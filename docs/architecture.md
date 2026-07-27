@@ -8,7 +8,7 @@ How Tinycast is wired together. See the per-subsystem docs for internals:
 
 `AppCore.shared` (`Core/AppCore.swift`) is a `@MainActor` singleton that owns every long-lived
 manager — `AppIndex`, `ClipboardStore`, `ClipboardManager`, `HotKeyManager`, `AppSettings`,
-`FavoritesStore`, `VisibilityStore`, `CalculatorHistoryStore`, `RunningAppsMonitor`,
+`FavoritesStore`, `VisibilityStore`, `CalculatorHistoryStore`, `CurrencyRateStore`, `RunningAppsMonitor`,
 `PaletteViewModel` — plus the window controllers. `AppDelegate.applicationDidFinishLaunching` calls
 `AppCore.shared.start()` and nothing else; that is the single wiring point. All palette / paste /
 launch actions are methods on `AppCore` that the SwiftUI views call.
@@ -36,8 +36,8 @@ only.
 
 The target builds in **Swift 6 language mode** (tools version 6.0, no language-mode override), so
 data-race safety violations are hard errors. Almost everything is `@MainActor`; cross-actor model
-types are `Sendable`. Heavy / IO work (app scan, image decode) is deliberately pushed off-main via
-`Task.detached` / `nonisolated`. Keep that boundary when adding code.
+types are `Sendable`. Heavy / IO work (app scan, image decode, the FX rate fetch) is deliberately
+pushed off-main via `Task.detached` / `nonisolated`. Keep that boundary when adding code.
 
 House idioms for the sharp edges:
 

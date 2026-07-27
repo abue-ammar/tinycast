@@ -215,6 +215,38 @@ struct CalcTests {
         // Date ± duration now carries the resolved start as a source badge
         expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Result")
 
+        // Currency — against the fixed `fx` table below (1 USD = 0.92 EUR = 0.79 GBP = 157 JPY)
+        expectDisplay("1 euro to dollars", "1.09 USD")
+        expectExpression("1 euro to dollars", "1 EUR")
+        expectBadges("1 euro to dollars", source: "Euro", target: "US Dollar")
+        expectDisplay("50 GBP in euros", "58.23 EUR")
+        expectDisplay("100 dollars to yen", "15,700.00 JPY")
+        expectDisplay("100 usd -> eur", "92.00 EUR")
+        expectDisplay("2*50 usd to eur", "92.00 EUR")  // expression on the value side
+        expectDisplay("eur to usd", "1.09 USD")  // implied amount of 1
+        expectCopy("100 dollars to yen", "15700.00 JPY")
+        // Currency signs, prefixed and suffixed
+        expectDisplay("€20 to GBP", "17.17 GBP")
+        expectDisplay("20€ to GBP", "17.17 GBP")
+        expectDisplay("£50 in dollars", "63.29 USD")
+        expectDisplay("$100 to yen", "15,700.00 JPY")
+        // Sub-cent cross-rates widen instead of collapsing to 0.00
+        expectDisplay("1 jpy to usd", "0.006369 USD")
+        // Currency never steals a query the unit table can answer
+        expectDisplay("10 pounds to kilograms", "4.5359237 kg")
+        expectDisplay("10 pounds", "4.5359237 kg")
+        expectDisplay("10 pounds to euros", "11.65 EUR")
+        expectBadges("10 pounds to euros", source: "British Pound", target: "Euro")
+        // Currency ↔ unit is a friendly category error, like Weight ↔ Time
+        expectError("10 usd to kg", "Cannot convert Currency to Weight.")
+        expectError("10 kg to usd", "Cannot convert Weight to Currency.")
+        // A known currency the snapshot doesn't quote, and no snapshot at all
+        expectError("5 usd to npr", "No exchange rate for NPR.")
+        expectErrorWithoutRates(
+            "1 eur to usd", "Exchange rates unavailable — check your connection.")
+        expectNil("10 usd to nonsense")
+        expectNil("usd")  // a lone code is still an app search
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -234,6 +266,16 @@ struct CalcTests {
         components.second = 0
         return (calendar.date(from: components)!, calendar)
     }()
+
+    // MARK: - Fixed exchange rates so currency answers are deterministic (NPR deliberately absent)
+
+    static let fx = CurrencyRates(
+        base: "USD",
+        rates: [
+            "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
+            "KRW": 1330,
+        ],
+        fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))
 
     // MARK: - Helpers
 
@@ -267,7 +309,7 @@ struct CalcTests {
     }
 
     static func expectBadges(_ query: String, source: String, target: String) {
-        guard let result = CalcEngine.evaluate(query) else {
+        guard let result = CalcEngine.evaluate(query, rates: fx) else {
             fail(query, expected: "\(source) → \(target)", got: "nil")
             return
         }
@@ -276,7 +318,7 @@ struct CalcTests {
     }
 
     static func expectDisplay(_ query: String, _ expected: String) {
-        guard case .value(let display, _)? = CalcEngine.evaluate(query)?.payload else {
+        guard case .value(let display, _)? = CalcEngine.evaluate(query, rates: fx)?.payload else {
             fail(query, expected: expected, got: "nil / error")
             return
         }
@@ -284,7 +326,7 @@ struct CalcTests {
     }
 
     static func expectCopy(_ query: String, _ expected: String) {
-        guard case .value(_, let copy)? = CalcEngine.evaluate(query)?.payload else {
+        guard case .value(_, let copy)? = CalcEngine.evaluate(query, rates: fx)?.payload else {
             fail(query, expected: expected, got: "nil / error")
             return
         }
@@ -292,6 +334,15 @@ struct CalcTests {
     }
 
     static func expectError(_ query: String, _ expected: String) {
+        guard case .error(let message)? = CalcEngine.evaluate(query, rates: fx)?.payload else {
+            fail(query, expected: "error: \(expected)", got: "nil / value")
+            return
+        }
+        check(query, expected: expected, got: message)
+    }
+
+    /// The first-run / never-connected state: no snapshot at all.
+    static func expectErrorWithoutRates(_ query: String, _ expected: String) {
         guard case .error(let message)? = CalcEngine.evaluate(query)?.payload else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -300,7 +351,7 @@ struct CalcTests {
     }
 
     static func expectExpression(_ query: String, _ expected: String) {
-        guard let result = CalcEngine.evaluate(query) else {
+        guard let result = CalcEngine.evaluate(query, rates: fx) else {
             fail(query, expected: expected, got: "nil")
             return
         }
@@ -308,7 +359,7 @@ struct CalcTests {
     }
 
     static func expectNil(_ query: String) {
-        if let result = CalcEngine.evaluate(query) {
+        if let result = CalcEngine.evaluate(query, rates: fx) {
             fail(query, expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1

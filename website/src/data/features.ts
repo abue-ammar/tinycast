@@ -25,7 +25,7 @@ export const features: Feature[] = [
   {
     icon: "calculator",
     title: "Inline calculator",
-    body: "Type math or unit conversions right in the palette, read the answer as you go, and revisit past results from history.",
+    body: "Type math, unit or live currency conversions right in the palette, read the answer as you go, and revisit past results from history.",
   },
   {
     icon: "emoji",

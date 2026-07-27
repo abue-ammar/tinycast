@@ -61,8 +61,10 @@ Never break these without an explicit task to do so.
   frozen instead (resigning shifts the text a point or two). See [palette.md](docs/palette.md).
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`). See [palette.md](docs/palette.md).
-- **`Core/Calculator/` (incl. `CalcDateTime`) must stay Foundation-only** — no AppKit / SwiftUI
-  imports. `Tools/calc-test.swift` compiles the real engine sources. Likewise `Core/Emoji/`
+- **`Core/Calculator/` (incl. `CalcDateTime`) must stay Foundation-only *and pure*** — no AppKit /
+  SwiftUI imports, no clock or network reads. `Tools/calc-test.swift` compiles the real engine
+  sources. Both externally-sourced inputs are injected: the clock via `now`/`calendar`, the FX table
+  via `rates` (`CurrencyRateStore` owns the fetch). Likewise `Core/Emoji/`
   (`EmojiCatalog`, `EmojiGridGeometry`) stays AppKit/SwiftUI-free for `Tools/emoji-test.swift`.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.

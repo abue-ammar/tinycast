@@ -32,7 +32,7 @@ export const galleryItems: GalleryItem[] = [
     type: "image",
     src: "calculator.png",
     title: "Inline calculator",
-    caption: "Math and unit conversions, right in the palette.",
+    caption: "Math, unit and currency conversions, right in the palette.",
     width: 2148,
     height: 1302,
   },

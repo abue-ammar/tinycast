@@ -31,6 +31,7 @@
 		68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B629EC3B716FEE881BB0075 /* TinycastApp.swift */; };
 		693E88D22D00CF6FD9CD7413 /* VisibilityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */; };
 		6962B8A2850A45401275F677 /* NotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */; };
+		6CDCE462405648998CDF1E77 /* CurrencyRateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E6CB5CD6C0477BAC9FE383F /* CurrencyRateStore.swift */; };
 		6D3DBE00FCB757C67669CFBA /* CommandRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D57B0AE44D21035163BD422 /* CommandRegistry.swift */; };
 		6F08764D6CC09E9B3FD1E05A /* RootPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F50886DC766B9923C3875A5 /* RootPaletteView.swift */; };
 		715F8A70F7A533D2EEEF6135 /* EdgeDissolve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A13DB27EE627AC08051165 /* EdgeDissolve.swift */; };
@@ -65,6 +66,7 @@
 		CFB516312C4694DDFD99DBCA /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68952539C0BD045BA175CBB6 /* SettingsRootView.swift */; };
 		D322804853973E1C19F2A408 /* AppIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7CE23482F7DF563A268806 /* AppIndex.swift */; };
 		D3CA50C1CFABC31E6BC7B73C /* CalcPercent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A65B4EC5AE7E22594BFC5E /* CalcPercent.swift */; };
+		D3D2ACD2D94588786C2185AE /* CalcCurrency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 299122624B5E1BA2C5400478 /* CalcCurrency.swift */; };
 		DA2EBB18F026BD055E0270CD /* AppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */; };
 		DA5BCA13045FF91B3FC8EB35 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */; };
 		DB04CC2AFEDD69D0676CA1D1 /* CalculatorCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64C87569634E26E1BE99A91 /* CalculatorCardView.swift */; };
@@ -90,6 +92,7 @@
 		1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
 		23591B301A183579098AA019 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		25B8A7D8DBB0CE2ACEDB3979 /* CalcUnits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcUnits.swift; sourceTree = "<group>"; };
+		299122624B5E1BA2C5400478 /* CalcCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcCurrency.swift; sourceTree = "<group>"; };
 		2B629EC3B716FEE881BB0075 /* TinycastApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinycastApp.swift; sourceTree = "<group>"; };
 		2C3EB07C07902C53BFD3B08B /* KeyShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcut.swift; sourceTree = "<group>"; };
 		2FC323070A08CD17DFFB2F8A /* BackupSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSettingsView.swift; sourceTree = "<group>"; };
@@ -124,6 +127,7 @@
 		825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisibilityStore.swift; sourceTree = "<group>"; };
 		849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsView.swift; sourceTree = "<group>"; };
 		88A65B4EC5AE7E22594BFC5E /* CalcPercent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcPercent.swift; sourceTree = "<group>"; };
+		8E6CB5CD6C0477BAC9FE383F /* CurrencyRateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyRateStore.swift; sourceTree = "<group>"; };
 		919AC64DE9C9DC3A973A0B4E /* HyperKeyTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKeyTap.swift; sourceTree = "<group>"; };
 		93E9ACD504E016DFF6FE6C1B /* RightClick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightClick.swift; sourceTree = "<group>"; };
 		98B7211D27EDF764EC477A0F /* PopoverMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverMenu.swift; sourceTree = "<group>"; };
@@ -182,6 +186,7 @@
 				A76E4099082D59FA686C3485 /* ClipboardManager.swift */,
 				BDC43CFF6777C11BB880F398 /* ClipboardStore.swift */,
 				5D57B0AE44D21035163BD422 /* CommandRegistry.swift */,
+				8E6CB5CD6C0477BAC9FE383F /* CurrencyRateStore.swift */,
 				33A13DB27EE627AC08051165 /* EdgeDissolve.swift */,
 				9FB750D045194AE34D39D792 /* FavoritesStore.swift */,
 				D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */,
@@ -348,6 +353,7 @@
 		E78667BC941556AB120FB562 /* Calculator */ = {
 			isa = PBXGroup;
 			children = (
+				299122624B5E1BA2C5400478 /* CalcCurrency.swift */,
 				E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */,
 				3B976C84AFE60E357A346224 /* CalcEngine.swift */,
 				09093BF10EA97BDCA45A241F /* CalcFormatter.swift */,
@@ -447,6 +453,7 @@
 				AE0D0C53004C65D65BE89B6F /* BackupActions.swift in Sources */,
 				8631543D8E0E008E7C541345 /* BackupSettingsView.swift in Sources */,
 				BA76E53A12248B3A9C42B4F9 /* Bundle+AppName.swift in Sources */,
+				D3D2ACD2D94588786C2185AE /* CalcCurrency.swift in Sources */,
 				A9D8B54D88A60DE9FC1F43BF /* CalcDateTime.swift in Sources */,
 				14A5A5ACD35A572EE906769F /* CalcEngine.swift in Sources */,
 				649961AA51BA4D87626C27D5 /* CalcFormatter.swift in Sources */,
@@ -461,6 +468,7 @@
 				441CF705AE1D03F6E236A61E /* ClipboardStore.swift in Sources */,
 				34E5FF0B3C9FD2FFE504D87A /* ClipboardView.swift in Sources */,
 				6D3DBE00FCB757C67669CFBA /* CommandRegistry.swift in Sources */,
+				6CDCE462405648998CDF1E77 /* CurrencyRateStore.swift in Sources */,
 				715F8A70F7A533D2EEEF6135 /* EdgeDissolve.swift in Sources */,
 				344D89B83B57C1DD1E7C0BFC /* EmojiCatalog.swift in Sources */,
 				B810158281A87CBA2AB694D0 /* EmojiData.generated.swift in Sources */,

@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`, so hover/selection re-renders with the same query don't re-run the evaluator.
+/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`, so hover/selection re-renders with the same query don't re-run the evaluator. A new FX snapshot changes `fetchedAt`, which invalidates the memo without comparing the rate table itself.
 @MainActor
 enum CalcMemo {
-    private static var cache: (query: String, result: CalcResult?)?
+    private static var cache: (query: String, ratesStamp: Date?, result: CalcResult?)?
 
-    static func evaluate(_ query: String) -> CalcResult? {
-        if let cache, cache.query == query { return cache.result }
-        let result = CalcEngine.evaluate(query)
-        cache = (query, result)
+    static func evaluate(_ query: String, rates: CurrencyRates?) -> CalcResult? {
+        let stamp = rates?.fetchedAt
+        if let cache, cache.query == query, cache.ratesStamp == stamp { return cache.result }
+        let result = CalcEngine.evaluate(query, rates: rates)
+        cache = (query, stamp, result)
         return result
     }
 }

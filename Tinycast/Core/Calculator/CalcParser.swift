@@ -81,6 +81,13 @@ enum CalcTokenizer {
                 continue
             }
 
+            // Currency signs are punctuation, not letters: fold each to its ISO code so `€20 to gbp` tokenizes exactly like `20 eur to gbp`.
+            if let code = CalcCurrency.symbols[ch] {
+                tokens.append(.ident(code))
+                i += 1
+                continue
+            }
+
             switch ch {
             case "+", "(", ")", "!", "%", "^":
                 tokens.append(.op(ch))

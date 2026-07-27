@@ -17,6 +17,13 @@ enum CalcFormatter {
         return String(format: "%.10g", v)
     }
 
+    /// Money rounding for currency answers: two decimals, widening to four significant digits below a cent so a small cross-rate (`1 JPY to USD`) never collapses to "0.00". Ungrouped — the display side wraps this in `grouped`.
+    static func currency(_ value: Double) -> String {
+        let v = value == 0 ? 0 : value  // normalize -0
+        if abs(v) < 0.01 && v != 0 { return String(format: "%.4g", v) }
+        return String(format: "%.2f", v)
+    }
+
     /// A length in feet rendered as whole feet + remaining inches ("3 feet 3.370078740 inches"); used only for the bare metric-length auto-conversion. Sub-foot values drop the feet part.
     static func compoundFeetInches(_ feet: Double) -> String {
         let sign = feet < 0 ? "-" : ""
