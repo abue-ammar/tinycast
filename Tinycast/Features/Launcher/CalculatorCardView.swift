@@ -79,6 +79,8 @@ private struct CalcColumn: View {
             if let badge {
                 Text(badge)
                     .font(Theme.Typography.keyCap)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, Theme.Spacing.sm)
                     .padding(.vertical, Theme.Spacing.xxs)

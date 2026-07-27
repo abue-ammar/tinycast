@@ -70,8 +70,9 @@ Never break these without an explicit task to do so.
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
   `CurrencyData.generated.swift` by `node Tools/gen-currencies.js`** — never edit either by hand.
-  Currency *aliases*, badge short-names and the currency-sign tie-breaks are hand-maintained in
-  `CalcCurrency.swift`; only ISO codes and display names are generated.
+  Currency names, signs and uncontested nouns are generated (Frankfurter × CLDR); the only
+  hand-maintained currency data is `CalcCurrency.contested`, the nouns several currencies share
+  (`dollars`, `pounds`). Don't add slang or synonyms there — no source of truth, so they rot.
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for

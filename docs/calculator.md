@@ -30,16 +30,28 @@ against a fixed clock.
 `expr from (to|in|->) to` token shape, so `eur to usd` implies an amount of 1 exactly like `m to ft`.
 A leading sign is swapped back into amount-first order, so `€20 to GBP` and `20€ to GBP` parse alike.
 
-The table is **half generated**. ISO codes and display names come from
-`CurrencyData.generated.swift`, emitted by `node Tools/gen-currencies.js` from the same feed the
-rates come from — so all 165 currencies resolve, not just the ones someone thought to type. What the
-feed can't know stays hand-written next to it in `CalcCurrency.swift`:
+The table is **generated except for the judgement calls**. `node Tools/gen-currencies.js` joins two
+sources on the ISO code and emits `CurrencyData.generated.swift`:
 
-- **Aliases** — `quid`, `bucks`, `euros`, `rupees`, `yen`. The feed has formal names only.
-- **Badge short-names** — where the formal name would overflow the card pill (`Bosnia and
-  Herzegovina Convertible Mark` is 39 characters) or nobody uses it (`United States Dollar`).
-- **Sign tie-breaks** — the feed lists `$` for eleven currencies and `¥` for two, and two thirds of
-  its symbols are multi-character (`R$`, `Kč`, `د.إ`). Which one `$` means is a product call.
+- **Frankfurter** decides which currencies exist — the same feed the rates come from, so the table
+  can never list something the app can't price. 165 codes.
+- **CLDR** (`en`) decides what humans call them: display name, currency sign, singular/plural noun.
+  Read from the pinned `cldr-json` checkout, not the host's `Intl`, whose output shifts with the
+  local ICU version.
+
+Only *unambiguous* CLDR data is emitted — 26 signs and 129 nouns. CLDR itself supplies the sign
+tie-break: it writes every dollar but USD as `CA$`/`A$`/`NT$`, so plain `$` is claimed by exactly one
+currency. Bare Latin letters CLDR lists as symbols (`P` for BWP, `L` for HNL) are dropped, since a
+letter is indistinguishable from a word to the tokenizer. Accented nouns are emitted both as written
+and folded, so `krónur` and `kronur` both resolve.
+
+What's left hand-written in `CalcCurrency.swift` is one table, `contested`: the nouns several
+currencies share, where CLDR correctly refuses to choose and the calculator must. `dollars` is
+claimed by 22 currencies, `francs` 10, `pounds` 9, `pesos` 8, `rupees` 6. CLDR says "US dollars" and
+"Canadian dollars"; nothing in it says a bare "dollars" is USD. Words that stay genuinely ambiguous
+are assigned to nobody — `krona` is both SEK and ISK, so it produces no card. Slang and synonyms
+(`quid`, `bucks`, `rmb`) are deliberately *not* carried: they'd be hand-maintained data with no
+source of truth.
 
 Order is the whole disambiguation story. Currency runs **after** the unit path, so a query both sides
 of which are compatible units stays a measurement: `10 pounds to kg` is weight, `10 pounds to euros`

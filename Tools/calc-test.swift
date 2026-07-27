@@ -255,11 +255,33 @@ struct CalcTests {
         expectError("5 usd to zmw", "No exchange rate for ZMW.")
         expectError("5 usd to afn", "No exchange rate for AFN.")
         check(
-            "CurrencyData.all", expected: "true",
-            got: "\(CurrencyData.all.count >= 120 && CurrencyData.all.contains { $0.code == "USD" })")
-        // Badges come from the generated names, overridden only where the formal one is unwieldy
+            "CurrencyData sizes", expected: "true",
+            got:
+                "\(CurrencyData.all.count >= 120 && CurrencyData.signs.count >= 20 && CurrencyData.aliases.count >= 100)"
+        )
+        // Badges come from CLDR's label, which is shorter than the registry name where it matters
         expectBadges("1 chf to usd", source: "Swiss Franc", target: "US Dollar")
-        // CUP (Cuban peso) is the one generated code that collides with a unit; volume still wins
+        expectBadges("1 aed to usd", source: "UAE Dirham", target: "US Dollar")
+        // Nouns only one currency claims are generated — nobody hand-typed these
+        expectError("1 zloty to usd", "No exchange rate for PLN.")
+        expectError("1 forint to usd", "No exchange rate for HUF.")
+        expectError("1 taka to usd", "No exchange rate for BDT.")
+        expectError("1 rand to usd", "No exchange rate for ZAR.")
+        expectDisplay("1 euro to dollars", "1.09 USD")
+        // Accented nouns resolve with or without the accent
+        expectError("1 krónur to usd", "No exchange rate for ISK.")
+        expectError("1 kronur to usd", "No exchange rate for ISK.")
+        // Nouns several currencies share are the hand-written part, and they must still win
+        expectDisplay("100 dollars to yen", "15,700.00 JPY")
+        expectDisplay("10 pounds to euros", "11.65 EUR")
+        expectDisplay("1 franc to usd", "1.23 USD")
+        expectError("1 peso to usd", "No exchange rate for MXN.")
+        // `krona` is contested (SEK vs ISK) and deliberately assigned to neither
+        expectNil("1 krona to usd")
+        // Slang is no longer carried: CLDR has no "quid", and we don't hand-maintain synonyms
+        expectNil("50 quid to usd")
+        expectNil("100 bucks to eur")
+        // CUP (Cuban peso) is a generated code that collides with a unit; volume still wins
         expectDisplay("1 cup to ml", "236.5882365 mL")
         expectDisplay("1 cup to tbsp", "16 tbsp")
 
@@ -291,7 +313,7 @@ struct CalcTests {
         base: "USD",
         rates: [
             "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
-            "KRW": 1330, "IDR": 18053, "CHF": 0.81,
+            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725,
         ],
         fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))
 

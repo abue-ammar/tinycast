@@ -89,73 +89,41 @@ enum CalcCurrency {
         return reordered
     }
 
-    /// Currency sign → the tokenizer's lowercased ident form. Hand-written on purpose: this is a
-    /// tie-break policy, not data. The feed lists `$` for eleven currencies (ARS, AUD, CAD, CLP, COP,
-    /// HKD, MXN, NZD, SGD, TWD, USD) and `¥` for two — picking the one a user means is a product call.
-    /// Two thirds of the feed's symbols are multi-character (`R$`, `Kč`, `د.إ`) and can't be a `Character` anyway.
-    static let symbols: [Character: String] = [
-        "$": "usd", "€": "eur", "£": "gbp", "¥": "jpy", "₹": "inr", "₩": "krw",
-        "₽": "rub", "₺": "try", "₪": "ils", "₫": "vnd", "฿": "thb", "₴": "uah",
-        "₦": "ngn", "₱": "php",
+    /// The only currency data still written by hand: nouns several currencies share, where CLDR
+    /// correctly refuses to choose ("US dollars", "Canadian dollars" — never a bare "dollars") and
+    /// the calculator has to. The count is how many of the feed's currencies claim that word.
+    /// Everything unambiguous — names, signs, and 129 uncontested nouns — is generated.
+    /// `pound`/`pounds` deliberately overlaps `CalcUnits`' weight; the pipeline order resolves it.
+    private static let contested: [String: [String]] = [
+        "USD": ["dollar", "dollars"],  // 22 claimants
+        "CHF": ["franc", "francs"],  // 10
+        "GBP": ["pound", "pounds"],  // 9
+        "MXN": ["peso", "pesos"],  // 8
+        "INR": ["rupee", "rupees"],  // 6
+        "KES": ["shilling", "shillings"],  // 4
+        "AED": ["dirham", "dirhams"],  // 2
+        "KRW": ["won"],  // 2
+        "RON": ["leu", "lei"],  // 2
+        "RUB": ["ruble", "rubles"],  // 2
+        "SAR": ["riyal", "riyals"],  // 2
     ]
 
-    /// Natural-language names the feed can't know, keyed by ISO code. `pound`/`pounds` deliberately
-    /// overlaps `CalcUnits`' weight — the pipeline order resolves it.
-    private static let aliases: [String: [String]] = [
-        "USD": ["dollar", "dollars", "buck", "bucks"],
-        "EUR": ["euro", "euros"],
-        "GBP": ["pound", "pounds", "sterling", "quid"],
-        "JPY": ["yen"],
-        "CHF": ["franc", "francs"],
-        "CNY": ["yuan", "renminbi", "rmb"],
-        "INR": ["rupee", "rupees"],
-        "KRW": ["won"],
-        "THB": ["baht"],
-        "MYR": ["ringgit"],
-        "IDR": ["rupiah"],
-        "VND": ["dong"],
-        "RUB": ["ruble", "rubles", "rouble", "roubles"],
-        "TRY": ["lira"],
-        "PLN": ["zloty"],
-        "CZK": ["koruna"],
-        "HUF": ["forint"],
-        "RON": ["leu", "lei"],
-        "ILS": ["shekel", "shekels"],
-        "AED": ["dirham", "dirhams"],
-        "SAR": ["riyal", "riyals"],
-        "ZAR": ["rand"],
-        "NGN": ["naira"],
-        "KES": ["shilling", "shillings"],
-        "BRL": ["real", "reais"],
-        "MXN": ["peso", "pesos"],
-        "UAH": ["hryvnia"],
-        "BDT": ["taka"],
-    ]
-
-    /// Shorter badge labels where the feed's formal name would overflow the card's pill (39 characters
-    /// for BAM), plus `USD`, where nobody writes "United States Dollar".
-    private static let shortNames: [String: String] = [
-        "AED": "UAE Dirham",
-        "ANG": "Antillean Guilder",
-        "BAM": "Bosnian Mark",
-        "CNH": "Offshore Yuan",
-        "CNY": "Chinese Yuan",
-        "STN": "São Tomé Dobra",
-        "TTD": "Trinidad Dollar",
-        "USD": "US Dollar",
-        "VES": "Venezuelan Bolívar",
-        "XAF": "Central African Franc",
-    ]
-
-    /// Lookup by lowercased ident. Codes and names come from `CurrencyData.generated.swift`; only the
-    /// aliases and short labels above are hand-maintained.
+    /// Lookup by lowercased ident. Codes, display names and uncontested nouns come from
+    /// `CurrencyData.generated.swift`; `contested` above is applied last so its choices win.
     static let byName: [String: CurrencyDef] = {
+        var defs: [String: CurrencyDef] = [:]
         var table: [String: CurrencyDef] = [:]
-        table.reserveCapacity(CurrencyData.all.count * 2)
+        defs.reserveCapacity(CurrencyData.all.count)
+        table.reserveCapacity(CurrencyData.all.count + CurrencyData.aliases.count)
         for entry in CurrencyData.all {
-            let def = CurrencyDef(code: entry.code, name: shortNames[entry.code] ?? entry.name)
+            let def = CurrencyDef(code: entry.code, name: entry.name)
+            defs[entry.code] = def
             table[entry.code.lowercased()] = def
-            for alias in aliases[entry.code] ?? [] { table[alias] = def }
+        }
+        for (word, code) in CurrencyData.aliases { table[word] = defs[code] }
+        for (code, words) in contested {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
         }
         return table
     }()

@@ -94,12 +94,16 @@ node Tools/gen-emoji.js            # -> Tinycast/Core/Emoji/EmojiData.generated.
 node Tools/gen-currencies.js       # -> Tinycast/Core/Calculator/CurrencyData.generated.swift
 ```
 
-`gen-currencies.js` reads Frankfurter's currency list — the same feed `CurrencyRateStore` fetches
-rates from — so the table and the rate source can't drift apart. It emits only ISO codes and display
-names. Everything the feed can't know stays hand-written in `CalcCurrency.swift`: the
-natural-language aliases (`quid`, `bucks`, `euros`), the shorter badge labels, and the currency-sign
-tie-breaks (the feed lists `$` for eleven different currencies). Re-run it when a currency is added
-or retired; nothing breaks in the meantime, since an unquoted code just reports "no exchange rate".
+`gen-currencies.js` joins two sources on the ISO code: **Frankfurter**'s currency list (the same feed
+`CurrencyRateStore` fetches rates from, so the table and the rate source can't drift apart) and
+**Unicode CLDR**'s `en` currency data, which supplies display names, signs and the singular/plural
+noun. It reads the pinned `cldr-json` checkout rather than the host's `Intl`, whose output shifts
+with the local ICU version and would make the file unreproducible.
+
+Only unambiguous data is emitted. Anything two currencies claim — `dollars`, `pounds`, `krona` — is
+left out and decided by hand in `CalcCurrency.contested`, the one currency table still written by
+hand. Re-run the script when a currency is added or retired; nothing breaks in the meantime, since
+an unquoted code just reports "no exchange rate".
 
 ## Packaging a DMG
 
