@@ -232,6 +232,9 @@ struct CalcTests {
         expectDisplay("$100 to yen", "15,700.00 JPY")
         // Sub-cent cross-rates widen instead of collapsing to 0.00
         expectDisplay("1 jpy to usd", "0.006369 USD")
+        // …and stay in plain notation past 1e-5, where "%g" would flip to "5.539e-05"
+        expectDisplay("1 idr to usd", "0.00005539 USD")
+        expectCopy("1 idr to usd", "0.00005539 USD")
         // Currency never steals a query the unit table can answer
         expectDisplay("10 pounds to kilograms", "4.5359237 kg")
         expectDisplay("10 pounds", "4.5359237 kg")
@@ -246,6 +249,7 @@ struct CalcTests {
             "1 eur to usd", "Exchange rates unavailable — check your connection.")
         expectNil("10 usd to nonsense")
         expectNil("usd")  // a lone code is still an app search
+        expectNil("btc")  // crypto isn't in the table — Frankfurter is central-bank fiat only
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -273,7 +277,7 @@ struct CalcTests {
         base: "USD",
         rates: [
             "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
-            "KRW": 1330,
+            "KRW": 1330, "IDR": 18053,
         ],
         fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))
 

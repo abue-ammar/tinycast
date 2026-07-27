@@ -5,8 +5,12 @@ import Foundation
 /// a finished `CurrencyRates` snapshot, which is what keeps it Foundation-only and pure.
 @MainActor
 final class CurrencyRateStore: ObservableObject {
-    /// exchangerate-api's free tier: no key, one USD-based table of ~160 currencies, updated daily.
-    private nonisolated static let endpoint = URL(string: "https://open.er-api.com/v6/latest/USD")!
+    /// Frankfurter (`frankfurter.dev`) — open-source, no key, no account, no quota, rates blended from
+    /// 84 central banks. `quotes` is pinned to the codes the calculator can actually answer for, which
+    /// keeps the response near 500 bytes gzipped instead of pulling all 201 currencies.
+    private nonisolated static let endpoint = URL(
+        string: "https://api.frankfurter.dev/v2/rates?base=USD&quotes="
+            + CalcCurrency.codes.joined(separator: ","))!
     private static let refreshInterval: TimeInterval = 6 * 3600
     /// Shorter retry so a machine that was offline at launch picks rates up soon after it reconnects.
     private static let retryInterval: TimeInterval = 15 * 60
@@ -64,22 +68,24 @@ final class CurrencyRateStore: ObservableObject {
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             throw URLError(.badServerResponse)
         }
-        let payload = try JSONDecoder().decode(RatesResponse.self, from: data)
-        guard payload.result == "success", !payload.rates.isEmpty else {
-            throw URLError(.cannotParseResponse)
+
+        // Frankfurter v2 answers with one flat row per pair rather than a keyed table.
+        let rows = try JSONDecoder().decode([RateRow].self, from: data)
+        guard let base = rows.first?.base else { throw URLError(.cannotParseResponse) }
+        var rates: [String: Double] = [:]
+        rates.reserveCapacity(rows.count + 1)
+        for row in rows where row.rate > 0 && row.rate.isFinite && row.base == base {
+            rates[row.quote] = row.rate
         }
-        return CurrencyRates(base: payload.base, rates: payload.rates, fetchedAt: Date())
+        guard !rates.isEmpty else { throw URLError(.cannotParseResponse) }
+        rates[base] = 1
+
+        return CurrencyRates(base: base, rates: rates, fetchedAt: Date())
     }
 
-    private struct RatesResponse: Decodable {
-        let result: String
+    private struct RateRow: Decodable {
         let base: String
-        let rates: [String: Double]
-
-        enum CodingKeys: String, CodingKey {
-            case result
-            case base = "base_code"
-            case rates
-        }
+        let quote: String
+        let rate: Double
     }
 }

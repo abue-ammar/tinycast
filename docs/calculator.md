@@ -36,16 +36,24 @@ of which are compatible units stays a measurement: `10 pounds to kg` is weight, 
 is money. A currency on one side and a unit on the other produces the same friendly category error as
 any other mismatch (`Cannot convert Currency to Weight.`).
 
-Rates come from `CurrencyRateStore` (`Core/`, owned by `AppCore`): one key-less USD-based table from
-exchangerate-api, cached at `~/Library/Caches/<bundle-id>/currency-rates.json`, refreshed every 6h
-with a 15-minute retry after a failure. Offline, the last snapshot keeps answering; with no snapshot
-at all the card says so rather than guessing, and a currency the table doesn't quote reports
+Rates come from `CurrencyRateStore` (`Core/`, owned by `AppCore`), which reads
+[Frankfurter](https://frankfurter.dev) — open source, no key, no account, no quota, rates blended
+from 84 central banks. One `GET api.frankfurter.dev/v2/rates?base=USD&quotes=…`, whose `quotes` list
+is `CalcCurrency.codes` itself, so the request can never drift from what the calculator recognizes
+and the response stays ~500 bytes gzipped instead of pulling all 201 currencies. v2 answers with one
+flat `{date, base, quote, rate}` row per pair rather than a keyed table, and omits the base's own
+row — the store folds both into the `[code: rate]` shape `CurrencyRates` stores.
+
+The table is cached at `~/Library/Caches/<bundle-id>/currency-rates.json`, refreshed every 6h with a
+15-minute retry after a failure. Offline, the last snapshot keeps answering; with no snapshot at all
+the card says so rather than guessing, and a currency the feed doesn't quote reports
 `No exchange rate for <CODE>.` The store hands `CalcEngine.evaluate` a finished `CurrencyRates`
 value — the engine never fetches, which is what keeps it Foundation-only and testable. `CalcMemo`
-keys its memo on the snapshot's `fetchedAt`, so a fresh table re-evaluates without diffing 160 rates.
+keys its memo on the snapshot's `fetchedAt`, so a fresh table re-evaluates without diffing every rate.
 
 Money rounds to two decimals (`CalcFormatter.currency`), widening to four significant digits below a
-cent so `1 JPY to USD` reads `0.00611 USD` instead of `0.00`.
+cent — in *plain* notation, deliberately not `%g`, so `1 IDR to USD` reads `0.00005539 USD` rather
+than `5.539e-05`.
 
 ## Result and rendering
 

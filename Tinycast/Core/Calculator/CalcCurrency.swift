@@ -96,6 +96,10 @@ enum CalcCurrency {
         "₦": "ngn", "₱": "php",
     ]
 
+    /// Every ISO code the table can answer for, sorted. `CurrencyRateStore` asks the feed for exactly
+    /// these, so the request can never drift from what the calculator recognizes.
+    static let codes: [String] = Set(byName.values.map(\.code)).sorted()
+
     /// Lookup by lowercased ident: ISO code, singular/plural name, and common nicknames. `pound`/`pounds` deliberately overlaps `CalcUnits`' weight — the pipeline order resolves it.
     static let byName: [String: CurrencyDef] = {
         var table: [String: CurrencyDef] = [:]
