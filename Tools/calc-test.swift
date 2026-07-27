@@ -250,6 +250,18 @@ struct CalcTests {
         expectNil("10 usd to nonsense")
         expectNil("usd")  // a lone code is still an app search
         expectNil("btc")  // crypto isn't in the table — Frankfurter is central-bank fiat only
+        // The table is generated from the feed's own currency list, so codes nobody hand-typed still
+        // resolve — reaching "no rate" (not "no card") is what proves recognition.
+        expectError("5 usd to zmw", "No exchange rate for ZMW.")
+        expectError("5 usd to afn", "No exchange rate for AFN.")
+        check(
+            "CurrencyData.all", expected: "true",
+            got: "\(CurrencyData.all.count >= 120 && CurrencyData.all.contains { $0.code == "USD" })")
+        // Badges come from the generated names, overridden only where the formal one is unwieldy
+        expectBadges("1 chf to usd", source: "Swiss Franc", target: "US Dollar")
+        // CUP (Cuban peso) is the one generated code that collides with a unit; volume still wins
+        expectDisplay("1 cup to ml", "236.5882365 mL")
+        expectDisplay("1 cup to tbsp", "16 tbsp")
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -271,13 +283,15 @@ struct CalcTests {
         return (calendar.date(from: components)!, calendar)
     }()
 
-    // MARK: - Fixed exchange rates so currency answers are deterministic (NPR deliberately absent)
+    // MARK: - Fixed exchange rates so currency answers are deterministic
 
+    /// NPR, ZMW and AFN are deliberately absent: the table recognizes them (they're in the generated
+    /// list), so a query for one must reach "no exchange rate" rather than falling through to no card.
     static let fx = CurrencyRates(
         base: "USD",
         rates: [
             "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
-            "KRW": 1330, "IDR": 18053,
+            "KRW": 1330, "IDR": 18053, "CHF": 0.81,
         ],
         fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))
 

@@ -84,6 +84,23 @@ swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
 change the scoring in one and mirror it in the other. The calc harness compiles the real engine
 sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only.
 
+## Generated data
+
+Two Swift files are emitted by scripts and must never be hand-edited. Both download their source, so
+run them online, then commit the result:
+
+```sh
+node Tools/gen-emoji.js            # -> Tinycast/Core/Emoji/EmojiData.generated.swift
+node Tools/gen-currencies.js       # -> Tinycast/Core/Calculator/CurrencyData.generated.swift
+```
+
+`gen-currencies.js` reads Frankfurter's currency list — the same feed `CurrencyRateStore` fetches
+rates from — so the table and the rate source can't drift apart. It emits only ISO codes and display
+names. Everything the feed can't know stays hand-written in `CalcCurrency.swift`: the
+natural-language aliases (`quid`, `bucks`, `euros`), the shorter badge labels, and the currency-sign
+tie-breaks (the feed lists `$` for eleven different currencies). Re-run it when a currency is added
+or retired; nothing breaks in the meantime, since an unquoted code just reports "no exchange rate".
+
 ## Packaging a DMG
 
 For a local signed DMG:

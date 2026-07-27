@@ -54,6 +54,7 @@
 		A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */; };
 		A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB750D045194AE34D39D792 /* FavoritesStore.swift */; };
 		A9D8B54D88A60DE9FC1F43BF /* CalcDateTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */; };
+		AA8050D9A547CDDD37C581C4 /* CurrencyData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */; };
 		ABBB2A811EB5C69D55A93B1C /* RaycastImportSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */; };
 		AD2141EBF98A246BDA3BAB8E /* Gunzip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A53295959552ED28D34960 /* Gunzip.swift */; };
 		AE0D0C53004C65D65BE89B6F /* BackupActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D8C2C59C2B578CFE61E004 /* BackupActions.swift */; };
@@ -114,6 +115,7 @@
 		596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorder.swift; sourceTree = "<group>"; };
 		5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		5D57B0AE44D21035163BD422 /* CommandRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandRegistry.swift; sourceTree = "<group>"; };
+		5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyData.generated.swift; sourceTree = "<group>"; };
 		6185011A02366B30B48B5B6C /* Paster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Paster.swift; sourceTree = "<group>"; };
 		641A8B9F099ED1521F14D81E /* EmojiCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCatalog.swift; sourceTree = "<group>"; };
 		6621A88681E993D49EEF07A3 /* tinycast.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = tinycast.icon; sourceTree = "<group>"; };
@@ -360,6 +362,7 @@
 				423CFE8AB90484D0309F24C0 /* CalcParser.swift */,
 				88A65B4EC5AE7E22594BFC5E /* CalcPercent.swift */,
 				25B8A7D8DBB0CE2ACEDB3979 /* CalcUnits.swift */,
+				5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */,
 			);
 			path = Calculator;
 			sourceTree = "<group>";
@@ -468,6 +471,7 @@
 				441CF705AE1D03F6E236A61E /* ClipboardStore.swift in Sources */,
 				34E5FF0B3C9FD2FFE504D87A /* ClipboardView.swift in Sources */,
 				6D3DBE00FCB757C67669CFBA /* CommandRegistry.swift in Sources */,
+				AA8050D9A547CDDD37C581C4 /* CurrencyData.generated.swift in Sources */,
 				6CDCE462405648998CDF1E77 /* CurrencyRateStore.swift in Sources */,
 				715F8A70F7A533D2EEEF6135 /* EdgeDissolve.swift in Sources */,
 				344D89B83B57C1DD1E7C0BFC /* EmojiCatalog.swift in Sources */,

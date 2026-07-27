@@ -89,76 +89,74 @@ enum CalcCurrency {
         return reordered
     }
 
-    /// Currency sign → the tokenizer's lowercased ident form. `¥` resolves to JPY and `$` to USD — the other claimants (CNY, CAD, AUD…) need their code.
+    /// Currency sign → the tokenizer's lowercased ident form. Hand-written on purpose: this is a
+    /// tie-break policy, not data. The feed lists `$` for eleven currencies (ARS, AUD, CAD, CLP, COP,
+    /// HKD, MXN, NZD, SGD, TWD, USD) and `¥` for two — picking the one a user means is a product call.
+    /// Two thirds of the feed's symbols are multi-character (`R$`, `Kč`, `د.إ`) and can't be a `Character` anyway.
     static let symbols: [Character: String] = [
         "$": "usd", "€": "eur", "£": "gbp", "¥": "jpy", "₹": "inr", "₩": "krw",
         "₽": "rub", "₺": "try", "₪": "ils", "₫": "vnd", "฿": "thb", "₴": "uah",
         "₦": "ngn", "₱": "php",
     ]
 
-    /// Every ISO code the table can answer for, sorted. `CurrencyRateStore` asks the feed for exactly
-    /// these, so the request can never drift from what the calculator recognizes.
-    static let codes: [String] = Set(byName.values.map(\.code)).sorted()
+    /// Natural-language names the feed can't know, keyed by ISO code. `pound`/`pounds` deliberately
+    /// overlaps `CalcUnits`' weight — the pipeline order resolves it.
+    private static let aliases: [String: [String]] = [
+        "USD": ["dollar", "dollars", "buck", "bucks"],
+        "EUR": ["euro", "euros"],
+        "GBP": ["pound", "pounds", "sterling", "quid"],
+        "JPY": ["yen"],
+        "CHF": ["franc", "francs"],
+        "CNY": ["yuan", "renminbi", "rmb"],
+        "INR": ["rupee", "rupees"],
+        "KRW": ["won"],
+        "THB": ["baht"],
+        "MYR": ["ringgit"],
+        "IDR": ["rupiah"],
+        "VND": ["dong"],
+        "RUB": ["ruble", "rubles", "rouble", "roubles"],
+        "TRY": ["lira"],
+        "PLN": ["zloty"],
+        "CZK": ["koruna"],
+        "HUF": ["forint"],
+        "RON": ["leu", "lei"],
+        "ILS": ["shekel", "shekels"],
+        "AED": ["dirham", "dirhams"],
+        "SAR": ["riyal", "riyals"],
+        "ZAR": ["rand"],
+        "NGN": ["naira"],
+        "KES": ["shilling", "shillings"],
+        "BRL": ["real", "reais"],
+        "MXN": ["peso", "pesos"],
+        "UAH": ["hryvnia"],
+        "BDT": ["taka"],
+    ]
 
-    /// Lookup by lowercased ident: ISO code, singular/plural name, and common nicknames. `pound`/`pounds` deliberately overlaps `CalcUnits`' weight — the pipeline order resolves it.
+    /// Shorter badge labels where the feed's formal name would overflow the card's pill (39 characters
+    /// for BAM), plus `USD`, where nobody writes "United States Dollar".
+    private static let shortNames: [String: String] = [
+        "AED": "UAE Dirham",
+        "ANG": "Antillean Guilder",
+        "BAM": "Bosnian Mark",
+        "CNH": "Offshore Yuan",
+        "CNY": "Chinese Yuan",
+        "STN": "São Tomé Dobra",
+        "TTD": "Trinidad Dollar",
+        "USD": "US Dollar",
+        "VES": "Venezuelan Bolívar",
+        "XAF": "Central African Franc",
+    ]
+
+    /// Lookup by lowercased ident. Codes and names come from `CurrencyData.generated.swift`; only the
+    /// aliases and short labels above are hand-maintained.
     static let byName: [String: CurrencyDef] = {
         var table: [String: CurrencyDef] = [:]
-        func add(_ code: String, _ name: String, _ aliases: [String] = []) {
-            let def = CurrencyDef(code: code, name: name)
-            table[code.lowercased()] = def
-            for alias in aliases { table[alias] = def }
+        table.reserveCapacity(CurrencyData.all.count * 2)
+        for entry in CurrencyData.all {
+            let def = CurrencyDef(code: entry.code, name: shortNames[entry.code] ?? entry.name)
+            table[entry.code.lowercased()] = def
+            for alias in aliases[entry.code] ?? [] { table[alias] = def }
         }
-
-        add("USD", "US Dollar", ["dollar", "dollars", "buck", "bucks"])
-        add("EUR", "Euro", ["euro", "euros"])
-        add("GBP", "British Pound", ["pound", "pounds", "sterling", "quid"])
-        add("JPY", "Japanese Yen", ["yen"])
-        add("CHF", "Swiss Franc", ["franc", "francs"])
-        add("CAD", "Canadian Dollar")
-        add("AUD", "Australian Dollar")
-        add("NZD", "New Zealand Dollar")
-        add("CNY", "Chinese Yuan", ["yuan", "renminbi", "rmb"])
-        add("HKD", "Hong Kong Dollar")
-        add("SGD", "Singapore Dollar")
-        add("INR", "Indian Rupee", ["rupee", "rupees"])
-        add("KRW", "South Korean Won", ["won"])
-        add("TWD", "Taiwan Dollar")
-        add("THB", "Thai Baht", ["baht"])
-        add("MYR", "Malaysian Ringgit", ["ringgit"])
-        add("IDR", "Indonesian Rupiah", ["rupiah"])
-        add("PHP", "Philippine Peso")
-        add("VND", "Vietnamese Dong", ["dong"])
-        add("RUB", "Russian Ruble", ["ruble", "rubles", "rouble", "roubles"])
-        add("TRY", "Turkish Lira", ["lira"])
-        add("PLN", "Polish Zloty", ["zloty"])
-        add("CZK", "Czech Koruna", ["koruna"])
-        add("HUF", "Hungarian Forint", ["forint"])
-        add("RON", "Romanian Leu", ["leu", "lei"])
-        add("SEK", "Swedish Krona")
-        add("NOK", "Norwegian Krone")
-        add("DKK", "Danish Krone")
-        add("ISK", "Icelandic Krona")
-        add("ILS", "Israeli Shekel", ["shekel", "shekels"])
-        add("AED", "UAE Dirham", ["dirham", "dirhams"])
-        add("SAR", "Saudi Riyal", ["riyal", "riyals"])
-        add("QAR", "Qatari Riyal")
-        add("EGP", "Egyptian Pound")
-        add("ZAR", "South African Rand", ["rand"])
-        add("NGN", "Nigerian Naira", ["naira"])
-        add("KES", "Kenyan Shilling", ["shilling", "shillings"])
-        add("MAD", "Moroccan Dirham")
-        add("BRL", "Brazilian Real", ["real", "reais"])
-        add("MXN", "Mexican Peso", ["peso", "pesos"])
-        add("ARS", "Argentine Peso")
-        add("CLP", "Chilean Peso")
-        add("COP", "Colombian Peso")
-        add("PEN", "Peruvian Sol")
-        add("UAH", "Ukrainian Hryvnia", ["hryvnia"])
-        add("PKR", "Pakistani Rupee")
-        add("BDT", "Bangladeshi Taka", ["taka"])
-        add("LKR", "Sri Lankan Rupee")
-        add("NPR", "Nepalese Rupee")
-
         return table
     }()
 }

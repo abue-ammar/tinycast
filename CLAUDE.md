@@ -68,7 +68,10 @@ Never break these without an explicit task to do so.
   (`EmojiCatalog`, `EmojiGridGeometry`) stays AppKit/SwiftUI-free for `Tools/emoji-test.swift`.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
-- **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js`** — never edit it by hand.
+- **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
+  `CurrencyData.generated.swift` by `node Tools/gen-currencies.js`** — never edit either by hand.
+  Currency *aliases*, badge short-names and the currency-sign tie-breaks are hand-maintained in
+  `CalcCurrency.swift`; only ISO codes and display names are generated.
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for

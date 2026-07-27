@@ -6,11 +6,10 @@ import Foundation
 @MainActor
 final class CurrencyRateStore: ObservableObject {
     /// Frankfurter (`frankfurter.dev`) — open-source, no key, no account, no quota, rates blended from
-    /// 84 central banks. `quotes` is pinned to the codes the calculator can actually answer for, which
-    /// keeps the response near 500 bytes gzipped instead of pulling all 201 currencies.
+    /// 84 central banks. Unfiltered: `CurrencyData.generated.swift` is generated from this same feed's
+    /// currency list, so every quote it returns is one the calculator can answer for (~1.4 KB gzipped).
     private nonisolated static let endpoint = URL(
-        string: "https://api.frankfurter.dev/v2/rates?base=USD&quotes="
-            + CalcCurrency.codes.joined(separator: ","))!
+        string: "https://api.frankfurter.dev/v2/rates?base=USD")!
     private static let refreshInterval: TimeInterval = 6 * 3600
     /// Shorter retry so a machine that was offline at launch picks rates up soon after it reconnects.
     private static let retryInterval: TimeInterval = 15 * 60

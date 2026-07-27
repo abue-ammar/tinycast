@@ -26,23 +26,32 @@ against a fixed clock.
 
 ## Currency
 
-`CalcCurrency` mirrors `CalcUnits`' shape: an alias table (ISO code, singular/plural name, nicknames,
-and the `€ £ $ ¥ ₹ …` signs the tokenizer folds to codes) plus a `parseConversion` over the same
+`CalcCurrency` mirrors `CalcUnits`' shape: a lookup table plus a `parseConversion` over the same
 `expr from (to|in|->) to` token shape, so `eur to usd` implies an amount of 1 exactly like `m to ft`.
 A leading sign is swapped back into amount-first order, so `€20 to GBP` and `20€ to GBP` parse alike.
 
+The table is **half generated**. ISO codes and display names come from
+`CurrencyData.generated.swift`, emitted by `node Tools/gen-currencies.js` from the same feed the
+rates come from — so all 165 currencies resolve, not just the ones someone thought to type. What the
+feed can't know stays hand-written next to it in `CalcCurrency.swift`:
+
+- **Aliases** — `quid`, `bucks`, `euros`, `rupees`, `yen`. The feed has formal names only.
+- **Badge short-names** — where the formal name would overflow the card pill (`Bosnia and
+  Herzegovina Convertible Mark` is 39 characters) or nobody uses it (`United States Dollar`).
+- **Sign tie-breaks** — the feed lists `$` for eleven currencies and `¥` for two, and two thirds of
+  its symbols are multi-character (`R$`, `Kč`, `د.إ`). Which one `$` means is a product call.
+
 Order is the whole disambiguation story. Currency runs **after** the unit path, so a query both sides
 of which are compatible units stays a measurement: `10 pounds to kg` is weight, `10 pounds to euros`
-is money. A currency on one side and a unit on the other produces the same friendly category error as
-any other mismatch (`Cannot convert Currency to Weight.`).
+is money, and `1 cup to ml` stays volume even though `CUP` is the Cuban peso. A currency on one side
+and a unit on the other produces the same friendly category error as any other mismatch
+(`Cannot convert Currency to Weight.`).
 
 Rates come from `CurrencyRateStore` (`Core/`, owned by `AppCore`), which reads
 [Frankfurter](https://frankfurter.dev) — open source, no key, no account, no quota, rates blended
-from 84 central banks. One `GET api.frankfurter.dev/v2/rates?base=USD&quotes=…`, whose `quotes` list
-is `CalcCurrency.codes` itself, so the request can never drift from what the calculator recognizes
-and the response stays ~500 bytes gzipped instead of pulling all 201 currencies. v2 answers with one
-flat `{date, base, quote, rate}` row per pair rather than a keyed table, and omits the base's own
-row — the store folds both into the `[code: rate]` shape `CurrencyRates` stores.
+from 84 central banks. One `GET api.frankfurter.dev/v2/rates?base=USD`, ~1.4 KB gzipped. v2 answers
+with one flat `{date, base, quote, rate}` row per pair rather than a keyed table, and omits the
+base's own row — the store folds both into the `[code: rate]` shape `CurrencyRates` stores.
 
 The table is cached at `~/Library/Caches/<bundle-id>/currency-rates.json`, refreshed every 6h with a
 15-minute retry after a failure. Offline, the last snapshot keeps answering; with no snapshot at all
