@@ -285,6 +285,27 @@ struct CalcTests {
         expectDisplay("1 cup to ml", "236.5882365 mL")
         expectDisplay("1 cup to tbsp", "16 tbsp")
 
+        // Consent gate: without it the currency path doesn't exist. Not an error card explaining a
+        // feature the user never enabled — no card at all, so the query falls through to app search.
+        expectNilWithoutConsent("1 euro to dollars")
+        expectNilWithoutConsent("100 dollars to yen")
+        expectNilWithoutConsent("50 GBP in euros")
+        expectNilWithoutConsent("eur to usd")
+        expectNilWithoutConsent("€20 to GBP")
+        expectNilWithoutConsent("2*50 usd to cad")
+        expectNilWithoutConsent("1 zloty to eur")
+        // Even the friendly category error stays silent — it would leak that currency exists.
+        expectNilWithoutConsent("10 usd to kg")
+        expectNilWithoutConsent("10 kg to usd")
+        // Everything that isn't currency is untouched by the gate.
+        expectDisplayWithoutConsent("10 pounds to kilograms", "4.5359237 kg")
+        expectDisplayWithoutConsent("10 pounds", "4.5359237 kg")
+        expectDisplayWithoutConsent("1 cup to ml", "236.5882365 mL")
+        expectDisplayWithoutConsent("10km to mi", "6.213711922 mi")
+        expectDisplayWithoutConsent("2+2", "4")
+        expectDisplayWithoutConsent("255 to hex", "0xFF")
+        expectDisplayWithoutConsent("20% off 500", "400")
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -349,7 +370,7 @@ struct CalcTests {
     }
 
     static func expectBadges(_ query: String, source: String, target: String) {
-        guard let result = CalcEngine.evaluate(query, rates: fx) else {
+        guard let result = CalcEngine.evaluate(query, currency: .on(fx)) else {
             fail(query, expected: "\(source) → \(target)", got: "nil")
             return
         }
@@ -358,7 +379,8 @@ struct CalcTests {
     }
 
     static func expectDisplay(_ query: String, _ expected: String) {
-        guard case .value(let display, _)? = CalcEngine.evaluate(query, rates: fx)?.payload else {
+        guard case .value(let display, _)? = CalcEngine.evaluate(query, currency: .on(fx))?.payload
+        else {
             fail(query, expected: expected, got: "nil / error")
             return
         }
@@ -366,7 +388,8 @@ struct CalcTests {
     }
 
     static func expectCopy(_ query: String, _ expected: String) {
-        guard case .value(_, let copy)? = CalcEngine.evaluate(query, rates: fx)?.payload else {
+        guard case .value(_, let copy)? = CalcEngine.evaluate(query, currency: .on(fx))?.payload
+        else {
             fail(query, expected: expected, got: "nil / error")
             return
         }
@@ -374,24 +397,48 @@ struct CalcTests {
     }
 
     static func expectError(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, rates: fx)?.payload else {
+        guard case .error(let message)? = CalcEngine.evaluate(query, currency: .on(fx))?.payload
+        else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
         }
         check(query, expected: expected, got: message)
     }
 
-    /// The first-run / never-connected state: no snapshot at all.
+    /// Consented, but no snapshot has landed yet — first run, or still offline.
     static func expectErrorWithoutRates(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query)?.payload else {
+        guard case .error(let message)? = CalcEngine.evaluate(query, currency: .on(nil))?.payload
+        else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
         }
         check(query, expected: expected, got: message)
+    }
+
+    /// No consent: the currency path must not engage. Checks the explicit `.off` source and the
+    /// default argument, since a caller that forgets to pass one must still get the feature off.
+    static func expectNilWithoutConsent(_ query: String) {
+        if let result = CalcEngine.evaluate(query, currency: .off) {
+            fail(query, expected: "nil (consent withheld)", got: "\(result.payload)")
+        } else if let result = CalcEngine.evaluate(query) {
+            fail(query, expected: "nil (default source)", got: "\(result.payload)")
+        } else {
+            passes += 1
+        }
+    }
+
+    /// A non-currency answer that must survive with the feature switched off.
+    static func expectDisplayWithoutConsent(_ query: String, _ expected: String) {
+        guard case .value(let display, _)? = CalcEngine.evaluate(query, currency: .off)?.payload
+        else {
+            fail(query, expected: expected, got: "nil / error")
+            return
+        }
+        check(query, expected: expected, got: display)
     }
 
     static func expectExpression(_ query: String, _ expected: String) {
-        guard let result = CalcEngine.evaluate(query, rates: fx) else {
+        guard let result = CalcEngine.evaluate(query, currency: .on(fx)) else {
             fail(query, expected: expected, got: "nil")
             return
         }
@@ -399,7 +446,7 @@ struct CalcTests {
     }
 
     static func expectNil(_ query: String) {
-        if let result = CalcEngine.evaluate(query, rates: fx) {
+        if let result = CalcEngine.evaluate(query, currency: .on(fx)) {
             fail(query, expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1

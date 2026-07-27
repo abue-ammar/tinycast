@@ -26,6 +26,17 @@ struct CurrencyRates: Codable, Equatable, Sendable {
     }
 }
 
+/// Whether the calculator may answer currency questions at all, and with what.
+///
+/// `.off` is the shipped default and the *only* state that exists without explicit user consent:
+/// the currency path never engages, so a currency query falls through to no card — not an error
+/// explaining a feature the user never turned on. `.on(nil)` means consent was given but no
+/// snapshot has landed yet, which is the state that earns the "rates unavailable" message.
+enum CurrencySource: Equatable, Sendable {
+    case off
+    case on(CurrencyRates?)
+}
+
 enum CalcCurrency {
     enum ConversionParse: Equatable {
         case value(input: Double, from: CurrencyDef, to: CurrencyDef, output: Double)
@@ -41,7 +52,9 @@ enum CalcCurrency {
     static let categoryName = "Currency"
 
     /// Detects `expr currency (to|in|->) currency`, mirroring `CalcUnits.parseConversion`'s shape so both read the same. Runs *after* the unit path, so a query both sides of which are compatible units (`10 pounds to kg`) never reaches here. A missing amount defaults to 1, so `eur to usd` reads as `1 eur to usd`.
-    static func parseConversion(_ tokens: [CalcToken], rates: CurrencyRates?) -> ConversionParse? {
+    static func parseConversion(_ tokens: [CalcToken], source: CurrencySource) -> ConversionParse? {
+        // The consent gate, before any parsing: without it the feature does not exist.
+        guard case .on(let rates) = source else { return nil }
         let tokens = amountFirst(tokens)
         guard tokens.count >= 3, CalcUnits.isConnector(tokens[tokens.count - 2]),
             case .ident(let toName) = tokens[tokens.count - 1],

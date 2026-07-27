@@ -6,7 +6,7 @@ extension Notification.Name {
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, permissions, shortcuts, backup, about
+    case general, clipboard, emoji, permissions, shortcuts, backup, miscellaneous, about
     var id: Int { rawValue }
 
     var title: String {
@@ -17,6 +17,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         case .backup: return "Backup"
+        case .miscellaneous: return "Miscellaneous"
         case .about: return "About"
         }
     }
@@ -29,6 +30,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         case .backup: return "arrow.up.arrow.down.circle"
+        case .miscellaneous: return "ellipsis.circle"
         case .about: return "info.circle"
         }
     }
@@ -42,6 +44,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .permissions: return .blue
         case .shortcuts: return .indigo
         case .backup: return .teal
+        case .miscellaneous: return .purple
         case .about: return .pink
         }
     }
@@ -67,6 +70,7 @@ struct SettingsRootView: View {
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .backup: BackupSettingsView()
+                case .miscellaneous: MiscellaneousSettingsView()
                 case .about: AboutView()
                 }
             }

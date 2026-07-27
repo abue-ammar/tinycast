@@ -73,6 +73,15 @@ Never break these without an explicit task to do so.
   Currency names, signs and uncontested nouns are generated (Frankfurter × CLDR); the only
   hand-maintained currency data is `CalcCurrency.contested`, the nouns several currencies share
   (`dollars`, `pounds`). Don't add slang or synonyms there — no source of truth, so they rot.
+- **Every networked feature ships off and is consent-gated.** Tinycast is offline by default; a
+  feature that reaches the network must be opt-in behind a Settings toggle whose dialog names the
+  provider, the cadence and what leaves the machine, and its owning store must re-check consent at
+  every entry point — including on both sides of the `await` around the request, since consent can
+  be withdrawn mid-flight. Consent flags live on the owning store, never in `AppSettings`
+  (`SettingsBackup` mirrors that type, and an import must not grant network access). Model the gate
+  so the *safe* state is the default: `CalcEngine.evaluate`'s `currency:` parameter defaults to
+  `.off`, so forgetting to pass one disables the feature rather than enabling it.
+  `CurrencyRateStore` is the reference implementation — follow it rather than inventing a second shape.
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for

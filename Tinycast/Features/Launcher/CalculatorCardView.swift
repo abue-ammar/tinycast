@@ -1,15 +1,29 @@
 import SwiftUI
 
-/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`, so hover/selection re-renders with the same query don't re-run the evaluator. A new FX snapshot changes `fetchedAt`, which invalidates the memo without comparing the rate table itself.
+/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`, so hover/selection
+/// re-renders with the same query don't re-run the evaluator. Keyed on the consent flag plus the
+/// snapshot's `fetchedAt`, so flipping the setting or landing a fresh table invalidates the memo
+/// without comparing the rate table itself.
 @MainActor
 enum CalcMemo {
-    private static var cache: (query: String, ratesStamp: Date?, result: CalcResult?)?
+    private static var cache: (query: String, enabled: Bool, stamp: Date?, result: CalcResult?)?
 
-    static func evaluate(_ query: String, rates: CurrencyRates?) -> CalcResult? {
-        let stamp = rates?.fetchedAt
-        if let cache, cache.query == query, cache.ratesStamp == stamp { return cache.result }
-        let result = CalcEngine.evaluate(query, rates: rates)
-        cache = (query, stamp, result)
+    static func evaluate(_ query: String, currency: CurrencySource) -> CalcResult? {
+        let enabled: Bool
+        let stamp: Date?
+        switch currency {
+        case .off:
+            enabled = false
+            stamp = nil
+        case .on(let rates):
+            enabled = true
+            stamp = rates?.fetchedAt
+        }
+        if let cache, cache.query == query, cache.enabled == enabled, cache.stamp == stamp {
+            return cache.result
+        }
+        let result = CalcEngine.evaluate(query, currency: currency)
+        cache = (query, enabled, stamp, result)
         return result
     }
 }

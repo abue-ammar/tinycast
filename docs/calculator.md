@@ -59,6 +59,29 @@ is money, and `1 cup to ml` stays volume even though `CUP` is the Cuban peso. A 
 and a unit on the other produces the same friendly category error as any other mismatch
 (`Cannot convert Currency to Weight.`).
 
+### Consent
+
+Currency conversion reaches the network, so it ships **off** and stays off until the user turns it on
+in Settings → Miscellaneous and accepts a sheet naming the provider, the request cadence and what
+leaves the machine. Declining leaves it off; there is no "remind me later" state. Any future feature
+that needs the network should follow the same shape rather than inventing a second one.
+
+The gate is a type, not a boolean sprinkled around: `CalcEngine.evaluate` takes a `CurrencySource`
+that is either `.off` or `.on(CurrencyRates?)`, and it **defaults to `.off`**, so a caller that
+forgets to pass one gets the feature disabled rather than silently enabled. `.off` makes
+`CalcCurrency.parseConversion` return nil before it parses anything, so a currency query produces no
+card at all — not even the category-mismatch error, which would leak that the feature exists.
+`.on(nil)` is the consented-but-not-yet-downloaded state, and that is what earns the "rates
+unavailable" message.
+
+`CurrencyRateStore` re-checks consent at every entry point rather than trusting a caller: reading the
+cache at init, the `source` the engine is handed, `start()`, each turn of the refresh loop, and twice
+around the network call itself — once before the request and once after the `await`, since consent
+can be withdrawn while a response is in flight. Revoking cancels the loop, drops the snapshot and
+deletes the cached file. The flag lives on the store, deliberately *not* in `AppSettings`:
+`SettingsBackup` mirrors that type field-for-field, and importing a config must never be able to
+grant network access.
+
 Rates come from `CurrencyRateStore` (`Core/`, owned by `AppCore`), which reads
 [Frankfurter](https://frankfurter.dev) — open source, no key, no account, no quota, rates blended
 from 84 central banks. One `GET api.frankfurter.dev/v2/rates?base=USD`, ~1.4 KB gzipped. v2 answers

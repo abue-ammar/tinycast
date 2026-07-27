@@ -44,6 +44,7 @@
 		8631543D8E0E008E7C541345 /* BackupSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FC323070A08CD17DFFB2F8A /* BackupSettingsView.swift */; };
 		86D400D72735A8D0829029DE /* SettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */; };
 		8EF55652F19A1E0C5FF644B4 /* RaycastImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4049668745FD438D5792A2F /* RaycastImport.swift */; };
+		8F7431A1340D0A5783599087 /* MiscellaneousSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297F819E291F33E43E490359 /* MiscellaneousSettingsView.swift */; };
 		903E82F78D3FCEF3A1AF3752 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */; };
 		97A195E9D6480418D4944560 /* AppCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A64EF5A07D459753998F78C /* AppCore.swift */; };
 		9969E6858C4FDC5CCCDEB5D8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C45190564C9D9F1722E83943 /* Assets.xcassets */; };
@@ -93,6 +94,7 @@
 		1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
 		23591B301A183579098AA019 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		25B8A7D8DBB0CE2ACEDB3979 /* CalcUnits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcUnits.swift; sourceTree = "<group>"; };
+		297F819E291F33E43E490359 /* MiscellaneousSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiscellaneousSettingsView.swift; sourceTree = "<group>"; };
 		299122624B5E1BA2C5400478 /* CalcCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcCurrency.swift; sourceTree = "<group>"; };
 		2B629EC3B716FEE881BB0075 /* TinycastApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinycastApp.swift; sourceTree = "<group>"; };
 		2C3EB07C07902C53BFD3B08B /* KeyShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcut.swift; sourceTree = "<group>"; };
@@ -342,6 +344,7 @@
 				849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */,
 				041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */,
 				4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */,
+				297F819E291F33E43E490359 /* MiscellaneousSettingsView.swift */,
 				0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */,
 				1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */,
 				D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */,
@@ -492,6 +495,7 @@
 				F5F3381FF70997223F8888B0 /* KeyShortcut.swift in Sources */,
 				A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */,
 				DCC36924E538C11136CEC060 /* LauncherView.swift in Sources */,
+				8F7431A1340D0A5783599087 /* MiscellaneousSettingsView.swift in Sources */,
 				6962B8A2850A45401275F677 /* NotificationToken.swift in Sources */,
 				DA5BCA13045FF91B3FC8EB35 /* OnboardingState.swift in Sources */,
 				0DD808F80666846F4E74BAD8 /* OnboardingView.swift in Sources */,
