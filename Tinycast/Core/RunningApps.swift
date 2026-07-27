@@ -21,6 +21,12 @@ final class RunningAppsMonitor: ObservableObject {
         }
     }
 
+    /// True when the entry's bundle is currently running — drives the row's running dot and the Quit action.
+    func isRunning(_ app: AppEntry) -> Bool {
+        guard let bundleID = app.bundleID else { return false }
+        return runningBundleIDs.contains(bundleID)
+    }
+
     private func refresh() {
         runningBundleIDs = Set(
             NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))

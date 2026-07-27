@@ -10,6 +10,8 @@ struct RootPaletteView: View {
     @EnvironmentObject private var calcHistory: CalculatorHistoryStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
     @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
+    /// Observed so an app launching / quitting re-renders the Quit action's availability.
+    @EnvironmentObject private var runningApps: RunningAppsMonitor
     /// Observed so a skin tone changed in Settings re-renders the grid glyphs immediately.
     @ObservedObject private var settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
@@ -105,7 +107,9 @@ struct RootPaletteView: View {
                 return CalcActionsMenu.content(result: calc, core: core)
             }
             if let app = selectedAppEntry {
-                return AppActionsMenu.content(app: app, core: core, favorites: favorites)
+                return AppActionsMenu.content(
+                    app: app, core: core, favorites: favorites,
+                    running: runningApps.isRunning(app))
             }
             return nil
         case .clipboard:
@@ -344,7 +348,11 @@ struct RootPaletteView: View {
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
             case .launcher:
-                return .ignored
+                // ⌘↵ quits the selected app when it's running (the Actions menu advertises it); nothing else in the launcher takes a modified ↵.
+                guard command, let app = selectedAppEntry, runningApps.isRunning(app) else {
+                    return .ignored
+                }
+                core.quit(app)
             }
             return .handled
         }

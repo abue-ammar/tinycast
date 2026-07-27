@@ -40,4 +40,32 @@ enum AppLauncher {
             running.activate()
         }
     }
+
+    /// Asks every running instance of a bundle ID to quit — graceful, so an app with unsaved work still gets to put its own sheet up. False when nothing was running.
+    @MainActor
+    @discardableResult
+    static func quit(bundleID: String) -> Bool {
+        let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        for app in running { app.terminate() }
+        return !running.isEmpty
+    }
+
+    /// Finder is never a Quit All target: `terminate()` only makes it relaunch, and nobody means the desktop when they say "quit everything".
+    private static let quitAllExclusions: Set<String> = ["com.apple.finder"]
+
+    /// What Quit All acts on: every app with a Dock presence, minus Finder and Tinycast itself. Accessories and background agents are left alone.
+    @MainActor
+    static func quitAllTargets() -> [NSRunningApplication] {
+        let ownPID = NSRunningApplication.current.processIdentifier
+        return NSWorkspace.shared.runningApplications.filter { app in
+            app.activationPolicy == .regular
+                && app.processIdentifier != ownPID
+                && !quitAllExclusions.contains(app.bundleIdentifier ?? "")
+        }
+    }
+
+    @MainActor
+    static func quitAll() {
+        for app in quitAllTargets() { app.terminate() }
+    }
 }

@@ -79,8 +79,7 @@ struct LauncherList: View {
                                     AppRow(
                                         app: app,
                                         selected: app.id == selectedID,
-                                        running: app.bundleID.map(
-                                            runningApps.runningBundleIDs.contains) ?? false
+                                        running: runningApps.isRunning(app)
                                     )
                                     .contentShape(Rectangle())
                                     .onTapGesture { core.launch(app) }
@@ -221,7 +220,7 @@ struct AppIconView: View {
 /// Actions menu content for a launcher app, shown bottom-right on right-click or from the Actions pill.
 @MainActor
 enum AppActionsMenu {
-    static func content(app: AppEntry, core: AppCore, favorites: FavoritesStore)
+    static func content(app: AppEntry, core: AppCore, favorites: FavoritesStore, running: Bool)
         -> PopoverMenuContent
     {
         var items: [PopoverMenuItem] = [
@@ -244,6 +243,15 @@ enum AppActionsMenu {
             items.append(
                 PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
                     core.showInFinder(app)
+                })
+        }
+        if running, app.kind == .application {
+            items.append(
+                PopoverMenuItem(
+                    title: "Quit Application", systemImage: "power", shortcut: "⌘↵",
+                    isDestructive: true
+                ) {
+                    core.quit(app)
                 })
         }
         return PopoverMenuContent(header: app.name, items: items)

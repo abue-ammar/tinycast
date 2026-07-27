@@ -261,6 +261,14 @@ final class AppCore: ObservableObject {
         }
     }
 
+    /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.
+    func quit(_ app: AppEntry) {
+        guard app.kind == .application, let bundleID = app.bundleID,
+            AppLauncher.quit(bundleID: bundleID)
+        else { return }
+        hidePalette(restoreFocus: false)
+    }
+
     private func runCommand(_ entry: AppEntry) {
         switch CommandRegistry.command(for: entry) {
         case .calculatorHistory:
@@ -284,6 +292,9 @@ final class AppCore: ObservableObject {
         case .about:
             hidePalette(restoreFocus: false)
             showAbout()
+        case .quitAllApps:
+            hidePalette(restoreFocus: false)
+            AppLauncher.quitAll()
         case .quit:
             NSApp.terminate(nil)
         case nil:
