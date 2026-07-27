@@ -263,6 +263,37 @@ final class AppCore: ObservableObject {
         }
     }
 
+    /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.
+    func quit(_ app: AppEntry) {
+        guard app.kind == .application, let bundleID = app.bundleID else { return }
+        // Unlike `launch`, nothing here takes focus on its own — hand it back to where the user was, unless that's the app now on its way out.
+        let quittingPreviousApp = windowController.previousApp?.bundleIdentifier == bundleID
+        guard AppLauncher.quit(bundleID: bundleID) else { return }
+        hidePalette(restoreFocus: !quittingPreviousApp)
+    }
+
+    /// Quit All: the one action whose blast radius reaches outside Tinycast, so it confirms first. The target list is resolved once and both counted and terminated, so the set the user approves is the set that quits.
+    private func quitAllApps() {
+        let targets = AppLauncher.quitAllTargets()
+        guard !targets.isEmpty, Self.confirmQuitAll(count: targets.count) else { return }
+        for app in targets { app.terminate() }
+    }
+
+    private static func confirmQuitAll(count: Int) -> Bool {
+        // An accessory app's alert opens behind the frontmost app unless it activates first (same as `BackupActions`).
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = count == 1 ? "Quit 1 application?" : "Quit \(count) applications?"
+        alert.informativeText = "Applications with unsaved changes will ask you to save."
+        alert.alertStyle = .warning
+        let quitButton = alert.addButton(withTitle: "Quit All")
+        quitButton.hasDestructiveAction = true
+        // `hasDestructiveAction` only tints the button — it stays the ↵ default. Hand ↵ to Cancel instead: this command is one ↵ away in the palette, and a second reflexive ↵ must not quit the desktop.
+        quitButton.keyEquivalent = ""
+        alert.addButton(withTitle: "Cancel").keyEquivalent = "\r"
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     private func runCommand(_ entry: AppEntry) {
         switch CommandRegistry.command(for: entry) {
         case .calculatorHistory:
@@ -286,6 +317,10 @@ final class AppCore: ObservableObject {
         case .about:
             hidePalette(restoreFocus: false)
             showAbout()
+        case .quitAllApps:
+            // Hide before confirming: the palette is a floating panel and would sit above the alert.
+            hidePalette(restoreFocus: false)
+            quitAllApps()
         case .quit:
             NSApp.terminate(nil)
         case nil:

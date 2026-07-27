@@ -18,6 +18,8 @@ struct RootPaletteView: View {
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
+    /// The selection's running state, sampled once by `openActions` — an app launching or quitting elsewhere must not add or drop the Quit row while the menu is up. `RunningAppsMonitor` is deliberately not observed here: only `LauncherList` needs live running state, and observing it would re-render the whole palette on every workspace launch/terminate.
+    @State private var selectionIsRunning = false
     /// Highlighted row of whichever popover menu is open; reset to the first row on open, moved by ↑/↓ and hover, activated by ↵/click.
     @State private var menuSelection = 0
     /// Bumped only when the selection should pull the scroll view with it (keyboard nav, list resets); mouse selection targets a visible row, so it leaves this and the list put.
@@ -109,7 +111,8 @@ struct RootPaletteView: View {
                 return CalcActionsMenu.content(result: calc, core: core)
             }
             if let app = selectedAppEntry {
-                return AppActionsMenu.content(app: app, core: core, favorites: favorites)
+                return AppActionsMenu.content(
+                    app: app, core: core, favorites: favorites, running: selectionIsRunning)
             }
             return nil
         case .clipboard:
@@ -348,7 +351,11 @@ struct RootPaletteView: View {
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
             case .launcher:
-                return .ignored
+                // ⌘↵ quits the selected app when it's running (the Actions menu advertises it); nothing else in the launcher takes a modified ↵. The condition mirrors the menu row's exactly, so the key never swallows a press it won't act on.
+                guard command, let app = selectedAppEntry, app.kind == .application,
+                    core.runningApps.isRunning(app)
+                else { return .ignored }
+                core.quit(app)
             }
             return .handled
         }
@@ -378,7 +385,7 @@ struct RootPaletteView: View {
             guard resultCount > 0 else { return .handled }
             // An error calc card is the selection but has no actions — don't open an empty panel.
             if calcCount > 0, selection == 0, calcResult?.isActionable != true { return .handled }
-            withAnimation(Self.menuAnimation) { showActions.toggle() }
+            toggleActions()
             return .handled
         }
         // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
@@ -478,11 +485,11 @@ struct RootPaletteView: View {
                 onCalcActions: {
                     guard let calc, case .value = calc.payload else { return }
                     vm.selection = 0
-                    withAnimation(Self.menuAnimation) { showActions = true }
+                    openActions()
                 },
                 onActions: { app in
                     if let index = apps.firstIndex(of: app) { vm.selection = index + offset }
-                    withAnimation(Self.menuAnimation) { showActions = true }
+                    openActions()
                 }
             )
         case .clipboard:
@@ -500,7 +507,7 @@ struct RootPaletteView: View {
                         onActivate: activateSelection,
                         onActions: { item in
                             if let index = clips.firstIndex(of: item) { vm.selection = index }
-                            withAnimation(Self.menuAnimation) { showActions = true }
+                            openActions()
                         }
                     )
                     .frame(width: Theme.Size.clipboardListWidth)
@@ -532,7 +539,7 @@ struct RootPaletteView: View {
                     onCalcActions: {
                         guard let calc, case .value = calc.payload else { return }
                         vm.selection = 0
-                        withAnimation(Self.menuAnimation) { showActions = true }
+                        openActions()
                     },
                     onSelect: { entry in
                         if let index = hist.firstIndex(of: entry) { vm.selection = index + offset }
@@ -540,7 +547,7 @@ struct RootPaletteView: View {
                     onActivate: activateSelection,
                     onActions: { entry in
                         if let index = hist.firstIndex(of: entry) { vm.selection = index + offset }
-                        withAnimation(Self.menuAnimation) { showActions = true }
+                        openActions()
                     }
                 )
             }
@@ -559,7 +566,7 @@ struct RootPaletteView: View {
                     onActivate: activateSelection,
                     onActions: { flat in
                         vm.selection = flat
-                        withAnimation(Self.menuAnimation) { showActions = true }
+                        openActions()
                     }
                 )
             }
@@ -595,7 +602,7 @@ struct RootPaletteView: View {
                     KeyCapChip(text: "↵", style: .outline)
                 }
             }
-            BarButton(action: { withAnimation(Self.menuAnimation) { showActions.toggle() } }) {
+            BarButton(action: toggleActions) {
                 HStack(spacing: Theme.Spacing.sm) {
                     Text("Actions")
                         .font(Theme.Typography.bar)
@@ -625,6 +632,25 @@ struct RootPaletteView: View {
             case .command: return "Open Command"
             default: return "Open Application"
             }
+        }
+    }
+
+    /// The single path that opens the Actions menu: samples the state its rows depend on, then shows it. Callers set `vm.selection` first, so the sample matches the row the menu is for.
+    private func openActions() {
+        // Only the launcher's menu carries a Quit row, so the other modes skip the (unmemoized) `appResults` walk entirely.
+        if vm.mode == .launcher, let app = selectedAppEntry {
+            selectionIsRunning = core.runningApps.isRunning(app)
+        } else {
+            selectionIsRunning = false
+        }
+        withAnimation(Self.menuAnimation) { showActions = true }
+    }
+
+    private func toggleActions() {
+        if showActions {
+            withAnimation(Self.menuAnimation) { showActions = false }
+        } else {
+            openActions()
         }
     }
 
