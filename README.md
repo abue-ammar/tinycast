@@ -1,10 +1,10 @@
-# Tinycast
+# Smallcast
 
 A tiny, fully native macOS launcher — the essentials, without the bloat.
 
 <!-- Screenshot placeholder — drop the real image at docs/screenshot.png -->
 <p align="center">
-  <img src="docs/screenshot.png" alt="Tinycast command palette" width="720">
+  <img src="docs/screenshot.png" alt="Smallcast command palette" width="720">
 </p>
 
 Around **4 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
@@ -25,29 +25,29 @@ JavaScriptCore ships with macOS, so that costs no extra binary size.
 ## Install
 
 ```sh
-brew trust --tap abue-ammar/tinycast   # required for third-party taps
-brew tap abue-ammar/tinycast
-brew install --cask tinycast          # stable
-brew install --cask tinycast@beta     # beta  (installs side-by-side)
+brew trust --tap arthur-fontaine/smallcast   # required for third-party taps
+brew tap arthur-fontaine/smallcast
+brew install --cask smallcast          # stable
+brew install --cask smallcast@beta     # beta  (installs side-by-side)
 ```
 
-Each channel is a separate app (`Tinycast.app`, `Tinycast Beta.app`) with its own settings and
+Each channel is a separate app (`Smallcast.app`, `Smallcast Beta.app`) with its own settings and
 permissions, so you can run stable next to the beta.
 
-Tinycast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
+Smallcast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
 automatically on every install and update, so there's nothing to run. (If you download the DMG
 directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
-"/Applications/Tinycast.app"`.)
+"/Applications/Smallcast.app"`.)
 
 ## Permissions
 
-**Accessibility** — needed only so Tinycast can paste a clipboard item back into the app you
+**Accessibility** — needed only so Smallcast can paste a clipboard item back into the app you
 came from. You're prompted the first time you paste; grant it in **System Settings → Privacy &
 Security → Accessibility**.
 
 ## Using it
 
-1. Open **Settings → General** and record a global shortcut to summon Tinycast.
+1. Open **Settings → General** and record a global shortcut to summon Smallcast.
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
 4. **Settings → App Hotkeys** — search an app and record a shortcut to toggle it.
@@ -55,7 +55,7 @@ Security → Accessibility**.
 
 ### Raycast extensions
 
-Tinycast runs the same prebuilt extension bundles Raycast does. **Settings → Extensions → Import from
+Smallcast runs the same prebuilt extension bundles Raycast does. **Settings → Extensions → Import from
 Raycast** copies the ones already built on your machine; **Add Extension Folder…** takes any directory
 you've run `ray build` in. Their commands then appear in the launcher under *Extensions*, and their
 `List`, `Grid`, `Detail` and `Form` screens are drawn natively — same keyboard model, ⌘K action panel

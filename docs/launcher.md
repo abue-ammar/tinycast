@@ -7,7 +7,7 @@
 consecutive / word-boundary bonuses. Rankings are memoized one query deep.
 
 > **Invariant:** `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from
-> `Tinycast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test
+> `Smallcast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test
 > is meaningless.
 
 Icons go through a count-capped `NSCache` (`IconCache`).

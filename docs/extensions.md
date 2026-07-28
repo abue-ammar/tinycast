@@ -1,6 +1,6 @@
 # Raycast extensions
 
-Tinycast runs Raycast extensions: the same `package.json` + prebuilt CommonJS bundles Raycast itself
+Smallcast runs Raycast extensions: the same `package.json` + prebuilt CommonJS bundles Raycast itself
 produces, rendered natively into the palette. No Electron, no browser, no Node.js.
 
 - [How it works](#how-it-works) · [The JS runtime](#the-js-runtime) ·
@@ -11,7 +11,7 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 ## How it works
 
 A Raycast extension command is a **single prebuilt CommonJS file** that keeps `react`,
-`react/jsx-runtime`, `@raycast/api` and the Node built-ins external. Tinycast supplies exactly those,
+`react/jsx-runtime`, `@raycast/api` and the Node built-ins external. Smallcast supplies exactly those,
 runs the bundle, and renders the React tree it produces:
 
 ```
@@ -53,13 +53,13 @@ timers, `fetch`, `URL`, `URLSearchParams`, `TextEncoder`/`TextDecoder`, `AbortCo
 
 ## The JS runtime
 
-`Tinycast/Resources/RaycastRuntime.generated.js` (~200 KB minified) is **generated and committed**, the
-same arrangement as `EmojiData.generated.swift`: building Tinycast never needs Node. Sources live in
+`Smallcast/Resources/RaycastRuntime.generated.js` (~200 KB minified) is **generated and committed**, the
+same arrangement as `EmojiData.generated.swift`: building Smallcast never needs Node. Sources live in
 [`Tools/raycast-runtime/`](../Tools/raycast-runtime):
 
 | File | What it is |
 | --- | --- |
-| `src/index.js` | the `__tinycast` object Swift calls into (`boot`, `start`, `dispatch`, `popNavigation`, `settle`, `fireTimer`, `stop`) |
+| `src/index.js` | the `__smallcast` object Swift calls into (`boot`, `start`, `dispatch`, `popNavigation`, `settle`, `fireTimer`, `stop`) |
 | `src/host.js` | the JS→Swift seam: async `hostCall`, blocking `hostCallSync`, logging |
 | `src/reconciler.js` | `react-reconciler` host config that commits into a JSON tree |
 | `src/api/components.js` | every `@raycast/api` component |
@@ -71,7 +71,7 @@ same arrangement as `EmojiData.generated.swift`: building Tinycast never needs N
 Two host-call flavours:
 
 - **Async** (`invoke`) for anything that needs the main actor — clipboard, toasts, window control,
-  `fetch`, `exec`. Swift answers later through `__tinycast.settle`, so the JS thread never blocks on the
+  `fetch`, `exec`. Swift answers later through `__smallcast.settle`, so the JS thread never blocks on the
   UI.
 - **Blocking** (`invokeSync`) for the synchronous Node shims only — `fs.readFileSync`,
   `execSync`, `createHash`, `gunzipSync`. Safe because Swift services these entirely on the JS queue;
@@ -79,7 +79,7 @@ Two host-call flavours:
 
 ## The Swift host
 
-`Tinycast/Core/Extensions/`:
+`Smallcast/Core/Extensions/`:
 
 | File | Role |
 | --- | --- |
@@ -126,7 +126,7 @@ screens hold (see [palette.md](palette.md)).
 - **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, remote
   images) with `AttributedString` handling inline styling, plus `Detail.Metadata`.
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
-  edit dispatches `onTinycastChange` and the resulting re-render is what updates the control, so
+  edit dispatches `onSmallcastChange` and the resulting re-render is what updates the control, so
   `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
 - **ActionPanel** — flattened (sections and submenus included) into the palette's ⌘K menu. The first
   action is the primary ↵ action; an action's own `shortcut` is matched against modified keystrokes.
@@ -164,7 +164,7 @@ Settings → Extensions offers two routes:
 Only `package.json`, the built commands and `assets/` are copied — never `node_modules` or the
 multi-megabyte `.js.map` Raycast writes beside each bundle.
 
-Tinycast does **not** bundle extensions itself. That is the deliberate boundary: bundling needs a
+Smallcast does **not** bundle extensions itself. That is the deliberate boundary: bundling needs a
 JavaScript toolchain and a dependency installer, which would dwarf the app.
 
 ## What's supported
@@ -200,7 +200,7 @@ extensions / 114 of 147 view commands** boot and render. `Tools/raycast-runtime/
 
 | Gap | Why |
 | --- | --- |
-| **OAuth** (`OAuth.PKCEClient`) | The `Web` redirect method routes through `raycast.com/redirect`, which the provider's app registration is bound to. Not portable without that service; `App`/`AppURI` redirects would need a Tinycast URL scheme. This is the single biggest gap — 3 of the 37 extensions measured, 26 commands. |
+| **OAuth** (`OAuth.PKCEClient`) | The `Web` redirect method routes through `raycast.com/redirect`, which the provider's app registration is bound to. Not portable without that service; `App`/`AppURI` redirects would need a Smallcast URL scheme. This is the single biggest gap — 3 of the 37 extensions measured, 26 commands. |
 | **`menu-bar` commands** | The launcher lists them and explains why they don't open. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **WebSocket** | No polyfill yet; `URLSessionWebSocketTask` could back one. |
@@ -214,7 +214,7 @@ extensions / 114 of 147 view commands** boot and render. `Tools/raycast-runtime/
 cd Tools/raycast-runtime
 pnpm install
 node gen-enums.mjs        # only after bumping the @raycast/api devDependency
-node build.mjs            # → Tinycast/Resources/RaycastRuntime.generated.js (commit it)
+node build.mjs            # → Smallcast/Resources/RaycastRuntime.generated.js (commit it)
 node build.mjs --dev       # unminified, React in development mode (better error messages)
 ```
 
@@ -229,10 +229,10 @@ node test.mjs ~/.config/raycast/extensions/<uuid> [command]
 
 # 3. the real Swift engine, against JavaScriptCore
 swiftc -parse-as-library -swift-version 6 \
-  Tinycast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
-  Tinycast/Core/FuzzyMatch.swift Tinycast/Core/Compression/Zlib.swift \
+  Smallcast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
+  Smallcast/Core/FuzzyMatch.swift Smallcast/Core/Compression/Zlib.swift \
   Tools/ext-test.swift -o /tmp/ext-test && /tmp/ext-test
-/tmp/ext-test ~/Library/Application\ Support/com.tinycast.app.dev/extensions/<name> [command]
+/tmp/ext-test ~/Library/Application\ Support/com.smallcast.app.dev/extensions/<name> [command]
 ```
 
 `ext-test` compiles the real engine sources — there is no copy to keep in sync. `EXT_TEST_VERBOSE=1`

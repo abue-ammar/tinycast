@@ -19,7 +19,7 @@ export function requireModule(name) {
   const root = key.startsWith("@") ? key.split("/").slice(0, 2).join("/") : key.split("/")[0];
   if (registry.has(root)) return registry.get(root);
   throw new Error(
-    `Cannot find module '${key}'. Tinycast provides React, @raycast/api and a subset of Node builtins — see docs/extensions.md.`,
+    `Cannot find module '${key}'. Smallcast provides React, @raycast/api and a subset of Node builtins — see docs/extensions.md.`,
   );
 }
 
@@ -27,7 +27,7 @@ export function requireModule(name) {
 /// to `__dirname`, and `environment.assetsPath` points at the same directory.
 export function evaluateCommonJS(code, filename, dirname) {
   const module = { exports: {}, id: filename, filename, loaded: false, children: [], paths: [] };
-  const factory = globalThis.__tinycastCompile(code, filename);
+  const factory = globalThis.__smallcastCompile(code, filename);
   factory(module.exports, requireModule, module, filename, dirname);
   module.loaded = true;
   return module.exports;

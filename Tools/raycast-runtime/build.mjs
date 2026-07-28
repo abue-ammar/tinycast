@@ -1,14 +1,14 @@
-// Bundles the embedded extension runtime into Tinycast/Resources/RaycastRuntime.generated.js.
+// Bundles the embedded extension runtime into Smallcast/Resources/RaycastRuntime.generated.js.
 //
 //   pnpm install && node gen-enums.mjs && node build.mjs
 //
-// The output is committed (like EmojiData.generated.swift) so building Tinycast never needs Node.
+// The output is committed (like EmojiData.generated.swift) so building Smallcast never needs Node.
 
 import { build } from "esbuild";
 import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-const outFile = resolve("../../Tinycast/Resources/RaycastRuntime.generated.js");
+const outFile = resolve("../../Smallcast/Resources/RaycastRuntime.generated.js");
 const dev = process.argv.includes("--dev");
 
 mkdirSync(dirname(outFile), { recursive: true });
@@ -36,7 +36,7 @@ const result = await build({
 for (const warning of result.warnings) console.warn(warning.text);
 
 const [output] = result.outputFiles;
-// `__tinycastCompile` has to compile in the *global* scope so the extension bundle it evaluates can't
+// `__smallcastCompile` has to compile in the *global* scope so the extension bundle it evaluates can't
 // see the runtime's own module locals. It is installed by Swift, not here.
 writeFileSync(outFile, output.text);
 

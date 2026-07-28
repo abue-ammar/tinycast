@@ -9,9 +9,9 @@
       // database (.compile) stays in sync on every build — that's what keeps cross-file
       // symbols resolving in VS Code as you add/rename files. pipefail preserves the
       // xcodebuild exit code so a failed build still blocks F5 / the run step.
-      "label": "Build Tinycast.app (debug)",
+      "label": "Build Smallcast.app (debug)",
       "type": "shell",
-      "command": "bash -c 'set -o pipefail; xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug -derivedDataPath build/DerivedData build 2>&1 | tee \"${TMPDIR:-/tmp}/tinycast-build.log\"; ec=$?; /opt/homebrew/bin/xcode-build-server parse -a -o .compile < \"${TMPDIR:-/tmp}/tinycast-build.log\" >/dev/null 2>&1 || true; exit $ec'",
+      "command": "bash -c 'set -o pipefail; xcodebuild -project Smallcast.xcodeproj -scheme Smallcast -configuration Debug -derivedDataPath build/DerivedData build 2>&1 | tee \"${TMPDIR:-/tmp}/smallcast-build.log\"; ec=$?; /opt/homebrew/bin/xcode-build-server parse -a -o .compile < \"${TMPDIR:-/tmp}/smallcast-build.log\" >/dev/null 2>&1 || true; exit $ec'",
       "options": {
         "cwd": "${workspaceFolder}",
         "env": { "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer" }
@@ -21,11 +21,11 @@
     },
     {
       // Rebuild, then relaunch the menu-bar app. Default build task (⌘⇧B).
-      "label": "Build & Run Tinycast (debug)",
+      "label": "Build & Run Smallcast (debug)",
       "type": "shell",
-      "command": "killall 'Tinycast Dev' 2>/dev/null; open 'build/DerivedData/Build/Products/Debug/Tinycast Dev.app'",
+      "command": "killall 'Smallcast Dev' 2>/dev/null; open 'build/DerivedData/Build/Products/Debug/Smallcast Dev.app'",
       "options": { "cwd": "${workspaceFolder}" },
-      "dependsOn": "Build Tinycast.app (debug)",
+      "dependsOn": "Build Smallcast.app (debug)",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
     }

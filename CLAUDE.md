@@ -1,18 +1,18 @@
 ## Project
 
-Tinycast is a native macOS menu-bar launcher (a minimal Raycast): fuzzy app launcher, global +
+Smallcast is a native macOS menu-bar launcher (a minimal Raycast): fuzzy app launcher, global +
 per-app hotkeys, a text/image clipboard history, an inline calculator, an emoji picker, and it **runs
 Raycast extensions** natively. SwiftUI + AppKit, runs as an accessory (no Dock icon, `LSUIElement`).
 Targets **macOS 26+** (Liquid Glass) and builds with the **Xcode 26** toolchain.
 
-- **Build:** XcodeGen owns the project — `Tinycast.xcodeproj` is committed but generated from
+- **Build:** XcodeGen owns the project — `Smallcast.xcodeproj` is committed but generated from
   `project.yml`. After editing `project.yml`, run `xcodegen generate` and commit. There is **no**
   `Package.swift` / SwiftPM. Full build/test/sign/release steps: [`docs/development.md`](docs/development.md),
   [`docs/signing.md`](docs/signing.md).
-- **Channels:** Debug builds are their own channel — `Tinycast Dev.app` / `com.tinycast.app.dev` — so a
+- **Channels:** Debug builds are their own channel — `Smallcast Dev.app` / `com.smallcast.app.dev` — so a
   local run never shares prefs, caches, TCC grants or login item with an installed stable/beta.
   Anything newly persisted must stay keyed by `Bundle.main.bundleIdentifier`.
-- **Extension runtime:** `Tinycast/Resources/RaycastRuntime.generated.js` is generated from
+- **Extension runtime:** `Smallcast/Resources/RaycastRuntime.generated.js` is generated from
   `Tools/raycast-runtime/` (`pnpm install && node build.mjs`) and **committed**, so building the app
   never needs Node. See [`docs/extensions.md`](docs/extensions.md).
 - **Tests:** no XCTest target — standalone `swiftc` harnesses in `Tools/` (see Critical Invariants and
@@ -38,7 +38,7 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
   every long-lived manager and the window controllers.
   `AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start()` and nothing else — that
   is the one wiring point. Palette / paste / launch actions are methods on `AppCore` that views call.
-- **Mostly AppKit windows.** `TinycastApp` (`@main`) declares only a `MenuBarExtra` scene. The command
+- **Mostly AppKit windows.** `SmallcastApp` (`@main`) declares only a `MenuBarExtra` scene. The command
   palette is a borderless floating `NSPanel` hosting SwiftUI; Settings/About are plain `NSWindow`s via
   `AuxWindowController`. SwiftUI `Settings` / `Window` scenes are deliberately avoided (unreliable for
   accessory apps).
@@ -91,7 +91,7 @@ Never break these without an explicit task to do so.
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for
   block observers, `isolated deinit` for `ClipboardStore`'s SQLite teardown, decode raw Carbon / C
   pointers to plain values before crossing into actor code.
-- **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
+- **Clipboard writes stamp a private `internalType` marker** so the poller skips Smallcast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
 - **`ExtensionScreen` is the only place extension row order is decided**, so the flat `selection` index
@@ -101,14 +101,14 @@ Never break these without an explicit task to do so.
 
 ## Project Layout
 
-- `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
+- `Smallcast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
   `Core/Calculator/` and `Core/Emoji/` are the Foundation-only engines; `Core/Extensions/` the Raycast
   extension host; `Core/Compression/Zlib.swift` gzip/zlib both directions; `Core/Theme.swift` the design
   tokens; `Core/HotKey/` the in-house hotkey stack.
-- `Tinycast/Resources/` — `RaycastRuntime.generated.js`, the embedded extension runtime.
-- `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
+- `Smallcast/Resources/` — `RaycastRuntime.generated.js`, the embedded extension runtime.
+- `Smallcast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
   `Emoji/`, `Extensions/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
-- `Tinycast/App/` — `@main` app + delegate.
+- `Smallcast/App/` — `@main` app + delegate.
 - `Tools/` — standalone test harnesses, the emoji generator, and `raycast-runtime/` (the npm project
   that builds the embedded extension runtime).
 - `.github/workflows/release.yml` — the entire release pipeline (see `docs/development.md`).

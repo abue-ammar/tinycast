@@ -7,10 +7,10 @@
       // -derivedDataPath used by the build task.
       "type": "swift",
       "request": "launch",
-      "name": "Run Tinycast Dev (bundled .app)",
-      "program": "${workspaceFolder}/build/DerivedData/Build/Products/Debug/Tinycast Dev.app/Contents/MacOS/Tinycast Dev",
+      "name": "Run Smallcast Dev (bundled .app)",
+      "program": "${workspaceFolder}/build/DerivedData/Build/Products/Debug/Smallcast Dev.app/Contents/MacOS/Smallcast Dev",
       "cwd": "${workspaceFolder}",
-      "preLaunchTask": "Build Tinycast.app (debug)"
+      "preLaunchTask": "Build Smallcast.app (debug)"
     }
   ]
 }

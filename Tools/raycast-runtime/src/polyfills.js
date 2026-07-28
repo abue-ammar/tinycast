@@ -84,10 +84,10 @@ export function reportUncaught(error) {
 // Backed by URLSession on the Swift side. Bodies cross the bridge base64-encoded so binary
 // responses survive; text/JSON go through the same path.
 
-class TinycastHeaders {
+class SmallcastHeaders {
   constructor(init) {
     this._map = new Map();
-    if (init instanceof TinycastHeaders) {
+    if (init instanceof SmallcastHeaders) {
       for (const [key, value] of init._map) this._map.set(key, value);
     } else if (Array.isArray(init)) {
       for (const [key, value] of init) this.append(key, value);
@@ -136,11 +136,11 @@ class TinycastHeaders {
   }
 }
 
-class TinycastResponse {
+class SmallcastResponse {
   constructor({ status, statusText, headers, url, bodyBase64 }) {
     this.status = status;
     this.statusText = statusText || "";
-    this.headers = new TinycastHeaders(headers);
+    this.headers = new SmallcastHeaders(headers);
     this.url = url || "";
     this.ok = status >= 200 && status < 300;
     this.redirected = false;
@@ -149,7 +149,7 @@ class TinycastResponse {
     this.bodyUsed = false;
   }
   clone() {
-    return new TinycastResponse({
+    return new SmallcastResponse({
       status: this.status,
       statusText: this.statusText,
       headers: this.headers.toJSON(),
@@ -173,29 +173,29 @@ class TinycastResponse {
     return JSON.parse(await this.text());
   }
   async blob() {
-    throw new Error("Response.blob() is not supported in Tinycast extensions.");
+    throw new Error("Response.blob() is not supported in Smallcast extensions.");
   }
 }
 
-class TinycastRequest {
+class SmallcastRequest {
   constructor(input, init = {}) {
-    if (input instanceof TinycastRequest) {
+    if (input instanceof SmallcastRequest) {
       this.url = input.url;
       this.method = init.method || input.method;
-      this.headers = new TinycastHeaders(init.headers || input.headers);
+      this.headers = new SmallcastHeaders(init.headers || input.headers);
       this.body = init.body !== undefined ? init.body : input.body;
     } else {
       this.url = String(input);
       this.method = (init.method || "GET").toUpperCase();
-      this.headers = new TinycastHeaders(init.headers);
+      this.headers = new SmallcastHeaders(init.headers);
       this.body = init.body;
     }
     this.signal = init.signal;
   }
 }
 
-async function tinycastFetch(input, init = {}) {
-  const request = input instanceof TinycastRequest ? input : new TinycastRequest(input, init);
+async function smallcastFetch(input, init = {}) {
+  const request = input instanceof SmallcastRequest ? input : new SmallcastRequest(input, init);
   const signal = init.signal || request.signal;
   if (signal?.aborted) throw abortError();
 
@@ -208,7 +208,7 @@ async function tinycastFetch(input, init = {}) {
     },
   ]);
   if (signal?.aborted) throw abortError();
-  return new TinycastResponse(raw);
+  return new SmallcastResponse(raw);
 }
 
 function abortError() {
@@ -228,10 +228,10 @@ function encodeBody(body) {
 }
 
 if (!g.fetch) {
-  g.fetch = tinycastFetch;
-  g.Headers = TinycastHeaders;
-  g.Response = TinycastResponse;
-  g.Request = TinycastRequest;
+  g.fetch = smallcastFetch;
+  g.Headers = SmallcastHeaders;
+  g.Response = SmallcastResponse;
+  g.Request = SmallcastRequest;
 }
 
 // ─── AbortController ────────────────────────────────────────────────

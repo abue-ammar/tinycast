@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // oxlint-disable no-unused-vars
-// Generate Tinycast/Core/Emoji/EmojiData.generated.swift from Unicode + CLDR data.
+// Generate Smallcast/Core/Emoji/EmojiData.generated.swift from Unicode + CLDR data.
 //
 // Usage: node Tools/gen-emoji.js [emoji-test.txt annotations.json annotationsDerived.json]
 // Downloads the sources when paths aren't given. Run once, commit the output.
@@ -315,7 +315,7 @@ async function main() {
   const out = path.resolve(
     __dirname,
     "..",
-    "Tinycast/Core/Emoji/EmojiData.generated.swift",
+    "Smallcast/Core/Emoji/EmojiData.generated.swift",
   );
   fs.mkdirSync(path.dirname(out), { recursive: true });
   const body = records.join("\n");

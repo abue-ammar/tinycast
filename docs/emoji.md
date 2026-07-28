@@ -20,8 +20,8 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
   `Tools/emoji-test.swift` harness compiles the real sources:
 
   ```sh
-  swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
-    Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test
+  swiftc Smallcast/Core/Emoji/EmojiCatalog.swift Smallcast/Core/Emoji/EmojiGridGeometry.swift \
+    Smallcast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test
   ```
 
 - The grid list uses the palette scrollbar (`.thinScrollbar()` + `.hideNativeScrollers()`) and the

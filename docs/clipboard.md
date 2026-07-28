@@ -3,7 +3,7 @@
 ## Poll-based capture
 
 `ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
-re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the
+re-capturing Smallcast's own writes, every write stamps a private `internalType` marker on the
 pasteboard and the poller skips anything carrying it.
 
 ## Store

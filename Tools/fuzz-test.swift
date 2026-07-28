@@ -1,5 +1,5 @@
 // Standalone test for the launcher matcher — compiles the *real* Foundation-only source (no copy to
-// sync): swiftc Tinycast/Core/FuzzyMatch.swift Tools/fuzz-test.swift -o /tmp/fuzz-test && /tmp/fuzz-test
+// sync): swiftc Smallcast/Core/FuzzyMatch.swift Tools/fuzz-test.swift -o /tmp/fuzz-test && /tmp/fuzz-test
 
 import Foundation
 

@@ -253,9 +253,9 @@ export async function runFixtures() {
     );
     const field = form.children.find((child) => child.type === "Form.TextField");
     check("field exposes its value", field.props.value === "Ada", JSON.stringify(field.props));
-    check("field has a change handler", !!field.props.onTinycastChange?.$fn);
+    check("field has a change handler", !!field.props.onSmallcastChange?.$fn);
 
-    harness.dispatch("s1", field.props.onTinycastChange.$fn, ["Grace"]);
+    harness.dispatch("s1", field.props.onSmallcastChange.$fn, ["Grace"]);
     await wait();
     const submit = findNode(harness.state.trees.at(-1), "Action");
     harness.dispatch("s1", submit.props.onAction.$fn);
@@ -278,7 +278,7 @@ export async function runFixtures() {
     check("the first screen is inactive but mounted", screens[0].props.active === false);
     check("navigation depth reported", harness.state.navigationDepth === 2, String(harness.state.navigationDepth));
 
-    harness.call('__tinycast.popNavigation("s1")');
+    harness.call('__smallcast.popNavigation("s1")');
     await wait();
     screens = harness.state.trees.at(-1).children.filter((child) => child.type === "__screen");
     check("one screen after pop", screens.length === 1, String(screens.length));

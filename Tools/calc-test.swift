@@ -1,4 +1,4 @@
-// Standalone test for the calculator engine — compiles the *real* Foundation-only engine sources (no copy to sync): swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift -o /tmp/calc-test && /tmp/calc-test
+// Standalone test for the calculator engine — compiles the *real* Foundation-only engine sources (no copy to sync): swiftc Smallcast/Core/Calculator/*.swift Tools/calc-test.swift -o /tmp/calc-test && /tmp/calc-test
 
 import Foundation
 

@@ -1,8 +1,8 @@
 # UI & Design System
 
-The design system for Tinycast's UI, written so an agent restyling or extending it stays consistent
-with what's already there. This documents **Tinycast as built** — every rule here maps to code in
-`Tinycast/`. `Core/Theme.swift` is the single design-token source.
+The design system for Smallcast's UI, written so an agent restyling or extending it stays consistent
+with what's already there. This documents **Smallcast as built** — every rule here maps to code in
+`Smallcast/`. `Core/Theme.swift` is the single design-token source.
 
 Read this before touching any view body, `Theme` value, or the panel chrome.
 
@@ -10,7 +10,7 @@ Read this before touching any view body, `Theme` value, or the panel chrome.
 
 ## The look, in one paragraph
 
-Tinycast is a **Raycast-style dark command palette**: a borderless floating panel whose surface is
+Smallcast is a **Raycast-style dark command palette**: a borderless floating panel whose surface is
 just the OS behind-window blur under a 40% black scrim — there is no gray chrome. Everything on that
 surface is white at a fixed alpha ramp. The header and bottom bar **float over the list as fully
 transparent overlays**; there are no hard-edged bars, strips, or dividers. Rows don't clip under the
@@ -41,7 +41,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 
 ---
 
-## Tokens — `Tinycast/Core/Theme.swift`
+## Tokens — `Smallcast/Core/Theme.swift`
 
 `Theme` is the single source of truth. **Never hardcode a spacing/radius/size/color that has a token.**
 Add a token rather than a magic number when introducing a new value.

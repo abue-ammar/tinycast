@@ -2,8 +2,8 @@
 // sync) and runs them against JavaScriptCore, exactly as the app does:
 //
 //   swiftc -parse-as-library \
-//     Tinycast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,RenderNode}.swift \
-//     Tinycast/Core/{FuzzyMatch,Compression/Zlib}.swift Tools/ext-test.swift \
+//     Smallcast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,RenderNode}.swift \
+//     Smallcast/Core/{FuzzyMatch,Compression/Zlib}.swift Tools/ext-test.swift \
 //     -o /tmp/ext-test && /tmp/ext-test
 //
 // With no arguments it runs the built-in checks (manifest parsing, tree decoding, screen flattening,
@@ -98,10 +98,10 @@ struct ExtensionTests {
     static func runtimeURL() -> URL {
         let candidates = [
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-                .appendingPathComponent("Tinycast/Resources/RaycastRuntime.generated.js"),
+                .appendingPathComponent("Smallcast/Resources/RaycastRuntime.generated.js"),
             URL(fileURLWithPath: #filePath)
                 .deletingLastPathComponent().deletingLastPathComponent()
-                .appendingPathComponent("Tinycast/Resources/RaycastRuntime.generated.js"),
+                .appendingPathComponent("Smallcast/Resources/RaycastRuntime.generated.js"),
         ]
         return candidates.first { FileManager.default.fileExists(atPath: $0.path) } ?? candidates[0]
     }
@@ -230,7 +230,7 @@ struct ExtensionTests {
         check("dropdown options", prefs["mode"]?.options.count == 2)
         check("dropdown default", prefs["mode"]?.effectiveDefault == .string("b"))
 
-        // A manifest with no commands isn't an extension Tinycast can run.
+        // A manifest with no commands isn't an extension Smallcast can run.
         check("rejects a manifest with no commands", ExtensionManifest(json: ["name": "x"]) == nil)
         check(
             "rejects a Windows-only manifest",
@@ -620,7 +620,7 @@ struct ExtensionTests {
 
     /// `zlib` is the one node shim with no JS-side implementation to lean on.
     static func zlibChecks() {
-        let payload = Data(String(repeating: "tinycast extensions ", count: 64).utf8)
+        let payload = Data(String(repeating: "smallcast extensions ", count: 64).utf8)
         do {
             check("gzip round-trips", try Zlib.gunzip(Zlib.gzip(payload)) == payload)
             check("zlib round-trips", try Zlib.inflate(Zlib.deflate(payload)) == payload)

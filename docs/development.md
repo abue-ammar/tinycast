@@ -1,6 +1,6 @@
 # Development
 
-How to build, test, package, and release Tinycast.
+How to build, test, package, and release Smallcast.
 
 ## Requirements
 
@@ -9,7 +9,7 @@ How to build, test, package, and release Tinycast.
 
 ## First-time setup
 
-Create the `Tinycast Self-Signed` code-signing identity once — builds sign with it, which keeps the
+Create the `Smallcast Self-Signed` code-signing identity once — builds sign with it, which keeps the
 macOS Accessibility grant from being forgotten every rebuild. Follow **[signing.md](signing.md) §1**
 (a few `openssl`/`security` commands).
 
@@ -18,26 +18,26 @@ macOS Accessibility grant from being forgotten every rebuild. Follow **[signing.
 Open the project in Xcode and run it:
 
 ```sh
-open Tinycast.xcodeproj    # then press ⌘R
+open Smallcast.xcodeproj    # then press ⌘R
 ```
 
 Or from the command line:
 
 ```sh
-xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug build
+xcodebuild -project Smallcast.xcodeproj -scheme Smallcast -configuration Debug build
 ```
 
 `xcodebuild` uses whatever `xcode-select` points at; if that's the Command Line Tools rather than
 Xcode, prefix with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (the SwiftUI
 `@State`/`@FocusState` macros need Xcode's macOS platform).
 
-`Tinycast.xcodeproj` is committed and generated from `project.yml` via
+`Smallcast.xcodeproj` is committed and generated from `project.yml` via
 [XcodeGen](https://github.com/yonaskolb/XcodeGen) — after changing project settings in `project.yml`,
 run `xcodegen generate` and commit the result.
 
 ### The dev channel
 
-Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Since
+Debug builds are a separate channel: **`Smallcast Dev.app`**, bundle id `com.smallcast.app.dev`. Since
 every persisted thing is keyed by bundle
 id — `~/Library/Preferences/<id>.plist` (settings + hotkey bindings),
 `~/Library/Caches/<id>/` (clipboard history, calculator history, frequent emoji),
@@ -49,7 +49,7 @@ Consequences worth knowing:
 
 - The dev build asks for Accessibility on its own the first time, and starts with **no** hotkeys bound
   and onboarding unseen. Grant + bind once; it persists across rebuilds (the fixed build path and the
-  `Tinycast Self-Signed` identity keep the TCC grant alive).
+  `Smallcast Self-Signed` identity keep the TCC grant alive).
 - Don't bind the same global hotkey in both — whichever registered first wins.
 - The Hyper Key's Caps Lock remap is `hidutil` state, which is **system-wide, not per-bundle**:
   quitting one build clears the remap for the other, which then needs a rebind (or relaunch) to
@@ -62,7 +62,7 @@ once (it's machine-specific and git-ignored):
 
 ```sh
 brew install xcode-build-server
-xcode-build-server config -project Tinycast.xcodeproj -scheme Tinycast \
+xcode-build-server config -project Smallcast.xcodeproj -scheme Smallcast \
     --build_root "$PWD/build/DerivedData"
 ```
 
@@ -72,7 +72,7 @@ app; changes always apply (fixed build path — no need to delete `build/`).
 
 ## The extension runtime
 
-`Tinycast/Resources/RaycastRuntime.generated.js` (React + a reconciler + the `@raycast/api` shim + the
+`Smallcast/Resources/RaycastRuntime.generated.js` (React + a reconciler + the `@raycast/api` shim + the
 Node/web polyfills JavaScriptCore lacks) is **generated and committed**, so a plain app build needs no
 Node. Regenerate it only when changing `Tools/raycast-runtime/src/`:
 
@@ -80,7 +80,7 @@ Node. Regenerate it only when changing `Tools/raycast-runtime/src/`:
 cd Tools/raycast-runtime
 pnpm install
 node gen-enums.mjs        # only after bumping the @raycast/api devDependency
-node build.mjs            # -> Tinycast/Resources/RaycastRuntime.generated.js (commit it)
+node build.mjs            # -> Smallcast/Resources/RaycastRuntime.generated.js (commit it)
 ```
 
 Details, the supported API surface and the known gaps: [`extensions.md`](extensions.md).
@@ -90,25 +90,25 @@ Details, the supported API surface and the known gaps: [`extensions.md`](extensi
 There's no XCTest target. Standalone harnesses, all compiling the **real** sources:
 
 ```sh
-swiftc Tinycast/Core/FuzzyMatch.swift Tools/fuzz-test.swift \
+swiftc Smallcast/Core/FuzzyMatch.swift Tools/fuzz-test.swift \
     -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher fuzzy matcher
-swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
+swiftc Smallcast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                            # calculator engine
-swiftc Tinycast/Core/Emoji/{EmojiCatalog,EmojiGridGeometry,EmojiData.generated}.swift \
+swiftc Smallcast/Core/Emoji/{EmojiCatalog,EmojiGridGeometry,EmojiData.generated}.swift \
     Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test    # emoji catalog + grid geometry
 swiftc -parse-as-library -swift-version 6 \
-    Tinycast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
-    Tinycast/Core/FuzzyMatch.swift Tinycast/Core/Compression/Zlib.swift \
+    Smallcast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
+    Smallcast/Core/FuzzyMatch.swift Smallcast/Core/Compression/Zlib.swift \
     Tools/ext-test.swift -o /tmp/ext-test && /tmp/ext-test         # extension runtime (JavaScriptCore)
 ```
 
-That the harnesses compile the shipped sources is why `Tinycast/Core/Calculator/` and
-`Tinycast/Core/Emoji/` must stay Foundation-only, and why `FuzzyMatch` is its own Foundation-only file.
+That the harnesses compile the shipped sources is why `Smallcast/Core/Calculator/` and
+`Smallcast/Core/Emoji/` must stay Foundation-only, and why `FuzzyMatch` is its own Foundation-only file.
 
 `ext-test` also runs any installed extension and prints the tree it renders:
 
 ```sh
-/tmp/ext-test ~/Library/Application\ Support/com.tinycast.app.dev/extensions/<name> [command]
+/tmp/ext-test ~/Library/Application\ Support/com.smallcast.app.dev/extensions/<name> [command]
 ```
 
 The JS half has its own faster loop, which needs no Swift build:
@@ -124,19 +124,19 @@ node test.mjs ~/.config/raycast/extensions/<uuid> [command]  # any prebuilt exte
 For a local signed DMG:
 
 ```sh
-./build-dmg.sh            # -> build/Tinycast-<version>.dmg (version from project.yml)
-./build-dmg.sh 0.5.7      # -> build/Tinycast-0.5.7.dmg
+./build-dmg.sh            # -> build/Smallcast-<version>.dmg (version from project.yml)
+./build-dmg.sh 0.5.7      # -> build/Smallcast-0.5.7.dmg
 ```
 
-It builds a Release `Tinycast.app` signed with `Tinycast Self-Signed` and packs it (with an
+It builds a Release `Smallcast.app` signed with `Smallcast Self-Signed` and packs it (with an
 `/Applications` symlink). Official per-channel releases (beta/stable) are built by CI — see
 below and [`.github/workflows/release.yml`](../.github/workflows/release.yml).
 
 ## Signing & Gatekeeper
 
-Both local builds and CI releases sign with the same stable `Tinycast Self-Signed` identity (not an
+Both local builds and CI releases sign with the same stable `Smallcast Self-Signed` identity (not an
 Apple Developer ID), so macOS quarantines a directly-downloaded DMG — the Homebrew cask strips that
-automatically, and direct downloaders run `xattr -dr com.apple.quarantine "…/Tinycast.app"` once.
+automatically, and direct downloaders run `xattr -dr com.apple.quarantine "…/Smallcast.app"` once.
 Full details in [signing.md](signing.md).
 
 ## CI releases
@@ -145,21 +145,21 @@ Full details in [signing.md](signing.md).
 needed. Run it from the **Actions** tab (`Release` → **Run workflow**) and pick:
 
 - **channel** — `beta` or `stable`. Each builds a distinct app
-  (`Tinycast Beta.app` / `Tinycast.app`) with its own bundle id, alongside the local
-  `Tinycast Dev.app` (above).
+  (`Smallcast Beta.app` / `Smallcast.app`) with its own bundle id, alongside the local
+  `Smallcast Dev.app` (above).
   Beta gets an auto-incrementing `-beta.N` suffix (`N` = the Actions run number)
   so re-running never collides; stable ships the version as-is.
 - **version** — base semver, e.g. `0.2.0`.
 
 It builds on a `macos-26` runner with Xcode 26 and publishes a GitHub Release tagged
-`v<full-version>` with a versioned DMG asset (`Tinycast-<full-version>.dmg`), marked prerelease
+`v<full-version>` with a versioned DMG asset (`Smallcast-<full-version>.dmg`), marked prerelease
 for beta. On success it also bumps the matching cask in the tap (below).
 
 ### Homebrew tap automation
 
-The release job's final step rewrites the `version` + `sha256` of the channel's cask (`tinycast`
-or `tinycast@beta`) in the
-[`homebrew-tinycast`](https://github.com/abue-ammar/homebrew-tinycast) tap and pushes. It needs a
+The release job's final step rewrites the `version` + `sha256` of the channel's cask (`smallcast`
+or `smallcast@beta`) in the
+[`homebrew-smallcast`](https://github.com/arthur-fontaine/homebrew-smallcast) tap and pushes. It needs a
 `HOMEBREW_TAP_TOKEN` repo secret — a fine-grained PAT with **Contents: read/write** on the tap
 repo. Without the secret the step logs a warning and skips (the release still publishes).
 

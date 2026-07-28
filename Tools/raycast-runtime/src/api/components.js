@@ -263,13 +263,13 @@ function makeField(type, fallback) {
       {
         ...rest,
         value,
-        onTinycastChange: (next) => {
+        onSmallcastChange: (next) => {
           const decoded = type === "Form.DatePicker" ? decodeDate(next) : next;
           setValue(decoded);
           props.onChange?.(decoded);
         },
-        onTinycastBlur: props.onBlur ? () => props.onBlur({ target: { value } }) : undefined,
-        onTinycastFocus: props.onFocus ? () => props.onFocus({ target: { value } }) : undefined,
+        onSmallcastBlur: props.onBlur ? () => props.onBlur({ target: { value } }) : undefined,
+        onSmallcastFocus: props.onFocus ? () => props.onFocus({ target: { value } }) : undefined,
       },
       props.children,
     );
@@ -471,7 +471,7 @@ Action.PickDate = function ActionPickDate(props) {
     style: props.style,
     // Rendered as a submenu-less action; Swift opens its own date picker and answers through onChange.
     pickDate: { type: props.type, min: props.min, max: props.max },
-    onTinycastChange: (value) => props.onChange?.(decodeDate(value)),
+    onSmallcastChange: (value) => props.onChange?.(decodeDate(value)),
   });
 };
 Action.PickDate.Type = undefined; // filled in from the generated enums by index.js

@@ -72,7 +72,7 @@ const Keyboard = {
   },
 };
 
-/// Surfaces Tinycast doesn't implement. They exist so a bundle that merely imports them still loads;
+/// Surfaces Smallcast doesn't implement. They exist so a bundle that merely imports them still loads;
 /// calling one gives the extension (and the user) a clear reason instead of a TypeError.
 function rejectingNamespace(name, members) {
   const target = {};
@@ -90,7 +90,7 @@ const OAuth = {
   RedirectMethod: nestedEnums.OAuth.RedirectMethod,
   PKCEClient: class PKCEClient {
     constructor() {
-      throw new Error("OAuth.PKCEClient is not supported in Tinycast extensions yet. See docs/extensions.md.");
+      throw new Error("OAuth.PKCEClient is not supported in Smallcast extensions yet. See docs/extensions.md.");
     }
   },
 };

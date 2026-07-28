@@ -117,23 +117,23 @@ const process = {
   platform: "darwin",
   arch: "arm64",
   version: "v22.0.0",
-  versions: { node: "22.0.0", v8: "12.0.0", tinycast: "1" },
+  versions: { node: "22.0.0", v8: "12.0.0", smallcast: "1" },
   argv: ["node", "extension"],
   argv0: "node",
   execPath: "",
   pid: 1,
   ppid: 0,
   env: {},
-  title: "tinycast-extension",
+  title: "smallcast-extension",
   stdout: { write: (text) => console.log(String(text).replace(/\n$/, "")), isTTY: false, columns: 80 },
   stderr: { write: (text) => console.error(String(text).replace(/\n$/, "")), isTTY: false, columns: 80 },
   stdin: { on: () => {}, resume: () => {}, pause: () => {}, isTTY: false },
   cwd: () => bootEnvironment.cwd,
   chdir: () => {
-    throw new Error("process.chdir is not supported in Tinycast extensions.");
+    throw new Error("process.chdir is not supported in Smallcast extensions.");
   },
   exit: () => {
-    throw new Error("process.exit is not supported in Tinycast extensions.");
+    throw new Error("process.exit is not supported in Smallcast extensions.");
   },
   nextTick: (callback, ...args) => {
     queueMicrotask(() => {
@@ -369,13 +369,13 @@ const fs = {
   chmodSync() {},
   utimesSync() {},
   watch() {
-    throw new Error("fs.watch is not supported in Tinycast extensions.");
+    throw new Error("fs.watch is not supported in Smallcast extensions.");
   },
   createReadStream() {
-    throw new Error("fs.createReadStream is not supported in Tinycast extensions.");
+    throw new Error("fs.createReadStream is not supported in Smallcast extensions.");
   },
   createWriteStream() {
-    throw new Error("fs.createWriteStream is not supported in Tinycast extensions.");
+    throw new Error("fs.createWriteStream is not supported in Smallcast extensions.");
   },
   Stats,
   Dirent,
@@ -532,7 +532,7 @@ const childProcess = {
     return new BufferedChildProcess(String(file), args.map(String), options);
   },
   fork() {
-    throw new Error("child_process.fork is not supported in Tinycast extensions.");
+    throw new Error("child_process.fork is not supported in Smallcast extensions.");
   },
 };
 
@@ -607,10 +607,10 @@ const zlibImpl = {
   deflateRawSync: zlibSync("deflateRaw"),
   inflateRawSync: zlibSync("inflateRaw"),
   brotliCompressSync: () => {
-    throw new Error("zlib brotli is not supported in Tinycast extensions.");
+    throw new Error("zlib brotli is not supported in Smallcast extensions.");
   },
   brotliDecompressSync: () => {
-    throw new Error("zlib brotli is not supported in Tinycast extensions.");
+    throw new Error("zlib brotli is not supported in Smallcast extensions.");
   },
   constants: {},
 };
@@ -948,7 +948,7 @@ const util = {
   inspect,
   format,
   /// Deliberately more forgiving than Node's: bundles call this at load time against classes from
-  /// modules Tinycast only stubs, and a throw there would take down an extension that never reaches
+  /// modules Smallcast only stubs, and a throw there would take down an extension that never reaches
   /// the code path.
   inherits(child, parent) {
     if (!child?.prototype || !parent?.prototype) return;
@@ -1049,7 +1049,7 @@ function unsupportedModule(name, extras = {}) {
 const RESERVED_MEMBERS = new Set(["__esModule", "default", "then", "catch", "prototype", "constructor", "toJSON", "inspect", "valueOf", "toString", "length", "name"]);
 
 function makeUnsupported(label) {
-  const reason = `${label} is not supported in Tinycast extensions (no Node runtime). See docs/extensions.md.`;
+  const reason = `${label} is not supported in Smallcast extensions (no Node runtime). See docs/extensions.md.`;
   const Unsupported = class {
     constructor() {
       throw new Error(reason);
@@ -1111,7 +1111,7 @@ export const nodeModules = {
 };
 
 function requireStub(name) {
-  throw new Error(`createRequire is not supported in Tinycast extensions (tried to load "${name}").`);
+  throw new Error(`createRequire is not supported in Smallcast extensions (tried to load "${name}").`);
 }
 
 // Every remaining Node builtin resolves to a refuse-on-use stub. Bundles reference the whole

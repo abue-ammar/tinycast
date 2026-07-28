@@ -1,0 +1,356 @@
+import Foundation
+import JavaScriptCore
+
+/// The JS→Swift seam for everything that needs the main actor. Answers are JSON strings so nothing
+/// non-`Sendable` crosses back to the JS queue.
+@MainActor
+protocol ExtensionHostAPI: AnyObject, Sendable {
+    func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String
+}
+
+/// Where a running command's UI or failure lands. Every callback arrives on the main actor.
+@MainActor
+protocol ExtensionRuntimeDelegate: AnyObject {
+    func runtime(_ runtime: ExtensionRuntime, session: String, didRender tree: RenderTree)
+    func runtime(_ runtime: ExtensionRuntime, session: String, didFail message: String)
+    func runtime(_ runtime: ExtensionRuntime, session: String, navigationDepth: Int)
+    func runtime(_ runtime: ExtensionRuntime, session: String, didFinish: Void)
+    func runtime(_ runtime: ExtensionRuntime, log level: String, message: String)
+}
+
+/// Owns the one JavaScriptCore context every extension command runs in.
+///
+/// JavaScriptCore is deliberate: it ships with macOS, so embedding a JS engine costs zero binary size
+/// and no vendored C — the alternative (QuickJS) would add ~1 MB and a build-system detour for an
+/// engine that is slower and no more capable here. Extension bundles are CommonJS with `react` and
+/// `@raycast/api` external, which is exactly what a bare JSContext can host once
+/// `Resources/RaycastRuntime.generated.js` supplies them.
+///
+/// `@unchecked Sendable` is load-bearing and narrow: every `JSContext` / `JSValue` touch happens on
+/// `queue`, a private serial queue, and nothing but plain values crosses in or out. That keeps the
+/// heavy work (extension evaluation, synchronous `fs` / `exec` shims) off the main actor, matching the
+/// house rule in docs/architecture.md.
+final class ExtensionRuntime: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.smallcast.extensions.js", qos: .userInitiated)
+    private var context: JSContext?
+    private var timers: [String: DispatchSourceTimer] = [:]
+    private let nodeShims = ExtensionNodeShims()
+
+    /// Set once at startup; read on the JS queue, so it is written before the runtime ever boots.
+    private nonisolated(unsafe) weak var delegate: ExtensionRuntimeDelegate?
+    private let hostAPI: ExtensionHostAPI
+    private let runtimeOverride: URL?
+
+    /// `runtimeURL` overrides the bundled `RaycastRuntime.generated.js` — only `Tools/ext-test.swift`
+    /// passes it, since a command-line harness has no app bundle to look in.
+    init(hostAPI: ExtensionHostAPI, runtimeURL: URL? = nil) {
+        self.hostAPI = hostAPI
+        self.runtimeOverride = runtimeURL
+    }
+
+    @MainActor
+    func setDelegate(_ delegate: ExtensionRuntimeDelegate) {
+        self.delegate = delegate
+    }
+
+    // MARK: - Lifecycle
+
+    enum RuntimeError: LocalizedError {
+        case runtimeResourceMissing
+        case bootFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .runtimeResourceMissing:
+                return "RaycastRuntime.generated.js is missing from the app bundle."
+            case .bootFailed(let message):
+                return "The extension runtime failed to start: \(message)"
+            }
+        }
+    }
+
+    /// Evaluate the bundled runtime and hand it the machine-level facts the Node shims need. Idempotent
+    /// — a second call is a no-op, so any command can lazily ensure the engine is up.
+    func boot(config: ExtensionBootConfig) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    try self.bootOnQueue(config: config)
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func bootOnQueue(config: ExtensionBootConfig) throws {
+        guard context == nil else { return }
+        guard
+            let url = runtimeOverride
+                ?? Bundle.main.url(forResource: "RaycastRuntime.generated", withExtension: "js"),
+            let source = try? String(contentsOf: url, encoding: .utf8)
+        else { throw RuntimeError.runtimeResourceMissing }
+
+        guard let context = JSContext() else { throw RuntimeError.bootFailed("no JSContext") }
+        self.context = context
+
+        var thrown: String?
+        context.exceptionHandler = { _, exception in
+            thrown = ExtensionRuntime.describe(exception)
+        }
+        installHost(in: context)
+        context.evaluateScript(source, withSourceURL: url)
+        if let thrown { throw RuntimeError.bootFailed(thrown) }
+
+        // From here on an exception is a bug in a command, not in the runtime: report it and keep going.
+        context.exceptionHandler = { [weak self] _, exception in
+            self?.report(level: "error", message: ExtensionRuntime.describe(exception))
+        }
+
+        let payload = config.jsonString()
+        _ = context.objectForKeyedSubscript("__smallcast")?
+            .invokeMethod("boot", withArguments: [payload])
+    }
+
+    /// Load and mount one command. `code` is its prebuilt CommonJS bundle.
+    func start(
+        session: String, code: String, file: URL, mode: ExtensionCommandMode,
+        context launchContext: ExtensionLaunchContext
+    ) async {
+        let payload = launchContext.jsonString()
+        await onQueue { context in
+            let compiled = context.objectForKeyedSubscript("__smallcast")
+            _ = compiled?.invokeMethod(
+                "start",
+                withArguments: [
+                    session, code, file.path, file.deletingLastPathComponent().path,
+                    mode.runtimeName, payload,
+                ])
+        }
+    }
+
+    func dispatch(session: String, handler: String, arguments: [Any]) async {
+        let payload = Self.jsonString(from: arguments)
+        await onQueue { context in
+            _ = context.objectForKeyedSubscript("__smallcast")?
+                .invokeMethod("dispatch", withArguments: [session, handler, payload])
+        }
+    }
+
+    /// Escape / the back chevron inside a pushed screen. Returns true when a screen was actually popped.
+    func popNavigation(session: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                guard let context = self.context else { return continuation.resume(returning: false) }
+                let result = context.objectForKeyedSubscript("__smallcast")?
+                    .invokeMethod("popNavigation", withArguments: [session])
+                continuation.resume(returning: result?.toString() == "1")
+            }
+        }
+    }
+
+    func runToastAction(token: String) async {
+        await onQueue { context in
+            _ = context.objectForKeyedSubscript("__smallcast")?
+                .invokeMethod("runToastAction", withArguments: [token])
+        }
+    }
+
+    func stop(session: String) async {
+        await onQueue { context in
+            _ = context.objectForKeyedSubscript("__smallcast")?
+                .invokeMethod("stop", withArguments: [session])
+        }
+    }
+
+    private func onQueue(_ body: @escaping @Sendable (JSContext) -> Void) async {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                if let context = self.context { body(context) }
+                continuation.resume()
+            }
+        }
+    }
+
+    // MARK: - Host object
+
+    /// Installs `__smallcastHost` (the JS→Swift seam) and `__smallcastCompile`.
+    private func installHost(in context: JSContext) {
+        let host = JSValue(newObjectIn: context)
+
+        let log: @convention(block) (String, String) -> Void = { [weak self] level, message in
+            self?.report(level: level, message: message)
+        }
+        let render: @convention(block) (String, String) -> Void = { [weak self] session, json in
+            self?.deliverRender(session: session, json: json)
+        }
+        let failed: @convention(block) (String, String) -> Void = { [weak self] session, message in
+            guard let self else { return }
+            let delegate = self.delegate
+            Task { @MainActor in delegate?.runtime(self, session: session, didFail: message) }
+        }
+        let navigation: @convention(block) (String, String) -> Void = { [weak self] session, depth in
+            guard let self else { return }
+            let delegate = self.delegate
+            let value = Int(depth) ?? 1
+            Task { @MainActor in delegate?.runtime(self, session: session, navigationDepth: value) }
+        }
+        let finished: @convention(block) (String) -> Void = { [weak self] session in
+            guard let self else { return }
+            let delegate = self.delegate
+            Task { @MainActor in delegate?.runtime(self, session: session, didFinish: ()) }
+        }
+        let fieldCommand: @convention(block) (String, String) -> Void = { _, _ in
+            // Field focus requests have no native target yet; the palette focuses the first field.
+        }
+        let invoke: @convention(block) (String, String, String, String) -> Void = {
+            [weak self] callId, api, method, argsJSON in
+            self?.invokeAsync(callId: callId, api: api, method: method, argsJSON: argsJSON)
+        }
+        let invokeSync: @convention(block) (String, String, String) -> String = {
+            [weak self] api, method, argsJSON in
+            guard let self else { return #"{"ok":false,"error":"runtime gone"}"# }
+            return self.nodeShims.perform(api: api, method: method, argsJSON: argsJSON)
+        }
+        let startTimer: @convention(block) (String, Double, Bool) -> Void = {
+            [weak self] id, milliseconds, repeats in
+            self?.startTimer(id: id, milliseconds: milliseconds, repeats: repeats)
+        }
+        let clearTimer: @convention(block) (String) -> Void = { [weak self] id in
+            self?.clearTimer(id: id)
+        }
+
+        host?.setObject(log, forKeyedSubscript: "log" as NSString)
+        host?.setObject(render, forKeyedSubscript: "render" as NSString)
+        host?.setObject(failed, forKeyedSubscript: "failed" as NSString)
+        host?.setObject(navigation, forKeyedSubscript: "navigationDepthChanged" as NSString)
+        host?.setObject(finished, forKeyedSubscript: "finished" as NSString)
+        host?.setObject(fieldCommand, forKeyedSubscript: "fieldCommand" as NSString)
+        host?.setObject(invoke, forKeyedSubscript: "invoke" as NSString)
+        host?.setObject(invokeSync, forKeyedSubscript: "invokeSync" as NSString)
+        host?.setObject(startTimer, forKeyedSubscript: "startTimer" as NSString)
+        host?.setObject(clearTimer, forKeyedSubscript: "clearTimer" as NSString)
+        context.setObject(host, forKeyedSubscript: "__smallcastHost" as NSString)
+
+        // Compiling in the *global* scope is the point: the extension body must not see the runtime's
+        // own locals, and a real source URL keeps its stack traces readable.
+        let compile: @convention(block) (String, String) -> JSValue? = { [weak self] code, filename in
+            guard let context = self?.context else { return nil }
+            let wrapped = "(function (exports, require, module, __filename, __dirname) {\n\(code)\n})"
+            return context.evaluateScript(wrapped, withSourceURL: URL(fileURLWithPath: filename))
+        }
+        context.setObject(compile, forKeyedSubscript: "__smallcastCompile" as NSString)
+    }
+
+    // MARK: - Host call plumbing
+
+    private func invokeAsync(callId: String, api: String, method: String, argsJSON: String) {
+        // Decode to `RenderValue` here so only `Sendable` values reach the main actor.
+        let arguments = RenderValue.arguments(from: argsJSON)
+        let hostAPI = self.hostAPI
+        Task { @MainActor in
+            do {
+                let json = try await hostAPI.perform(
+                    api: api, method: method, arguments: arguments)
+                await self.settle(callId: callId, ok: true, payload: json)
+            } catch {
+                await self.settle(
+                    callId: callId, ok: false,
+                    payload: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+            }
+        }
+    }
+
+    private func settle(callId: String, ok: Bool, payload: String) async {
+        await onQueue { context in
+            _ = context.objectForKeyedSubscript("__smallcast")?
+                .invokeMethod("settle", withArguments: [callId, ok, payload])
+        }
+    }
+
+    private func deliverRender(session: String, json: String) {
+        guard let delegate else { return }
+        // Decode on the JS queue: it keeps JSON parsing (the expensive part of a large list) off the
+        // main actor, and only the decoded value tree crosses over.
+        guard let tree = RenderTree(json: json) else {
+            report(level: "error", message: "Could not decode the render tree for \(session).")
+            return
+        }
+        Task { @MainActor in delegate.runtime(self, session: session, didRender: tree) }
+    }
+
+    private func report(level: String, message: String) {
+        guard let delegate else { return }
+        Task { @MainActor in delegate.runtime(self, log: level, message: message) }
+    }
+
+    // MARK: - Timers
+
+    private func startTimer(id: String, milliseconds: Double, repeats: Bool) {
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        let interval = max(milliseconds, 0) / 1000
+        if repeats {
+            timer.schedule(deadline: .now() + interval, repeating: max(interval, 0.001))
+        } else {
+            timer.schedule(deadline: .now() + interval)
+        }
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            if !repeats { self.timers[id] = nil }
+            _ = self.context?.objectForKeyedSubscript("__smallcast")?
+                .invokeMethod("fireTimer", withArguments: [id])
+        }
+        timers[id]?.cancel()
+        timers[id] = timer
+        timer.resume()
+    }
+
+    private func clearTimer(id: String) {
+        timers[id]?.cancel()
+        timers[id] = nil
+    }
+
+    /// Drop the whole JavaScript context; the next `boot` builds a fresh one (~7 ms warm).
+    ///
+    /// Reusing one context across commands was subtly wrong. Timers are global, and React's scheduler
+    /// drives every commit through `setTimeout` — so cancelling an extension's leftover timers also
+    /// cancelled the scheduler's, which latches `isMessageLoopRunning` and silently stops *all* later
+    /// sessions from ever committing ("works once, then hangs"). Leaving them alone instead leaks any
+    /// interval an extension forgot to clear. Throwing the context away avoids both, and as a bonus no
+    /// module-level state in an extension bundle can survive into its next run.
+    func shutdown() {
+        queue.async {
+            for timer in self.timers.values { timer.cancel() }
+            self.timers.removeAll()
+            self.context = nil
+        }
+    }
+
+    // MARK: - JSON helpers
+
+    private static func describe(_ exception: JSValue?) -> String {
+        guard let exception else { return "unknown JavaScript error" }
+        let stack = exception.objectForKeyedSubscript("stack")?.toString()
+        let message = exception.toString() ?? "JavaScript error"
+        if let stack, !stack.isEmpty, stack != "undefined" { return "\(message)\n\(stack)" }
+        return message
+    }
+
+    static func jsonArray(from json: String) -> [Any] {
+        guard let data = json.data(using: .utf8),
+            let array = try? JSONSerialization.jsonObject(with: data) as? [Any]
+        else { return [] }
+        return array
+    }
+
+    /// Fragment-tolerant encoding: host results are frequently bare strings, numbers or nil.
+    static func jsonString(from value: Any?) -> String {
+        guard let value, !(value is NSNull) else { return "" }
+        guard
+            let data = try? JSONSerialization.data(
+                withJSONObject: value, options: [.fragmentsAllowed])
+        else { return "" }
+        return String(decoding: data, as: UTF8.self)
+    }
+}

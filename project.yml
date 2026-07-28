@@ -1,6 +1,6 @@
-name: Tinycast
+name: Smallcast
 options:
-  bundleIdPrefix: com.tinycast
+  bundleIdPrefix: com.smallcast
   deploymentTarget:
     macOS: "26.0"
   createIntermediateGroups: true
@@ -15,7 +15,7 @@ settings:
     CODE_SIGN_STYLE: Manual
     # Stable self-signed identity so macOS keeps the Accessibility grant across rebuilds.
     # Create it once — see docs/signing.md.
-    CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
+    CODE_SIGN_IDENTITY: "Smallcast Self-Signed"
     ENABLE_HARDENED_RUNTIME: NO
     SWIFT_STRICT_CONCURRENCY: complete
   configs:
@@ -27,19 +27,19 @@ settings:
       DEAD_CODE_STRIPPING: YES
 
 targets:
-  Tinycast:
+  Smallcast:
     type: application
     platform: macOS
     sources:
-      # Everything under Tinycast/, including Resources/RaycastRuntime.generated.js — the embedded
+      # Everything under Smallcast/, including Resources/RaycastRuntime.generated.js — the embedded
       # Raycast-extension runtime, which ships as a bundle resource (see docs/extensions.md).
-      - path: Tinycast
+      - path: Smallcast
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app
-        INFOPLIST_FILE: Tinycast/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Tinycast/Tinycast.entitlements
-        ASSETCATALOG_COMPILER_APPICON_NAME: tinycast
+        PRODUCT_BUNDLE_IDENTIFIER: com.smallcast.app
+        INFOPLIST_FILE: Smallcast/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Smallcast/Smallcast.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: smallcast
         COMBINE_HIDPI_IMAGES: YES
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
@@ -49,5 +49,5 @@ targets:
         # locally-run build gets its own prefs, caches, TCC grants and login item instead of
         # inheriting — and corrupting — the installed app's state.
         Debug:
-          PRODUCT_NAME: Tinycast Dev
-          PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+          PRODUCT_NAME: Smallcast Dev
+          PRODUCT_BUNDLE_IDENTIFIER: com.smallcast.app.dev
