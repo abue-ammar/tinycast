@@ -40,6 +40,14 @@ final class VisibilityStore: ObservableObject {
         defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
     }
 
+    func removeItemKeys(_ keys: Set<String>) {
+        guard !keys.isEmpty else { return }
+        let previous = hiddenItemKeys
+        hiddenItemKeys.subtract(keys)
+        guard hiddenItemKeys != previous else { return }
+        defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
+    }
+
     func isKindVisible(_ kind: AppEntry.Kind) -> Bool {
         !hiddenKinds.contains(kind.rawValue)
     }

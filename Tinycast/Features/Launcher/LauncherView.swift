@@ -268,7 +268,7 @@ enum AppActionsMenu {
         switch app.kind {
         case .application: return "Open Application"
         case .systemSettings: return "Open System Setting"
-        case .command: return "Open Command"
+        case .command: return "Run Command"
         }
     }
 }

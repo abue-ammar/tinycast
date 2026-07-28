@@ -22,6 +22,14 @@ final class FavoritesStore: ObservableObject {
         defaults.set(keys, forKey: key)
     }
 
+    func remove(keys removedKeys: Set<String>) {
+        guard !removedKeys.isEmpty else { return }
+        let updated = keys.filter { !removedKeys.contains($0) }
+        guard updated != keys else { return }
+        keys = updated
+        defaults.set(keys, forKey: key)
+    }
+
     func toggle(_ app: AppEntry) {
         let k = key(for: app)
         if let index = keys.firstIndex(of: k) {

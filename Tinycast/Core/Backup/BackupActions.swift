@@ -34,6 +34,11 @@ enum BackupActions {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let backup = try SettingsBackup(json: try Data(contentsOf: url))
+            let commandCount = backup.customCommands?.count ?? 0
+            let shortcutCount = backup.hotkeys?.customCommands?.count ?? 0
+            guard confirmExecutableImport(commands: commandCount, shortcuts: shortcutCount) else {
+                return
+            }
             present(
                 title: "Settings Imported", message: summaryText(backup.apply()),
                 style: .informational
@@ -95,8 +100,27 @@ enum BackupActions {
         if s.hotkeys > 0 { parts.append("\(s.hotkeys) shortcuts") }
         if s.favorites > 0 { parts.append("\(s.favorites) favorites") }
         if s.hiddenItems > 0 { parts.append("\(s.hiddenItems) hidden items") }
+        if s.customCommands > 0 { parts.append("\(s.customCommands) custom commands") }
         return parts.isEmpty
             ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
+    }
+
+    private static func confirmExecutableImport(commands: Int, shortcuts: Int) -> Bool {
+        guard commands > 0 || shortcuts > 0 else { return true }
+        let commandText = commands == 1 ? "1 custom command" : "\(commands) custom commands"
+        let shortcutText =
+            shortcuts == 1 ? "1 global shortcut" : "\(shortcuts) global shortcuts"
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Import executable commands?"
+        alert.informativeText =
+            "This backup contains \(commandText) and \(shortcutText). Custom commands can run "
+            + "arbitrary shell code. Only import files you trust."
+        alert.alertStyle = .warning
+        let importButton = alert.addButton(withTitle: "Import")
+        importButton.keyEquivalent = ""
+        alert.addButton(withTitle: "Cancel").keyEquivalent = "\r"
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private static func dateStamp() -> String {

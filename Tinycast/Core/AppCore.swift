@@ -91,6 +91,7 @@ final class AppCore: ObservableObject {
 
     let launcherRanking: LauncherRankingStore
     let appIndex: AppIndex
+    let customCommands = CustomCommandStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
     let hotKeys = HotKeyManager()
@@ -128,6 +129,10 @@ final class AppCore: ObservableObject {
         clipboardManager.start()
 
         appIndex.start(settings: settings)
+        customCommands.onChange = { [weak self] commands in
+            self?.appIndex.setCustomCommands(commands)
+        }
+        appIndex.setCustomCommands(customCommands.commands)
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
         currencyRates.start()
@@ -135,7 +140,8 @@ final class AppCore: ObservableObject {
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
         hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
-        hotKeys.start()
+        hotKeys.onRunCustomCommand = { [weak self] id in self?.runCustomCommand(id: id) }
+        hotKeys.start(customCommandIDs: Set(customCommands.commands.map(\.id)))
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
 
@@ -220,6 +226,7 @@ final class AppCore: ObservableObject {
             SettingsRootView(initialTab: tab)
                 .environmentObject(self.appIndex)
                 .environmentObject(self.visibility)
+                .environmentObject(self.customCommands)
         }
         if !isNew {
             NotificationCenter.default.post(name: .tinycastSelectSettingsTab, object: tab)
@@ -258,7 +265,11 @@ final class AppCore: ObservableObject {
         }
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
-            runCommand(app)
+            if let id = CustomCommand.id(fromEntryID: app.id) {
+                runCustomCommand(id: id)
+            } else {
+                runCommand(app)
+            }
             return
         }
         hidePalette(restoreFocus: false)
@@ -275,6 +286,79 @@ final class AppCore: ObservableObject {
 
     func resetRanking(for app: AppEntry) {
         launcherRanking.reset(itemKey: app.preferenceKey)
+    }
+
+    // MARK: - Custom commands
+
+    @discardableResult
+    func addCustomCommand(name: String, command: String) throws -> CustomCommand {
+        try customCommands.add(name: name, command: command)
+    }
+
+    func updateCustomCommand(id: UUID, name: String, command: String) throws {
+        try customCommands.update(id: id, name: name, command: command)
+    }
+
+    func deleteCustomCommand(id: UUID) {
+        guard let command = customCommands.command(id: id) else { return }
+        removeCustomCommandReferences(ids: [id], entryIDs: [command.entryID])
+        customCommands.remove(id: id)
+    }
+
+    @discardableResult
+    func replaceCustomCommands(_ commands: [CustomCommand]) -> Int {
+        let previous = Dictionary(uniqueKeysWithValues: customCommands.commands.map { ($0.id, $0) })
+        let count = customCommands.replace(with: commands)
+        let liveIDs = Set(customCommands.commands.map(\.id))
+        let removed = Set(previous.keys).subtracting(liveIDs)
+        let removedEntryIDs = Set(removed.compactMap { previous[$0]?.entryID })
+        removeCustomCommandReferences(ids: removed, entryIDs: removedEntryIDs)
+        return count
+    }
+
+    func runCustomCommand(id: UUID) {
+        guard let command = customCommands.command(id: id) else { return }
+        if windowController.isVisible { hidePalette(restoreFocus: false) }
+        Task {
+            let outcome = await ShellCommandRunner.run(command.command)
+            guard outcome != .success else { return }
+            Self.presentCustomCommandFailure(name: command.name, outcome: outcome)
+        }
+    }
+
+    private func removeCustomCommandReferences(ids: Set<UUID>, entryIDs: Set<String>) {
+        for id in ids {
+            let action = HotKeyAction.customCommand(id: id)
+            if hotKeys.recordingAction == action { hotKeys.recordingAction = nil }
+            hotKeys.setShortcut(nil, for: action)
+        }
+        favorites.remove(keys: entryIDs)
+        visibility.removeItemKeys(entryIDs)
+        for entryID in entryIDs {
+            launcherRanking.reset(itemKey: entryID)
+        }
+    }
+
+    private static func presentCustomCommandFailure(
+        name: String, outcome: ShellCommandOutcome
+    ) {
+        let message: String
+        switch outcome {
+        case .success:
+            return
+        case .launchFailure(let detail):
+            message = "The shell could not be started.\n\n\(detail)"
+        case .nonZeroExit(let status, let stderr):
+            message =
+                "The command exited with status \(status)."
+                + (stderr.map { "\n\n" + $0 } ?? "")
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "“\(name)” Failed"
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.runModal()
     }
 
     /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.

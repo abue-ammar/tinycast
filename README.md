@@ -26,6 +26,7 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 
 - **App launcher** — fuzzy-search and launch anything, pin favorites, see what's running, quit an app
   or every app at once.
+- **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
 - **Calculator** — do math, unit and live currency conversions inline, right in the palette.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
@@ -59,7 +60,7 @@ Security → Accessibility**.
 1. Open **Settings → General** and record a global shortcut to summon Tinycast.
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
-4. **Settings → App Hotkeys** — search an app and record a shortcut to toggle it.
+4. **Settings → Shortcuts** — search an app or custom command and record a global shortcut.
 
 ## Building from source
 

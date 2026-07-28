@@ -2,9 +2,10 @@ import Foundation
 
 /// A passwordless, human-readable snapshot of Tinycast's configuration. Every field is optional so an import applies only the keys actually present (non-destructive merge): a partial file — or one from Raycast — leaves everything it omits untouched.
 struct SettingsBackup: Codable {
-    var version = 1
+    var version = 2
     var settings: SettingsData?
     var hotkeys: HotkeyBackup?
+    var customCommands: [CustomCommand]?
     var favoriteApps: [String]?
     var hiddenLauncherItems: [String]?
     var hiddenLauncherKinds: [String]?
@@ -33,6 +34,7 @@ struct SettingsBackup: Codable {
         var toggleEmoji: KeyShortcut?
         var apps: [String: KeyShortcut]?
         var panes: [String: KeyShortcut]?
+        var customCommands: [String: KeyShortcut]?
     }
 
     /// A tally of what an import touched, for user-facing confirmation.
@@ -41,6 +43,7 @@ struct SettingsBackup: Codable {
         var hotkeys = 0
         var favorites = 0
         var hiddenItems = 0
+        var customCommands = 0
     }
 }
 
@@ -81,8 +84,13 @@ extension SettingsBackup {
             uniqueKeysWithValues: hk.boundPaneBundleIDs.compactMap { id in
                 hk.shortcut(for: .settingsPane(bundleID: id)).map { (id, $0) }
             })
+        hotkeys.customCommands = Dictionary(
+            uniqueKeysWithValues: hk.boundCustomCommandIDs.compactMap { id in
+                hk.shortcut(for: .customCommand(id: id)).map { (id.uuidString.lowercased(), $0) }
+            })
         backup.hotkeys = hotkeys
 
+        backup.customCommands = core.customCommands.commands
         backup.favoriteApps = core.favorites.keys
         backup.hiddenLauncherItems = Array(core.visibility.hiddenItemKeys)
         backup.hiddenLauncherKinds = Array(core.visibility.hiddenKinds)
@@ -93,6 +101,9 @@ extension SettingsBackup {
     func apply(to core: AppCore = .shared) -> ApplySummary {
         var summary = ApplySummary()
         if let s = settings { summary.settingsFields = applySettings(s, to: core) }
+        if let customCommands {
+            summary.customCommands = core.replaceCustomCommands(customCommands)
+        }
         if let hotkeys { summary.hotkeys = applyHotkeys(hotkeys, to: core) }
         if let favoriteApps {
             core.favorites.replace(keys: favoriteApps)
@@ -185,6 +196,12 @@ extension SettingsBackup {
         if let s = hotkeys.toggleEmoji { apply(s, .toggleEmoji) }
         for (id, s) in hotkeys.apps ?? [:] { apply(s, .app(bundleID: id)) }
         for (id, s) in hotkeys.panes ?? [:] { apply(s, .settingsPane(bundleID: id)) }
+        for (rawID, s) in hotkeys.customCommands ?? [:] {
+            guard let id = UUID(uuidString: rawID), core.customCommands.command(id: id) != nil else {
+                continue
+            }
+            apply(s, .customCommand(id: id))
+        }
         return count
     }
 }

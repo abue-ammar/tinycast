@@ -11,7 +11,8 @@
 
 Shortcuts persist as JSON strings under `KeyboardShortcuts_<name>` UserDefaults keys — a **legacy
 format** from the removed KeyboardShortcuts package, kept so old bindings survive. The set of bound
-bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch.
+bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes use
+`boundPaneBundleIDs`; custom commands use their stable UUIDs in `boundCustomCommandIDs`.
 
 ## Recorder
 

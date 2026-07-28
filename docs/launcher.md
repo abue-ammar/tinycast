@@ -45,6 +45,16 @@ Rankings are memoized one query deep and keyed by the ranking store's revision, 
 invalidates the cached order. `rank` resolves the whole learned table for a query up front via
 `boosts(query:)` — one fold and one clock read per pass, not per candidate.
 
+## Custom commands
+
+`CustomCommandStore` supplies user-authored entries to `AppIndex` without joining the off-main
+application scan. Built-in and custom commands are alphabetized into the same final section, so they
+reuse fuzzy ranking, favorites, visibility, keycap rendering and the launcher's flat selection.
+
+Only the display name is indexed. Activation resolves the stable UUID through the store and dispatches
+to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
+execution semantics.
+
 > **Invariant:** `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from
 > `Tinycast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test
 > is meaningless.

@@ -84,6 +84,12 @@ swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.
     -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
 swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
     -o /tmp/scopes-test && /tmp/scopes-test                       # launcher search scopes
+swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
+    Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
+    -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog + geometry
+swiftc Tinycast/Core/CustomCommand.swift Tinycast/Core/ShellCommandRunner.swift \
+    Tools/custom-command-test.swift -o /tmp/custom-command-test \
+    && /tmp/custom-command-test                                   # custom command store + runner
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —

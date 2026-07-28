@@ -659,7 +659,7 @@ struct RootPaletteView: View {
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
             case .systemSettings: return "Open System Setting"
-            case .command: return "Open Command"
+            case .command: return "Run Command"
             default: return "Open Application"
             }
         }
