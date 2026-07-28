@@ -140,7 +140,8 @@ All four palette lists (App Launcher, Clipboard, Emoji, Calculator History) rend
 through one shared **`SectionHeader`** (`.subheadline.medium`, secondary — `Features/Launcher/LauncherView.swift`).
 The launcher shows a single "Results" header over search matches, and per-kind sections
 (Favorites / Applications / System Settings / Commands) for the empty query; clipboard/history use
-date buckets (Today / Yesterday / …).
+date buckets (Today / Yesterday / …), and the clipboard adds a "Pinned" section above them holding
+every pinned entry (filtered searches included).
 
 Spacing lives in `Theme.Spacing`: `sectionHeaderBottom` (header → first row) and `sectionSpacing`
 (gap above every header **except the list's first**, which reads as the previous section's closing

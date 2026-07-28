@@ -59,6 +59,8 @@ final class PaletteViewModel: ObservableObject {
     @Published var focusToken = UUID()
     /// Changes only when `prepare` resets the palette, so the lists snap their scroll to the top even when query/mode were already at their defaults (`focusToken` can't serve: it bumps on every reopen, which must preserve a within-timeout scroll).
     @Published var resetToken = UUID()
+    /// Changes when an action reorders the list under the selection (pinning a clip lifts it into the Pinned section), so the list scrolls the highlight back into view.
+    @Published var followToken = UUID()
     /// Set by the compact bar's "…" overflow to expand into the full launcher without a query; cleared on every `prepare`.
     @Published var forceExpanded = false
     /// The app a paste would land in, mirrored from `PaletteWindowController.previousApp` on every show. Deliberately *not* cleared by `prepare` — pop-to-root resets the screen, not the paste target.
@@ -355,22 +357,22 @@ final class AppCore: ObservableObject {
     func paste(_ item: ClipboardItem) {
         let previous = windowController.previousApp
         hidePalette(restoreFocus: false)
-        // A successful write promotes the item to index 0; follow it so any preserved (pop-to-root) or open clipboard state highlights the row that moved.
+        // A successful write promotes the item to the head of its section; follow it so any preserved (pop-to-root) or open clipboard state highlights the row that moved.
         if Paster.paste(item, store: clipboardStore, previousApp: previous) {
-            palette.selection = 0
+            selectClip(item)
         }
     }
 
     func pasteKeepingWindowOpen(_ item: ClipboardItem) {
         if windowController.pasteKeepingWindowOpen(item, store: clipboardStore) {
-            palette.selection = 0
+            selectClip(item)
         }
     }
 
     func copyToClipboard(_ item: ClipboardItem) {
         hidePalette(restoreFocus: false)
         if Paster.copy(item, store: clipboardStore) {
-            palette.selection = 0
+            selectClip(item)
         }
     }
 
@@ -378,6 +380,18 @@ final class AppCore: ObservableObject {
         guard let url = clipboardStore.imageURL(for: item) else { return }
         hidePalette(restoreFocus: false)
         AppLauncher.showInFinder(url)
+    }
+
+    /// Pin or unpin a clipboard entry: the row jumps into (or out of) the Pinned section at the top, so the selection and the scroll follow it.
+    func togglePinnedClip(_ item: ClipboardItem) {
+        clipboardStore.togglePinned(item)
+        selectClip(item)
+        palette.followToken = UUID()
+    }
+
+    /// Put the selection on `item`'s row in the list as currently filtered — pinned rows hold the top, so a row that moved isn't always index 0.
+    private func selectClip(_ item: ClipboardItem) {
+        palette.selection = clipboardStore.rowIndex(of: item, in: palette.query) ?? 0
     }
 
     // MARK: - Emoji actions (frequency is tallied on the base glyph; the configured tone is applied at copy time)

@@ -22,15 +22,15 @@ struct ClipboardList: View {
         }
     }
 
-    /// Items are newest-first, so grouping walks and emits a date header whenever the bucket changes — mirrors the launcher's sectioning.
+    /// Pinned entries come first from the store and share one "Pinned" header; the rest are newest-first, so grouping walks and emits a date header whenever the bucket changes — mirrors the launcher's sectioning.
     private var rows: [Row] {
         var rows: [Row] = []
-        var currentBucket: DateBucket?
+        var currentTitle: String?
         for item in results {
-            let bucket = DateBucket(for: item.createdAt)
-            if bucket != currentBucket {
-                rows.append(.header(bucket.title))
-                currentBucket = bucket
+            let title = item.isPinned ? "Pinned" : DateBucket(for: item.createdAt).title
+            if title != currentTitle {
+                rows.append(.header(title))
+                currentTitle = title
             }
             rows.append(.item(item))
         }
@@ -124,11 +124,22 @@ enum ClipboardActionsMenu {
                 core.copyToClipboard(item)
             },
             PopoverMenuItem(
-                title: "Paste & Keep Window Open", icon: .paste(target, fallback: "pin")
+                title: "Paste & Keep Window Open", icon: .paste(target, fallback: "macwindow")
             ) {
                 core.pasteKeepingWindowOpen(item)
             },
         ]
+        if item.isPinned {
+            items.append(
+                PopoverMenuItem(title: "Unpin Entry", systemImage: "pin.slash", shortcut: "⌘P") {
+                    core.togglePinnedClip(item)
+                })
+        } else {
+            items.append(
+                PopoverMenuItem(title: "Pin Entry", systemImage: "pin", shortcut: "⌘P") {
+                    core.togglePinnedClip(item)
+                })
+        }
         if item.kind == .image {
             items.append(
                 PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {

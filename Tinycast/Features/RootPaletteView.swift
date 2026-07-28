@@ -165,6 +165,8 @@ struct RootPaletteView: View {
         let hist = vm.mode == .calculatorHistory ? histResults : []
         let emojiSections = vm.mode == .emoji ? emojiSections : []
         let emojis = emojiSections.flatMap(\.entries)
+        // Newest stored clip + the reorder token: the pair changes only when the store mutates, never when a query filters the list.
+        let clipFollow = ClipFollowKey(id: store.items.first?.id, token: vm.followToken)
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
@@ -270,10 +272,15 @@ struct RootPaletteView: View {
             }
             vm.menuOpen = menuOpen
         }
-        // A new top clip while the list is showing (promote-on-paste, live capture) pulls the highlight and scroll back to the row that just moved up.
-        .onChange(of: clips.first?.id) { _, newTop in
-            guard vm.mode == .clipboard, newTop != nil else { return }
-            vm.selection = 0
+        // Follow a row the store moved: a fresh capture (or promote-on-paste) lands at the head of its section, and pinning lifts a row into the Pinned section. With a query typed the highlight stays put; `AppCore` has already placed it for pin/paste.
+        .onChange(of: clipFollow) { old, new in
+            // A nil `old.id` is the first load landing, not a row that moved.
+            guard vm.mode == .clipboard, old.id != nil else { return }
+            if isQueryEmpty, old.id != new.id, let id = new.id,
+                let index = clips.firstIndex(where: { $0.id == id })
+            {
+                vm.selection = index
+            }
             scrollToken = UUID()
         }
         .onAppear { searchFocused = true }
@@ -400,6 +407,14 @@ struct RootPaletteView: View {
             case .launcher, .emoji:
                 return .ignored
             }
+            return .handled
+        }
+        // ⌘P pins/unpins the selected clip — mirrors the Actions menu row, and works while that menu is open like the other advertised chords.
+        .onKeyPress(keys: ["p"], phases: .down) { press in
+            guard press.modifiers.contains(.command), vm.mode == .clipboard,
+                clipResults.indices.contains(selection)
+            else { return .ignored }
+            core.togglePinnedClip(clipResults[selection])
             return .handled
         }
     }
@@ -751,6 +766,12 @@ struct RootPaletteView: View {
             core.pasteEmoji(emojiResults[selection])
         }
     }
+}
+
+/// Change key for the clipboard list's follow-the-moved-row handler: the newest stored clip (a capture or promote puts a different row there) plus the token an action bumps when it reorders the list (pin/unpin). Deliberately read from the store, not the filtered results, so typing a query never reads as a row that moved.
+private struct ClipFollowKey: Equatable {
+    let id: ClipboardItem.ID?
+    let token: UUID
 }
 
 /// The footer's glass menu circle; hover lives here so a mouse sweep never re-renders the palette body.
