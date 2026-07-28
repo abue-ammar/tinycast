@@ -70,19 +70,54 @@ xcode-build-server config -project Tinycast.xcodeproj -scheme Tinycast \
 actually build. Do a build once (⌘⇧B or F5) to populate it. In VS Code, **F5** builds and launches the
 app; changes always apply (fixed build path — no need to delete `build/`).
 
-## Tests
+## The extension runtime
 
-There's no XCTest target. Two standalone harnesses:
+`Tinycast/Resources/RaycastRuntime.generated.js` (React + a reconciler + the `@raycast/api` shim + the
+Node/web polyfills JavaScriptCore lacks) is **generated and committed**, so a plain app build needs no
+Node. Regenerate it only when changing `Tools/raycast-runtime/src/`:
 
 ```sh
-swift Tools/fuzz-test.swift                                        # launcher fuzzy matcher
-swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
-    -o /tmp/calc-test && /tmp/calc-test                           # calculator engine
+cd Tools/raycast-runtime
+pnpm install
+node gen-enums.mjs        # only after bumping the @raycast/api devDependency
+node build.mjs            # -> Tinycast/Resources/RaycastRuntime.generated.js (commit it)
 ```
 
-`Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
-change the scoring in one and mirror it in the other. The calc harness compiles the real engine
-sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only.
+Details, the supported API surface and the known gaps: [`extensions.md`](extensions.md).
+
+## Tests
+
+There's no XCTest target. Standalone harnesses, all compiling the **real** sources:
+
+```sh
+swiftc Tinycast/Core/FuzzyMatch.swift Tools/fuzz-test.swift \
+    -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher fuzzy matcher
+swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
+    -o /tmp/calc-test && /tmp/calc-test                            # calculator engine
+swiftc Tinycast/Core/Emoji/{EmojiCatalog,EmojiGridGeometry,EmojiData.generated}.swift \
+    Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test    # emoji catalog + grid geometry
+swiftc -parse-as-library -swift-version 6 \
+    Tinycast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
+    Tinycast/Core/FuzzyMatch.swift Tinycast/Core/Compression/Zlib.swift \
+    Tools/ext-test.swift -o /tmp/ext-test && /tmp/ext-test         # extension runtime (JavaScriptCore)
+```
+
+That the harnesses compile the shipped sources is why `Tinycast/Core/Calculator/` and
+`Tinycast/Core/Emoji/` must stay Foundation-only, and why `FuzzyMatch` is its own Foundation-only file.
+
+`ext-test` also runs any installed extension and prints the tree it renders:
+
+```sh
+/tmp/ext-test ~/Library/Application\ Support/com.tinycast.app.dev/extensions/<name> [command]
+```
+
+The JS half has its own faster loop, which needs no Swift build:
+
+```sh
+cd Tools/raycast-runtime
+node fixtures.mjs                                          # runtime fixtures in a bare `vm` context
+node test.mjs ~/.config/raycast/extensions/<uuid> [command]  # any prebuilt extension
+```
 
 ## Packaging a DMG
 

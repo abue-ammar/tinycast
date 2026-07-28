@@ -60,11 +60,16 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
         /// Little state indicator dot next to a settings row title (Hyper Key active/needs-permission).
         static let statusDot: CGFloat = 6
+        /// Label column of an extension `Form`, so every control lines up down the pane.
+        static let formLabelWidth: CGFloat = 110
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
     enum Typography {
-        static let searchField = Font.system(size: 20, weight: .regular)
+        /// Point size of the search field, shared with the width measurement that sizes it to its text
+        /// when a command's argument fields sit beside it.
+        static let searchFieldSize: CGFloat = 20
+        static let searchField = Font.system(size: searchFieldSize, weight: .regular)
         static let headerIcon = Font.system(size: 18, weight: .medium)
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout

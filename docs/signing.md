@@ -25,7 +25,11 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
   -addext "extendedKeyUsage=critical,codeSigning"
 
 # Bundle it as a .p12 (the non-empty password keeps `security import` happy).
-openssl pkcs12 -export -inkey /tmp/tc-key.pem -in /tmp/tc-cert.pem \
+# Use the *system* openssl here: OpenSSL 3 (what Homebrew installs, and what's first in PATH if you
+# have it) defaults to a SHA-256 MAC with AES-256, which Apple's SecPKCS12Import can't read — the
+# import then fails with "MAC verification failed during PKCS12 import (wrong password?)".
+# macOS's LibreSSL always writes the legacy SHA-1/3DES form Security understands.
+/usr/bin/openssl pkcs12 -export -inkey /tmp/tc-key.pem -in /tmp/tc-cert.pem \
   -name "Tinycast Self-Signed" -out /tmp/tc.p12 -passout pass:tinycast
 
 # Import into the login keychain so codesign can use it without prompting.
@@ -42,6 +46,10 @@ security find-identity -p codesigning | grep "Tinycast Self-Signed"
 ```
 
 Now local builds (Xcode, VS Code F5, `xcodebuild`) sign with it, and you grant Accessibility once.
+
+If you'd rather stay on one `openssl`, adding `-legacy` to the OpenSSL 3 `pkcs12 -export` line produces
+the same compatible bundle. To build without any of this (no signing, so macOS forgets the
+Accessibility grant on every rebuild): `xcodebuild … CODE_SIGNING_ALLOWED=NO`.
 
 ## 2. Generate the CI secrets
 

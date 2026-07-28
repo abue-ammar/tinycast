@@ -27,6 +27,9 @@ buildServer.json
 build/
 dist/
 
+# The extension runtime's build-time dependencies (the bundled output is committed)
+Tools/raycast-runtime/node_modules/
+
 # Fastlane
 fastlane/report.xml
 fastlane/Preview.html

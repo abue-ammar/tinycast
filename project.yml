@@ -31,6 +31,8 @@ targets:
     type: application
     platform: macOS
     sources:
+      # Everything under Tinycast/, including Resources/RaycastRuntime.generated.js — the embedded
+      # Raycast-extension runtime, which ships as a bundle resource (see docs/extensions.md).
       - path: Tinycast
     settings:
       base:

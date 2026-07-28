@@ -6,6 +6,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case clipboard
     case calculatorHistory
     case emoji
+    /// A Raycast extension command rendering into the palette.
+    case extensionCommand
 
     var id: String { rawValue }
     var title: String {
@@ -14,6 +16,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .calculatorHistory: return "Calculator History"
         case .emoji: return "Emoji & Symbols"
+        case .extensionCommand: return "Extension"
         }
     }
     var systemImage: String {
@@ -22,6 +25,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.doc"
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .emoji: return "face.smiling"
+        case .extensionCommand: return "puzzlepiece.extension"
         }
     }
     var placeholder: String {
@@ -30,6 +34,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         case .emoji: return "Search emoji and symbols…"
+        case .extensionCommand: return "Search…"
         }
     }
 }
@@ -100,12 +105,15 @@ final class AppCore: ObservableObject {
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteViewModel()
+    let extensions: ExtensionManager
 
     private lazy var windowController = PaletteWindowController(core: self)
     private let auxWindows = AuxWindowController()
+    private let hud = HUDWindowController()
 
     private init() {
         clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
+        extensions = ExtensionManager(clipboardStore: clipboardStore)
     }
 
     func start() {
@@ -122,6 +130,7 @@ final class AppCore: ObservableObject {
 
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
+        extensions.start(appIndex: appIndex, core: self)
 
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
@@ -243,10 +252,15 @@ final class AppCore: ObservableObject {
 
     // MARK: - Actions invoked from the palette UI
 
-    func launch(_ app: AppEntry) {
+    func launch(_ app: AppEntry, arguments: [String: String] = [:]) {
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
             runCommand(app)
+            return
+        }
+        // A view command takes over the palette; a no-view command closes it and runs headless.
+        if app.kind == .extensionCommand {
+            runExtensionCommand(app, arguments: arguments)
             return
         }
         hidePalette(restoreFocus: false)
@@ -256,9 +270,77 @@ final class AppCore: ObservableObject {
         case .systemSettings:
             guard let bundleID = app.bundleID else { return }
             AppLauncher.openSettingsPane(bundleID: bundleID)
-        case .command:
+        case .command, .extensionCommand:
             break  // handled above
         }
+    }
+
+    // MARK: - Extension commands
+
+    /// The app a paste from an extension should land in — the same recorded `previousApp` the clipboard
+    /// and emoji paste paths use.
+    var extensionPasteTarget: NSRunningApplication? { windowController.previousApp }
+
+    private func runExtensionCommand(_ app: AppEntry, arguments: [String: String]) {
+        guard let (owner, command) = extensions.resolve(app) else { return }
+        switch command.mode {
+        case .view:
+            // Switch the palette over first so the launching state is what the user sees.
+            palette.prepare(mode: .extensionCommand)
+            Task { await extensions.run(owner, command: command, arguments: arguments) }
+        case .noView, .menuBar:
+            // A no-view command's own `showHUD` / `showToast` is the feedback; the palette gets out of
+            // the way exactly as Raycast does. An unsupported mode surfaces its reason as a HUD.
+            hidePalette(restoreFocus: false)
+            Task { await extensions.run(owner, command: command, arguments: arguments) }
+        }
+    }
+
+    /// The arguments a selected launcher row declares, or nil when it isn't an extension command with
+    /// any — what the header uses to decide whether to show the inline argument fields.
+    func commandArguments(for entry: AppEntry?) -> [ExtensionCommandArgument]? {
+        guard let entry, entry.kind == .extensionCommand,
+            let (_, command) = extensions.resolve(entry), !command.arguments.isEmpty
+        else { return nil }
+        return command.arguments
+    }
+
+    /// Escape in an extension screen: pop the extension's own stack first, then leave the command.
+    func exitExtensionScreen() {
+        Task {
+            if await extensions.popNavigation() { return }
+            await extensions.stop()
+            palette.prepare(mode: .launcher)
+        }
+    }
+
+    /// `popToRoot()` from an extension — back to a fresh root search, command torn down.
+    func popExtensionToRoot() {
+        Task {
+            await extensions.stop()
+            palette.prepare(mode: .launcher)
+        }
+    }
+
+    /// `showHUD` from an extension. Its own window, because a no-view command closes the palette
+    /// before it finishes — the pill has to outlive it.
+    func showExtensionHUD(_ message: String) {
+        hud.show(message)
+    }
+
+    /// True while the palette is on screen — a toast has somewhere to render only then.
+    var isPaletteVisible: Bool { windowController.isVisible }
+
+    func showExtensionSettings(for app: AppEntry) {
+        guard let (owner, _) = extensions.resolve(app) else { return }
+        showExtensionSettings(for: owner)
+    }
+
+    func showExtensionSettings(for owner: InstalledExtension) {
+        hidePalette(restoreFocus: false)
+        showSettings(tab: .extensions)
+        NotificationCenter.default.post(
+            name: .tinycastSelectExtension, object: owner.manifest.name)
     }
 
     private func runCommand(_ entry: AppEntry) {

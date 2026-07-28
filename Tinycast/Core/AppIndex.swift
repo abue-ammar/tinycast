@@ -5,19 +5,26 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case application
         case systemSettings
         case command
+        case extensionCommand
     }
 
-    let id: String  // file path (or "command:…" id) — always unique
+    let id: String  // file path (or "command:…" / "extension:…" id) — always unique
     let name: String  // clean display name, never includes ".app"
     let url: URL
     let bundleID: String?
     let kind: Kind
+    /// An image file to draw instead of the file icon — an extension's manifest icon.
+    var imageIconPath: String? = nil
+    /// Replaces the trailing kind label; an extension command shows its extension's title there.
+    var kindLabelOverride: String? = nil
 
     var kindLabel: String {
+        if let kindLabelOverride { return kindLabelOverride }
         switch kind {
         case .application: return "Application"
         case .systemSettings: return "System Setting"
         case .command: return "Command"
+        case .extensionCommand: return "Extension Command"
         }
     }
 
@@ -27,16 +34,21 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         switch kind {
         case .application: return .app(bundleID: bundleID)
         case .systemSettings: return .settingsPane(bundleID: bundleID)
-        case .command: return nil
+        case .command, .extensionCommand: return nil
         }
     }
 
-    /// Command entries draw an SF Symbol tile; everything else uses its file icon.
-    var isSymbolIcon: Bool { kind == .command }
-    var symbolIconName: String { CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark" }
+    /// Command entries draw an SF Symbol tile; an extension command draws its manifest icon when it
+    /// ships one, and falls back to a symbol tile otherwise.
+    var isSymbolIcon: Bool { kind == .command || (kind == .extensionCommand && imageIconPath == nil) }
+    var symbolIconName: String {
+        if kind == .extensionCommand { return "puzzlepiece.extension" }
+        return CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark"
+    }
 
     var icon: NSImage {
-        isSymbolIcon
+        if let imageIconPath { return IconCache.imageIcon(atPath: imageIconPath) }
+        return isSymbolIcon
             ? IconCache.symbolIcon(named: symbolIconName) : IconCache.icon(forFile: url.path)
     }
 }
@@ -77,6 +89,52 @@ enum IconCache {
         return await Task.detached(priority: .userInitiated) {
             Decoded(image: symbolIcon(named: name))
         }.value.image
+    }
+
+    static func cachedImage(atPath path: String) -> NSImage? {
+        cache.object(forKey: ("image:" + path) as NSString)
+    }
+
+    /// An extension list row or Detail markdown can reference a remote image; fetch once, then serve
+    /// from the same cache as every other row icon. Failures cache nothing, so a transient error retries
+    /// on the next render. `downsample` is off for markdown images, which are drawn much larger than a
+    /// row icon.
+    static func loadRemoteAsync(_ url: URL, downsample: Bool = true) async -> NSImage? {
+        let key = ("image:\(downsample ? "" : "full:")" + url.absoluteString) as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        let decoded = await Task.detached(priority: .userInitiated) {
+            Decoded(image: NSImage(data: data))
+        }.value
+        guard let source = decoded.image else { return nil }
+        guard downsample else {
+            let bytes = Int(source.size.width * source.size.height * 4)
+            cache.setObject(source, forKey: key, cost: bytes)
+            return source
+        }
+        let (icon, cost) = downsampled(source)
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
+    }
+
+    static func loadImageAsync(atPath path: String) async -> NSImage? {
+        if let cached = cachedImage(atPath: path) { return cached }
+        return await Task.detached(priority: .userInitiated) {
+            Decoded(image: imageIcon(atPath: path))
+        }.value.image
+    }
+
+    /// An icon read straight from an image file — an extension ships a PNG, which `NSWorkspace` would
+    /// otherwise answer with the generic document icon.
+    static func imageIcon(atPath path: String) -> NSImage {
+        let key = "image:" + path as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let source = NSImage(contentsOfFile: path) else {
+            return symbolIcon(named: "puzzlepiece.extension")
+        }
+        let (icon, cost) = downsampled(source)
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
     }
 
     static func icon(forFile path: String) -> NSImage {
@@ -154,18 +212,40 @@ final class AppIndex: ObservableObject {
 
     private var isRefreshing = false
 
+    /// Disk-scanned entries, kept apart from `extensionCommands` so either can be refreshed alone.
+    private var scanned: [AppEntry] = []
+    private var extensionCommands: [AppEntry] = []
+
     /// Re-scan (called on every launcher open); the in-flight guard drops overlapping reopens and `apps` is only re-published when the set changed, so an unchanged reopen does no UI work.
     func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
         let found = await Task.detached(priority: .utility) { AppIndex.scan() }.value
-        guard found != apps else { return }
-        apps = found
+        guard found != scanned else { return }
+        scanned = found
+        rebuild()
+    }
+
+    /// Called by `ExtensionManager` whenever the installed set changes.
+    func setExtensionCommands(_ entries: [AppEntry]) {
+        guard entries != extensionCommands else { return }
+        extensionCommands = entries
+        rebuild()
+    }
+
+    /// Apps, extension commands, Settings panes, then built-in commands — the sectioned launcher
+    /// relies on this order so its flat selection index maps 1:1 onto rows.
+    private func rebuild() {
+        let applications = scanned.filter { $0.kind == .application }
+        let rest = scanned.filter { $0.kind != .application }
+        apps = applications + extensionCommands + rest
         matchCache = nil
     }
 
-    nonisolated private static func scan() -> [AppEntry] {
+    /// Every `.app` in the standard search directories, in scan order. Also serves extensions'
+    /// `getApplications()`.
+    nonisolated static func installedApplicationURLs() -> [URL] {
         let fm = FileManager.default
         var searchDirs = [
             "/Applications",
@@ -175,29 +255,29 @@ final class AppIndex: ObservableObject {
         ].map { URL(fileURLWithPath: $0) }
         searchDirs.append(fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications"))
 
+        return searchDirs.flatMap { dir -> [URL] in
+            let items =
+                (try? fm.contentsOfDirectory(
+                    at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+            return items.filter { $0.pathExtension == "app" }
+        }
+    }
+
+    nonisolated private static func scan() -> [AppEntry] {
         var seenBundleIDs = Set<String>()
         var result: [AppEntry] = []
-        for dir in searchDirs {
-            guard
-                let items = try? fm.contentsOfDirectory(
-                    at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-                )
-            else { continue }
-            for url in items where url.pathExtension == "app" {
-                let bundle = Bundle(url: url)
-                let bundleID = bundle?.bundleIdentifier
-                // Dedup by bundle id; first directory (/Applications) wins.
-                if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
+        for url in installedApplicationURLs() {
+            let bundle = Bundle(url: url)
+            let bundleID = bundle?.bundleIdentifier
+            // Dedup by bundle id; first directory (/Applications) wins.
+            if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
 
-                let name =
-                    (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-                    ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
-                    ?? url.deletingPathExtension().lastPathComponent
-                result.append(
-                    AppEntry(
-                        id: url.path, name: name, url: url, bundleID: bundleID,
-                        kind: .application))
-            }
+            let name =
+                (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                ?? url.deletingPathExtension().lastPathComponent
+            result.append(
+                AppEntry(id: url.path, name: name, url: url, bundleID: bundleID, kind: .application))
         }
         // Apps, then Settings panes, then Commands — the sectioned launcher relies on this order so its flat selection index maps 1:1 onto rows.
         let apps = result.sorted {
@@ -230,59 +310,5 @@ final class AppIndex: ObservableObject {
             }
             .prefix(limit)
             .map(\.0)
-    }
-}
-
-enum FuzzyMatch {
-    /// Tiered relevance score (higher is better), or nil when the query doesn't match; tiers are spaced so a better kind always wins.
-    static func score(query: String, candidate: String) -> Int? {
-        let q = query.lowercased()
-        let c = candidate.lowercased()
-        guard !q.isEmpty else { return 0 }
-
-        if c == q { return 100_000 }
-        if c.hasPrefix(q) { return 90_000 - c.count }
-
-        if let range = c.range(of: q) {
-            let atWordStart = isWordStart(c, range.lowerBound)
-            return (atWordStart ? 80_000 : 70_000) - c.count
-        }
-
-        guard let sub = subsequenceScore(Array(q), Array(c)) else { return nil }
-        return sub
-    }
-
-    private static func isWordStart(_ s: String, _ index: String.Index) -> Bool {
-        if index == s.startIndex { return true }
-        let before = s[s.index(before: index)]
-        return !before.isLetter && !before.isNumber
-    }
-
-    /// Subsequence match with bonuses for consecutive hits and word boundaries, or nil when `q` isn't a subsequence of `c`.
-    private static func subsequenceScore(_ q: [Character], _ c: [Character]) -> Int? {
-        var qi = 0
-        var score = 0
-        var run = 0
-        var prev = -2
-        for (ci, ch) in c.enumerated() where qi < q.count && ch == q[qi] {
-            var bonus = 1
-            if ci == prev + 1 {
-                run += 1
-                bonus += run * 3
-            } else {
-                run = 0
-            }
-            if ci == 0 {
-                bonus += 12
-            } else {
-                let before = c[ci - 1]
-                if !before.isLetter && !before.isNumber { bonus += 8 }
-            }
-            score += bonus
-            prev = ci
-            qi += 1
-        }
-        guard qi == q.count else { return nil }
-        return score
     }
 }

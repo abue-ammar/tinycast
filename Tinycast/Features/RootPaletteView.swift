@@ -10,9 +10,16 @@ struct RootPaletteView: View {
     @EnvironmentObject private var calcHistory: CalculatorHistoryStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
     @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
+    @EnvironmentObject private var extensions: ExtensionManager
     /// Observed so a skin tone changed in Settings re-renders the grid glyphs immediately.
     @ObservedObject private var settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
+    /// Focus among a selected command's inline argument fields; nil means the search field has it.
+    @FocusState private var focusedArgument: String?
+    /// Typed argument values, keyed by row id + argument name. View state, not view-model state: the
+    /// selection's own `onChange` would otherwise publish into `PaletteViewModel` mid-update. Keying by
+    /// row also means moving the selection needs no reset — another row's values are simply not read.
+    @State private var commandArguments: [String: String] = [:]
     @State private var showActions = false
     @State private var showAppMenu = false
     /// Highlighted row of whichever popover menu is open; reset to the first row on open, moved by ↑/↓ and hover, activated by ↵/click.
@@ -56,12 +63,30 @@ struct RootPaletteView: View {
     }
     private var calcCount: Int { calcResult == nil ? 0 : 1 }
 
+    /// The running command's screen, flattened. Rebuilt per render from the published tree — cheap,
+    /// and it keeps row order and the flat selection index derived from one value.
+    private var extensionScreen: ExtensionScreen {
+        guard vm.mode == .extensionCommand, case .rendered(let tree) = extensions.state else {
+            return .empty
+        }
+        return ExtensionScreen(tree: tree, query: vm.query)
+    }
+
+    /// `assets/` of the running extension, so its icons resolve.
+    private var extensionAssetsPath: String? {
+        guard let name = extensions.running?.extensionName,
+            let owner = extensions.extensionNamed(name)
+        else { return nil }
+        return owner.assetsPath
+    }
+
     private var resultCount: Int {
         switch vm.mode {
         case .launcher: return appResults.count + calcCount
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + calcCount
         case .emoji: return emojiResults.count
+        case .extensionCommand: return extensionScreen.items.count
         }
     }
     /// Selection clamped into the current results — the single source of truth for highlight, preview and activation so the list and preview can never disagree.
@@ -129,6 +154,10 @@ struct RootPaletteView: View {
                     entry: emoji, core: core, target: vm.pasteTarget)
             }
             return nil
+        case .extensionCommand:
+            return ExtensionActionsMenu.content(
+                screen: extensionScreen, selection: selection,
+                assetsPath: extensionAssetsPath, core: core)
         }
     }
 
@@ -158,11 +187,13 @@ struct RootPaletteView: View {
         let hist = vm.mode == .calculatorHistory ? histResults : []
         let emojiSections = vm.mode == .emoji ? emojiSections : []
         let emojis = emojiSections.flatMap(\.entries)
+        let extensionScreen = self.extensionScreen
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
         // Only the active mode is non-empty.
         let count = apps.count + offset + clips.count + hist.count + emojis.count
+            + extensionScreen.items.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
@@ -173,8 +204,29 @@ struct RootPaletteView: View {
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
         // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). The primary/Actions group is hidden when there's nothing to act on: no results in any mode, or an error calc card (selectable but action-less).
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
-        let showActionGroup = count > 0 && !(calcSelected && !calcActionable)
+        var showActionGroup = count > 0 && !(calcSelected && !calcActionable)
+        if vm.mode == .extensionCommand {
+            showActionGroup = extensionScreen.actionPanel(forItemAt: sel) != nil
+        }
 
+        // Assembled in three stages — chrome, state observers, key handling. Splitting the chain is
+        // not cosmetic: as one expression the type-checker gives up on it.
+        let chrome = paletteChrome(
+            apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
+            extensionScreen: extensionScreen, selection: sel, favoriteCount: favoriteCount,
+            showSections: showSections, pillLabel: pillLabel, showActionGroup: showActionGroup)
+        return keyHandlers(
+            observers(chrome, clips: clips, extensionScreen: extensionScreen),
+            selection: sel, extensionScreen: extensionScreen)
+    }
+
+    /// Everything visual: the mode's content, the pinned header and footer, and the menu overlays.
+    private func paletteChrome(
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
+        emojiSections: [EmojiGridSection], calc: CalcResult?, extensionScreen: ExtensionScreen,
+        selection sel: Int, favoriteCount: Int, showSections: Bool, pillLabel: String,
+        showActionGroup: Bool
+    ) -> some View {
         // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see docs/ui.md).
         return Group {
             if isCollapsed {
@@ -182,6 +234,7 @@ struct RootPaletteView: View {
             } else {
                 content(
                     apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
+                    extensionScreen: extensionScreen,
                     selection: sel, favoriteCount: favoriteCount, showSections: showSections
                 )
             }
@@ -190,6 +243,13 @@ struct RootPaletteView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !isCollapsed {
                 bottomBar(pillLabel: pillLabel, showActionGroup: showActionGroup)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if vm.mode == .extensionCommand, !extensions.toasts.isEmpty {
+                ExtensionFeedbackOverlay(
+                    toasts: extensions.toasts,
+                    onToastAction: { extensions.runToastAction(token: $0) })
             }
         }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
@@ -226,9 +286,18 @@ struct RootPaletteView: View {
         .background(Color.black.opacity(Theme.Colors.panelDimming))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
+    }
+
+    /// State observers: focus, query, mode and the pop-to-root reset.
+    private func observers<Content: View>(
+        _ content: Content, clips: [ClipboardItem], extensionScreen: ExtensionScreen
+    ) -> some View {
+        content
         // Every show bumps focusToken — refocus search and drop any menu left open from last time (e.g. dismissed by clicking away with a context menu up).
         .onChange(of: vm.focusToken) {
             searchFocused = true
+            focusedArgument = nil
+            commandArguments = [:]
             showActions = false
             showAppMenu = false
         }
@@ -236,6 +305,10 @@ struct RootPaletteView: View {
             vm.selection = 0
             scrollToken = UUID()
             emojiScroll = EmojiScrollIntent(kind: .top)
+            // A command with `onSearchTextChange` owns filtering; hand it every keystroke.
+            if vm.mode == .extensionCommand, let handler = extensionScreen.searchTextHandler {
+                extensions.dispatch(handler: handler, arguments: [vm.query])
+            }
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
@@ -272,6 +345,13 @@ struct RootPaletteView: View {
         .onAppear { searchFocused = true }
         // Typing/clearing/overflow/settings all flip `paletteIsCollapsed`; resize the window to match.
         .onChange(of: core.paletteIsCollapsed) { core.syncPaletteSize() }
+    }
+
+    /// Every keyboard shortcut the palette owns.
+    private func keyHandlers<Content: View>(
+        _ content: Content, selection: Int, extensionScreen: ExtensionScreen
+    ) -> some View {
+        content
         // ⌘1–⌘5 launch the compact bar's favorite slots (or expand, for the "…" overflow slot).
         .onKeyPress(keys: ["1", "2", "3", "4", "5"], phases: .down) { press in
             guard isCollapsed, settings.showFavoritesInCompactMode,
@@ -343,7 +423,7 @@ struct RootPaletteView: View {
                 let index = selection - calcCount
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
-            case .launcher:
+            case .launcher, .extensionCommand:
                 return .ignored
             }
             return .handled
@@ -353,11 +433,29 @@ struct RootPaletteView: View {
                 closeMenus()
                 return .handled
             }
+            if focusedArgument != nil {
+                focusedArgument = nil
+                searchFocused = true
+                return .handled
+            }
+            if vm.mode == .extensionCommand {
+                core.exitExtensionScreen()
+                return .handled
+            }
             core.hidePalette()
             return .handled
         }
         .onKeyPress(.tab) {
             if menuOpen { return .handled }
+            // A running command owns the screen; Tab would otherwise drop it for the clipboard.
+            if vm.mode == .extensionCommand { return .handled }
+            // With argument fields on screen, Tab walks them before it means anything else.
+            if let arguments = selectedCommandArguments {
+                let next = CommandArgumentsRow.next(after: focusedArgument, in: arguments)
+                focusedArgument = next
+                searchFocused = next == nil
+                return .handled
+            }
             toggleMode()
             return .handled
         }
@@ -377,6 +475,23 @@ struct RootPaletteView: View {
             withAnimation(Self.menuAnimation) { showActions.toggle() }
             return .handled
         }
+        // An extension action can declare its own shortcut; match modified keystrokes against the
+        // current panel before the field editor sees them. Unmodified keys fall through to typing.
+        .onKeyPress(phases: .down) { press in
+            guard vm.mode == .extensionCommand, !menuOpen else { return .ignored }
+            guard press.modifiers.contains(.command) || press.modifiers.contains(.control)
+                || press.modifiers.contains(.option)
+            else { return .ignored }
+            let actions = ExtensionScreen.actions(
+                in: extensionScreen.actionPanel(forItemAt: selection))
+            guard
+                let match = actions.first(where: {
+                    $0.matches(key: press.key, modifiers: press.modifiers)
+                }), let handler = match.handler
+            else { return .ignored }
+            extensions.dispatch(handler: handler)
+            return .handled
+        }
         // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
             if menuOpen { return .handled }
@@ -386,7 +501,7 @@ struct RootPaletteView: View {
                 deleteSelectedClip()
             case .calculatorHistory:
                 deleteSelectedHistoryEntry()
-            case .launcher, .emoji:
+            case .launcher, .emoji, .extensionCommand:
                 return .ignored
             }
             return .handled
@@ -397,7 +512,7 @@ struct RootPaletteView: View {
         HStack(alignment: .center, spacing: Theme.Spacing.md) {
             // Clipboard and Calculator History are sub-screens of the root search, so their header icon is a back chevron instead of a mode glyph.
             if vm.mode != .launcher {
-                Button(action: exitToLauncher) {
+                Button(action: backOut) {
                     Image(systemName: "chevron.left")
                         .font(Theme.Typography.headerIcon)
                         .symbolRenderingMode(.hierarchical)
@@ -414,6 +529,22 @@ struct RootPaletteView: View {
                     .frame(width: Theme.Size.headerIconSlot)
             }
             searchField
+                // Nil leaves the field flexible (it fills the row, as everywhere else); a width pins it
+                // to its text so a command's argument fields sit right after what you typed.
+                .frame(width: selectedCommandArguments.map(searchFieldWidth))
+            if let arguments = selectedCommandArguments, let entry = selectedAppEntry {
+                CommandArgumentsRow(
+                    arguments: arguments,
+                    icon: entry.imageIconPath,
+                    value: { name in
+                        Binding(
+                            get: { commandArguments[Self.argumentKey(entry.id, name)] ?? "" },
+                            set: { commandArguments[Self.argumentKey(entry.id, name)] = $0 })
+                    },
+                    focused: $focusedArgument,
+                    onSubmit: activateSelection)
+                Spacer(minLength: 0)
+            }
             // Compact bar pins favorites to the right of the field; expanded shows them as list rows instead.
             if isCollapsed, settings.showFavoritesInCompactMode {
                 let slots = compactFavoriteSlots
@@ -438,7 +569,7 @@ struct RootPaletteView: View {
     private var searchField: some View {
         TextField(
             "", text: $vm.query,
-            prompt: Text(vm.mode.placeholder).foregroundStyle(Theme.Colors.textTertiary)
+            prompt: Text(searchPlaceholder).foregroundStyle(Theme.Colors.textTertiary)
         )
         .textFieldStyle(.plain)
         .font(Theme.Typography.searchField)
@@ -450,7 +581,7 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func content(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
-        emojiSections: [EmojiGridSection], calc: CalcResult?,
+        emojiSections: [EmojiGridSection], calc: CalcResult?, extensionScreen: ExtensionScreen,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
@@ -540,6 +671,24 @@ struct RootPaletteView: View {
                     }
                 )
             }
+        case .extensionCommand:
+            ExtensionCommandView(
+                screen: extensionScreen,
+                state: extensions.state,
+                selection: selection,
+                assetsPath: extensionAssetsPath,
+                scrollToken: scrollToken,
+                onSelect: { vm.selection = $0 },
+                onActivate: activateSelection,
+                onActions: { index in
+                    vm.selection = index
+                    withAnimation(Self.menuAnimation) { showActions = true }
+                },
+                onFieldChange: { field, value in
+                    guard let handler = field.handler("onTinycastChange") else { return }
+                    extensions.dispatch(handler: handler, arguments: [value])
+                }
+            )
         case .emoji:
             if !emojiIndex.isLoaded {
                 EmptyResults(text: "Loading emoji…")
@@ -614,11 +763,16 @@ struct RootPaletteView: View {
             return vm.pasteTarget?.pasteTitle ?? "Paste"
         case .calculatorHistory:
             return "Copy Answer"
+        case .extensionCommand:
+            let actions = ExtensionScreen.actions(
+                in: extensionScreen.actionPanel(forItemAt: selection))
+            return actions.first?.title ?? "Run"
         case .launcher:
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
             case .systemSettings: return "Open System Setting"
             case .command: return "Open Command"
+            case .extensionCommand: return "Run Command"
             default: return "Open Application"
             }
         }
@@ -691,6 +845,60 @@ struct RootPaletteView: View {
         vm.prepare(mode: .launcher)
     }
 
+    /// The header chevron: an extension screen pops its own navigation stack before leaving the command.
+    private func backOut() {
+        if vm.mode == .extensionCommand {
+            core.exitExtensionScreen()
+        } else {
+            exitToLauncher()
+        }
+    }
+
+    /// Arguments declared by the currently selected launcher row, or nil when it declares none. Only
+    /// the launcher shows them — inside a running command the search bar belongs to the extension.
+    private var selectedCommandArguments: [ExtensionCommandArgument]? {
+        guard vm.mode == .launcher, !isCollapsed else { return nil }
+        return core.commandArguments(for: selectedAppEntry)
+    }
+
+    /// Width the search field shrinks to when argument fields are beside it: the typed text's own
+    /// width, floored so the caret always has room and capped so the fields can't be pushed off-screen.
+    private func searchFieldWidth(for arguments: [ExtensionCommandArgument]) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: Theme.Typography.searchFieldSize)
+        let typed = (vm.query as NSString).size(withAttributes: [.font: font]).width
+        let stripWidth = CommandArgumentsRow.totalWidth(
+            for: arguments, hasIcon: selectedAppEntry?.imageIconPath != nil)
+        let chrome = Theme.Size.headerIconSlot + Theme.Spacing.md * 4
+        let available = Theme.Size.panelWidth - stripWidth - chrome
+        // +3pt so the caret sits after the last glyph rather than on top of it.
+        return min(max(typed + 3, 18), max(available, 60))
+    }
+
+    private static func argumentKey(_ entryID: String, _ name: String) -> String {
+        // U+0001 can't appear in an entry id or an argument name, so the halves stay unambiguous.
+        entryID + "\u{1}" + name
+    }
+
+    /// The values for one row, stripped of blanks — what gets handed to the command.
+    private func argumentValues(for entry: AppEntry) -> [String: String] {
+        var values: [String: String] = [:]
+        for argument in core.commandArguments(for: entry) ?? [] {
+            let value = commandArguments[Self.argumentKey(entry.id, argument.name)] ?? ""
+            if !value.isEmpty { values[argument.name] = value }
+        }
+        return values
+    }
+
+    /// A running command can rename the search bar; everything else uses its mode's placeholder.
+    private var searchPlaceholder: String {
+        // The field is only wide enough for the caret while argument fields are beside it.
+        if selectedCommandArguments != nil { return "" }
+        if vm.mode == .extensionCommand, let placeholder = extensionScreen.searchPlaceholder {
+            return placeholder
+        }
+        return vm.mode.placeholder
+    }
+
     private func activateSelection() {
         // Nothing is visibly selected in the collapsed compact bar; launch only via ⌘1–⌘5 or by typing.
         guard !isCollapsed else { return }
@@ -703,7 +911,17 @@ struct RootPaletteView: View {
             }
             let index = selection - calcCount
             guard appResults.indices.contains(index) else { return }
-            core.launch(appResults[index])
+            let entry = appResults[index]
+            let values = argumentValues(for: entry)
+            // A required argument left blank blocks the launch; focus the first one instead.
+            if let arguments = selectedCommandArguments,
+                let blank = arguments.first(where: { $0.required && values[$0.name] == nil })
+            {
+                focusedArgument = blank.name
+                searchFocused = false
+                return
+            }
+            core.launch(entry, arguments: values)
         case .clipboard:
             guard clipResults.indices.contains(selection) else { return }
             core.paste(clipResults[selection])
@@ -719,6 +937,14 @@ struct RootPaletteView: View {
         case .emoji:
             guard emojiResults.indices.contains(selection) else { return }
             core.pasteEmoji(emojiResults[selection])
+        case .extensionCommand:
+            let screen = extensionScreen
+            // The primary action is the panel's first `Action`, exactly as in Raycast.
+            guard
+                let handler = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
+                    .first?.handler
+            else { return }
+            extensions.dispatch(handler: handler)
         }
     }
 }

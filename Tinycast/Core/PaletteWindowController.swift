@@ -58,7 +58,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         popToRootTimer?.invalidate()
         let timeout = core.settings.popToRootTimeout
         guard timeout != .immediately else {
-            core.palette.prepare(mode: .launcher)
+            // Next turn, not now: `hide()` just called `orderOut`, which drives a synchronous SwiftUI
+            // update pass, and mutating the view model inside it trips "Publishing changes from within
+            // view updates". The window is already hidden, so the reset is invisible either way.
+            DispatchQueue.main.async { [weak self] in
+                self?.core.palette.prepare(mode: .launcher)
+            }
             return
         }
         popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
@@ -120,15 +125,20 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.frequentEmoji)
             .environmentObject(core.runningApps)
             .environmentObject(core.hotKeys)
+            .environmentObject(core.extensions)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteViewModel = core.palette
         // Backspace in an already-empty search backs out of a sub-screen to a fresh root launcher; `prepare` clears state and re-focuses the field.
         panel.onBareBackspace = { [weak self] in
-            guard let vm = self?.core.palette, vm.mode != .launcher, vm.query.isEmpty else {
-                return false
+            guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
+            else { return false }
+            // An extension screen backs out through its own navigation stack first.
+            if core.palette.mode == .extensionCommand {
+                core.exitExtensionScreen()
+                return true
             }
-            vm.prepare(mode: .launcher)
+            core.palette.prepare(mode: .launcher)
             return true
         }
         self.panel = panel

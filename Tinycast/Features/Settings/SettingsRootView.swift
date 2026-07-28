@@ -3,10 +3,12 @@ import SwiftUI
 extension Notification.Name {
     /// Switch an already-open Settings window to a pane (object: the target `SettingsTab`).
     static let tinycastSelectSettingsTab = Notification.Name("TinycastSelectSettingsTab")
+    /// Reveal one extension in the Extensions pane (object: its manifest name).
+    static let tinycastSelectExtension = Notification.Name("TinycastSelectExtension")
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, permissions, shortcuts, backup, about
+    case general, clipboard, emoji, extensions, permissions, shortcuts, backup, about
     var id: Int { rawValue }
 
     var title: String {
@@ -14,6 +16,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return "General"
         case .clipboard: return "Clipboard"
         case .emoji: return "Emoji & Symbols"
+        case .extensions: return "Extensions"
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         case .backup: return "Backup"
@@ -26,6 +29,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return "switch.2"
         case .clipboard: return "doc.on.clipboard"
         case .emoji: return "face.smiling"
+        case .extensions: return "puzzlepiece.extension"
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         case .backup: return "arrow.up.arrow.down.circle"
@@ -39,6 +43,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return .gray
         case .clipboard: return .orange
         case .emoji: return .yellow
+        case .extensions: return .purple
         case .permissions: return .blue
         case .shortcuts: return .indigo
         case .backup: return .teal
@@ -64,6 +69,7 @@ struct SettingsRootView: View {
                 case .general: GeneralSettingsView()
                 case .clipboard: ClipboardSettingsView()
                 case .emoji: EmojiSettingsView()
+                case .extensions: ExtensionsSettingsView()
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .backup: BackupSettingsView()

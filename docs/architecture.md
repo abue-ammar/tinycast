@@ -2,14 +2,14 @@
 
 How Tinycast is wired together. See the per-subsystem docs for internals:
 [palette](palette.md), [launcher](launcher.md), [calculator](calculator.md),
-[clipboard](clipboard.md), [hotkeys](hotkeys.md), [ui](ui.md).
+[clipboard](clipboard.md), [hotkeys](hotkeys.md), [extensions](extensions.md), [ui](ui.md).
 
 ## Single-owner core
 
 `AppCore.shared` (`Core/AppCore.swift`) is a `@MainActor` singleton that owns every long-lived
 manager — `AppIndex`, `ClipboardStore`, `ClipboardManager`, `HotKeyManager`, `AppSettings`,
 `FavoritesStore`, `VisibilityStore`, `CalculatorHistoryStore`, `RunningAppsMonitor`,
-`PaletteViewModel` — plus the window controllers. `AppDelegate.applicationDidFinishLaunching` calls
+`ExtensionManager`, `PaletteViewModel` — plus the window controllers. `AppDelegate.applicationDidFinishLaunching` calls
 `AppCore.shared.start()` and nothing else; that is the single wiring point. All palette / paste /
 launch actions are methods on `AppCore` that the SwiftUI views call.
 
@@ -46,3 +46,16 @@ House idioms for the sharp edges:
 - `ClipboardStore` uses `isolated deinit` for its SQLite teardown.
 - Raw Carbon / C pointers get decoded to plain values before crossing into actor code (see
   `hotKeyCarbonEventHandler`).
+- `ExtensionRuntime` (`Core/Extensions/`) is `@unchecked Sendable` around a private serial
+  `DispatchQueue`: JavaScriptCore is single-threaded, and running extension code (plus its blocking
+  `fs`/`exec` shims) must stay off the main actor. Only plain `Sendable` values cross the boundary —
+  `RenderValue` in, `RenderTree` out, JSON strings for results. See [extensions.md](extensions.md).
+
+## Raycast extensions
+
+`ExtensionManager` owns the installed set and the one running command; `ExtensionRuntime` owns the
+JavaScriptCore context. Extensions are prebuilt CommonJS bundles, so nothing is compiled at runtime; the
+bundled `Resources/RaycastRuntime.generated.js` supplies React, a reconciler that commits a JSON render
+tree, the `@raycast/api` shim and the Node/web polyfills a bare `JSContext` lacks. `ExtensionScreen`
+flattens a tree into palette rows and `Features/Extensions/` draws them. Full detail:
+[extensions.md](extensions.md).

@@ -24,6 +24,7 @@ struct ShortcutsSettingsView: View {
                 Text("Applications").tag(AppEntry.Kind.application)
                 Text("System Settings").tag(AppEntry.Kind.systemSettings)
                 Text("Commands").tag(AppEntry.Kind.command)
+            Text("Extensions").tag(AppEntry.Kind.extensionCommand)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -42,6 +43,7 @@ struct ShortcutsSettingsView: View {
         case .application: return "Search applications…"
         case .systemSettings: return "Search System Settings…"
         case .command: return "Search commands…"
+        case .extensionCommand: return "Search extension commands…"
         }
     }
 

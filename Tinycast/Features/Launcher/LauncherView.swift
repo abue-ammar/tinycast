@@ -41,12 +41,13 @@ struct LauncherList: View {
         var rows: [Row] = calcRows
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
-        // `rest` is apps-then-panes-then-commands by the AppIndex sort invariant, so filtering by kind keeps row order identical and the flat selection index valid.
+        // `rest` is apps-then-extensions-then-panes-then-commands by the AppIndex sort invariant, so filtering by kind keeps row order identical and the flat selection index valid.
         let apps = rest.filter { $0.kind == .application }
+        let extensions = rest.filter { $0.kind == .extensionCommand }
         let panes = rest.filter { $0.kind == .systemSettings }
         let commands = rest.filter { $0.kind == .command }
         for (title, group) in [
-            ("Favorites", Array(favorites)), ("Applications", apps),
+            ("Favorites", Array(favorites)), ("Applications", apps), ("Extensions", extensions),
             ("System Settings", panes), ("Commands", commands),
         ]
         where !group.isEmpty {
@@ -194,9 +195,12 @@ struct AppIconView: View {
     init(app: AppEntry) {
         self.app = app
         _image = State(
-            initialValue: app.isSymbolIcon
-                ? IconCache.cachedSymbol(named: app.symbolIconName)
-                : IconCache.cached(forFile: app.url.path))
+            initialValue: {
+                if let path = app.imageIconPath { return IconCache.cachedImage(atPath: path) }
+                return app.isSymbolIcon
+                    ? IconCache.cachedSymbol(named: app.symbolIconName)
+                    : IconCache.cached(forFile: app.url.path)
+            }())
     }
 
     var body: some View {
@@ -210,10 +214,14 @@ struct AppIconView: View {
         }
         .task(id: app.id) {
             guard image == nil else { return }
-            image =
-                app.isSymbolIcon
-                ? await IconCache.loadSymbolAsync(named: app.symbolIconName)
-                : await IconCache.loadAsync(forFile: app.url.path)
+            if let path = app.imageIconPath {
+                image = await IconCache.loadImageAsync(atPath: path)
+            } else {
+                image =
+                    app.isSymbolIcon
+                    ? await IconCache.loadSymbolAsync(named: app.symbolIconName)
+                    : await IconCache.loadAsync(forFile: app.url.path)
+            }
         }
     }
 }
@@ -240,7 +248,13 @@ enum AppActionsMenu {
                     favorites.toggle(app)
                 })
         }
-        if app.kind != .command {
+        if app.kind == .extensionCommand {
+            items.append(
+                PopoverMenuItem(title: "Configure Extension", systemImage: "slider.horizontal.3") {
+                    core.showExtensionSettings(for: app)
+                })
+        }
+        if app.kind != .command && app.kind != .extensionCommand {
             items.append(
                 PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
                     core.showInFinder(app)
@@ -254,6 +268,7 @@ enum AppActionsMenu {
         case .application: return "Open Application"
         case .systemSettings: return "Open System Setting"
         case .command: return "Open Command"
+        case .extensionCommand: return "Run Command"
         }
     }
 }
