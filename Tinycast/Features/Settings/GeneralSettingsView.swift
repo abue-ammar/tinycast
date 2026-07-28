@@ -168,6 +168,19 @@ struct GeneralSettingsView: View {
                         .disabled(!settings.compactMode)
                 }
                 .opacity(settings.compactMode ? 1 : 0.5)
+                SettingsDivider()
+                SettingsRow(
+                    title: "Follow the cursor across displays",
+                    subtitle:
+                        "Open the launcher on whichever display the pointer is on, rather than the one with the menu bar.",
+                    systemImage: "display.2",
+                    tint: .teal
+                ) {
+                    Toggle("", isOn: $settings.openOnCursorScreen)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                }
             }
 
             SettingsCard(header: "General") {

@@ -39,6 +39,7 @@ final class AppSettings: ObservableObject {
         static let compactMode = "compactMode"
         static let showFavoritesInCompactMode = "showFavoritesInCompactMode"
         static let searchScopes = "launcherSearchScopes"
+        static let openOnCursorScreen = "openOnCursorScreen"
     }
 
     /// Folders (and individual `.app` bundles) `AppIndex` scans, in scan order. Editing this re-indexes — `AppIndex.start(settings:)` observes it.
@@ -98,6 +99,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(showFavoritesInCompactMode, forKey: Key.showFavoritesInCompactMode) }
     }
 
+    /// Summon the palette on the display under the pointer instead of the one holding the menu bar.
+    @Published var openOnCursorScreen: Bool {
+        didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -132,5 +138,10 @@ final class AppSettings: ObservableObject {
             || defaults.bool(forKey: Key.showFavoritesInCompactMode)
         // An unset key means "never configured" and seeds the defaults; a stored empty array is a user who deliberately cleared the list.
         searchScopes = defaults.stringArray(forKey: Key.searchScopes) ?? SearchScopes.defaults
+        // Also defaults to true: following the pointer is what a multi-display user expects, and the
+        // alternative pins the palette to the menu-bar display no matter where they're working.
+        openOnCursorScreen =
+            defaults.object(forKey: Key.openOnCursorScreen) == nil
+            || defaults.bool(forKey: Key.openOnCursorScreen)
     }
 }

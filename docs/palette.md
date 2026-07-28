@@ -20,6 +20,24 @@ The flat `selection` index is the single source of truth for highlight / activat
 match the visible row order**, including the inline calculator card at index 0 when present (see
 [calculator.md](calculator.md)).
 
+## Window placement
+
+`PaletteWindowController` resolves an anchor (left edge + top edge) **once per summon** and reuses it
+for every compact↔expanded resize, so only the height changes and the top edge never drifts. The
+anchor is dropped on hide, so the next summon re-resolves for wherever the user is then.
+
+Which display it anchors to depends on the **Follow the cursor across displays** setting
+(`AppSettings.openOnCursorScreen`, on by default):
+
+- **On** — the screen whose `frame` contains `NSEvent.mouseLocation`, i.e. the display under the
+  pointer.
+- **Off** — `NSScreen.main`.
+
+`NSScreen.main` alone can't implement the follow-the-cursor case: Tinycast is an accessory app with no
+key window on the display the user is looking at, so `main` resolves to the menu-bar display and the
+palette would always open there regardless of which screen the pointer is on. The pointer lookup falls
+back to `NSScreen.main` when the pointer lands in a gap between display frames.
+
 ## Menu-open input freeze
 
 While a footer popover menu (⌘K Actions / app menu) is open the search field reads as inert but

@@ -24,6 +24,7 @@ struct SettingsBackup: Codable {
         var compactMode: Bool?
         var showFavoritesInCompactMode: Bool?
         var searchScopes: [String]?
+        var openOnCursorScreen: Bool?
     }
 
     struct HotkeyBackup: Codable {
@@ -64,7 +65,8 @@ extension SettingsBackup {
             popToRootSeconds: s.popToRootTimeout.rawValue,
             compactMode: s.compactMode,
             showFavoritesInCompactMode: s.showFavoritesInCompactMode,
-            searchScopes: s.searchScopes)
+            searchScopes: s.searchScopes,
+            openOnCursorScreen: s.openOnCursorScreen)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -160,6 +162,10 @@ extension SettingsBackup {
         }
         if let scopes = s.searchScopes {
             settings.searchScopes = SearchScopes.normalize(scopes)
+            count += 1
+        }
+        if let flag = s.openOnCursorScreen {
+            settings.openOnCursorScreen = flag
             count += 1
         }
         return count
