@@ -96,7 +96,9 @@ final class SnippetKeywordListener {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.clearBuffer()
+            MainActor.assumeIsolated {
+                self?.clearBuffer()
+            }
         }
     }
 
