@@ -42,6 +42,7 @@ struct ShortcutsSettingsView: View {
         case .application: return "Search applications…"
         case .systemSettings: return "Search System Settings…"
         case .command: return "Search commands…"
+        case .snippet: return "Search snippets…"
         }
     }
 

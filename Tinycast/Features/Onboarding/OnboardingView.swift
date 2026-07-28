@@ -10,6 +10,7 @@ struct OnboardingView: View {
     @ObservedObject private var hotKeys = AppCore.shared.hotKeys
 
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
+    @State private var inputMonitoringTrusted = Permissions.isInputMonitoringTrusted()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private static let lastStep = 3
@@ -34,10 +35,15 @@ struct OnboardingView: View {
         // Extend under the transparent titlebar (top padding clears the traffic lights) so the window height equals the fixed content height.
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.2), value: step)
-        .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
+        .onAppear {
+            accessibilityTrusted = Permissions.isAccessibilityTrusted()
+            inputMonitoringTrusted = Permissions.isInputMonitoringTrusted()
+        }
         .onReceive(refreshTimer) { _ in
-            let trusted = Permissions.isAccessibilityTrusted()
-            if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+            let acc = Permissions.isAccessibilityTrusted()
+            if acc != accessibilityTrusted { accessibilityTrusted = acc }
+            let input = Permissions.isInputMonitoringTrusted()
+            if input != inputMonitoringTrusted { inputMonitoringTrusted = input }
         }
     }
 
@@ -76,7 +82,7 @@ struct OnboardingView: View {
     private var title: String {
         switch step {
         case 0: "Welcome to Tinycast"
-        case 1: "Enable Pasting"
+        case 1: "Enable Permissions"
         case 2: "Import from Raycast"
         default: "You're all set"
         }
@@ -85,7 +91,7 @@ struct OnboardingView: View {
     private var subtitle: String {
         switch step {
         case 0: "Set a shortcut to summon the launcher from anywhere."
-        case 1: "Let Tinycast paste items back into the app you were using."
+        case 1: "Grant Accessibility for pasting and Input Monitoring for snippet keywords."
         case 2: "Bring your shortcuts, favorites, and clipboard history along."
         default: readyMessage
         }
@@ -156,13 +162,22 @@ struct OnboardingView: View {
                 SettingsRow(
                     title: "Accessibility",
                     subtitle:
-                        "Without it Tinycast can still copy, but it can't paste a clipboard or emoji item back into the app you were using.",
+                        "Allows pasting clipboard items and expanded snippets into active apps.",
                     systemImage: "accessibility", tint: .blue
                 ) {
-                    statusBadge
+                    statusBadge(isGranted: accessibilityTrusted)
+                }
+                SettingsDivider()
+                SettingsRow(
+                    title: "Input Monitoring",
+                    subtitle:
+                        "Required for Snippets auto-expansion keywords (e.g. !notes) to detect typing in other apps.",
+                    systemImage: "keyboard", tint: .purple
+                ) {
+                    statusBadge(isGranted: inputMonitoringTrusted)
                 }
             }
-            caption("Optional — you can enable this later in Settings › Permissions.")
+            caption("Optional — you can manage these anytime in Settings › Permissions.")
         }
     }
 
@@ -253,22 +268,25 @@ struct OnboardingView: View {
     }
 
     private var showsSkip: Bool {
-        (step == 1 && !accessibilityTrusted) || (step == 2 && !model.didImport)
+        (step == 1 && (!accessibilityTrusted || !inputMonitoringTrusted)) || (step == 2 && !model.didImport)
     }
 
     private var primaryTitle: String {
         switch step {
-        case 0: "Continue"
-        case 1: accessibilityTrusted ? "Continue" : "Grant Access"
+        case 0: return "Continue"
+        case 1:
+            if !accessibilityTrusted { return "Grant Accessibility" }
+            if !inputMonitoringTrusted { return "Grant Input Monitoring" }
+            return "Continue"
         case 2:
             if model.didImport {
-                "Continue"
+                return "Continue"
             } else if model.importing {
-                "Importing…"
+                return "Importing…"
             } else {
-                "Import"
+                return "Import"
             }
-        default: "Get Started"
+        default: return "Get Started"
         }
     }
 
@@ -278,8 +296,15 @@ struct OnboardingView: View {
 
     private func primaryAction() {
         switch step {
-        case 1 where !accessibilityTrusted:
-            Permissions.openAccessibilitySettings()
+        case 1:
+            if !accessibilityTrusted {
+                Permissions.openAccessibilitySettings()
+            } else if !inputMonitoringTrusted {
+                Permissions.requestInputMonitoringPrompt()
+                Permissions.openInputMonitoringSettings()
+            } else {
+                advance()
+            }
         case 2 where !model.didImport:
             model.run()
         case Self.lastStep:
@@ -321,15 +346,15 @@ struct OnboardingView: View {
         .padding(.horizontal, Theme.Spacing.xs)
     }
 
-    private var statusBadge: some View {
+    private func statusBadge(isGranted: Bool) -> some View {
         HStack(spacing: Theme.Spacing.xs + 1) {
             Image(
-                systemName: accessibilityTrusted
+                systemName: isGranted
                     ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-            Text(accessibilityTrusted ? "Granted" : "Not granted")
+            Text(isGranted ? "Granted" : "Not granted")
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
+        .foregroundStyle(isGranted ? Color.green : Color.orange)
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.xs)
         .background(

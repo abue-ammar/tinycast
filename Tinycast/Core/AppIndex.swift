@@ -6,6 +6,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case application
         case systemSettings
         case command
+        case snippet
     }
 
     let id: String  // file path (or "command:…" id) — always unique
@@ -23,6 +24,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .systemSettings: return "System Setting"
         case .command:
             return CustomCommand.id(fromEntryID: id) == nil ? "Command" : "Custom Command"
+        case .snippet: return "Snippet"
         }
     }
 
@@ -35,15 +37,18 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return bundleID.map { .settingsPane(bundleID: $0) }
         case .command:
             return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
+        case .snippet:
+            return nil
         }
     }
 
     /// Command entries are synthetic — no file behind them to reveal.
     var canRevealInFinder: Bool { kind != .command }
 
-    /// Command entries draw an SF Symbol tile; everything else uses its file icon.
-    var isSymbolIcon: Bool { kind == .command }
+    /// Command and snippet entries draw an SF Symbol tile; everything else uses its file icon.
+    var isSymbolIcon: Bool { kind == .command || kind == .snippet }
     var symbolIconName: String {
+        if kind == .snippet { return "text.quote" }
         if let builtIn = CommandRegistry.command(for: self) { return builtIn.sfSymbol }
         return CustomCommand.id(fromEntryID: id) == nil ? "questionmark" : "terminal"
     }
@@ -244,11 +249,11 @@ final class AppIndex: ObservableObject {
                     id: url.path, name: name, url: url, bundleID: bundleID,
                     kind: .application))
         }
-        // `publishEntries` appends commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
+        // `publishEntries` appends commands after apps, Settings panes, and snippets so the sectioned flat selection maps 1:1 onto rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        return apps + SettingsPaneScanner.scan()
+        return apps + SettingsPaneScanner.scan() + scanSnippets()
     }
 
     private func publishEntries() {
@@ -259,6 +264,32 @@ final class AppIndex: ObservableObject {
         guard updated != apps else { return }
         apps = updated
         matchCache = nil
+    }
+
+    nonisolated private static func scanSnippets() -> [AppEntry] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let snippetsDir = home.appendingPathComponent(".config/tinycast/snippets", isDirectory: true)
+        guard let files = try? FileManager.default.contentsOfDirectory(at: snippetsDir, includingPropertiesForKeys: nil) else {
+            return []
+        }
+        var entries: [AppEntry] = []
+        for url in files where url.pathExtension.lowercased() == "md" {
+            if let content = try? String(contentsOf: url, encoding: .utf8) {
+                let snippet = SnippetMarkdownSerializer.parse(content: content, fileURL: url)
+                if snippet.isEnabled && snippet.showInLauncher {
+                    entries.append(
+                        AppEntry(
+                            id: "snippet:\(snippet.id.uuidString)",
+                            name: snippet.name,
+                            url: url,
+                            bundleID: nil,
+                            kind: .snippet
+                        )
+                    )
+                }
+            }
+        }
+        return entries.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
@@ -277,8 +308,27 @@ final class AppIndex: ObservableObject {
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let learned = ranking.boosts(query: q)
+        let snippets = AppCore.shared.snippetsStore.snippets
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
-            guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
+            var bestScore = FuzzyMatch.score(query: q, candidate: app.name)
+            // A snippet is reachable by keyword or category too; the keyword edges out a bare name hit of the same kind.
+            if app.kind == .snippet,
+                let snippet = snippets.first(where: {
+                    "snippet:\($0.id.uuidString)" == app.id || $0.name == app.name
+                })
+            {
+                if let kw = snippet.keyword, !kw.isEmpty,
+                    let kwScore = FuzzyMatch.score(query: q, candidate: kw)
+                {
+                    bestScore = max(bestScore ?? -1, kwScore + 200)
+                }
+                if let cat = snippet.category, !cat.isEmpty,
+                    let catScore = FuzzyMatch.score(query: q, candidate: cat)
+                {
+                    bestScore = max(bestScore ?? -1, catScore)
+                }
+            }
+            guard let score = bestScore else { return nil }
             return (app, score + (learned[app.preferenceKey] ?? 0))
         }
         return

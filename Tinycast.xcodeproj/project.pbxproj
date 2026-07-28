@@ -12,6 +12,7 @@
 		11C4CC0D767EFD44AB28D6DD /* SearchScopes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AA0E1FD530C764A021E6053 /* SearchScopes.swift */; };
 		14712478C37E6E8760CA47EC /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DC5A4706854493D23FD18A /* HyperKey.swift */; };
 		14A5A5ACD35A572EE906769F /* CalcEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B976C84AFE60E357A346224 /* CalcEngine.swift */; };
+		1AF562E00FCB98B12076F01D /* SnippetKeywordListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5051622CC6497E2151326CA /* SnippetKeywordListener.swift */; };
 		1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */; };
 		1F39D145DBE2290532C93614 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */; };
 		2085C9433B7534044E0A8A7D /* PermissionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */; };
@@ -27,6 +28,7 @@
 		3FEBE1C993C5BD92F1C3D95B /* LauncherRankingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B6E442944C99B4D1FE1C74 /* LauncherRankingStore.swift */; };
 		42828BD1C5E4E6E7AA1BF103 /* CalculatorHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F793A92DD4DC73CF1D87F3FD /* CalculatorHistoryStore.swift */; };
 		441CF705AE1D03F6E236A61E /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC43CFF6777C11BB880F398 /* ClipboardStore.swift */; };
+		48AB20B04EB50F9F4A68BD66 /* SnippetTemplateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */; };
 		4F3D96E59E117459153336F4 /* SettingsPaneScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */; };
 		4F740AF85545CF4133C89B82 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4802942FF89B327A76432A9B /* AboutView.swift */; };
 		5568D02AE095293A15A7F30D /* RightClick.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E9ACD504E016DFF6FE6C1B /* RightClick.swift */; };
@@ -44,6 +46,7 @@
 		72ACD144841BF1117CD4E705 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC2DEA0A052116A92F9A539 /* Theme.swift */; };
 		80F1A591DB0F5385F5C9A06C /* PopoverMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98B7211D27EDF764EC477A0F /* PopoverMenu.swift */; };
 		854C19458C8A0AE0BD757600 /* EmojiIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F450E10D107C1E30EA2BC6 /* EmojiIndex.swift */; };
+		85A9ACCB19D9502A79F1A508 /* Snippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05970D61D4E595D0658D0D94 /* Snippet.swift */; };
 		85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */; };
 		8611F52FF00B8C43EC46F902 /* EmojiSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */; };
 		8631543D8E0E008E7C541345 /* BackupSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FC323070A08CD17DFFB2F8A /* BackupSettingsView.swift */; };
@@ -61,12 +64,14 @@
 		A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB750D045194AE34D39D792 /* FavoritesStore.swift */; };
 		A9D8B54D88A60DE9FC1F43BF /* CalcDateTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */; };
 		AA8050D9A547CDDD37C581C4 /* CurrencyData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */; };
+		AB9B998DB62EE2D18A058C78 /* SnippetsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3579618BC7FA235EBF9E93 /* SnippetsSettingsView.swift */; };
 		ABBB2A811EB5C69D55A93B1C /* RaycastImportSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */; };
 		AD2141EBF98A246BDA3BAB8E /* Gunzip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A53295959552ED28D34960 /* Gunzip.swift */; };
 		AE0D0C53004C65D65BE89B6F /* BackupActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D8C2C59C2B578CFE61E004 /* BackupActions.swift */; };
 		B1B3F5715BE7A092F0CEFA09 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76E4099082D59FA686C3485 /* ClipboardManager.swift */; };
 		B20599ED24698C1E1F82AA10 /* ScrollIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CFD97FB49778B4358FA5189 /* ScrollIntent.swift */; };
 		B810158281A87CBA2AB694D0 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79DB24EE452A7CA120B56FA6 /* EmojiData.generated.swift */; };
+		B9CED4B06F36998A67097FC5 /* SnippetMarkdownSerializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE084FDBE22B01204E7BEDA /* SnippetMarkdownSerializer.swift */; };
 		BA76E53A12248B3A9C42B4F9 /* Bundle+AppName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */; };
 		C0642512B709EF0517ABF4CB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C37CCD024267EB21876C7E9 /* AppDelegate.swift */; };
 		C526BEAA60A62E9BC78F309E /* CustomCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95C105FED5D77A2392FDA3F0 /* CustomCommand.swift */; };
@@ -85,6 +90,7 @@
 		E952B659AEB905A3B233F78B /* EmojiGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB94F0767AE0A5855FB22BF6 /* EmojiGridView.swift */; };
 		F25D58ED6EF3308D38D01732 /* PaletteWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5447AEAD87BFE0E2D979B39 /* PaletteWindowController.swift */; };
 		F2B68DBA258D85DD5C6DC1CC /* Paster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6185011A02366B30B48B5B6C /* Paster.swift */; };
+		F457EB595789DD3A25E888DF /* SnippetsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C3E740AA883770481A6A8C /* SnippetsStore.swift */; };
 		F5F3381FF70997223F8888B0 /* KeyShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C3EB07C07902C53BFD3B08B /* KeyShortcut.swift */; };
 		F6B79728FF2D37A60FED72AF /* HyperKeyTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 919AC64DE9C9DC3A973A0B4E /* HyperKeyTap.swift */; };
 		FC934E5AE6A933F5BC7AC4DD /* CalcQuantity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D93A4CEA9FE857034D63EF7 /* CalcQuantity.swift */; };
@@ -94,6 +100,7 @@
 
 /* Begin PBXFileReference section */
 		041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
+		05970D61D4E595D0658D0D94 /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
 		09093BF10EA97BDCA45A241F /* CalcFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcFormatter.swift; sourceTree = "<group>"; };
 		0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsView.swift; sourceTree = "<group>"; };
 		0D045D032498C2294A99890E /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
@@ -115,6 +122,7 @@
 		3FF10C4F5E4F73503F58D03B /* OverlayScroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayScroller.swift; sourceTree = "<group>"; };
 		423CFE8AB90484D0309F24C0 /* CalcParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcParser.swift; sourceTree = "<group>"; };
 		45D4BA6E1BD8EB1F96A8927F /* Tinycast.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tinycast.entitlements; sourceTree = "<group>"; };
+		46C3E740AA883770481A6A8C /* SnippetsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsStore.swift; sourceTree = "<group>"; };
 		4802942FF89B327A76432A9B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		4B432D84D8F9C10521342199 /* RunningApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningApps.swift; sourceTree = "<group>"; };
 		4DA7B926405DAC632C056418 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -124,6 +132,7 @@
 		5392500F86E23C099D33561D /* Tinycast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tinycast.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		555E9C7EA62BDB40891A5751 /* PalettePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalettePanel.swift; sourceTree = "<group>"; };
 		596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorder.swift; sourceTree = "<group>"; };
+		5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTemplateEngine.swift; sourceTree = "<group>"; };
 		5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		5D57B0AE44D21035163BD422 /* CommandRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandRegistry.swift; sourceTree = "<group>"; };
 		5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyData.generated.swift; sourceTree = "<group>"; };
@@ -169,13 +178,16 @@
 		C6DC5A4706854493D23FD18A /* HyperKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKey.swift; sourceTree = "<group>"; };
 		C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPaneScanner.swift; sourceTree = "<group>"; };
 		C9D8C2C59C2B578CFE61E004 /* BackupActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupActions.swift; sourceTree = "<group>"; };
+		CD3579618BC7FA235EBF9E93 /* SnippetsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsSettingsView.swift; sourceTree = "<group>"; };
 		D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+AppName.swift"; sourceTree = "<group>"; };
 		D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComponents.swift; sourceTree = "<group>"; };
 		DABCE058D38F493D58F6E072 /* EmojiGridGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiGridGeometry.swift; sourceTree = "<group>"; };
 		DCBF70B1C646861FDF20ED2D /* CustomCommandsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCommandsSettingsView.swift; sourceTree = "<group>"; };
 		E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcDateTime.swift; sourceTree = "<group>"; };
+		E5051622CC6497E2151326CA /* SnippetKeywordListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetKeywordListener.swift; sourceTree = "<group>"; };
 		EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
+		EDE084FDBE22B01204E7BEDA /* SnippetMarkdownSerializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetMarkdownSerializer.swift; sourceTree = "<group>"; };
 		EDE0C0DC05F958A4B4DCAA8C /* Scrypt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scrypt.swift; sourceTree = "<group>"; };
 		F31E3ACB6D2C26ECA485C3DB /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
 		F793A92DD4DC73CF1D87F3FD /* CalculatorHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryStore.swift; sourceTree = "<group>"; };
@@ -197,6 +209,7 @@
 				E78667BC941556AB120FB562 /* Calculator */,
 				E2E33C02FBE324BED2E84314 /* Emoji */,
 				CB742F7643800C43475DE213 /* HotKey */,
+				32B8FED93732983EAE729EB1 /* Snippets */,
 				3A64EF5A07D459753998F78C /* AppCore.swift */,
 				BA7CE23482F7DF563A268806 /* AppIndex.swift */,
 				5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */,
@@ -257,6 +270,18 @@
 				BB94F0767AE0A5855FB22BF6 /* EmojiGridView.swift */,
 			);
 			path = Emoji;
+			sourceTree = "<group>";
+		};
+		32B8FED93732983EAE729EB1 /* Snippets */ = {
+			isa = PBXGroup;
+			children = (
+				05970D61D4E595D0658D0D94 /* Snippet.swift */,
+				E5051622CC6497E2151326CA /* SnippetKeywordListener.swift */,
+				EDE084FDBE22B01204E7BEDA /* SnippetMarkdownSerializer.swift */,
+				46C3E740AA883770481A6A8C /* SnippetsStore.swift */,
+				5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */,
+			);
+			path = Snippets;
 			sourceTree = "<group>";
 		};
 		356F452DB0F8F9834817455B /* Calculator */ = {
@@ -374,6 +399,7 @@
 				68952539C0BD045BA175CBB6 /* SettingsRootView.swift */,
 				596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */,
 				AF5AE919A2699E6EB8BF7DC8 /* ShortcutsSettingsView.swift */,
+				CD3579618BC7FA235EBF9E93 /* SnippetsSettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -550,6 +576,12 @@
 				212B9B44D7EED18A0DEF47AF /* ShellCommandRunner.swift in Sources */,
 				57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */,
 				05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */,
+				85A9ACCB19D9502A79F1A508 /* Snippet.swift in Sources */,
+				1AF562E00FCB98B12076F01D /* SnippetKeywordListener.swift in Sources */,
+				B9CED4B06F36998A67097FC5 /* SnippetMarkdownSerializer.swift in Sources */,
+				48AB20B04EB50F9F4A68BD66 /* SnippetTemplateEngine.swift in Sources */,
+				AB9B998DB62EE2D18A058C78 /* SnippetsSettingsView.swift in Sources */,
+				F457EB595789DD3A25E888DF /* SnippetsStore.swift in Sources */,
 				72ACD144841BF1117CD4E705 /* Theme.swift in Sources */,
 				85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */,
 				68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */,

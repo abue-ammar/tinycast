@@ -52,10 +52,11 @@ struct LauncherList: View {
         // `rest` is apps-then-panes-then-commands by the AppIndex sort invariant, so filtering by kind keeps row order identical and the flat selection index valid.
         let apps = rest.filter { $0.kind == .application }
         let panes = rest.filter { $0.kind == .systemSettings }
+        let snippets = rest.filter { $0.kind == .snippet }
         let commands = rest.filter { $0.kind == .command }
         for (title, group) in [
             ("Favorites", Array(favorites)), ("Applications", apps),
-            ("System Settings", panes), ("Commands", commands),
+            ("System Settings", panes), ("Snippets", snippets), ("Commands", commands),
         ]
         where !group.isEmpty {
             rows.append(.header(title))
@@ -286,6 +287,7 @@ enum AppActionsMenu {
         case .application: return "Open Application"
         case .systemSettings: return "Open System Setting"
         case .command: return "Run Command"
+        case .snippet: return "Paste Snippet"
         }
     }
 }
