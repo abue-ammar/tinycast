@@ -310,7 +310,13 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.downArrow) {
-            if isCollapsed { return .ignored }
+            if isCollapsed {
+                // The compact bar has no visible selection; Down reveals the list at its first row
+                // while the shared search field stays mounted and focused.
+                vm.selection = 0
+                core.expandFromCompact()
+                return .handled
+            }
             if menuOpen {
                 moveMenu(1)
                 return .handled
