@@ -229,9 +229,10 @@ final class AppIndex: ObservableObject {
     }
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
+        let learned = ranking.boosts(query: q)
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
             guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
-            return (app, score + ranking.boost(itemKey: app.preferenceKey, query: q))
+            return (app, score + (learned[app.preferenceKey] ?? 0))
         }
         return
             scored
@@ -264,8 +265,7 @@ enum FuzzyMatch {
         return sub
     }
 
-    /// App metadata can contain invisible bidirectional/zero-width format scalars (WhatsApp's
-    /// display name starts with U+200E). They must not demote an otherwise-visible prefix match.
+    /// App metadata can contain invisible bidirectional/zero-width format scalars (WhatsApp's display name starts with U+200E); they must not demote an otherwise-visible prefix match.
     private static func normalized(_ value: String) -> String {
         let scalars = value.unicodeScalars.filter {
             $0.properties.generalCategory != .format

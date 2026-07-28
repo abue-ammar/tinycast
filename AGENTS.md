@@ -67,7 +67,9 @@ Never break these without an explicit task to do so.
   via `rates` (`CurrencyRateStore` owns the fetch). Likewise `Core/Emoji/`
   (`EmojiCatalog`, `EmojiGridGeometry`) stays AppKit/SwiftUI-free for `Tools/emoji-test.swift`, and
   `Core/ClipboardStore.swift` must keep to Foundation + SQLite3 with no other app source, so
-  `Tools/clipboard-test.swift` can compile it standalone.
+  `Tools/clipboard-test.swift` can compile it standalone. `Core/LauncherRankingStore.swift` is the
+  same deal for `Tools/ranking-test.swift` — Foundation only, with the clock injected via `now` and
+  the store path via `fileURL`.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and

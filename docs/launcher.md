@@ -11,11 +11,13 @@ format scalars first, since app metadata can contain bidi/zero-width markers bef
 
 Selecting a launcher result records every prefix of the submitted query, so choosing WhatsApp for
 `wha` also teaches `w` and `wh`. Direct hotkeys and empty-query favorites do not affect learned
-ranking. Learned data stays on device in `launcher-ranking.json`; every launcher result exposes the
-same per-item reset in its Actions menu, and users can clear all learned ranking in General Settings.
+ranking. Learned data stays on device in `launcher-ranking.json`; a result that has learned ranking
+offers a per-item reset in its Actions menu, and users can clear all learned ranking in General
+Settings.
 
 Rankings are memoized one query deep and keyed by the ranking store's revision, so a launch or reset
-invalidates the cached order.
+invalidates the cached order. `rank` resolves the whole learned table for a query up front via
+`boosts(query:)` — one fold and one clock read per pass, not per candidate.
 
 > **Invariant:** `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from
 > `Tinycast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test

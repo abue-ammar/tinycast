@@ -240,10 +240,12 @@ enum AppActionsMenu {
                     favorites.toggle(app)
                 })
         }
-        items.append(
-            PopoverMenuItem(title: "Reset Ranking", systemImage: "arrow.counterclockwise") {
-                onResetRanking()
-            })
+        if core.launcherRanking.hasRanking(for: app.preferenceKey) {
+            items.append(
+                PopoverMenuItem(title: "Reset Ranking", systemImage: "arrow.counterclockwise") {
+                    onResetRanking()
+                })
+        }
         if app.kind != .command {
             items.append(
                 PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {

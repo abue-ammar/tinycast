@@ -8,13 +8,11 @@ struct LauncherRankingRecord: Codable, Hashable, Sendable {
     var lastUsed: Date
 }
 
-/// Learns which launcher results the user chooses for each query and persists the bounded,
-/// on-device-only frecency data under `~/Library/Caches/<bundle-id>/`.
+/// Learns which launcher results the user chooses for each query and persists the bounded, on-device-only frecency data under `~/Library/Caches/<bundle-id>/`.
 @MainActor
 final class LauncherRankingStore: ObservableObject {
     private static let cap = 1_000
-    /// The adaptive boost stays below half the 10k gaps between FuzzyMatch's relevance tiers, so
-    /// learned usage can reorder similarly-matching results without beating a stronger match kind.
+    /// Stays below half the 10k gaps between FuzzyMatch's relevance tiers, so learned usage can reorder similarly-matching results without ever beating a stronger match kind.
     private static let maximumBoost = 4_500
 
     private let fileURL: URL
@@ -43,8 +41,7 @@ final class LauncherRankingStore: ObservableObject {
 
     var isEmpty: Bool { records.isEmpty }
 
-    /// Record every prefix of the submitted query: choosing WhatsApp for "wha" teaches "w",
-    /// "wh", and "wha", letting the preferred result surface for progressively shorter input.
+    /// Records every prefix of the submitted query: choosing WhatsApp for "wha" teaches "w", "wh" and "wha", so the preferred result surfaces for progressively shorter input.
     func record(itemKey: String, query: String) {
         let query = Self.normalize(query)
         guard !itemKey.isEmpty, !query.isEmpty else { return }
@@ -72,15 +69,17 @@ final class LauncherRankingStore: ObservableObject {
         didMutate()
     }
 
-    /// A bounded blend of frequency and exponentially-decaying recency for this exact query.
-    func boost(itemKey: String, query: String) -> Int {
+    /// Learned boosts for one query, keyed by item — a ranking pass folds the query and reads the clock once here rather than per candidate.
+    func boosts(query: String) -> [String: Int] {
         let query = Self.normalize(query)
-        guard !query.isEmpty, let record = rankingLookup()[query]?[itemKey] else { return 0 }
+        guard !query.isEmpty, let learned = rankingLookup()[query] else { return [:] }
+        let timestamp = now()
+        return learned.mapValues { boost($0, at: timestamp) }
+    }
 
-        let age = max(0, now().timeIntervalSince(record.lastUsed))
-        let ageInDays = age / 86_400
-        // Cap frequency separately so an old, once-dominant habit cannot stay permanently pinned;
-        // enough recent visits to a different result can eventually overtake it.
+    private func boost(_ record: LauncherRankingRecord, at timestamp: Date) -> Int {
+        let ageInDays = max(0, timestamp.timeIntervalSince(record.lastUsed)) / 86_400
+        // Cap frequency separately so an old, once-dominant habit cannot stay permanently pinned; enough recent visits to a different result can eventually overtake it.
         let frequency = min(3_000, log2(Double(record.count) + 1) * 600)
         let recency = 1_500 * exp(-ageInDays / 14)
         return min(Self.maximumBoost, Int((frequency + recency).rounded()))
@@ -103,9 +102,7 @@ final class LauncherRankingStore: ObservableObject {
         didMutate()
     }
 
-    /// `locale: nil` asks for the locale-independent canonical form. These strings are persisted
-    /// lookup keys, so folding must not depend on ambient state — a locale-sensitive fold maps "I"
-    /// to "ı" under Turkish, which would orphan every record keyed on the dotted form.
+    /// `locale: nil` is the locale-independent canonical form: these are persisted lookup keys, and a locale-sensitive fold maps "I" to "ı" under Turkish, orphaning every record keyed on the dotted form.
     static func normalize(_ query: String) -> String {
         query
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -113,8 +110,7 @@ final class LauncherRankingStore: ObservableObject {
     }
 
     private static func prefixes(of query: String) -> [String] {
-        // Launcher names and useful queries are short; cap pathological pasted input so one visit
-        // cannot evict the whole bounded ranking table.
+        // Launcher names and useful queries are short; cap pathological pasted input so one visit cannot evict the whole bounded ranking table.
         let limit = min(query.count, 64)
         var result: [String] = []
         result.reserveCapacity(limit)

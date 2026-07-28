@@ -76,7 +76,7 @@ There's no XCTest target. Standalone harnesses:
 
 ```sh
 swift Tools/fuzz-test.swift                                        # launcher fuzzy matcher
-swiftc Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
+swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
     -o /tmp/ranking-test && /tmp/ranking-test                      # learned launcher ranking
 swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                           # calculator engine

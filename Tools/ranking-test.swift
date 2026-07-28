@@ -21,6 +21,11 @@ struct RankingTest {
             }
         }
 
+        // Mirrors how AppIndex.rank reads the table: one boosts(query:) pass, then a per-item lookup.
+        func boost(_ store: LauncherRankingStore, _ itemKey: String, _ query: String) -> Int {
+            store.boosts(query: query)[itemKey] ?? 0
+        }
+
         let whatsApp = "net.whatsapp.WhatsApp"
         let wick = "com.example.wick"
         let cafe = "com.example.cafe"
@@ -30,9 +35,7 @@ struct RankingTest {
             LauncherRankingStore.normalize(" wha \n") == "wha")
         check("query key folds case", LauncherRankingStore.normalize("WhA") == "wha")
         check("query key folds diacritics", LauncherRankingStore.normalize("Café") == "cafe")
-        // Records are keyed on the folded query, so the fold must resolve to one canonical form no
-        // matter the ambient locale. A Turkish fold maps "I" to "ı"; asserting the difference keeps
-        // this check from going vacuous if that ever stops being true.
+        // A Turkish fold maps "I" to "ı"; asserting the difference keeps this from going vacuous if that ever stops being true.
         check(
             "query key is locale-independent",
             LauncherRankingStore.normalize("I") == "i"
@@ -41,42 +44,58 @@ struct RankingTest {
                         options: [.caseInsensitive, .diacriticInsensitive],
                         locale: Locale(identifier: "tr_TR")))
 
-        check("unvisited result has no boost", store.boost(itemKey: whatsApp, query: "w") == 0)
+        check("unvisited result has no boost", boost(store, whatsApp, "w") == 0)
+        check("an unlearned query yields an empty table", store.boosts(query: "w").isEmpty)
 
         store.record(itemKey: cafe, query: " Café ")
         check(
             "a learned query is recalled through its normalized key",
-            store.boost(itemKey: cafe, query: "cafe") > 0)
+            boost(store, cafe, "cafe") > 0)
 
         store.record(itemKey: whatsApp, query: "Wha")
-        let firstBoost = store.boost(itemKey: whatsApp, query: "w")
+        let firstBoost = boost(store, whatsApp, "w")
         check("visit teaches first query prefix", firstBoost > 0)
-        check("visit teaches full normalized query", store.boost(itemKey: whatsApp, query: "WHA") > 0)
-        check("visit does not teach a different query", store.boost(itemKey: whatsApp, query: "wa") == 0)
+        check("visit teaches full normalized query", boost(store, whatsApp, "WHA") > 0)
+        check("visit does not teach a different query", boost(store, whatsApp, "wa") == 0)
 
-        store.record(itemKey: whatsApp, query: "w")
-        check(
-            "frequency increases the boost",
-            store.boost(itemKey: whatsApp, query: "w") > firstBoost)
+        // Golden values: these pin the frecency curve, so a change to the scoring has to be deliberate rather than incidental.
+        check("one visit, same day, scores 2100", firstBoost == 2_100)
+        for _ in 0..<9 { store.record(itemKey: whatsApp, query: "Wha") }
+        check("ten visits, same day, score 3576", boost(store, whatsApp, "w") == 3_576)
+        clock.addTimeInterval(14 * 86_400)
+        check("ten visits, one half-life later, score 2627", boost(store, whatsApp, "w") == 2_627)
+        clock.addTimeInterval(351 * 86_400)
+        check("ten visits, a year later, score 2076", boost(store, whatsApp, "w") == 2_076)
+        for _ in 0..<200 { store.record(itemKey: wick, query: "w") }
+        check("the blend is capped at 4500", boost(store, wick, "w") == 4_500)
+
+        store.resetAll()
+        store.record(itemKey: whatsApp, query: "Wha")
+        let sameDay = boost(store, whatsApp, "w")
+        store.record(itemKey: whatsApp, query: "Wha")
+        check("frequency increases the boost", boost(store, whatsApp, "w") > sameDay)
 
         clock.addTimeInterval(60 * 86_400)
-        check(
-            "recency decays over time",
-            store.boost(itemKey: whatsApp, query: "w") < firstBoost)
+        check("recency decays over time", boost(store, whatsApp, "w") < sameDay)
 
         for _ in 0..<100 { store.record(itemKey: whatsApp, query: "w") }
         clock.addTimeInterval(60 * 86_400)
-        let oldFrequentBoost = store.boost(itemKey: whatsApp, query: "w")
+        let oldFrequentBoost = boost(store, whatsApp, "w")
         for _ in 0..<8 { store.record(itemKey: wick, query: "w") }
         check(
             "a newer habit can overtake an old frequent result",
-            store.boost(itemKey: wick, query: "w") > oldFrequentBoost)
+            boost(store, wick, "w") > oldFrequentBoost)
 
-        let persistedWickBoost = store.boost(itemKey: wick, query: "w")
+        let table = store.boosts(query: "w")
+        check(
+            "one pass returns every item learned for the query",
+            Set(table.keys) == [whatsApp, wick])
+
+        let persistedWickBoost = boost(store, wick, "w")
         let reloaded = LauncherRankingStore(fileURL: fileURL) { clock }
         check(
             "records persist across store instances",
-            reloaded.boost(itemKey: wick, query: "w") == persistedWickBoost)
+            boost(reloaded, wick, "w") == persistedWickBoost)
 
         reloaded.reset(itemKey: whatsApp)
         check("per-item reset clears every learned query", !reloaded.hasRanking(for: whatsApp))
