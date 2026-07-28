@@ -112,7 +112,15 @@ struct RootPaletteView: View {
             }
             if let app = selectedAppEntry {
                 return AppActionsMenu.content(
-                    app: app, core: core, favorites: favorites, running: selectionIsRunning)
+                    app: app, searchQuery: vm.query, core: core, favorites: favorites,
+                    running: selectionIsRunning,
+                    onResetRanking: {
+                        core.resetRanking(for: app)
+                        // Reset can move the item; keep the highlight on the item whose action ran.
+                        if let index = appResults.firstIndex(of: app) {
+                            vm.selection = index + calcCount
+                        }
+                    })
             }
             return nil
         case .clipboard:
@@ -502,6 +510,7 @@ struct RootPaletteView: View {
                     vm.selection = 0
                     openActions()
                 },
+                onActivate: { core.launch($0, searchQuery: vm.query) },
                 onActions: { app in
                     if let index = apps.firstIndex(of: app) { vm.selection = index + offset }
                     openActions()
@@ -748,7 +757,7 @@ struct RootPaletteView: View {
             }
             let index = selection - calcCount
             guard appResults.indices.contains(index) else { return }
-            core.launch(appResults[index])
+            core.launch(appResults[index], searchQuery: vm.query)
         case .clipboard:
             guard clipResults.indices.contains(selection) else { return }
             core.paste(clipResults[selection])

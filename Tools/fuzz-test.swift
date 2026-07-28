@@ -4,8 +4,8 @@ import Foundation
 
 enum FuzzyMatch {
     static func score(query: String, candidate: String) -> Int? {
-        let q = query.lowercased()
-        let c = candidate.lowercased()
+        let q = normalized(query)
+        let c = normalized(candidate)
         guard !q.isEmpty else { return 0 }
 
         if c == q { return 100_000 }
@@ -17,6 +17,13 @@ enum FuzzyMatch {
         }
 
         return subsequenceScore(Array(q), Array(c))
+    }
+
+    private static func normalized(_ value: String) -> String {
+        let scalars = value.unicodeScalars.filter {
+            $0.properties.generalCategory != .format
+        }
+        return String(String.UnicodeScalarView(scalars)).lowercased()
     }
 
     private static func isWordStart(_ s: String, _ index: String.Index) -> Bool {
@@ -56,13 +63,13 @@ enum FuzzyMatch {
 let apps = [
     "Google Chrome", "Chess", "Time Machine", "Safari", "Bluetooth File Exchange",
     "Screenshot", "Screen Sharing", "Visual Studio Code", "Photos", "App Store",
-    "System Settings", "Calendar", "Terminal",
+    "System Settings", "Calendar", "Terminal", "WhatsApp", "Wick",
 ]
 
-func rank(_ query: String) -> [String] {
+func rank(_ query: String, boosts: [String: Int] = [:]) -> [String] {
     apps.compactMap { name -> (String, Int)? in
         guard let s = FuzzyMatch.score(query: query, candidate: name) else { return nil }
-        return (name, s)
+        return (name, s + boosts[name, default: 0])
     }
     .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.count < $1.0.count }
     .map(\.0)
@@ -96,6 +103,26 @@ check(
     "got \(rank("code"))")
 check("'terminal' exact top", rank("terminal").first == "Terminal")
 check("'xyz' matches nothing", rank("xyz").isEmpty, "got \(rank("xyz"))")
+
+let defaultW = rank("w")
+check(
+    "shorter Wick wins the default prefix tie",
+    defaultW.firstIndex(of: "Wick")! < defaultW.firstIndex(of: "WhatsApp")!,
+    "got \(defaultW)")
+let learnedW = rank("w", boosts: ["WhatsApp": 2_100])
+check(
+    "learned boost promotes WhatsApp within the prefix tier",
+    learnedW.firstIndex(of: "WhatsApp")! < learnedW.firstIndex(of: "Wick")!,
+    "got \(learnedW)")
+let markedWhatsApp = "\u{200E}WhatsApp"
+check(
+    "invisible format mark does not demote WhatsApp's prefix match",
+    FuzzyMatch.score(query: "w", candidate: markedWhatsApp)
+        == FuzzyMatch.score(query: "w", candidate: "WhatsApp"))
+check(
+    "learned marked WhatsApp can outrank Wick",
+    FuzzyMatch.score(query: "w", candidate: markedWhatsApp)! + 2_100
+        > FuzzyMatch.score(query: "w", candidate: "Wick")!)
 
 print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

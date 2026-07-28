@@ -12,7 +12,7 @@ final class FavoritesStore: ObservableObject {
         keys = defaults.stringArray(forKey: key) ?? []
     }
 
-    func key(for app: AppEntry) -> String { app.bundleID ?? app.id }
+    func key(for app: AppEntry) -> String { app.preferenceKey }
 
     func isFavorite(_ app: AppEntry) -> Bool { keys.contains(key(for: app)) }
 

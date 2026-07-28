@@ -13,6 +13,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let bundleID: String?
     let kind: Kind
 
+    /// Stable identity for learned ranking, favorites, and other per-entry preferences.
+    var preferenceKey: String { bundleID ?? id }
+
     var kindLabel: String {
         switch kind {
         case .application: return "Application"
@@ -150,9 +153,14 @@ final class AppIndex: ObservableObject {
     @Published private(set) var apps: [AppEntry] = []
 
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
-    private var matchCache: (query: String, result: [AppEntry])?
+    private var matchCache: (query: String, rankingRevision: Int, result: [AppEntry])?
 
     private var isRefreshing = false
+    private let ranking: LauncherRankingStore
+
+    init(ranking: LauncherRankingStore) {
+        self.ranking = ranking
+    }
 
     /// Re-scan (called on every launcher open); the in-flight guard drops overlapping reopens and `apps` is only re-published when the set changed, so an unchanged reopen does no UI work.
     func refresh() async {
@@ -210,16 +218,20 @@ final class AppIndex: ObservableObject {
     func matches(_ query: String, limit: Int = 200) -> [AppEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return apps }
-        if let matchCache, matchCache.query == q { return matchCache.result }
+        if let matchCache, matchCache.query == q,
+            matchCache.rankingRevision == ranking.revision
+        {
+            return matchCache.result
+        }
         let result = rank(q, limit: limit)
-        matchCache = (q, result)
+        matchCache = (q, ranking.revision, result)
         return result
     }
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
             guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
-            return (app, score)
+            return (app, score + ranking.boost(itemKey: app.preferenceKey, query: q))
         }
         return
             scored
@@ -236,8 +248,8 @@ final class AppIndex: ObservableObject {
 enum FuzzyMatch {
     /// Tiered relevance score (higher is better), or nil when the query doesn't match; tiers are spaced so a better kind always wins.
     static func score(query: String, candidate: String) -> Int? {
-        let q = query.lowercased()
-        let c = candidate.lowercased()
+        let q = normalized(query)
+        let c = normalized(candidate)
         guard !q.isEmpty else { return 0 }
 
         if c == q { return 100_000 }
@@ -250,6 +262,15 @@ enum FuzzyMatch {
 
         guard let sub = subsequenceScore(Array(q), Array(c)) else { return nil }
         return sub
+    }
+
+    /// App metadata can contain invisible bidirectional/zero-width format scalars (WhatsApp's
+    /// display name starts with U+200E). They must not demote an otherwise-visible prefix match.
+    private static func normalized(_ value: String) -> String {
+        let scalars = value.unicodeScalars.filter {
+            $0.properties.generalCategory != .format
+        }
+        return String(String.UnicodeScalarView(scalars)).lowercased()
     }
 
     private static func isWordStart(_ s: String, _ index: String.Index) -> Bool {

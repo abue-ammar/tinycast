@@ -12,8 +12,8 @@ struct LauncherList: View {
     var calcSelected = false
     var onActivateCalc: () -> Void = {}
     var onCalcActions: () -> Void = {}
+    let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
-    @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var runningApps: RunningAppsMonitor
 
     private nonisolated static let calcRowID = "calc-card"
@@ -82,7 +82,7 @@ struct LauncherList: View {
                                         running: runningApps.isRunning(app)
                                     )
                                     .contentShape(Rectangle())
-                                    .onTapGesture { core.launch(app) }
+                                    .onTapGesture { onActivate(app) }
                                     .onRightClick { onActions(app) }
                                 }
                             }
@@ -220,13 +220,14 @@ struct AppIconView: View {
 /// Actions menu content for a launcher app, shown bottom-right on right-click or from the Actions pill.
 @MainActor
 enum AppActionsMenu {
-    static func content(app: AppEntry, core: AppCore, favorites: FavoritesStore, running: Bool)
-        -> PopoverMenuContent
-    {
+    static func content(
+        app: AppEntry, searchQuery: String, core: AppCore, favorites: FavoritesStore,
+        running: Bool, onResetRanking: @escaping () -> Void
+    ) -> PopoverMenuContent {
         var items: [PopoverMenuItem] = [
             PopoverMenuItem(
                 title: openTitle(app), systemImage: "list.bullet.rectangle", shortcut: "↵"
-            ) { core.launch(app) }
+            ) { core.launch(app, searchQuery: searchQuery) }
         ]
         if favorites.isFavorite(app) {
             items.append(
@@ -239,6 +240,10 @@ enum AppActionsMenu {
                     favorites.toggle(app)
                 })
         }
+        items.append(
+            PopoverMenuItem(title: "Reset Ranking", systemImage: "arrow.counterclockwise") {
+                onResetRanking()
+            })
         if app.kind != .command {
             items.append(
                 PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {

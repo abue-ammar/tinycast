@@ -89,7 +89,8 @@ final class PaletteViewModel: ObservableObject {
 final class AppCore: ObservableObject {
     static let shared = AppCore()
 
-    let appIndex = AppIndex()
+    let launcherRanking: LauncherRankingStore
+    let appIndex: AppIndex
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
     let hotKeys = HotKeyManager()
@@ -108,6 +109,9 @@ final class AppCore: ObservableObject {
     private let auxWindows = AuxWindowController()
 
     private init() {
+        let launcherRanking = LauncherRankingStore()
+        self.launcherRanking = launcherRanking
+        appIndex = AppIndex(ranking: launcherRanking)
         clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
     }
 
@@ -247,7 +251,10 @@ final class AppCore: ObservableObject {
 
     // MARK: - Actions invoked from the palette UI
 
-    func launch(_ app: AppEntry) {
+    func launch(_ app: AppEntry, searchQuery: String? = nil) {
+        if let searchQuery {
+            launcherRanking.record(itemKey: app.preferenceKey, query: searchQuery)
+        }
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
             runCommand(app)
@@ -263,6 +270,10 @@ final class AppCore: ObservableObject {
         case .command:
             break  // handled above
         }
+    }
+
+    func resetRanking(for app: AppEntry) {
+        launcherRanking.reset(itemKey: app.preferenceKey)
     }
 
     /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.

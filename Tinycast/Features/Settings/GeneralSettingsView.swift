@@ -3,8 +3,10 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @ObservedObject private var settings = AppCore.shared.settings
     @ObservedObject private var hyperTap = AppCore.shared.hyperKeyTap
+    @ObservedObject private var launcherRanking = AppCore.shared.launcherRanking
     // Same UserDefaults key the `App` binds its `MenuBarExtra(isInserted:)` to — toggling here updates the menu-bar icon live, with no shared observable between them.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
+    @State private var confirmingRankingReset = false
 
     /// The Hyper modifier chord as prose glyphs, tracking the Include Shift toggle.
     private var hyperGlyphs: String { settings.hyperKeyIncludesShift ? "⌃⌥⇧⌘" : "⌃⌥⌘" }
@@ -46,6 +48,22 @@ struct GeneralSettingsView: View {
                     tint: .blue
                 ) {
                     ShortcutRecorder(action: .togglePalette)
+                }
+            }
+
+            SettingsCard(header: "Search") {
+                SettingsRow(
+                    title: "Learned ranking",
+                    subtitle:
+                        "Tinycast privately learns which results you choose for each query. Reset all learned choices to restore the default order.",
+                    systemImage: "chart.line.uptrend.xyaxis",
+                    tint: .blue
+                ) {
+                    Button("Reset…", role: .destructive) {
+                        confirmingRankingReset = true
+                    }
+                    .controlSize(.small)
+                    .disabled(launcherRanking.isEmpty)
                 }
             }
 
@@ -200,6 +218,18 @@ struct GeneralSettingsView: View {
                         .controlSize(.small)
                 }
             }
+        }
+        .confirmationDialog(
+            "Reset learned launcher ranking?",
+            isPresented: $confirmingRankingReset,
+            titleVisibility: .visible
+        ) {
+            Button("Reset Ranking", role: .destructive) {
+                launcherRanking.resetAll()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Tinycast will relearn your preferred results as you use the launcher.")
         }
     }
 }

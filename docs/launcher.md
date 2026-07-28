@@ -4,11 +4,25 @@
 (first dir wins).
 
 `FuzzyMatch.score` is a tiered scorer: exact → prefix → substring / word-start → subsequence with
-consecutive / word-boundary bonuses. Rankings are memoized one query deep.
+consecutive / word-boundary bonuses. `LauncherRankingStore` then adds a bounded, query-specific
+frecency boost (frequency plus decaying recency). The boost can reorder results within a relevance
+tier but cannot make a weaker match kind beat a stronger one. Matching strips invisible Unicode
+format scalars first, since app metadata can contain bidi/zero-width markers before the visible name.
+
+Selecting a launcher result records every prefix of the submitted query, so choosing WhatsApp for
+`wha` also teaches `w` and `wh`. Direct hotkeys and empty-query favorites do not affect learned
+ranking. Learned data stays on device in `launcher-ranking.json`; every launcher result exposes the
+same per-item reset in its Actions menu, and users can clear all learned ranking in General Settings.
+
+Rankings are memoized one query deep and keyed by the ranking store's revision, so a launch or reset
+invalidates the cached order.
 
 > **Invariant:** `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from
 > `Tinycast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test
 > is meaningless.
+
+The ranking harness covers prefix learning, frequency/recency scoring, persistence, and both reset
+paths; see the command in `development.md`.
 
 Icons go through a count-capped `NSCache` (`IconCache`).
 

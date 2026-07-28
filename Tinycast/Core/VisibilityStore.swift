@@ -23,7 +23,7 @@ final class VisibilityStore: ObservableObject {
         defaults.set(Array(hiddenKinds), forKey: kindsKey)
     }
 
-    func key(for entry: AppEntry) -> String { entry.bundleID ?? entry.id }
+    func key(for entry: AppEntry) -> String { entry.preferenceKey }
 
     /// Whether the entry appears in the launcher: its category and the item itself must be on.
     func isVisible(_ entry: AppEntry) -> Bool {

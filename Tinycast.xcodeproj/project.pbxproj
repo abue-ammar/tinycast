@@ -52,6 +52,7 @@
 		9A3972BE11AE353EFBB839A0 /* PalettePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555E9C7EA62BDB40891A5751 /* PalettePanel.swift */; };
 		9EC89A6398BD075275FECC9E /* CalcUnits.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B8A7D8DBB0CE2ACEDB3979 /* CalcUnits.swift */; };
 		A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D045D032498C2294A99890E /* LaunchAtLogin.swift */; };
+		B0F1E2D3C4B5A69788776655 /* LauncherRankingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F1E2D3C4B5A69788776655 /* LauncherRankingStore.swift */; };
 		A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */; };
 		A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB750D045194AE34D39D792 /* FavoritesStore.swift */; };
 		A9D8B54D88A60DE9FC1F43BF /* CalcDateTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */; };
@@ -139,6 +140,7 @@
 		9A228BEF62103605DE7A8F38 /* FrequentEmojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentEmojiStore.swift; sourceTree = "<group>"; };
 		9C37CCD024267EB21876C7E9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		9FB750D045194AE34D39D792 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
+		A0F1E2D3C4B5A69788776655 /* LauncherRankingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherRankingStore.swift; sourceTree = "<group>"; };
 		A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinScrollbar.swift; sourceTree = "<group>"; };
 		A5447AEAD87BFE0E2D979B39 /* PaletteWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteWindowController.swift; sourceTree = "<group>"; };
 		A76E4099082D59FA686C3485 /* ClipboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManager.swift; sourceTree = "<group>"; };
@@ -196,6 +198,7 @@
 				D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */,
 				99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */,
 				0D045D032498C2294A99890E /* LaunchAtLogin.swift */,
+				A0F1E2D3C4B5A69788776655 /* LauncherRankingStore.swift */,
 				7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */,
 				B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */,
 				3FF10C4F5E4F73503F58D03B /* OverlayScroller.swift */,
@@ -495,6 +498,7 @@
 				F5F3381FF70997223F8888B0 /* KeyShortcut.swift in Sources */,
 				A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */,
 				DCC36924E538C11136CEC060 /* LauncherView.swift in Sources */,
+				B0F1E2D3C4B5A69788776655 /* LauncherRankingStore.swift in Sources */,
 				8F7431A1340D0A5783599087 /* MiscellaneousSettingsView.swift in Sources */,
 				6962B8A2850A45401275F677 /* NotificationToken.swift in Sources */,
 				DA5BCA13045FF91B3FC8EB35 /* OnboardingState.swift in Sources */,
