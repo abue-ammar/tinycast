@@ -15,9 +15,9 @@ enum Permissions {
         isAccessibilityTrusted() && isInputMonitoringTrusted()
     }
 
-    /// Explicitly prompts the user to grant Accessibility access in System Settings if needed.
+    /// Returns current trust state and prompts the user to grant it if needed.
     @discardableResult
-    static func requestAccessibilityPrompt() -> Bool {
+    static func ensureAccessibility() -> Bool {
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         return AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
     }
@@ -26,12 +26,6 @@ enum Permissions {
     @discardableResult
     static func requestInputMonitoringPrompt() -> Bool {
         CGRequestListenEventAccess()
-    }
-
-    /// Checks if accessibility is trusted without triggering system dialog prompts.
-    @discardableResult
-    static func ensureAccessibility() -> Bool {
-        return isAccessibilityTrusted()
     }
 
     @MainActor
