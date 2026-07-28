@@ -279,7 +279,8 @@ final class AppIndex: ObservableObject {
                 if snippet.isEnabled && snippet.showInLauncher {
                     entries.append(
                         AppEntry(
-                            id: "snippet:\(snippet.id.uuidString)",
+                            // The file path, not `snippet.id`: the serializer never persists the UUID, so it is freshly minted on every scan and cannot key learned ranking, favorites or visibility.
+                            id: "snippet:\(url.path)",
                             name: snippet.name,
                             url: url,
                             bundleID: nil,
