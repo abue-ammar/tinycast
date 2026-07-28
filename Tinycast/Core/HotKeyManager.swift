@@ -9,14 +9,19 @@ final class HotKeyManager: ObservableObject {
 
     /// The recorder currently capturing keystrokes, or `nil`; keeping this as plain app state makes recorders glitch-free, and any active recorder pauses Carbon so the typed combo can't fire a hotkey.
     @Published var recordingAction: HotKeyAction? {
-        didSet { center.isPaused = recordingAction != nil }
+        didSet {
+            center.isPaused = recordingAction != nil
+            sideMatcher.isPaused = recordingAction != nil
+        }
     }
 
     private let center = HotKeyCenter()
+    private let sideMatcher = SideHotKeyMatcher()
     private let boundKey = "boundAppBundleIDs"
     private let boundPaneKey = "boundPaneBundleIDs"
 
     func start() {
+        sideMatcher.start()
         register(.togglePalette)
         register(.toggleClipboard)
         register(.toggleEmoji)
@@ -46,6 +51,7 @@ final class HotKeyManager: ObservableObject {
     /// Persists (or clears, when `nil`) the binding, swaps the live Carbon registration, and publishes so the launcher and recorders re-render.
     func setShortcut(_ shortcut: KeyShortcut?, for action: HotKeyAction) {
         objectWillChange.send()
+        if shortcut?.sideModifiers != nil { Permissions.ensureAccessibility() }
         if let shortcut,
             let data = try? JSONEncoder().encode(shortcut),
             let json = String(data: data, encoding: .utf8)
@@ -55,6 +61,7 @@ final class HotKeyManager: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: action.defaultsKey)
             center.unregister(id: action.defaultsKey)
+            sideMatcher.unregister(id: action.defaultsKey)
         }
         switch action {
         case .app(let bundleID):
@@ -76,7 +83,7 @@ final class HotKeyManager: ObservableObject {
         candidates += boundBundleIDs.map { .app(bundleID: $0) }
         candidates += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         for candidate in candidates
-        where candidate != action && self.shortcut(for: candidate) == shortcut {
+        where candidate != action && self.shortcut(for: candidate)?.conflicts(with: shortcut) == true {
             return displayName(of: candidate)
         }
         return nil
@@ -103,8 +110,15 @@ final class HotKeyManager: ObservableObject {
 
     private func register(_ action: HotKeyAction) {
         guard let shortcut = shortcut(for: action) else { return }
-        center.register(id: action.defaultsKey, shortcut: shortcut) { [weak self] in
+        center.unregister(id: action.defaultsKey)
+        sideMatcher.unregister(id: action.defaultsKey)
+        let handler: () -> Void = { [weak self] in
             self?.perform(action)
+        }
+        if shortcut.sideModifiers == nil {
+            center.register(id: action.defaultsKey, shortcut: shortcut, onKeyDown: handler)
+        } else {
+            sideMatcher.register(id: action.defaultsKey, shortcut: shortcut, onKeyDown: handler)
         }
     }
 

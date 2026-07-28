@@ -62,6 +62,7 @@
 		B1B3F5715BE7A092F0CEFA09 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76E4099082D59FA686C3485 /* ClipboardManager.swift */; };
 		B810158281A87CBA2AB694D0 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79DB24EE452A7CA120B56FA6 /* EmojiData.generated.swift */; };
 		BA76E53A12248B3A9C42B4F9 /* Bundle+AppName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */; };
+		BE85B09CE8F35DBC976A66F9 /* SideHotKeyMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE99374FEBCF09B625A8DAF8 /* SideHotKeyMatcher.swift */; };
 		C0642512B709EF0517ABF4CB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C37CCD024267EB21876C7E9 /* AppDelegate.swift */; };
 		C7DD1345A6BFB1D9EB22FCEE /* RunningApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B432D84D8F9C10521342199 /* RunningApps.swift */; };
 		C8F4555ECA895F63A34A327C /* EmojiGridGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABCE058D38F493D58F6E072 /* EmojiGridGeometry.swift */; };
@@ -158,6 +159,7 @@
 		D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+AppName.swift"; sourceTree = "<group>"; };
 		D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComponents.swift; sourceTree = "<group>"; };
 		DABCE058D38F493D58F6E072 /* EmojiGridGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiGridGeometry.swift; sourceTree = "<group>"; };
+		DE99374FEBCF09B625A8DAF8 /* SideHotKeyMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideHotKeyMatcher.swift; sourceTree = "<group>"; };
 		E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcDateTime.swift; sourceTree = "<group>"; };
 		EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
 		EDE0C0DC05F958A4B4DCAA8C /* Scrypt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scrypt.swift; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 				C6DC5A4706854493D23FD18A /* HyperKey.swift */,
 				919AC64DE9C9DC3A973A0B4E /* HyperKeyTap.swift */,
 				2C3EB07C07902C53BFD3B08B /* KeyShortcut.swift */,
+				DE99374FEBCF09B625A8DAF8 /* SideHotKeyMatcher.swift */,
 			);
 			path = HotKey;
 			sourceTree = "<group>";
@@ -518,6 +521,7 @@
 				CFB516312C4694DDFD99DBCA /* SettingsRootView.swift in Sources */,
 				57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */,
 				05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */,
+				BE85B09CE8F35DBC976A66F9 /* SideHotKeyMatcher.swift in Sources */,
 				72ACD144841BF1117CD4E705 /* Theme.swift in Sources */,
 				85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */,
 				68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */,

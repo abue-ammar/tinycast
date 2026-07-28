@@ -66,7 +66,14 @@ struct ShortcutRecorder: View {
                     .foregroundStyle(.orange)
             } else if !session.heldModifiers.isEmpty {
                 // Collapsed so holding the Hyper key previews as "✦" while recording.
-                Text(KeyShortcut.collapsedModifierSymbols(from: session.heldModifiers).joined())
+                Text(
+                    KeyShortcut.modifierSymbols(
+                        from: session.heldModifiers,
+                        sideModifiers: session.heldSideModifiers.isEmpty
+                            ? nil
+                            : SideModifierRequirement(session.heldSideModifiers)
+                    ).joined()
+                )
                     .foregroundStyle(.primary)
             } else {
                 Text("Type shortcut…")
@@ -113,6 +120,7 @@ struct ShortcutRecorder: View {
 private final class CaptureSession: ObservableObject {
     /// Modifiers currently held, for the live "⌃⌥…" preview while recording.
     @Published var heldModifiers: NSEvent.ModifierFlags = []
+    @Published var heldSideModifiers: Set<SideModifier> = []
     /// Owner of a just-typed conflicting combo; shown for a moment, then recording resumes.
     @Published var conflictOwner: String?
 
@@ -123,6 +131,7 @@ private final class CaptureSession: ObservableObject {
     func start(action: HotKeyAction, hotKeys: HotKeyManager) {
         stop()
         heldModifiers = NSEvent.modifierFlags.intersection([.command, .option, .control, .shift])
+        heldSideModifiers = []
 
         // The handlers run on the main thread but AppKit predates actor annotations, hence assumeIsolated; only Sendable event pieces (key code, flags) cross in.
         if let monitor = NSEvent.addLocalMonitorForEvents(
@@ -147,7 +156,18 @@ private final class CaptureSession: ObservableObject {
             handler: {
                 [weak self] event in
                 let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
-                MainActor.assumeIsolated { self?.heldModifiers = flags }
+                let keyCode = Int(event.keyCode)
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.heldModifiers = flags
+                    if let modifier = SideModifier(keyCode: keyCode) {
+                        if self.heldSideModifiers.contains(modifier) {
+                            self.heldSideModifiers.remove(modifier)
+                        } else {
+                            self.heldSideModifiers.insert(modifier)
+                        }
+                    }
+                }
                 return event
             })
         {
@@ -184,6 +204,7 @@ private final class CaptureSession: ObservableObject {
         conflictReset = nil
         conflictOwner = nil
         heldModifiers = []
+        heldSideModifiers = []
     }
 
     private func handleKeyDown(
@@ -202,7 +223,12 @@ private final class CaptureSession: ObservableObject {
             return
         }
         // Not a bindable combo (e.g. a bare letter): swallow it and keep recording.
-        guard let shortcut = KeyShortcut(keyCode: keyCode, modifierFlags: flags) else { return }
+        let sideModifiers = heldSideModifiers.isEmpty
+            ? nil
+            : SideModifierRequirement(heldSideModifiers)
+        guard let shortcut = KeyShortcut(
+            keyCode: keyCode, modifierFlags: flags, sideModifiers: sideModifiers
+        ) else { return }
 
         if let owner = hotKeys.conflictOwner(of: shortcut, excluding: action) {
             flashConflict(owner)

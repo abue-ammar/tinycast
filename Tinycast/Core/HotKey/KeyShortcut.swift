@@ -5,24 +5,39 @@ import Carbon.HIToolbox
 struct KeyShortcut: Hashable, Sendable {
     let carbonKeyCode: Int
     let carbonModifiers: Int
+    let sideModifiers: SideModifierRequirement?
 
-    init(carbonKeyCode: Int, carbonModifiers: Int) {
+    init(
+        carbonKeyCode: Int, carbonModifiers: Int,
+        sideModifiers: SideModifierRequirement? = nil
+    ) {
         self.carbonKeyCode = carbonKeyCode
         // Mask to the four real modifiers so equality (and conflict detection) isn't thrown off by device-dependent bits older builds may have stored.
         self.carbonModifiers = carbonModifiers & Self.allModifiers
+        self.sideModifiers = sideModifiers
     }
 
     /// Captures a shortcut from a key-down event, or `nil` if unbindable: a global hotkey needs one of ⌘⌥⌃ (⇧ alone shadows typing), except function keys which are fine standalone.
-    init?(keyCode: Int, modifierFlags: NSEvent.ModifierFlags) {
+    init?(
+        keyCode: Int, modifierFlags: NSEvent.ModifierFlags,
+        sideModifiers: SideModifierRequirement? = nil
+    ) {
         let flags = modifierFlags.intersection([.command, .option, .control, .shift])
         let hasCommandingModifier = !flags.isDisjoint(with: [.command, .option, .control])
         guard hasCommandingModifier || Self.isFunctionKey(keyCode) else { return nil }
-        self.init(carbonKeyCode: keyCode, carbonModifiers: Self.carbonModifiers(from: flags))
+        guard sideModifiers?.modifierFlags.isSubset(of: flags) ?? true else { return nil }
+        self.init(
+            carbonKeyCode: keyCode,
+            carbonModifiers: Self.carbonModifiers(from: flags),
+            sideModifiers: sideModifiers
+        )
     }
 
     /// One string per keycap in canonical macOS order (⌃⌥⇧⌘) with the key glyph last, feeding the launcher rows and settings recorder.
     @MainActor var keycaps: [String] {
-        Self.collapsedModifierSymbols(from: modifierFlags) + [keyGlyph]
+        (sideModifiers == nil
+            ? Self.collapsedModifierSymbols(from: modifierFlags)
+            : Self.modifierSymbols(from: modifierFlags, sideModifiers: sideModifiers)) + [keyGlyph]
     }
 
     var modifierFlags: NSEvent.ModifierFlags {
@@ -60,12 +75,32 @@ struct KeyShortcut: Hashable, Sendable {
 
     /// Modifier symbols in the fixed ⌃⌥⇧⌘ order every macOS surface uses.
     static func modifierSymbols(from flags: NSEvent.ModifierFlags) -> [String] {
+        modifierSymbols(from: flags, sideModifiers: nil)
+    }
+
+    static func modifierSymbols(
+        from flags: NSEvent.ModifierFlags, sideModifiers: SideModifierRequirement?
+    ) -> [String] {
         var symbols: [String] = []
-        if flags.contains(.control) { symbols.append("⌃") }
-        if flags.contains(.option) { symbols.append("⌥") }
-        if flags.contains(.shift) { symbols.append("⇧") }
-        if flags.contains(.command) { symbols.append("⌘") }
+        for (flag, symbol) in [
+            (NSEvent.ModifierFlags.control, "⌃"),
+            (.option, "⌥"),
+            (.shift, "⇧"),
+            (.command, "⌘"),
+        ] where flags.contains(flag) {
+            let sideSymbols = sideModifiers?.symbols(for: flag) ?? []
+            symbols += sideSymbols.isEmpty ? [symbol] : sideSymbols
+        }
         return symbols
+    }
+
+    func conflicts(with other: KeyShortcut) -> Bool {
+        guard
+            carbonKeyCode == other.carbonKeyCode,
+            carbonModifiers == other.carbonModifiers
+        else { return false }
+        guard let sideModifiers, let otherSideModifiers = other.sideModifiers else { return true }
+        return sideModifiers == otherSideModifiers
     }
 
     static func isFunctionKey(_ keyCode: Int) -> Bool {
@@ -133,15 +168,24 @@ struct KeyShortcut: Hashable, Sendable {
 // Decoding routes through the masking initializer; the encoded shape stays byte-compatible with the legacy `{"carbonKeyCode":N,"carbonModifiers":N}` records.
 extension KeyShortcut: Codable {
     private enum CodingKeys: String, CodingKey {
-        case carbonKeyCode, carbonModifiers
+        case carbonKeyCode, carbonModifiers, sideModifiers
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
             carbonKeyCode: try container.decode(Int.self, forKey: .carbonKeyCode),
-            carbonModifiers: try container.decode(Int.self, forKey: .carbonModifiers)
+            carbonModifiers: try container.decode(Int.self, forKey: .carbonModifiers),
+            sideModifiers: try container.decodeIfPresent(
+                SideModifierRequirement.self, forKey: .sideModifiers)
         )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(carbonKeyCode, forKey: .carbonKeyCode)
+        try container.encode(carbonModifiers, forKey: .carbonModifiers)
+        try container.encodeIfPresent(sideModifiers, forKey: .sideModifiers)
     }
 }
 
