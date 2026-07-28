@@ -23,8 +23,30 @@ struct RankingTest {
 
         let whatsApp = "net.whatsapp.WhatsApp"
         let wick = "com.example.wick"
+        let cafe = "com.example.cafe"
+
+        check(
+            "query key trims surrounding whitespace",
+            LauncherRankingStore.normalize(" wha \n") == "wha")
+        check("query key folds case", LauncherRankingStore.normalize("WhA") == "wha")
+        check("query key folds diacritics", LauncherRankingStore.normalize("Café") == "cafe")
+        // Records are keyed on the folded query, so the fold must resolve to one canonical form no
+        // matter the ambient locale. A Turkish fold maps "I" to "ı"; asserting the difference keeps
+        // this check from going vacuous if that ever stops being true.
+        check(
+            "query key is locale-independent",
+            LauncherRankingStore.normalize("I") == "i"
+                && LauncherRankingStore.normalize("I")
+                    != "I".folding(
+                        options: [.caseInsensitive, .diacriticInsensitive],
+                        locale: Locale(identifier: "tr_TR")))
 
         check("unvisited result has no boost", store.boost(itemKey: whatsApp, query: "w") == 0)
+
+        store.record(itemKey: cafe, query: " Café ")
+        check(
+            "a learned query is recalled through its normalized key",
+            store.boost(itemKey: cafe, query: "cafe") > 0)
 
         store.record(itemKey: whatsApp, query: "Wha")
         let firstBoost = store.boost(itemKey: whatsApp, query: "w")

@@ -103,10 +103,13 @@ final class LauncherRankingStore: ObservableObject {
         didMutate()
     }
 
+    /// `locale: nil` asks for the locale-independent canonical form. These strings are persisted
+    /// lookup keys, so folding must not depend on ambient state — a locale-sensitive fold maps "I"
+    /// to "ı" under Turkish, which would orphan every record keyed on the dotted form.
     static func normalize(_ query: String) -> String {
         query
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 
     private static func prefixes(of query: String) -> [String] {
