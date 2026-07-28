@@ -5,6 +5,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case application
         case systemSettings
         case command
+        case snippet
     }
 
     let id: String  // file path (or "command:…" id) — always unique
@@ -21,6 +22,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .application: return "Application"
         case .systemSettings: return "System Setting"
         case .command: return "Command"
+        case .snippet: return "Snippet"
         }
     }
 
@@ -30,13 +32,16 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         switch kind {
         case .application: return .app(bundleID: bundleID)
         case .systemSettings: return .settingsPane(bundleID: bundleID)
-        case .command: return nil
+        case .command, .snippet: return nil
         }
     }
 
     /// Command entries draw an SF Symbol tile; everything else uses its file icon.
-    var isSymbolIcon: Bool { kind == .command }
-    var symbolIconName: String { CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark" }
+    var isSymbolIcon: Bool { kind == .command || kind == .snippet }
+    var symbolIconName: String {
+        if kind == .snippet { return "text.quote" }
+        return CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark"
+    }
 
     var icon: NSImage {
         isSymbolIcon
@@ -207,11 +212,37 @@ final class AppIndex: ObservableObject {
                         kind: .application))
             }
         }
-        // Apps, then Settings panes, then Commands — the sectioned launcher relies on this order so its flat selection index maps 1:1 onto rows.
+        // Apps, then Settings panes, then Snippets, then Commands — the sectioned launcher relies on this order so its flat selection index maps 1:1 onto rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        return apps + SettingsPaneScanner.scan() + CommandRegistry.all
+        return apps + SettingsPaneScanner.scan() + scanSnippets() + CommandRegistry.all
+    }
+
+    nonisolated private static func scanSnippets() -> [AppEntry] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let snippetsDir = home.appendingPathComponent(".config/tinycast/snippets", isDirectory: true)
+        guard let files = try? FileManager.default.contentsOfDirectory(at: snippetsDir, includingPropertiesForKeys: nil) else {
+            return []
+        }
+        var entries: [AppEntry] = []
+        for url in files where url.pathExtension.lowercased() == "md" {
+            if let content = try? String(contentsOf: url, encoding: .utf8) {
+                let snippet = SnippetMarkdownSerializer.parse(content: content, fileURL: url)
+                if snippet.isEnabled && snippet.showInLauncher {
+                    entries.append(
+                        AppEntry(
+                            id: "snippet:\(snippet.id.uuidString)",
+                            name: snippet.name,
+                            url: url,
+                            bundleID: nil,
+                            kind: .snippet
+                        )
+                    )
+                }
+            }
+        }
+        return entries.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
@@ -230,8 +261,27 @@ final class AppIndex: ObservableObject {
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let learned = ranking.boosts(query: q)
+        let snippets = AppCore.shared.snippetsStore.snippets
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
-            guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
+            var bestScore = FuzzyMatch.score(query: q, candidate: app.name)
+            // A snippet is reachable by keyword or category too; the keyword edges out a bare name hit of the same kind.
+            if app.kind == .snippet,
+                let snippet = snippets.first(where: {
+                    "snippet:\($0.id.uuidString)" == app.id || $0.name == app.name
+                })
+            {
+                if let kw = snippet.keyword, !kw.isEmpty,
+                    let kwScore = FuzzyMatch.score(query: q, candidate: kw)
+                {
+                    bestScore = max(bestScore ?? -1, kwScore + 200)
+                }
+                if let cat = snippet.category, !cat.isEmpty,
+                    let catScore = FuzzyMatch.score(query: q, candidate: cat)
+                {
+                    bestScore = max(bestScore ?? -1, catScore)
+                }
+            }
+            guard let score = bestScore else { return nil }
             return (app, score + (learned[app.preferenceKey] ?? 0))
         }
         return

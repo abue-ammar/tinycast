@@ -6,7 +6,7 @@ extension Notification.Name {
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, permissions, shortcuts, backup, miscellaneous, about
+    case general, clipboard, emoji, snippets, permissions, shortcuts, backup, miscellaneous, about
     var id: Int { rawValue }
 
     var title: String {
@@ -14,6 +14,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return "General"
         case .clipboard: return "Clipboard"
         case .emoji: return "Emoji & Symbols"
+        case .snippets: return "Snippets"
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         case .backup: return "Backup"
@@ -27,6 +28,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return "switch.2"
         case .clipboard: return "doc.on.clipboard"
         case .emoji: return "face.smiling"
+        case .snippets: return "curlybraces"
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         case .backup: return "arrow.up.arrow.down.circle"
@@ -41,6 +43,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return .gray
         case .clipboard: return .orange
         case .emoji: return .yellow
+        case .snippets: return .green
         case .permissions: return .blue
         case .shortcuts: return .indigo
         case .backup: return .teal
@@ -67,6 +70,7 @@ struct SettingsRootView: View {
                 case .general: GeneralSettingsView()
                 case .clipboard: ClipboardSettingsView()
                 case .emoji: EmojiSettingsView()
+                case .snippets: SnippetsSettingsView().environmentObject(AppCore.shared.snippetsStore)
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .backup: BackupSettingsView()

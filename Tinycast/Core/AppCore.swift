@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Carbon.HIToolbox
 
 enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
@@ -93,6 +94,8 @@ final class AppCore: ObservableObject {
     let appIndex: AppIndex
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
+    let snippetsStore = SnippetsStore()
+    private(set) var snippetListener: SnippetKeywordListener?
     let hotKeys = HotKeyManager()
     let hyperKeyTap = HyperKeyTap()
     let settings = AppSettings()
@@ -137,6 +140,11 @@ final class AppCore: ObservableObject {
         hotKeys.start()
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
+
+        snippetListener = SnippetKeywordListener(store: snippetsStore)
+        snippetListener?.start { [weak self] snippet, missingArgs in
+            self?.promptSnippetArguments(snippet: snippet, missingArgs: missingArgs)
+        }
 
         // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
         if !OnboardingState.hasOnboarded {
@@ -260,6 +268,7 @@ final class AppCore: ObservableObject {
             runCommand(app)
             return
         }
+        let previous = windowController.previousApp
         hidePalette(restoreFocus: false)
         switch app.kind {
         case .application:
@@ -267,6 +276,34 @@ final class AppCore: ObservableObject {
         case .systemSettings:
             guard let bundleID = app.bundleID else { return }
             AppLauncher.openSettingsPane(bundleID: bundleID)
+        case .snippet:
+            let snippetIDString = app.id.replacingOccurrences(of: "snippet:", with: "")
+            guard let snippet = snippetsStore.snippets.first(where: { $0.id.uuidString == snippetIDString || $0.name == app.name }) else { return }
+
+            let result = SnippetTemplateEngine.expand(snippet, snippets: snippetsStore.snippets)
+            if !result.missingArguments.isEmpty {
+                promptSnippetArguments(snippet: snippet, missingArgs: result.missingArguments)
+            } else {
+                Paster.injectString(result.text, previousApp: previous)
+                if let offset = result.cursorOffsetFromEnd, offset > 0 {
+                    let source = CGEventSource(stateID: .combinedSessionState)
+                    for i in 0..<offset {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.008 + 0.1) {
+                            guard let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: true),
+                                  let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: false) else { return }
+                            down.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
+                            up.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
+                            if let pid = previous?.processIdentifier {
+                                down.postToPid(pid)
+                                up.postToPid(pid)
+                            } else {
+                                down.post(tap: .cgAnnotatedSessionEventTap)
+                                up.post(tap: .cgAnnotatedSessionEventTap)
+                            }
+                        }
+                    }
+                }
+            }
         case .command:
             break  // handled above
         }
@@ -315,6 +352,9 @@ final class AppCore: ObservableObject {
             showPalette(mode: .clipboard)
         case .searchEmoji:
             showPalette(mode: .emoji)
+        case .searchSnippets:
+            hidePalette(restoreFocus: false)
+            showSettings(tab: .snippets)
         case .exportSettings:
             hidePalette(restoreFocus: false)
             BackupActions.exportSettings()
@@ -423,5 +463,69 @@ final class AppCore: ObservableObject {
     func pasteEmojiKeepingWindowOpen(_ entry: EmojiEntry) {
         frequentEmoji.record(entry.glyph)
         windowController.pasteStringKeepingWindowOpen(entry.display(tone: settings.emojiSkinTone))
+    }
+
+    // MARK: - Snippet Argument Prompt
+
+    func promptSnippetArguments(snippet: Snippet, missingArgs: [String]) {
+        let frontApp = NSWorkspace.shared.frontmostApplication
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.messageText = "Snippet: \(snippet.name)"
+        alert.informativeText = "Fill in the required template fields:"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Expand")
+        alert.addButton(withTitle: "Cancel")
+
+        let stackView = NSStackView()
+        stackView.orientation = .vertical
+        stackView.alignment = .leading
+        stackView.spacing = 8
+        stackView.frame = NSRect(x: 0, y: 0, width: 320, height: CGFloat(missingArgs.count * 52))
+
+        var fields: [String: NSTextField] = [:]
+
+        for arg in missingArgs {
+            let label = NSTextField(labelWithString: "\(arg):")
+            label.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
+            let field = NSTextField(string: "")
+            field.placeholderString = arg
+            fields[arg] = field
+
+            stackView.addArrangedSubview(label)
+            stackView.addArrangedSubview(field)
+            field.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
+        }
+
+        alert.accessoryView = stackView
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            var userArgs: [String: String] = [:]
+            for (arg, field) in fields {
+                userArgs[arg] = field.stringValue
+            }
+            let result = SnippetTemplateEngine.expand(snippet, snippets: snippetsStore.snippets, userArguments: userArgs)
+            Paster.injectString(result.text, previousApp: frontApp)
+
+            if let offset = result.cursorOffsetFromEnd, offset > 0 {
+                let source = CGEventSource(stateID: .combinedSessionState)
+                for i in 0..<offset {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.008 + 0.1) {
+                        guard let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: true),
+                              let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: false) else { return }
+                        down.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
+                        up.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
+                        if let pid = frontApp?.processIdentifier {
+                            down.postToPid(pid)
+                            up.postToPid(pid)
+                        } else {
+                            down.post(tap: .cgAnnotatedSessionEventTap)
+                            up.post(tap: .cgAnnotatedSessionEventTap)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

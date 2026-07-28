@@ -50,6 +50,11 @@ Carthage/Build/
 # Tuist (if ever added)
 Tuist/.build/
 
+# Claude Code
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
 # Temporary files
 *.swp
 *.tmp
