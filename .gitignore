@@ -52,7 +52,6 @@ Tuist/.build/
 
 # Claude Code
 .claude/
-CLAUDE.md
 CLAUDE.local.md
 
 # Temporary files
