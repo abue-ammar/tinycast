@@ -9,34 +9,55 @@ enum ShellCommandOutcome: Sendable, Equatable {
 
 enum ShellCommandRunner {
     private static let stderrLimit = 8 * 1024
+    /// `waitUntilExit` blocks for the whole life of the command, so it runs here rather than on a cooperative-pool thread a `brew upgrade` would hold for minutes. Concurrent so two commands don't queue behind each other.
+    private static let queue = DispatchQueue(
+        label: "com.tinycast.shell-command", qos: .userInitiated, attributes: .concurrent)
 
-    nonisolated static func run(_ command: String) async -> ShellCommandOutcome {
-        await Task.detached(priority: .userInitiated) {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-lc", command]
-            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
-            process.standardInput = FileHandle.nullDevice
-            process.standardOutput = FileHandle.nullDevice
-
-            let capture = makeStderrCapture()
-            process.standardError = capture?.handle ?? FileHandle.nullDevice
-            defer { capture?.remove() }
-
-            do {
-                try process.run()
-            } catch {
-                return .launchFailure(error.localizedDescription)
+    /// `loadingShellEnvironment` defaults to the fast path, so a caller that forgets it gets the cheap shell rather than the user's whole config.
+    nonisolated static func run(
+        _ command: String, loadingShellEnvironment: Bool = false
+    ) async -> ShellCommandOutcome {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                continuation.resume(
+                    returning: execute(command, loadingShellEnvironment: loadingShellEnvironment))
             }
-            process.waitUntilExit()
+        }
+    }
 
-            guard process.terminationReason == .exit, process.terminationStatus == 0 else {
-                return .nonZeroExit(
-                    status: process.terminationStatus,
-                    stderr: capture?.readSuffix(limit: stderrLimit))
-            }
-            return .success
-        }.value
+    nonisolated private static func execute(
+        _ command: String, loadingShellEnvironment: Bool
+    ) -> ShellCommandOutcome {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        // zsh only reads `.zshrc` for *interactive* shells, so `-l` alone never sees the user's aliases, functions or `PATH`.
+        process.arguments = [loadingShellEnvironment ? "-ilc" : "-lc", command]
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+        // Lets a shell config skip slow or interactive sections when Tinycast is the caller: `[[ -n $TINYCAST ]] && return`.
+        process.environment = ProcessInfo.processInfo.environment.merging(["TINYCAST": "1"]) {
+            _, new in new
+        }
+        // Load-bearing for the interactive shell: a config that prompts reads EOF and moves on instead of hanging forever.
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = FileHandle.nullDevice
+
+        let capture = makeStderrCapture()
+        process.standardError = capture?.handle ?? FileHandle.nullDevice
+        defer { capture?.remove() }
+
+        do {
+            try process.run()
+        } catch {
+            return .launchFailure(error.localizedDescription)
+        }
+        process.waitUntilExit()
+
+        guard process.terminationReason == .exit, process.terminationStatus == 0 else {
+            return .nonZeroExit(
+                status: process.terminationStatus,
+                stderr: capture?.readSuffix(limit: stderrLimit))
+        }
+        return .success
     }
 
     private final class StderrCapture: @unchecked Sendable {
@@ -81,6 +102,6 @@ enum ShellCommandRunner {
     }
 }
 
-private extension String {
-    var nilIfEmpty: String? { isEmpty ? nil : self }
+extension String {
+    fileprivate var nilIfEmpty: String? { isEmpty ? nil : self }
 }

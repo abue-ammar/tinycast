@@ -108,6 +108,8 @@ final class AppCore: ObservableObject {
 
     private lazy var windowController = PaletteWindowController(core: self)
     private let auxWindows = AuxWindowController()
+    /// Guards only the confirmation modal, not execution — two deliberate runs of an unguarded command still run twice.
+    private var isConfirmingCommand = false
 
     private init() {
         let launcherRanking = LauncherRankingStore()
@@ -291,12 +293,12 @@ final class AppCore: ObservableObject {
     // MARK: - Custom commands
 
     @discardableResult
-    func addCustomCommand(name: String, command: String) throws -> CustomCommand {
-        try customCommands.add(name: name, command: command)
+    func addCustomCommand(_ draft: CustomCommand) throws -> CustomCommand {
+        try customCommands.add(draft)
     }
 
-    func updateCustomCommand(id: UUID, name: String, command: String) throws {
-        try customCommands.update(id: id, name: name, command: command)
+    func updateCustomCommand(_ draft: CustomCommand) throws {
+        try customCommands.update(draft)
     }
 
     func deleteCustomCommand(id: UUID) {
@@ -316,13 +318,23 @@ final class AppCore: ObservableObject {
         return count
     }
 
+    /// The one funnel for both palette activation and the command's global hotkey, so the confirmation gate can't be bypassed by either.
     func runCustomCommand(id: UUID) {
         guard let command = customCommands.command(id: id) else { return }
+        // Hide before confirming: the palette is a floating panel and would sit above the alert.
         if windowController.isVisible { hidePalette(restoreFocus: false) }
+        if command.requiresConfirmation {
+            // Carbon hotkeys keep firing during a modal session; without this a held shortcut stacks alerts.
+            guard !isConfirmingCommand else { return }
+            isConfirmingCommand = true
+            defer { isConfirmingCommand = false }
+            guard Self.confirmRun(command) else { return }
+        }
         Task {
-            let outcome = await ShellCommandRunner.run(command.command)
+            let outcome = await ShellCommandRunner.run(
+                command.command, loadingShellEnvironment: command.loadsShellEnvironment)
             guard outcome != .success else { return }
-            Self.presentCustomCommandFailure(name: command.name, outcome: outcome)
+            self.presentCustomCommandFailure(command: command, outcome: outcome)
         }
     }
 
@@ -339,26 +351,48 @@ final class AppCore: ObservableObject {
         }
     }
 
-    private static func presentCustomCommandFailure(
-        name: String, outcome: ShellCommandOutcome
+    private static func confirmRun(_ command: CustomCommand) -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = command.name
+        alert.informativeText = "Are you sure you want to run this command?"
+        alert.alertStyle = .warning
+        let runButton = alert.addButton(withTitle: "Run")
+        // ↵ goes to Cancel, as in `confirmQuitAll`: this command is one ↵ away in the palette.
+        runButton.keyEquivalent = ""
+        alert.addButton(withTitle: "Cancel").keyEquivalent = "\r"
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func presentCustomCommandFailure(
+        command: CustomCommand, outcome: ShellCommandOutcome
     ) {
         let message: String
+        // `127` is the shell's "command not found", so an alias or function that only exists in the user's config lands here.
+        var suggestsShellEnvironment = false
         switch outcome {
         case .success:
             return
         case .launchFailure(let detail):
             message = "The shell could not be started.\n\n\(detail)"
         case .nonZeroExit(let status, let stderr):
+            suggestsShellEnvironment = status == 127 && !command.loadsShellEnvironment
             message =
                 "The command exited with status \(status)."
                 + (stderr.map { "\n\n" + $0 } ?? "")
+                + (suggestsShellEnvironment
+                    ? "\n\nIf this is a shell alias or function, turn on Load Shell Environment for "
+                        + "this command." : "")
         }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "“\(name)” Failed"
+        alert.messageText = "“\(command.name)” Failed"
         alert.informativeText = message
         alert.alertStyle = .warning
-        alert.runModal()
+        alert.addButton(withTitle: "OK")
+        if suggestsShellEnvironment { alert.addButton(withTitle: "Open Settings…") }
+        guard alert.runModal() == .alertSecondButtonReturn else { return }
+        showSettings(tab: .customCommands)
     }
 
     /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.

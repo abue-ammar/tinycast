@@ -7,11 +7,19 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     let id: UUID
     var name: String
     var command: String
+    /// Sources the user's shell config so aliases, functions and `PATH` resolve; opt-in because a heavy `.zshrc` costs far more than the command itself.
+    var loadsShellEnvironment: Bool
+    var requiresConfirmation: Bool
 
-    init(id: UUID = UUID(), name: String, command: String) {
+    init(
+        id: UUID = UUID(), name: String, command: String,
+        loadsShellEnvironment: Bool = false, requiresConfirmation: Bool = false
+    ) {
         self.id = id
         self.name = name
         self.command = command
+        self.loadsShellEnvironment = loadsShellEnvironment
+        self.requiresConfirmation = requiresConfirmation
     }
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
@@ -63,16 +71,17 @@ final class CustomCommandStore: ObservableObject {
         CustomCommand.id(fromEntryID: entryID).flatMap(command)
     }
 
+    // Takes a whole draft rather than a parameter per field so adding an option doesn't churn every call site.
     @discardableResult
-    func add(name: String, command: String) throws -> CustomCommand {
-        let value = try validated(id: UUID(), name: name, command: command)
+    func add(_ draft: CustomCommand) throws -> CustomCommand {
+        let value = try validated(draft)
         commit(commands + [value])
         return value
     }
 
-    func update(id: UUID, name: String, command: String) throws {
-        guard let index = commands.firstIndex(where: { $0.id == id }) else { return }
-        let value = try validated(id: id, name: name, command: command)
+    func update(_ draft: CustomCommand) throws {
+        guard let index = commands.firstIndex(where: { $0.id == draft.id }) else { return }
+        let value = try validated(draft)
         var updated = commands
         updated[index] = value
         commit(updated)
@@ -95,20 +104,22 @@ final class CustomCommandStore: ObservableObject {
         return updated.count
     }
 
-    private func validated(id: UUID, name: String, command: String) throws -> CustomCommand {
-        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanCommand = command.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanName.isEmpty else { throw CustomCommandValidationError.emptyName }
-        guard !cleanCommand.isEmpty else { throw CustomCommandValidationError.emptyCommand }
-        guard !cleanName.contains("\0"), !cleanCommand.contains("\0") else {
+    private func validated(_ draft: CustomCommand) throws -> CustomCommand {
+        var value = draft
+        value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        value.command = draft.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.name.isEmpty else { throw CustomCommandValidationError.emptyName }
+        guard !value.command.isEmpty else { throw CustomCommandValidationError.emptyCommand }
+        guard !value.name.contains("\0"), !value.command.contains("\0") else {
             throw CustomCommandValidationError.invalidCharacter
         }
         guard
             !commands.contains(where: {
-                $0.id != id && $0.name.compare(cleanName, options: .caseInsensitive) == .orderedSame
+                $0.id != value.id
+                    && $0.name.compare(value.name, options: .caseInsensitive) == .orderedSame
             })
         else { throw CustomCommandValidationError.duplicateName }
-        return CustomCommand(id: id, name: cleanName, command: cleanCommand)
+        return value
     }
 
     private func commit(_ updated: [CustomCommand]) {
@@ -128,13 +139,16 @@ final class CustomCommandStore: ObservableObject {
         var names = Set<String>()
         var result: [CustomCommand] = []
         for value in values {
-            let name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            let command = value.command.trimmingCharacters(in: .whitespacesAndNewlines)
-            let foldedName = name.folding(options: [.caseInsensitive], locale: .current)
-            guard !name.isEmpty, !command.isEmpty, !name.contains("\0"), !command.contains("\0"),
-                ids.insert(value.id).inserted, names.insert(foldedName).inserted
+            // Copy-and-clean rather than rebuild, so a new option can never be dropped on import.
+            var cleaned = value
+            cleaned.name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            cleaned.command = value.command.trimmingCharacters(in: .whitespacesAndNewlines)
+            let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: .current)
+            guard !cleaned.name.isEmpty, !cleaned.command.isEmpty, !cleaned.name.contains("\0"),
+                !cleaned.command.contains("\0"), ids.insert(cleaned.id).inserted,
+                names.insert(foldedName).inserted
             else { continue }
-            result.append(CustomCommand(id: value.id, name: name, command: command))
+            result.append(cleaned)
         }
         return result
     }
