@@ -163,7 +163,7 @@ private struct CustomCommandEditorSheet: View {
                     .font(.body.monospaced())
                     .scrollContentBackground(.hidden)
                     .padding(Theme.Spacing.sm)
-                    .frame(height: 120)
+                    .frame(height: Theme.Size.customCommandEditorHeight)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                             .fill(Theme.Colors.cardFill)
@@ -209,7 +209,7 @@ private struct CustomCommandEditorSheet: View {
             }
         }
         .padding(Theme.Spacing.xxl)
-        .frame(width: 480)
+        .frame(width: Theme.Size.editorSheetWidth)
     }
 
     private func optionToggle(

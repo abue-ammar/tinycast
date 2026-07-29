@@ -40,6 +40,8 @@ final class AppSettings: ObservableObject {
         static let showFavoritesInCompactMode = "showFavoritesInCompactMode"
         static let searchScopes = "launcherSearchScopes"
         static let openOnCursorScreen = "openOnCursorScreen"
+        static let snippetKeywordExpansion = "snippetKeywordExpansion"
+        static let snippetHUD = "snippetHUD"
     }
 
     /// Folders (and individual `.app` bundles) `AppIndex` scans, in scan order. Editing this re-indexes — `AppIndex.start(settings:)` observes it.
@@ -104,6 +106,15 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen) }
     }
 
+    /// Global opt-in for listening for snippet keywords while the user types in other apps.
+    @Published var snippetHUD: Bool {
+        didSet { defaults.set(snippetHUD, forKey: Key.snippetHUD) }
+    }
+
+    @Published var snippetKeywordExpansion: Bool {
+        didSet { defaults.set(snippetKeywordExpansion, forKey: Key.snippetKeywordExpansion) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -141,5 +152,7 @@ final class AppSettings: ObservableObject {
         openOnCursorScreen =
             defaults.object(forKey: Key.openOnCursorScreen) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen)
+        snippetKeywordExpansion = defaults.bool(forKey: Key.snippetKeywordExpansion)
+        snippetHUD = defaults.bool(forKey: Key.snippetHUD)
     }
 }

@@ -11,10 +11,6 @@ enum Permissions {
         CGPreflightListenEventAccess()
     }
 
-    static func isFullyTrusted() -> Bool {
-        isAccessibilityTrusted() && isInputMonitoringTrusted()
-    }
-
     /// Returns current trust state and prompts the user to grant it if needed.
     @discardableResult
     static func ensureAccessibility() -> Bool {
@@ -22,9 +18,9 @@ enum Permissions {
         return AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
     }
 
-    /// Explicitly prompts the user to grant Input Monitoring access in System Settings if needed.
+    /// Called only from the explicit Snippets opt-in gesture, after Tinycast explains why the permission is needed.
     @discardableResult
-    static func requestInputMonitoringPrompt() -> Bool {
+    static func requestInputMonitoringFromSnippetOptIn() -> Bool {
         CGRequestListenEventAccess()
     }
 

@@ -30,6 +30,7 @@ enum Theme {
         static let keyCap: CGFloat = 6
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 4
+        static let hud: CGFloat = 14
     }
 
     enum Size {
@@ -60,6 +61,17 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
         /// Little state indicator dot next to a settings row title (Hyper Key active/needs-permission).
         static let statusDot: CGFloat = 6
+        static let editorSheetWidth: CGFloat = 480
+        static let snippetEditorHeight: CGFloat = 620
+        static let customCommandEditorHeight: CGFloat = 120
+        static let snippetTemplateEditorHeight: CGFloat = 180
+        static let hudWidth: CGFloat = 320
+        static let hudHeight: CGFloat = 56
+        static let hudEdgeOffset: CGFloat = 24
+    }
+
+    enum Duration {
+        static let hud: TimeInterval = 1.6
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.

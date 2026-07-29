@@ -7,6 +7,7 @@ enum BackupActions {
     struct RaycastOutcome {
         var summary: SettingsBackup.ApplySummary
         var clipboardImported: Int
+        var snippetsImported: Int
         var missingImages: Int
     }
 
@@ -64,8 +65,12 @@ enum BackupActions {
         let imported =
             result.clipboard.isEmpty
             ? 0 : AppCore.shared.clipboardStore.importEntries(result.clipboard)
+        let snippetsImported = try await AppCore.shared.snippetsStore.importSnippets(result.snippets).count
         return RaycastOutcome(
-            summary: summary, clipboardImported: imported, missingImages: result.missingImages)
+            summary: summary,
+            clipboardImported: imported,
+            snippetsImported: snippetsImported,
+            missingImages: result.missingImages)
     }
 
     /// Every Raycast channel (stable, beta, alpha, internal) shares this bundle-id prefix.

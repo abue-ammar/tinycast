@@ -1,35 +1,71 @@
 import Foundation
 
-struct Snippet: Identifiable, Codable, Sendable, Hashable {
-    let id: UUID
+struct Snippet: Codable, Sendable, Hashable {
     var name: String
     var text: String
     var keyword: String?
     var category: String?
-    var shortcut: KeyShortcut?
     var isEnabled: Bool
     var showInLauncher: Bool
-    var updatedAt: Date
+    var showHUD: Bool
 
     init(
-        id: UUID = UUID(),
         name: String,
         text: String,
         keyword: String? = nil,
         category: String? = nil,
-        shortcut: KeyShortcut? = nil,
         isEnabled: Bool = true,
         showInLauncher: Bool = true,
-        updatedAt: Date = Date()
+        showHUD: Bool = false
     ) {
-        self.id = id
         self.name = name
         self.text = text
         self.keyword = keyword
         self.category = category
-        self.shortcut = shortcut
         self.isEnabled = isEnabled
         self.showInLauncher = showInLauncher
-        self.updatedAt = updatedAt
+        self.showHUD = showHUD
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, text, keyword, category, isEnabled, showInLauncher, showHUD
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        text = try container.decode(String.self, forKey: .text)
+        keyword = try container.decodeIfPresent(String.self, forKey: .keyword)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        showInLauncher = try container.decodeIfPresent(Bool.self, forKey: .showInLauncher) ?? true
+        showHUD = try container.decodeIfPresent(Bool.self, forKey: .showHUD) ?? false
+    }
+}
+
+struct SnippetSourceRevision: RawRepresentable, Codable, Sendable, Hashable {
+    let rawValue: String
+
+    init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    init(content: String) {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        var byteCount = 0
+        for byte in content.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+            byteCount += 1
+        }
+        rawValue = "\(byteCount):\(String(hash, radix: 16))"
+    }
+}
+
+struct StoredSnippet: Identifiable, Sendable, Hashable {
+    let fileURL: URL
+    var snippet: Snippet
+    let sourceRevision: SnippetSourceRevision
+
+    var id: String { fileURL.standardizedFileURL.path }
 }

@@ -39,6 +39,15 @@ final class ClipboardManager {
         self.timer = timer
     }
 
+    func prepareForTinycastPasteboardMutation() {
+        poll()
+    }
+
+    func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {
+        guard NSPasteboard.general.changeCount == changeCount else { return }
+        lastChangeCount = changeCount
+    }
+
     private func poll() {
         let pb = NSPasteboard.general
         guard pb.changeCount != lastChangeCount else { return }

@@ -27,9 +27,10 @@ struct RaycastImportOptions: OptionSet, Sendable {
     static let clipboardHistory = RaycastImportOptions(rawValue: 1 << 5)
     static let popToRoot = RaycastImportOptions(rawValue: 1 << 6)
     static let compactMode = RaycastImportOptions(rawValue: 1 << 7)
+    static let snippets = RaycastImportOptions(rawValue: 1 << 8)
     static let all: RaycastImportOptions = [
         .shortcuts, .favorites, .emojiSkinTone, .launchAtLogin, .menuBarVisibility, .clipboardHistory,
-        .popToRoot, .compactMode,
+        .popToRoot, .compactMode, .snippets,
     ]
 }
 
@@ -38,6 +39,7 @@ enum RaycastImport {
     struct Result {
         var backup: SettingsBackup
         var clipboard: [ClipboardItem]
+        var snippets: [Snippet]
         /// Image clips whose referenced file no longer exists on disk (reported so the UI can note them).
         var missingImages: Int
 
@@ -95,6 +97,7 @@ enum RaycastImport {
             return Result(
                 backup: trimmed,
                 clipboard: keepClipboard ? clipboard : [],
+                snippets: options.contains(.snippets) ? snippets : [],
                 missingImages: keepClipboard ? missingImages : 0)
         }
     }
@@ -141,7 +144,13 @@ enum RaycastImport {
         backup.hotkeys = mapHotkeys(json)
         backup.favoriteApps = mapFavorites(json)
         let (clipboard, missing) = mapClipboard(json)
-        return Result(backup: backup, clipboard: clipboard, missingImages: missing)
+        let snippets = RaycastSnippetImport.parse(
+            (json["builtin_package_snippets"] as? [String: Any])?["snippets"])
+        return Result(
+            backup: backup,
+            clipboard: clipboard,
+            snippets: snippets,
+            missingImages: missing)
     }
 
     /// Raycast `general.hyperKeyCode` → Tinycast physical key; unknown or absent values are skipped, and no value ever maps to `.none` (an export without a Hyper key must not disable one the user already configured).

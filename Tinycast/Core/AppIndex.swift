@@ -14,6 +14,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let url: URL
     let bundleID: String?
     let kind: Kind
+    var searchAliases: [String] = []
+    var keywordAlias: String? = nil
 
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
@@ -167,6 +169,9 @@ enum IconCache {
 final class AppIndex: ObservableObject {
     @Published private(set) var apps: [AppEntry] = []
 
+    private var scannedEntries: [AppEntry] = []
+    private var snippetEntries: [AppEntry] = []
+
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
     private var matchCache: (query: String, rankingRevision: Int, result: [AppEntry])?
 
@@ -194,6 +199,23 @@ final class AppIndex: ObservableObject {
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
         customCommandEntries = entries
+        publishEntries()
+    }
+
+    func updateSnippets(_ records: [StoredSnippet]) {
+        snippetEntries = records
+            .filter { $0.snippet.isEnabled && $0.snippet.showInLauncher }
+            .map { record in
+                AppEntry(
+                    id: "snippet:\(record.id)",
+                    name: record.snippet.name,
+                    url: record.fileURL,
+                    bundleID: nil,
+                    kind: .snippet,
+                    searchAliases: [record.snippet.category].compactMap { $0 },
+                    keywordAlias: record.snippet.keyword)
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         publishEntries()
     }
 
@@ -249,48 +271,21 @@ final class AppIndex: ObservableObject {
                     id: url.path, name: name, url: url, bundleID: bundleID,
                     kind: .application))
         }
-        // `publishEntries` appends commands after apps, Settings panes, and snippets so the sectioned flat selection maps 1:1 onto rows.
+        // `publishEntries` appends snippets and commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        return apps + SettingsPaneScanner.scan() + scanSnippets()
+        return apps + SettingsPaneScanner.scan()
     }
 
     private func publishEntries() {
         let commands = (CommandRegistry.all + customCommandEntries).sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        let updated = discoveredEntries + commands
+        let updated = discoveredEntries + snippetEntries + commands
         guard updated != apps else { return }
         apps = updated
         matchCache = nil
-    }
-
-    nonisolated private static func scanSnippets() -> [AppEntry] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let snippetsDir = home.appendingPathComponent(".config/tinycast/snippets", isDirectory: true)
-        guard let files = try? FileManager.default.contentsOfDirectory(at: snippetsDir, includingPropertiesForKeys: nil) else {
-            return []
-        }
-        var entries: [AppEntry] = []
-        for url in files where url.pathExtension.lowercased() == "md" {
-            if let content = try? String(contentsOf: url, encoding: .utf8) {
-                let snippet = SnippetMarkdownSerializer.parse(content: content, fileURL: url)
-                if snippet.isEnabled && snippet.showInLauncher {
-                    entries.append(
-                        AppEntry(
-                            // The file path, not `snippet.id`: the serializer never persists the UUID, so it is freshly minted on every scan and cannot key learned ranking, favorites or visibility.
-                            id: "snippet:\(url.path)",
-                            name: snippet.name,
-                            url: url,
-                            bundleID: nil,
-                            kind: .snippet
-                        )
-                    )
-                }
-            }
-        }
-        return entries.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
@@ -309,25 +304,16 @@ final class AppIndex: ObservableObject {
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let learned = ranking.boosts(query: q)
-        let snippets = AppCore.shared.snippetsStore.snippets
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
             var bestScore = FuzzyMatch.score(query: q, candidate: app.name)
-            // A snippet is reachable by keyword or category too; the keyword edges out a bare name hit of the same kind.
-            if app.kind == .snippet,
-                let snippet = snippets.first(where: {
-                    "snippet:\($0.id.uuidString)" == app.id || $0.name == app.name
-                })
+            if let keyword = app.keywordAlias,
+                let keywordScore = FuzzyMatch.score(query: q, candidate: keyword)
             {
-                if let kw = snippet.keyword, !kw.isEmpty,
-                    let kwScore = FuzzyMatch.score(query: q, candidate: kw)
-                {
-                    bestScore = max(bestScore ?? -1, kwScore + 200)
-                }
-                if let cat = snippet.category, !cat.isEmpty,
-                    let catScore = FuzzyMatch.score(query: q, candidate: cat)
-                {
-                    bestScore = max(bestScore ?? -1, catScore)
-                }
+                bestScore = max(bestScore ?? -1, keywordScore + 200)
+            }
+            for alias in app.searchAliases {
+                guard let aliasScore = FuzzyMatch.score(query: q, candidate: alias) else { continue }
+                bestScore = max(bestScore ?? -1, aliasScore)
             }
             guard let score = bestScore else { return nil }
             return (app, score + (learned[app.preferenceKey] ?? 0))

@@ -157,6 +157,13 @@ struct BackupSettingsView: View {
                 if outcome.clipboardImported > 0 {
                     message += " Imported \(outcome.clipboardImported) clipboard entries."
                 }
+                if outcome.snippetsImported > 0 {
+                    let noun = outcome.snippetsImported == 1 ? "snippet" : "snippets"
+                    let snippetsMessage = "Imported \(outcome.snippetsImported) \(noun)."
+                    message = message == "Nothing to import from this file."
+                        ? snippetsMessage
+                        : message + " " + snippetsMessage
+                }
                 if outcome.missingImages > 0 {
                     message += " \(outcome.missingImages) images were unavailable and skipped."
                 }

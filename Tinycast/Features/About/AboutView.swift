@@ -195,12 +195,19 @@ private struct AboutLinkRow: View {
 /// Hosts auxiliary SwiftUI windows (About, Settings), torn down on close so their SwiftUI trees deallocate instead of lingering, and rebuilt instantly on reopen from live state.
 @MainActor
 final class AuxWindowController: NSObject, NSWindowDelegate {
+    typealias CloseGuard = (@escaping (Bool) -> Void) -> Bool
+
     private var windows: [String: NSWindow] = [:]
+    private var closeGuards: [String: CloseGuard] = [:]
+    private var closeHandlers: [String: () -> Void] = [:]
+    private var approvedCloseIDs: Set<String> = []
 
     /// Returns `true` when a new window was created, `false` when an existing one was re-raised.
     @discardableResult
     func show<Content: View>(
         id: String, title: String, size: CGSize, seamlessTitleBar: Bool = false,
+        shouldClose: CloseGuard? = nil,
+        onClose: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) -> Bool {
         let window: NSWindow
@@ -233,6 +240,8 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
             window.delegate = self
             window.center()
             windows[id] = window
+            if let shouldClose { closeGuards[id] = shouldClose }
+            if let onClose { closeHandlers[id] = onClose }
         }
         // Promote to a regular app so the window gets a Dock icon and normal layering; demoted back to accessory when the last aux window closes.
         NSApp.setActivationPolicy(.regular)
@@ -262,11 +271,27 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
         windows[id]?.close()
     }
 
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard let id = windows.first(where: { $0.value === sender })?.key else { return true }
+        if approvedCloseIDs.remove(id) != nil { return true }
+        guard let closeGuard = closeGuards[id] else { return true }
+
+        return closeGuard { [weak self, weak sender] approved in
+            guard approved, let self, let sender else { return }
+            self.approvedCloseIDs.insert(id)
+            sender.close()
+        }
+    }
+
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow,
             let id = windows.first(where: { $0.value === window })?.key
         else { return }
         windows.removeValue(forKey: id)
+        closeGuards.removeValue(forKey: id)
+        approvedCloseIDs.remove(id)
+        let closeHandler = closeHandlers.removeValue(forKey: id)
+        closeHandler?()
         if windows.isEmpty { NSApp.setActivationPolicy(.accessory) }
     }
 }

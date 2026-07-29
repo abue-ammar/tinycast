@@ -1,161 +1,344 @@
-import Foundation
 import Combine
-import AppKit
+import Darwin
+import Foundation
 
 @MainActor
 final class SnippetsStore: ObservableObject {
-    @Published private(set) var snippets: [Snippet] = []
+    enum State: Sendable, Equatable {
+        case idle
+        case loading
+        case ready
+        case failed(String)
+    }
+
+    @Published private(set) var snippets: [StoredSnippet] = []
+    @Published private(set) var state: State = .idle
+    @Published private(set) var issues: [SnippetRepository.Issue] = []
+    @Published private(set) var operationError: String?
 
     let snippetsDirectory: URL
-    nonisolated(unsafe) private var fileSource: DispatchSourceFileSystemObject?
-    nonisolated(unsafe) private var fileDescriptor: CInt = -1
+    var onSnapshot: ((SnippetRepository.Snapshot) -> Void)?
 
-    init() {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        self.snippetsDirectory = home
-            .appendingPathComponent(".config", isDirectory: true)
-            .appendingPathComponent("tinycast", isDirectory: true)
-            .appendingPathComponent("snippets", isDirectory: true)
+    private let repository: SnippetRepository
+    private var directoryWatcher: DispatchSourceFileSystemObject?
+    private var fileWatchers: [String: DispatchSourceFileSystemObject] = [:]
+    private var reloadTask: Task<Void, Never>?
+    private var watcherRetryTask: Task<Void, Never>?
+    private var generation = 0
+    private var watcherGeneration = 0
+    private var isStarted = false
 
-        try? FileManager.default.createDirectory(at: snippetsDirectory, withIntermediateDirectories: true)
-
-        load()
-        startFolderWatcher()
+    init(repository: SnippetRepository = SnippetRepository()) {
+        self.repository = repository
+        snippetsDirectory = repository.snippetsDirectory
     }
 
-    deinit {
-        stopFolderWatcher()
+    isolated deinit {
+        reloadTask?.cancel()
+        watcherRetryTask?.cancel()
+        directoryWatcher?.cancel()
+        for source in fileWatchers.values { source.cancel() }
     }
 
-    func load() {
-        let fm = FileManager.default
+    func start() async {
+        guard !isStarted else { return }
+        isStarted = true
+        await reload(showLoadingState: true)
+    }
 
-        // Check if directory has markdown files
-        let mdFiles = (try? fm.contentsOfDirectory(at: snippetsDirectory, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension.lowercased() == "md" } ?? []
+    func stop() {
+        isStarted = false
+        generation &+= 1
+        reloadTask?.cancel()
+        reloadTask = nil
+        watcherRetryTask?.cancel()
+        watcherRetryTask = nil
+        stopWatchers()
+    }
 
-        if mdFiles.isEmpty {
-            // Check for legacy snippets.json migration
-            let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
-            let legacyURL = appSupport.appendingPathComponent(bundleID).appendingPathComponent("snippets.json")
+    func retry() {
+        guard isStarted else { return }
+        scheduleReload(after: .zero, showLoadingState: true)
+    }
 
-            if fm.fileExists(atPath: legacyURL.path),
-               let data = try? Data(contentsOf: legacyURL),
-               let legacySnippets = try? JSONDecoder().decode([Snippet].self, from: data) {
-                for snippet in legacySnippets {
-                    saveSnippetFile(snippet)
+    @discardableResult
+    func create(_ snippet: Snippet) async throws -> StoredSnippet {
+        let record = try await performMutation { try $0.create(snippet) }
+        guard isStarted else { return record }
+        var records = snippets.filter { $0.id != record.id }
+        records.append(record)
+        publishLocal(records: records)
+        scheduleReload(after: .zero)
+        return record
+    }
+
+    @discardableResult
+    func importSnippets(_ imported: [Snippet]) async throws -> [StoredSnippet] {
+        guard !imported.isEmpty else { return [] }
+        let created = try await performMutation { try $0.create(imported) }
+        guard isStarted else { return created }
+        let createdIDs = Set(created.map(\.id))
+        publishLocal(records: snippets.filter { !createdIDs.contains($0.id) } + created)
+        scheduleReload(after: .zero)
+        return created
+    }
+
+    @discardableResult
+    func save(_ record: StoredSnippet) async throws -> StoredSnippet {
+        let saved = try await performMutation {
+            try $0.save(
+                record.snippet,
+                fileURL: record.fileURL,
+                expectedRevision: record.sourceRevision)
+        }
+        guard isStarted else { return saved }
+        var records = snippets.filter { $0.id != saved.id }
+        records.append(saved)
+        publishLocal(records: records)
+        scheduleReload(after: .zero)
+        return saved
+    }
+
+    func delete(id: StoredSnippet.ID) async throws {
+        guard let record = record(id: id) else {
+            throw SnippetRepository.RepositoryError.fileNotFound(URL(fileURLWithPath: id))
+        }
+        try await performMutation {
+            try $0.delete(
+                fileURL: record.fileURL,
+                expectedRevision: record.sourceRevision)
+        }
+        guard isStarted else { return }
+        publishLocal(records: snippets.filter { $0.id != id })
+        scheduleReload(after: .zero)
+    }
+
+    func record(id: StoredSnippet.ID) -> StoredSnippet? {
+        snippets.first(where: { $0.id == id })
+    }
+
+    private enum RepositoryResult<Value: Sendable>: Sendable {
+        case success(Value)
+        case failure(SnippetRepository.RepositoryError)
+    }
+
+    private func performMutation<Value: Sendable>(
+        _ operation: @escaping @Sendable (SnippetRepository) throws -> Value
+    ) async throws -> Value {
+        reloadTask?.cancel()
+        reloadTask = nil
+        generation &+= 1
+        let repository = repository
+
+        let result = await Task.detached(priority: .utility) {
+            do {
+                return RepositoryResult.success(try operation(repository))
+            } catch let error as SnippetRepository.RepositoryError {
+                return RepositoryResult.failure(error)
+            } catch {
+                return RepositoryResult.failure(.io(
+                    fileURL: repository.snippetsDirectory,
+                    message: error.localizedDescription))
+            }
+        }.value
+
+        switch result {
+        case .success(let value):
+            operationError = nil
+            return value
+        case .failure(let error):
+            operationError = error.localizedDescription
+            throw error
+        }
+    }
+
+    private func reload(showLoadingState: Bool) async {
+        guard isStarted else { return }
+        generation &+= 1
+        let loadGeneration = generation
+        if showLoadingState { state = .loading }
+        let repository = repository
+
+        let result = await Task.detached(priority: .utility) {
+            do {
+                return RepositoryResult.success(try repository.load())
+            } catch let error as SnippetRepository.RepositoryError {
+                return RepositoryResult.failure(error)
+            } catch {
+                return RepositoryResult.failure(.io(
+                    fileURL: repository.snippetsDirectory,
+                    message: error.localizedDescription))
+            }
+        }.value
+
+        guard isStarted, loadGeneration == generation else { return }
+        switch result {
+        case .success(let snapshot):
+            apply(snapshot)
+        case .failure(let error):
+            state = .failed(error.localizedDescription)
+            scheduleWatcherRetry()
+        }
+    }
+
+    private func publishLocal(records: [StoredSnippet]) {
+        apply(SnippetRepository.Snapshot(
+            records: records.sorted(by: recordOrder),
+            issues: issues))
+    }
+
+    private func apply(_ snapshot: SnippetRepository.Snapshot) {
+        guard isStarted else { return }
+        let isUnchanged = state == .ready
+            && snippets == snapshot.records
+            && issues == snapshot.issues
+        if !isUnchanged {
+            snippets = snapshot.records
+            issues = snapshot.issues
+            state = .ready
+            onSnapshot?(snapshot)
+        }
+        if syncWatchers(with: snapshot) {
+            scheduleReload(after: .milliseconds(150))
+        }
+    }
+
+    private func scheduleReload(after delay: Duration, showLoadingState: Bool = false) {
+        guard isStarted else { return }
+        reloadTask?.cancel()
+        reloadTask = Task { [weak self] in
+            if delay != .zero {
+                do {
+                    try await Task.sleep(for: delay)
+                } catch {
+                    return
                 }
-            } else {
-                createDefaultSnippets()
+            }
+            guard let self, self.isStarted, !Task.isCancelled else { return }
+            await self.reload(showLoadingState: showLoadingState)
+        }
+    }
+
+    private func syncWatchers(with snapshot: SnippetRepository.Snapshot) -> Bool {
+        guard isStarted else { return false }
+        watcherRetryTask?.cancel()
+        watcherRetryTask = nil
+
+        var changed = false
+        if directoryWatcher == nil {
+            changed = armDirectoryWatcher() || changed
+        }
+
+        let desiredPaths = Set(
+            snapshot.records.map { $0.fileURL.standardizedFileURL.path }
+                + snapshot.issues.map { $0.fileURL.standardizedFileURL.path })
+        for path in Array(fileWatchers.keys) where !desiredPaths.contains(path) {
+            fileWatchers.removeValue(forKey: path)?.cancel()
+            changed = true
+        }
+        for path in desiredPaths where fileWatchers[path] == nil {
+            changed = armFileWatcher(path: path) || changed
+        }
+
+        if directoryWatcher == nil { scheduleWatcherRetry() }
+        return changed
+    }
+
+    @discardableResult
+    private func armDirectoryWatcher() -> Bool {
+        let descriptor = Darwin.open(snippetsDirectory.path, O_EVTONLY)
+        guard descriptor >= 0 else { return false }
+
+        watcherGeneration &+= 1
+        let installedGeneration = watcherGeneration
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor,
+            eventMask: [.write, .extend, .attrib, .delete, .rename, .revoke],
+            queue: .main)
+        source.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                self?.handleDirectoryEvent(generation: installedGeneration)
             }
         }
+        source.setCancelHandler { Darwin.close(descriptor) }
+        directoryWatcher = source
+        source.resume()
+        return true
+    }
 
-        // Load all .md files from ~/.config/tinycast/snippets/
-        let currentFiles = (try? fm.contentsOfDirectory(at: snippetsDirectory, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension.lowercased() == "md" } ?? []
+    @discardableResult
+    private func armFileWatcher(path: String) -> Bool {
+        let descriptor = Darwin.open(path, O_EVTONLY)
+        guard descriptor >= 0 else { return false }
 
-        var loaded: [Snippet] = []
-        for url in currentFiles {
-            if let content = try? String(contentsOf: url, encoding: .utf8) {
-                let snippet = SnippetMarkdownSerializer.parse(content: content, fileURL: url)
-                loaded.append(snippet)
+        let installedGeneration = watcherGeneration
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor,
+            eventMask: [.write, .extend, .attrib, .delete, .rename, .revoke],
+            queue: .main)
+        source.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                self?.handleFileEvent(path: path, generation: installedGeneration)
             }
         }
-
-        self.snippets = loaded.sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
+        source.setCancelHandler { Darwin.close(descriptor) }
+        fileWatchers[path] = source
+        source.resume()
+        return true
     }
 
-    func add(_ snippet: Snippet) {
-        saveSnippetFile(snippet)
-        load()
-    }
+    private func handleDirectoryEvent(generation installedGeneration: Int) {
+        guard isStarted, installedGeneration == watcherGeneration,
+            let events = directoryWatcher?.data
+        else { return }
 
-    func update(_ snippet: Snippet) {
-        saveSnippetFile(snippet)
-        load()
-    }
-
-    func delete(id: UUID) {
-        guard let snippet = snippets.first(where: { $0.id == id }) else { return }
-        deleteSnippetFile(snippet)
-        load()
-    }
-
-    func revealInFinder() {
-        NSWorkspace.shared.open(snippetsDirectory)
-    }
-
-    private func saveSnippetFile(_ snippet: Snippet) {
-        let slug = SnippetMarkdownSerializer.slug(for: snippet.name)
-        let fileURL = snippetsDirectory.appendingPathComponent("\(slug).md")
-        let content = SnippetMarkdownSerializer.serialize(snippet)
-        try? content.write(to: fileURL, atomically: true, encoding: .utf8)
-    }
-
-    private func deleteSnippetFile(_ snippet: Snippet) {
-        let slug = SnippetMarkdownSerializer.slug(for: snippet.name)
-        let fileURL = snippetsDirectory.appendingPathComponent("\(slug).md")
-        try? FileManager.default.removeItem(at: fileURL)
-    }
-
-    private func createDefaultSnippets() {
-        let defaults = [
-            Snippet(
-                name: "Email Sign-off",
-                text: "Best regards,\n\n{cursor}\n{snippet:My Name}",
-                keyword: "!bye",
-                category: "Personal"
-            ),
-            Snippet(
-                name: "My Name",
-                text: "Alex",
-                category: "Personal"
-            ),
-            Snippet(
-                name: "Meeting Notes",
-                text: "## Meeting Notes - {date}\n\n**Attendees:** {argument name=\"Attendees\"}\n\n**Action Items:**\n- {cursor}",
-                keyword: "!notes",
-                category: "Work"
-            )
-        ]
-        for s in defaults {
-            saveSnippetFile(s)
+        if !events.intersection([.delete, .rename, .revoke]).isEmpty {
+            stopWatchers()
         }
+        noteFilesystemChange()
     }
 
-    private func startFolderWatcher() {
-        stopFolderWatcher()
+    private func handleFileEvent(path: String, generation installedGeneration: Int) {
+        guard isStarted, installedGeneration == watcherGeneration,
+            let source = fileWatchers[path]
+        else { return }
 
-        fileDescriptor = open(snippetsDirectory.path, O_EVTONLY)
-        guard fileDescriptor >= 0 else { return }
+        if !source.data.intersection([.delete, .rename, .revoke]).isEmpty {
+            fileWatchers.removeValue(forKey: path)?.cancel()
+        }
+        noteFilesystemChange()
+    }
 
-        fileSource = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fileDescriptor,
-            eventMask: [.write, .extend, .delete, .rename],
-            queue: .main
-        )
+    private func noteFilesystemChange() {
+        generation &+= 1
+        scheduleReload(after: .milliseconds(150))
+    }
 
-        fileSource?.setEventHandler { [weak self] in
-            Task { @MainActor in
-                self?.load()
+    private func stopWatchers() {
+        watcherGeneration &+= 1
+        directoryWatcher?.cancel()
+        directoryWatcher = nil
+        for source in fileWatchers.values { source.cancel() }
+        fileWatchers.removeAll()
+    }
+
+    private func scheduleWatcherRetry() {
+        guard isStarted, watcherRetryTask == nil else { return }
+        watcherRetryTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(1))
+            } catch {
+                return
             }
+            guard let self, self.isStarted, !Task.isCancelled else { return }
+            self.watcherRetryTask = nil
+            await self.reload(showLoadingState: false)
         }
-
-        fileSource?.setCancelHandler { [weak self] in
-            if let fd = self?.fileDescriptor, fd >= 0 {
-                close(fd)
-                self?.fileDescriptor = -1
-            }
-        }
-
-        fileSource?.resume()
     }
 
-    private nonisolated func stopFolderWatcher() {
-        if let source = fileSource {
-            source.cancel()
-            fileSource = nil
-        }
+    private func recordOrder(_ lhs: StoredSnippet, _ rhs: StoredSnippet) -> Bool {
+        let comparison = lhs.snippet.name.localizedCaseInsensitiveCompare(rhs.snippet.name)
+        if comparison != .orderedSame { return comparison == .orderedAscending }
+        return lhs.id < rhs.id
     }
 }

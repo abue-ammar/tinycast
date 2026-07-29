@@ -41,9 +41,9 @@ Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tiny
 every persisted thing is keyed by bundle
 id — `~/Library/Preferences/<id>.plist` (settings + hotkey bindings),
 `~/Library/Caches/<id>/` (clipboard history, calculator history, exchange rates, frequent emoji),
-`~/Library/Application Support/<id>/` (the onboarding marker), the `SMAppService` login item, and the
-Accessibility / Input Monitoring (TCC) grants — a build you run locally can't read or clobber the
-installed app's state, and both can run side-by-side.
+`~/Library/Application Support/<id>/` (the onboarding marker and snippets), the `SMAppService` login
+item, and the Accessibility / Input Monitoring (TCC) grants — a build you run locally can't read or
+clobber the installed app's state, and both can run side-by-side.
 
 Consequences worth knowing:
 
@@ -80,16 +80,19 @@ swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift Tools/ranking-t
     -o /tmp/ranking-test && /tmp/ranking-test                      # learned launcher ranking
 swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                           # calculator engine
+swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
+    Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
+    -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog
 swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.swift \
     -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
 swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
     -o /tmp/scopes-test && /tmp/scopes-test                       # launcher search scopes
-swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
-    Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
-    -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog + geometry
 swiftc -swift-version 6 Tinycast/Core/CustomCommand.swift \
     Tinycast/Core/ShellCommandRunner.swift Tools/custom-command-test.swift \
     -o /tmp/custom-command-test && /tmp/custom-command-test        # custom command store + runner
+swiftc -swift-version 6 Tinycast/Core/NotificationToken.swift \
+    Tinycast/Core/Snippets/{Snippet,SnippetMarkdownSerializer,SnippetTemplateEngine,SnippetRepository,RaycastSnippetImport,SnippetKeywordPolicy,SnippetKeywordListener,SnippetTextInjector,SnippetsStore}.swift \
+    Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test  # snippets
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
@@ -104,6 +107,13 @@ The custom-command harness spawns **real `/bin/zsh`** processes. Its shell-envir
 `ZDOTDIR` at a throwaway fixture directory (and unset `TERM_PROGRAM`), so a run can never read or write
 the developer's own dotfiles. `/etc/zshrc` is still sourced for interactive shells, so the assertions
 are relative — the fixture's alias resolves with `-i` and not without — rather than absolute.
+
+The snippets harness compiles the real model, codec, template engine, Foundation-only repository,
+keyword/event/lifecycle policies, AppKit delivery primitives and main-actor store. Injected temporary
+roots and named pasteboards cover identity, per-channel isolation, migration, persistent empty
+libraries, malformed files, revision conflicts, watcher rearming, template determinism, delivery
+serialization and pasteboard restoration without touching a real snippets library or clipboard. The
+complete subsystem contract is in [snippets.md](snippets.md).
 
 ## Generated data
 

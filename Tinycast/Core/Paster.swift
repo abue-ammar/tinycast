@@ -33,46 +33,6 @@ enum Paster {
         pb.setString(text, forType: .string)
     }
 
-    /// Smart Injection (Espanso-style Hybrid Backend):
-    /// - For short single-line text (<= 100 chars): Uses Keystroke Backend (`keyboardSetUnicodeString`), leaving pasteboard untouched.
-    /// - For multi-line or long text (> 100 chars): Uses Clipboard Backend (NSPasteboard + ⌘V).
-    @MainActor
-    static func injectString(_ text: String, previousApp: NSRunningApplication?) {
-        let pid = previousApp?.processIdentifier
-        let isShortSingleLine = text.count <= 100 && !text.contains("\n") && !text.contains("\r")
-
-        if isShortSingleLine {
-            typeUnicodeString(text, toPid: pid)
-        } else {
-            pasteString(text, previousApp: previousApp)
-        }
-    }
-
-    /// Direct Keystroke Backend: Injects text via `keyboardSetUnicodeString` without touching NSPasteboard.
-    @MainActor
-    static func typeUnicodeString(_ text: String, toPid pid: pid_t? = nil) {
-        guard Permissions.ensureAccessibility() else { return }
-        let source = CGEventSource(stateID: .combinedSessionState)
-
-        var chars = Array(text.utf16)
-        guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false) else { return }
-
-        down.setIntegerValueField(.eventSourceUserData, value: tinycastEventTag)
-        up.setIntegerValueField(.eventSourceUserData, value: tinycastEventTag)
-
-        down.keyboardSetUnicodeString(stringLength: chars.count, unicodeString: &chars)
-        up.keyboardSetUnicodeString(stringLength: chars.count, unicodeString: &chars)
-
-        if let pid {
-            down.postToPid(pid)
-            up.postToPid(pid)
-        } else {
-            down.post(tap: .cghidEventTap)
-            up.post(tap: .cghidEventTap)
-        }
-    }
-
     /// String counterpart of `paste(_:store:previousApp:)` — marker-stamped so pasted text doesn't re-enter clipboard history.
     @MainActor
     static func pasteString(_ text: String, previousApp: NSRunningApplication?) {
@@ -165,8 +125,8 @@ enum Paster {
             down.postToPid(pid)
             up.postToPid(pid)
         } else {
-            down.post(tap: .cgAnnotatedSessionEventTap)
-            up.post(tap: .cgAnnotatedSessionEventTap)
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
         }
     }
 }

@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 struct PermissionsSettingsView: View {
+    @EnvironmentObject private var core: AppCore
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
     @State private var inputMonitoringTrusted = Permissions.isInputMonitoringTrusted()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -44,20 +45,41 @@ struct PermissionsSettingsView: View {
                 }
                 SettingsDivider()
                 SettingsRow(
-                    title: inputMonitoringTrusted ? "Manage in System Settings" : "Grant access",
-                    subtitle: "Opens Privacy & Security › Input Monitoring.",
+                    title: inputMonitoringActionTitle,
+                    subtitle: inputMonitoringActionSubtitle,
                     systemImage: "arrow.up.forward.app",
                     tint: .secondary
                 ) {
-                    Button(inputMonitoringTrusted ? "Open…" : "Open Settings…") {
-                        Permissions.requestInputMonitoringPrompt()
-                        Permissions.openInputMonitoringSettings()
-                    }
+                    Button(inputMonitoringActionButtonTitle, action: inputMonitoringAction)
                 }
             }
         }
         .onAppear { refreshPermissions() }
         .onReceive(refreshTimer) { _ in refreshPermissions() }
+    }
+
+    private var inputMonitoringActionTitle: String {
+        core.settings.snippetKeywordExpansion
+            ? "Manage in System Settings"
+            : "Enable from Snippets"
+    }
+
+    private var inputMonitoringActionSubtitle: String {
+        core.settings.snippetKeywordExpansion
+            ? "Opens Privacy & Security › Input Monitoring."
+            : "Tinycast explains this permission before requesting it."
+    }
+
+    private var inputMonitoringActionButtonTitle: String {
+        core.settings.snippetKeywordExpansion ? "Open…" : "Open Snippets…"
+    }
+
+    private func inputMonitoringAction() {
+        if core.settings.snippetKeywordExpansion {
+            Permissions.openInputMonitoringSettings()
+        } else {
+            core.showSettings(tab: .snippets)
+        }
     }
 
     private func refreshPermissions() {

@@ -10,7 +10,6 @@ struct OnboardingView: View {
     @ObservedObject private var hotKeys = AppCore.shared.hotKeys
 
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
-    @State private var inputMonitoringTrusted = Permissions.isInputMonitoringTrusted()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private static let lastStep = 3
@@ -37,13 +36,10 @@ struct OnboardingView: View {
         .animation(.easeInOut(duration: 0.2), value: step)
         .onAppear {
             accessibilityTrusted = Permissions.isAccessibilityTrusted()
-            inputMonitoringTrusted = Permissions.isInputMonitoringTrusted()
         }
         .onReceive(refreshTimer) { _ in
             let acc = Permissions.isAccessibilityTrusted()
             if acc != accessibilityTrusted { accessibilityTrusted = acc }
-            let input = Permissions.isInputMonitoringTrusted()
-            if input != inputMonitoringTrusted { inputMonitoringTrusted = input }
         }
     }
 
@@ -82,7 +78,7 @@ struct OnboardingView: View {
     private var title: String {
         switch step {
         case 0: "Welcome to Tinycast"
-        case 1: "Enable Permissions"
+        case 1: "Enable Accessibility"
         case 2: "Import from Raycast"
         default: "You're all set"
         }
@@ -91,7 +87,7 @@ struct OnboardingView: View {
     private var subtitle: String {
         switch step {
         case 0: "Set a shortcut to summon the launcher from anywhere."
-        case 1: "Grant Accessibility for pasting and Input Monitoring for snippet keywords."
+        case 1: "Grant Accessibility so Tinycast can paste into other apps."
         case 2: "Bring your shortcuts, favorites, and clipboard history along."
         default: readyMessage
         }
@@ -167,17 +163,8 @@ struct OnboardingView: View {
                 ) {
                     statusBadge(isGranted: accessibilityTrusted)
                 }
-                SettingsDivider()
-                SettingsRow(
-                    title: "Input Monitoring",
-                    subtitle:
-                        "Required for Snippets auto-expansion keywords (e.g. !notes) to detect typing in other apps.",
-                    systemImage: "keyboard", tint: .purple
-                ) {
-                    statusBadge(isGranted: inputMonitoringTrusted)
-                }
             }
-            caption("Optional — you can manage these anytime in Settings › Permissions.")
+            caption("Optional — you can manage this anytime in Settings › Permissions.")
         }
     }
 
@@ -268,7 +255,7 @@ struct OnboardingView: View {
     }
 
     private var showsSkip: Bool {
-        (step == 1 && (!accessibilityTrusted || !inputMonitoringTrusted)) || (step == 2 && !model.didImport)
+        (step == 1 && !accessibilityTrusted) || (step == 2 && !model.didImport)
     }
 
     private var primaryTitle: String {
@@ -276,7 +263,6 @@ struct OnboardingView: View {
         case 0: return "Continue"
         case 1:
             if !accessibilityTrusted { return "Grant Accessibility" }
-            if !inputMonitoringTrusted { return "Grant Input Monitoring" }
             return "Continue"
         case 2:
             if model.didImport {
@@ -299,9 +285,6 @@ struct OnboardingView: View {
         case 1:
             if !accessibilityTrusted {
                 Permissions.openAccessibilitySettings()
-            } else if !inputMonitoringTrusted {
-                Permissions.requestInputMonitoringPrompt()
-                Permissions.openInputMonitoringSettings()
             } else {
                 advance()
             }

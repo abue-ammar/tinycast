@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import Carbon.HIToolbox
 
 enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
@@ -95,11 +94,13 @@ final class AppCore: ObservableObject {
     let customCommands = CustomCommandStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
-    let snippetsStore = SnippetsStore()
-    private(set) var snippetListener: SnippetKeywordListener?
+    let snippetsStore: SnippetsStore
+    let snippetListener = SnippetKeywordListener(
+        syntheticEventTag: Paster.tinycastEventTag)
+    let snippetTextInjector: SnippetTextInjector
     let hotKeys = HotKeyManager()
     let hyperKeyTap = HyperKeyTap()
-    let settings = AppSettings()
+    let settings: AppSettings
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
     let calcHistory = CalculatorHistoryStore()
@@ -110,15 +111,25 @@ final class AppCore: ObservableObject {
     let palette = PaletteViewModel()
 
     private lazy var windowController = PaletteWindowController(core: self)
+    private lazy var snippetHUDController = SnippetHUDWindowController(settings: settings)
     private let auxWindows = AuxWindowController()
     /// Guards only the confirmation modal, not execution — two deliberate runs of an unguarded command still run twice.
     private var isConfirmingCommand = false
+    private var settingsSnippetsSession: SnippetEditingSession?
+    private var isReviewingTermination = false
 
     private init() {
         let launcherRanking = LauncherRankingStore()
+        let settings = AppSettings()
         self.launcherRanking = launcherRanking
+        self.settings = settings
         appIndex = AppIndex(ranking: launcherRanking)
-        clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
+        let clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
+        self.clipboardManager = clipboardManager
+        snippetsStore = SnippetsStore()
+        snippetTextInjector = SnippetTextInjector(
+            clipboardManager: clipboardManager,
+            settings: settings)
     }
 
     func start() {
@@ -150,9 +161,13 @@ final class AppCore: ObservableObject {
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
 
-        snippetListener = SnippetKeywordListener(store: snippetsStore)
-        snippetListener?.start { [weak self] snippet, missingArgs in
-            self?.promptSnippetArguments(snippet: snippet, missingArgs: missingArgs)
+        snippetsStore.onSnapshot = { [weak self] snapshot in
+            self?.appIndex.updateSnippets(snapshot.records)
+            self?.snippetListener.update(snapshot.records)
+        }
+        Task { await snippetsStore.start() }
+        if settings.snippetKeywordExpansion {
+            startSnippetKeywordListener()
         }
 
         // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
@@ -160,6 +175,28 @@ final class AppCore: ObservableObject {
             OnboardingState.markShown()
             showOnboarding()
         }
+    }
+
+    func applicationShouldTerminate() -> NSApplication.TerminateReply {
+        guard let session = settingsSnippetsSession,
+            session.isDirty || session.externalChange != nil
+        else { return .terminateNow }
+        guard !isReviewingTermination else { return .terminateLater }
+
+        isReviewingTermination = true
+        Task {
+            let approved = await session.prepareForDeparture()
+            isReviewingTermination = false
+            NSApp.reply(toApplicationShouldTerminate: approved)
+        }
+        return .terminateLater
+    }
+
+    func prepareForTermination() {
+        snippetTextInjector.prepareForTermination()
+        snippetListener.stop()
+        snippetsStore.stop()
+        hyperKeyTap.prepareForTermination()
     }
 
     // MARK: - Palette control
@@ -229,14 +266,25 @@ final class AppCore: ObservableObject {
 
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory apps). A fresh window mounts directly on `tab` (no first-frame flicker); an already-open one is switched in place.
     func showSettings(tab: SettingsTab = .general) {
+        let snippetsSession = settingsSnippetsSession
+            ?? SnippetEditingSession(store: snippetsStore)
+        settingsSnippetsSession = snippetsSession
         let isNew = auxWindows.show(
             id: "settings", title: "Settings", size: CGSize(width: 720, height: 550),
-            seamlessTitleBar: true
+            seamlessTitleBar: true,
+            shouldClose: { completion in
+                snippetsSession.requestWindowClose(completion: completion)
+            },
+            onClose: { [weak self] in
+                self?.settingsSnippetsSession = nil
+            }
         ) {
-            SettingsRootView(initialTab: tab)
+            SettingsRootView(initialTab: tab, snippetsSession: snippetsSession)
+                .environmentObject(self)
                 .environmentObject(self.appIndex)
                 .environmentObject(self.visibility)
                 .environmentObject(self.customCommands)
+                .environmentObject(self.snippetsStore)
         }
         if !isNew {
             NotificationCenter.default.post(name: .tinycastSelectSettingsTab, object: tab)
@@ -291,33 +339,8 @@ final class AppCore: ObservableObject {
             guard let bundleID = app.bundleID else { return }
             AppLauncher.openSettingsPane(bundleID: bundleID)
         case .snippet:
-            let snippetIDString = app.id.replacingOccurrences(of: "snippet:", with: "")
-            guard let snippet = snippetsStore.snippets.first(where: { $0.id.uuidString == snippetIDString || $0.name == app.name }) else { return }
-
-            let result = SnippetTemplateEngine.expand(snippet, snippets: snippetsStore.snippets)
-            if !result.missingArguments.isEmpty {
-                promptSnippetArguments(snippet: snippet, missingArgs: result.missingArguments)
-            } else {
-                Paster.injectString(result.text, previousApp: previous)
-                if let offset = result.cursorOffsetFromEnd, offset > 0 {
-                    let source = CGEventSource(stateID: .combinedSessionState)
-                    for i in 0..<offset {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.008 + 0.1) {
-                            guard let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: true),
-                                  let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: false) else { return }
-                            down.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
-                            up.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
-                            if let pid = previous?.processIdentifier {
-                                down.postToPid(pid)
-                                up.postToPid(pid)
-                            } else {
-                                down.post(tap: .cgAnnotatedSessionEventTap)
-                                up.post(tap: .cgAnnotatedSessionEventTap)
-                            }
-                        }
-                    }
-                }
-            }
+            let snippetID = String(app.id.dropFirst("snippet:".count))
+            expandSnippet(id: snippetID, targetApp: previous)
         case .command:
             break  // handled above
         }
@@ -584,14 +607,134 @@ final class AppCore: ObservableObject {
         windowController.pasteStringKeepingWindowOpen(entry.display(tone: settings.emojiSkinTone))
     }
 
-    // MARK: - Snippet Argument Prompt
+    // MARK: - Snippets
 
-    func promptSnippetArguments(snippet: Snippet, missingArgs: [String]) {
-        let frontApp = NSWorkspace.shared.frontmostApplication
+    private struct SnippetHUDPresentation: Sendable {
+        let name: String
+        let isEnabled: Bool
+    }
+
+    func revealSnippetsInFinder() {
+        NSWorkspace.shared.open(snippetsStore.snippetsDirectory)
+    }
+
+    func setSnippetKeywordExpansion(_ enabled: Bool) {
+        guard enabled != settings.snippetKeywordExpansion else { return }
+        if !enabled {
+            settings.snippetKeywordExpansion = false
+            snippetTextInjector.cancelAutomaticExpansion()
+            snippetListener.stop()
+            return
+        }
+
         NSApp.activate(ignoringOtherApps: true)
-
         let alert = NSAlert()
-        alert.messageText = "Snippet: \(snippet.name)"
+        alert.messageText = "Enable keyword expansion?"
+        alert.informativeText = "Requires Input Monitoring and Accessibility. Keystrokes stay on this Mac."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        settings.snippetKeywordExpansion = true
+        if !Permissions.isInputMonitoringTrusted() {
+            Permissions.requestInputMonitoringFromSnippetOptIn()
+        }
+        if !Permissions.isAccessibilityTrusted() {
+            Permissions.ensureAccessibility()
+        }
+        startSnippetKeywordListener()
+    }
+
+    private func startSnippetKeywordListener() {
+        snippetListener.start { [weak self] id, keyword, keywordLength, targetApp in
+            guard let self,
+                self.settings.snippetKeywordExpansion,
+                Permissions.isInputMonitoringTrusted(),
+                Permissions.isAccessibilityTrusted(),
+                let targetApp,
+                !targetApp.isTerminated,
+                targetApp.bundleIdentifier != Bundle.main.bundleIdentifier
+            else { return }
+
+            guard let generation = self.snippetTextInjector.beginAutomaticExpansion(
+                targetApp: targetApp)
+            else { return }
+            self.expandSnippet(
+                id: id,
+                targetApp: targetApp,
+                expectedKeyword: keyword,
+                keywordLength: keywordLength,
+                automaticGeneration: generation)
+        }
+    }
+
+    private func expandSnippet(
+        id: StoredSnippet.ID,
+        targetApp: NSRunningApplication?,
+        expectedKeyword: String? = nil,
+        keywordLength: Int = 0,
+        automaticGeneration: UInt? = nil
+    ) {
+        let records = snippetsStore.snippets
+        guard let record = records.first(where: { $0.id == id }) else {
+            snippetTextInjector.cancelArgumentPrompt(
+                automaticGeneration: automaticGeneration,
+                targetApp: targetApp)
+            return
+        }
+        if let automaticGeneration {
+            guard snippetTextInjector.automaticExpansionIsAllowed(
+                generation: automaticGeneration,
+                targetApp: targetApp)
+            else { return }
+        } else {
+            guard snippetTextInjector.prepareInteractiveExpansion(targetApp: targetApp) else { return }
+        }
+        let hudPresentation = SnippetHUDPresentation(
+            name: record.snippet.name,
+            isEnabled: record.snippet.showHUD)
+        let context = snippetTextInjector.captureExpansionContext(targetApp: targetApp)
+        let result = SnippetTemplateEngine.expand(
+            record,
+            snippets: records,
+            context: context)
+        if !result.missingArguments.isEmpty {
+            promptSnippetArguments(
+                record: record,
+                records: records,
+                context: context,
+                missingArgs: result.missingArguments,
+                targetApp: targetApp,
+                expectedKeyword: expectedKeyword,
+                keywordLength: keywordLength,
+                automaticGeneration: automaticGeneration,
+                hudPresentation: hudPresentation)
+            return
+        }
+        completeSnippetExpansion(
+            result,
+            targetApp: targetApp,
+            expectedKeyword: expectedKeyword,
+            keywordLength: keywordLength,
+            automaticGeneration: automaticGeneration,
+            hudPresentation: hudPresentation)
+    }
+
+    private func promptSnippetArguments(
+        record: StoredSnippet,
+        records: [StoredSnippet],
+        context: SnippetTemplateEngine.ExpansionContext,
+        missingArgs: [String],
+        targetApp: NSRunningApplication?,
+        expectedKeyword: String?,
+        keywordLength: Int,
+        automaticGeneration: UInt?,
+        hudPresentation: SnippetHUDPresentation
+    ) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Snippet: \(record.snippet.name)"
         alert.informativeText = "Fill in the required template fields:"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Expand")
@@ -602,49 +745,57 @@ final class AppCore: ObservableObject {
         stackView.alignment = .leading
         stackView.spacing = 8
         stackView.frame = NSRect(x: 0, y: 0, width: 320, height: CGFloat(missingArgs.count * 52))
-
         var fields: [String: NSTextField] = [:]
-
-        for arg in missingArgs {
-            let label = NSTextField(labelWithString: "\(arg):")
+        for argument in missingArgs {
+            let label = NSTextField(labelWithString: "\(argument):")
             label.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
             let field = NSTextField(string: "")
-            field.placeholderString = arg
-            fields[arg] = field
-
+            field.placeholderString = argument
+            fields[argument] = field
             stackView.addArrangedSubview(label)
             stackView.addArrangedSubview(field)
             field.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
         }
-
         alert.accessoryView = stackView
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            var userArgs: [String: String] = [:]
-            for (arg, field) in fields {
-                userArgs[arg] = field.stringValue
-            }
-            let result = SnippetTemplateEngine.expand(snippet, snippets: snippetsStore.snippets, userArguments: userArgs)
-            Paster.injectString(result.text, previousApp: frontApp)
-
-            if let offset = result.cursorOffsetFromEnd, offset > 0 {
-                let source = CGEventSource(stateID: .combinedSessionState)
-                for i in 0..<offset {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.008 + 0.1) {
-                        guard let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: true),
-                              let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: false) else { return }
-                        down.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
-                        up.setIntegerValueField(.eventSourceUserData, value: Paster.tinycastEventTag)
-                        if let pid = frontApp?.processIdentifier {
-                            down.postToPid(pid)
-                            up.postToPid(pid)
-                        } else {
-                            down.post(tap: .cgAnnotatedSessionEventTap)
-                            up.post(tap: .cgAnnotatedSessionEventTap)
-                        }
-                    }
-                }
-            }
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            snippetTextInjector.cancelArgumentPrompt(
+                automaticGeneration: automaticGeneration,
+                targetApp: targetApp)
+            return
         }
+
+        let arguments = fields.mapValues(\.stringValue)
+        let result = SnippetTemplateEngine.expand(
+            record,
+            snippets: records,
+            context: context,
+            userArguments: arguments)
+        completeSnippetExpansion(
+            result,
+            targetApp: targetApp,
+            expectedKeyword: expectedKeyword,
+            keywordLength: keywordLength,
+            automaticGeneration: automaticGeneration,
+            hudPresentation: hudPresentation)
+    }
+
+    private func completeSnippetExpansion(
+        _ result: SnippetTemplateEngine.ExpansionResult,
+        targetApp: NSRunningApplication?,
+        expectedKeyword: String?,
+        keywordLength: Int,
+        automaticGeneration: UInt?,
+        hudPresentation: SnippetHUDPresentation
+    ) {
+        snippetTextInjector.deliver(
+            result,
+            targetApp: targetApp,
+            expectedKeyword: expectedKeyword,
+            keywordLength: keywordLength,
+            automaticGeneration: automaticGeneration,
+            onDelivered: { [weak self] in
+                guard let self, self.settings.snippetHUD, hudPresentation.isEnabled else { return }
+                self.snippetHUDController.show(snippetName: hudPresentation.name)
+            })
     }
 }

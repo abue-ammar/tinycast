@@ -29,6 +29,8 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 - **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
 - **Calculator** — do math, unit and live currency conversions inline, right in the palette.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
+- **Snippets** — reusable Markdown templates with arguments, nested references, cursor placement, and
+  optional keyword expansion.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
 
@@ -51,9 +53,13 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 
 ## Permissions
 
-**Accessibility** — needed only so Tinycast can paste a clipboard item back into the app you
-came from. You're prompted the first time you paste; grant it in **System Settings → Privacy &
-Security → Accessibility**.
+**Accessibility** — needed when Tinycast pastes or expands text into another app. You're prompted
+when you first use a feature that needs it; grant access in **System Settings → Privacy & Security →
+Accessibility**.
+
+**Input Monitoring** — optional and used only for automatic snippet keyword expansion. Tinycast
+explains why before requesting it, and the feature ships disabled. Keystrokes are processed locally,
+never stored and never sent anywhere.
 
 ## Using it
 
@@ -61,6 +67,7 @@ Security → Accessibility**.
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
 4. **Settings → Shortcuts** — search an app or custom command and record a global shortcut.
+5. **Settings → Snippets** — create templates and optionally enable local keyword expansion.
 
 ## Building from source
 

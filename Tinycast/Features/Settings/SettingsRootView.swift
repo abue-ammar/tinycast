@@ -59,9 +59,12 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
 
 struct SettingsRootView: View {
     @State private var tab: SettingsTab
+    @State private var isChangingTab = false
+    @StateObject private var snippetsSession: SnippetEditingSession
 
-    init(initialTab: SettingsTab = .general) {
+    init(initialTab: SettingsTab = .general, snippetsSession: SnippetEditingSession) {
         _tab = State(initialValue: initialTab)
+        _snippetsSession = StateObject(wrappedValue: snippetsSession)
     }
 
     var body: some View {
@@ -74,7 +77,7 @@ struct SettingsRootView: View {
                 case .general: GeneralSettingsView()
                 case .clipboard: ClipboardSettingsView()
                 case .emoji: EmojiSettingsView()
-                case .snippets: SnippetsSettingsView().environmentObject(AppCore.shared.snippetsStore)
+                case .snippets: SnippetsSettingsView(session: snippetsSession)
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .customCommands: CustomCommandsSettingsView()
@@ -92,7 +95,7 @@ struct SettingsRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectSettingsTab)) { note in
-            if let target = note.object as? SettingsTab { tab = target }
+            if let target = note.object as? SettingsTab { requestTab(target) }
         }
     }
 
@@ -126,7 +129,22 @@ struct SettingsRootView: View {
             systemImage: item.systemImage,
             tint: item.tint,
             isSelected: tab == item
-        ) { tab = item }
+        ) { requestTab(item) }
+    }
+
+    private func requestTab(_ target: SettingsTab) {
+        guard target != tab, !isChangingTab else { return }
+        guard tab == .snippets else {
+            tab = target
+            return
+        }
+
+        isChangingTab = true
+        Task {
+            defer { isChangingTab = false }
+            guard await snippetsSession.prepareForDeparture() else { return }
+            tab = target
+        }
     }
 }
 
