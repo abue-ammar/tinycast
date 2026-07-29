@@ -29,14 +29,18 @@ anchor is dropped on hide, so the next summon re-resolves for wherever the user 
 Which display it anchors to depends on the **Follow the cursor across displays** setting
 (`AppSettings.openOnCursorScreen`, on by default):
 
-- **On** — the screen whose `frame` contains `NSEvent.mouseLocation`, i.e. the display under the
-  pointer.
+- **On** — the screen holding `NSEvent.mouseLocation`, i.e. the display under the pointer.
 - **Off** — `NSScreen.main`.
 
 `NSScreen.main` alone can't implement the follow-the-cursor case: Tinycast is an accessory app with no
 key window on the display the user is looking at, so `main` resolves to the menu-bar display and the
-palette would always open there regardless of which screen the pointer is on. The pointer lookup falls
-back to `NSScreen.main` when the pointer lands in a gap between display frames.
+palette would always open there regardless of which screen the pointer is on.
+
+The hit test is `CGRect.containsMouseLocation`, **not** `CGRect.contains`. A mouse location is the
+CoreGraphics cursor position flipped about the primary display's height, so a screen's pixel rows land
+in `(minY, maxY]`: the topmost row is exactly `maxY`, which `contains` excludes (a pointer parked at the
+top of a display would fall through to `NSScreen.main`), while `minY` is the topmost row of the display
+stacked below, which `contains` would wrongly claim.
 
 ## Menu-open input freeze
 

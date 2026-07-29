@@ -151,11 +151,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.setFrame(frame, display: true)
     }
 
-    /// The screen to place the palette on. `NSScreen.main` alone can't serve when following the pointer: this is an accessory app with no key window on the display the user is looking at, so `main` resolves to the menu-bar display and the palette always opened there. Falls back to `main` when the pointer sits in a gap between display frames.
+    /// The screen to place the palette on. `NSScreen.main` is the key window's screen, and an accessory app driving a non-activating panel has none, so it resolves to the menu-bar display rather than the one the user is working on.
     private func targetScreen() -> NSScreen? {
         guard core.settings.openOnCursorScreen else { return NSScreen.main }
         let mouse = NSEvent.mouseLocation
-        return NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
+        return NSScreen.screens.first { $0.frame.containsMouseLocation(mouse) } ?? NSScreen.main
     }
 
     /// The current session's anchor, resolved from the target screen on first use and cached until hide — so compact and expanded placements can never read a different `visibleFrame`.
@@ -169,5 +169,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         )
         anchor = resolved
         return resolved
+    }
+}
+
+extension CGRect {
+    /// `contains` is wrong for a mouse location: the y axis is flipped about the primary display's height, so a screen's pixel rows land in `(minY, maxY]` — the topmost row is exactly `maxY`, which `contains` excludes, and `minY` belongs to the display stacked below.
+    fileprivate func containsMouseLocation(_ point: CGPoint) -> Bool {
+        point.x >= minX && point.x < maxX && point.y > minY && point.y <= maxY
     }
 }
