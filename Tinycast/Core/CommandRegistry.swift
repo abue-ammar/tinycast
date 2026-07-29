@@ -1,6 +1,6 @@
 import Foundation
 
-/// App-internal launcher actions surfaced as a "Commands" category; each is a synthetic `AppEntry` (kind `.command`, no bundle ID) so existing `AppEntry` plumbing applies, with dispatch in `AppCore.runCommand`.
+/// Built-in launcher actions surfaced alongside user-authored commands, with dispatch in `AppCore.runCommand`.
 enum CommandID: String, CaseIterable, Sendable {
     case calculatorHistory = "command:calculator-history"
     case clipboardHistory = "command:clipboard-history"

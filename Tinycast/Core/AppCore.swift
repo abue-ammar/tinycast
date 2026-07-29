@@ -91,6 +91,7 @@ final class AppCore: ObservableObject {
 
     let launcherRanking: LauncherRankingStore
     let appIndex: AppIndex
+    let customCommands = CustomCommandStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
     let hotKeys = HotKeyManager()
@@ -107,6 +108,8 @@ final class AppCore: ObservableObject {
 
     private lazy var windowController = PaletteWindowController(core: self)
     private let auxWindows = AuxWindowController()
+    /// Guards only the confirmation modal, not execution — two deliberate runs of an unguarded command still run twice.
+    private var isConfirmingCommand = false
 
     private init() {
         let launcherRanking = LauncherRankingStore()
@@ -128,6 +131,10 @@ final class AppCore: ObservableObject {
         clipboardManager.start()
 
         appIndex.start(settings: settings)
+        customCommands.onChange = { [weak self] commands in
+            self?.appIndex.setCustomCommands(commands)
+        }
+        appIndex.setCustomCommands(customCommands.commands)
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
         currencyRates.start()
@@ -135,7 +142,8 @@ final class AppCore: ObservableObject {
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
         hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
-        hotKeys.start()
+        hotKeys.onRunCustomCommand = { [weak self] id in self?.runCustomCommand(id: id) }
+        hotKeys.start(customCommandIDs: Set(customCommands.commands.map(\.id)))
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
 
@@ -220,6 +228,7 @@ final class AppCore: ObservableObject {
             SettingsRootView(initialTab: tab)
                 .environmentObject(self.appIndex)
                 .environmentObject(self.visibility)
+                .environmentObject(self.customCommands)
         }
         if !isNew {
             NotificationCenter.default.post(name: .tinycastSelectSettingsTab, object: tab)
@@ -258,7 +267,11 @@ final class AppCore: ObservableObject {
         }
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
-            runCommand(app)
+            if let id = CustomCommand.id(fromEntryID: app.id) {
+                runCustomCommand(id: id)
+            } else {
+                runCommand(app)
+            }
             return
         }
         hidePalette(restoreFocus: false)
@@ -275,6 +288,111 @@ final class AppCore: ObservableObject {
 
     func resetRanking(for app: AppEntry) {
         launcherRanking.reset(itemKey: app.preferenceKey)
+    }
+
+    // MARK: - Custom commands
+
+    @discardableResult
+    func addCustomCommand(_ draft: CustomCommand) throws -> CustomCommand {
+        try customCommands.add(draft)
+    }
+
+    func updateCustomCommand(_ draft: CustomCommand) throws {
+        try customCommands.update(draft)
+    }
+
+    func deleteCustomCommand(id: UUID) {
+        guard let command = customCommands.command(id: id) else { return }
+        removeCustomCommandReferences(ids: [id], entryIDs: [command.entryID])
+        customCommands.remove(id: id)
+    }
+
+    @discardableResult
+    func replaceCustomCommands(_ commands: [CustomCommand]) -> Int {
+        let previous = Dictionary(uniqueKeysWithValues: customCommands.commands.map { ($0.id, $0) })
+        let count = customCommands.replace(with: commands)
+        let liveIDs = Set(customCommands.commands.map(\.id))
+        let removed = Set(previous.keys).subtracting(liveIDs)
+        let removedEntryIDs = Set(removed.compactMap { previous[$0]?.entryID })
+        removeCustomCommandReferences(ids: removed, entryIDs: removedEntryIDs)
+        return count
+    }
+
+    /// The one funnel for both palette activation and the command's global hotkey, so the confirmation gate can't be bypassed by either.
+    func runCustomCommand(id: UUID) {
+        guard let command = customCommands.command(id: id) else { return }
+        // Hide before confirming: the palette is a floating panel and would sit above the alert.
+        if windowController.isVisible { hidePalette(restoreFocus: false) }
+        if command.requiresConfirmation {
+            // Carbon hotkeys keep firing during a modal session; without this a held shortcut stacks alerts.
+            guard !isConfirmingCommand else { return }
+            isConfirmingCommand = true
+            defer { isConfirmingCommand = false }
+            guard Self.confirmRun(command) else { return }
+        }
+        Task {
+            let outcome = await ShellCommandRunner.run(
+                command.command, loadingShellEnvironment: command.loadsShellEnvironment)
+            guard outcome != .success else { return }
+            self.presentCustomCommandFailure(command: command, outcome: outcome)
+        }
+    }
+
+    private func removeCustomCommandReferences(ids: Set<UUID>, entryIDs: Set<String>) {
+        for id in ids {
+            let action = HotKeyAction.customCommand(id: id)
+            if hotKeys.recordingAction == action { hotKeys.recordingAction = nil }
+            hotKeys.setShortcut(nil, for: action)
+        }
+        favorites.remove(keys: entryIDs)
+        visibility.removeItemKeys(entryIDs)
+        for entryID in entryIDs {
+            launcherRanking.reset(itemKey: entryID)
+        }
+    }
+
+    private static func confirmRun(_ command: CustomCommand) -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = command.name
+        alert.informativeText = "Are you sure you want to run this command?"
+        alert.alertStyle = .warning
+        let runButton = alert.addButton(withTitle: "Run")
+        // ↵ goes to Cancel, as in `confirmQuitAll`: this command is one ↵ away in the palette.
+        runButton.keyEquivalent = ""
+        alert.addButton(withTitle: "Cancel").keyEquivalent = "\r"
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func presentCustomCommandFailure(
+        command: CustomCommand, outcome: ShellCommandOutcome
+    ) {
+        let message: String
+        // `127` is the shell's "command not found", so an alias or function that only exists in the user's config lands here.
+        var suggestsShellEnvironment = false
+        switch outcome {
+        case .success:
+            return
+        case .launchFailure(let detail):
+            message = "The shell could not be started.\n\n\(detail)"
+        case .nonZeroExit(let status, let stderr):
+            suggestsShellEnvironment = status == 127 && !command.loadsShellEnvironment
+            message =
+                "The command exited with status \(status)."
+                + (stderr.map { "\n\n" + $0 } ?? "")
+                + (suggestsShellEnvironment
+                    ? "\n\nIf this is a shell alias or function, turn on Load Shell Environment for "
+                        + "this command." : "")
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "“\(command.name)” Failed"
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        if suggestsShellEnvironment { alert.addButton(withTitle: "Open Settings…") }
+        guard alert.runModal() == .alertSecondButtonReturn else { return }
+        showSettings(tab: .customCommands)
     }
 
     /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.

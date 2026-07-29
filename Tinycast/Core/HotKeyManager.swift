@@ -6,6 +6,7 @@ final class HotKeyManager: ObservableObject {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
     var onToggleEmoji: (() -> Void)?
+    var onRunCustomCommand: ((UUID) -> Void)?
 
     /// The recorder currently capturing keystrokes, or `nil`; keeping this as plain app state makes recorders glitch-free, and any active recorder pauses Carbon so the typed combo can't fire a hotkey.
     @Published var recordingAction: HotKeyAction? {
@@ -15,13 +16,21 @@ final class HotKeyManager: ObservableObject {
     private let center = HotKeyCenter()
     private let boundKey = "boundAppBundleIDs"
     private let boundPaneKey = "boundPaneBundleIDs"
+    private let boundCustomCommandKey = "boundCustomCommandIDs"
 
-    func start() {
+    func start(customCommandIDs: Set<UUID>) {
         register(.togglePalette)
         register(.toggleClipboard)
         register(.toggleEmoji)
         for bundleID in boundBundleIDs { register(.app(bundleID: bundleID)) }
         for bundleID in boundPaneBundleIDs { register(.settingsPane(bundleID: bundleID)) }
+        let stale = Set(boundCustomCommandIDs).subtracting(customCommandIDs)
+        for id in stale {
+            UserDefaults.standard.removeObject(forKey: HotKeyAction.customCommand(id: id).defaultsKey)
+        }
+        let live = Set(boundCustomCommandIDs).intersection(customCommandIDs)
+        persistBoundCustomCommandIDs(live)
+        for id in live { register(.customCommand(id: id)) }
     }
 
     /// Bundle IDs that currently have a per-app hotkey — lets `start()` know which records to load and lets launcher rows show keycaps.
@@ -32,6 +41,12 @@ final class HotKeyManager: ObservableObject {
     /// Settings-pane bundle IDs with a hotkey — same role as `boundBundleIDs`, own namespace.
     var boundPaneBundleIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundPaneKey) ?? []
+    }
+
+    /// Custom-command UUIDs with a Carbon binding, indexed separately so startup can re-register them.
+    var boundCustomCommandIDs: [UUID] {
+        (UserDefaults.standard.stringArray(forKey: boundCustomCommandKey) ?? [])
+            .compactMap(UUID.init(uuidString:))
     }
 
     func shortcut(for action: HotKeyAction) -> KeyShortcut? {
@@ -65,6 +80,10 @@ final class HotKeyManager: ObservableObject {
             var set = Set(boundPaneBundleIDs)
             if shortcut == nil { set.remove(bundleID) } else { set.insert(bundleID) }
             UserDefaults.standard.set(Array(set), forKey: boundPaneKey)
+        case .customCommand(let id):
+            var set = Set(boundCustomCommandIDs)
+            if shortcut == nil { set.remove(id) } else { set.insert(id) }
+            persistBoundCustomCommandIDs(set)
         case .togglePalette, .toggleClipboard, .toggleEmoji:
             break
         }
@@ -75,6 +94,7 @@ final class HotKeyManager: ObservableObject {
         var candidates: [HotKeyAction] = [.togglePalette, .toggleClipboard, .toggleEmoji]
         candidates += boundBundleIDs.map { .app(bundleID: $0) }
         candidates += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
+        candidates += boundCustomCommandIDs.map { .customCommand(id: $0) }
         for candidate in candidates
         where candidate != action && self.shortcut(for: candidate) == shortcut {
             return displayName(of: candidate)
@@ -98,6 +118,8 @@ final class HotKeyManager: ObservableObject {
             let apps = AppCore.shared.appIndex.apps
             return apps.first { $0.kind == .systemSettings && $0.bundleID == bundleID }?.name
                 ?? bundleID
+        case .customCommand(let id):
+            return AppCore.shared.customCommands.command(id: id)?.name ?? "Custom Command"
         }
     }
 
@@ -115,6 +137,12 @@ final class HotKeyManager: ObservableObject {
         case .toggleEmoji: onToggleEmoji?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
+        case .customCommand(let id): onRunCustomCommand?(id)
         }
+    }
+
+    private func persistBoundCustomCommandIDs(_ ids: Set<UUID>) {
+        UserDefaults.standard.set(
+            ids.map { $0.uuidString.lowercased() }.sorted(), forKey: boundCustomCommandKey)
     }
 }

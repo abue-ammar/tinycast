@@ -6,7 +6,8 @@ extension Notification.Name {
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, permissions, shortcuts, backup, miscellaneous, about
+    case general, clipboard, emoji, permissions, shortcuts, customCommands, backup, miscellaneous,
+        about
     var id: Int { rawValue }
 
     var title: String {
@@ -16,6 +17,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return "Emoji & Symbols"
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
+        case .customCommands: return "Custom Commands"
         case .backup: return "Backup"
         case .miscellaneous: return "Miscellaneous"
         case .about: return "About"
@@ -29,6 +31,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return "face.smiling"
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
+        case .customCommands: return "terminal"
         case .backup: return "arrow.up.arrow.down.circle"
         case .miscellaneous: return "ellipsis.circle"
         case .about: return "info.circle"
@@ -43,6 +46,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return .yellow
         case .permissions: return .blue
         case .shortcuts: return .indigo
+        case .customCommands: return .green
         case .backup: return .teal
         case .miscellaneous: return .purple
         case .about: return .pink
@@ -69,6 +73,7 @@ struct SettingsRootView: View {
                 case .emoji: EmojiSettingsView()
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
+                case .customCommands: CustomCommandsSettingsView()
                 case .backup: BackupSettingsView()
                 case .miscellaneous: MiscellaneousSettingsView()
                 case .about: AboutView()
@@ -156,6 +161,8 @@ private struct SidebarRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The selected-row fill already marks the current tab; a focus ring on top of it is just noise.
+        .focusEffectDisabled()
         .onHover { hovering = $0 }
     }
 

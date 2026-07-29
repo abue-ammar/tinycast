@@ -21,23 +21,32 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         switch kind {
         case .application: return "Application"
         case .systemSettings: return "System Setting"
-        case .command: return "Command"
+        case .command:
+            return CustomCommand.id(fromEntryID: id) == nil ? "Command" : "Custom Command"
         }
     }
 
-    /// The global-hotkey action that opens this entry, or `nil` when it has no bundle ID to key the binding on.
+    /// The global-hotkey action for this entry, or `nil` for built-in commands and unaddressable bundles.
     var hotKeyAction: HotKeyAction? {
-        guard let bundleID else { return nil }
         switch kind {
-        case .application: return .app(bundleID: bundleID)
-        case .systemSettings: return .settingsPane(bundleID: bundleID)
-        case .command: return nil
+        case .application:
+            return bundleID.map { .app(bundleID: $0) }
+        case .systemSettings:
+            return bundleID.map { .settingsPane(bundleID: $0) }
+        case .command:
+            return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
         }
     }
+
+    /// Command entries are synthetic — no file behind them to reveal.
+    var canRevealInFinder: Bool { kind != .command }
 
     /// Command entries draw an SF Symbol tile; everything else uses its file icon.
     var isSymbolIcon: Bool { kind == .command }
-    var symbolIconName: String { CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark" }
+    var symbolIconName: String {
+        if let builtIn = CommandRegistry.command(for: self) { return builtIn.sfSymbol }
+        return CustomCommand.id(fromEntryID: id) == nil ? "questionmark" : "terminal"
+    }
 
     var icon: NSImage {
         isSymbolIcon
@@ -156,6 +165,8 @@ final class AppIndex: ObservableObject {
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
     private var matchCache: (query: String, rankingRevision: Int, result: [AppEntry])?
 
+    private var discoveredEntries: [AppEntry] = []
+    private var customCommandEntries: [AppEntry] = []
     private var isRefreshing = false
     /// Set when a refresh is requested mid-scan, so a scope edit landing during an in-flight scan isn't silently dropped.
     private var refreshPending = false
@@ -165,6 +176,20 @@ final class AppIndex: ObservableObject {
 
     init(ranking: LauncherRankingStore) {
         self.ranking = ranking
+    }
+
+    /// Replaces the user-authored command slice without rescanning disk so Settings edits reach launcher search immediately.
+    func setCustomCommands(_ commands: [CustomCommand]) {
+        let entries = commands.map { command in
+            AppEntry(
+                id: command.entryID, name: command.name,
+                url: URL(string: "tinycast://custom-command/" + command.id.uuidString)!,
+                bundleID: nil, kind: .command)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        guard entries != customCommandEntries else { return }
+        customCommandEntries = entries
+        publishEntries()
     }
 
     /// Wires the search scopes, re-indexing when the user edits them so Settings changes land without waiting for the next launcher open.
@@ -195,9 +220,9 @@ final class AppIndex: ObservableObject {
             let scopes = settings?.searchScopes ?? SearchScopes.defaults
             let found = await Task.detached(priority: .utility) { AppIndex.scan(scopes: scopes) }
                 .value
-            guard found != apps else { continue }
-            apps = found
-            matchCache = nil
+            guard found != discoveredEntries else { continue }
+            discoveredEntries = found
+            publishEntries()
         } while refreshPending
     }
 
@@ -219,11 +244,21 @@ final class AppIndex: ObservableObject {
                     id: url.path, name: name, url: url, bundleID: bundleID,
                     kind: .application))
         }
-        // Apps, then Settings panes, then Commands — the sectioned launcher relies on this order so its flat selection index maps 1:1 onto rows.
+        // `publishEntries` appends commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        return apps + SettingsPaneScanner.scan() + CommandRegistry.all
+        return apps + SettingsPaneScanner.scan()
+    }
+
+    private func publishEntries() {
+        let commands = (CommandRegistry.all + customCommandEntries).sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+        let updated = discoveredEntries + commands
+        guard updated != apps else { return }
+        apps = updated
+        matchCache = nil
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.

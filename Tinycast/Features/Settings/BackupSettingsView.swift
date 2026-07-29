@@ -26,7 +26,8 @@ struct BackupSettingsView: View {
             SettingsCard(header: "Tinycast") {
                 SettingsRow(
                     title: "Export Settings",
-                    subtitle: "Save your shortcuts, favorites, and preferences to a JSON file.",
+                    subtitle:
+                        "Save your shortcuts, custom commands, favorites, and preferences to JSON.",
                     systemImage: "square.and.arrow.up",
                     tint: .blue
                 ) {

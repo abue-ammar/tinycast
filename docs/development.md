@@ -84,6 +84,12 @@ swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.
     -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
 swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
     -o /tmp/scopes-test && /tmp/scopes-test                       # launcher search scopes
+swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
+    Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
+    -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog + geometry
+swiftc -swift-version 6 Tinycast/Core/CustomCommand.swift \
+    Tinycast/Core/ShellCommandRunner.swift Tools/custom-command-test.swift \
+    -o /tmp/custom-command-test && /tmp/custom-command-test        # custom command store + runner
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
@@ -93,6 +99,11 @@ sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only.
 The clipboard harness likewise compiles the real `ClipboardStore.swift`, so that file must keep to
 Foundation + SQLite3 and depend on no other app source. Each case drives a store rooted in a
 throwaway temp directory (`ClipboardStore(directory:)`), so a run can never reach a real history.
+
+The custom-command harness spawns **real `/bin/zsh`** processes. Its shell-environment cases point
+`ZDOTDIR` at a throwaway fixture directory (and unset `TERM_PROGRAM`), so a run can never read or write
+the developer's own dotfiles. `/etc/zshrc` is still sourced for interactive shells, so the assertions
+are relative — the fixture's alias resolves with `-i` and not without — rather than absolute.
 
 ## Generated data
 

@@ -45,6 +45,16 @@ Rankings are memoized one query deep and keyed by the ranking store's revision, 
 invalidates the cached order. `rank` resolves the whole learned table for a query up front via
 `boosts(query:)` — one fold and one clock read per pass, not per candidate.
 
+## Custom commands
+
+`CustomCommandStore` supplies user-authored entries to `AppIndex` without joining the off-main
+application scan. Built-in and custom commands are alphabetized into the same final section, so they
+reuse fuzzy ranking, favorites, visibility, keycap rendering and the launcher's flat selection.
+
+Only the display name is indexed. Activation resolves the stable UUID through the store and dispatches
+to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
+execution semantics.
+
 > **Invariant:** `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from
 > `Tinycast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test
 > is meaningless.
@@ -54,15 +64,25 @@ paths; see the command in `development.md`.
 
 Icons go through a count-capped `NSCache` (`IconCache`).
 
+## Reveal in Finder
+
+Application and System Settings results expose **Show in Finder** in their ⌘K Actions menu and on
+**⌘↵**. Synthetic command results have no filesystem location, so neither the menu row nor the
+shortcut is available for them. `AppEntry.canRevealInFinder` is the one rule both the menu row and
+the key handler read, so the advertised chord can't drift from the behavior.
+
 ## Quitting apps
 
 `RunningAppsMonitor` (live from `NSWorkspace` launch/terminate notifications) drives both the row's
 running dot and the availability of the quit actions:
 
 - **Quit Application** — the last row of an app's ⌘K Actions menu, shown only while that app is
-  running, also bound to **⌘↵** on the selected row. `AppLauncher.quit(bundleID:)` terminates every
-  instance of the bundle and reports whether anything was running; the palette only dismisses when
-  something was, and it restores focus unless the app it just quit *was* `previousApp`.
+  running, also bound to **⌃⇧Q** on the selected row. The chord guard mirrors the menu row's
+  condition (an `.application` entry that `RunningAppsMonitor` reports running) so the key never
+  swallows a press it won't act on, and it's skipped in the compact bar, which shows no selection.
+  `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
+  anything was running; the palette only dismisses when something was, and it restores focus unless
+  the app it just quit *was* `previousApp`.
 - **Quit All Applications** — a `CommandRegistry` command. `AppLauncher.quitAllTargets()` is the
   policy (every `.regular` app except Finder — `terminate()` only relaunches it — and Tinycast,
   excluded by PID because About/Settings temporarily flips it to `.regular`). `AppCore.quitAllApps()`

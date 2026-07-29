@@ -2,13 +2,14 @@
 
 How Tinycast is wired together. See the per-subsystem docs for internals:
 [palette](palette.md), [launcher](launcher.md), [calculator](calculator.md),
-[clipboard](clipboard.md), [hotkeys](hotkeys.md), [ui](ui.md).
+[clipboard](clipboard.md), [custom commands](custom-commands.md), [hotkeys](hotkeys.md), [ui](ui.md).
 
 ## Single-owner core
 
 `AppCore.shared` (`Core/AppCore.swift`) is a `@MainActor` singleton that owns every long-lived
 manager — `AppIndex`, `ClipboardStore`, `ClipboardManager`, `HotKeyManager`, `AppSettings`,
-`FavoritesStore`, `VisibilityStore`, `LauncherRankingStore`, `CalculatorHistoryStore`,
+`FavoritesStore`, `VisibilityStore`, `LauncherRankingStore`, `CustomCommandStore`,
+`CalculatorHistoryStore`,
 `CurrencyRateStore`, `RunningAppsMonitor`, `PaletteViewModel` — plus the window controllers.
 `AppDelegate.applicationDidFinishLaunching` calls
 `AppCore.shared.start()` and nothing else; that is the single wiring point. All palette / paste /

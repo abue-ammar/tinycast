@@ -346,7 +346,7 @@ struct RootPaletteView: View {
             move(1)
             return .handled
         }
-        // With a menu open, plain ↵ activates its highlighted row. A modified ↵ always runs the selection's own action regardless of menu state: ⌘↵ the secondary copy action (each menu advertises it), ⌥↵ paste-in-place; plain ↵ (no menu) falls through to the field's onSubmit.
+        // With a menu open, plain ↵ activates its highlighted row. A modified ↵ always runs the selection's own action regardless of menu state: ⌘↵ the advertised secondary action, ⌥↵ paste-in-place; plain ↵ (no menu) falls through to the field's onSubmit.
         .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
@@ -372,11 +372,9 @@ struct RootPaletteView: View {
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
             case .launcher:
-                // ⌘↵ quits the selected app when it's running (the Actions menu advertises it); nothing else in the launcher takes a modified ↵. The condition mirrors the menu row's exactly, so the key never swallows a press it won't act on.
-                guard command, let app = selectedAppEntry, app.kind == .application,
-                    core.runningApps.isRunning(app)
+                guard command, let app = selectedAppEntry, app.canRevealInFinder
                 else { return .ignored }
-                core.quit(app)
+                core.showInFinder(app)
             }
             return .handled
         }
@@ -429,6 +427,15 @@ struct RootPaletteView: View {
                 clipResults.indices.contains(selection)
             else { return .ignored }
             core.togglePinnedClip(clipResults[selection])
+            return .handled
+        }
+        // Both cases are listed because Shift uppercases the reported key. The compact bar is excluded like ⌘K — it shows no selection to aim a destructive action at.
+        .onKeyPress(keys: ["q", "Q"], phases: .down) { press in
+            guard press.modifiers.contains(.control), press.modifiers.contains(.shift),
+                !isCollapsed, vm.mode == .launcher, let app = selectedAppEntry,
+                app.kind == .application, core.runningApps.isRunning(app)
+            else { return .ignored }
+            core.quit(app)
             return .handled
         }
     }
@@ -659,7 +666,7 @@ struct RootPaletteView: View {
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
             case .systemSettings: return "Open System Setting"
-            case .command: return "Open Command"
+            case .command: return "Run Command"
             default: return "Open Application"
             }
         }

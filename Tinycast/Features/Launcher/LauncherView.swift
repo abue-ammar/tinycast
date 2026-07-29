@@ -246,16 +246,18 @@ enum AppActionsMenu {
                     onResetRanking()
                 })
         }
-        if app.kind != .command {
+        if app.canRevealInFinder {
             items.append(
-                PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
+                PopoverMenuItem(
+                    title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"
+                ) {
                     core.showInFinder(app)
                 })
         }
         if running, app.kind == .application {
             items.append(
                 PopoverMenuItem(
-                    title: "Quit Application", systemImage: "power", shortcut: "⌘↵",
+                    title: "Quit Application", systemImage: "power", shortcut: "⌃⇧Q",
                     isDestructive: true
                 ) {
                     core.quit(app)
@@ -268,7 +270,7 @@ enum AppActionsMenu {
         switch app.kind {
         case .application: return "Open Application"
         case .systemSettings: return "Open System Setting"
-        case .command: return "Open Command"
+        case .command: return "Run Command"
         }
     }
 }

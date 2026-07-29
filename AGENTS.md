@@ -70,6 +70,10 @@ Never break these without an explicit task to do so.
   `Tools/clipboard-test.swift` can compile it standalone. `Core/LauncherRankingStore.swift` is the
   same deal for `Tools/ranking-test.swift` — Foundation only, with the clock injected via `now` and
   the store path via `fileURL`, as is `Core/SearchScopes.swift` for `Tools/scopes-test.swift`.
+  `Core/CustomCommand.swift` and `Core/ShellCommandRunner.swift` must likewise stay free of AppKit /
+  SwiftUI (Foundation plus Combine for `ObservableObject` and Darwin for `mkstemp`) so
+  `Tools/custom-command-test.swift` can compile them standalone — which is why the custom-command
+  confirmation gate lives in `AppCore` and not in the runner.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
