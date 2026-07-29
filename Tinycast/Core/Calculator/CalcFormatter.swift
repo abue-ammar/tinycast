@@ -7,11 +7,14 @@ enum CalcFormatter {
         grouped(copyText(value))
     }
 
+    /// Every integer up to 2^53 is exactly representable as a Double.
+    private static let maxExactInteger = 9_007_199_254_740_992.0
+
     /// Same rounding, no grouping — what lands on the pasteboard.
     static func copyText(_ value: Double) -> String {
         let v = value == 0 ? 0 : value  // normalize -0
-        // Integers print in full (not exponent form) while they're exactly representable.
-        if v.rounded() == v && abs(v) < 1e15 {
+        // Past 2^53 the precision is genuinely gone, so exponent form is the honest answer there.
+        if v.rounded() == v && abs(v) <= maxExactInteger {
             return String(format: "%.0f", v)
         }
         return String(format: "%.10g", v)

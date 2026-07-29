@@ -36,6 +36,23 @@ struct CalcTests {
         expectDisplay("10k * 2", "20,000")
         expectBadges("10k", source: "Expression", target: "Result")
 
+        // Scientific notation input
+        expectDisplay("1e6 + 1", "1,000,001")
+        expectDisplay("1.5e-3 * 2", "0.003")
+        expectDisplay("2.5e8 / 2", "125,000,000")
+        expectDisplay("1E6 + 1", "1,000,001")  // uppercase E
+        expectDisplay("1e6", "1,000,000")  // a lone shorthand literal cards like "10k"
+        expectNil("10em")  // partial "e" isn't an exponent, so the ident scanner still gets it
+        expectDisplay("1e3k + 1", "1,000,001")  // exponent then compact suffix, both applied
+
+        // Exact up to 2^53, past the old 1e15 cutoff — truncating these lost real digits on copy
+        expectDisplay("2^49", "562,949,953,421,312")
+        expectDisplay("2^50", "1,125,899,906,842,624")
+        expectCopy("2^50", "1125899906842624")
+        expectDisplay("999999999999999 + 1", "1,000,000,000,000,000")  // exactly the old cutoff
+        // Beyond 2^53 the precision is genuinely gone, so exponent form is the honest answer
+        expectDisplay("123456789 * 123456789", "1.524157875e+16")
+
         // Functions
         expectDisplay("sqrt(64)", "8")
         expectDisplay("sqrt 64", "8")
