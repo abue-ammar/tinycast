@@ -33,7 +33,7 @@ struct CalculatorHistoryList: View {
     /// Entries are newest-first, so grouping walks and emits a date header whenever the bucket changes (same as the clipboard list); a live calculation pins above them.
     private var rows: [Row] {
         var rows: [Row] = []
-        if let calc { rows = [.header("Calculator"), .calc(calc)] }
+        if let calc { rows = [.header(String(localized: "Calculator")), .calc(calc)] }
         var currentBucket: DateBucket?
         for entry in results {
             let bucket = DateBucket(for: entry.createdAt)

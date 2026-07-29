@@ -25,12 +25,13 @@ enum EmojiGrid {
             start += entries.count
         }
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
-            append("Frequently Used", frequent.top().compactMap(index.entry(for:)))
+            append(
+                String(localized: "Frequently Used"), frequent.top().compactMap(index.entry(for:)))
             for section in index.categorySections {
                 append(section.category.title, section.entries)
             }
         } else {
-            append("Results", index.search(query))
+            append(String(localized: "Results"), index.search(query))
         }
         return sections
     }
@@ -260,7 +261,7 @@ enum EmojiActionsMenu {
             header: entry.displayName,
             items: [
                 PopoverMenuItem(
-                    title: target?.pasteTitle ?? "Paste",
+                    title: target.map { DisplayText.verbatim($0.pasteTitle) } ?? "Paste",
                     icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: "↵"
                 ) {
                     core.pasteEmoji(entry)

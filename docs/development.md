@@ -84,6 +84,7 @@ swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.
     -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
 swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
     -o /tmp/scopes-test && /tmp/scopes-test                       # launcher search scopes
+swift Tools/localization-test.swift                               # localization completeness
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —

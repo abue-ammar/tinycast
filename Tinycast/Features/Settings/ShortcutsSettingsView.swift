@@ -39,9 +39,9 @@ struct ShortcutsSettingsView: View {
 
     private var searchPrompt: String {
         switch tab {
-        case .application: return "Search applications…"
-        case .systemSettings: return "Search System Settings…"
-        case .command: return "Search commands…"
+        case .application: return String(localized: "Search applications…")
+        case .systemSettings: return String(localized: "Search System Settings…")
+        case .command: return String(localized: "Search commands…")
         }
     }
 
@@ -89,7 +89,7 @@ private struct CategoryCard: View {
                     .font(Theme.Typography.sectionHeader)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Toggle("", isOn: kindBinding)
+                Toggle("Show in launcher", isOn: kindBinding)
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.small)
@@ -117,7 +117,10 @@ private struct CategoryCard: View {
             )
             .overlay {
                 if entries.isEmpty {
-                    Text(query.isEmpty ? "Nothing here yet." : "No matches for “\(query)”.")
+                    Text(
+                        verbatim: query.isEmpty
+                            ? String(localized: "Nothing here yet.")
+                            : String(localized: "No matches for “\(query)”."))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -150,7 +153,7 @@ private struct ShortcutRow: View {
             if let action = entry.hotKeyAction {
                 ShortcutRecorder(action: action)
             }
-            Toggle("", isOn: itemBinding)
+            Toggle(entry.name, isOn: itemBinding)
                 .labelsHidden()
                 .toggleStyle(.checkbox)
         }

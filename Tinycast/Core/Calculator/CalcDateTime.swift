@@ -63,7 +63,8 @@ enum CalcDateTime {
             value = target.timeIntervalSince(reference) / unit.seconds
         }
 
-        let word = value == 1 ? unit.singular : unit.plural
+        let display = localizedDuration(CalcFormatter.display(value), unit: unit)
+        let copy = localizedDuration(CalcFormatter.copyText(value), unit: unit)
         let source =
             unit.subDay
             ? timeString(now, calendar: calendar)
@@ -77,9 +78,7 @@ enum CalcDateTime {
             expression: echo,
             sourceBadge: source,
             targetBadge: targetBadge,
-            payload: .value(
-                display: "\(CalcFormatter.display(value)) \(word)",
-                copyText: "\(CalcFormatter.copyText(value)) \(word)"))
+            payload: .value(display: display, copyText: copy))
     }
 
     // MARK: - Grammar B: duration since a past moment
@@ -107,7 +106,8 @@ enum CalcDateTime {
             value = reference.timeIntervalSince(past) / unit.seconds
         }
 
-        let word = value == 1 ? unit.singular : unit.plural
+        let display = localizedDuration(CalcFormatter.display(value), unit: unit)
+        let copy = localizedDuration(CalcFormatter.copyText(value), unit: unit)
         let source =
             unit.subDay
             ? timeString(past, calendar: calendar)
@@ -121,9 +121,7 @@ enum CalcDateTime {
             expression: echo,
             sourceBadge: source,
             targetBadge: targetBadge,
-            payload: .value(
-                display: "\(CalcFormatter.display(value)) \(word)",
-                copyText: "\(CalcFormatter.copyText(value)) \(word)"))
+            payload: .value(display: display, copyText: copy))
     }
 
     // MARK: - Grammars C & D: moment ± duration / moment − moment
@@ -160,7 +158,8 @@ enum CalcDateTime {
             let sourceBadge = momentString(
                 base.date, hasTime: base.hasTime, now: now, calendar: calendar)
             return CalcResult(
-                expression: echo, sourceBadge: sourceBadge, targetBadge: "Result",
+                expression: echo, sourceBadge: sourceBadge,
+                targetBadge: String(localized: "Result"),
                 payload: .value(display: display, copyText: display))
         }
 
@@ -176,12 +175,12 @@ enum CalcDateTime {
                 [.day], from: calendar.startOfDay(for: other.date),
                 to: calendar.startOfDay(for: base.date)
             ).day ?? 0
-        let word = abs(days) == 1 ? "day" : "days"
+        let duration = localizedDays(String(days), singular: abs(days) == 1)
         return CalcResult(
             expression: echo,
             sourceBadge: dateString(base.date, now: now, calendar: calendar),
             targetBadge: dateString(other.date, now: now, calendar: calendar),
-            payload: .value(display: "\(days) \(word)", copyText: "\(days) \(word)"))
+            payload: .value(display: duration, copyText: duration))
     }
 
     // MARK: - Moment parsing
@@ -354,10 +353,11 @@ enum CalcDateTime {
 
     private enum DurKind { case subSecond, day, week }
 
+    private enum DurationDisplayUnit { case second, minute, hour, day, week }
+
     private struct DurUnit {
         let seconds: Double
-        let singular: String
-        let plural: String
+        let displayUnit: DurationDisplayUnit
         let kind: DurKind
         var subDay: Bool { kind == .subSecond }
     }
@@ -366,15 +366,15 @@ enum CalcDateTime {
         guard let last = phrase.split(separator: " ").last.map(String.init) else { return nil }
         switch last {
         case "s", "sec", "secs", "second", "seconds":
-            return DurUnit(seconds: 1, singular: "second", plural: "seconds", kind: .subSecond)
+            return DurUnit(seconds: 1, displayUnit: .second, kind: .subSecond)
         case "min", "mins", "minute", "minutes":
-            return DurUnit(seconds: 60, singular: "minute", plural: "minutes", kind: .subSecond)
+            return DurUnit(seconds: 60, displayUnit: .minute, kind: .subSecond)
         case "h", "hr", "hrs", "hour", "hours":
-            return DurUnit(seconds: 3600, singular: "hour", plural: "hours", kind: .subSecond)
+            return DurUnit(seconds: 3600, displayUnit: .hour, kind: .subSecond)
         case "d", "day", "days":
-            return DurUnit(seconds: 86400, singular: "day", plural: "days", kind: .day)
+            return DurUnit(seconds: 86400, displayUnit: .day, kind: .day)
         case "wk", "week", "weeks":
-            return DurUnit(seconds: 604800, singular: "week", plural: "weeks", kind: .week)
+            return DurUnit(seconds: 604800, displayUnit: .week, kind: .week)
         default:
             return nil
         }
@@ -405,28 +405,59 @@ enum CalcDateTime {
         -> String
     {
         let day = dateString(date, now: now, calendar: calendar)
-        return hasTime ? "\(day) at \(timeString(date, calendar: calendar))" : day
+        return hasTime
+            ? String(localized: "\(day) at \(timeString(date, calendar: calendar))") : day
     }
 
     private static func dateString(_ date: Date, now: Date, calendar: Calendar) -> String {
         let sameYear =
             calendar.component(.year, from: date) == calendar.component(.year, from: now)
         return format(
-            date, calendar: calendar, pattern: sameYear ? "EEEE, d MMMM" : "EEEE, d MMMM, yyyy")
+            date, calendar: calendar, template: sameYear ? "EEEEdMMMM" : "EEEEdMMMMy",
+            englishPattern: sameYear ? "EEEE, d MMMM" : "EEEE, d MMMM, yyyy")
     }
 
     private static func timeString(_ date: Date, calendar: Calendar) -> String {
-        format(date, calendar: calendar, pattern: "h:mm a")
+        format(date, calendar: calendar, template: "jm", englishPattern: "h:mm a")
     }
 
-    private static func format(_ date: Date, calendar: Calendar, pattern: String) -> String {
+    private static func format(
+        _ date: Date, calendar: Calendar, template: String, englishPattern: String
+    ) -> String {
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
         // Follow the injected calendar's locale so weekday/month names match the user's language; the test clock pins en_US for deterministic assertions.
         formatter.locale = calendar.locale ?? Locale(identifier: "en_US")
-        formatter.dateFormat = pattern
+        if formatter.locale.language.languageCode?.identifier == "en" {
+            formatter.dateFormat = englishPattern
+        } else {
+            formatter.setLocalizedDateFormatFromTemplate(template)
+        }
         return formatter.string(from: date)
+    }
+
+    private static func localizedDuration(_ number: String, unit: DurUnit) -> String {
+        let singular = number == "1"
+        switch unit.displayUnit {
+        case .second:
+            return singular
+                ? String(localized: "\(number) second") : String(localized: "\(number) seconds")
+        case .minute:
+            return singular
+                ? String(localized: "\(number) minute") : String(localized: "\(number) minutes")
+        case .hour:
+            return singular
+                ? String(localized: "\(number) hour") : String(localized: "\(number) hours")
+        case .day: return localizedDays(number, singular: singular)
+        case .week:
+            return singular
+                ? String(localized: "\(number) week") : String(localized: "\(number) weeks")
+        }
+    }
+
+    private static func localizedDays(_ number: String, singular: Bool) -> String {
+        singular ? String(localized: "\(number) day") : String(localized: "\(number) days")
     }
 
     // MARK: - Low-level helpers

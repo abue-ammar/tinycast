@@ -477,7 +477,7 @@ struct RootPaletteView: View {
     /// The one search field, kept in a single tree position (the `header`) so its focus survives the compact↔expanded swap.
     private var searchField: some View {
         TextField(
-            "", text: $vm.query,
+            "Search", text: $vm.query,
             prompt: Text(vm.mode.placeholder).foregroundStyle(Theme.Colors.textTertiary)
         )
         .textFieldStyle(.plain)
@@ -626,7 +626,7 @@ struct RootPaletteView: View {
         HStack(spacing: 2) {
             BarButton(action: activateSelection) {
                 HStack(spacing: Theme.Spacing.sm) {
-                    Text(pillLabel)
+                    Text(verbatim: pillLabel)
                         .font(Theme.Typography.bar)
                         .foregroundStyle(.primary)
                     KeyCapChip(text: "↵", style: .outline)
@@ -652,15 +652,15 @@ struct RootPaletteView: View {
     private func actionPillLabel(selectedApp: AppEntry?, calcActionable: Bool) -> String {
         switch vm.mode {
         case .clipboard, .emoji:
-            return vm.pasteTarget?.pasteTitle ?? "Paste"
+            return vm.pasteTarget?.pasteTitle ?? String(localized: "Paste")
         case .calculatorHistory:
-            return "Copy Answer"
+            return String(localized: "Copy Answer")
         case .launcher:
-            if calcActionable { return "Copy Answer" }
+            if calcActionable { return String(localized: "Copy Answer") }
             switch selectedApp?.kind {
-            case .systemSettings: return "Open System Setting"
-            case .command: return "Open Command"
-            default: return "Open Application"
+            case .systemSettings: return String(localized: "Open System Setting")
+            case .command: return String(localized: "Open Command")
+            default: return String(localized: "Open Application")
             }
         }
     }
@@ -843,7 +843,7 @@ extension View {
 }
 
 struct EmptyResults: View {
-    let text: String
+    let text: DisplayText
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: "magnifyingglass").font(.largeTitle)
@@ -886,7 +886,10 @@ private struct CompactFavoritesRow: View {
                             .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                     }
                 case .more:
-                    CompactFavoriteButton(help: "Show all  ⌘\(index + 1)", action: onOverflow) {
+                    CompactFavoriteButton(
+                        help: String(localized: "Show all  ⌘\(index + 1)"),
+                        action: onOverflow
+                    ) {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 10))
                             .foregroundStyle(Theme.Colors.textSecondary)

@@ -85,11 +85,11 @@ final class HotKeyManager: ObservableObject {
     private func displayName(of action: HotKeyAction) -> String {
         switch action {
         case .togglePalette:
-            return "App Launcher"
+            return String(localized: "App Launcher")
         case .toggleClipboard:
-            return "Clipboard History"
+            return String(localized: "Clipboard History")
         case .toggleEmoji:
-            return "Emoji & Symbols"
+            return String(localized: "Emoji & Symbols")
         case .app(let bundleID):
             let apps = AppCore.shared.appIndex.apps
             return apps.first { $0.kind == .application && $0.bundleID == bundleID }?.name

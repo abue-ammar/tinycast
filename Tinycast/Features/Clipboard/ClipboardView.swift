@@ -27,7 +27,8 @@ struct ClipboardList: View {
         var rows: [Row] = []
         var currentTitle: String?
         for item in results {
-            let title = item.isPinned ? "Pinned" : DateBucket(for: item.createdAt).title
+            let title =
+                item.isPinned ? String(localized: "Pinned") : DateBucket(for: item.createdAt).title
             if title != currentTitle {
                 rows.append(.header(title))
                 currentTitle = title
@@ -84,11 +85,11 @@ enum DateBucket: Int {
 
     var title: String {
         switch self {
-        case .today: return "Today"
-        case .yesterday: return "Yesterday"
-        case .thisWeek: return "This Week"
-        case .thisMonth: return "This Month"
-        case .earlier: return "Earlier"
+        case .today: return String(localized: "Today")
+        case .yesterday: return String(localized: "Yesterday")
+        case .thisWeek: return String(localized: "This Week")
+        case .thisMonth: return String(localized: "This Month")
+        case .earlier: return String(localized: "Earlier")
         }
     }
 
@@ -115,7 +116,7 @@ enum ClipboardActionsMenu {
     ) -> PopoverMenuContent {
         var items: [PopoverMenuItem] = [
             PopoverMenuItem(
-                title: target?.pasteTitle ?? "Paste",
+                title: target.map { DisplayText.verbatim($0.pasteTitle) } ?? "Paste",
                 icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: "↵"
             ) {
                 core.paste(item)
@@ -166,7 +167,7 @@ enum ClipboardActionsMenu {
             let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(
                 separator: " ")
             return String(oneLine.prefix(40))
-        case .image: return "Image"
+        case .image: return String(localized: "Image")
         }
     }
 }
@@ -208,7 +209,7 @@ private struct ClipboardRow: View {
         case .text:
             return String((item.text ?? "").prefix(200)).trimmingCharacters(
                 in: .whitespacesAndNewlines)
-        case .image: return "Image"
+        case .image: return String(localized: "Image")
         }
     }
 
@@ -344,10 +345,10 @@ private struct ClipboardInfoSection: View {
     }
 
     private struct InfoRow: Identifiable {
-        let label: String
+        let label: DisplayText
         let value: String
         var icon: NSImage?
-        var id: String { label }
+        var id: String { label.rawValue }
     }
 
     /// Relative day name plus exact time ("Today at 1:22:57 AM"); shared because `DateFormatter` is expensive to build.
@@ -394,7 +395,7 @@ private struct ClipboardInfoSection: View {
         }
         switch item.kind {
         case .text:
-            rows.append(InfoRow(label: "Type", value: "Text"))
+            rows.append(InfoRow(label: "Type", value: String(localized: "Text")))
             if let characters = details.characters {
                 rows.append(InfoRow(label: "Characters", value: characters.formatted()))
             }
@@ -402,7 +403,7 @@ private struct ClipboardInfoSection: View {
                 rows.append(InfoRow(label: "Words", value: words.formatted()))
             }
         case .image:
-            rows.append(InfoRow(label: "Type", value: "Image"))
+            rows.append(InfoRow(label: "Type", value: String(localized: "Image")))
             if let size = details.pixelSize {
                 rows.append(
                     InfoRow(label: "Dimensions", value: "\(Int(size.width))×\(Int(size.height))"))

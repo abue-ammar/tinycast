@@ -14,7 +14,7 @@ enum PopoverMenuIcon: Equatable {
 
 /// One popover-menu row's data: the render path and the keyboard handlers both address rows through these, so a selection index can drive highlight and activation. Actions are pure — closing the menu is the caller's job (one central `onActivate`).
 struct PopoverMenuItem {
-    let title: String
+    let title: DisplayText
     let icon: PopoverMenuIcon
     var shortcut: String? = nil
     /// Destructive rows (delete) tint their icon + label red, matching the native menu convention.
@@ -22,7 +22,8 @@ struct PopoverMenuItem {
     let action: () -> Void
 
     init(
-        title: String, icon: PopoverMenuIcon, shortcut: String? = nil, isDestructive: Bool = false,
+        title: DisplayText, icon: PopoverMenuIcon, shortcut: String? = nil,
+        isDestructive: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -33,7 +34,8 @@ struct PopoverMenuItem {
     }
 
     init(
-        title: String, systemImage: String, shortcut: String? = nil, isDestructive: Bool = false,
+        title: DisplayText, systemImage: String, shortcut: String? = nil,
+        isDestructive: Bool = false,
         action: @escaping () -> Void
     ) {
         self.init(
@@ -58,7 +60,7 @@ struct PopoverMenu: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             if let header {
-                Text(header)
+                Text(verbatim: header)
                     .font(Theme.Typography.sectionHeader)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

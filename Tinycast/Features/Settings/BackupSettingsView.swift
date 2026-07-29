@@ -23,7 +23,7 @@ struct BackupSettingsView: View {
             title: "Backup",
             subtitle: "Export your settings, restore a backup, or import from Raycast."
         ) {
-            SettingsCard(header: "Tinycast") {
+            SettingsCard(header: .verbatim("Tinycast")) {
                 SettingsRow(
                     title: "Export Settings",
                     subtitle: "Save your shortcuts, favorites, and preferences to a JSON file.",
@@ -49,7 +49,7 @@ struct BackupSettingsView: View {
             SettingsCard(header: "Import from Raycast") {
                 SettingsRow(
                     title: "Raycast Export",
-                    subtitle: raycastFile?.lastPathComponent
+                    subtitle: raycastFile.map { DisplayText.verbatim($0.lastPathComponent) }
                         ?? "Choose a .rayconfig file exported from Raycast.",
                     systemImage: "doc.badge.gearshape",
                     tint: .orange
@@ -124,12 +124,16 @@ struct BackupSettingsView: View {
     private func statusRow(_ status: Status) -> some View {
         switch status {
         case .success(let message):
-            SettingsRow(title: message, systemImage: "checkmark.circle.fill", tint: .green) {
+            SettingsRow(
+                title: .verbatim(message), systemImage: "checkmark.circle.fill", tint: .green
+            ) {
                 EmptyView()
             }
         case .failure(let message):
-            SettingsRow(title: message, systemImage: "exclamationmark.triangle.fill", tint: .orange)
-            {
+            SettingsRow(
+                title: .verbatim(message), systemImage: "exclamationmark.triangle.fill",
+                tint: .orange
+            ) {
                 EmptyView()
             }
         }
@@ -154,10 +158,16 @@ struct BackupSettingsView: View {
                     file: file, passphrase: passphrase, options: selection)
                 var message = BackupActions.summaryText(outcome.summary)
                 if outcome.clipboardImported > 0 {
-                    message += " Imported \(outcome.clipboardImported) clipboard entries."
+                    message += " " + (outcome.clipboardImported == 1
+                        ? String(localized: "Imported 1 clipboard entry.")
+                        : String(
+                            localized: "Imported \(outcome.clipboardImported) clipboard entries."))
                 }
                 if outcome.missingImages > 0 {
-                    message += " \(outcome.missingImages) images were unavailable and skipped."
+                    message += " " + (outcome.missingImages == 1
+                        ? String(localized: "1 image was unavailable and skipped.")
+                        : String(
+                            localized: "\(outcome.missingImages) images were unavailable and skipped."))
                 }
                 status = .success(message)
                 passphrase = ""

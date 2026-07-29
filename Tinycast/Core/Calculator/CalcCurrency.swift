@@ -4,6 +4,12 @@ import Foundation
 struct CurrencyDef: Equatable, Sendable {
     let code: String  // "EUR"
     let name: String  // "Euro"
+
+    var localizedName: String {
+        let identifier = Bundle.main.preferredLocalizations.first ?? Locale.current.identifier
+        guard !identifier.hasPrefix("en") else { return name }
+        return Locale(identifier: identifier).localizedString(forCurrencyCode: code) ?? name
+    }
 }
 
 /// An exchange-rate snapshot: every rate quoted as units of that currency per 1 `base`. Downloaded and persisted by `CurrencyRateStore` and handed to `CalcEngine.evaluate` — the engine never fetches, which is what keeps `Core/Calculator/` Foundation-only and pure.
@@ -49,7 +55,7 @@ enum CalcCurrency {
     }
 
     /// The category label used in the mismatch message, mirroring `UnitCategory.displayName`.
-    static let categoryName = "Currency"
+    static var categoryName: String { String(localized: "Currency") }
 
     /// Detects `expr currency (to|in|->) currency`, mirroring `CalcUnits.parseConversion`'s shape so both read the same. Runs *after* the unit path, so a query both sides of which are compatible units (`10 pounds to kg`) never reaches here. A missing amount defaults to 1, so `eur to usd` reads as `1 eur to usd`.
     static func parseConversion(_ tokens: [CalcToken], source: CurrencySource) -> ConversionParse? {

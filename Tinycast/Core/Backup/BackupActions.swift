@@ -22,7 +22,9 @@ enum BackupActions {
         do {
             try SettingsBackup.gather().encoded().write(to: url, options: .atomic)
         } catch {
-            present(title: "Export Failed", message: error.localizedDescription, style: .warning)
+            present(
+                title: String(localized: "Export Failed"), message: error.localizedDescription,
+                style: .warning)
         }
     }
 
@@ -35,11 +37,13 @@ enum BackupActions {
         do {
             let backup = try SettingsBackup(json: try Data(contentsOf: url))
             present(
-                title: "Settings Imported", message: summaryText(backup.apply()),
+                title: String(localized: "Settings Imported"), message: summaryText(backup.apply()),
                 style: .informational
             )
         } catch {
-            present(title: "Import Failed", message: error.localizedDescription, style: .warning)
+            present(
+                title: String(localized: "Import Failed"), message: error.localizedDescription,
+                style: .warning)
         }
     }
 
@@ -91,12 +95,33 @@ enum BackupActions {
 
     static func summaryText(_ s: SettingsBackup.ApplySummary) -> String {
         var parts: [String] = []
-        if s.settingsFields > 0 { parts.append("\(s.settingsFields) settings") }
-        if s.hotkeys > 0 { parts.append("\(s.hotkeys) shortcuts") }
-        if s.favorites > 0 { parts.append("\(s.favorites) favorites") }
-        if s.hiddenItems > 0 { parts.append("\(s.hiddenItems) hidden items") }
-        return parts.isEmpty
-            ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
+        if s.settingsFields > 0 {
+            parts.append(
+                s.settingsFields == 1
+                    ? String(localized: "1 setting")
+                    : String(localized: "\(s.settingsFields) settings"))
+        }
+        if s.hotkeys > 0 {
+            parts.append(
+                s.hotkeys == 1
+                    ? String(localized: "1 shortcut")
+                    : String(localized: "\(s.hotkeys) shortcuts"))
+        }
+        if s.favorites > 0 {
+            parts.append(
+                s.favorites == 1
+                    ? String(localized: "1 favorite")
+                    : String(localized: "\(s.favorites) favorites"))
+        }
+        if s.hiddenItems > 0 {
+            parts.append(
+                s.hiddenItems == 1
+                    ? String(localized: "1 hidden item")
+                    : String(localized: "\(s.hiddenItems) hidden items"))
+        }
+        guard !parts.isEmpty else { return String(localized: "Nothing to import from this file.") }
+        let summary = ListFormatter.localizedString(byJoining: parts)
+        return String(localized: "Applied \(summary).")
     }
 
     private static func dateStamp() -> String {

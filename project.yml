@@ -18,6 +18,7 @@ settings:
     CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
     ENABLE_HARDENED_RUNTIME: NO
     SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_EMIT_LOC_STRINGS: YES
   configs:
     Release:
       # Strip the shipped binary (dSYM is still generated first) and drop unused code.

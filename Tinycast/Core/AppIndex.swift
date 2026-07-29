@@ -19,9 +19,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     var kindLabel: String {
         switch kind {
-        case .application: return "Application"
-        case .systemSettings: return "System Setting"
-        case .command: return "Command"
+        case .application: return String(localized: "Application")
+        case .systemSettings: return String(localized: "System Setting")
+        case .command: return String(localized: "Command")
         }
     }
 

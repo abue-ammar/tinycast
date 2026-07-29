@@ -33,8 +33,8 @@ enum CalcPercent {
     private static func card(_ query: String, _ display: String, _ copy: String) -> CalcResult {
         CalcResult(
             expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
-            sourceBadge: "Expression",
-            targetBadge: "Result",
+            sourceBadge: String(localized: "Expression"),
+            targetBadge: String(localized: "Result"),
             payload: .value(display: display, copyText: copy))
     }
 }

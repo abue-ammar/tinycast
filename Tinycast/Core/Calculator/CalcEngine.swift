@@ -62,13 +62,15 @@ enum CalcEngine {
                 let display = CalcFormatter.grouped(String(value))
                 return CalcResult(
                     expression: query,
-                    sourceBadge: "Hexadecimal", targetBadge: "Decimal",
+                    sourceBadge: String(localized: "Hexadecimal"),
+                    targetBadge: String(localized: "Decimal"),
                     payload: .value(display: display, copyText: String(value)))
             }
             if case .compactNumber(let value) = tokens[0] {
                 return CalcResult(
                     expression: query,
-                    sourceBadge: "Expression", targetBadge: "Result",
+                    sourceBadge: String(localized: "Expression"),
+                    targetBadge: String(localized: "Result"),
                     payload: .value(
                         display: CalcFormatter.display(value),
                         copyText: CalcFormatter.copyText(value)))
@@ -84,8 +86,8 @@ enum CalcEngine {
             case .value(let input, let from, let to, let output):
                 return CalcResult(
                     expression: "\(CalcFormatter.display(input)) \(from.symbol)",
-                    sourceBadge: from.name,
-                    targetBadge: to.name,
+                    sourceBadge: from.localizedName,
+                    targetBadge: to.localizedName,
                     payload: .value(
                         display: "\(CalcFormatter.display(output)) \(to.symbol)",
                         copyText: "\(CalcFormatter.copyText(output)) \(to.symbol)"))
@@ -93,8 +95,10 @@ enum CalcEngine {
                 return CalcResult(
                     expression: query,
                     payload: .error(
-                        message:
-                            "Cannot convert \(from.category.displayName) to \(to.category.displayName)."
+                        message: String(
+                            localized:
+                                "Cannot convert \(from.category.displayName) to \(to.category.displayName)."
+                        )
                     ))
             }
         }
@@ -112,23 +116,25 @@ enum CalcEngine {
                 let amount = CalcFormatter.currency(output)
                 return CalcResult(
                     expression: "\(CalcFormatter.display(input)) \(from.code)",
-                    sourceBadge: from.name,
-                    targetBadge: to.name,
+                    sourceBadge: from.localizedName,
+                    targetBadge: to.localizedName,
                     payload: .value(
                         display: "\(CalcFormatter.grouped(amount)) \(to.code)",
                         copyText: "\(amount) \(to.code)"))
             case .mismatch(let from, let to):
                 return CalcResult(
                     expression: query,
-                    payload: .error(message: "Cannot convert \(from) to \(to)."))
+                    payload: .error(message: String(localized: "Cannot convert \(from) to \(to).")))
             case .noRate(let code):
                 return CalcResult(
                     expression: query,
-                    payload: .error(message: "No exchange rate for \(code)."))
+                    payload: .error(message: String(localized: "No exchange rate for \(code).")))
             case .unavailable:
                 return CalcResult(
                     expression: query,
-                    payload: .error(message: "Exchange rates unavailable — check your connection."))
+                    payload: .error(
+                        message: String(
+                            localized: "Exchange rates unavailable — check your connection.")))
             }
         }
 
@@ -143,8 +149,8 @@ enum CalcEngine {
                 ? display : "\(CalcFormatter.copyText(bare.output)) \(bare.to.symbol)"
             return CalcResult(
                 expression: "\(CalcFormatter.display(bare.input)) \(bare.from.symbol)",
-                sourceBadge: bare.from.name,
-                targetBadge: bare.to.name,
+                sourceBadge: bare.from.localizedName,
+                targetBadge: bare.to.localizedName,
                 payload: .value(display: display, copyText: copyText))
         }
 
@@ -160,8 +166,8 @@ enum CalcEngine {
         guard let value = CalcParser.evaluate(tokens) else { return nil }
         return CalcResult(
             expression: prettyExpression(query),
-            sourceBadge: "Expression",
-            targetBadge: "Result",
+            sourceBadge: String(localized: "Expression"),
+            targetBadge: String(localized: "Result"),
             payload: .value(
                 display: CalcFormatter.display(value),
                 copyText: CalcFormatter.copyText(value)))
@@ -198,7 +204,8 @@ enum CalcEngine {
         guard let value = CalcParser.evaluate(prefixTokens) else { return nil }
         return CalcResult(
             expression: prettyExpression(query),
-            sourceBadge: "Expression", targetBadge: "Result",
+            sourceBadge: String(localized: "Expression"),
+            targetBadge: String(localized: "Result"),
             payload: .value(
                 display: CalcFormatter.display(value),
                 copyText: CalcFormatter.copyText(value)))
@@ -259,11 +266,11 @@ enum CalcEngine {
         case .number(let value)
         where value >= 0 && value.rounded() == value && value <= 9_007_199_254_740_992:
             source = UInt64(value)
-            sourceBadge = "Decimal"
+            sourceBadge = String(localized: "Decimal")
         case .compactNumber(let value)
         where value >= 0 && value.rounded() == value && value <= 9_007_199_254_740_992:
             source = UInt64(value)
-            sourceBadge = "Decimal"
+            sourceBadge = String(localized: "Decimal")
         default:
             return nil
         }
@@ -273,16 +280,16 @@ enum CalcEngine {
         switch target {
         case "hex", "hexadecimal":
             output = "0x" + String(source, radix: 16, uppercase: true)
-            targetBadge = "Hexadecimal"
+            targetBadge = String(localized: "Hexadecimal")
         case "binary", "bin":
             output = "0b" + String(source, radix: 2)
-            targetBadge = "Binary"
+            targetBadge = String(localized: "Binary")
         case "octal", "oct":
             output = "0o" + String(source, radix: 8)
-            targetBadge = "Octal"
+            targetBadge = String(localized: "Octal")
         case "decimal", "dec":
             output = CalcFormatter.grouped(String(source))
-            targetBadge = "Decimal"
+            targetBadge = String(localized: "Decimal")
         default:
             return nil
         }
@@ -297,10 +304,10 @@ enum CalcEngine {
 
     private static func baseName(forRadix radix: Int) -> String {
         switch radix {
-        case 16: return "Hexadecimal"
-        case 2: return "Binary"
-        case 8: return "Octal"
-        default: return "Decimal"
+        case 16: return String(localized: "Hexadecimal")
+        case 2: return String(localized: "Binary")
+        case 8: return String(localized: "Octal")
+        default: return String(localized: "Decimal")
         }
     }
 

@@ -45,7 +45,9 @@ struct PermissionsSettingsView: View {
                 systemName: accessibilityTrusted
                     ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
             )
-            Text(accessibilityTrusted ? "Granted" : "Not granted")
+            Text(
+                accessibilityTrusted
+                    ? LocalizedStringKey("Granted") : LocalizedStringKey("Not granted"))
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)

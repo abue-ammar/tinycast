@@ -17,18 +17,18 @@ enum EmojiCategory: String, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .smileysAndPeople: return "Smileys & People"
-        case .animalsAndNature: return "Animals & Nature"
-        case .foodAndDrink: return "Food & Drink"
-        case .activity: return "Activity"
-        case .travelAndPlaces: return "Travel & Places"
-        case .objects: return "Objects"
-        case .symbols: return "Symbols"
-        case .flags: return "Flags"
-        case .arrows: return "Arrows"
-        case .currency: return "Currency"
-        case .math: return "Math"
-        case .shapesAndPunctuation: return "Shapes & Punctuation"
+        case .smileysAndPeople: return String(localized: "Smileys & People")
+        case .animalsAndNature: return String(localized: "Animals & Nature")
+        case .foodAndDrink: return String(localized: "Food & Drink")
+        case .activity: return String(localized: "Activity")
+        case .travelAndPlaces: return String(localized: "Travel & Places")
+        case .objects: return String(localized: "Objects")
+        case .symbols: return String(localized: "Symbols")
+        case .flags: return String(localized: "Flags")
+        case .arrows: return String(localized: "Arrows")
+        case .currency: return String(localized: "Currency")
+        case .math: return String(localized: "Math")
+        case .shapesAndPunctuation: return String(localized: "Shapes & Punctuation")
         }
     }
 }
@@ -52,12 +52,12 @@ enum EmojiSkinTone: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .none: return "Default"
-        case .light: return "Light"
-        case .mediumLight: return "Medium Light"
-        case .medium: return "Medium"
-        case .mediumDark: return "Medium Dark"
-        case .dark: return "Dark"
+        case .none: return String(localized: "Default")
+        case .light: return String(localized: "Light")
+        case .mediumLight: return String(localized: "Medium Light")
+        case .medium: return String(localized: "Medium")
+        case .mediumDark: return String(localized: "Medium Dark")
+        case .dark: return String(localized: "Dark")
         }
     }
 

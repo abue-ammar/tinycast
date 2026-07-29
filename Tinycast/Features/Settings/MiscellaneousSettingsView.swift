@@ -16,7 +16,7 @@ struct MiscellaneousSettingsView: View {
             SettingsCard(header: "Calculator") {
                 SettingsRow(
                     title: "Currency Conversion",
-                    subtitle: conversionStatus,
+                    subtitle: .verbatim(conversionStatus),
                     systemImage: "dollarsign.arrow.circlepath",
                     tint: .green,
                     statusDot: currencyRates.isEnabled ? .green : nil
@@ -44,7 +44,7 @@ struct MiscellaneousSettingsView: View {
                     SettingsDivider()
                     SettingsRow(
                         title: "Exchange Rates",
-                        subtitle: ratesStatus,
+                        subtitle: .verbatim(ratesStatus),
                         systemImage: "clock.arrow.circlepath",
                         tint: .gray
                     ) {
@@ -74,18 +74,24 @@ struct MiscellaneousSettingsView: View {
     /// Carries the off-state promise that used to need its own callout: nothing is contacted until
     /// the switch is on.
     private var conversionStatus: String {
-        let examples = "Convert inline — \"100 dollars to yen\", \"€20 to GBP\"."
-        return currencyRates.isEnabled ? examples : "\(examples) Off — no service is contacted."
+        let examples = String(
+            localized: "Convert inline — \"100 dollars to yen\", \"€20 to GBP\".")
+        return currencyRates.isEnabled
+            ? examples
+            : String(localized: "\(examples) Off — no service is contacted.")
     }
 
     private var ratesStatus: String {
-        if refreshing { return "Updating…" }
-        if refreshFailed { return "Couldn't reach \(CurrencyRateStore.provider). Try again." }
+        if refreshing { return String(localized: "Updating…") }
+        if refreshFailed {
+            return String(localized: "Couldn't reach \(CurrencyRateStore.provider). Try again.")
+        }
         guard let fetched = currencyRates.rates?.fetchedAt else {
-            return "\(CurrencyRateStore.provider) · not downloaded yet."
+            return String(localized: "\(CurrencyRateStore.provider) · not downloaded yet.")
         }
         let stamp = fetched.formatted(date: .abbreviated, time: .shortened)
-        return "\(CurrencyRateStore.provider) · updated \(stamp). Refreshes daily."
+        return String(
+            localized: "\(CurrencyRateStore.provider) · updated \(stamp). Refreshes daily.")
     }
 }
 
@@ -106,9 +112,10 @@ private struct CurrencyConsentSheet: View {
             }
 
             Text(
-                "Tinycast downloads exchange rates from \(CurrencyRateStore.provider) once a day and "
-                + "keeps a copy on your Mac. No account, no identifiers, nothing you type. "
-                + "Turning it off deletes the cached rates."
+                String(
+                    localized:
+                        "Tinycast downloads exchange rates from \(CurrencyRateStore.provider) once a day and keeps a copy on your Mac. No account, no identifiers, nothing you type. Turning it off deletes the cached rates."
+                )
             )
             .font(.callout)
             .foregroundStyle(.secondary)

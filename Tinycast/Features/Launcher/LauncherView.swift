@@ -33,10 +33,10 @@ struct LauncherList: View {
 
     private var rows: [Row] {
         var calcRows: [Row] = []
-        if let calc { calcRows = [.header("Calculator"), .calc(calc)] }
+        if let calc { calcRows = [.header(String(localized: "Calculator")), .calc(calc)] }
         guard showSections else {
             guard !results.isEmpty else { return calcRows }
-            return calcRows + [.header("Results")] + results.map(Row.app)
+            return calcRows + [.header(String(localized: "Results"))] + results.map(Row.app)
         }
         var rows: [Row] = calcRows
         let favorites = results.prefix(favoriteCount)
@@ -46,8 +46,10 @@ struct LauncherList: View {
         let panes = rest.filter { $0.kind == .systemSettings }
         let commands = rest.filter { $0.kind == .command }
         for (title, group) in [
-            ("Favorites", Array(favorites)), ("Applications", apps),
-            ("System Settings", panes), ("Commands", commands),
+            (String(localized: "Favorites"), Array(favorites)),
+            (String(localized: "Applications"), apps),
+            (String(localized: "System Settings"), panes),
+            (String(localized: "Commands"), commands),
         ]
         where !group.isEmpty {
             rows.append(.header(title))
@@ -113,7 +115,7 @@ struct SectionHeader: View {
     /// The list's first header hugs the top; every later header gets `sectionSpacing` above it, which reads as bottom padding on the section that just ended.
     var isFirst = false
     var body: some View {
-        Text(title)
+        Text(verbatim: title)
             .font(Theme.Typography.sectionHeader)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -226,7 +228,7 @@ enum AppActionsMenu {
     ) -> PopoverMenuContent {
         var items: [PopoverMenuItem] = [
             PopoverMenuItem(
-                title: openTitle(app), systemImage: "list.bullet.rectangle", shortcut: "↵"
+                title: .verbatim(openTitle(app)), systemImage: "list.bullet.rectangle", shortcut: "↵"
             ) { core.launch(app, searchQuery: searchQuery) }
         ]
         if favorites.isFavorite(app) {
@@ -266,9 +268,9 @@ enum AppActionsMenu {
 
     private static func openTitle(_ app: AppEntry) -> String {
         switch app.kind {
-        case .application: return "Open Application"
-        case .systemSettings: return "Open System Setting"
-        case .command: return "Open Command"
+        case .application: return String(localized: "Open Application")
+        case .systemSettings: return String(localized: "Open System Setting")
+        case .command: return String(localized: "Open Command")
         }
     }
 }

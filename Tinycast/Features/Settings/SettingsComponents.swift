@@ -6,8 +6,8 @@ import SwiftUI
 
 /// Standard layout for a settings pane (title + subtitle header, then scrollable content) so headers, insets and scroll behaviour stay identical across the app.
 struct SettingsPane<Content: View>: View {
-    let title: String
-    let subtitle: String
+    let title: DisplayText
+    let subtitle: DisplayText
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -28,8 +28,8 @@ struct SettingsPane<Content: View>: View {
 
 /// The title + subtitle block at the top of every pane.
 struct SettingsHeader: View {
-    let title: String
-    let subtitle: String
+    let title: DisplayText
+    let subtitle: DisplayText
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -46,7 +46,7 @@ struct SettingsHeader: View {
 
 /// A rounded, hairline-bordered container grouping related rows — the macOS System Settings "card" (rows split by inset dividers via `SettingsRow`/`SettingsDivider`).
 struct SettingsCard<Content: View>: View {
-    var header: String? = nil
+    var header: DisplayText? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -84,8 +84,8 @@ struct SettingsDivider: View {
 
 /// A single settings line (optional SF Symbol, title with optional subtitle, trailing control); fixed vertical rhythm keeps every card aligned regardless of the control.
 struct SettingsRow<Trailing: View>: View {
-    let title: String
-    var subtitle: String? = nil
+    let title: DisplayText
+    var subtitle: DisplayText? = nil
     var systemImage: String? = nil
     var tint: Color = .secondary
     /// Optional state indicator rendered after the title (green = active, orange = attention).
@@ -129,8 +129,8 @@ struct SettingsRow<Trailing: View>: View {
 
 /// A tinted inset box for a notice or warning inside a `SettingsCard` — SF Symbol + title + optional message, with an optional trailing control (e.g. a fix-it button).
 struct SettingsCallout<Trailing: View>: View {
-    let title: String
-    var message: String? = nil
+    let title: DisplayText
+    var message: DisplayText? = nil
     var systemImage: String = "info.circle"
     var tint: Color = .secondary
     @ViewBuilder var trailing: Trailing
@@ -167,7 +167,10 @@ struct SettingsCallout<Trailing: View>: View {
 }
 
 extension SettingsCallout where Trailing == EmptyView {
-    init(title: String, message: String? = nil, systemImage: String = "info.circle", tint: Color = .secondary) {
+    init(
+        title: DisplayText, message: DisplayText? = nil, systemImage: String = "info.circle",
+        tint: Color = .secondary
+    ) {
         self.init(title: title, message: message, systemImage: systemImage, tint: tint) { EmptyView() }
     }
 }

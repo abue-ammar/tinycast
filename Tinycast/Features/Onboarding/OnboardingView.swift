@@ -47,9 +47,9 @@ struct OnboardingView: View {
         VStack(spacing: Theme.Spacing.md) {
             heroMark
             VStack(spacing: Theme.Spacing.xs) {
-                Text(title)
+                Text(verbatim: title)
                     .font(.title2.weight(.bold))
-                Text(subtitle)
+                Text(verbatim: subtitle)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -75,18 +75,18 @@ struct OnboardingView: View {
 
     private var title: String {
         switch step {
-        case 0: "Welcome to Tinycast"
-        case 1: "Enable Pasting"
-        case 2: "Import from Raycast"
-        default: "You're all set"
+        case 0: String(localized: "Welcome to Tinycast")
+        case 1: String(localized: "Enable Pasting")
+        case 2: String(localized: "Import from Raycast")
+        default: String(localized: "You're all set")
         }
     }
 
     private var subtitle: String {
         switch step {
-        case 0: "Set a shortcut to summon the launcher from anywhere."
-        case 1: "Let Tinycast paste items back into the app you were using."
-        case 2: "Bring your shortcuts, favorites, and clipboard history along."
+        case 0: String(localized: "Set a shortcut to summon the launcher from anywhere.")
+        case 1: String(localized: "Let Tinycast paste items back into the app you were using.")
+        case 2: String(localized: "Bring your shortcuts, favorites, and clipboard history along.")
         default: readyMessage
         }
     }
@@ -109,9 +109,9 @@ struct OnboardingView: View {
 
     private var readyMessage: String {
         if let caps = hotKeys.shortcut(for: .togglePalette)?.keycaps {
-            return "Press \(caps.joined()) anytime to start using Tinycast."
+            return String(localized: "Press \(caps.joined()) anytime to start using Tinycast.")
         }
-        return "Tinycast is ready. Set a shortcut in Settings to summon it."
+        return String(localized: "Tinycast is ready. Set a shortcut in Settings to summon it.")
     }
 
     // MARK: - Step content
@@ -142,7 +142,7 @@ struct OnboardingView: View {
                     subtitle: "Start Tinycast automatically when you log in.",
                     systemImage: "power", tint: .green
                 ) {
-                    Toggle("", isOn: $settings.launchAtLogin)
+                    Toggle("Launch at login", isOn: $settings.launchAtLogin)
                         .labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }
             }
@@ -171,7 +171,7 @@ struct OnboardingView: View {
             SettingsCard {
                 SettingsRow(
                     title: "Raycast Export",
-                    subtitle: model.file?.lastPathComponent
+                    subtitle: model.file.map { DisplayText.verbatim($0.lastPathComponent) }
                         ?? "Choose a .rayconfig file exported from Raycast.",
                     systemImage: "doc.badge.gearshape", tint: .orange
                 ) {
@@ -242,7 +242,7 @@ struct OnboardingView: View {
                     .controlSize(.large)
                     .disabled(true)
                 } else {
-                    Button(primaryTitle, action: primaryAction)
+                    Button(action: primaryAction) { Text(verbatim: primaryTitle) }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                         .disabled(primaryDisabled)
@@ -258,17 +258,19 @@ struct OnboardingView: View {
 
     private var primaryTitle: String {
         switch step {
-        case 0: "Continue"
-        case 1: accessibilityTrusted ? "Continue" : "Grant Access"
+        case 0: String(localized: "Continue")
+        case 1:
+            accessibilityTrusted
+                ? String(localized: "Continue") : String(localized: "Grant Access")
         case 2:
             if model.didImport {
-                "Continue"
+                String(localized: "Continue")
             } else if model.importing {
-                "Importing…"
+                String(localized: "Importing…")
             } else {
-                "Import"
+                String(localized: "Import")
             }
-        default: "Get Started"
+        default: String(localized: "Get Started")
         }
     }
 
@@ -295,7 +297,7 @@ struct OnboardingView: View {
 
     // MARK: - Shared bits
 
-    private func caption(_ text: String) -> some View {
+    private func caption(_ text: DisplayText) -> some View {
         Text(text)
             .font(.caption)
             .foregroundStyle(.tertiary)
@@ -326,7 +328,9 @@ struct OnboardingView: View {
             Image(
                 systemName: accessibilityTrusted
                     ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-            Text(accessibilityTrusted ? "Granted" : "Not granted")
+            Text(
+                verbatim: accessibilityTrusted
+                    ? String(localized: "Granted") : String(localized: "Not granted"))
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
@@ -385,10 +389,16 @@ final class OnboardingModel: ObservableObject {
                     file: file, passphrase: passphrase, options: selection)
                 var message = BackupActions.summaryText(outcome.summary)
                 if outcome.clipboardImported > 0 {
-                    message += " Imported \(outcome.clipboardImported) clipboard entries."
+                    message += " " + (outcome.clipboardImported == 1
+                        ? String(localized: "Imported 1 clipboard entry.")
+                        : String(
+                            localized: "Imported \(outcome.clipboardImported) clipboard entries."))
                 }
                 if outcome.missingImages > 0 {
-                    message += " \(outcome.missingImages) images were unavailable and skipped."
+                    message += " " + (outcome.missingImages == 1
+                        ? String(localized: "1 image was unavailable and skipped.")
+                        : String(
+                            localized: "\(outcome.missingImages) images were unavailable and skipped."))
                 }
                 status = .success(message)
                 passphrase = ""

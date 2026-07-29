@@ -29,7 +29,7 @@ struct ClipboardSettingsView: View {
                     systemImage: "clock.arrow.circlepath",
                     tint: .orange
                 ) {
-                    Picker("", selection: $settings.clipboardRetention) {
+                    Picker("Keep history for", selection: $settings.clipboardRetention) {
                         ForEach(ClipboardRetention.allCases) { retention in
                             Text(retention.title).tag(retention)
                         }

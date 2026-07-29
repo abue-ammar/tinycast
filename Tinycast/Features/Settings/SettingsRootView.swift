@@ -11,14 +11,14 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "General"
-        case .clipboard: return "Clipboard"
-        case .emoji: return "Emoji & Symbols"
-        case .permissions: return "Permissions"
-        case .shortcuts: return "Shortcuts"
-        case .backup: return "Backup"
-        case .miscellaneous: return "Miscellaneous"
-        case .about: return "About"
+        case .general: return String(localized: "General")
+        case .clipboard: return String(localized: "Clipboard")
+        case .emoji: return String(localized: "Emoji & Symbols")
+        case .permissions: return String(localized: "Permissions")
+        case .shortcuts: return String(localized: "Shortcuts")
+        case .backup: return String(localized: "Backup")
+        case .miscellaneous: return String(localized: "Miscellaneous")
+        case .about: return String(localized: "About")
         }
     }
 
@@ -143,7 +143,7 @@ private struct SidebarRow: View {
                             .foregroundStyle(.white)
                     )
                     .shadow(color: .black.opacity(0.2), radius: 0.5, y: 0.5)
-                Text(title)
+                Text(verbatim: title)
                     .font(Theme.Typography.rowTitle)
                 Spacer(minLength: 0)
             }

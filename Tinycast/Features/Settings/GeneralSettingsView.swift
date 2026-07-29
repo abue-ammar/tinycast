@@ -21,16 +21,22 @@ struct GeneralSettingsView: View {
 
     private var hyperSubtitle: String {
         guard settings.hyperKey != .none else {
-            return
-                "Select a physical key to remap to the \(hyperGlyphs) modifier keys simultaneously."
+            return String(
+                localized:
+                    "Select a physical key to remap to the \(hyperGlyphs) modifier keys simultaneously."
+            )
         }
-        var text =
-            "Pressing \(settings.hyperKey.title) will trigger the left \(hyperGlyphs) modifier keys."
+        var text = String(
+            localized:
+                "Pressing \(settings.hyperKey.title) will trigger the left \(hyperGlyphs) modifier keys."
+        )
         if settings.hyperKeyReplacesGlyph {
-            text += " Hyper Key shortcuts will be shown in Tinycast with ✦."
+            text += " " + String(
+                localized: "Hyper Key shortcuts will be shown in Tinycast with ✦.")
         }
         if hyperTap.status == .needsAccessibility {
-            text += " Tinycast needs Accessibility access to remap keys."
+            text += " " + String(
+                localized: "Tinycast needs Accessibility access to remap keys.")
         }
         return text
     }
@@ -72,7 +78,7 @@ struct GeneralSettingsView: View {
             SettingsCard(header: "Hyper Key") {
                 SettingsRow(
                     title: "Hyper Key",
-                    subtitle: hyperSubtitle,
+                    subtitle: .verbatim(hyperSubtitle),
                     systemImage: "sparkle",
                     tint: .purple,
                     statusDot: hyperStatusDot
@@ -81,7 +87,7 @@ struct GeneralSettingsView: View {
                         Button("Grant Access…") { Permissions.openAccessibilitySettings() }
                             .controlSize(.small)
                     }
-                    Picker("", selection: $settings.hyperKey) {
+                    Picker("Hyper Key", selection: $settings.hyperKey) {
                         ForEach(HyperKeyPhysicalKey.allCases) { key in
                             Text(key.title).tag(key)
                         }
@@ -98,12 +104,15 @@ struct GeneralSettingsView: View {
                     SettingsDivider()
                     SettingsRow(
                         title: "Quick Press",
-                        subtitle:
-                            "Select an action to perform when \(settings.hyperKey.title) is pressed without any other keys.",
+                        subtitle: .verbatim(
+                            String(
+                                localized:
+                                    "Select an action to perform when \(settings.hyperKey.title) is pressed without any other keys."
+                            )),
                         systemImage: "hand.tap",
                         tint: .teal
                     ) {
-                        Picker("", selection: $settings.hyperKeyQuickPress) {
+                        Picker("Quick Press", selection: $settings.hyperKeyQuickPress) {
                             Text("Does Nothing").tag(HyperKeyQuickPress.none)
                             if let original = settings.hyperKey.quickPressOriginalTitle {
                                 Text(original).tag(HyperKeyQuickPress.originalKey)
@@ -117,23 +126,26 @@ struct GeneralSettingsView: View {
                 SettingsDivider()
                 SettingsRow(
                     title: "Include Shift (⇧)",
-                    subtitle: "Hyper Key will remap to the \(hyperGlyphs) modifier keys.",
+                    subtitle: .verbatim(
+                        String(
+                            localized: "Hyper Key will remap to the \(hyperGlyphs) modifier keys.")),
                     systemImage: "shift",
                     tint: .indigo
                 ) {
-                    Toggle("", isOn: $settings.hyperKeyIncludesShift)
+                    Toggle("Include Shift (⇧)", isOn: $settings.hyperKeyIncludesShift)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.small)
                 }
                 SettingsDivider()
                 SettingsRow(
-                    title: "Replace occurrences of \(hyperGlyphs) with ✦",
+                    title: .verbatim(
+                        String(localized: "Replace occurrences of \(hyperGlyphs) with ✦")),
                     subtitle: "Shortcuts containing the Hyper Key modifiers are shown with ✦.",
                     systemImage: "keyboard",
                     tint: .gray
                 ) {
-                    Toggle("", isOn: $settings.hyperKeyReplacesGlyph)
+                    Toggle("Show Hyper Key as ✦", isOn: $settings.hyperKeyReplacesGlyph)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.small)
@@ -148,7 +160,7 @@ struct GeneralSettingsView: View {
                     systemImage: "macwindow",
                     tint: .blue
                 ) {
-                    Toggle("", isOn: $settings.compactMode)
+                    Toggle("Compact mode", isOn: $settings.compactMode)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.small)
@@ -161,7 +173,9 @@ struct GeneralSettingsView: View {
                     systemImage: "star",
                     tint: .yellow
                 ) {
-                    Toggle("", isOn: $settings.showFavoritesInCompactMode)
+                    Toggle(
+                        "Show favorites in compact mode",
+                        isOn: $settings.showFavoritesInCompactMode)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.small)
@@ -177,7 +191,7 @@ struct GeneralSettingsView: View {
                     systemImage: "power",
                     tint: .green
                 ) {
-                    Toggle("", isOn: $settings.launchAtLogin)
+                    Toggle("Launch at login", isOn: $settings.launchAtLogin)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.small)
@@ -190,7 +204,7 @@ struct GeneralSettingsView: View {
                     systemImage: "menubar.arrow.up.rectangle",
                     tint: .gray
                 ) {
-                    Toggle("", isOn: $showInMenuBar)
+                    Toggle("Show in menu bar", isOn: $showInMenuBar)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.small)
@@ -202,7 +216,7 @@ struct GeneralSettingsView: View {
                     systemImage: "arrow.uturn.backward",
                     tint: .indigo
                 ) {
-                    Picker("", selection: $settings.popToRootTimeout) {
+                    Picker("Pop to Root Search", selection: $settings.popToRootTimeout) {
                         ForEach(PopToRootTimeout.allCases) { timeout in
                             Text(timeout.title).tag(timeout)
                         }

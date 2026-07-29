@@ -7,7 +7,7 @@ struct RaycastImportSelection: View {
     private struct Category: Identifiable {
         let option: RaycastImportOptions
         let symbol: String
-        let label: String
+        let label: DisplayText
         var id: Int { option.rawValue }
     }
 
@@ -46,8 +46,10 @@ struct RaycastImportSelection: View {
                     .toggleStyle(.checkbox)
                 }
             }
-            Button(selection == .all ? "Deselect All" : "Select All") {
+            Button {
                 selection = selection == .all ? [] : .all
+            } label: {
+                Text(selection == .all ? "Deselect All" : "Select All")
             }
             .buttonStyle(.link)
             .font(.caption)

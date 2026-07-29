@@ -5,7 +5,7 @@ struct AboutView: View {
     private static var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
-        return "Version \(short) (\(build))"
+        return String(localized: "Version \(short) (\(build))")
     }
 
     // Loaded once and cached: reading the .icns is disk I/O, and body can re-run often. Read the
@@ -115,29 +115,31 @@ private struct AboutLink: Identifiable {
 
     let id: String
     let glyph: Glyph
-    let title: String
-    let detail: String
+    let title: DisplayText
+    let detail: DisplayText
     let url: URL
 
     static let all: [AboutLink] = [
         AboutLink(
             id: "website", glyph: .symbol("globe"), title: "Website",
-            detail: "abue-ammar.github.io/tinycast",
+            detail: .verbatim("abue-ammar.github.io/tinycast"),
             url: URL(string: "https://abue-ammar.github.io/tinycast/")!),
         AboutLink(
-            id: "github", glyph: .brand("BrandGitHub"), title: "GitHub",
-            detail: "github.com/abue-ammar/tinycast",
+            id: "github", glyph: .brand("BrandGitHub"), title: .verbatim("GitHub"),
+            detail: .verbatim("github.com/abue-ammar/tinycast"),
             url: URL(string: "https://github.com/abue-ammar/tinycast")!),
         AboutLink(
-            id: "discord", glyph: .brand("BrandDiscord"), title: "Discord",
+            id: "discord", glyph: .brand("BrandDiscord"), title: .verbatim("Discord"),
             detail: "Join the Tinycast community",
             url: URL(string: "https://discord.gg/v2Eeb4QQy3")!),
         AboutLink(
-            id: "x", glyph: .brand("BrandX"), title: "X", detail: "@abue_ammar",
+            id: "x", glyph: .brand("BrandX"), title: .verbatim("X"),
+            detail: .verbatim("@abue_ammar"),
             url: URL(string: "https://x.com/abue_ammar")!),
         AboutLink(
             id: "email", glyph: .symbol("envelope"), title: "Email",
-            detail: "iabueammar@gmail.com", url: URL(string: "mailto:iabueammar@gmail.com")!),
+            detail: .verbatim("iabueammar@gmail.com"),
+            url: URL(string: "mailto:iabueammar@gmail.com")!),
     ]
 }
 

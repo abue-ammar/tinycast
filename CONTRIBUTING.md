@@ -24,6 +24,32 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 - Details: [`docs/development.md`](docs/development.md). Architecture:
   [`docs/architecture.md`](docs/architecture.md).
 
+## Localization
+
+Tinycast uses Apple's native localization stack: an English-source
+`Tinycast/Localizable.xcstrings` String Catalog, SwiftUI's localization-aware text initializers, and
+Foundation's `String(localized:)` for strings resolved outside a view. `DisplayText` distinguishes
+catalog keys from runtime/user content in generic UI components; there is no generated API or
+third-party dependency.
+
+- Pass literal user-facing text directly to SwiftUI controls such as `Text`, `Button`, and `Label`.
+- Use `String(localized:)` when AppKit, a model, an error, or an interpolated status needs a `String`.
+- Keep interpolation inside the localized value so translators can reorder placeholders. Do not
+  assemble a sentence from translated fragments.
+- Generic settings and popover components resolve their string values through the catalog. Add their
+  English key and every supported translation to `Localizable.xcstrings` when introducing text there.
+- Wrap file names, app names, already-localized status messages, and other runtime values in
+  `DisplayText.verbatim` when passing them to a generic component.
+- Keep app names, file names, typed calculator expressions, keyboard glyphs, URLs, and user content
+  verbatim.
+
+To add a language, add it to `Localizable.xcstrings`, translate every entry, and run
+`swift Tools/localization-test.swift`. The app follows the language selected by macOS; it does not
+maintain a second in-app language setting. See Apple's documentation for
+[String Catalogs](https://developer.apple.com/documentation/xcode/localizing-and-varying-text-with-a-string-catalog),
+[preparing SwiftUI views](https://developer.apple.com/documentation/swiftui/preparing-views-for-localization),
+and [`LocalizedStringResource`](https://developer.apple.com/documentation/foundation/localizedstringresource).
+
 ## Before submitting
 
 - Builds clean — no new warnings.
