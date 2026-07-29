@@ -372,9 +372,7 @@ struct RootPaletteView: View {
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
             case .launcher:
-                // The condition mirrors the menu row's capability exactly, so synthetic command entries never swallow a press they cannot act on.
-                guard command, let app = selectedAppEntry,
-                    LauncherActionPolicy.modifiedReturnAction(for: app.kind) == .showInFinder
+                guard command, let app = selectedAppEntry, app.canRevealInFinder
                 else { return .ignored }
                 core.showInFinder(app)
             }
@@ -431,7 +429,7 @@ struct RootPaletteView: View {
             core.togglePinnedClip(clipResults[selection])
             return .handled
         }
-        // ⌃⇧Q quits the selected app — mirrors the Actions menu row, and works while that menu is open like the other advertised chords. Both cases are listed because Shift uppercases the reported key. Collapsed is excluded like ⌘K: the compact bar shows no selection, and a destructive action needs a visible target.
+        // Both cases are listed because Shift uppercases the reported key. The compact bar is excluded like ⌘K — it shows no selection to aim a destructive action at.
         .onKeyPress(keys: ["q", "Q"], phases: .down) { press in
             guard press.modifiers.contains(.control), press.modifiers.contains(.shift),
                 !isCollapsed, vm.mode == .launcher, let app = selectedAppEntry,

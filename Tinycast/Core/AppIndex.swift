@@ -2,7 +2,11 @@ import AppKit
 import Combine
 
 struct AppEntry: Identifiable, Hashable, Sendable {
-    typealias Kind = LauncherEntryKind
+    enum Kind: String, Sendable {
+        case application
+        case systemSettings
+        case command
+    }
 
     let id: String  // file path (or "command:…" id) — always unique
     let name: String  // clean display name, never includes ".app"
@@ -33,6 +37,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
         }
     }
+
+    /// Command entries are synthetic — no file behind them to reveal.
+    var canRevealInFinder: Bool { kind != .command }
 
     /// Command entries draw an SF Symbol tile; everything else uses its file icon.
     var isSymbolIcon: Bool { kind == .command }

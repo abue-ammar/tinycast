@@ -246,7 +246,7 @@ enum AppActionsMenu {
                     onResetRanking()
                 })
         }
-        if LauncherActionPolicy.modifiedReturnAction(for: app.kind) == .showInFinder {
+        if app.canRevealInFinder {
             items.append(
                 PopoverMenuItem(
                     title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"

@@ -24,7 +24,6 @@
 		34E5FF0B3C9FD2FFE504D87A /* ClipboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ADC36002F1A5B04D61B4D3 /* ClipboardView.swift */; };
 		36784C964DB27B94A62EEAA3 /* tinycast.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6621A88681E993D49EEF07A3 /* tinycast.icon */; };
 		374235D358A127741447551E /* SettingsBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5043CD44B4B40C49BE79852A /* SettingsBackup.swift */; };
-		3E786620D0E5A5517AF5AB9C /* LauncherActionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35AA88B66B039F8BAD715D5E /* LauncherActionPolicy.swift */; };
 		3FEBE1C993C5BD92F1C3D95B /* LauncherRankingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B6E442944C99B4D1FE1C74 /* LauncherRankingStore.swift */; };
 		42828BD1C5E4E6E7AA1BF103 /* CalculatorHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F793A92DD4DC73CF1D87F3FD /* CalculatorHistoryStore.swift */; };
 		441CF705AE1D03F6E236A61E /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC43CFF6777C11BB880F398 /* ClipboardStore.swift */; };
@@ -110,7 +109,6 @@
 		2FC323070A08CD17DFFB2F8A /* BackupSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSettingsView.swift; sourceTree = "<group>"; };
 		32A53295959552ED28D34960 /* Gunzip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gunzip.swift; sourceTree = "<group>"; };
 		33A13DB27EE627AC08051165 /* EdgeDissolve.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeDissolve.swift; sourceTree = "<group>"; };
-		35AA88B66B039F8BAD715D5E /* LauncherActionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherActionPolicy.swift; sourceTree = "<group>"; };
 		3A64EF5A07D459753998F78C /* AppCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCore.swift; sourceTree = "<group>"; };
 		3B976C84AFE60E357A346224 /* CalcEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcEngine.swift; sourceTree = "<group>"; };
 		3FF10C4F5E4F73503F58D03B /* OverlayScroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayScroller.swift; sourceTree = "<group>"; };
@@ -213,7 +211,6 @@
 				D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */,
 				99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */,
 				0D045D032498C2294A99890E /* LaunchAtLogin.swift */,
-				35AA88B66B039F8BAD715D5E /* LauncherActionPolicy.swift */,
 				87B6E442944C99B4D1FE1C74 /* LauncherRankingStore.swift */,
 				7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */,
 				B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */,
@@ -521,7 +518,6 @@
 				E5072CA7D34BA877D97DF392 /* ImageThumbnail.swift in Sources */,
 				F5F3381FF70997223F8888B0 /* KeyShortcut.swift in Sources */,
 				A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */,
-				3E786620D0E5A5517AF5AB9C /* LauncherActionPolicy.swift in Sources */,
 				3FEBE1C993C5BD92F1C3D95B /* LauncherRankingStore.swift in Sources */,
 				DCC36924E538C11136CEC060 /* LauncherView.swift in Sources */,
 				8F7431A1340D0A5783599087 /* MiscellaneousSettingsView.swift in Sources */,

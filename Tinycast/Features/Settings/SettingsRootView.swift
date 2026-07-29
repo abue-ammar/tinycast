@@ -161,7 +161,7 @@ private struct SidebarRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        // The selected-row fill already communicates place; keep keyboard focusability while suppressing SwiftUI's extra blue ring.
+        // The selected-row fill already marks the current tab; a focus ring on top of it is just noise.
         .focusEffectDisabled()
         .onHover { hovering = $0 }
     }

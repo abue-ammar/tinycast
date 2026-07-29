@@ -68,8 +68,8 @@ Icons go through a count-capped `NSCache` (`IconCache`).
 
 Application and System Settings results expose **Show in Finder** in their ⌘K Actions menu and on
 **⌘↵**. Synthetic command results have no filesystem location, so neither the menu row nor the
-shortcut is available for them. `LauncherActionPolicy` owns that shared capability rule, so the
-advertised chord and the key handler can't drift apart.
+shortcut is available for them. `AppEntry.canRevealInFinder` is the one rule both the menu row and
+the key handler read, so the advertised chord can't drift from the behavior.
 
 ## Quitting apps
 
