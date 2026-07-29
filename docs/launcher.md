@@ -68,7 +68,8 @@ Icons go through a count-capped `NSCache` (`IconCache`).
 
 Application and System Settings results expose **Show in Finder** in their ⌘K Actions menu and on
 **⌘↵**. Synthetic command results have no filesystem location, so neither the menu row nor the
-shortcut is available for them. `LauncherActionPolicy` owns that shared capability rule.
+shortcut is available for them. `LauncherActionPolicy` owns that shared capability rule, so the
+advertised chord and the key handler can't drift apart.
 
 ## Quitting apps
 
@@ -76,7 +77,10 @@ shortcut is available for them. `LauncherActionPolicy` owns that shared capabili
 running dot and the availability of the quit actions:
 
 - **Quit Application** — the last row of an app's ⌘K Actions menu, shown only while that app is
-  running. `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
+  running, also bound to **⌃⇧Q** on the selected row. The chord guard mirrors the menu row's
+  condition (an `.application` entry that `RunningAppsMonitor` reports running) so the key never
+  swallows a press it won't act on, and it's skipped in the compact bar, which shows no selection.
+  `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
   anything was running; the palette only dismisses when something was, and it restores focus unless
   the app it just quit *was* `previousApp`.
 - **Quit All Applications** — a `CommandRegistry` command. `AppLauncher.quitAllTargets()` is the

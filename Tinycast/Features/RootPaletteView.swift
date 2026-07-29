@@ -431,6 +431,15 @@ struct RootPaletteView: View {
             core.togglePinnedClip(clipResults[selection])
             return .handled
         }
+        // ⌃⇧Q quits the selected app — mirrors the Actions menu row, and works while that menu is open like the other advertised chords. Both cases are listed because Shift uppercases the reported key. Collapsed is excluded like ⌘K: the compact bar shows no selection, and a destructive action needs a visible target.
+        .onKeyPress(keys: ["q", "Q"], phases: .down) { press in
+            guard press.modifiers.contains(.control), press.modifiers.contains(.shift),
+                !isCollapsed, vm.mode == .launcher, let app = selectedAppEntry,
+                app.kind == .application, core.runningApps.isRunning(app)
+            else { return .ignored }
+            core.quit(app)
+            return .handled
+        }
     }
 
     private var header: some View {

@@ -257,7 +257,8 @@ enum AppActionsMenu {
         if running, app.kind == .application {
             items.append(
                 PopoverMenuItem(
-                    title: "Quit Application", systemImage: "power", isDestructive: true
+                    title: "Quit Application", systemImage: "power", shortcut: "⌃⇧Q",
+                    isDestructive: true
                 ) {
                     core.quit(app)
                 })
