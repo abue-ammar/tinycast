@@ -138,7 +138,6 @@ final class AppSettings: ObservableObject {
             || defaults.bool(forKey: Key.showFavoritesInCompactMode)
         // An unset key means "never configured" and seeds the defaults; a stored empty array is a user who deliberately cleared the list.
         searchScopes = defaults.stringArray(forKey: Key.searchScopes) ?? SearchScopes.defaults
-        // Also defaults to true, so absence must be distinguished from a stored `false`.
         openOnCursorScreen =
             defaults.object(forKey: Key.openOnCursorScreen) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen)

@@ -32,15 +32,15 @@ Which display it anchors to depends on the **Follow the cursor across displays**
 - **On** — the screen holding `NSEvent.mouseLocation`, i.e. the display under the pointer.
 - **Off** — `NSScreen.main`.
 
-`NSScreen.main` alone can't implement the follow-the-cursor case: Tinycast is an accessory app with no
-key window on the display the user is looking at, so `main` resolves to the menu-bar display and the
-palette would always open there regardless of which screen the pointer is on.
+`NSScreen.main` alone can't implement the follow-the-cursor case: it is documented as the *key window's*
+screen, and an accessory app driving a non-activating panel has no key window on the display the user is
+looking at, so `main` resolves to the menu-bar display regardless of where the pointer is.
 
-The hit test is `CGRect.containsMouseLocation`, **not** `CGRect.contains`. A mouse location is the
-CoreGraphics cursor position flipped about the primary display's height, so a screen's pixel rows land
-in `(minY, maxY]`: the topmost row is exactly `maxY`, which `contains` excludes (a pointer parked at the
-top of a display would fall through to `NSScreen.main`), while `minY` is the topmost row of the display
-stacked below, which `contains` would wrongly claim.
+The hit test is `NSMouseInRect(mouse, screen.frame, false)`, **not** `CGRect.contains`. A mouse location
+is the CoreGraphics cursor position flipped about the primary display's height, so a screen's rows land
+in the half-open interval `(minY, maxY]`: the topmost row is exactly `maxY`, which `contains` excludes,
+while that same value is the `minY` of the display stacked above. `contains` would therefore hand a
+pointer parked at the top of one display to its neighbour. `NSMouseInRect` exists for precisely this.
 
 ## Menu-open input freeze
 
