@@ -763,14 +763,32 @@ private struct SnippetEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(session.isNew ? "New Snippet" : "Edit Snippet")
+            Text(session.isNew ? "Add Snippet" : "Edit Snippet")
                 .font(.title2.weight(.bold))
 
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                     notices
-                    detailsCard
-                    templateCard
+                    textField(
+                        title: "Name",
+                        placeholder: "Email Sign-off",
+                        text: draftBinding(\.name),
+                        focus: .name,
+                        accessibilityHint: "Required. This name appears in the library and launcher.")
+                    textField(
+                        title: "Keyword",
+                        placeholder: "Optional, for example !notes",
+                        text: optionalDraftBinding(\.keyword),
+                        focus: .keyword,
+                        accessibilityHint: "Optional text that triggers automatic expansion when the feature is active.")
+                    textField(
+                        title: "Category",
+                        placeholder: "Optional",
+                        text: optionalDraftBinding(\.category),
+                        focus: .category,
+                        accessibilityHint: "Optional category used when searching snippets.")
+                    templateEditor
+                    options
                 }
                 .padding(.vertical, 1)
             }
@@ -790,95 +808,44 @@ private struct SnippetEditorSheet: View {
         .interactiveDismissDisabled(session.isDirty || session.externalChange != nil || session.isBusy)
     }
 
-    private var detailsCard: some View {
-        SettingsCard(header: "DETAILS") {
-            editorRow(title: "Name", systemImage: "textformat") {
-                TextField("Snippet name", text: draftBinding(\.name))
-                    .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .name)
-                    .accessibilityLabel("Snippet name")
-                    .accessibilityHint("Required. This name appears in the library and launcher.")
-            }
-            SettingsDivider()
-            editorRow(title: "Keyword", systemImage: "keyboard") {
-                TextField("Optional, for example !notes", text: optionalDraftBinding(\.keyword))
-                    .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .keyword)
-                    .accessibilityLabel("Snippet keyword")
-                    .accessibilityHint("Optional text that triggers automatic expansion when the feature is active.")
-            }
-            SettingsDivider()
-            editorRow(title: "Category", systemImage: "tag") {
-                TextField("Optional", text: optionalDraftBinding(\.category))
-                    .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .category)
-                    .accessibilityLabel("Snippet category")
-                    .accessibilityHint("Optional category used when searching snippets.")
-            }
-            SettingsDivider()
-            SettingsRow(
-                title: "Enabled",
-                subtitle: "Disabled snippets cannot be expanded.",
-                systemImage: "checkmark.circle",
-                tint: .green
-            ) {
-                Toggle("Snippet enabled", isOn: draftBinding(\.isEnabled))
-                    .labelsHidden()
-                    .toggleStyle(.checkbox)
-                    .accessibilityLabel("Snippet enabled")
-            }
-            SettingsDivider()
-            SettingsRow(
-                title: "Show in Launcher",
-                subtitle: "Include this snippet in launcher search results.",
-                systemImage: "magnifyingglass",
-                tint: .green
-            ) {
-                Toggle("Show snippet in launcher", isOn: draftBinding(\.showInLauncher))
-                    .labelsHidden()
-                    .toggleStyle(.checkbox)
-                    .accessibilityLabel("Show snippet in launcher")
-                    .accessibilityHint("When enabled, this snippet appears in launcher search results.")
-            }
-            SettingsDivider()
-            SettingsRow(
-                title: "Show insertion HUD",
-                subtitle: "Also requires the master switch in Snippets Settings.",
-                systemImage: "checkmark.rectangle",
-                tint: .green
-            ) {
-                Toggle("Show insertion HUD for this snippet", isOn: draftBinding(\.showHUD))
-                    .labelsHidden()
-                    .toggleStyle(.checkbox)
-                    .accessibilityLabel("Show insertion HUD for this snippet")
-                    .accessibilityHint("The global insertion HUD setting must also be enabled.")
-            }
+    private var templateEditor: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Template")
+                .font(.callout.weight(.medium))
+            variableToolbar
+            TextEditor(text: draftBinding(\.text))
+                .font(.body.monospaced())
+                .scrollContentBackground(.hidden)
+                .padding(Theme.Spacing.sm)
+                .frame(minHeight: Theme.Size.snippetTemplateEditorHeight)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                        .fill(Theme.Colors.cardFill)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                        .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+                )
+                .focused($focusedField, equals: .template)
+                .accessibilityLabel("Snippet template")
+                .accessibilityHint("Enter the text Tinycast expands. Variable buttons append template tokens.")
         }
     }
 
-    private var templateCard: some View {
-        SettingsCard(header: "TEMPLATE") {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                variableToolbar
-
-                TextEditor(text: draftBinding(\.text))
-                    .font(.system(.body, design: .monospaced))
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: Theme.Size.snippetTemplateEditorHeight)
-                    .padding(Theme.Spacing.sm)
-                    .background(
-                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                            .fill(Theme.Colors.cardFill)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-                    )
-                    .focused($focusedField, equals: .template)
-                    .accessibilityLabel("Snippet template")
-                    .accessibilityHint("Enter the text Tinycast expands. Variable buttons append template tokens.")
-            }
-            .padding(Theme.Spacing.xl)
+    private var options: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            optionToggle(
+                "Enabled",
+                isOn: draftBinding(\.isEnabled),
+                detail: "Disabled snippets cannot be expanded.")
+            optionToggle(
+                "Show in Launcher",
+                isOn: draftBinding(\.showInLauncher),
+                detail: "Include this snippet in launcher search results.")
+            optionToggle(
+                "Show insertion HUD",
+                isOn: draftBinding(\.showHUD),
+                detail: "Also requires the master switch in Snippets Settings.")
         }
     }
 
@@ -983,14 +950,39 @@ private struct SnippetEditorSheet: View {
         variableButton("{snippet:Name}")
     }
 
-    private func editorRow<Content: View>(
+    private func textField(
         title: String,
-        systemImage: String,
-        @ViewBuilder content: () -> Content
+        placeholder: String,
+        text: Binding<String>,
+        focus: FocusedField,
+        accessibilityHint: String
     ) -> some View {
-        SettingsRow(title: title, systemImage: systemImage, tint: .green) {
-            content().frame(maxWidth: .infinity)
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text(title)
+                .font(.callout.weight(.medium))
+            TextField(placeholder, text: text)
+                .textFieldStyle(.roundedBorder)
+                .focused($focusedField, equals: focus)
+                .accessibilityLabel("Snippet \(title.lowercased())")
+                .accessibilityHint(accessibilityHint)
         }
+    }
+
+    private func optionToggle(
+        _ title: String,
+        isOn: Binding<Bool>,
+        detail: String
+    ) -> some View {
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(title)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .toggleStyle(.checkbox)
     }
 
     private func draftBinding<Value>(_ keyPath: WritableKeyPath<Snippet, Value>) -> Binding<Value> {
