@@ -26,6 +26,8 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 
 ## Before submitting
 
+- **A linked issue that got a green light.** No agreed issue, no merge — typos and docs-only fixes
+  aside.
 - Builds clean — no new warnings.
 - The `Tools/` harnesses pass; engine changes come with new cases.
 - Leak-tested and memory-measured. Numbers in the PR.
@@ -40,6 +42,8 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 
 ## Pull requests
 
+- Fill in the [PR template](.github/PULL_REQUEST_TEMPLATE.md) — every section, or say why it doesn't
+  apply.
 - **Visual change → side-by-side before/after video. Mandatory.** Same window size, same actions.
   An "after"-only clip doesn't count; stills don't substitute.
 - Non-visual → say what you tested.
@@ -50,7 +54,7 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 
 Match the surrounding code.
 
-- Single-line comments only. Comment the *why*, never the *what*.
+- Single-line comments only. Comment the _why_, never the _what_.
 - Views stay declarative; logic lives in models and managers.
 - Swift 6 isolation — heavy work off the main actor.
 - [`Core/Theme.swift`](Tinycast/Core/Theme.swift) tokens only. Read [`docs/ui.md`](docs/ui.md) before
