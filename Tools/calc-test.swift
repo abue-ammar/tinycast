@@ -92,6 +92,13 @@ struct CalcTests {
         expectDisplay("450 - 15%", "382.5")
         expectDisplay("20%", "0.2")
 
+        // Modulo — "%" reads as modulo only when a value follows, so the percent cases above still hold
+        expectDisplay("10 % 3", "1")
+        expectDisplay("17 % 5", "2")
+        expectDisplay("10 mod 3", "1")
+        expectDisplay("2 + 10 % 3", "3")  // same precedence as * and /, binds tighter than +
+        expectDisplay("10k % 3", "1")  // the compact "10k" spelling is a value too
+
         // Unit conversion — length / weight / temperature / time / area / volume / storage
         expectDisplay("10km to mi", "6.213711922 mi")
         expectDisplay("10 km in miles", "6.213711922 mi")
