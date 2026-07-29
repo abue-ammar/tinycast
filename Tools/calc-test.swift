@@ -418,6 +418,20 @@ struct CalcTests {
         expectDisplay("100 mbps to kbps", "100,000 Kbps")
         expectBadges("100 kmh to mph", source: "Kilometers per Hour", target: "Miles per Hour")
 
+        // Bare-unit auto-conversion coverage gaps: bar/psi/atm/Mbps/Gbps/Kbps had it, their
+        // neighbors didn't — same category, same treatment.
+        expectDisplay("5 mbar", "0.07251886887 psi")
+        expectDisplay("5 kPa", "0.7251886887 psi")
+        expectDisplay("5 hPa", "0.07251886887 psi")
+        expectDisplay("5 mmHg", "0.0966838873 psi")
+        expectDisplay("5 Torr", "0.09668387352 psi")
+        expectDisplay("100 bps", "0.1 Kbps")
+        expectDisplay("1 Tbps", "1,000 Gbps")
+
+        // Base conversion accepts an expression on the value side, like unit conversion already does
+        expectDisplay("2*128 to hex", "0x100")
+        expectDisplay("10*5 to hex", "0x32")
+
         // Percentage phrasings
         expectDisplay("20% off 500", "400")
         expectDisplay("50 as % of 200", "25%")

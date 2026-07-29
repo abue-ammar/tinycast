@@ -148,8 +148,11 @@ enum CalcUnits {
         "kn": ("kmh", false), "ft/s": ("mph", false),
         // Pressure
         "bar": ("psi", false), "psi": ("bar", false), "atm": ("psi", false),
+        "mbar": ("psi", false), "kPa": ("psi", false), "hPa": ("psi", false),
+        "mmHg": ("psi", false), "Torr": ("psi", false),
         // Data transfer rate
         "Mbps": ("kbps", false), "Gbps": ("mbps", false), "Kbps": ("bps", false),
+        "bps": ("kbps", false), "Tbps": ("gbps", false),
     ]
 
     /// Lookup by lowercased, `²`-folded name (the tokenizer's ident form).
