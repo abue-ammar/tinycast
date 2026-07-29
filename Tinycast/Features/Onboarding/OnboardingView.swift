@@ -156,7 +156,7 @@ struct OnboardingView: View {
                 SettingsRow(
                     title: "Accessibility",
                     subtitle:
-                        "Without it Tinycast can still copy, but it can't paste a clipboard or emoji item back into the app you were using.",
+                        "Without it Tinycast can still copy, but it can't paste back into another app or lock the screen.",
                     systemImage: "accessibility", tint: .blue
                 ) {
                     statusBadge

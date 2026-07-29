@@ -54,6 +54,16 @@ paths; see the command in `development.md`.
 
 Icons go through a count-capped `NSCache` (`IconCache`).
 
+## System commands
+
+`CommandRegistry` exposes **Lock Screen** and **Sleep** alongside the other built-in commands. Both
+hide the palette before dispatch. Sleep uses the public IOKit power-management API; Lock Screen posts
+the standard macOS **⌃⌘Q** shortcut through CoreGraphics and requests event-posting access when
+needed. Neither action shells out or relies on the removed `CGSession` helper.
+
+Command entries use their stable `CommandID` for global-hotkey persistence, so commands can be
+searched, favorited, hidden, or bound in Settings just like apps and System Settings panes.
+
 ## Quitting apps
 
 `RunningAppsMonitor` (live from `NSWorkspace` launch/terminate notifications) drives both the row's

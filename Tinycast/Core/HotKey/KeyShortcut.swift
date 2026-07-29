@@ -152,6 +152,7 @@ enum HotKeyAction: Hashable, Sendable {
     case toggleEmoji
     case app(bundleID: String)
     case settingsPane(bundleID: String)
+    case command(id: CommandID)
 
     /// UserDefaults key holding the shortcut JSON; the `KeyboardShortcuts_` prefix is a fossil of the replaced package, kept verbatim so existing bindings need no migration.
     var defaultsKey: String {
@@ -161,6 +162,7 @@ enum HotKeyAction: Hashable, Sendable {
         case .toggleEmoji: "KeyboardShortcuts_toggleEmoji"
         case .app(let bundleID): "KeyboardShortcuts_appHotkey." + bundleID
         case .settingsPane(let bundleID): "KeyboardShortcuts_paneHotkey." + bundleID
+        case .command(let id): "KeyboardShortcuts_commandHotkey." + id.rawValue
         }
     }
 }

@@ -28,6 +28,7 @@
 		441CF705AE1D03F6E236A61E /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC43CFF6777C11BB880F398 /* ClipboardStore.swift */; };
 		4F3D96E59E117459153336F4 /* SettingsPaneScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */; };
 		4F740AF85545CF4133C89B82 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4802942FF89B327A76432A9B /* AboutView.swift */; };
+		54C5A5EF76F4290EFAA9A86E /* SystemActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8549CF4317F8D6CCE97D3C /* SystemActions.swift */; };
 		5568D02AE095293A15A7F30D /* RightClick.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E9ACD504E016DFF6FE6C1B /* RightClick.swift */; };
 		57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */; };
 		649961AA51BA4D87626C27D5 /* CalcFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09093BF10EA97BDCA45A241F /* CalcFormatter.swift */; };
@@ -130,6 +131,7 @@
 		6BB7C545EFD9589A77AD7BE2 /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
 		74F450E10D107C1E30EA2BC6 /* EmojiIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiIndex.swift; sourceTree = "<group>"; };
 		79DB24EE452A7CA120B56FA6 /* EmojiData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.generated.swift; sourceTree = "<group>"; };
+		7A8549CF4317F8D6CCE97D3C /* SystemActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemActions.swift; sourceTree = "<group>"; };
 		7BC2DEA0A052116A92F9A539 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationToken.swift; sourceTree = "<group>"; };
 		825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisibilityStore.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
 				4B432D84D8F9C10521342199 /* RunningApps.swift */,
 				9AA0E1FD530C764A021E6053 /* SearchScopes.swift */,
 				C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */,
+				7A8549CF4317F8D6CCE97D3C /* SystemActions.swift */,
 				7BC2DEA0A052116A92F9A539 /* Theme.swift */,
 				A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */,
 				825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */,
@@ -534,6 +537,7 @@
 				CFB516312C4694DDFD99DBCA /* SettingsRootView.swift in Sources */,
 				57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */,
 				05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */,
+				54C5A5EF76F4290EFAA9A86E /* SystemActions.swift in Sources */,
 				72ACD144841BF1117CD4E705 /* Theme.swift in Sources */,
 				85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */,
 				68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */,

@@ -13,7 +13,7 @@ struct PermissionsSettingsView: View {
             SettingsCard(header: "Accessibility") {
                 SettingsRow(
                     title: "Accessibility",
-                    subtitle: "Lets Tinycast paste a clipboard item into the app you were using.",
+                    subtitle: "Lets Tinycast paste into other apps and lock the screen.",
                     systemImage: "accessibility",
                     tint: .blue
                 ) {

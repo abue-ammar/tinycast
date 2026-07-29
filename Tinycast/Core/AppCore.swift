@@ -258,7 +258,8 @@ final class AppCore: ObservableObject {
         }
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
-            runCommand(app)
+            guard let command = CommandRegistry.command(for: app) else { return }
+            runCommand(command)
             return
         }
         hidePalette(restoreFocus: false)
@@ -308,8 +309,8 @@ final class AppCore: ObservableObject {
         return alert.runModal() == .alertFirstButtonReturn
     }
 
-    private func runCommand(_ entry: AppEntry) {
-        switch CommandRegistry.command(for: entry) {
+    func runCommand(_ command: CommandID) {
+        switch command {
         case .calculatorHistory:
             showPalette(mode: .calculatorHistory)
         case .clipboardHistory:
@@ -325,6 +326,11 @@ final class AppCore: ObservableObject {
         case .importFromRaycast:
             hidePalette(restoreFocus: false)
             showBackupSettings()
+        case .lockScreen, .sleep:
+            hidePalette(restoreFocus: false)
+            guard let action = command.systemAction else { return }
+            let result = SystemActions.perform(action)
+            if result != .success { showSystemActionFailure(action, result: result) }
         case .settings:
             hidePalette(restoreFocus: false)
             showSettings()
@@ -337,7 +343,36 @@ final class AppCore: ObservableObject {
             quitAllApps()
         case .quit:
             NSApp.terminate(nil)
-        case nil:
+        }
+    }
+
+    private func showSystemActionFailure(
+        _ action: SystemAction, result: SystemActionResult
+    ) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        switch (action, result) {
+        case (.lockScreen, .permissionDenied):
+            alert.messageText = "Tinycast needs permission to lock the screen."
+            alert.informativeText =
+                "Allow Tinycast in System Settings → Privacy & Security → Accessibility, then try again."
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() == .alertFirstButtonReturn {
+                Permissions.openAccessibilitySettings()
+            }
+        case (.lockScreen, .systemFailure):
+            alert.messageText = "Tinycast couldn’t lock the screen."
+            alert.informativeText = "macOS couldn’t create the lock request. Try ⌃⌘Q or press Touch ID."
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        case (.sleep, .permissionDenied), (.sleep, .systemFailure):
+            alert.messageText = "Tinycast couldn’t put this Mac to sleep."
+            alert.informativeText = "macOS rejected the sleep request. Try again or use the Apple menu."
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        case (_, .success):
             break
         }
     }

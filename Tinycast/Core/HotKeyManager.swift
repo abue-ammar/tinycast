@@ -15,6 +15,7 @@ final class HotKeyManager: ObservableObject {
     private let center = HotKeyCenter()
     private let boundKey = "boundAppBundleIDs"
     private let boundPaneKey = "boundPaneBundleIDs"
+    private let boundCommandKey = "boundCommandIDs"
 
     func start() {
         register(.togglePalette)
@@ -22,6 +23,7 @@ final class HotKeyManager: ObservableObject {
         register(.toggleEmoji)
         for bundleID in boundBundleIDs { register(.app(bundleID: bundleID)) }
         for bundleID in boundPaneBundleIDs { register(.settingsPane(bundleID: bundleID)) }
+        for id in boundCommandIDs { register(.command(id: id)) }
     }
 
     /// Bundle IDs that currently have a per-app hotkey — lets `start()` know which records to load and lets launcher rows show keycaps.
@@ -32,6 +34,12 @@ final class HotKeyManager: ObservableObject {
     /// Settings-pane bundle IDs with a hotkey — same role as `boundBundleIDs`, own namespace.
     var boundPaneBundleIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundPaneKey) ?? []
+    }
+
+    /// Stable command IDs with a hotkey; unknown IDs from a newer or removed build are ignored.
+    var boundCommandIDs: [CommandID] {
+        (UserDefaults.standard.stringArray(forKey: boundCommandKey) ?? [])
+            .compactMap(CommandID.init(rawValue:))
     }
 
     func shortcut(for action: HotKeyAction) -> KeyShortcut? {
@@ -65,6 +73,10 @@ final class HotKeyManager: ObservableObject {
             var set = Set(boundPaneBundleIDs)
             if shortcut == nil { set.remove(bundleID) } else { set.insert(bundleID) }
             UserDefaults.standard.set(Array(set), forKey: boundPaneKey)
+        case .command(let id):
+            var set = Set(boundCommandIDs)
+            if shortcut == nil { set.remove(id) } else { set.insert(id) }
+            UserDefaults.standard.set(set.map(\.rawValue), forKey: boundCommandKey)
         case .togglePalette, .toggleClipboard, .toggleEmoji:
             break
         }
@@ -75,6 +87,7 @@ final class HotKeyManager: ObservableObject {
         var candidates: [HotKeyAction] = [.togglePalette, .toggleClipboard, .toggleEmoji]
         candidates += boundBundleIDs.map { .app(bundleID: $0) }
         candidates += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
+        candidates += boundCommandIDs.map { .command(id: $0) }
         for candidate in candidates
         where candidate != action && self.shortcut(for: candidate) == shortcut {
             return displayName(of: candidate)
@@ -98,6 +111,8 @@ final class HotKeyManager: ObservableObject {
             let apps = AppCore.shared.appIndex.apps
             return apps.first { $0.kind == .systemSettings && $0.bundleID == bundleID }?.name
                 ?? bundleID
+        case .command(let id):
+            return id.name
         }
     }
 
@@ -115,6 +130,7 @@ final class HotKeyManager: ObservableObject {
         case .toggleEmoji: onToggleEmoji?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
+        case .command(let id): AppCore.shared.runCommand(id)
         }
     }
 }

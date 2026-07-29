@@ -25,13 +25,18 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         }
     }
 
-    /// The global-hotkey action that opens this entry, or `nil` when it has no bundle ID to key the binding on.
+    /// The global-hotkey action that opens this entry, keyed by bundle ID or stable command ID.
     var hotKeyAction: HotKeyAction? {
-        guard let bundleID else { return nil }
         switch kind {
-        case .application: return .app(bundleID: bundleID)
-        case .systemSettings: return .settingsPane(bundleID: bundleID)
-        case .command: return nil
+        case .application:
+            guard let bundleID else { return nil }
+            return .app(bundleID: bundleID)
+        case .systemSettings:
+            guard let bundleID else { return nil }
+            return .settingsPane(bundleID: bundleID)
+        case .command:
+            guard let command = CommandRegistry.command(for: self) else { return nil }
+            return .command(id: command)
         }
     }
 

@@ -30,6 +30,7 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
+- **System commands** — lock the screen or put the Mac to sleep from the launcher or a hotkey.
 
 ## Install
 
@@ -50,9 +51,9 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 
 ## Permissions
 
-**Accessibility** — needed only so Tinycast can paste a clipboard item back into the app you
-came from. You're prompted the first time you paste; grant it in **System Settings → Privacy &
-Security → Accessibility**.
+**Accessibility** — needed so Tinycast can paste a clipboard item back into the app you came from
+and invoke **Lock Screen**. You're prompted the first time either action needs it; grant access in
+**System Settings → Privacy & Security → Accessibility**.
 
 ## Using it
 

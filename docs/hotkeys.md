@@ -10,8 +10,9 @@
 ## Persistence
 
 Shortcuts persist as JSON strings under `KeyboardShortcuts_<name>` UserDefaults keys — a **legacy
-format** from the removed KeyboardShortcuts package, kept so old bindings survive. The set of bound
-bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch.
+format** from the removed KeyboardShortcuts package, kept so old bindings survive. Bound app bundle
+IDs, settings-pane bundle IDs, and stable command IDs live in separate arrays and are re-registered
+on launch. Unknown command IDs are ignored so removing or downgrading a build stays safe.
 
 ## Recorder
 

@@ -1,14 +1,16 @@
 import Foundation
 
 /// App-internal launcher actions surfaced as a "Commands" category; each is a synthetic `AppEntry` (kind `.command`, no bundle ID) so existing `AppEntry` plumbing applies, with dispatch in `AppCore.runCommand`.
-enum CommandID: String, CaseIterable, Sendable {
+enum CommandID: String, CaseIterable, Hashable, Sendable {
     case calculatorHistory = "command:calculator-history"
     case clipboardHistory = "command:clipboard-history"
     case searchEmoji = "command:search-emoji"
     case exportSettings = "command:export-settings"
     case importSettings = "command:import-settings"
     case importFromRaycast = "command:import-from-raycast"
+    case lockScreen = "command:lock-screen"
     case settings = "command:settings"
+    case sleep = "command:sleep"
     case about = "command:about"
     case quitAllApps = "command:quit-all-apps"
     case quit = "command:quit"
@@ -21,10 +23,20 @@ enum CommandID: String, CaseIterable, Sendable {
         case .exportSettings: return "Export Settings"
         case .importSettings: return "Import Settings"
         case .importFromRaycast: return "Import from Raycast"
+        case .lockScreen: return "Lock Screen"
         case .settings: return "Settings"
+        case .sleep: return "Sleep"
         case .about: return "About Tinycast"
         case .quitAllApps: return "Quit All Applications"
         case .quit: return "Quit Tinycast"
+        }
+    }
+
+    var systemAction: SystemAction? {
+        switch self {
+        case .lockScreen: return .lockScreen
+        case .sleep: return .sleep
+        default: return nil
         }
     }
 
@@ -36,7 +48,9 @@ enum CommandID: String, CaseIterable, Sendable {
         case .exportSettings: return "square.and.arrow.up"
         case .importSettings: return "square.and.arrow.down"
         case .importFromRaycast: return "arrow.down.doc"
+        case .lockScreen: return "lock.fill"
         case .settings: return "gearshape"
+        case .sleep: return "moon.zzz.fill"
         case .about: return "info.circle"
         case .quitAllApps: return "xmark.circle"
         case .quit: return "power"

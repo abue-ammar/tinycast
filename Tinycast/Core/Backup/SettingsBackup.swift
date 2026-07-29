@@ -33,6 +33,7 @@ struct SettingsBackup: Codable {
         var toggleEmoji: KeyShortcut?
         var apps: [String: KeyShortcut]?
         var panes: [String: KeyShortcut]?
+        var commands: [String: KeyShortcut]?
     }
 
     /// A tally of what an import touched, for user-facing confirmation.
@@ -80,6 +81,10 @@ extension SettingsBackup {
         hotkeys.panes = Dictionary(
             uniqueKeysWithValues: hk.boundPaneBundleIDs.compactMap { id in
                 hk.shortcut(for: .settingsPane(bundleID: id)).map { (id, $0) }
+            })
+        hotkeys.commands = Dictionary(
+            uniqueKeysWithValues: hk.boundCommandIDs.compactMap { id in
+                hk.shortcut(for: .command(id: id)).map { (id.rawValue, $0) }
             })
         backup.hotkeys = hotkeys
 
@@ -185,6 +190,10 @@ extension SettingsBackup {
         if let s = hotkeys.toggleEmoji { apply(s, .toggleEmoji) }
         for (id, s) in hotkeys.apps ?? [:] { apply(s, .app(bundleID: id)) }
         for (id, s) in hotkeys.panes ?? [:] { apply(s, .settingsPane(bundleID: id)) }
+        for (rawID, s) in hotkeys.commands ?? [:] {
+            guard let id = CommandID(rawValue: rawID) else { continue }
+            apply(s, .command(id: id))
+        }
         return count
     }
 }
