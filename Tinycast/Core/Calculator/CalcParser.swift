@@ -109,6 +109,13 @@ enum CalcTokenizer {
                 continue
             }
 
+            // "**" is the Python/JS/shell spelling of power, same operator as "^".
+            if ch == "*", i + 1 < chars.count, chars[i + 1] == "*" {
+                tokens.append(.op("^"))
+                i += 2
+                continue
+            }
+
             switch ch {
             case "+", "(", ")", "!", "%", "^":
                 tokens.append(.op(ch))

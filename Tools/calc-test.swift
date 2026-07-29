@@ -15,6 +15,9 @@ struct CalcTests {
         expectDisplay("100/4", "25")
         expectDisplay("2^10", "1,024")
         expectDisplay("2^3^2", "512")  // right-associative
+        expectDisplay("2**2", "4")  // "**" is an alias for "^" (Python/JS/shell spelling)
+        expectDisplay("2**10", "1,024")
+        expectDisplay("2**3**2", "512")  // right-associative, same as "^"
         expectDisplay("(5+2)*3", "21")
         expectDisplay("5!", "120")
         expectDisplay("3!!", "720")  // (3!)! — chained postfix
