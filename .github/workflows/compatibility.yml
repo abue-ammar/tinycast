@@ -1,0 +1,57 @@
+name: Sequoia Compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Tinycast/**"
+      - "Tools/**"
+      - "project.yml"
+      - "Tinycast.xcodeproj/**"
+      - ".github/workflows/compatibility.yml"
+  pull_request:
+    paths:
+      - "Tinycast/**"
+      - "Tools/**"
+      - "project.yml"
+      - "Tinycast.xcodeproj/**"
+      - ".github/workflows/compatibility.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build with the oldest supported toolchain
+        run: |
+          xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build
+
+      - name: Run standalone harnesses
+        run: |
+          set -euo pipefail
+          swift Tools/fuzz-test.swift
+          swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift \
+            Tools/ranking-test.swift -o "$RUNNER_TEMP/ranking-test"
+          "$RUNNER_TEMP/ranking-test"
+          swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
+            -o "$RUNNER_TEMP/calc-test"
+          "$RUNNER_TEMP/calc-test"
+          swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift \
+            Tools/clipboard-test.swift -o "$RUNNER_TEMP/clipboard-test"
+          "$RUNNER_TEMP/clipboard-test"
+          swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift \
+            Tools/scopes-test.swift -o "$RUNNER_TEMP/scopes-test"
+          "$RUNNER_TEMP/scopes-test"
+          swiftc Tinycast/Core/Emoji/EmojiCatalog.swift \
+            Tinycast/Core/Emoji/EmojiGridGeometry.swift \
+            Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
+            -o "$RUNNER_TEMP/emoji-test"
+          "$RUNNER_TEMP/emoji-test"

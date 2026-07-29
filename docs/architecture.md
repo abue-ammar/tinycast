@@ -30,8 +30,8 @@ imperatively from AppKit.
   `Features/About/AboutView.swift`). SwiftUI `Settings` / `Window` scenes are unreliable for accessory
   apps, so this is deliberate.
 
-The app forces `.darkAqua` appearance globally; the Liquid Glass material is tuned for a dark surface
-only.
+The app forces `.darkAqua` appearance globally; its translucent materials are tuned for a dark
+surface only.
 
 ## Concurrency
 
@@ -44,6 +44,7 @@ House idioms for the sharp edges:
 
 - Block-observer lifetimes go through the RAII `NotificationToken` (`Core/NotificationToken.swift`)
   instead of removal in a `deinit`.
-- `ClipboardStore` uses `isolated deinit` for its SQLite teardown.
+- `ClipboardStore` keeps its SQLite handles in a private RAII owner, so teardown stays deterministic
+  without exposing the main-actor store's non-Sendable state.
 - Raw Carbon / C pointers get decoded to plain values before crossing into actor code (see
   `hotKeyCarbonEventHandler`).

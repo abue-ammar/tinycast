@@ -2,8 +2,9 @@
 
 Tinycast is a native macOS menu-bar launcher (a minimal Raycast): fuzzy app launcher, global +
 per-app hotkeys, a text/image clipboard history, an inline calculator, and an emoji picker. SwiftUI +
-AppKit, runs as an accessory (no Dock icon, `LSUIElement`). Targets **macOS 26+** (Liquid Glass) and
-builds with the **Xcode 26** toolchain.
+AppKit, runs as an accessory (no Dock icon, `LSUIElement`). Targets **macOS 15+**; official releases
+use the **Xcode 26** toolchain so macOS 26 gets Liquid Glass while macOS 15–25 use native-material
+fallbacks.
 
 - **Build:** XcodeGen owns the project — `Tinycast.xcodeproj` is committed but generated from
   `project.yml`. After editing `project.yml`, run `xcodegen generate` and commit. There is **no**
@@ -52,8 +53,8 @@ Never break these without an explicit task to do so.
 - **`PaletteWindowController` solely owns the palette frame.** The hosting view sets
   `sizingOptions = []` so SwiftUI never drives the window size — otherwise the top edge drifts on the
   compact↔expanded swap.
-- **The app is locked to `.darkAqua` globally.** The Liquid Glass material is tuned for a dark surface
-  only; do not add light-mode styling.
+- **The app is locked to `.darkAqua` globally.** Its translucent materials are tuned for a dark
+  surface only; do not add light-mode styling.
 - **The flat `selection` index must match the visible row order exactly**, including the inline
   calculator card at index 0 when present. Selection is the single source of truth for highlight /
   activation.
@@ -91,7 +92,7 @@ Never break these without an explicit task to do so.
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for
-  block observers, `isolated deinit` for `ClipboardStore`'s SQLite teardown, decode raw Carbon / C
+  block observers, private RAII resource owners for non-Sendable teardown, decode raw Carbon / C
   pointers to plain values before crossing into actor code.
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed

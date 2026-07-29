@@ -5,7 +5,7 @@ Marketing site for [Tinycast](../), built with React + Vite + Tailwind CSS.
 ## Develop
 
 ```sh
-npm install
+npm ci
 npm run dev      # local dev server with HMR
 ```
 

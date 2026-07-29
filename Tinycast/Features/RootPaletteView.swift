@@ -1,6 +1,19 @@
 import SwiftUI
 
 struct RootPaletteView: View {
+    private struct RenderState {
+        let apps: [AppEntry]
+        let clips: [ClipboardItem]
+        let history: [CalcHistoryEntry]
+        let emojiSections: [EmojiGridSection]
+        let calculator: CalcResult?
+        let selection: Int
+        let favoriteCount: Int
+        let showsSections: Bool
+        let actionLabel: String
+        let showsActionGroup: Bool
+    }
+
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var vm: PaletteViewModel
     @EnvironmentObject private var appIndex: AppIndex
@@ -34,7 +47,8 @@ struct RootPaletteView: View {
 
     /// Favorite slots shown in the compact bar: up to 5 launchable apps, or the first 4 plus an overflow "…" that expands the window. Evaluated only in the compact render and on the rare ⌘N keypress.
     private var compactFavoriteSlots: [CompactFavoriteSlot] {
-        let favs = favorites.ordered(appIndex.matches("").filter(visibility.isVisible)).favorites
+        let favs = favorites.ordered(appIndex.matches("").filter { visibility.isVisible($0) })
+            .favorites
         if favs.count <= 5 { return favs.map(CompactFavoriteSlot.app) }
         return favs.prefix(4).map(CompactFavoriteSlot.app) + [.more]
     }
@@ -42,7 +56,7 @@ struct RootPaletteView: View {
     /// Ordered launcher results (the single source of truth for list, selection and activation): empty query pins favorites to the top, otherwise plain ranked matches.
     private var appResults: [AppEntry] {
         // Visibility filtering stays downstream of `matches` so its one-deep memo cache is never keyed on hidden state; hidden favorites drop out here too.
-        let base = appIndex.matches(vm.query).filter(visibility.isVisible)
+        let base = appIndex.matches(vm.query).filter { visibility.isVisible($0) }
         guard isQueryEmpty, !favorites.keys.isEmpty else { return base }
         let split = favorites.ordered(base)
         return split.favorites + split.rest
@@ -192,108 +206,15 @@ struct RootPaletteView: View {
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
         let showActionGroup = count > 0 && !(calcSelected && !calcActionable)
 
-        // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see docs/ui.md).
-        return Group {
-            if isCollapsed {
-                Color.clear
-            } else {
-                content(
-                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
-                    selection: sel, favoriteCount: favoriteCount, showSections: showSections
-                )
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) { header }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !isCollapsed {
-                bottomBar(pillLabel: pillLabel, showActionGroup: showActionGroup)
-            }
-        }
-        // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
-        .overlay {
-            if showAppMenu || showActions {
-                Color.black.opacity(0.001)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: closeMenus)
-            }
-        }
-        .overlay(alignment: .bottomLeading) {
-            if showAppMenu {
-                let content = appMenuContent
-                PopoverMenu(
-                    header: content.header, items: content.items, selection: $menuSelection,
-                    onActivate: activateMenuItem
-                )
-                .padding(Self.menuInset)
-                .transition(Self.menuTransition(.bottomLeading))
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if showActions, let content = actionsContent {
-                PopoverMenu(
-                    header: content.header, items: content.items, selection: $menuSelection,
-                    onActivate: activateMenuItem
-                )
-                .padding(Self.menuInset)
-                .transition(Self.menuTransition(.bottomTrailing))
-            }
-        }
-        // The window's own frame (driven by `PaletteWindowController`) is the size source of truth; filling it keeps the glass background and corner clip matched to the current compact/expanded window height.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.black.opacity(Theme.Colors.panelDimming))
-        .background(VisualEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
-        // Every show bumps focusToken — refocus search and drop any menu left open from last time (e.g. dismissed by clicking away with a context menu up).
-        .onChange(of: vm.focusToken) {
-            searchFocused = true
-            showActions = false
-            showAppMenu = false
-        }
-        .onChange(of: vm.query) {
-            vm.selection = 0
-            scrollToken = UUID()
-            emojiScroll = EmojiScrollIntent(kind: .top)
-        }
-        .onChange(of: vm.mode) {
-            vm.selection = 0
-            showActions = false
-            scrollToken = UUID()
-            emojiScroll = EmojiScrollIntent(kind: .top)
-        }
-        // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this token guarantees the scroll itself snaps back to the top.
-        .onChange(of: vm.resetToken) {
-            scrollToken = UUID()
-            emojiScroll = EmojiScrollIntent(kind: .top)
-        }
-        // Opening either menu highlights its first row and closes the other, so exactly one menu is ever open and always has a highlight.
-        .onChange(of: showActions) {
-            if showActions {
-                showAppMenu = false
-                menuSelection = 0
-            }
-            vm.menuOpen = menuOpen
-        }
-        .onChange(of: showAppMenu) {
-            if showAppMenu {
-                showActions = false
-                menuSelection = 0
-            }
-            vm.menuOpen = menuOpen
-        }
-        // Follow a row the store moved: a fresh capture (or promote-on-paste) lands at the head of its section, and pinning lifts a row into the Pinned section. With a query typed the highlight stays put; `AppCore` has already placed it for pin/paste.
-        .onChange(of: clipFollow) { old, new in
-            // A nil `old.id` is the first load landing, not a row that moved.
-            guard vm.mode == .clipboard, old.id != nil else { return }
-            if isQueryEmpty, old.id != new.id, let id = new.id,
-                let index = clips.firstIndex(where: { $0.id == id })
-            {
-                vm.selection = index
-            }
-            scrollToken = UUID()
-        }
-        .onAppear { searchFocused = true }
-        // Typing/clearing/overflow/settings all flip `paletteIsCollapsed`; resize the window to match.
-        .onChange(of: core.paletteIsCollapsed) { core.syncPaletteSize() }
+        let state = RenderState(
+            apps: apps, clips: clips, history: hist, emojiSections: emojiSections,
+            calculator: calc, selection: sel, favoriteCount: favoriteCount,
+            showsSections: showSections, actionLabel: pillLabel,
+            showsActionGroup: showActionGroup
+        )
+        let surface = paletteSurface(state)
+        let observed = observedSurface(surface, clipFollow: clipFollow, clips: state.clips)
+        return observed
         // ⌘1–⌘5 launch the compact bar's favorite slots (or expand, for the "…" overflow slot).
         .onKeyPress(keys: ["1", "2", "3", "4", "5"], phases: .down) { press in
             guard isCollapsed, settings.showFavoritesInCompactMode,
@@ -431,6 +352,121 @@ struct RootPaletteView: View {
             core.togglePinnedClip(clipResults[selection])
             return .handled
         }
+    }
+
+    private func observedSurface<Content: View>(
+        _ content: Content, clipFollow: ClipFollowKey, clips: [ClipboardItem]
+    ) -> some View {
+        content
+            // Every show bumps focusToken — refocus search and drop any menu left open from last time (e.g. dismissed by clicking away with a context menu up).
+            .onChange(of: vm.focusToken) {
+                searchFocused = true
+                showActions = false
+                showAppMenu = false
+            }
+            .onChange(of: vm.query) {
+                vm.selection = 0
+                scrollToken = UUID()
+                emojiScroll = EmojiScrollIntent(kind: .top)
+            }
+            .onChange(of: vm.mode) {
+                vm.selection = 0
+                showActions = false
+                scrollToken = UUID()
+                emojiScroll = EmojiScrollIntent(kind: .top)
+            }
+            // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this token guarantees the scroll itself snaps back to the top.
+            .onChange(of: vm.resetToken) {
+                scrollToken = UUID()
+                emojiScroll = EmojiScrollIntent(kind: .top)
+            }
+            // Opening either menu highlights its first row and closes the other, so exactly one menu is ever open and always has a highlight.
+            .onChange(of: showActions) {
+                if showActions {
+                    showAppMenu = false
+                    menuSelection = 0
+                }
+                vm.menuOpen = menuOpen
+            }
+            .onChange(of: showAppMenu) {
+                if showAppMenu {
+                    showActions = false
+                    menuSelection = 0
+                }
+                vm.menuOpen = menuOpen
+            }
+            // Follow a row the store moved: a fresh capture (or promote-on-paste) lands at the head of its section, and pinning lifts a row into the Pinned section.
+            .onChange(of: clipFollow) { old, new in
+                // A nil `old.id` is the first load landing, not a row that moved.
+                guard vm.mode == .clipboard, old.id != nil else { return }
+                if isQueryEmpty, old.id != new.id, let id = new.id,
+                    let index = clips.firstIndex(where: { $0.id == id })
+                {
+                    vm.selection = index
+                }
+                scrollToken = UUID()
+            }
+            .onAppear { searchFocused = true }
+            // Typing/clearing/overflow/settings all flip `paletteIsCollapsed`; resize the window to match.
+            .onChange(of: core.paletteIsCollapsed) { core.syncPaletteSize() }
+    }
+
+    private func paletteSurface(_ state: RenderState) -> some View {
+        // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle.
+        Group {
+            if isCollapsed {
+                Color.clear
+            } else {
+                content(
+                    apps: state.apps, clips: state.clips, hist: state.history,
+                    emojiSections: state.emojiSections, calc: state.calculator,
+                    selection: state.selection, favoriteCount: state.favoriteCount,
+                    showSections: state.showsSections
+                )
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) { header }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !isCollapsed {
+                bottomBar(
+                    pillLabel: state.actionLabel, showActionGroup: state.showsActionGroup
+                )
+            }
+        }
+        // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
+        .overlay {
+            if showAppMenu || showActions {
+                Color.black.opacity(0.001)
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: closeMenus)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if showAppMenu {
+                let menu = appMenuContent
+                PopoverMenu(
+                    header: menu.header, items: menu.items, selection: $menuSelection,
+                    onActivate: activateMenuItem
+                )
+                .padding(Self.menuInset)
+                .transition(Self.menuTransition(.bottomLeading))
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if showActions, let menu = actionsContent {
+                PopoverMenu(
+                    header: menu.header, items: menu.items, selection: $menuSelection,
+                    onActivate: activateMenuItem
+                )
+                .padding(Self.menuInset)
+                .transition(Self.menuTransition(.bottomTrailing))
+            }
+        }
+        // The window's own frame (driven by `PaletteWindowController`) is the size source of truth; filling it keeps the translucent background and corner clip matched to the current compact/expanded window height.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.black.opacity(Theme.Colors.panelDimming))
+        .background(VisualEffectView())
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
     }
 
     private var header: some View {

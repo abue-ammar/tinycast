@@ -6,7 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // The Hyper Key's HID-level caps remap outlives the process; give the key back.
+        // Tear down the Hyper Key input hooks and restore Caps Lock before the process exits.
         AppCore.shared.hyperKeyTap.prepareForTermination()
     }
 

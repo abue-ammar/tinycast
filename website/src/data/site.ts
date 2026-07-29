@@ -6,7 +6,7 @@ export const site = {
   tagline: "The essentials, without the bloat.",
   repo: "https://github.com/abue-ammar/tinycast",
   version: "v0.1.0",
-  platform: "macOS 26+",
+  platform: "macOS 15+",
   license: "AGPL-3.0",
   licenseUrl: "https://github.com/abue-ammar/tinycast/blob/main/LICENSE",
   // Community. Replace the placeholder with the real Discord invite when ready.

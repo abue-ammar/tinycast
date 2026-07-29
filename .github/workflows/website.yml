@@ -34,7 +34,7 @@ jobs:
       - name: Install & build
         working-directory: website
         run: |
-          npm install
+          npm ci
           npm run build
       - uses: actions/upload-pages-artifact@v5
         with:

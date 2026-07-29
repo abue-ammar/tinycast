@@ -23,6 +23,6 @@ body:
     id: macos
     attributes:
       label: macOS version
-      placeholder: "26.0"
+      placeholder: "15.0"
     validations:
       required: true

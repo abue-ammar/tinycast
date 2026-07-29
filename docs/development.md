@@ -4,8 +4,9 @@ How to build, test, package, and release Tinycast.
 
 ## Requirements
 
-- macOS 26 or later (Liquid Glass).
-- Xcode 26 installed — it provides the SwiftUI macro plugin and SDK used to build.
+- macOS 15 Sequoia or later.
+- Xcode 16.2 or later. Official releases use Xcode 26 so the same binary can render Liquid Glass
+  on macOS 26 while retaining the native-material fallback on macOS 15–25.
 
 ## First-time setup
 
@@ -151,6 +152,10 @@ It builds on a `macos-26` runner with Xcode 26 and publishes a GitHub Release ta
 `v<full-version>` with a versioned DMG asset (`Tinycast-<full-version>.dmg`), marked prerelease
 for beta. On success it also bumps the matching cask in the tap (below).
 
+`.github/workflows/compatibility.yml` separately builds every app change with Xcode 16.2 on macOS 15
+and runs all six standalone harnesses, keeping the oldest supported toolchain covered independently
+of the Xcode 26 release build.
+
 ### Homebrew tap automation
 
 The release job's final step rewrites the `version` + `sha256` of the channel's cask (`tinycast`
@@ -166,5 +171,5 @@ Pages at `https://abue-ammar.github.io/tinycast/` on every push to `main` that t
 `website/`. Enable it once via **Settings → Pages → Source = GitHub Actions**.
 
 ```sh
-cd website && npm install && npm run dev     # local preview
+cd website && npm ci && npm run dev     # local preview
 ```

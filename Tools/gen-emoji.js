@@ -9,8 +9,8 @@
 const fs = require("fs");
 const path = require("path");
 
-// Emoji added after this version may lack glyphs on the oldest supported macOS (26.0 ships Emoji 16.0).
-const MAX_EMOJI_VERSION = 17.0;
+// Keep the catalog to the glyph set bundled with the oldest supported release, macOS 15.
+const MAX_EMOJI_VERSION = 15.1;
 
 const SOURCES = [
   ["emoji-test.txt", "https://unicode.org/Public/emoji/latest/emoji-test.txt"],

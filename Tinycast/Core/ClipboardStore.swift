@@ -3,6 +3,43 @@ import SQLite3
 
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+/// Owns SQLite state accessed only through the main-actor store, closing it after the store's final isolated access.
+private final class SQLiteResources {
+    var database: OpaquePointer?
+    var insert: OpaquePointer?
+    var load: OpaquePointer?
+    var windowFloor: OpaquePointer?
+    var search: OpaquePointer?
+    var deleteByID: OpaquePointer?
+    var pin: OpaquePointer?
+    var staleImages: OpaquePointer?
+    var deleteStale: OpaquePointer?
+
+    deinit {
+        close()
+    }
+
+    func close() {
+        [insert, load, windowFloor, search, deleteByID, pin, staleImages, deleteStale]
+            .forEach { sqlite3_finalize($0) }
+        insert = nil
+        load = nil
+        windowFloor = nil
+        search = nil
+        deleteByID = nil
+        pin = nil
+        staleImages = nil
+        deleteStale = nil
+        sqlite3_close_v2(database)
+        database = nil
+    }
+}
+
+/// Identifies the Clear History generation in which an image was observed.
+struct ClipboardImageCaptureToken: Sendable {
+    fileprivate let generation: UInt64
+}
+
 struct ClipboardItem: Identifiable, Hashable, Sendable {
     enum Kind: String, Sendable { case text, image }
 
@@ -103,6 +140,8 @@ final class ClipboardStore: ObservableObject {
     private var searchCache: (query: String, result: [ClipboardItem])?
     /// Same memo for the empty query — every render reads the full display order, so the pinned/unpinned split runs once per mutation.
     private var orderedCache: [ClipboardItem]?
+    /// Invalidates image work that was already off-main when Clear History ran.
+    private var imageCaptureGeneration: UInt64 = 0
 
     private static let memoryWindow = 1000
 
@@ -130,15 +169,7 @@ final class ClipboardStore: ObservableObject {
 
     private let imagesDir: URL
     private let dbURL: URL
-    private var db: OpaquePointer?
-    private var insertStmt: OpaquePointer?
-    private var loadStmt: OpaquePointer?
-    private var windowFloorStmt: OpaquePointer?
-    private var searchStmt: OpaquePointer?
-    private var deleteByIDStmt: OpaquePointer?
-    private var pinStmt: OpaquePointer?
-    private var staleImagesStmt: OpaquePointer?
-    private var deleteStaleStmt: OpaquePointer?
+    private let sqlite = SQLiteResources()
 
     /// `directory` defaults to the per-channel cache; `Tools/clipboard-test.swift` passes a throwaway one so a harness run can never reach a real history.
     init(directory: URL? = nil) {
@@ -164,13 +195,8 @@ final class ClipboardStore: ObservableObject {
             .appendingPathComponent(bundleID, isDirectory: true)
     }
 
-    // Isolated so teardown may touch the main-actor statement/db pointers; AppCore only ever releases the store on the main actor, so no hop.
-    isolated deinit {
-        closeDatabase()
-    }
-
     func load() {
-        guard let stmt = loadStmt else { return }
+        guard let stmt = sqlite.load else { return }
         sqlite3_bind_int64(stmt, 1, windowFloor())
         var loaded: [ClipboardItem] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
@@ -190,7 +216,7 @@ final class ClipboardStore: ObservableObject {
 
     /// Rowid of the oldest unpinned row the in-memory window keeps — the floor `loadStmt` reads from. 0 (no floor, load everything) when the history is shorter than the window.
     private func windowFloor() -> sqlite3_int64 {
-        guard let stmt = windowFloorStmt else { return 0 }
+        guard let stmt = sqlite.windowFloor else { return 0 }
         defer {
             sqlite3_reset(stmt)
             sqlite3_clear_bindings(stmt)
@@ -204,24 +230,38 @@ final class ClipboardStore: ObservableObject {
         insert(ClipboardItem(text: text, sourceBundleID: sourceBundleID))
     }
 
-    func addImage(_ data: Data, sourceBundleID: String?) {
+    func beginImageCapture() -> ClipboardImageCaptureToken {
+        ClipboardImageCaptureToken(generation: imageCaptureGeneration)
+    }
+
+    func addImage(
+        _ data: Data, sourceBundleID: String?, capture: ClipboardImageCaptureToken
+    ) async {
+        guard capture.generation == imageCaptureGeneration else { return }
         let url = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
         let item = ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID)
-        // The blob write is multi-MB disk I/O; only the row insert (a failed write inserts nothing) returns to the main actor.
-        Task.detached(priority: .utility) { [weak self] in
-            guard (try? data.write(to: url, options: .atomic)) != nil else { return }
-            await self?.insert(item)
+        // The blob write is multi-MB disk I/O; only the row insert (a failed or invalidated write inserts nothing) returns to the main actor.
+        let written = await Task.detached(priority: .utility) {
+            (try? data.write(to: url, options: .atomic)) != nil
+        }.value
+        guard written else { return }
+        guard capture.generation == imageCaptureGeneration else {
+            _ = await Task.detached(priority: .utility) {
+                try? FileManager.default.removeItem(at: url)
+            }.value
+            return
         }
+        insert(item)
     }
 
     /// Bulk-insert history from an external source (e.g. a Raycast import). Entries carry their original `createdAt` and image *paths* are stored as external references (zero-copy) — the store never owns or prunes files outside `imagesDir`. Dedups within the batch and against existing rows; imported items older than `maxAge` are pruned on reload.
     func importEntries(_ entries: [ClipboardItem]) -> Int {
-        guard let stmt = insertStmt else { return 0 }
+        guard let stmt = sqlite.insert else { return 0 }
         var seenText = Set<String>()
         var seenPath = Set<String>()
         var inserted = 0
         // One transaction for the whole batch: ~1 WAL commit instead of one per row (dedup reads still see the in-progress inserts on this connection).
-        sqlite3_exec(db, "BEGIN", nil, nil, nil)
+        sqlite3_exec(sqlite.database, "BEGIN", nil, nil, nil)
         // Oldest first so newest ends up with the highest rowid (load orders by rowid DESC).
         for item in entries.sorted(by: { $0.createdAt < $1.createdAt }) {
             switch item.kind {
@@ -238,7 +278,7 @@ final class ClipboardStore: ObservableObject {
             bindAndInsert(stmt, item)
             inserted += 1
         }
-        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        sqlite3_exec(sqlite.database, "COMMIT", nil, nil, nil)
         load()
         return inserted
     }
@@ -255,7 +295,7 @@ final class ClipboardStore: ObservableObject {
     }
 
     func remove(_ item: ClipboardItem) {
-        if let stmt = deleteByIDStmt {
+        if let stmt = sqlite.deleteByID {
             sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
             sqlite3_reset(stmt)
@@ -266,7 +306,10 @@ final class ClipboardStore: ObservableObject {
     }
 
     func clearAll() {
-        if db != nil { sqlite3_exec(db, "DELETE FROM items", nil, nil, nil) }
+        imageCaptureGeneration &+= 1
+        if sqlite.database != nil {
+            sqlite3_exec(sqlite.database, "DELETE FROM items", nil, nil, nil)
+        }
         try? FileManager.default.removeItem(at: imagesDir)
         try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
         items = []
@@ -295,7 +338,7 @@ final class ClipboardStore: ObservableObject {
 
     private func runSearch(_ q: String) -> [ClipboardItem] {
         // Trigram FTS needs ≥3 characters; shorter queries (and the no-database path) fall back to filtering the in-memory window.
-        guard let stmt = searchStmt, q.count >= 3 else { return fallbackSearch(q) }
+        guard let stmt = sqlite.search, q.count >= 3 else { return fallbackSearch(q) }
         let match = "\"" + q.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         sqlite3_bind_text(stmt, 1, match, -1, SQLITE_TRANSIENT)
         var results: [ClipboardItem] = []
@@ -334,7 +377,7 @@ final class ClipboardStore: ObservableObject {
     private func pin(_ item: ClipboardItem) {
         let stamp = Date()
         let pinned = item.with(pinnedAt: stamp)
-        if let stmt = pinStmt {
+        if let stmt = sqlite.pin {
             sqlite3_bind_double(stmt, 1, stamp.timeIntervalSince1970)
             sqlite3_bind_text(stmt, 2, item.id.uuidString, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
@@ -357,15 +400,15 @@ final class ClipboardStore: ObservableObject {
 
     /// Rewrite a row under the same id so it leads the history: stored order is rowid, so this is a delete + re-insert, and the fresh `createdAt` keeps the date buckets descending. The image blob is never touched.
     private func reinsert(_ updated: ClipboardItem) {
-        if let deleteStmt = deleteByIDStmt, let insertStmt {
+        if let deleteStmt = sqlite.deleteByID, let insertStmt = sqlite.insert {
             // One transaction: `id` is UNIQUE and a crash between the two statements must not lose the row.
-            sqlite3_exec(db, "BEGIN", nil, nil, nil)
+            sqlite3_exec(sqlite.database, "BEGIN", nil, nil, nil)
             sqlite3_bind_text(deleteStmt, 1, updated.id.uuidString, -1, SQLITE_TRANSIENT)
             sqlite3_step(deleteStmt)
             sqlite3_reset(deleteStmt)
             sqlite3_clear_bindings(deleteStmt)
             bindAndInsert(insertStmt, updated)
-            sqlite3_exec(db, "COMMIT", nil, nil, nil)
+            sqlite3_exec(sqlite.database, "COMMIT", nil, nil, nil)
         }
         // Array ops also cover items surfaced by FTS from beyond the in-memory window.
         items.removeAll { $0.id == updated.id }
@@ -381,7 +424,7 @@ final class ClipboardStore: ObservableObject {
     }
 
     private func insert(_ item: ClipboardItem) {
-        if let stmt = insertStmt { bindAndInsert(stmt, item) }
+        if let stmt = sqlite.insert { bindAndInsert(stmt, item) }
         items.insert(item, at: 0)
         trimWindow()
         prune()
@@ -437,7 +480,7 @@ final class ClipboardStore: ObservableObject {
 
     private func prune() {
         let cutoff = Date().addingTimeInterval(-maxAge)
-        if let imagesStmt = staleImagesStmt, let deleteStmt = deleteStaleStmt {
+        if let imagesStmt = sqlite.staleImages, let deleteStmt = sqlite.deleteStale {
             sqlite3_bind_double(imagesStmt, 1, cutoff.timeIntervalSince1970)
             var staleOwnedPaths: [String] = []
             while sqlite3_step(imagesStmt) == SQLITE_ROW {
@@ -474,32 +517,38 @@ final class ClipboardStore: ObservableObject {
 
     private func openDatabase() -> Bool {
         guard
-            sqlite3_open_v2(dbURL.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
+            sqlite3_open_v2(
+                dbURL.path, &sqlite.database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil
+            )
                 == SQLITE_OK,
-            sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", nil, nil, nil)
-                == SQLITE_OK,
-            sqlite3_exec(db, Self.schema, nil, nil, nil) == SQLITE_OK
+            sqlite3_exec(
+                sqlite.database, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", nil, nil,
+                nil
+            ) == SQLITE_OK,
+            sqlite3_exec(sqlite.database, Self.schema, nil, nil, nil) == SQLITE_OK
         else { return false }
         // Migrates pre-source_app databases; guarded so current ones don't log "duplicate column".
         if !columnExists("source_app", in: "items") {
-            sqlite3_exec(db, "ALTER TABLE items ADD COLUMN source_app TEXT", nil, nil, nil)
+            sqlite3_exec(
+                sqlite.database, "ALTER TABLE items ADD COLUMN source_app TEXT", nil, nil, nil)
         }
         if !columnExists("pinned_at", in: "items") {
-            sqlite3_exec(db, "ALTER TABLE items ADD COLUMN pinned_at REAL", nil, nil, nil)
+            sqlite3_exec(
+                sqlite.database, "ALTER TABLE items ADD COLUMN pinned_at REAL", nil, nil, nil)
         }
         // Created after the migration rather than in `schema`, since the column may not exist yet on an older database.
         sqlite3_exec(
-            db,
+            sqlite.database,
             "CREATE INDEX IF NOT EXISTS items_pinned_at ON items(pinned_at) WHERE pinned_at IS NOT NULL",
             nil, nil, nil)
-        insertStmt = prepare(
+        sqlite.insert = prepare(
             """
             INSERT INTO items(id, kind, text, image_path, created_at, source_app, pinned_at)
             VALUES(?,?,?,?,?,?,?)
             """
         )
         // Every pinned row plus the newest `memoryWindow` unpinned ones, keyed off the floor rowid `windowFloor` looks up. Two indexed branches rather than one `pinned_at IS NOT NULL OR rowid >= ?`: the planner can't drive an OR from an index while holding the row order, so that form reads the whole table.
-        loadStmt = prepare(
+        sqlite.load = prepare(
             """
             SELECT id, kind, text, image_path, created_at, source_app, pinned_at FROM (
               SELECT rowid AS rid, * FROM items WHERE rowid >= ?1
@@ -507,31 +556,34 @@ final class ClipboardStore: ObservableObject {
               SELECT rowid AS rid, * FROM items WHERE pinned_at IS NOT NULL AND rowid < ?1
             ) ORDER BY rid DESC
             """)
-        windowFloorStmt = prepare(
+        sqlite.windowFloor = prepare(
             "SELECT rowid FROM items WHERE pinned_at IS NULL ORDER BY rowid DESC LIMIT 1 OFFSET ?")
-        searchStmt = prepare(
+        sqlite.search = prepare(
             """
             SELECT i.id, i.kind, i.text, i.image_path, i.created_at, i.source_app, i.pinned_at
             FROM items_fts f JOIN items i ON i.rowid = f.rowid
             WHERE items_fts MATCH ? ORDER BY f.rowid DESC LIMIT 200
             """)
-        deleteByIDStmt = prepare("DELETE FROM items WHERE id = ?")
+        sqlite.deleteByID = prepare("DELETE FROM items WHERE id = ?")
         // Only ever sets a stamp: unpinning rewrites the whole row so it leads the history again.
-        pinStmt = prepare("UPDATE items SET pinned_at = ? WHERE id = ?")
-        staleImagesStmt = prepare(
+        sqlite.pin = prepare("UPDATE items SET pinned_at = ? WHERE id = ?")
+        sqlite.staleImages = prepare(
             """
             SELECT image_path FROM items
             WHERE created_at < ? AND pinned_at IS NULL AND image_path IS NOT NULL
             """)
-        deleteStaleStmt = prepare("DELETE FROM items WHERE created_at < ? AND pinned_at IS NULL")
-        return insertStmt != nil && loadStmt != nil && windowFloorStmt != nil && searchStmt != nil
-            && deleteByIDStmt != nil && pinStmt != nil && staleImagesStmt != nil
-            && deleteStaleStmt != nil
+        sqlite.deleteStale = prepare(
+            "DELETE FROM items WHERE created_at < ? AND pinned_at IS NULL")
+        return sqlite.insert != nil && sqlite.load != nil && sqlite.windowFloor != nil
+            && sqlite.search != nil && sqlite.deleteByID != nil && sqlite.pin != nil
+            && sqlite.staleImages != nil && sqlite.deleteStale != nil
     }
 
     private func prepare(_ sql: String) -> OpaquePointer? {
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
+        guard sqlite3_prepare_v2(sqlite.database, sql, -1, &stmt, nil) == SQLITE_OK else {
+            return nil
+        }
         return stmt
     }
 
@@ -545,20 +597,7 @@ final class ClipboardStore: ObservableObject {
     }
 
     private func closeDatabase() {
-        [
-            insertStmt, loadStmt, windowFloorStmt, searchStmt, deleteByIDStmt, pinStmt,
-            staleImagesStmt, deleteStaleStmt,
-        ].forEach { sqlite3_finalize($0) }
-        insertStmt = nil
-        loadStmt = nil
-        windowFloorStmt = nil
-        searchStmt = nil
-        deleteByIDStmt = nil
-        pinStmt = nil
-        staleImagesStmt = nil
-        deleteStaleStmt = nil
-        sqlite3_close_v2(db)
-        db = nil
+        sqlite.close()
     }
 
     private static func row(_ stmt: OpaquePointer?) -> ClipboardItem? {

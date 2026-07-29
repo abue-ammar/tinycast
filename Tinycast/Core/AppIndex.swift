@@ -69,6 +69,7 @@ enum IconCache {
     private struct Decoded: @unchecked Sendable { let image: NSImage? }
 
     /// Return the decode directly (not a cache re-read) so an `NSCache` purge mid-decode can't strand a row on its placeholder. A missing path returns nil — not `NSWorkspace`'s broken-document icon — and never caches, so an uninstalled app can't leave a broken icon behind.
+    @MainActor
     static func loadAsync(forFile path: String) async -> NSImage? {
         if let cached = cached(forFile: path) { return cached }
         return await Task.detached(priority: .userInitiated) { () -> Decoded in
@@ -76,6 +77,7 @@ enum IconCache {
             return Decoded(image: icon(forFile: path))
         }.value.image
     }
+    @MainActor
     static func loadSymbolAsync(named name: String) async -> NSImage? {
         if let cached = cachedSymbol(named: name) { return cached }
         return await Task.detached(priority: .userInitiated) {

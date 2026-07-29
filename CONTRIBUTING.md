@@ -18,7 +18,7 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 
 ## Setup
 
-- macOS 26+, Xcode 26. Do the one-time signing setup ([`docs/signing.md`](docs/signing.md) §1).
+- macOS 15+, Xcode 16.2 or later. Do the one-time signing setup ([`docs/signing.md`](docs/signing.md) §1).
 - `open Tinycast.xcodeproj` → ⌘R. Debug builds are their own channel (`Tinycast Dev.app`).
 - After editing `project.yml`: `xcodegen generate`, commit the result. No SwiftPM.
 - Details: [`docs/development.md`](docs/development.md). Architecture:

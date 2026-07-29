@@ -96,7 +96,7 @@ enum Theme {
         /// Settings grouped "card": a faint raised surface whose hairline border doubles as the inset row divider.
         static let cardFill = Color.white.opacity(0.05)
         static let cardStroke = Color.white.opacity(0.10)
-        /// Whitish tint layered into the Liquid Glass floating controls (action group + menu circle) so the glass reads frosted rather than clear.
+        /// Whitish tint layered into floating controls (action group + menu circle) so the material reads frosted rather than clear.
         static let glassFrost = Color.white.opacity(0.05)
         /// The violet of the app mark. The one non-white hue in the system, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
@@ -133,10 +133,59 @@ struct KeyCapChip: View {
     }
 }
 
+private struct FrostedSurfaceModifier<S: Shape>: ViewModifier {
+    let shape: S
+    let isInteractive: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        #if compiler(>=6.2)
+            if #available(macOS 26.0, *) {
+                if isInteractive {
+                    content
+                        .glassEffect(
+                            .regular.interactive().tint(Theme.Colors.glassFrost), in: shape
+                        )
+                        .tint(.clear)
+                } else {
+                    content.glassEffect(.regular, in: shape)
+                }
+            } else {
+                fallback(content: content)
+            }
+        #else
+            fallback(content: content)
+        #endif
+    }
+
+    @ViewBuilder
+    private func fallback(content: Content) -> some View {
+        let surface = content
+            .background {
+                shape
+                    .fill(.ultraThinMaterial)
+                    .overlay { shape.fill(Theme.Colors.glassFrost) }
+                    .overlay {
+                        shape.stroke(Theme.Colors.border.opacity(0.6), lineWidth: 0.5)
+                    }
+                    .shadow(color: .black.opacity(0.22), radius: 6, y: 2)
+            }
+        if isInteractive {
+            surface.tint(.clear)
+        } else {
+            surface
+        }
+    }
+}
+
 extension View {
-    /// A floating Liquid Glass control surface (action group + menu button), interactive for native lensing with a whitish frost tint so it reads brighter than clear glass.
+    /// An interactive floating control surface: Liquid Glass on macOS 26+, with a native-material fallback on older systems.
     func frosted(in shape: some Shape) -> some View {
-        glassEffect(.regular.interactive().tint(Theme.Colors.glassFrost), in: shape)
-            .tint(.clear)
+        modifier(FrostedSurfaceModifier(shape: shape, isInteractive: true))
+    }
+
+    /// A noninteractive floating menu surface that follows the same OS-specific material path as `frosted(in:)`.
+    func frostedMenu(in shape: some Shape) -> some View {
+        modifier(FrostedSurfaceModifier(shape: shape, isInteractive: false))
     }
 }

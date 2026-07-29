@@ -422,7 +422,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
 
         override func updateTrackingAreas() {
             super.updateTrackingAreas()
-            trackingAreas.forEach(removeTrackingArea)
+            trackingAreas.forEach { removeTrackingArea($0) }
             // `.inVisibleRect` pins the area to the resizing bounds; `.activeAlways` so hover reveals the rail in non-key windows too.
             addTrackingArea(
                 NSTrackingArea(

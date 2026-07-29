@@ -1,5 +1,18 @@
 import AppKit
 
+/// Owns the main-run-loop poll timer so all supported Swift compilers get deterministic teardown without widening `ClipboardManager`'s actor isolation.
+private final class ClipboardPollTimer {
+    let value: Timer
+
+    init(_ value: Timer) {
+        self.value = value
+    }
+
+    deinit {
+        value.invalidate()
+    }
+}
+
 @MainActor
 final class ClipboardManager {
     /// Marker we attach to the pasteboard when *we* write to it, so polling ignores our own pastes.
@@ -17,17 +30,12 @@ final class ClipboardManager {
 
     private let store: ClipboardStore
     private let settings: AppSettings
-    private var timer: Timer?
+    private var pollTimer: ClipboardPollTimer?
     private var lastChangeCount = 0
 
     init(store: ClipboardStore, settings: AppSettings) {
         self.store = store
         self.settings = settings
-    }
-
-    // Isolated so teardown can touch the main-actor timer; AppCore only releases the manager on the main actor, so no hop. The poll block is `[weak self]`, so this isn't fixing a leak — it stops a stray timer firing if the manager is ever recreated.
-    isolated deinit {
-        timer?.invalidate()
     }
 
     func start() {
@@ -36,7 +44,7 @@ final class ClipboardManager {
             MainActor.assumeIsolated { self?.poll() }
         }
         RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        pollTimer = ClipboardPollTimer(timer)
     }
 
     private func poll() {
@@ -64,6 +72,7 @@ final class ClipboardManager {
         if let type = pb.availableType(from: [.png, .tiff]), let data = pb.data(forType: type) {
             let isPNG = type == .png
             let store = store
+            let capture = store.beginImageCapture()
             // A big copy's TIFF→PNG re-encode can take 100ms+; keep the poll (and the UI) off that path.
             Task.detached(priority: .utility) {
                 let png =
@@ -71,7 +80,8 @@ final class ClipboardManager {
                     ? data
                     : NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
                 guard let png else { return }
-                await store.addImage(png, sourceBundleID: sourceBundleID)
+                await store.addImage(
+                    png, sourceBundleID: sourceBundleID, capture: capture)
             }
         }
     }

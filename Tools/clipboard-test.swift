@@ -12,7 +12,7 @@ struct ClipboardTests {
     static var failures = 0
     static var passes = 0
 
-    static func main() {
+    static func main() async {
         pinOrder()
         unpinRejoinsAsNewest()
         pasteLeavesPinsAlone()
@@ -20,6 +20,7 @@ struct ClipboardTests {
         pinsLeadFilteredSearches()
         persistence()
         migrationFromShippedDatabase()
+        await clearCancelsPendingImage()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -196,6 +197,30 @@ struct ClipboardTests {
             "and indexed")
     }
 
+    /// An image already writing off-main must not recreate history after the user clears it.
+    static func clearCancelsPendingImage() async {
+        let dir = scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ClipboardStore(directory: dir)
+        let capture = store.beginImageCapture()
+        let addTask = Task {
+            await store.addImage(
+                Data(repeating: 0x89, count: 4 * 1024 * 1024),
+                sourceBundleID: nil,
+                capture: capture)
+        }
+
+        await Task.yield()
+        store.clearAll()
+        await addTask.value
+
+        let imageFiles =
+            (try? FileManager.default.contentsOfDirectory(
+                at: dir.appendingPathComponent("images"), includingPropertiesForKeys: nil)) ?? []
+        expect(store.items.isEmpty, "Clear History rejects an in-flight image row")
+        expect(imageFiles.isEmpty, "Clear History removes an in-flight image blob")
+    }
+
     // MARK: - Harness
 
     /// Runs `body` against a store rooted in a fresh temp directory, torn down afterwards.
@@ -219,6 +244,7 @@ struct ClipboardTests {
         sqlite(
             url,
             """
+            PRAGMA trusted_schema=ON;
             CREATE TABLE items(
               id TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, text TEXT, image_path TEXT,
               created_at REAL NOT NULL, source_app TEXT

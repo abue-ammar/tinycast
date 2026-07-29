@@ -42,6 +42,7 @@ enum ImageThumbnail {
     }
 
     /// Decodes off the main thread and reads the result back from the thread-safe cache; the `NSImage` never crosses the actor boundary, keeping it clean under strict concurrency.
+    @MainActor
     static func loadAsync(_ url: URL, maxPixel: CGFloat) async -> NSImage? {
         if let cached = cached(url, maxPixel: maxPixel) { return cached }
         await Task.detached(priority: .userInitiated) {

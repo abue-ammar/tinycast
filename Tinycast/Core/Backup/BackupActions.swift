@@ -64,9 +64,11 @@ enum BackupActions {
     }
 
     /// Every Raycast channel (stable, beta, alpha, internal) shares this bundle-id prefix.
-    static let raycastBundleIDPrefix = "com.raycast"
+    nonisolated static let raycastBundleIDPrefix = "com.raycast"
 
-    static func isRaycastBundleID(_ id: String) -> Bool { id.hasPrefix(raycastBundleIDPrefix) }
+    nonisolated static func isRaycastBundleID(_ id: String) -> Bool {
+        id.hasPrefix(raycastBundleIDPrefix)
+    }
 
     /// Quit any running Raycast app so its hotkeys stop clashing; skip `.prohibited` (pure background helpers/XPC).
     static func quitRaycast() {

@@ -119,7 +119,7 @@ final class AppCore: ObservableObject {
         // AppKit's default tooltip delay is ~2–3s; shorten it (in ms) so the compact-bar favorite tooltips appear promptly. Registration domain — never overrides a user default.
         UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 250])
         NSApp.setActivationPolicy(.accessory)
-        // Force dark: the Liquid Glass material is tuned for a deep dark surface and renders washed-out in Light mode.
+        // Force dark: the translucent materials are tuned for a deep dark surface and render washed-out in Light mode.
         NSApp.appearance = NSAppearance(named: .darkAqua)
 
         clipboardStore.maxAge = settings.clipboardRetention.maxAge

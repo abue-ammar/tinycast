@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Native vibrancy background. On macOS 26+ the system renders these materials with Liquid Glass.
+/// Native vibrancy background; the system supplies the rendering appropriate to each macOS release.
 struct VisualEffectView: NSViewRepresentable {
     var material: NSVisualEffectView.Material = .hudWindow
     var blending: NSVisualEffectView.BlendingMode = .behindWindow

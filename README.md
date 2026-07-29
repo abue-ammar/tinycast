@@ -43,6 +43,8 @@ brew install --cask tinycast@beta     # beta  (installs side-by-side)
 Each channel is a separate app (`Tinycast.app`, `Tinycast Beta.app`) with its own settings and
 permissions, so you can run stable next to the beta.
 
+Tinycast requires macOS 15 Sequoia or later.
+
 Tinycast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
 automatically on every install and update, so there's nothing to run. (If you download the DMG
 directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine

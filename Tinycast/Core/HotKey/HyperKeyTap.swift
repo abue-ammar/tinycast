@@ -1,6 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 import Combine
+@preconcurrency import Darwin
 @preconcurrency import IOKit.hidsystem
 
 // Snapshot the imported mutable C global `mach_task_self_` (process-constant) so actor code never touches the raw global under strict concurrency.
@@ -59,9 +60,10 @@ private enum CapsLockRemap {
         queue.async { apply(mapping) }
     }
 
-    /// Synchronous variant for `applicationWillTerminate`, where detached work wouldn't get to run.
+    /// Synchronous variant for `applicationWillTerminate`; sharing the queue guarantees every pending remap finishes before Caps Lock is restored.
+    @MainActor
     static func clearBlocking() {
-        apply(mappingOff)
+        queue.sync { apply(mappingOff) }
     }
 
     private static func apply(_ mapping: String) {
@@ -133,10 +135,16 @@ final class HyperKeyTap: ObservableObject {
     private let clock = ContinuousClock()
     private static let quickPressWindow: Duration = .milliseconds(250)
 
-    // Isolated so teardown can release the main-actor IOKit connection; the tap is an AppCore-owned singleton released on main. The kernel reclaims this at process exit anyway, so this only matters if it's ever recreated.
-    isolated deinit {
-        if hidConnect != IO_OBJECT_NULL { IOServiceClose(hidConnect) }
-    }
+    #if compiler(>=6.2)
+        // Isolated so teardown can release the main-actor IOKit connection; the tap is an AppCore-owned singleton released on main. The kernel reclaims this at process exit anyway, so this only matters if it's ever recreated.
+        isolated deinit {
+            if hidConnect != IO_OBJECT_NULL { IOServiceClose(hidConnect) }
+        }
+    #else
+        deinit {
+            if hidConnect != IO_OBJECT_NULL { IOServiceClose(hidConnect) }
+        }
+    #endif
 
     func start(settings: AppSettings) {
         self.settings = settings
@@ -308,9 +316,15 @@ final class HyperKeyTap: ObservableObject {
         syncTapPresence()
     }
 
-    /// Called from `applicationWillTerminate`: the HID remap outlives the process, so hand the key back to the system before exiting.
+    /// Called from `applicationWillTerminate`: detach callbacks and hand the HID-level Caps Lock remap back to the system before exiting.
     func prepareForTermination() {
-        if key == .capsLock { CapsLockRemap.clearBlocking() }
+        tearDownTap()
+        stopHealthTimer()
+        CapsLockRemap.clearBlocking()
+        if hidConnect != IO_OBJECT_NULL {
+            IOServiceClose(hidConnect)
+            hidConnect = IO_OBJECT_NULL
+        }
     }
 
     // MARK: - Tap lifecycle
