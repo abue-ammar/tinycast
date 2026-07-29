@@ -346,7 +346,7 @@ struct RootPaletteView: View {
             move(1)
             return .handled
         }
-        // With a menu open, plain ↵ activates its highlighted row. A modified ↵ always runs the selection's own action regardless of menu state: ⌘↵ the secondary copy action (each menu advertises it), ⌥↵ paste-in-place; plain ↵ (no menu) falls through to the field's onSubmit.
+        // With a menu open, plain ↵ activates its highlighted row. A modified ↵ always runs the selection's own action regardless of menu state: ⌘↵ the advertised secondary action, ⌥↵ paste-in-place; plain ↵ (no menu) falls through to the field's onSubmit.
         .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
@@ -372,11 +372,11 @@ struct RootPaletteView: View {
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
             case .launcher:
-                // ⌘↵ quits the selected app when it's running (the Actions menu advertises it); nothing else in the launcher takes a modified ↵. The condition mirrors the menu row's exactly, so the key never swallows a press it won't act on.
-                guard command, let app = selectedAppEntry, app.kind == .application,
-                    core.runningApps.isRunning(app)
+                // The condition mirrors the menu row's capability exactly, so synthetic command entries never swallow a press they cannot act on.
+                guard command, let app = selectedAppEntry,
+                    LauncherActionPolicy.modifiedReturnAction(for: app.kind) == .showInFinder
                 else { return .ignored }
-                core.quit(app)
+                core.showInFinder(app)
             }
             return .handled
         }

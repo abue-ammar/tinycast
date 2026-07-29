@@ -246,17 +246,18 @@ enum AppActionsMenu {
                     onResetRanking()
                 })
         }
-        if app.kind != .command {
+        if LauncherActionPolicy.modifiedReturnAction(for: app.kind) == .showInFinder {
             items.append(
-                PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
+                PopoverMenuItem(
+                    title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"
+                ) {
                     core.showInFinder(app)
                 })
         }
         if running, app.kind == .application {
             items.append(
                 PopoverMenuItem(
-                    title: "Quit Application", systemImage: "power", shortcut: "⌘↵",
-                    isDestructive: true
+                    title: "Quit Application", systemImage: "power", isDestructive: true
                 ) {
                     core.quit(app)
                 })

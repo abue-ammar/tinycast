@@ -2,11 +2,7 @@ import AppKit
 import Combine
 
 struct AppEntry: Identifiable, Hashable, Sendable {
-    enum Kind: String, Sendable {
-        case application
-        case systemSettings
-        case command
-    }
+    typealias Kind = LauncherEntryKind
 
     let id: String  // file path (or "command:…" id) — always unique
     let name: String  // clean display name, never includes ".app"
