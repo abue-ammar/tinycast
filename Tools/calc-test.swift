@@ -57,6 +57,16 @@ struct CalcTests {
         expectDisplay("π*2", "6.283185307")
         expectDisplay("e^2", "7.389056099")
 
+        // Implicit multiplication
+        expectDisplay("4(2+3)", "20")
+        expectDisplay("(2+3)(2+3)", "25")
+        expectDisplay("2pi", "6.283185307")
+        expectDisplay("2π", "6.283185307")
+        expectDisplay("2sqrt(9)", "6")
+        expectDisplay("2(3+1)+1", "9")  // implicit "*" binds like explicit "*", not looser
+        // Units are never mistaken for a constant/function, so this stays untouched
+        expectDisplay("10km to mi", "6.213711922 mi")
+
         // Percent
         expectDisplay("20% of 450", "90")
         expectDisplay("450 + 20%", "540")

@@ -224,13 +224,33 @@ private struct Parser {
 
     mutating func parseExpression(minBP: Int) -> Value? {
         guard var lhs = parseOperand() else { return nil }
-        while let (op, bp, rightBP) = peekBinary(), bp >= minBP {
-            pos += 1
-            guard let rhs = parseExpression(minBP: rightBP) else { return nil }
-            guard let combined = apply(op, lhs, rhs) else { return nil }
-            lhs = combined
+        while true {
+            if let (op, bp, rightBP) = peekBinary(), bp >= minBP {
+                pos += 1
+                guard let rhs = parseExpression(minBP: rightBP) else { return nil }
+                guard let combined = apply(op, lhs, rhs) else { return nil }
+                lhs = combined
+                continue
+            }
+            // Juxtaposition is the operator here, so there's no token to consume before the rhs.
+            if impliesMultiplication(), 20 >= minBP {
+                guard let rhs = parseExpression(minBP: 21) else { return nil }
+                guard let combined = apply("*", lhs, rhs) else { return nil }
+                lhs = combined
+                continue
+            }
+            break
         }
         return lhs
+    }
+
+    /// Deliberately narrow — no unit or currency ident is a constant or function, so `10km` keeps its own path.
+    private func impliesMultiplication() -> Bool {
+        switch current {
+        case .op("("): return true
+        case .ident(let name): return CalcParser.constants[name] != nil || CalcParser.functions[name] != nil
+        default: return false
+        }
     }
 
     /// (operator, its binding power, minimum bp for its right operand).
