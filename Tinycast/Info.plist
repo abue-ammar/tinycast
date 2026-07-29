@@ -26,6 +26,10 @@
 	<true/>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Tinycast uses the camera to show a preview and take photos you request.</string>
+	<key>NSCameraUseContinuityCameraDeviceType</key>
+	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Tinycast</string>
 </dict>

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C0A100000000000000000001 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A200000000000000000001 /* CameraView.swift */; };
 		05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF5AE919A2699E6EB8BF7DC8 /* ShortcutsSettingsView.swift */; };
 		0DD808F80666846F4E74BAD8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23591B301A183579098AA019 /* OnboardingView.swift */; };
 		14712478C37E6E8760CA47EC /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DC5A4706854493D23FD18A /* HyperKey.swift */; };
@@ -81,6 +82,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		C0A200000000000000000001 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
 		09093BF10EA97BDCA45A241F /* CalcFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcFormatter.swift; sourceTree = "<group>"; };
 		0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsView.swift; sourceTree = "<group>"; };
@@ -158,6 +160,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		C0A300000000000000000001 /* Camera */ = {
+			isa = PBXGroup;
+			children = (
+				C0A200000000000000000001 /* CameraView.swift */,
+			);
+			path = Camera;
+			sourceTree = "<group>";
+		};
 		005F026A8F7D5E209B1CE917 /* Clipboard */ = {
 			isa = PBXGroup;
 			children = (
@@ -259,6 +269,7 @@
 			children = (
 				4667598F175BCBB55CA88BEE /* About */,
 				356F452DB0F8F9834817455B /* Calculator */,
+				C0A300000000000000000001 /* Camera */,
 				005F026A8F7D5E209B1CE917 /* Clipboard */,
 				15CFCD6B1429C5F0944CBCC4 /* Emoji */,
 				7DE06EE636C14E50EE172D9E /* Launcher */,
@@ -447,6 +458,7 @@
 				AE0D0C53004C65D65BE89B6F /* BackupActions.swift in Sources */,
 				8631543D8E0E008E7C541345 /* BackupSettingsView.swift in Sources */,
 				BA76E53A12248B3A9C42B4F9 /* Bundle+AppName.swift in Sources */,
+				C0A100000000000000000001 /* CameraView.swift in Sources */,
 				A9D8B54D88A60DE9FC1F43BF /* CalcDateTime.swift in Sources */,
 				14A5A5ACD35A572EE906769F /* CalcEngine.swift in Sources */,
 				649961AA51BA4D87626C27D5 /* CalcFormatter.swift in Sources */,

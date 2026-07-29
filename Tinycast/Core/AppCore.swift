@@ -102,6 +102,7 @@ final class AppCore: ObservableObject {
     let palette = PaletteViewModel()
 
     private lazy var windowController = PaletteWindowController(core: self)
+    private lazy var cameraWindowController = CameraWindowController(core: self)
     private let auxWindows = AuxWindowController()
 
     private init() {
@@ -198,6 +199,7 @@ final class AppCore: ObservableObject {
 
     /// Dock-icon / reopen: focus an open aux window (About/Settings/Onboarding), else summon the launcher. Decoupled from the individual show paths so activation always works.
     func handleReopen() {
+        if cameraWindowController.focusExisting() { return }
         if auxWindows.focusExisting() { return }
         showPalette(mode: .launcher, restoreAnyMode: true)
     }
@@ -267,6 +269,9 @@ final class AppCore: ObservableObject {
             showPalette(mode: .calculatorHistory)
         case .clipboardHistory:
             showPalette(mode: .clipboard)
+        case .openCamera:
+            hidePalette(restoreFocus: false)
+            cameraWindowController.show()
         case .searchEmoji:
             showPalette(mode: .emoji)
         case .exportSettings:

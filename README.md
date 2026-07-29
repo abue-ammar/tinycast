@@ -15,6 +15,7 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 - **App launcher** — fuzzy-search and launch anything, pin favorites, see what's running.
 - **Calculator** — do math and unit conversions inline, right in the palette.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
+- **Camera preview** — check your framing, mirror or switch cameras, and copy a photo.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
 
@@ -40,6 +41,9 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 **Accessibility** — needed only so Tinycast can paste a clipboard item back into the app you
 came from. You're prompted the first time you paste; grant it in **System Settings → Privacy &
 Security → Accessibility**.
+
+**Camera** — requested only when you open the **Open Camera** command. Photos you take are copied
+to the clipboard and included in Tinycast's local clipboard history.
 
 ## Using it
 
