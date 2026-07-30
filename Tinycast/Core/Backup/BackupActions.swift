@@ -84,12 +84,19 @@ enum BackupActions {
     }
 
     /// Shared `.rayconfig` file picker used by the Backup pane and onboarding.
-    static func pickRaycastFile() -> URL? {
+    /// Runs as a sheet on the current key window; in an LSUIElement app `runModal()` can
+    /// open an orphaned, invisible modal that blocks the UI.
+    static func pickRaycastFile() async -> URL? {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return nil }
         NSApp.activate(ignoringOtherApps: true)
-        return panel.runModal() == .OK ? panel.url : nil
+        return await withCheckedContinuation(isolation: #isolation) { continuation in
+            panel.beginSheetModal(for: window) { response in
+                continuation.resume(returning: response == .OK ? panel.url : nil)
+            }
+        }
     }
 
     // MARK: - Helpers

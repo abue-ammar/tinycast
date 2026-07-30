@@ -194,7 +194,7 @@ struct OnboardingView: View {
             if let status = model.status {
                 importStatus(status)
             } else {
-                caption("Optional — you can import later in Settings › Backup.")
+                caption("Optional — you can import later in Settings › Backup. In Raycast, export from Settings › Advanced › Import / Export.")
             }
         }
     }
@@ -369,9 +369,11 @@ final class OnboardingModel: ObservableObject {
     }
 
     func chooseFile() {
-        guard let url = BackupActions.pickRaycastFile() else { return }
-        file = url
-        status = nil
+        Task {
+            guard let url = await BackupActions.pickRaycastFile() else { return }
+            file = url
+            status = nil
+        }
     }
 
     func run() {

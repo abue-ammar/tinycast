@@ -137,9 +137,11 @@ struct BackupSettingsView: View {
     }
 
     private func chooseRaycastFile() {
-        guard let url = BackupActions.pickRaycastFile() else { return }
-        raycastFile = url
-        status = nil
+        Task {
+            guard let url = await BackupActions.pickRaycastFile() else { return }
+            raycastFile = url
+            status = nil
+        }
     }
 
     private func runRaycastImport() {
