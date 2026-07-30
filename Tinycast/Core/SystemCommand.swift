@@ -8,6 +8,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case restart
         case shutDown = "shut-down"
         case logOut = "log-out"
+        case showScreenSaver = "show-screen-saver"
     }
 
     enum Confirmation: String, Sendable {
@@ -44,6 +45,7 @@ enum SystemCommandCatalog {
         case .restart: return "Restart"
         case .shutDown: return "Shut Down"
         case .logOut: return "Log Out"
+        case .showScreenSaver: return "Show Screen Saver"
         }
     }
 
@@ -55,6 +57,7 @@ enum SystemCommandCatalog {
         case .restart: return "arrow.clockwise"
         case .shutDown: return "power"
         case .logOut: return "rectangle.portrait.and.arrow.right"
+        case .showScreenSaver: return "rectangle.inset.filled"
         }
     }
 

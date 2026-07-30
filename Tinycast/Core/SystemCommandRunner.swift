@@ -60,6 +60,20 @@ enum SystemCommandRunner {
             try runAppleScript("tell application \"System Events\" to shut down")
         case .logOut:
             try runAppleScript("tell application \"System Events\" to log out")
+        case .showScreenSaver:
+            let url = URL(fileURLWithPath: "/System/Library/CoreServices/ScreenSaverEngine.app")
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                throw SystemCommandFailure("The macOS screen saver could not be found.")
+            }
+            NSWorkspace.shared.openApplication(
+                at: url, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+                    guard let error else { return }
+                    Task { @MainActor in
+                        AppCore.shared.presentSystemCommandFailure(
+                            name: "Show Screen Saver",
+                            failure: SystemCommandFailure(error.localizedDescription))
+                    }
+                }
         }
         return nil
     }
