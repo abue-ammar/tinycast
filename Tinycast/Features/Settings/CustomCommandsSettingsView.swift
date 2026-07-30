@@ -186,7 +186,7 @@ private struct CustomCommandEditorSheet: View {
                     detail: "Ask before running this command.")
                 optionToggle(
                     "Show confirmation", isOn: $showsConfirmation,
-                    detail: "Flash a confirmation on screen when it runs.")
+                    detail: "Confirm on screen after the command succeeds.")
             }
 
             if let errorMessage {

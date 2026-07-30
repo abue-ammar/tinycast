@@ -105,23 +105,15 @@ struct SnippetsTests {
             content: "---\r\nname: \"Safe\r\nenabled: false\"\r\n---\r\nBody",
             fileURL: fileURL)
 
-        let legacy = "---\r\nname: \"Legacy\"\r\nshowInLauncher: false\r\n---\r\n\r\nBody\r\n"
-        let legacyParsed = try SnippetMarkdownSerializer.parse(content: legacy, fileURL: fileURL)
-        check("legacy showInLauncher alias is accepted", legacyParsed.showInLauncher == false)
-        check("CRLF frontmatter consumes only its structural boundary", legacyParsed.text == "\r\nBody\r\n")
-        let launcherAlias = try SnippetMarkdownSerializer.parse(
-            content: "---\nlauncher: false\n---\nBody",
-            fileURL: fileURL)
-        check("legacy launcher alias is accepted", launcherAlias.showInLauncher == false)
+        let crlf = "---\r\nname: \"CRLF\"\r\nshow_in_launcher: false\r\n---\r\n\r\nBody\r\n"
+        let crlfParsed = try SnippetMarkdownSerializer.parse(content: crlf, fileURL: fileURL)
+        check("CRLF frontmatter parses its keys", crlfParsed.showInLauncher == false)
+        check("CRLF frontmatter consumes only its structural boundary", crlfParsed.text == "\r\nBody\r\n")
         let missingHUD = try SnippetMarkdownSerializer.parse(
             content: "---\nname: \"No HUD\"\n---\nBody",
             fileURL: fileURL)
         check("missing show_confirmation defaults false", !missingHUD.showsConfirmation)
         expectParseError("show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n", fileURL: fileURL)
-
-        let legacyJSON = Data("{\"name\":\"Legacy\",\"text\":\"Body\",\"isEnabled\":true,\"showInLauncher\":true}".utf8)
-        let decodedLegacy = try JSONDecoder().decode(Snippet.self, from: legacyJSON)
-        check("legacy JSON without showsConfirmation decodes with HUD off", !decodedLegacy.showsConfirmation)
 
         let delimiterBody = "---\nname: \"Delimiter Body\"\nenabled: true\nshow_in_launcher: true\n---\nFirst\n---\nLast\n"
         let delimiterParsed = try SnippetMarkdownSerializer.parse(
@@ -150,7 +142,8 @@ struct SnippetsTests {
         expectParseError("unquoted scalar is rejected", content: "---\nname: Broken\n---\n", fileURL: fileURL)
         expectParseError("invalid scalar escape is rejected", content: "---\nname: \"Bad\\q\"\n---\n", fileURL: fileURL)
         expectParseError("non-strict boolean is rejected", content: "---\nenabled: FALSE\n---\n", fileURL: fileURL)
-        expectParseError("duplicate aliases are rejected", content: "---\nlauncher: true\nshow_in_launcher: false\n---\n", fileURL: fileURL)
+        expectParseError("duplicate keys are rejected", content: "---\nname: \"A\"\nname: \"B\"\n---\n", fileURL: fileURL)
+        expectParseError("the removed showInLauncher alias is rejected", content: "---\nshowInLauncher: false\n---\n", fileURL: fileURL)
         expectParseError("unknown frontmatter key is rejected", content: "---\nunknown: \"value\"\n---\n", fileURL: fileURL)
         // Both keys were removed or renamed; a file still carrying one is reported, not silently half-loaded.
         expectParseError("the removed category key is rejected", content: "---\ncategory: \"Work\"\n---\n", fileURL: fileURL)
@@ -166,111 +159,32 @@ struct SnippetsTests {
         defer { try? fm.removeItem(at: root) }
 
         let channelRoot = root.appendingPathComponent("channels", isDirectory: true)
-        let missingLegacy = root.appendingPathComponent("missing-legacy", isDirectory: true)
         let stable = SnippetRepository(
             bundleIdentifier: "com.tinycast.app",
-            applicationSupportRoot: channelRoot,
-            legacyMarkdownDirectory: missingLegacy)
+            applicationSupportRoot: channelRoot)
         let beta = SnippetRepository(
             bundleIdentifier: "com.tinycast.app.beta",
-            applicationSupportRoot: channelRoot,
-            legacyMarkdownDirectory: missingLegacy)
+            applicationSupportRoot: channelRoot)
         let dev = SnippetRepository(
             bundleIdentifier: "com.tinycast.app.dev",
-            applicationSupportRoot: channelRoot,
-            legacyMarkdownDirectory: missingLegacy)
+            applicationSupportRoot: channelRoot)
 
         check("stable, beta, and dev repositories use isolated directories",
             Set([stable.snippetsDirectory, beta.snippetsDirectory, dev.snippetsDirectory]).count == 3)
-        let stableBootstrap = try stable.load()
-        check("a fresh channel bootstraps samples once", stableBootstrap.records.count == 3)
-        check("bootstrap completion is recorded outside the snippets folder",
-            fm.fileExists(atPath: stable.initializationMarkerURL.path))
-        for record in stableBootstrap.records { try fm.removeItem(at: record.fileURL) }
-        let emptyStable = try stable.load()
-        check("an intentionally empty initialized library stays empty", emptyStable.records.isEmpty)
-        check("initializing stable does not create another channel", !fm.fileExists(atPath: dev.snippetsDirectory.path))
-        let devBootstrap = try dev.load()
-        check("another channel receives its own bootstrap", devBootstrap.records.count == 3)
-
-        let precreatedRepository = SnippetRepository(
-            bundleIdentifier: "com.example.precreated",
-            applicationSupportRoot: root.appendingPathComponent("precreated"),
-            legacyMarkdownDirectory: missingLegacy)
-        try fm.createDirectory(
-            at: precreatedRepository.snippetsDirectory,
-            withIntermediateDirectories: true)
-        let precreatedBootstrap = try precreatedRepository.load()
-        check("bootstrap atomically replaces a precreated empty directory",
-            precreatedBootstrap.records.count == 3)
-
-        let migrationRoot = root.appendingPathComponent("markdown-migration", isDirectory: true)
-        let legacyMarkdown = migrationRoot.appendingPathComponent("legacy-markdown", isDirectory: true)
-        let legacySupport = migrationRoot.appendingPathComponent("legacy-support", isDirectory: true)
-        try fm.createDirectory(at: legacyMarkdown, withIntermediateDirectories: true)
-        let markdownSource = legacyMarkdown.appendingPathComponent("filename-not-name.md")
-        let markdownSnippet = Snippet(name: "Markdown Wins", text: "Imported")
-        try SnippetMarkdownSerializer.serialize(markdownSnippet).write(
-            to: markdownSource,
-            atomically: true,
-            encoding: .utf8)
-        let malformedMarkdownSource = legacyMarkdown.appendingPathComponent("malformed.md")
-        try "---\nname: invalid\n---\nBody".write(
-            to: malformedMarkdownSource,
-            atomically: true,
-            encoding: .utf8)
-        let migrationBundle = "com.example.markdown"
-        let legacyJSON = legacySupport
-            .appendingPathComponent(migrationBundle, isDirectory: true)
-            .appendingPathComponent("snippets.json")
-        try fm.createDirectory(at: legacyJSON.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode([Snippet(name: "JSON Loses", text: "Fallback")])
-            .write(to: legacyJSON, options: .atomic)
-        let markdownRepository = SnippetRepository(
-            bundleIdentifier: migrationBundle,
-            applicationSupportRoot: migrationRoot.appendingPathComponent("app-support"),
-            legacyMarkdownDirectory: legacyMarkdown,
-            legacyApplicationSupportRoot: legacySupport)
-        let markdownMigration = try markdownRepository.load()
-        check("legacy Markdown takes precedence over legacy JSON",
-            markdownMigration.records.map(\.snippet.name) == ["Markdown Wins"])
-        check("Markdown migration preserves source filenames",
-            markdownMigration.records.first?.fileURL.lastPathComponent == "filename-not-name.md")
-        check("a malformed migrated file is isolated as a per-file issue",
-            markdownMigration.issues.map { $0.fileURL.lastPathComponent } == ["malformed.md"])
-        check("migration leaves legacy sources untouched",
-            fm.fileExists(atPath: markdownSource.path)
-                && fm.fileExists(atPath: malformedMarkdownSource.path)
-                && fm.fileExists(atPath: legacyJSON.path))
-
-        let jsonRoot = root.appendingPathComponent("json-migration", isDirectory: true)
-        let jsonBundle = "com.example.json"
-        let jsonSupport = jsonRoot.appendingPathComponent("legacy-support", isDirectory: true)
-        let jsonURL = jsonSupport
-            .appendingPathComponent(jsonBundle, isDirectory: true)
-            .appendingPathComponent("snippets.json")
-        try fm.createDirectory(at: jsonURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode([
-            Snippet(name: "Same Name", text: "One", showsConfirmation: true),
-            Snippet(name: "Same Name", text: "Two"),
-        ]).write(to: jsonURL, options: .atomic)
-        let jsonRepository = SnippetRepository(
-            bundleIdentifier: jsonBundle,
-            applicationSupportRoot: jsonRoot.appendingPathComponent("app-support"),
-            legacyMarkdownDirectory: jsonRoot.appendingPathComponent("no-markdown"),
-            legacyApplicationSupportRoot: jsonSupport)
-        let jsonMigration = try jsonRepository.load()
-        check("legacy JSON is the migration fallback", jsonMigration.records.count == 2)
-        check("JSON migration keeps duplicate names in distinct files",
-            Set(jsonMigration.records.map { $0.fileURL.lastPathComponent }) == ["same-name.md", "same-name-2.md"])
-        check("JSON migration persists per-snippet HUD preference",
-            jsonMigration.records.contains { $0.snippet.showsConfirmation })
+        let firstLoad = try stable.load()
+        check("a fresh channel starts with an empty library",
+            firstLoad.records.isEmpty && firstLoad.issues.isEmpty)
+        check("the first load creates the channel's snippets folder",
+            fm.fileExists(atPath: stable.snippetsDirectory.path))
+        check("loading one channel does not create another",
+            !fm.fileExists(atPath: dev.snippetsDirectory.path))
+        let secondLoad = try stable.load()
+        check("a repeated load of an empty library stays empty", secondLoad.records.isEmpty)
 
         let corruptRoot = root.appendingPathComponent("partial-load", isDirectory: true)
         let corruptRepository = SnippetRepository(
             bundleIdentifier: "com.example.partial",
-            applicationSupportRoot: corruptRoot,
-            legacyMarkdownDirectory: missingLegacy)
+            applicationSupportRoot: corruptRoot)
         try fm.createDirectory(at: corruptRepository.snippetsDirectory, withIntermediateDirectories: true)
         let validURL = corruptRepository.snippetsDirectory.appendingPathComponent("valid.md")
         try SnippetMarkdownSerializer.serialize(Snippet(name: "Valid", text: "Body"))
@@ -308,10 +222,7 @@ struct SnippetsTests {
         let crudRoot = root.appendingPathComponent("crud", isDirectory: true)
         let crudRepository = SnippetRepository(
             bundleIdentifier: "com.example.crud",
-            applicationSupportRoot: crudRoot,
-            legacyMarkdownDirectory: missingLegacy)
-        let bootstrapped = try crudRepository.load()
-        for record in bootstrapped.records { try fm.removeItem(at: record.fileURL) }
+            applicationSupportRoot: crudRoot)
         let imported = try crudRepository.create([
             Snippet(name: "Imported", text: "One"),
             Snippet(name: "Imported", text: "Two", keyword: "!two"),
@@ -371,7 +282,7 @@ struct SnippetsTests {
         } catch SnippetRepository.RepositoryError.conflict {
             check("stale deletes report a revision conflict", true)
         }
-        // Everything below needs the reloaded record; report the loss instead of trapping, and keep the migration contracts running.
+        // Everything below needs the reloaded record; report the loss instead of trapping, and keep the later contracts running.
         if let currentSaved = try crudRepository.load().records.first(where: { $0.id == saved.id }) {
             try crudRepository.delete(
                 fileURL: currentSaved.fileURL,
@@ -402,36 +313,6 @@ struct SnippetsTests {
             check("deleting an already removed file reports file not found", false)
         }
 
-        let retryRoot = root.appendingPathComponent("migration-retry", isDirectory: true)
-        let retryBundle = "com.example.retry"
-        let retryLegacySupport = retryRoot.appendingPathComponent("legacy-support", isDirectory: true)
-        let retryJSON = retryLegacySupport
-            .appendingPathComponent(retryBundle, isDirectory: true)
-            .appendingPathComponent("snippets.json")
-        try fm.createDirectory(at: retryJSON.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try Data("not json".utf8).write(to: retryJSON, options: .atomic)
-        let retryRepository = SnippetRepository(
-            bundleIdentifier: retryBundle,
-            applicationSupportRoot: retryRoot.appendingPathComponent("app-support"),
-            legacyMarkdownDirectory: retryRoot.appendingPathComponent("no-markdown"),
-            legacyApplicationSupportRoot: retryLegacySupport)
-        do {
-            _ = try retryRepository.load()
-            check("failed migration remains retryable", false)
-        } catch SnippetRepository.RepositoryError.migrationFailed {
-            check("failed migration remains retryable",
-                !fm.fileExists(atPath: retryRepository.initializationMarkerURL.path))
-        }
-        try JSONEncoder().encode([Snippet(name: "Recovered", text: "Body")])
-            .write(to: retryJSON, options: .atomic)
-        let recoveredMigration = try retryRepository.load()
-        check("a corrected migration completes on the next load",
-            recoveredMigration.records.map(\.snippet.name) == ["Recovered"])
-        let retryContents = try fm.contentsOfDirectory(
-            at: retryRepository.channelDirectory,
-            includingPropertiesForKeys: nil)
-        check("migration staging directories are cleaned up",
-            !retryContents.contains { $0.lastPathComponent.hasPrefix(".Snippets.bootstrap.") })
     }
 
     private static func testRepositoryConcurrency() async throws {
@@ -447,8 +328,7 @@ struct SnippetsTests {
             let iterationRoot = root.appendingPathComponent("init-\(index)", isDirectory: true)
             let repository = SnippetRepository(
                 bundleIdentifier: "com.example.concurrent-init",
-                applicationSupportRoot: iterationRoot,
-                legacyMarkdownDirectory: iterationRoot.appendingPathComponent("missing"))
+                applicationSupportRoot: iterationRoot)
             async let first = Task.detached {
                 Result { try repository.create(Snippet(name: "First", text: "One")) }
             }.value
@@ -466,14 +346,10 @@ struct SnippetsTests {
         let saveRoot = root.appendingPathComponent("save", isDirectory: true)
         let repository = SnippetRepository(
             bundleIdentifier: "com.example.concurrent-save",
-            applicationSupportRoot: saveRoot,
-            legacyMarkdownDirectory: saveRoot.appendingPathComponent("missing"))
+            applicationSupportRoot: saveRoot)
         let secondRepositoryOwner = SnippetRepository(
             bundleIdentifier: "com.example.concurrent-save",
-            applicationSupportRoot: saveRoot,
-            legacyMarkdownDirectory: saveRoot.appendingPathComponent("missing"))
-        let initial = try repository.load()
-        for record in initial.records { try fm.removeItem(at: record.fileURL) }
+            applicationSupportRoot: saveRoot)
         let stored = try repository.create(Snippet(name: "Race", text: "Original"))
         var firstEdit = stored.snippet
         firstEdit.text = "First"
@@ -520,15 +396,11 @@ struct SnippetsTests {
             let directRepository = SnippetRepository(
                 bundleIdentifier: bundleIdentifier,
                 applicationSupportRoot: physicalSupport,
-                legacyMarkdownDirectory: root.appendingPathComponent("missing"),
                 mutationHooks: hooks)
             let symlinkedRepository = SnippetRepository(
                 bundleIdentifier: bundleIdentifier,
                 applicationSupportRoot: symlinkedSupport,
-                legacyMarkdownDirectory: root.appendingPathComponent("missing"),
                 mutationHooks: hooks)
-            let initial = try directRepository.load()
-            for record in initial.records { try fm.removeItem(at: record.fileURL) }
             let symlinkedRecord = try symlinkedRepository.create(
                 Snippet(name: "Alias Race", text: "Original"))
             guard let directRecord = try directRepository.load().records.first(where: {
@@ -574,16 +446,12 @@ struct SnippetsTests {
         let boundaryBundle = "com.example.mutation-boundary"
         let boundaryRepository = SnippetRepository(
             bundleIdentifier: boundaryBundle,
-            applicationSupportRoot: boundaryRoot,
-            legacyMarkdownDirectory: boundaryRoot.appendingPathComponent("missing"))
-        let boundaryInitial = try boundaryRepository.load()
-        for record in boundaryInitial.records { try fm.removeItem(at: record.fileURL) }
+            applicationSupportRoot: boundaryRoot)
         let boundaryRecord = try boundaryRepository.create(
             Snippet(name: "Boundary", text: "Original"))
         let racingRepository = SnippetRepository(
             bundleIdentifier: boundaryBundle,
             applicationSupportRoot: boundaryRoot,
-            legacyMarkdownDirectory: boundaryRoot.appendingPathComponent("missing"),
             mutationHooks: .init(beforeRevalidation: { mutation, fileURL in
                 let text = switch mutation {
                 case .save: "External before save"
@@ -758,15 +626,14 @@ struct SnippetsTests {
         defer { try? fm.removeItem(at: root) }
         let repository = SnippetRepository(
             bundleIdentifier: "com.example.watcher",
-            applicationSupportRoot: root,
-            legacyMarkdownDirectory: root.appendingPathComponent("no-legacy"))
+            applicationSupportRoot: root)
         let store = SnippetsStore(repository: repository)
         var snapshotCount = 0
         store.onSnapshot = { _ in snapshotCount += 1 }
 
         await store.start()
         check("store initialization publishes a ready snapshot",
-            store.state == .ready && store.snippets.count == 3 && snapshotCount == 1)
+            store.state == .ready && store.snippets.isEmpty && snapshotCount == 1)
 
         let externalURL = repository.snippetsDirectory.appendingPathComponent("external.md")
         try SnippetMarkdownSerializer.serialize(Snippet(name: "External", text: "One"))

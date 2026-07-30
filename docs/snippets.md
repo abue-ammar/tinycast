@@ -3,7 +3,7 @@
 Snippets are reusable plain-text templates stored as Markdown. They can be expanded from launcher
 results, or automatically when an enabled keyword is typed in another app.
 
-## Storage, identity, and migration
+## Storage and identity
 
 Each app channel owns a separate library:
 
@@ -20,16 +20,9 @@ frontmatter keeps the same identity. Renaming a file outside Tinycast appears as
 record plus creation of a new one. Saving always updates the existing path; creating snippets with
 the same name uses distinct filename suffixes.
 
-The first successful load initializes the channel once, in this order:
-
-1. Copy Markdown files from `~/.config/tinycast/snippets/` when any exist.
-2. Otherwise import the channel's legacy `snippets.json`.
-3. Otherwise install the starter snippets.
-
-Migration uses a staging directory and leaves legacy sources untouched. Its completion marker lives
-beside `Snippets/`, not inside it, so deleting every snippet creates a persistent empty library rather
-than reinstalling samples. A failed JSON migration writes no marker and is retried on the next load.
-Malformed Markdown is reported per file while valid files remain available.
+The first load creates the folder and nothing else: a new channel starts with an empty library, and
+snippets only ever arrive from the editor or a Raycast import. Malformed Markdown is reported per file
+while valid files stay available.
 
 ## Importing from Raycast
 
@@ -61,13 +54,12 @@ Template body
 ```
 
 `name` is optional when reading and defaults from the filename, and `keyword` is optional. `enabled`
-and `show_in_launcher` default to `true`; `show_confirmation` defaults to `false`. Every optional key
-also defaults when a legacy `snippets.json` is migrated.
+and `show_in_launcher` default to `true`; `show_confirmation` defaults to `false`.
 
 String values must use double quotes. The codec escapes and decodes `\\`, `\"`, `\n`, `\r`, and
 `\t`; unsupported escapes, unquoted strings, duplicate or unknown keys, non-exact delimiters, and
-booleans other than lowercase `true` or `false` are rejected. The legacy keys `showInLauncher` and
-`launcher` are accepted on read, but saves always emit `show_in_launcher`.
+booleans other than lowercase `true` or `false` are rejected. Keys are matched case-insensitively;
+there are no aliases, so a key Tinycast does not know names itself in the error.
 
 Everything after the closing delimiter's line terminator is the body. Leading and trailing blank
 lines, CR/LF choices, Unicode, and later lines containing `---` are preserved exactly when parsing.

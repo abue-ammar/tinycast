@@ -138,8 +138,6 @@ struct SnippetMarkdownSerializer {
         switch key {
         case "name", "keyword", "enabled", "show_in_launcher", "show_confirmation":
             return key
-        case "showinlauncher", "launcher":
-            return "show_in_launcher"
         default:
             return nil
         }

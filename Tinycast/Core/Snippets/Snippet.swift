@@ -1,6 +1,6 @@
 import Foundation
 
-struct Snippet: Codable, Sendable, Hashable {
+struct Snippet: Sendable, Hashable {
     var name: String
     var text: String
     var keyword: String?
@@ -22,20 +22,6 @@ struct Snippet: Codable, Sendable, Hashable {
         self.isEnabled = isEnabled
         self.showInLauncher = showInLauncher
         self.showsConfirmation = showsConfirmation
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case name, text, keyword, isEnabled, showInLauncher, showsConfirmation
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decode(String.self, forKey: .name)
-        text = try container.decode(String.self, forKey: .text)
-        keyword = try container.decodeIfPresent(String.self, forKey: .keyword)
-        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
-        showInLauncher = try container.decodeIfPresent(Bool.self, forKey: .showInLauncher) ?? true
-        showsConfirmation = try container.decodeIfPresent(Bool.self, forKey: .showsConfirmation) ?? false
     }
 }
 

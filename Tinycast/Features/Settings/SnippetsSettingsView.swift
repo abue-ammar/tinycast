@@ -305,7 +305,7 @@ private struct SnippetEditorSheet: View {
                     detail: "Find this snippet in launcher search.")
                 optionToggle(
                     "Show confirmation", isOn: $showsConfirmation,
-                    detail: "Flash a confirmation on screen when it runs.")
+                    detail: "Confirm on screen after this snippet is inserted.")
             }
 
             if let errorMessage {

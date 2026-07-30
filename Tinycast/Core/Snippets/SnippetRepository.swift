@@ -79,7 +79,6 @@ struct SnippetRepository: Sendable {
         )
         case fileNotFound(URL)
         case invalidFileLocation(URL)
-        case migrationFailed(source: URL, message: String)
         case io(fileURL: URL, message: String)
 
         var errorDescription: String? {
@@ -90,8 +89,6 @@ struct SnippetRepository: Sendable {
                 return "The snippet file no longer exists. (\(fileURL.lastPathComponent))"
             case .invalidFileLocation(let fileURL):
                 return "The snippet file is outside this Tinycast channel. (\(fileURL.path))"
-            case .migrationFailed(let source, let message):
-                return "Could not migrate snippets from \(source.path): \(message)"
             case .io(let fileURL, let message):
                 return "Could not access \(fileURL.path): \(message)"
             }
@@ -101,9 +98,6 @@ struct SnippetRepository: Sendable {
     let bundleIdentifier: String
     let channelDirectory: URL
     let snippetsDirectory: URL
-    let initializationMarkerURL: URL
-    let legacyMarkdownDirectory: URL
-    let legacyJSONURL: URL
 
     private let coordinator: Coordinator
     private let mutationHooks: MutationHooks
@@ -114,11 +108,6 @@ struct SnippetRepository: Sendable {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         )[0],
-        legacyMarkdownDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config", isDirectory: true)
-            .appendingPathComponent("tinycast", isDirectory: true)
-            .appendingPathComponent("snippets", isDirectory: true),
-        legacyApplicationSupportRoot: URL? = nil,
         mutationHooks: MutationHooks = MutationHooks()
     ) {
         self.bundleIdentifier = bundleIdentifier
@@ -129,17 +118,12 @@ struct SnippetRepository: Sendable {
         coordinator = Self.coordinatorRegistry.coordinator(for: channelDirectory)
         self.mutationHooks = mutationHooks
         snippetsDirectory = channelDirectory.appendingPathComponent("Snippets", isDirectory: true)
-        initializationMarkerURL = channelDirectory.appendingPathComponent(".snippets-storage-v1")
-        self.legacyMarkdownDirectory = legacyMarkdownDirectory
-        legacyJSONURL = (legacyApplicationSupportRoot ?? applicationSupportRoot)
-            .appendingPathComponent(bundleIdentifier, isDirectory: true)
-            .appendingPathComponent("snippets.json")
     }
 
     func load() throws(RepositoryError) -> Snapshot {
         try coordinator.withLock { () throws(RepositoryError) -> Snapshot in
             try mappedError(at: snippetsDirectory) {
-                try initializeIfNeeded()
+                try ensureSnippetsDirectory()
                 let files = try markdownFiles(in: snippetsDirectory)
                 var records: [StoredSnippet] = []
                 var issues: [Issue] = []
@@ -169,7 +153,7 @@ struct SnippetRepository: Sendable {
     func create(_ snippet: Snippet) throws(RepositoryError) -> StoredSnippet {
         try coordinator.withLock { () throws(RepositoryError) -> StoredSnippet in
             try mappedError(at: snippetsDirectory) {
-                try initializeIfNeeded()
+                try ensureSnippetsDirectory()
                 return try createUnlocked(snippet)
             }
         }
@@ -178,7 +162,7 @@ struct SnippetRepository: Sendable {
     func create(_ snippets: [Snippet]) throws(RepositoryError) -> [StoredSnippet] {
         try coordinator.withLock { () throws(RepositoryError) -> [StoredSnippet] in
             try mappedError(at: snippetsDirectory) {
-                try initializeIfNeeded()
+                try ensureSnippetsDirectory()
                 var created: [StoredSnippet] = []
                 do {
                     for snippet in snippets {
@@ -251,85 +235,10 @@ struct SnippetRepository: Sendable {
         }
     }
 
-    private func initializeIfNeeded() throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: channelDirectory, withIntermediateDirectories: true)
-
-        if fm.fileExists(atPath: initializationMarkerURL.path) {
-            try fm.createDirectory(at: snippetsDirectory, withIntermediateDirectories: true)
-            return
-        }
-
-        if try directoryHasContents(snippetsDirectory) {
-            try writeInitializationMarker()
-            return
-        }
-
-        let stagingDirectory = channelDirectory.appendingPathComponent(
-            ".Snippets.bootstrap.\(UUID().uuidString)",
-            isDirectory: true)
-        try fm.createDirectory(at: stagingDirectory, withIntermediateDirectories: false)
-        defer { try? fm.removeItem(at: stagingDirectory) }
-
-        let legacyMarkdown = try markdownFilesIfPresent(in: legacyMarkdownDirectory)
-        if !legacyMarkdown.isEmpty {
-            for sourceURL in legacyMarkdown {
-                let destinationURL = stagingDirectory.appendingPathComponent(sourceURL.lastPathComponent)
-                do {
-                    try fm.copyItem(at: sourceURL, to: destinationURL)
-                } catch {
-                    throw RepositoryError.migrationFailed(
-                        source: sourceURL,
-                        message: error.localizedDescription)
-                }
-            }
-        } else if fm.fileExists(atPath: legacyJSONURL.path) {
-            do {
-                let data = try Data(contentsOf: legacyJSONURL)
-                let snippets = try JSONDecoder().decode([Snippet].self, from: data)
-                try write(snippets, to: stagingDirectory)
-            } catch {
-                throw RepositoryError.migrationFailed(
-                    source: legacyJSONURL,
-                    message: error.localizedDescription)
-            }
-        } else {
-            try write(Self.samples, to: stagingDirectory)
-        }
-
-        try installStagingDirectory(stagingDirectory)
-        try writeInitializationMarker()
-    }
-
-    private func installStagingDirectory(_ stagingDirectory: URL) throws {
-        let fm = FileManager.default
-        if fm.fileExists(atPath: snippetsDirectory.path) {
-            _ = try fm.replaceItemAt(
-                snippetsDirectory,
-                withItemAt: stagingDirectory,
-                backupItemName: nil,
-                options: [])
-        } else {
-            try fm.moveItem(at: stagingDirectory, to: snippetsDirectory)
-        }
-    }
-
-    private func writeInitializationMarker() throws {
-        try Data("1\n".utf8).write(to: initializationMarkerURL, options: .atomic)
-    }
-
-    private func directoryHasContents(_ directory: URL) throws -> Bool {
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: directory.path) else { return false }
-        return try !fm.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]).isEmpty
-    }
-
-    private func markdownFilesIfPresent(in directory: URL) throws -> [URL] {
-        guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
-        return try markdownFiles(in: directory)
+    /// The library starts empty; this only has to guarantee the folder exists. Creating intermediates covers the channel directory too, and it is a no-op once both are there.
+    private func ensureSnippetsDirectory() throws {
+        try FileManager.default.createDirectory(
+            at: snippetsDirectory, withIntermediateDirectories: true)
     }
 
     private func markdownFiles(in directory: URL) throws -> [URL] {
@@ -347,14 +256,6 @@ struct SnippetRepository: Sendable {
         if (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true { return true }
         return (try? url.resolvingSymlinksInPath()
             .resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
-    }
-
-    private func write(_ snippets: [Snippet], to directory: URL) throws {
-        for snippet in snippets {
-            let fileURL = nextAvailableFileURL(for: snippet.name, in: directory)
-            let content = SnippetMarkdownSerializer.serialize(snippet)
-            try writeNewFileAtomically(Data(content.utf8), to: fileURL)
-        }
     }
 
     private func createUnlocked(_ snippet: Snippet) throws -> StoredSnippet {
@@ -468,17 +369,4 @@ struct SnippetRepository: Sendable {
         }
     }
 
-    private static let samples = [
-        Snippet(
-            name: "Email Sign-off",
-            text: "Best regards,\n\n{cursor}\n{snippet:My Name}",
-            keyword: "!bye"
-        ),
-        Snippet(name: "My Name", text: "Alex"),
-        Snippet(
-            name: "Meeting Notes",
-            text: "## Meeting Notes - {date}\n\n**Attendees:** {argument name=\"Attendees\"}\n\n**Action Items:**\n- {cursor}",
-            keyword: "!notes"
-        ),
-    ]
 }

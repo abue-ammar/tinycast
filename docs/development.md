@@ -110,9 +110,8 @@ are relative — the fixture's alias resolves with `-i` and not without — rath
 
 The snippets harness compiles the real model, codec, template engine, Foundation-only repository,
 keyword/event/lifecycle policies, AppKit delivery primitives and main-actor store. Injected temporary
-roots and named pasteboards cover identity, per-channel isolation, migration, persistent empty
-libraries, malformed files, revision conflicts, watcher rearming, template determinism, delivery
-serialization and pasteboard restoration without touching a real snippets library or clipboard. The
+roots and named pasteboards cover identity, per-channel isolation, malformed files, revision
+conflicts, watcher rearming, template determinism, delivery serialization and pasteboard restoration without touching a real snippets library or clipboard. The
 complete subsystem contract is in [snippets.md](snippets.md).
 
 ## Generated data

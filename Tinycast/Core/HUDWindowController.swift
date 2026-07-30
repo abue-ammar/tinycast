@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Transient, non-interactive confirmation panel: a message flashed near the top of the active screen after something succeeds. Any feature can use it — snippets confirm an insertion, custom commands confirm a run.
+/// Transient, non-interactive confirmation flashed at the bottom of the active screen after something succeeds. Any feature can use it — snippets confirm an insertion, custom commands confirm a run.
 @MainActor
 final class HUDWindowController {
     private let settings: AppSettings
@@ -21,9 +21,9 @@ final class HUDWindowController {
         let panel = panel ?? makePanel()
         let host = NSHostingView(
             rootView: HUDView(message: message, symbol: symbol, tint: tint))
-        // This controller owns the HUD frame; SwiftUI must never resize the panel out from under position(_:).
-        host.sizingOptions = []
+        // The capsule is only as wide as its message, so the panel takes its size from SwiftUI rather than a fixed frame.
         panel.contentView = host
+        panel.setContentSize(host.fittingSize)
         position(panel)
         panel.orderFrontRegardless()
         dismissalTask = Task { @MainActor [weak self, weak panel] in
@@ -36,16 +36,14 @@ final class HUDWindowController {
 
     private func makePanel() -> NSPanel {
         let panel = NSPanel(
-            contentRect: NSRect(
-                x: 0, y: 0,
-                width: Theme.Size.hudWidth,
-                height: Theme.Size.hudHeight),
+            contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        // Liquid Glass carries its own elevation; a second shadow under it reads heavy, as in `PopoverMenu`.
+        panel.hasShadow = false
         panel.level = .floating
         panel.ignoresMouseEvents = true
         panel.hidesOnDeactivate = false
@@ -66,8 +64,8 @@ final class HUDWindowController {
         }
         guard let visible = screen?.visibleFrame else { return }
         panel.setFrameOrigin(NSPoint(
-            x: visible.midX - Theme.Size.hudWidth / 2,
-            y: visible.maxY - Theme.Size.hudEdgeOffset - Theme.Size.hudHeight))
+            x: visible.midX - panel.frame.width / 2,
+            y: visible.minY + Theme.Size.hudEdgeOffset))
     }
 }
 
@@ -77,18 +75,19 @@ private struct HUDView: View {
     let tint: Color
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: symbol)
+                .font(.callout)
                 .foregroundStyle(tint)
             Text(message)
-                .font(.body.weight(.medium))
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.white)
                 .lineLimit(1)
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, Theme.Spacing.xxl)
-        .frame(width: Theme.Size.hudWidth, height: Theme.Size.hudHeight)
-        .background(Color.black.opacity(Theme.Colors.panelDimming))
-        .background(VisualEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.hud, style: .continuous))
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.vertical, Theme.Spacing.md)
+        .frame(maxWidth: Theme.Size.hudMaxWidth, alignment: .leading)
+        .fixedSize()
+        .glassEffect(.regular, in: Capsule())
     }
 }

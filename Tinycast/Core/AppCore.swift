@@ -396,10 +396,9 @@ final class AppCore: ObservableObject {
         alert.messageText = command.name
         alert.informativeText = "Are you sure you want to run this command?"
         alert.alertStyle = .warning
-        let runButton = alert.addButton(withTitle: "Run")
-        // ↵ goes to Cancel, as in `confirmQuitAll`: this command is one ↵ away in the palette.
-        runButton.keyEquivalent = ""
-        alert.addButton(withTitle: "Cancel").keyEquivalent = "\r"
+        // ↵ runs and Esc cancels — AppKit's defaults for the first button and the one titled "Cancel".
+        alert.addButton(withTitle: "Run")
+        alert.addButton(withTitle: "Cancel")
         return alert.runModal() == .alertFirstButtonReturn
     }
 

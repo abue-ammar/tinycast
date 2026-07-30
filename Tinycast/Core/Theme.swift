@@ -30,8 +30,6 @@ enum Theme {
         static let keyCap: CGFloat = 6
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 4
-        /// Confirmation HUD — rounder than a card, matching its pill-like proportions.
-        static let hud: CGFloat = 14
     }
 
     enum Size {
@@ -68,10 +66,9 @@ enum Theme {
         static let editorTextHeight: CGFloat = 120
         /// Field column in the snippet argument prompt. At or below 220 the alert keeps its natural 260pt width, so its buttons sit exactly where every other alert's do.
         static let argumentPromptWidth: CGFloat = 220
-        /// Confirmation HUD, and its inset from the top of the screen.
-        static let hudWidth: CGFloat = 320
-        static let hudHeight: CGFloat = 56
-        static let hudEdgeOffset: CGFloat = 24
+        /// Confirmation HUD: it sizes to its message, up to this ceiling, and sits this far above the bottom of the screen.
+        static let hudMaxWidth: CGFloat = 420
+        static let hudEdgeOffset: CGFloat = 48
     }
 
     enum Duration {
