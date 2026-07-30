@@ -36,6 +36,11 @@ struct SystemCommandFeedback: Sendable {
 
 @MainActor
 enum SystemCommandRunner {
+    private struct ProcessOutput: Sendable {
+        let status: Int32
+        let stdout: String
+        let stderr: String
+    }
 
     /// What a command reports back once it succeeded. Only commands whose effect is otherwise invisible
     /// return one, since Show Desktop or Hide Others are their own confirmation.
@@ -45,6 +50,8 @@ enum SystemCommandRunner {
         switch id {
         case .lockScreen:
             try postKey(keyCode: CGKeyCode(kVK_ANSI_Q), flags: [.maskControl, .maskCommand])
+        case .sleep:
+            try await runProcess("/usr/bin/pmset", arguments: ["sleepnow"])
         }
         return nil
     }
@@ -65,4 +72,38 @@ enum SystemCommandRunner {
         up.post(tap: .cghidEventTap)
     }
 
+    private static func runProcess(_ executable: String, arguments: [String]) async throws {
+        let output = try await process(executable, arguments: arguments)
+        guard output.status == 0 else { throw processFailure(output, executable: executable) }
+    }
+
+    private static func process(_ executable: String, arguments: [String]) async throws -> ProcessOutput {
+        try await Task.detached(priority: .userInitiated) {
+            let process = Process()
+            let stdout = Pipe()
+            let stderr = Pipe()
+            process.executableURL = URL(fileURLWithPath: executable)
+            process.arguments = arguments
+            process.standardInput = FileHandle.nullDevice
+            process.standardOutput = stdout
+            process.standardError = stderr
+            do { try process.run() } catch {
+                throw SystemCommandFailure("\(URL(fileURLWithPath: executable).lastPathComponent) could not start: \(error.localizedDescription)")
+            }
+            process.waitUntilExit()
+            let outData = stdout.fileHandleForReading.readDataToEndOfFile()
+            let errorData = stderr.fileHandleForReading.readDataToEndOfFile()
+            return ProcessOutput(
+                status: process.terminationStatus,
+                stdout: String(data: outData, encoding: .utf8) ?? "",
+                stderr: String(data: errorData, encoding: .utf8) ?? "")
+        }.value
+    }
+
+    private static func processFailure(_ output: ProcessOutput, executable: String) -> SystemCommandFailure {
+        let detail = output.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = URL(fileURLWithPath: executable).lastPathComponent
+        return SystemCommandFailure(
+            detail.isEmpty ? "\(name) exited with status \(output.status)." : detail)
+    }
 }

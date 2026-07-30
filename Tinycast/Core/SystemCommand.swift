@@ -3,6 +3,7 @@ import Foundation
 struct SystemCommand: Identifiable, Hashable, Sendable {
     enum ID: String, CaseIterable, Sendable {
         case lockScreen = "lock-screen"
+        case sleep
     }
 
     enum Confirmation: String, Sendable {
@@ -34,12 +35,14 @@ enum SystemCommandCatalog {
     private static func name(for id: SystemCommand.ID) -> String {
         switch id {
         case .lockScreen: return "Lock Screen"
+        case .sleep: return "Sleep"
         }
     }
 
     private static func symbol(for id: SystemCommand.ID) -> String {
         switch id {
         case .lockScreen: return "lock"
+        case .sleep: return "moon.zzz"
         }
     }
 
