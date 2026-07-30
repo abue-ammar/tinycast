@@ -112,6 +112,12 @@ enum SystemCommandRunner {
             return SystemCommandFeedback(
                 dark ? "Dark Appearance" : "Light Appearance",
                 symbol: dark ? "moon.fill" : "sun.max.fill")
+        case .toggleStageManager:
+            let on = try await toggleDefault(
+                domain: "com.apple.WindowManager", key: "GloballyEnabled")
+            return SystemCommandFeedback(
+                on ? "Stage Manager On" : "Stage Manager Off",
+                symbol: "squares.leading.rectangle")
         }
         return nil
     }
@@ -302,6 +308,43 @@ enum SystemCommandRunner {
                 with: .systemDefined, location: .zero, modifierFlags: [], timestamp: 0,
                 windowNumber: 0, context: nil, subtype: 8, data1: data1, data2: -1)
             event?.cgEvent?.post(tap: .cghidEventTap)
+        }
+    }
+
+    /// Returns the state the toggle landed in, so the caller can name it rather than re-reading the preference.
+    @discardableResult
+    private static func toggleDefault(domain: String, key: String) async throws -> Bool {
+        let read = try await process("/usr/bin/defaults", arguments: ["read", domain, key])
+        let normalized = read.stdout.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let current: Bool
+        if read.status == 0 {
+            guard let parsed = booleanDefault(normalized) else {
+                throw SystemCommandFailure("macOS reported an unexpected value for this setting.")
+            }
+            current = parsed
+        } else if read.stderr.contains("does not exist") {
+            // Unset keys are genuinely off; any other read failure is unknown state and must not be overwritten.
+            current = false
+        } else {
+            throw processFailure(read, executable: "defaults")
+        }
+        let requested = !current
+        try await runProcess(
+            "/usr/bin/defaults",
+            arguments: ["write", domain, key, "-bool", requested ? "true" : "false"])
+        let verify = try await process("/usr/bin/defaults", arguments: ["read", domain, key])
+        let verified = verify.stdout.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard verify.status == 0, booleanDefault(verified) == requested else {
+            throw SystemCommandFailure("macOS did not save the requested setting.")
+        }
+        return requested
+    }
+
+    private static func booleanDefault(_ value: String) -> Bool? {
+        switch value {
+        case "1", "true", "yes": return true
+        case "0", "false", "no": return false
+        default: return nil
         }
     }
 
