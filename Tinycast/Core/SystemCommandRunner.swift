@@ -52,6 +52,8 @@ enum SystemCommandRunner {
             try postKey(keyCode: CGKeyCode(kVK_ANSI_Q), flags: [.maskControl, .maskCommand])
         case .sleep:
             try await runProcess("/usr/bin/pmset", arguments: ["sleepnow"])
+        case .sleepDisplays:
+            try await runProcess("/usr/bin/pmset", arguments: ["displaysleepnow"])
         }
         return nil
     }

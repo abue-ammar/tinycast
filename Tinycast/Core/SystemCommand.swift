@@ -4,6 +4,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
     enum ID: String, CaseIterable, Sendable {
         case lockScreen = "lock-screen"
         case sleep
+        case sleepDisplays = "sleep-displays"
     }
 
     enum Confirmation: String, Sendable {
@@ -36,6 +37,7 @@ enum SystemCommandCatalog {
         switch id {
         case .lockScreen: return "Lock Screen"
         case .sleep: return "Sleep"
+        case .sleepDisplays: return "Sleep Displays"
         }
     }
 
@@ -43,6 +45,7 @@ enum SystemCommandCatalog {
         switch id {
         case .lockScreen: return "lock"
         case .sleep: return "moon.zzz"
+        case .sleepDisplays: return "display"
         }
     }
 
