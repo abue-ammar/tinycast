@@ -88,6 +88,8 @@ enum SystemCommandRunner {
             try changeVolume(by: volumeStep)
         case .volumeDown:
             try changeVolume(by: -volumeStep)
+        case .setVolume:
+            break  // AppCore owns the value-picking dialog and calls setVolume directly.
         }
         return nil
     }

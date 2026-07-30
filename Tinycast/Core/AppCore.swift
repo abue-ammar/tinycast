@@ -408,7 +408,14 @@ final class AppCore: ObservableObject {
             return
         }
         do {
-            let feedback = try await SystemCommandRunner.run(command.id, previousApp: previousApp)
+            var feedback: SystemCommandFeedback?
+            if command.id == .setVolume {
+                let current = try SystemCommandRunner.currentVolume()
+                guard let selected = await modals.pickVolume(current: current) else { return }
+                try SystemCommandRunner.setVolume(selected)
+            } else {
+                feedback = try await SystemCommandRunner.run(command.id, previousApp: previousApp)
+            }
             if Self.showsVolumeFeedback.contains(command.id) {
                 let state = try SystemCommandRunner.outputState()
                 modals.showVolumeHUD(level: state.level, muted: state.muted)
@@ -425,7 +432,7 @@ final class AppCore: ObservableObject {
 
     /// Commands that change the output level or mute state; macOS only draws its own HUD for real media keys, so these get Tinycast's.
     private static let showsVolumeFeedback: Set<SystemCommand.ID> = [
-        .volumeUp, .volumeDown, .toggleMute,
+        .setVolume, .volumeUp, .volumeDown, .toggleMute,
     ]
 
     private static func confirmationTitle(_ command: SystemCommand) -> String {
