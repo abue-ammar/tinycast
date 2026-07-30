@@ -81,6 +81,13 @@ currency name is a constant or function, so `10km` keeps its own path. `Quantity
 carries the same `(` rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
 `2*(3)kg`); adjacency there still means the composite-quantity `+` described above, never a product.
 
+## Modulo
+
+`mod` is a binary operator at `*` / `/` precedence, computed with `truncatingRemainder` so the sign
+follows the dividend (`-10 mod 3` → -1). It is spelled out on purpose: `%` already means percent, and
+`20% - 5` offers no local signal to tell a percent from a remainder, so overloading the symbol would
+silently rewrite expressions like `450 + 20% - 5`.
+
 A query ending in a binary operator keeps the last complete prefix visible while the next operand is
 being typed: `10 +` shows `10`, `10kg + 500g +` shows `10,500 g`, and `$10 +` shows `10.00 USD`
 when currency is enabled. The prefix must itself be valid, so malformed input and incomplete

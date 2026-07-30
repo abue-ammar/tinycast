@@ -277,9 +277,8 @@ private struct Parser {
         switch current {
         case .op(let op) where op == "+" || op == "-": return (op, 10, 11)
         case .op(let op) where op == "*" || op == "/": return (op, Self.mulBP, Self.mulBP + 1)
-        // Reached only when the postfix loop declined "%" as percent; "*"/"/" precedence is the common convention.
-        case .op("%"): return ("%", Self.mulBP, Self.mulBP + 1)
         case .ident("of"): return ("*", Self.mulBP, Self.mulBP + 1)
+        // Spelled-out only: "%" is already percent, and "20% - 5" gives no local signal to tell the two apart.
         case .ident("mod"): return ("%", Self.mulBP, Self.mulBP + 1)
         case .op("^"): return ("^", 30, 30)  // right-associative: 2^3^2 = 512
         default: return nil
@@ -319,8 +318,6 @@ private struct Parser {
                 value = Value(value: fact)
             case .op("%"):
                 guard !value.isPercent else { return nil }
-                // Leave it for peekBinary rather than consuming it as percent.
-                if percentIsModulo() { break loop }
                 value.isPercent = true
             case .ident("deg"):
                 guard !value.isPercent else { return nil }
@@ -331,17 +328,6 @@ private struct Parser {
             pos += 1
         }
         return value
-    }
-
-    /// Only a value can follow modulo, so `of`, an operator, `)` and end-of-input all keep the percent reading.
-    private func percentIsModulo() -> Bool {
-        switch pos + 1 < tokens.count ? tokens[pos + 1] : nil {
-        case .number, .compactNumber, .intLiteral: return true
-        case .op("-"), .op("+"), .op("("): return true
-        case .ident(let name):
-            return CalcParser.constants[name] != nil || CalcParser.functions[name] != nil
-        default: return false
-        }
     }
 
     private mutating func parsePrefix() -> Value? {
