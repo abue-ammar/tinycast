@@ -1,8 +1,8 @@
 # Custom commands
 
 Custom commands let users add a searchable name and a shell command in **Settings → Custom
-Commands**. They appear in the launcher's Commands section, share the normal fuzzy ranking, and run
-from Return, a favorite slot, or an optional global shortcut.
+Commands**. They appear in the launcher's Custom Commands section, share the normal fuzzy ranking,
+and run from Return, a favorite slot, or an optional global shortcut.
 
 ## Ownership and persistence
 
@@ -19,9 +19,9 @@ executable content.
 ## Launcher integration
 
 `AppIndex` owns two slices: applications/System Settings discovered off-main and custom command
-entries supplied on the main actor. It publishes those followed by one alphabetized command slice
-containing both `CommandRegistry` and user commands. This keeps the visible row order identical to
-the flat palette selection while allowing edits to invalidate fuzzy results without rescanning disk.
+entries supplied on the main actor. It publishes the custom command slice ahead of the alphabetized
+`CommandRegistry` built-ins, each its own launcher section. This keeps the visible row order identical
+to the flat palette selection while allowing edits to invalidate fuzzy results without rescanning disk.
 
 The command text is deliberately not searchable. Only the user-facing name enters fuzzy matching.
 

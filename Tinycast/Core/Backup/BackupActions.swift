@@ -8,6 +8,8 @@ enum BackupActions {
         var summary: SettingsBackup.ApplySummary
         var clipboardImported: Int
         var snippetsImported: Int
+        /// Set when the snippet files couldn't be written; the rest of the import still applied.
+        var snippetsError: String?
         var missingImages: Int
     }
 
@@ -61,8 +63,19 @@ enum BackupActions {
                 return try RaycastImport.parse(decrypted).selecting(options)
             }
         }.value
-        // Snippet import is the only throwing step, so it runs first: a failure must not leave settings and clipboard already committed.
-        let snippetsImported = try await AppCore.shared.snippetsStore.importSnippets(result.snippets).count
+        // A snippet write failure is reported in the outcome rather than thrown: it must not abort the settings and clipboard the user also asked for.
+        var snippetsImported = 0
+        var snippetsError: String?
+        if !result.snippets.isEmpty {
+            do {
+                // Starting the (lazily started) store first gets the imported snippets into the launcher immediately.
+                await AppCore.shared.snippetsStore.start()
+                snippetsImported =
+                    try await AppCore.shared.snippetsStore.importSnippets(result.snippets).count
+            } catch {
+                snippetsError = error.localizedDescription
+            }
+        }
         let summary = result.backup.apply()
         let imported =
             result.clipboard.isEmpty
@@ -71,6 +84,7 @@ enum BackupActions {
             summary: summary,
             clipboardImported: imported,
             snippetsImported: snippetsImported,
+            snippetsError: snippetsError,
             missingImages: result.missingImages)
     }
 

@@ -16,6 +16,7 @@ struct SnippetsTests {
         try testRepositoryStorage()
         try await testRepositoryConcurrency()
         try await testDeliveryQueueAndPasteboard()
+        try await testLazyStart()
         try await testStoreWatcher()
         testTemplateExpansion()
         testDynamicPlaceholders()
@@ -616,6 +617,43 @@ struct SnippetsTests {
                 pasteboard: pasteboard) == nil
                 && pasteboard.pasteboardItems?.count == 1
                 && pasteboard.data(forType: .png) == Data([9, 8, 7]))
+    }
+
+    private static func testLazyStart() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent(
+            "tinycast-snippets-lazy-\(UUID().uuidString)",
+            isDirectory: true)
+        defer { try? fm.removeItem(at: root) }
+        let repository = SnippetRepository(
+            bundleIdentifier: "com.example.lazy",
+            applicationSupportRoot: root)
+        let store = SnippetsStore(repository: repository)
+        var snapshotCount = 0
+        store.onSnapshot = { _ in snapshotCount += 1 }
+
+        await store.startIfLibraryExists()
+        check("lazy start leaves an absent library untouched",
+            store.state == .idle && snapshotCount == 0
+                && !fm.fileExists(atPath: repository.snippetsDirectory.path))
+
+        try fm.createDirectory(
+            at: repository.snippetsDirectory, withIntermediateDirectories: true)
+        await store.startIfLibraryExists()
+        check("lazy start ignores a library with no markdown files",
+            store.state == .idle && snapshotCount == 0)
+
+        let seededURL = repository.snippetsDirectory.appendingPathComponent("seeded.md")
+        try SnippetMarkdownSerializer.serialize(Snippet(name: "Seeded", text: "Body"))
+            .write(to: seededURL, atomically: true, encoding: .utf8)
+        await store.startIfLibraryExists()
+        check("lazy start loads a populated library",
+            store.state == .ready && snapshotCount == 1
+                && store.record(id: seededURL.path)?.snippet.text == "Body")
+
+        await store.startIfLibraryExists()
+        check("a started store ignores repeated lazy starts", snapshotCount == 1)
+        store.stop()
     }
 
     private static func testStoreWatcher() async throws {

@@ -24,6 +24,10 @@ The first load creates the folder and nothing else: a new channel starts with an
 snippets only ever arrive from the editor or a Raycast import. Malformed Markdown is reported per file
 while valid files stay available.
 
+The store starts lazily. At launch it arms only when snippet files already exist on disk or keyword
+expansion is consented; otherwise opening **Settings → Snippets** or running a Raycast snippet import
+starts it on demand, so a user who never touches snippets pays for no load and no directory watcher.
+
 ## Importing from Raycast
 
 The encrypted `.rayconfig` flow in **Settings → Backup** can import Raycast's built-in snippets as
@@ -33,7 +37,8 @@ are added in source order without overwriting the existing library. Duplicate na
 filename suffixes as snippets created in Tinycast, and duplicate keywords are preserved.
 
 Imported snippets are enabled and launcher-visible, with their confirmation off. Importing
-never enables automatic keyword expansion.
+never enables automatic keyword expansion. A failure writing the snippet files is reported in the
+import summary without aborting the settings and clipboard categories the user also selected.
 
 ## Markdown format
 

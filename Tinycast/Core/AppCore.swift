@@ -163,9 +163,12 @@ final class AppCore: ObservableObject {
             self?.appIndex.updateSnippets(snapshot.records)
             self?.snippetListener.update(snapshot.records)
         }
-        Task { await snippetsStore.start() }
         if settings.snippetKeywordExpansion {
+            Task { await snippetsStore.start() }
             startSnippetKeywordListener()
+        } else {
+            // Users who never touch snippets shouldn't pay for the store's directory watcher; the Settings pane and the Raycast import start it on demand.
+            Task { await snippetsStore.startIfLibraryExists() }
         }
 
         // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
@@ -472,9 +475,6 @@ final class AppCore: ObservableObject {
             showPalette(mode: .clipboard)
         case .searchEmoji:
             showPalette(mode: .emoji)
-        case .searchSnippets:
-            hidePalette(restoreFocus: false)
-            showSettings(tab: .snippets)
         case .exportSettings:
             hidePalette(restoreFocus: false)
             BackupActions.exportSettings()
@@ -616,6 +616,8 @@ final class AppCore: ObservableObject {
         settings.snippetKeywordExpansion = true
         // The one prompt for this feature, raised from the gesture that asked for it.
         Permissions.ensureAccessibility()
+        // The listener matches against the store's records, so make sure the (lazily started) store is running.
+        Task { await snippetsStore.start() }
         startSnippetKeywordListener()
     }
 

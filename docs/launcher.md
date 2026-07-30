@@ -48,8 +48,9 @@ invalidates the cached order. `rank` resolves the whole learned table for a quer
 ## Custom commands
 
 `CustomCommandStore` supplies user-authored entries to `AppIndex` without joining the off-main
-application scan. Built-in and custom commands are alphabetized into the same final section, so they
-reuse fuzzy ranking, favorites, visibility, keycap rendering and the launcher's flat selection.
+application scan. Custom commands are their own alphabetized section ahead of the built-in Commands
+section, and reuse fuzzy ranking, favorites, visibility, keycap rendering and the launcher's flat
+selection.
 
 Only the display name is indexed. Activation resolves the stable UUID through the store and dispatches
 to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and

@@ -20,12 +20,14 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
 
+    /// User-authored command, as opposed to a `CommandRegistry` built-in.
+    var isCustomCommand: Bool { kind == .command && CustomCommand.id(fromEntryID: id) != nil }
+
     var kindLabel: String {
         switch kind {
         case .application: return "Application"
         case .systemSettings: return "System Setting"
-        case .command:
-            return CustomCommand.id(fromEntryID: id) == nil ? "Command" : "Custom Command"
+        case .command: return isCustomCommand ? "Custom Command" : "Command"
         case .snippet: return "Snippet"
         }
     }
@@ -52,7 +54,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var symbolIconName: String {
         if kind == .snippet { return "text.quote" }
         if let builtIn = CommandRegistry.command(for: self) { return builtIn.sfSymbol }
-        return CustomCommand.id(fromEntryID: id) == nil ? "questionmark" : "terminal"
+        return isCustomCommand ? "terminal" : "questionmark"
     }
 
     var icon: NSImage {
@@ -271,7 +273,7 @@ final class AppIndex: ObservableObject {
                     id: url.path, name: name, url: url, bundleID: bundleID,
                     kind: .application))
         }
-        // `publishEntries` appends snippets and commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
+        // `publishEntries` appends snippets, custom commands and built-in commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
@@ -279,10 +281,8 @@ final class AppIndex: ObservableObject {
     }
 
     private func publishEntries() {
-        let commands = (CommandRegistry.all + customCommandEntries).sorted {
-            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-        }
-        let updated = discoveredEntries + snippetEntries + commands
+        // Each slice is already alphabetical; the slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
+        let updated = discoveredEntries + snippetEntries + customCommandEntries + CommandRegistry.all
         guard updated != apps else { return }
         apps = updated
         matchCache = nil

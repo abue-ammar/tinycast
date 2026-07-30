@@ -31,6 +31,8 @@ struct SnippetsSettingsView: View {
                 },
                 secondaryButton: .cancel())
         }
+        // The store starts lazily; opening this pane is one of the gestures that arms it (and creates the folder "Open Folder" reveals).
+        .task { await snippetsStore.start() }
     }
 
     private var keywordExpansionCard: some View {

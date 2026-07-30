@@ -45,7 +45,9 @@ publisher/coordinator: initialization is cheap, repository work runs off-main, a
 generation-ordered watcher reloads external edits and rearms after directory replacement. A stored
 snippet is identified by its source file path, so editing frontmatter never invalidates selection or
 launcher identity. `AppCore` projects every successful store snapshot into `AppIndex` and
-`SnippetKeywordListener`; neither consumer reads or parses snippet files independently.
+`SnippetKeywordListener`; neither consumer reads or parses snippet files independently. The store
+starts lazily — at launch only when snippet files exist or keyword expansion is consented, otherwise
+on demand from the Settings pane or a Raycast import — so an untouched feature costs no watcher.
 
 Keyword expansion is an explicit opt-in and the consent flag is excluded from settings backups. When
 consent is restored at startup, the listener waits until Accessibility is granted — the only

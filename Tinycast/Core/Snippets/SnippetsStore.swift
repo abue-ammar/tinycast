@@ -46,6 +46,22 @@ final class SnippetsStore: ObservableObject {
         await reload(showLoadingState: true)
     }
 
+    /// Launch-time gate: starts only when snippet files are already on disk, so a user who never touches snippets never pays for the load or the directory watcher. The probe neither creates the directory nor validates the files — `start()` does the real work.
+    func startIfLibraryExists() async {
+        guard !isStarted else { return }
+        let directory = snippetsDirectory
+        let hasSnippetFiles = await Task.detached(priority: .utility) {
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles])
+            return files?.contains { $0.pathExtension.lowercased() == "md" } ?? false
+        }.value
+        // Re-check: an on-demand start (Settings pane, import) may have landed during the probe.
+        guard hasSnippetFiles, !isStarted else { return }
+        await start()
+    }
+
     func stop() {
         isStarted = false
         generation &+= 1

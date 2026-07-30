@@ -162,7 +162,7 @@ struct OnboardingView: View {
                     statusBadge
                 }
             }
-            caption("Optional — you can enable this later in Settings › Clipboard.")
+            caption("Optional — you can enable this later in Settings › Permissions.")
         }
     }
 
