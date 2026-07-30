@@ -153,6 +153,8 @@ enum SystemCommandRunner {
             return SystemCommandFeedback(
                 shown ? "Hidden Files Shown" : "Hidden Files Hidden",
                 symbol: shown ? "eye" : "eye.slash")
+        case .hideOtherApps:
+            hideOtherApps(except: previousApp)
         }
         return nil
     }
@@ -344,6 +346,20 @@ enum SystemCommandRunner {
                 windowNumber: 0, context: nil, subtype: 8, data1: data1, data2: -1)
             event?.cgEvent?.post(tap: .cghidEventTap)
         }
+    }
+
+    private static func hideOtherApps(except previousApp: NSRunningApplication?) {
+        let ownPID = NSRunningApplication.current.processIdentifier
+        let keptPID = previousApp?.processIdentifier
+        for app in NSWorkspace.shared.runningApplications
+        where app.activationPolicy == .regular
+            && app.processIdentifier != ownPID
+            && app.processIdentifier != keptPID
+        {
+            app.hide()
+        }
+        previousApp?.unhide()
+        previousApp?.activate()
     }
 
     @discardableResult

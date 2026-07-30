@@ -28,6 +28,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case emptyTrash = "empty-trash"
         case ejectAllDisks = "eject-all-disks"
         case toggleHiddenFiles = "toggle-hidden-files"
+        case hideOtherApps = "hide-all-apps-except-frontmost"
     }
 
     enum Confirmation: String, Sendable {
@@ -84,6 +85,7 @@ enum SystemCommandCatalog {
         case .emptyTrash: return "Empty Trash"
         case .ejectAllDisks: return "Eject All Disks"
         case .toggleHiddenFiles: return "Toggle Hidden Files"
+        case .hideOtherApps: return "Hide All Apps Except Frontmost"
         }
     }
 
@@ -111,6 +113,7 @@ enum SystemCommandCatalog {
         case .emptyTrash: return "trash.slash"
         case .ejectAllDisks: return "eject"
         case .toggleHiddenFiles: return "eye.slash"
+        case .hideOtherApps: return "eye.slash.circle"
         }
     }
 
