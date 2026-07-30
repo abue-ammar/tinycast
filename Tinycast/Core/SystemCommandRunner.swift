@@ -42,6 +42,8 @@ enum SystemCommandRunner {
         let stderr: String
     }
 
+    private static let volumeStep: Float32 = 1 / 16
+
     /// What a command reports back once it succeeded. Only commands whose effect is otherwise invisible
     /// return one, since Show Desktop or Hide Others are their own confirmation.
     static func run(_ id: SystemCommand.ID, previousApp: NSRunningApplication?) async throws
@@ -82,6 +84,8 @@ enum SystemCommandRunner {
             try postMediaKey(18)
         case .toggleMute:
             try toggleMute()
+        case .volumeUp:
+            try changeVolume(by: volumeStep)
         }
         return nil
     }
@@ -196,6 +200,10 @@ enum SystemCommandRunner {
             throw SystemCommandFailure("No audio output device is available.")
         }
         return device
+    }
+
+    private static func changeVolume(by delta: Float32) throws {
+        try setVolume(try currentVolume() + delta)
     }
 
     private static func toggleMute() throws {
