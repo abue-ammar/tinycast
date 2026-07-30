@@ -19,6 +19,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case volume0 = "volume-0"
         case volume25 = "volume-25"
         case volume50 = "volume-50"
+        case volume75 = "volume-75"
     }
 
     enum Confirmation: String, Sendable {
@@ -66,6 +67,7 @@ enum SystemCommandCatalog {
         case .volume0: return "Set Volume to 0%"
         case .volume25: return "Set Volume to 25%"
         case .volume50: return "Set Volume to 50%"
+        case .volume75: return "Set Volume to 75%"
         }
     }
 
@@ -84,7 +86,7 @@ enum SystemCommandCatalog {
         case .toggleMute: return "speaker.slash"
         case .volumeUp: return "speaker.plus"
         case .volumeDown: return "speaker.minus"
-        case .setVolume, .volume0, .volume25, .volume50:
+        case .setVolume, .volume0, .volume25, .volume50, .volume75:
             return "speaker.wave.2"
         }
     }
