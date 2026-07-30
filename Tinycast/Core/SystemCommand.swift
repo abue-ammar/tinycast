@@ -11,6 +11,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case showScreenSaver = "show-screen-saver"
         case playPause = "play-pause"
         case nextTrack = "next-track"
+        case previousTrack = "previous-track"
     }
 
     enum Confirmation: String, Sendable {
@@ -50,6 +51,7 @@ enum SystemCommandCatalog {
         case .showScreenSaver: return "Show Screen Saver"
         case .playPause: return "Play / Pause"
         case .nextTrack: return "Next Track"
+        case .previousTrack: return "Previous Track"
         }
     }
 
@@ -64,6 +66,7 @@ enum SystemCommandCatalog {
         case .showScreenSaver: return "rectangle.inset.filled"
         case .playPause: return "playpause"
         case .nextTrack: return "forward.end"
+        case .previousTrack: return "backward.end"
         }
     }
 

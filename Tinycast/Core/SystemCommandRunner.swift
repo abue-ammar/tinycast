@@ -78,6 +78,8 @@ enum SystemCommandRunner {
             try postMediaKey(16)
         case .nextTrack:
             try postMediaKey(17)
+        case .previousTrack:
+            try postMediaKey(18)
         }
         return nil
     }
