@@ -104,6 +104,14 @@ enum SystemCommandRunner {
             try await runProcess(
                 "/System/Applications/Mission Control.app/Contents/MacOS/Mission Control",
                 arguments: ["1"])
+        case .toggleAppearance:
+            // The script returns the resulting state, so the confirmation can name it instead of guessing.
+            let result = try runAppleScript(
+                "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode")
+            let dark = result?.booleanValue ?? false
+            return SystemCommandFeedback(
+                dark ? "Dark Appearance" : "Light Appearance",
+                symbol: dark ? "moon.fill" : "sun.max.fill")
         }
         return nil
     }
