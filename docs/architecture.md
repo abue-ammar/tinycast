@@ -46,7 +46,8 @@ generation-ordered watcher reloads external edits and rearms after directory rep
 snippet is identified by its source file path, so editing frontmatter never invalidates selection or
 launcher identity. `AppCore` projects every successful store snapshot into `AppIndex` and
 `SnippetKeywordListener`; neither consumer reads or parses snippet files independently. The store
-starts lazily — at launch only when snippet files exist or keyword expansion is consented, otherwise
+starts lazily — at launch only when the feature is enabled and snippet files exist or keyword
+expansion is consented, otherwise
 on demand from the Settings pane or a Raycast import — so an untouched feature costs no watcher.
 
 Keyword expansion is an explicit opt-in and the consent flag is excluded from settings backups. When

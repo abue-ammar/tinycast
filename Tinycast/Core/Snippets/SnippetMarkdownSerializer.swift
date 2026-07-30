@@ -25,7 +25,6 @@ struct SnippetMarkdownSerializer {
         var name: String?
         var keyword: String?
         var isEnabled = true
-        var showInLauncher = true
         var showsConfirmation = false
         var seenKeys = Set<String>()
 
@@ -56,8 +55,6 @@ struct SnippetMarkdownSerializer {
                 keyword = try decodeScalar(rawValue, fileURL: fileURL, line: lineNumber)
             case "enabled":
                 isEnabled = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
-            case "show_in_launcher":
-                showInLauncher = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
             case "show_confirmation":
                 showsConfirmation = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
             default:
@@ -71,7 +68,6 @@ struct SnippetMarkdownSerializer {
             text: String(content[bodyStart...]),
             keyword: keyword,
             isEnabled: isEnabled,
-            showInLauncher: showInLauncher,
             showsConfirmation: showsConfirmation
         )
     }
@@ -85,7 +81,6 @@ struct SnippetMarkdownSerializer {
             lines.append("keyword: \(encodeScalar(keyword))")
         }
         lines.append("enabled: \(snippet.isEnabled)")
-        lines.append("show_in_launcher: \(snippet.showInLauncher)")
         lines.append("show_confirmation: \(snippet.showsConfirmation)")
         lines.append("---")
         return lines.joined(separator: "\n") + "\n" + snippet.text
@@ -136,7 +131,7 @@ struct SnippetMarkdownSerializer {
     private static func canonicalKey(for rawKey: String) -> String? {
         let key = rawKey.lowercased()
         switch key {
-        case "name", "keyword", "enabled", "show_in_launcher", "show_confirmation":
+        case "name", "keyword", "enabled", "show_confirmation":
             return key
         default:
             return nil

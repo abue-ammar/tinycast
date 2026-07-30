@@ -5,7 +5,6 @@ struct Snippet: Sendable, Hashable {
     var text: String
     var keyword: String?
     var isEnabled: Bool
-    var showInLauncher: Bool
     var showsConfirmation: Bool
 
     init(
@@ -13,14 +12,12 @@ struct Snippet: Sendable, Hashable {
         text: String,
         keyword: String? = nil,
         isEnabled: Bool = true,
-        showInLauncher: Bool = true,
         showsConfirmation: Bool = false
     ) {
         self.name = name
         self.text = text
         self.keyword = keyword
         self.isEnabled = isEnabled
-        self.showInLauncher = showInLauncher
         self.showsConfirmation = showsConfirmation
     }
 }

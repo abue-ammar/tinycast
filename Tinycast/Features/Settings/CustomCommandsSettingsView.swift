@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CustomCommandsSettingsView: View {
     @EnvironmentObject private var store: CustomCommandStore
+    @ObservedObject private var settings = AppCore.shared.settings
     @State private var editor: EditorTarget?
     @State private var pendingDeletion: CustomCommand?
 
@@ -10,12 +11,15 @@ struct CustomCommandsSettingsView: View {
             title: "Custom Commands",
             subtitle: "Run your own shell commands from the launcher or a global shortcut."
         ) {
-            SettingsCallout(
-                title: "Commands run with your user account.",
-                message: "Tinycast runs them in /bin/zsh, so use full executable paths.",
+            FeatureSwitchCard(
+                header: "Custom Commands",
+                enableTitle: "Enable custom commands",
+                enableSubtitle:
+                    "Commands run with your user account in /bin/zsh, so use full executable paths.",
                 systemImage: "terminal",
-                tint: .green
-            )
+                launcherSubtitle: "Find your commands in launcher search.",
+                isEnabled: $settings.customCommandsEnabled,
+                showsInLauncher: $settings.customCommandsShowInLauncher)
 
             SettingsCard(header: "Commands") {
                 if store.commands.isEmpty {
@@ -49,6 +53,9 @@ struct CustomCommandsSettingsView: View {
                         .controlSize(.small)
                 }
             }
+            // Same dim as ShortcutsSettingsView's hidden-category card; the switch above stays live.
+            .opacity(settings.customCommandsEnabled ? 1 : 0.45)
+            .disabled(!settings.customCommandsEnabled)
         }
         .sheet(item: $editor) { target in
             CustomCommandEditorSheet(command: target.command)

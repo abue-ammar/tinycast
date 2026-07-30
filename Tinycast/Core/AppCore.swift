@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 enum PaletteMode: String, CaseIterable, Identifiable {
@@ -115,6 +116,7 @@ final class AppCore: ObservableObject {
     private let auxWindows = AuxWindowController()
     /// Guards only the confirmation modal, not execution — two deliberate runs of an unguarded command still run twice.
     private var isConfirmingCommand = false
+    private var cancellables = Set<AnyCancellable>()
 
     private init() {
         let launcherRanking = LauncherRankingStore()
@@ -143,10 +145,10 @@ final class AppCore: ObservableObject {
         clipboardManager.start()
 
         appIndex.start(settings: settings)
-        customCommands.onChange = { [weak self] commands in
-            self?.appIndex.setCustomCommands(commands)
+        customCommands.onChange = { [weak self] _ in
+            self?.applyCustomCommandsPresence()
         }
-        appIndex.setCustomCommands(customCommands.commands)
+        applyCustomCommandsPresence()
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
         currencyRates.start()
@@ -160,16 +162,47 @@ final class AppCore: ObservableObject {
         hyperKeyTap.start(settings: settings)
 
         snippetsStore.onSnapshot = { [weak self] snapshot in
-            self?.appIndex.updateSnippets(snapshot.records)
-            self?.snippetListener.update(snapshot.records)
+            guard let self else { return }
+            self.applySnippetsLauncherPresence()
+            self.snippetListener.update(snapshot.records)
         }
-        if settings.snippetKeywordExpansion {
-            Task { await snippetsStore.start() }
-            startSnippetKeywordListener()
-        } else {
-            // Users who never touch snippets shouldn't pay for the store's directory watcher; the Settings pane and the Raycast import start it on demand.
-            Task { await snippetsStore.startIfLibraryExists() }
+        if settings.snippetsEnabled {
+            if settings.snippetKeywordExpansion {
+                Task { await snippetsStore.start() }
+                startSnippetKeywordListener()
+            } else {
+                // Users who never touch snippets shouldn't pay for the store's directory watcher; the Settings pane and the Raycast import start it on demand.
+                Task { await snippetsStore.startIfLibraryExists() }
+            }
         }
+
+        // @Published emits synchronously before the property is written (as in `AppIndex.start`), so every re-projection defers to a task that reads the settled value.
+        for publisher in [settings.$customCommandsEnabled, settings.$customCommandsShowInLauncher] {
+            publisher.dropFirst()
+                .sink { [weak self] _ in
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        Task { self.applyCustomCommandsPresence() }
+                    }
+                }
+                .store(in: &cancellables)
+        }
+        settings.$snippetsEnabled.dropFirst()
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    Task { self.applySnippetsEnabled() }
+                }
+            }
+            .store(in: &cancellables)
+        settings.$snippetsShowInLauncher.dropFirst()
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    Task { self.applySnippetsLauncherPresence() }
+                }
+            }
+            .store(in: &cancellables)
 
         // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
         if !OnboardingState.hasOnboarded {
@@ -184,6 +217,33 @@ final class AppCore: ObservableObject {
         snippetTextInjector.prepareForTermination()
         snippetListener.stop()
         snippetsStore.stop()
+    }
+
+    // MARK: - Feature switches
+
+    private func applyCustomCommandsPresence() {
+        let visible = settings.customCommandsEnabled && settings.customCommandsShowInLauncher
+        appIndex.setCustomCommands(visible ? customCommands.commands : [])
+    }
+
+    private func applySnippetsLauncherPresence() {
+        let visible = settings.snippetsEnabled && settings.snippetsShowInLauncher
+        appIndex.updateSnippets(visible ? snippetsStore.snippets : [])
+    }
+
+    /// Reconciles everything the snippets switch owns. Off tears down in dependency order; hotkey-free, so nothing else needs unwinding.
+    private func applySnippetsEnabled() {
+        if settings.snippetsEnabled {
+            Task { await snippetsStore.start() }
+            // A stop/start round-trip over an unchanged library publishes no snapshot, so re-project the records the store already holds.
+            applySnippetsLauncherPresence()
+            if settings.snippetKeywordExpansion { startSnippetKeywordListener() }
+            return
+        }
+        snippetListener.stop()
+        snippetTextInjector.cancelAutomaticExpansion()
+        snippetsStore.stop()
+        appIndex.updateSnippets([])
     }
 
     // MARK: - Palette control
@@ -358,6 +418,8 @@ final class AppCore: ObservableObject {
 
     /// The one funnel for both palette activation and the command's global hotkey, so the confirmation gate can't be bypassed by either.
     func runCustomCommand(id: UUID) {
+        // Also the feature switch: with custom commands off a still-registered global hotkey must not run anything.
+        guard settings.customCommandsEnabled else { return }
         guard let command = customCommands.command(id: id) else { return }
         // Hide before confirming: the palette is a floating panel and would sit above the alert.
         if windowController.isVisible { hidePalette(restoreFocus: false) }

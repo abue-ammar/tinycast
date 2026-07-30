@@ -68,8 +68,10 @@ enum BackupActions {
         var snippetsError: String?
         if !result.snippets.isEmpty {
             do {
-                // Starting the (lazily started) store first gets the imported snippets into the launcher immediately.
-                await AppCore.shared.snippetsStore.start()
+                // Starting the (lazily started) store first gets the imported snippets into the launcher immediately. With the feature switched off the files are still written and appear once it's re-enabled.
+                if AppCore.shared.settings.snippetsEnabled {
+                    await AppCore.shared.snippetsStore.start()
+                }
                 snippetsImported =
                     try await AppCore.shared.snippetsStore.importSnippets(result.snippets).count
             } catch {

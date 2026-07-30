@@ -205,7 +205,7 @@ final class AppIndex: ObservableObject {
 
     func updateSnippets(_ records: [StoredSnippet]) {
         let entries = records
-            .filter { $0.snippet.isEnabled && $0.snippet.showInLauncher }
+            .filter { $0.snippet.isEnabled }
             .map { record in
                 AppEntry(
                     id: "snippet:\(record.id)",

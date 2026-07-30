@@ -62,7 +62,7 @@ struct SnippetsTests {
         check("Raycast import trims keywords and normalizes blanks",
             imported[0].keyword == "!email" && imported[2].keyword == nil)
         check("Raycast import uses safe Tinycast defaults",
-            imported.allSatisfy { $0.isEnabled && $0.showInLauncher && !$0.showsConfirmation })
+            imported.allSatisfy { $0.isEnabled && !$0.showsConfirmation })
     }
 
     private static func testMarkdownCodec() throws {
@@ -72,14 +72,13 @@ struct SnippetsTests {
             text: "\nFirst body line\n\nLast body line\r\n",
             keyword: "!\"\\\n\t",
             isEnabled: false,
-            showInLauncher: true,
             showsConfirmation: true)
         let serialized = SnippetMarkdownSerializer.serialize(snippet)
         let parsed = try SnippetMarkdownSerializer.parse(content: serialized, fileURL: fileURL)
 
         check("Markdown codec round-trips escaped quoted scalars", parsed == snippet)
         check("serializer emits canonical key order", serialized.hasPrefix(
-            "---\nname: \"Quote \\\" slash \\\\ line\\nreturn\\rtab\\t雪\"\nkeyword: \"!\\\"\\\\\\n\\t\"\nenabled: false\nshow_in_launcher: true\nshow_confirmation: true\n---\n"))
+            "---\nname: \"Quote \\\" slash \\\\ line\\nreturn\\rtab\\t雪\"\nkeyword: \"!\\\"\\\\\\n\\t\"\nenabled: false\nshow_confirmation: true\n---\n"))
         check("Markdown codec preserves leading, blank, CRLF, and trailing body boundaries", parsed.text == snippet.text)
 
         let injection = Snippet(name: "Safe\"\nenabled: false", text: "Body")
@@ -93,7 +92,7 @@ struct SnippetsTests {
         let crlfInjection = Snippet(
             name: "Safe\r\nenabled: false",
             text: "Body",
-            keyword: "!key\r\nshow_in_launcher: false")
+            keyword: "!key\r\nshow_confirmation: false")
         let crlfInjectionSource = SnippetMarkdownSerializer.serialize(crlfInjection)
         let parsedCRLFInjection = try SnippetMarkdownSerializer.parse(
             content: crlfInjectionSource,
@@ -106,9 +105,9 @@ struct SnippetsTests {
             content: "---\r\nname: \"Safe\r\nenabled: false\"\r\n---\r\nBody",
             fileURL: fileURL)
 
-        let crlf = "---\r\nname: \"CRLF\"\r\nshow_in_launcher: false\r\n---\r\n\r\nBody\r\n"
+        let crlf = "---\r\nname: \"CRLF\"\r\nshow_confirmation: true\r\n---\r\n\r\nBody\r\n"
         let crlfParsed = try SnippetMarkdownSerializer.parse(content: crlf, fileURL: fileURL)
-        check("CRLF frontmatter parses its keys", crlfParsed.showInLauncher == false)
+        check("CRLF frontmatter parses its keys", crlfParsed.showsConfirmation)
         check("CRLF frontmatter consumes only its structural boundary", crlfParsed.text == "\r\nBody\r\n")
         let missingHUD = try SnippetMarkdownSerializer.parse(
             content: "---\nname: \"No HUD\"\n---\nBody",
@@ -116,7 +115,7 @@ struct SnippetsTests {
         check("missing show_confirmation defaults false", !missingHUD.showsConfirmation)
         expectParseError("show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n", fileURL: fileURL)
 
-        let delimiterBody = "---\nname: \"Delimiter Body\"\nenabled: true\nshow_in_launcher: true\n---\nFirst\n---\nLast\n"
+        let delimiterBody = "---\nname: \"Delimiter Body\"\nenabled: true\n---\nFirst\n---\nLast\n"
         let delimiterParsed = try SnippetMarkdownSerializer.parse(
             content: delimiterBody,
             fileURL: fileURL)
@@ -146,8 +145,9 @@ struct SnippetsTests {
         expectParseError("duplicate keys are rejected", content: "---\nname: \"A\"\nname: \"B\"\n---\n", fileURL: fileURL)
         expectParseError("the removed showInLauncher alias is rejected", content: "---\nshowInLauncher: false\n---\n", fileURL: fileURL)
         expectParseError("unknown frontmatter key is rejected", content: "---\nunknown: \"value\"\n---\n", fileURL: fileURL)
-        // Both keys were removed or renamed; a file still carrying one is reported, not silently half-loaded.
+        // These keys were removed or renamed; a file still carrying one is reported, not silently half-loaded.
         expectParseError("the removed category key is rejected", content: "---\ncategory: \"Work\"\n---\n", fileURL: fileURL)
+        expectParseError("the removed show_in_launcher key is rejected", content: "---\nshow_in_launcher: true\n---\n", fileURL: fileURL)
         expectParseError("the renamed show_hud key is rejected", content: "---\nshow_hud: true\n---\n", fileURL: fileURL)
     }
 

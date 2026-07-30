@@ -3,6 +3,7 @@ import SwiftUI
 struct SnippetsSettingsView: View {
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var snippetsStore: SnippetsStore
+    @ObservedObject private var settings = AppCore.shared.settings
     @ObservedObject private var keywordListener = AppCore.shared.snippetListener
 
     @State private var editor: EditorTarget?
@@ -14,9 +15,23 @@ struct SnippetsSettingsView: View {
             subtitle:
                 "Create reusable text templates and expand them from the launcher or with a keyword."
         ) {
-            keywordExpansionCard
-            snippetsCard
-            libraryNotices
+            FeatureSwitchCard(
+                header: "Snippets",
+                enableTitle: "Enable snippets",
+                enableSubtitle: "Reusable Markdown templates, expanded where you're typing.",
+                systemImage: "curlybraces",
+                launcherSubtitle: "Find your snippets in launcher search.",
+                isEnabled: $settings.snippetsEnabled,
+                showsInLauncher: $settings.snippetsShowInLauncher)
+
+            Group {
+                keywordExpansionCard
+                snippetsCard
+                libraryNotices
+            }
+            // Same dim as ShortcutsSettingsView's hidden-category card; the switch above stays live.
+            .opacity(settings.snippetsEnabled ? 1 : 0.45)
+            .disabled(!settings.snippetsEnabled)
         }
         .sheet(item: $editor) { target in
             SnippetEditorSheet(record: target.record)
@@ -31,8 +46,11 @@ struct SnippetsSettingsView: View {
                 },
                 secondaryButton: .cancel())
         }
-        // The store starts lazily; opening this pane is one of the gestures that arms it (and creates the folder "Open Folder" reveals).
-        .task { await snippetsStore.start() }
+        // The store starts lazily; opening this pane is one of the gestures that arms it (and creates the folder "Open Folder" reveals). With the feature off, AppCore's switch sink starts it instead.
+        .task {
+            guard settings.snippetsEnabled else { return }
+            await snippetsStore.start()
+        }
     }
 
     private var keywordExpansionCard: some View {
@@ -268,7 +286,6 @@ private struct SnippetEditorSheet: View {
     @State private var text: String
     @State private var selection: TextSelection?
     @State private var isEnabled: Bool
-    @State private var showInLauncher: Bool
     @State private var showsConfirmation: Bool
     @State private var errorMessage: String?
     @State private var isSaving = false
@@ -280,7 +297,6 @@ private struct SnippetEditorSheet: View {
         _keyword = State(initialValue: snippet?.keyword ?? "")
         _text = State(initialValue: snippet?.text ?? "")
         _isEnabled = State(initialValue: snippet?.isEnabled ?? true)
-        _showInLauncher = State(initialValue: snippet?.showInLauncher ?? true)
         _showsConfirmation = State(initialValue: snippet?.showsConfirmation ?? false)
     }
 
@@ -302,9 +318,6 @@ private struct SnippetEditorSheet: View {
                 optionToggle(
                     "Enabled", isOn: $isEnabled,
                     detail: "Disabled snippets cannot be expanded.")
-                optionToggle(
-                    "Show in Launcher", isOn: $showInLauncher,
-                    detail: "Find this snippet in launcher search.")
                 optionToggle(
                     "Show confirmation", isOn: $showsConfirmation,
                     detail: "Confirm on screen after this snippet is inserted.")
@@ -437,7 +450,6 @@ private struct SnippetEditorSheet: View {
             text: text,
             keyword: trimmedOrNil(keyword),
             isEnabled: isEnabled,
-            showInLauncher: showInLauncher,
             showsConfirmation: showsConfirmation)
     }
 

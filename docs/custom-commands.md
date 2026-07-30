@@ -4,6 +4,12 @@ Custom commands let users add a searchable name and a shell command in **Setting
 Commands**. They appear in the launcher's Custom Commands section, share the normal fuzzy ranking,
 and run from Return, a favorite slot, or an optional global shortcut.
 
+The pane carries the feature switch and its launcher-visibility companion, both in `AppSettings` and
+in settings backups. Switching the feature off empties the launcher section and makes
+`AppCore.runCustomCommand` — the single funnel for palette activation and global shortcuts — refuse to
+run anything; Carbon registrations and their bindings stay put, so re-enabling restores every shortcut
+without re-registering. "Show in launcher" only hides the section; shortcuts keep working.
+
 ## Ownership and persistence
 
 `CustomCommandStore` is owned by `AppCore` and persists the ordered command array as JSON in

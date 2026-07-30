@@ -70,6 +70,48 @@ struct SettingsCard<Content: View>: View {
     }
 }
 
+/// The identical top card of a feature pane (Custom Commands, Snippets): the master switch, then its launcher-visibility companion, which locks while the feature is off.
+struct FeatureSwitchCard: View {
+    let header: String
+    let enableTitle: String
+    let enableSubtitle: String
+    let systemImage: String
+    let launcherSubtitle: String
+    @Binding var isEnabled: Bool
+    @Binding var showsInLauncher: Bool
+
+    var body: some View {
+        SettingsCard(header: header) {
+            SettingsRow(
+                title: enableTitle,
+                subtitle: enableSubtitle,
+                systemImage: systemImage,
+                tint: .green
+            ) {
+                Toggle(enableTitle, isOn: $isEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .accessibilityLabel(enableTitle)
+            }
+            SettingsDivider()
+            SettingsRow(
+                title: "Show in launcher",
+                subtitle: launcherSubtitle,
+                systemImage: "magnifyingglass",
+                tint: .green
+            ) {
+                Toggle("Show in launcher", isOn: $showsInLauncher)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .accessibilityLabel("Show in launcher")
+            }
+            // Same dim as ShortcutsSettingsView's hidden-category card.
+            .opacity(isEnabled ? 1 : 0.45)
+            .disabled(!isEnabled)
+        }
+    }
+}
+
 /// Inset divider between rows inside a `SettingsCard`, aligned under the row's title (past the icon).
 struct SettingsDivider: View {
     var body: some View {

@@ -41,6 +41,10 @@ final class AppSettings: ObservableObject {
         static let searchScopes = "launcherSearchScopes"
         static let openOnCursorScreen = "openOnCursorScreen"
         static let snippetKeywordExpansion = "snippetKeywordExpansion"
+        static let customCommandsEnabled = "customCommandsEnabled"
+        static let customCommandsShowInLauncher = "customCommandsShowInLauncher"
+        static let snippetsEnabled = "snippetsEnabled"
+        static let snippetsShowInLauncher = "snippetsShowInLauncher"
     }
 
     /// Folders (and individual `.app` bundles) `AppIndex` scans, in scan order. Editing this re-indexes — `AppIndex.start(settings:)` observes it.
@@ -110,6 +114,26 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(snippetKeywordExpansion, forKey: Key.snippetKeywordExpansion) }
     }
 
+    // Feature switches: off means fully off — no launcher entries, no shortcuts, no expansion, no store. `AppCore` observes all four and re-projects.
+    @Published var customCommandsEnabled: Bool {
+        didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled) }
+    }
+
+    /// With the feature on, controls only whether its launcher section appears.
+    @Published var customCommandsShowInLauncher: Bool {
+        didSet {
+            defaults.set(customCommandsShowInLauncher, forKey: Key.customCommandsShowInLauncher)
+        }
+    }
+
+    @Published var snippetsEnabled: Bool {
+        didSet { defaults.set(snippetsEnabled, forKey: Key.snippetsEnabled) }
+    }
+
+    @Published var snippetsShowInLauncher: Bool {
+        didSet { defaults.set(snippetsShowInLauncher, forKey: Key.snippetsShowInLauncher) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -148,5 +172,18 @@ final class AppSettings: ObservableObject {
             defaults.object(forKey: Key.openOnCursorScreen) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen)
         snippetKeywordExpansion = defaults.bool(forKey: Key.snippetKeywordExpansion)
+        // All four feature flags default to true, so absence must be distinguished from a stored `false`.
+        customCommandsEnabled =
+            defaults.object(forKey: Key.customCommandsEnabled) == nil
+            || defaults.bool(forKey: Key.customCommandsEnabled)
+        customCommandsShowInLauncher =
+            defaults.object(forKey: Key.customCommandsShowInLauncher) == nil
+            || defaults.bool(forKey: Key.customCommandsShowInLauncher)
+        snippetsEnabled =
+            defaults.object(forKey: Key.snippetsEnabled) == nil
+            || defaults.bool(forKey: Key.snippetsEnabled)
+        snippetsShowInLauncher =
+            defaults.object(forKey: Key.snippetsShowInLauncher) == nil
+            || defaults.bool(forKey: Key.snippetsShowInLauncher)
     }
 }

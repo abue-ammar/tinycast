@@ -24,9 +24,17 @@ The first load creates the folder and nothing else: a new channel starts with an
 snippets only ever arrive from the editor or a Raycast import. Malformed Markdown is reported per file
 while valid files stay available.
 
-The store starts lazily. At launch it arms only when snippet files already exist on disk or keyword
-expansion is consented; otherwise opening **Settings → Snippets** or running a Raycast snippet import
-starts it on demand, so a user who never touches snippets pays for no load and no directory watcher.
+The store starts lazily. With the feature enabled, launch arms it only when snippet files already
+exist on disk or keyword expansion is consented; otherwise opening **Settings → Snippets** or running
+a Raycast snippet import starts it on demand, so a user who never touches snippets pays for no load
+and no directory watcher.
+
+**Settings → Snippets** carries the feature switch and its launcher-visibility companion. Switching
+the feature off is a full teardown — the keyword listener, the store and its watchers stop, and the
+launcher section disappears — while the files, the keyword-expansion consent and the toggle states all
+survive for re-enabling. "Show in launcher" only hides the launcher section; keyword expansion keeps
+working. Both flags live in `AppSettings`, travel in settings backups, and are re-projected by
+`AppCore`'s settings sinks, so an import behaves exactly like flipping the switches.
 
 ## Importing from Raycast
 
@@ -52,14 +60,13 @@ Canonical output uses this order:
 name: "Meeting Notes"
 keyword: "!notes"
 enabled: true
-show_in_launcher: true
 show_confirmation: false
 ---
 Template body
 ```
 
 `name` is optional when reading and defaults from the filename, and `keyword` is optional. `enabled`
-and `show_in_launcher` default to `true`; `show_confirmation` defaults to `false`.
+defaults to `true`; `show_confirmation` defaults to `false`.
 
 String values must use double quotes. The codec escapes and decodes `\\`, `\"`, `\n`, `\r`, and
 `\t`; unsupported escapes, unquoted strings, duplicate or unknown keys, non-exact delimiters, and
@@ -125,10 +132,10 @@ the caret correctly.
 
 ## Launcher and automatic keywords
 
-An enabled snippet with `show_in_launcher: true` appears in launcher search. Its name and keyword are
-both searchable, scored in the same tiers as an app's name so a snippet ranks above an app only when it
-genuinely matches better. Launcher expansion may interactively request Accessibility
-because it begins from an explicit user action.
+Every enabled snippet appears in launcher search while the pane's "Show in launcher" switch is on.
+Its name and keyword are both searchable, scored in the same tiers as an app's name so a snippet ranks
+above an app only when it genuinely matches better. Launcher expansion may interactively request
+Accessibility because it begins from an explicit user action.
 
 Automatic keyword expansion is disabled by default. Enabling it in **Settings → Snippets** first
 shows an explanation, then stores consent and requests Accessibility if it is missing. The consent flag
