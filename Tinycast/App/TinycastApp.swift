@@ -13,7 +13,12 @@ struct TinycastApp: App {
         MenuBarExtra(
             appName, systemImage: "macwindow.on.rectangle", isInserted: $showInMenuBar
         ) {
-            Button("Open \(appName)") { AppCore.shared.showPalette(mode: .launcher) }
+            // `restoreAnyMode`, like the global hotkey: "Open Tinycast" is a generic summon, so it
+            // restores whatever screen was up (a pending uninstall list, a within-timeout sub-screen)
+            // rather than forcing a reset root search.
+            Button("Open \(appName)") {
+                AppCore.shared.showPalette(mode: .launcher, restoreAnyMode: true)
+            }
             Button("Clipboard History") { AppCore.shared.showPalette(mode: .clipboard) }
             Divider()
             Button("Settings...") { AppCore.shared.showSettings() }

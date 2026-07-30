@@ -7,6 +7,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case clipboard
     case calculatorHistory
     case emoji
+    case uninstall
 
     var id: String { rawValue }
     var title: String {
@@ -15,6 +16,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .calculatorHistory: return "Calculator History"
         case .emoji: return "Emoji & Symbols"
+        case .uninstall: return "Uninstall"
         }
     }
     var systemImage: String {
@@ -23,6 +25,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.doc"
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .emoji: return "face.smiling"
+        case .uninstall: return "trash"
         }
     }
     var placeholder: String {
@@ -31,6 +34,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         case .emoji: return "Search emoji and symbols…"
+        case .uninstall: return "Filter files and folders by name…"
         }
     }
 }
@@ -62,6 +66,17 @@ final class PaletteViewModel: ObservableObject {
     @Published var resetToken = UUID()
     /// Changes when an action reorders the list under the selection (pinning a clip lifts it into the Pinned section), so the list scrolls the highlight back into view.
     @Published var followToken = UUID()
+    /// An app the launcher should re-select once it is back on screen — set when a sub-screen that was
+    /// opened *for* one app hands control back, so the user lands where they left. Consumed (and cleared)
+    /// by `RootPaletteView` a turn after the list mounts.
+    @Published var pendingSelectionID: AppEntry.ID?
+    /// The launcher's live scroll offset, mirrored from the list itself. Plain, not `@Published` — it
+    /// changes on every scroll tick and must never drive a re-render.
+    var launcherScrollOffset: CGFloat = 0
+    /// The offset to put the launcher back to when it next mounts, captured when a sub-screen replaced it.
+    /// Restoring by *row* isn't equivalent: a minimal scroll lands the row against a viewport edge rather
+    /// than where the user was looking.
+    var restoreLauncherOffset: CGFloat?
     /// Set by the compact bar's "…" overflow to expand into the full launcher without a query; cleared on every `prepare`.
     @Published var forceExpanded = false
     /// The app a paste would land in, mirrored from `PaletteWindowController.previousApp` on every show. Deliberately *not* cleared by `prepare` — pop-to-root resets the screen, not the paste target.
@@ -77,6 +92,9 @@ final class PaletteViewModel: ObservableObject {
         self.mode = mode
         query = ""
         selection = 0
+        // Cleared here so a request nobody consumed (the palette was hidden before the list mounted) can't
+        // move the selection on some later summon; the uninstall exits set theirs *after* calling this.
+        pendingSelectionID = nil
         forceExpanded = false
         hoverHighlightArmed = false
         menuOpen = false
@@ -110,6 +128,7 @@ final class AppCore: ObservableObject {
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
+    let uninstall = UninstallSession()
     let palette = PaletteViewModel()
 
     private lazy var windowController = PaletteWindowController(core: self)
@@ -290,6 +309,21 @@ final class AppCore: ObservableObject {
 
     /// Shows the palette, honoring Pop to Root Search: a reopen within the timeout restores the pre-close state — any mode for the generic summon (`restoreAnyMode`), else only when the preserved mode already matches the requested one.
     func showPalette(mode: PaletteMode, restoreAnyMode: Bool = false) {
+        // A live uninstall screen outlives a dismissal: the scan cost real time and the checkboxes are
+        // the user's work, so a click-away then re-summon lands back on the list instead of a reset
+        // root search. Asking for another screen *by name* (a clipboard/emoji hotkey) abandons it — that
+        // is an explicit request for something else, unlike the generic summon.
+        if hasLivePaletteSession {
+            if restoreAnyMode || mode == .uninstall {
+                // Consumed for its side effect only: cancel the pending pop-to-root, since this screen
+                // is being restored either way.
+                _ = windowController.consumePreservedState()
+                palette.mode = .uninstall
+                windowController.show()
+                return
+            }
+            uninstall.end()
+        }
         let preserved = windowController.consumePreservedState()
         if !(preserved && (restoreAnyMode || palette.mode == mode)) {
             palette.prepare(mode: mode)
@@ -302,6 +336,10 @@ final class AppCore: ObservableObject {
     func hidePalette(restoreFocus: Bool = true) {
         windowController.hide(restoreFocus: restoreFocus)
     }
+
+    /// True while a sub-screen holds state that must outlive a dismissal — the uninstall flow's scan and
+    /// checkboxes. Pop-to-root skips its timer for these, and the generic summon restores them.
+    var hasLivePaletteSession: Bool { uninstall.target != nil }
 
     /// True when the palette should render as the slim compact bar: compact mode on, launcher root, empty query, and not force-expanded via the "…" overflow.
     var paletteIsCollapsed: Bool {
@@ -539,8 +577,125 @@ final class AppCore: ObservableObject {
         case .automation: pane = "Privacy_Automation"
         case .bluetooth: pane = "Privacy_Bluetooth"
         }
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")
+        {
             NSWorkspace.shared.open(url)
+        }
+    }
+
+    // MARK: - Uninstall
+
+    /// Opens the uninstall screen for an app and starts its scan. The palette stays open — the list
+    /// itself is the confirmation, so nothing is removed until the user submits it.
+    func beginUninstall(_ app: AppEntry) {
+        guard app.kind == .application,
+            AppLeftovers.canUninstall(url: app.url, bundleID: app.bundleID)
+        else { return }
+        uninstall.begin(app: app)
+        // The launcher is torn down while this screen is up, so remember where it was sitting.
+        palette.restoreLauncherOffset = palette.launcherScrollOffset
+        // Mode first, then the query: clearing it while still on the launcher would flip
+        // `paletteIsCollapsed` and bounce the window through its compact height on the way in.
+        palette.mode = .uninstall
+        palette.query = ""
+        palette.selection = 0
+    }
+
+    /// Back out of the uninstall screen to a fresh root search, dropping the scan, and land back on the
+    /// app the screen was opened for rather than at the top of the list.
+    func cancelUninstall() {
+        let returningTo = uninstall.target?.id
+        uninstall.end()
+        palette.prepare(mode: .launcher)
+        palette.pendingSelectionID = returningTo
+    }
+
+    /// Submit the uninstall list: remove every checked path, then stay on screen and report what
+    /// happened — a destructive action that ends by silently closing the window gives the user nothing
+    /// to check. `forgetUninstalledApp` and the re-index run once the removal lands.
+    ///
+    /// `permanently` unlinks instead of trashing, and is the one path that confirms first — the ↵ /
+    /// footer default stays the recoverable one, so only the deliberate chord reaches a deletion
+    /// nothing can undo.
+    func confirmUninstall(permanently: Bool = false) {
+        guard let app = uninstall.target, !uninstall.checkedItems.isEmpty,
+            uninstall.phase == .selecting
+        else { return }
+        // Snapshot the approved set: what the confirmation counts is what gets removed — the rule
+        // `quitAllApps` already follows.
+        let targets = uninstall.checkedItems
+        // The real bundle, not just any `.bundle` row: a cask install also contributes its /Applications
+        // symlink, and that one failing while the bundle itself went must not strand the app's state.
+        let bundlePath = app.url.resolvingSymlinksInPath().path
+        let removedBundle = targets.contains { $0.url.path == bundlePath }
+        Task {
+            if permanently {
+                // The palette is a float panel and would sit above the dialog, so it steps aside for the
+                // one confirmation in the flow and comes straight back — cancelled or not.
+                hidePalette(restoreFocus: false)
+                let confirmed = await modals.confirm(
+                    title: targets.count == 1
+                        ? "Permanently delete 1 item?"
+                        : "Permanently delete \(targets.count) items?",
+                    message:
+                        "“\(app.name)” and the files you checked will be erased immediately. "
+                        + "This can’t be undone.",
+                    confirmTitle: "Delete", destructive: true)
+                showPalette(mode: .uninstall)
+                guard confirmed else { return }
+            }
+            let outcome = await uninstall.remove(targets, permanently: permanently)
+            if removedBundle, !outcome.failures.contains(where: { $0.url.path == bundlePath }) {
+                forgetUninstalledApp(app)
+            }
+            // The screen now shows the summary; the session ends when the user dismisses it.
+            await appIndex.refresh()
+        }
+    }
+
+    /// The uninstall screen's ⎋ / back-chevron / ⌫ exit, which has to respect the phase.
+    func exitUninstall() {
+        switch uninstall.phase {
+        case .selecting: cancelUninstall()
+        // A removal in flight can't be called back, and it lands on the summary in a moment — so this
+        // does nothing rather than hiding the one screen that reports what happened.
+        case .removing: break
+        case .done: finishUninstall()
+        }
+    }
+
+    /// Dismiss the summary back to a fresh root search — never by closing the palette. Ending the flow
+    /// is not the same as being done with Tinycast; the user closes it when they want to.
+    func finishUninstall() {
+        // Also aims at the app it acted on: after a successful uninstall that row is gone, and the
+        // consumer falls back to the top of the list.
+        let returningTo = uninstall.target?.id
+        uninstall.end()
+        palette.prepare(mode: .launcher)
+        palette.pendingSelectionID = returningTo
+    }
+
+    /// Re-orders the uninstall list from the header control; the highlight goes back to the first row
+    /// rather than chasing whichever row the old index now points at. The caller scrolls to match.
+    func setUninstallSort(_ sort: UninstallSort) {
+        uninstall.setSort(sort)
+        palette.selection = 0
+    }
+
+    func showLeftoverInFinder(_ item: LeftoverItem) {
+        hidePalette(restoreFocus: false)
+        AppLauncher.showInFinder(item.url)
+    }
+
+    /// Drop the per-app state Tinycast itself keeps once the bundle is gone, so the app doesn't linger
+    /// as a favorite, a hidden entry, a learned ranking or a bound hotkey.
+    private func forgetUninstalledApp(_ app: AppEntry) {
+        favorites.remove(keys: [app.preferenceKey])
+        visibility.removeItemKeys([app.preferenceKey])
+        launcherRanking.reset(itemKey: app.preferenceKey)
+        if let action = app.hotKeyAction {
+            if hotKeys.recordingAction == action { hotKeys.recordingAction = nil }
+            hotKeys.setShortcut(nil, for: action)
         }
     }
 
@@ -852,9 +1007,12 @@ final class AppCore: ObservableObject {
         }
         // The automatic path was gated by `beginAutomaticExpansion` in the same turn, and `deliver` gates both again. Only the interactive path needs a check here: it must fail before the argument prompt, not after it.
         if automaticGeneration == nil {
-            guard snippetTextInjector.prepareInteractiveExpansion(targetApp: targetApp) else { return }
+            guard snippetTextInjector.prepareInteractiveExpansion(targetApp: targetApp) else {
+                return
+            }
         }
-        let confirmation = record.snippet.showsConfirmation ? "Inserted \(record.snippet.name)" : nil
+        let confirmation =
+            record.snippet.showsConfirmation ? "Inserted \(record.snippet.name)" : nil
         let context = snippetTextInjector.captureExpansionContext(
             targetApp: targetApp,
             clipboardHistory: clipboardHistoryForExpansion())
@@ -895,9 +1053,10 @@ final class AppCore: ObservableObject {
         automaticGeneration: UInt?,
         confirmation: String?
     ) {
-        guard let arguments = SnippetArgumentsPrompt.run(
-            snippetName: record.snippet.name,
-            arguments: missingArgs)
+        guard
+            let arguments = SnippetArgumentsPrompt.run(
+                snippetName: record.snippet.name,
+                arguments: missingArgs)
         else {
             snippetTextInjector.cancelArgumentPrompt(
                 automaticGeneration: automaticGeneration,

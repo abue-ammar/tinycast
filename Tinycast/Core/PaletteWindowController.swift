@@ -56,6 +56,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Pop to Root Search: reset immediately (also releases heavy sub-screens — a fully scrolled emoji grid is ~2k realized views), or keep state and reset after the configured delay unless a reopen consumes it first.
     private func schedulePopToRoot() {
         popToRootTimer?.invalidate()
+        // A live uninstall screen is exempt at any timeout: popping to root would throw away a scan and
+        // a set of checkboxes the user built, and `showPalette` restores that screen on the next summon.
+        guard !core.hasLivePaletteSession else {
+            popToRootTimer = nil
+            return
+        }
         let timeout = core.settings.popToRootTimeout
         guard timeout != .immediately else {
             core.palette.prepare(mode: .launcher)
@@ -121,15 +127,33 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.frequentEmoji)
             .environmentObject(core.runningApps)
             .environmentObject(core.hotKeys)
+            .environmentObject(core.uninstall)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteViewModel = core.palette
         // Backspace in an already-empty search backs out of a sub-screen to a fresh root launcher; `prepare` clears state and re-focuses the field.
         panel.onBareBackspace = { [weak self] in
-            guard let vm = self?.core.palette, vm.mode != .launcher, vm.query.isEmpty else {
+            guard let self, core.palette.mode != .launcher, core.palette.query.isEmpty else {
                 return false
             }
-            vm.prepare(mode: .launcher)
+            // The uninstall screen owns state beyond the palette's, so it backs out through `AppCore`.
+            if core.palette.mode == .uninstall {
+                core.exitUninstall()
+            } else {
+                core.palette.prepare(mode: .launcher)
+            }
+            return true
+        }
+        // Space checks/unchecks the highlighted uninstall row; every other screen lets it type.
+        panel.onBareSpace = { [weak self] in
+            guard let self, core.palette.mode == .uninstall,
+                core.uninstall.phase == .selecting
+            else { return false }
+            if let item = core.uninstall.highlightedItem(
+                selection: core.palette.selection, query: core.palette.query)
+            {
+                core.uninstall.toggle(item)
+            }
             return true
         }
         self.panel = panel

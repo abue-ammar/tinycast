@@ -14,7 +14,18 @@ struct LauncherList: View {
     var onCalcActions: () -> Void = {}
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
+    /// Reports the live content offset so a screen that replaces this list can put it back exactly where
+    /// it was. Writes to plain (non-published) storage — this fires on every scroll tick.
+    var onScrollOffset: (CGFloat) -> Void = { _ in }
+    /// An offset to restore when this list mounts, from a screen that replaced it (the uninstall flow).
+    /// Read at mount rather than pushed in as an intent: the list has to exist before it can scroll, and
+    /// owning the timing here is what saves every caller from having to wait a turn for it.
+    var restoreOffset: CGFloat?
+    /// Fired once the restore has been applied, so the caller can drop it and not re-apply on a later mount.
+    var onRestored: () -> Void = {}
     @EnvironmentObject private var runningApps: RunningAppsMonitor
+    /// Needed for `.offset` restores: `ScrollViewProxy` can only scroll to a row, never to a position.
+    @State private var scrollPosition = ScrollPosition()
 
     private nonisolated static let calcRowID = "calc-card"
 
@@ -108,6 +119,18 @@ struct LauncherList: View {
                         .padding(.bottom, Theme.Spacing.md)
                         .hideNativeScrollers()
                         .scrollOriginAnchor()
+                    }
+                    .scrollPosition($scrollPosition)
+                    .onAppear {
+                        guard let restoreOffset else { return }
+                        scrollPosition.scrollTo(y: restoreOffset)
+                        onRestored()
+                    }
+                    .onScrollGeometryChange(for: CGFloat.self) {
+                        $0.contentOffset.y
+                    } action: {
+                        _, y in
+                        onScrollOffset(y)
                     }
                     .edgeDissolve()
                     .thinScrollbar()
@@ -284,6 +307,19 @@ enum AppActionsMenu {
                     isDestructive: true
                 ) {
                     core.quit(app)
+                })
+        }
+        // Opens the uninstall screen — nothing is removed until that list is submitted. Apple's own
+        // apps and Tinycast itself are never offered; `canUninstall` is the one rule the menu row and
+        // the ⌃⌫ chord both read, so the advertised chord can't drift from the menu.
+        if app.kind == .application, AppLeftovers.canUninstall(url: app.url, bundleID: app.bundleID)
+        {
+            items.append(
+                PopoverMenuItem(
+                    title: "Uninstall Application…", systemImage: "trash", shortcut: "⌃⌫",
+                    isDestructive: true
+                ) {
+                    core.beginUninstall(app)
                 })
         }
         return PopoverMenuContent(header: app.name, items: items)

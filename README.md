@@ -26,6 +26,8 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 
 - **App launcher** — fuzzy-search and launch anything, pin favorites, see what's running, quit an app
   or every app at once.
+- **Uninstall apps** — remove an app and the support files it left behind: pick what goes, and it goes to
+  the Trash by default, so a mistake is recoverable.
 - **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
 - **Calculator** — do math, unit and live currency conversions inline, right in the palette.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.

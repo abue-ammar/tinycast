@@ -127,6 +127,13 @@ Application and System Settings results expose **Show in Finder** in their ⌘K 
 shortcut is available for them. `AppEntry.canRevealInFinder` is the one rule both the menu row and
 the key handler read, so the advertised chord can't drift from the behavior.
 
+## Uninstalling apps
+
+An `.application` result's ⌘K menu ends with **Uninstall Application…**, also bound to **⌃⌫** on the
+selected row. `AppLeftovers.canUninstall` is the one rule the menu row and the chord both read, so the
+advertised chord can't drift from the menu. It opens the uninstall sub-screen; nothing is removed until
+that list is submitted. Full detail in [uninstall.md](uninstall.md).
+
 ## Quitting apps
 
 `RunningAppsMonitor` (live from `NSWorkspace` launch/terminate notifications) drives both the row's

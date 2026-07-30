@@ -30,6 +30,8 @@ enum Theme {
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
+        /// The uninstall list's checkbox — tighter than `row`, so a 16pt box reads as a checkbox and not a tile.
+        static let checkbox: CGFloat = 4
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 4
     }
@@ -48,6 +50,11 @@ enum Theme {
         static let compactHeight: CGFloat = headerHeight + headerPadding * 2
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
+        /// Square box of the uninstall list's checkbox.
+        static let checkbox: CGFloat = 16
+        /// Height of a control sharing the header row with the search field (the uninstall sort button),
+        /// matching the footer's `BarButton` so the two read as one control family.
+        static let headerControl: CGFloat = 28
         static let keyCap: CGFloat = 18
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 16

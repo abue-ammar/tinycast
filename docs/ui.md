@@ -61,7 +61,7 @@ section's closing padding). See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `modal 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `row 10` · `card 10` · `modal 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4` · `checkbox 4`
 
 `modal` sits between `menuPanel` and `panel` so a dialog reads as a smaller sibling of the palette, not a second palette.
 
@@ -72,9 +72,13 @@ Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corn
 ### Size (`Theme.Size`)
 
 `panelWidth 750` · `panelHeight 475` · `headerHeight 44` · `bottomBarHeight 52` · `rowIcon 24` ·
-`keyCap 18` · `recorderKeyCap 16` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
+`checkbox 16` · `headerControl 28` · `keyCap 18` · `recorderKeyCap 16` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
 `settingsSidebar 184` · `settingsRowIcon 20` · `modalWidth 420` · `modalIcon 26` · `hudWidth 200` ·
 `hudHeight 92` · `volumeTrackHeight 6` · `volumeKnob 16`
+
+`checkbox` (size and radius) is the uninstall list's check box — deliberately tighter than `row` so it
+reads as a checkbox, not a tile. `headerControl` is the height of a control sharing the header row with
+the search field (the uninstall sort button), matched to the footer's `BarButton`.
 
 `keyCap` sizes the palette's keycap chips; `recorderKeyCap` (both size and radius) is the intentionally-smaller Settings shortcut-recorder chip.
 
@@ -139,6 +143,20 @@ All lists share one row grammar so launcher and clipboard look identical:
 - **Scroll moves only on keyboard nav/reset**, driven by a `ScrollIntent` (`Core/ScrollIntent.swift`) — mouse selection targets a visible row and never yanks scroll. `.follow` is a minimal scroll-to-visible (nil anchor), so the list stays stationary while the selection walks across it and only advances by a row at the viewport edges; `.top` scrolls to the origin anchor that `scrollOriginAnchor()` installs — a zero-height overlay applied to the scrolled content *after* its padding, so it marks offset 0 without joining the layout and the restored origin is exact (targeting the first row instead leaves the top padding hidden under the header). A `.follow` that lands on flat index 0 restores the origin instead, so that row's section header comes back into view. One intent state serves all four modes — they never coexist.
 - **Keycaps** use `KeyCapChip`: `.outline` (white-0.20 border) for hotkey hints on rows, `.filled` (white-0.10 fill) for footer shortcuts.
 
+### The uninstall row
+
+The one list with a different row grammar, because it is a checkbox list rather than a result list
+(see [uninstall.md](uninstall.md)): checkbox, file name, its directory in `textTertiary`, size, then the
+file's own icon on the **trailing** edge. It keeps the shared insets (`horizontal md` / `vertical sm`),
+the shared `row 10` corner and the copy-identical `fill` precedence, so it still reads as one of the
+palette's lists. It carries no *category* headers — the header's sort control owns the order — and its
+checked-count line is rendered through the shared `SectionHeader` as the list's first row, so it lands
+exactly where every other list's first header lands. A locked row — a path this app can't remove, e.g. a root-owned
+bundle — swaps its file icon for a padlock, dims to `textTertiary` and draws an outline-only checkbox. The checkbox is
+drawn from `Theme` tokens rather than `checkmark.square`: an SF checkbox glyph reads as a near-invisible
+hairline on this surface, so checked is a filled box with a punched-out mark, unchecked a `border`
+hairline.
+
 ### Section headers
 
 All four palette lists (App Launcher, Clipboard, Emoji, Calculator History) render category labels
@@ -160,7 +178,7 @@ leading gap. Headers are non-selectable display rows, so selection (keyed by id)
 Glass is **only** for floating controls, never the main surface.
 
 - `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with a whitish frost tint (`glassFrost`) so the glass reads brighter than clear. Used on the action-group capsule and the menu circle; tune the frost amount via the `glassFrost` token, not per call site.
-- **Menus are in-window overlays, not system popovers.** `.contextMenu`/`NSMenu` stall clicks for seconds inside a `LazyVStack` and spill outside the panel. Use `PopoverMenu` anchored to a bottom corner via `.overlay`, inset `menuInset` (8pt) so its own corner isn't clipped by the panel's.
+- **Menus are in-window overlays, not system popovers.** `.contextMenu`/`NSMenu` stall clicks for seconds inside a `LazyVStack` and spill outside the panel. Use `PopoverMenu` anchored to a panel corner via `.overlay`, inset `menuInset` (8pt) so its own corner isn't clipped by the panel's. Three exist: the app menu (bottom-leading), ⌘K Actions (bottom-trailing), and the uninstall screen's sort menu — the one anchored **top**-trailing, under the control that opens it, so it also carries `headerHeight + headerPadding` of top padding to hang below the header rather than over it. They are mutually exclusive, enforced in the `toggle…`/`open…` helpers rather than in `onChange`, and `openActions()` refuses to open when the screen has no actions (an empty panel would swallow the keyboard invisibly).
 - **`PopoverMenu`** uses `glassEffect(.regular, in: RoundedRectangle(menuPanel 16))` with **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native.
 - `PopoverMenuRow`: leading glyph, label, trailing shortcut glyph, `menuHover` fill on hover, `menuRow 10` corner. Menus animate in with `.opacity + .scale(0.96)` from the anchored corner, `easeOut 0.14`.
 - The glyph is a `PopoverMenuIcon`: `.symbol` (SF Symbol, `hierarchical`, secondary — or **red** when `isDestructive`) or `.file` (a real app icon via `IconCache`, used by the paste rows to show the paste target). `PopoverMenuItem` keeps a `systemImage:` convenience init, so symbol rows read exactly as before.

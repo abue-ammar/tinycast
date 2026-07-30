@@ -87,6 +87,8 @@ swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift
 swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
     Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
     -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog + geometry
+swiftc -swift-version 6 Tinycast/Core/AppLeftovers.swift Tools/leftovers-test.swift \
+    -o /tmp/leftovers-test && /tmp/leftovers-test                   # uninstall leftover discovery
 swiftc -swift-version 6 Tinycast/Core/CustomCommand.swift \
     Tinycast/Core/ShellCommandRunner.swift Tools/custom-command-test.swift \
     -o /tmp/custom-command-test && /tmp/custom-command-test        # custom command store + runner
@@ -109,6 +111,14 @@ similarly keeps `SystemCommand.swift` independent from AppKit and all command si
 The clipboard harness likewise compiles the real `ClipboardStore.swift`, so that file must keep to
 Foundation + SQLite3 and depend on no other app source. Each case drives a store rooted in a
 throwaway temp directory (`ClipboardStore(directory:)`), so a run can never reach a real history.
+
+The leftovers harness compiles the real `AppLeftovers.swift` and points it at a throwaway home
+directory, so a run can never see — let alone return — a path in the developer's own Library. It covers
+discovery, the guards (refused bundle ids, short names, the surviving-sibling case, and that no result
+is ever a `~/Library` root itself), sizing, and **removal** — the permanent path erases fixtures for
+real, one failure doesn't strand the items after it, and the trash path is exercised on a
+UUID-named fixture that the harness then deletes from the Trash. The one assertion that needs Full Disk Access — reading
+`~/.Trash` to confirm the item landed there — reports `SKIP` rather than `FAIL` when the shell lacks it.
 
 The custom-command harness spawns **real `/bin/zsh`** processes. Its shell-environment cases point
 `ZDOTDIR` at a throwaway fixture directory (and unset `TERM_PROGRAM`), so a run can never read or write

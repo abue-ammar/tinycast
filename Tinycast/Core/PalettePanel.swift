@@ -6,6 +6,8 @@ import SwiftUI
 final class PalettePanel: NSPanel {
     /// Called for a bare backspace before it reaches the field editor (return true to consume); the field editor swallows plain backspace itself, so SwiftUI `onKeyPress` up the hierarchy never sees it.
     var onBareBackspace: (() -> Bool)?
+    /// Same deal for a bare space (the uninstall list's check/uncheck): the field editor would insert it into the query, so it is swallowed before SwiftUI ever sees the press.
+    var onBareSpace: (() -> Bool)?
     /// Arms the hover highlight from `sendEvent` — the one place both event streams pass through, so a keyboard-driven scroll under a still pointer never fires `.mouseMoved` and hover stays disarmed. Also carries the caret-hide hook fired when a footer menu opens.
     weak var paletteViewModel: PaletteViewModel? {
         didSet {
@@ -33,18 +35,20 @@ final class PalettePanel: NSPanel {
         case .keyDown: paletteViewModel?.hoverHighlightArmed = false
         default: break
         }
+        let bare = event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty
+        // Bare backspace / space are resolved before the field editor sees them: backspace backs out of
+        // a sub-screen, and space checks the uninstall list's highlighted row (its field is a filter, so
+        // the only cost is that a literal space can't be typed there). An open menu owns the keyboard
+        // outright, so neither hook runs while one is up.
+        if event.type == .keyDown, bare, paletteViewModel?.menuOpen != true {
+            if Int(event.keyCode) == kVK_Delete, onBareBackspace?() == true { return }
+            if Int(event.keyCode) == kVK_Space, onBareSpace?() == true { return }
+        }
         // A footer menu owns the keyboard: the search field stays first responder (no focus swap, so nothing reflows) with only its caret hidden; swallow text-editing keystrokes before the field editor consumes them, but let shortcut chords (⌘K, ⌘⌫) and menu-nav keys reach SwiftUI's onKeyPress.
         if event.type == .keyDown,
-            paletteViewModel?.menuOpen == true,
+            let vm = paletteViewModel, vm.menuOpen,
             event.modifierFlags.intersection([.command, .control]).isEmpty,
             !Self.menuNavKeys.contains(Int(event.keyCode))
-        {
-            return
-        }
-        if event.type == .keyDown,
-            Int(event.keyCode) == kVK_Delete,
-            event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
-            onBareBackspace?() == true
         {
             return
         }

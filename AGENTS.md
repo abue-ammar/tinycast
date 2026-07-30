@@ -40,8 +40,8 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
   `AuxWindowController`. SwiftUI `Settings` / `Window` scenes are deliberately avoided (unreliable for
   accessory apps).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
-  [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
-  [snippets](docs/snippets.md) · [window management](docs/window-management.md) ·
+  [uninstall](docs/uninstall.md) · [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) ·
+  [emoji](docs/emoji.md) · [snippets](docs/snippets.md) · [window management](docs/window-management.md) ·
   [hotkeys](docs/hotkeys.md) · [UI & design system](docs/ui.md).
 
 ## Critical Invariants
@@ -74,7 +74,11 @@ Never break these without an explicit task to do so.
   `Core/CustomCommand.swift` and `Core/ShellCommandRunner.swift` must likewise stay free of AppKit /
   SwiftUI (Foundation plus Combine for `ObservableObject` and Darwin for `mkstemp`) so
   `Tools/custom-command-test.swift` can compile them standalone — which is why the custom-command
-  confirmation gate lives in `AppCore` and not in the runner. All of `Core/Snippets/` compiles into
+  confirmation gate lives in `AppCore` and not in the runner. `Core/AppLeftovers.swift` is the same
+  deal for `Tools/leftovers-test.swift` — Foundation only and pure, with the home directory and the
+  sibling-install flag injected, which is why the LaunchServices lookup and the trashing orchestration
+  live in `UninstallSession` (the `trashItem` / `removeItem` primitive itself stays in `AppLeftovers`,
+  so the harness can drive it). All of `Core/Snippets/` compiles into
   `Tools/snippets-test.swift` (the harness globs the directory), so the model, Markdown serializer,
   template engine, repository and keyword policies stay Foundation-only, and the AppKit files there
   keep their dependencies to what the harness can stub. `Core/SystemCommand.swift` is also
@@ -122,6 +126,18 @@ Never break these without an explicit task to do so.
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for
   block observers, `isolated deinit` for `ClipboardStore`'s SQLite teardown, decode raw Carbon / C
   pointers to plain values before crossing into actor code.
+- **Uninstall only ever moves user-level paths to the Trash.** `AppLeftovers` may return nothing that
+  isn't a proper descendant of one of its `allowedRoots` under `~/Library`, never a root itself; a
+  bundle id that isn't plain reverse-DNS is refused rather than sanitized; and a shared bundle id (a
+  surviving sibling install) drops *all* keyed paths. `canUninstall` refuses `/System`, `/usr`, every
+  `com.apple.*` id (`isProtectedVendor`) and every Tinycast channel — the action is not offered for those
+  at all. Within an eligible app, removability is decided **per row**: `isRemovable` checks that the
+  parent permits deletion and that no immutable / SIP-restricted flag is set, and a locked row can never
+  be checked or toggled. The default removal is
+  `trashItem` — the list ships with every removable row checked, so ↵ has to be recoverable; `removeItem`
+  is reachable only from the explicit Permanently Delete row (⇧⌘⌫), the one action in the flow that
+  confirms first. Nothing system-level (LaunchDaemons, privileged helpers, system extensions) is
+  discovered or removed. See [uninstall.md](docs/uninstall.md).
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
@@ -147,7 +163,7 @@ Never break these without an explicit task to do so.
   standalone-harness input in full; `Core/WindowManagement/` is a pure geometry layer plus its one AX
   file; `Core/Theme.swift` is the design-token source; `Core/HotKey/` is the in-house hotkey stack.
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
-  `Emoji/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
+  `Emoji/`, `Uninstall/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
 - `Tinycast/App/` — `@main` app + delegate.
 - `Tools/` — standalone test harnesses and the emoji generator.
 - `.github/workflows/release.yml` — the entire release pipeline (see `docs/development.md`).
@@ -156,6 +172,7 @@ Never break these without an explicit task to do so.
 
 - [`docs/architecture.md`](docs/architecture.md) — core ownership, windows, concurrency.
 - [`docs/palette.md`](docs/palette.md) — palette state flow, menu-open freeze, focus restoration.
+- [`docs/uninstall.md`](docs/uninstall.md) — leftover discovery, guards, removal.
 - [`docs/launcher.md`](docs/launcher.md) · [`docs/calculator.md`](docs/calculator.md) ·
   [`docs/clipboard.md`](docs/clipboard.md) · [`docs/emoji.md`](docs/emoji.md) ·
   [`docs/snippets.md`](docs/snippets.md) ·

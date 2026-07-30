@@ -12,9 +12,12 @@ UUID) so the SwiftUI search field re-focuses. `RootPaletteView` switches its con
 - `.launcher` → `LauncherList`
 - `.clipboard` → `ClipboardList` + preview
 - `.calculatorHistory` → `CalculatorHistoryList`
+- `.uninstall` → `UninstallList`
 
 Clipboard and Calculator History are sub-screens reached from the launcher (Tab, a command, or a
-hotkey) and back out to it.
+hotkey) and back out to it. Uninstall is reached from an app's ⌘K menu; its field filters the file list
+rather than searching, and it carries a third popover menu (the sort control's, the only one anchored to
+a top corner). See [uninstall.md](uninstall.md).
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
 match the visible row order**, including the inline calculator card at index 0 when present (see
@@ -41,6 +44,14 @@ is the CoreGraphics cursor position flipped about the primary display's height, 
 in the half-open interval `(minY, maxY]`: the topmost row is exactly `maxY`, which `contains` excludes,
 while that same value is the `minY` of the display stacked above. `contains` would therefore hand a
 pointer parked at the top of one display to its neighbour. `NSMouseInRect` exists for precisely this.
+
+## Menus
+
+Three popover menus exist — the app menu (bottom-leading), ⌘K Actions (bottom-trailing) and the uninstall
+screen's sort control (top-trailing). `RootPaletteView` tracks *which one* is open in a single
+`PaletteMenu?`, not a flag each: they are mutually exclusive, and one field makes that true by
+construction instead of a rule every call site has to re-enforce. `openActions()` additionally refuses to
+open when the current screen has no actions.
 
 ## Menu-open input freeze
 

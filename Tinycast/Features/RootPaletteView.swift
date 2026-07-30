@@ -13,11 +13,13 @@ struct RootPaletteView: View {
     @EnvironmentObject private var currencyRates: CurrencyRateStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
     @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
+    @EnvironmentObject private var uninstall: UninstallSession
     /// Observed so a skin tone changed in Settings re-renders the grid glyphs immediately.
     @ObservedObject private var settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
-    @State private var showActions = false
-    @State private var showAppMenu = false
+    /// Whichever popover menu is open, or nil. One field rather than a flag each: they are mutually
+    /// exclusive by design, and three booleans made that a rule to re-enforce at every call site.
+    @State private var openMenu: PaletteMenu?
     /// The selection's running state, sampled once by `openActions` — an app launching or quitting elsewhere must not add or drop the Quit row while the menu is up. `RunningAppsMonitor` is deliberately not observed here: only `LauncherList` needs live running state, and observing it would re-render the whole palette on every workspace launch/terminate.
     @State private var selectionIsRunning = false
     /// Highlighted row of whichever popover menu is open; reset to the first row on open, moved by ↑/↓ and hover, activated by ↵/click.
@@ -46,6 +48,9 @@ struct RootPaletteView: View {
         return split.favorites + split.rest
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
+    /// The uninstall rows the header's filter field leaves visible — the single source of truth for that
+    /// screen's row order, selection and activation.
+    private var uninstallResults: [LeftoverItem] { uninstall.filtered(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
     private var emojiSections: [EmojiGridSection] {
         EmojiGrid.sections(query: vm.query, index: emojiIndex, frequent: frequentEmoji)
@@ -66,12 +71,13 @@ struct RootPaletteView: View {
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + calcCount
         case .emoji: return emojiResults.count
+        case .uninstall: return uninstall.phase == .selecting ? uninstallResults.count : 0
         }
     }
     /// Selection clamped into the current results — the single source of truth for highlight, preview and activation so the list and preview can never disagree.
     private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
 
-    private var menuOpen: Bool { showActions || showAppMenu }
+    private var menuOpen: Bool { openMenu != nil }
 
     // MARK: - Popover menu content
     //
@@ -142,6 +148,19 @@ struct RootPaletteView: View {
                     entry: emoji, core: core, target: vm.pasteTarget)
             }
             return nil
+        case .uninstall:
+            guard uninstall.phase == .selecting, !uninstallResults.isEmpty else { return nil }
+            return UninstallActionsMenu.content(
+                session: uninstall, visible: uninstallResults, selection: selection, core: core)
+        }
+    }
+
+    /// The uninstall header's sort menu. Re-ordering moves the selection to the first row, so the list
+    /// scrolls back to the origin with it.
+    private var sortMenuContent: PopoverMenuContent {
+        UninstallActionsMenu.sortContent(session: uninstall) { sort in
+            core.setUninstallSort(sort)
+            scroll = ScrollIntent(kind: .top)
         }
     }
 
@@ -159,9 +178,12 @@ struct RootPaletteView: View {
 
     /// Whichever menu is open (Actions takes precedence; the two are kept mutually exclusive) — the source for keyboard navigation and activation.
     private var menuContent: PopoverMenuContent? {
-        if showActions { return actionsContent }
-        if showAppMenu { return appMenuContent }
-        return nil
+        switch openMenu {
+        case .actions: return actionsContent
+        case .app: return appMenuContent
+        case .sort: return sortMenuContent
+        case nil: return nil
+        }
     }
 
     var body: some View {
@@ -171,13 +193,18 @@ struct RootPaletteView: View {
         let hist = vm.mode == .calculatorHistory ? histResults : []
         let emojiSections = vm.mode == .emoji ? emojiSections : []
         let emojis = emojiSections.flatMap(\.entries)
+        // Phase-gated exactly like `resultCount`: the removing/done screens render no rows, so counting
+        // them would leave the flat selection index describing a list that isn't on screen.
+        let uninstallItems =
+            vm.mode == .uninstall && uninstall.phase == .selecting ? uninstallResults : []
         // Newest stored clip + the reorder token: the pair changes only when the store mutates, never when a query filters the list.
         let clipFollow = ClipFollowKey(id: store.items.first?.id, token: vm.followToken)
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
         // Only the active mode is non-empty.
-        let count = apps.count + offset + clips.count + hist.count + emojis.count
+        let count =
+            apps.count + offset + clips.count + hist.count + emojis.count + uninstallItems.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
@@ -188,7 +215,8 @@ struct RootPaletteView: View {
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
         // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). The primary/Actions group is hidden when there's nothing to act on: no results in any mode, or an error calc card (selectable but action-less).
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
-        let showActionGroup = count > 0 && !(calcSelected && !calcActionable)
+        let showActionGroup = showsActionGroup(
+            count: count, calcBlocked: calcSelected && !calcActionable)
 
         // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see docs/ui.md).
         return Group {
@@ -196,7 +224,8 @@ struct RootPaletteView: View {
                 Color.clear
             } else {
                 content(
-                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
+                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections,
+                    uninstallItems: uninstallItems, calc: calc,
                     selection: sel, favoriteCount: favoriteCount, showSections: showSections
                 )
             }
@@ -207,35 +236,11 @@ struct RootPaletteView: View {
                 bottomBar(pillLabel: pillLabel, showActionGroup: showActionGroup)
             }
         }
-        // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
-        .overlay {
-            if showAppMenu || showActions {
-                Color.black.opacity(0.001)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: closeMenus)
-            }
-        }
-        .overlay(alignment: .bottomLeading) {
-            if showAppMenu {
-                let content = appMenuContent
-                PopoverMenu(
-                    header: content.header, items: content.items, selection: $menuSelection,
-                    onActivate: activateMenuItem
-                )
-                .padding(Self.menuInset)
-                .transition(Self.menuTransition(.bottomLeading))
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if showActions, let content = actionsContent {
-                PopoverMenu(
-                    header: content.header, items: content.items, selection: $menuSelection,
-                    onActivate: activateMenuItem
-                )
-                .padding(Self.menuInset)
-                .transition(Self.menuTransition(.bottomTrailing))
-            }
-        }
+        // Menus are in-window overlays anchored to a panel corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
+        .overlay { menuDismissCatcher }
+        .overlay(alignment: .bottomLeading) { appMenuOverlay }
+        .overlay(alignment: .topTrailing) { sortMenuOverlay }
+        .overlay(alignment: .bottomTrailing) { actionsMenuOverlay }
         // The window's own frame (driven by `PaletteWindowController`) is the size source of truth; filling it keeps the glass background and corner clip matched to the current compact/expanded window height.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.black.opacity(Theme.Colors.panelDimming))
@@ -244,8 +249,7 @@ struct RootPaletteView: View {
         // Every show bumps focusToken — refocus search and drop any menu left open from last time (e.g. dismissed by clicking away with a context menu up).
         .onChange(of: vm.focusToken) {
             searchFocused = true
-            showActions = false
-            showAppMenu = false
+            openMenu = nil
         }
         .onChange(of: vm.query) {
             vm.selection = 0
@@ -253,28 +257,24 @@ struct RootPaletteView: View {
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
-            showActions = false
+            // The sort control only exists on the uninstall screen, so no menu outlives a mode change.
+            openMenu = nil
             scroll = ScrollIntent(kind: .top)
         }
-        // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this intent guarantees the scroll itself snaps back to the origin.
-        .onChange(of: vm.resetToken) {
-            scroll = ScrollIntent(kind: .top)
+        // Coming back from the uninstall screen: put the highlight back on the app it was opened for.
+        // The scroll position is restored by `LauncherList` itself when it mounts, so nothing here has to
+        // wait for that.
+        .onChange(of: vm.pendingSelectionID) { _, id in
+            guard let id else { return }
+            vm.pendingSelectionID = nil
+            // Missing means the app is the one that was just uninstalled; the list keeps its position and
+            // simply has one fewer row.
+            guard let index = appResults.firstIndex(where: { $0.id == id }) else { return }
+            vm.selection = index + calcCount
         }
-        // Opening either menu highlights its first row and closes the other, so exactly one menu is ever open and always has a highlight.
-        .onChange(of: showActions) {
-            if showActions {
-                showAppMenu = false
-                menuSelection = 0
-            }
-            vm.menuOpen = menuOpen
-        }
-        .onChange(of: showAppMenu) {
-            if showAppMenu {
-                showActions = false
-                menuSelection = 0
-            }
-            vm.menuOpen = menuOpen
-        }
+        // Mutual exclusion and the first-row highlight are enforced by the `open…`/`toggle…` helpers, so
+        // this only has to mirror the aggregate state into the view model (which freezes text input).
+        .onChange(of: menuOpen) { vm.menuOpen = menuOpen }
         // Follow a row the store moved: a fresh capture (or promote-on-paste) lands at the head of its section, and pinning lifts a row into the Pinned section. With a query typed the highlight stays put; `AppCore` has already placed it for pin/paste.
         .onChange(of: clipFollow) { old, new in
             // A nil `old.id` is the first load landing, not a row that moved.
@@ -370,12 +370,21 @@ struct RootPaletteView: View {
                 guard command, let app = selectedAppEntry, app.canRevealInFinder
                 else { return .ignored }
                 core.showInFinder(app)
+            case .uninstall:
+                guard command, uninstallResults.indices.contains(selection) else { return .ignored }
+                core.showLeftoverInFinder(uninstallResults[selection])
             }
             return .handled
         }
         .onKeyPress(.escape) {
-            if showActions || showAppMenu {
+            if menuOpen {
                 closeMenus()
+                return .handled
+            }
+            // Esc on the uninstall screen backs out to the launcher rather than dismissing: the list
+            // took a scan to build, and abandoning it should land somewhere, not nowhere.
+            if vm.mode == .uninstall {
+                core.exitUninstall()
                 return .handled
             }
             core.hidePalette()
@@ -383,6 +392,8 @@ struct RootPaletteView: View {
         }
         .onKeyPress(.tab) {
             if menuOpen { return .handled }
+            // The uninstall screen is a modal step, not part of the launcher↔clipboard cycle.
+            if vm.mode == .uninstall { return .handled }
             toggleMode()
             return .handled
         }
@@ -399,19 +410,36 @@ struct RootPaletteView: View {
             guard resultCount > 0 else { return .handled }
             // An error calc card is the selection but has no actions — don't open an empty panel.
             if calcCount > 0, selection == 0, calcResult?.isActionable != true { return .handled }
-            toggleActions()
+            toggle(.actions)
             return .handled
         }
         // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
             if menuOpen { return .handled }
+            // ⌃⌫ opens the uninstall screen for the selected launcher app — the chord the Actions menu
+            // advertises. Excluded in the compact bar, like ⌘K: there's no visible selection to aim at.
+            if press.modifiers.contains(.control), !isCollapsed, vm.mode == .launcher,
+                let app = selectedAppEntry, app.kind == .application,
+                AppLeftovers.canUninstall(url: app.url, bundleID: app.bundleID)
+            {
+                core.beginUninstall(app)
+                return .handled
+            }
             guard press.modifiers.contains(.command) else { return .ignored }
+            // ⇧⌘⌫ is Finder's permanent-delete chord, and the uninstall screen's Permanently Delete row
+            // advertises it. `AppCore` puts the one confirmation alert in front of it.
+            if press.modifiers.contains(.shift), vm.mode == .uninstall,
+                uninstall.phase == .selecting
+            {
+                core.confirmUninstall(permanently: true)
+                return .handled
+            }
             switch vm.mode {
             case .clipboard:
                 deleteSelectedClip()
             case .calculatorHistory:
                 deleteSelectedHistoryEntry()
-            case .launcher, .emoji:
+            case .launcher, .emoji, .uninstall:
                 return .ignored
             }
             return .handled
@@ -432,6 +460,53 @@ struct RootPaletteView: View {
             else { return .ignored }
             core.quit(app)
             return .handled
+        }
+    }
+
+    /// Click-anywhere-else dismissal for whichever menu is open.
+    @ViewBuilder private var menuDismissCatcher: some View {
+        if menuOpen {
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: closeMenus)
+        }
+    }
+
+    @ViewBuilder private var appMenuOverlay: some View {
+        if openMenu == .app {
+            let content = appMenuContent
+            PopoverMenu(
+                header: content.header, items: content.items, selection: $menuSelection,
+                onActivate: activateMenuItem
+            )
+            .padding(Self.menuInset)
+            .transition(Self.menuTransition(.bottomLeading))
+        }
+    }
+
+    /// The uninstall header's sort menu — the one menu anchored to a *top* corner, under its control.
+    @ViewBuilder private var sortMenuOverlay: some View {
+        if openMenu == .sort, vm.mode == .uninstall {
+            let content = sortMenuContent
+            PopoverMenu(
+                header: content.header, items: content.items, selection: $menuSelection,
+                onActivate: activateMenuItem
+            )
+            .padding(Self.menuInset)
+            // Hangs below the header rather than over it — it's a dropdown from the control up there.
+            .padding(.top, Theme.Size.headerHeight + Theme.Size.headerPadding)
+            .transition(Self.menuTransition(.topTrailing))
+        }
+    }
+
+    @ViewBuilder private var actionsMenuOverlay: some View {
+        if openMenu == .actions, let content = actionsContent {
+            PopoverMenu(
+                header: content.header, items: content.items, selection: $menuSelection,
+                onActivate: activateMenuItem
+            )
+            .padding(Self.menuInset)
+            .transition(Self.menuTransition(.bottomTrailing))
         }
     }
 
@@ -456,17 +531,7 @@ struct RootPaletteView: View {
                     .frame(width: Theme.Size.headerIconSlot)
             }
             searchField
-            // Compact bar pins favorites to the right of the field; expanded shows them as list rows instead.
-            if isCollapsed, settings.showFavoritesInCompactMode {
-                let slots = compactFavoriteSlots
-                if !slots.isEmpty {
-                    CompactFavoritesRow(
-                        slots: slots,
-                        onLaunch: { core.launch($0) },
-                        onOverflow: { core.expandFromCompact() }
-                    )
-                }
-            }
+            headerTrailing
         }
         // Align the search icon with the list rows and section headers below (list inset + row inset).
         .padding(.horizontal, Theme.Spacing.md * 2)
@@ -474,6 +539,24 @@ struct RootPaletteView: View {
         .frame(height: Theme.Size.headerHeight)
         .padding(.top, Theme.Size.headerPadding)
         .frame(maxWidth: .infinity)
+    }
+
+    /// Controls sharing the header row with the field: the uninstall sort control, or the compact bar's
+    /// favorites strip (expanded shows those as list rows instead).
+    @ViewBuilder private var headerTrailing: some View {
+        if vm.mode == .uninstall, uninstall.phase == .selecting, !uninstall.items.isEmpty {
+            UninstallSortButton(sort: uninstall.sort) { toggle(.sort) }
+        }
+        if isCollapsed, settings.showFavoritesInCompactMode {
+            let slots = compactFavoriteSlots
+            if !slots.isEmpty {
+                CompactFavoritesRow(
+                    slots: slots,
+                    onLaunch: { core.launch($0) },
+                    onOverflow: { core.expandFromCompact() }
+                )
+            }
+        }
     }
 
     /// The one search field, kept in a single tree position (the `header`) so its focus survives the compact↔expanded swap.
@@ -492,7 +575,7 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func content(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
-        emojiSections: [EmojiGridSection], calc: CalcResult?,
+        emojiSections: [EmojiGridSection], uninstallItems: [LeftoverItem], calc: CalcResult?,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
@@ -522,7 +605,10 @@ struct RootPaletteView: View {
                 onActions: { app in
                     if let index = apps.firstIndex(of: app) { vm.selection = index + offset }
                     openActions()
-                }
+                },
+                onScrollOffset: { vm.launcherScrollOffset = $0 },
+                restoreOffset: vm.restoreLauncherOffset,
+                onRestored: { vm.restoreLauncherOffset = nil }
             )
         case .clipboard:
             // Empty history: center one message across the whole panel rather than wedging it into the narrow list column beside a blank preview.
@@ -602,6 +688,49 @@ struct RootPaletteView: View {
                     }
                 )
             }
+        case .uninstall:
+            switch uninstall.phase {
+            case .removing(let permanently):
+                UninstallProgressView(
+                    name: uninstall.target?.name ?? "Application", permanently: permanently)
+            case .done(let outcome):
+                UninstallSummaryView(
+                    name: uninstall.target?.name ?? "Application", outcome: outcome)
+            case .selecting:
+                uninstallSelection(items: uninstallItems, selection: selection)
+            }
+        }
+    }
+
+    /// The uninstall screen's list phase: the count line, then the filtered rows.
+    @ViewBuilder
+    private func uninstallSelection(items uninstallItems: [LeftoverItem], selection: Int)
+        -> some View
+    {
+        if uninstall.items.isEmpty {
+            EmptyResults(
+                text: uninstall.isScanning
+                    ? "Looking for files to remove…" : "Nothing found to remove")
+        } else if uninstallItems.isEmpty {
+            EmptyResults(text: "No files match")
+        } else {
+            UninstallList(
+                items: uninstallItems,
+                selection: selection,
+                isChecked: uninstall.isChecked,
+                appIcon: uninstall.target?.icon,
+                header: UninstallHeader.title(
+                    checked: uninstall.checkedItems.count,
+                    removable: uninstall.removableItems.count,
+                    size: uninstall.checkedSize),
+                scroll: scroll,
+                onSelect: { vm.selection = $0 },
+                onToggle: { uninstall.toggle(uninstallItems[$0]) },
+                onActions: { index in
+                    vm.selection = index
+                    openActions()
+                }
+            )
         }
     }
 
@@ -610,7 +739,13 @@ struct RootPaletteView: View {
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
-            if showActionGroup { actionGroup(pillLabel: pillLabel) }
+            if showActionGroup {
+                actionGroup(
+                    pillLabel: pillLabel,
+                    // Red while the list is up; the summary's Done is not a destructive button.
+                    destructive: vm.mode == .uninstall && uninstall.phase == .selecting,
+                    showActionsToggle: vm.mode != .uninstall || uninstall.phase == .selecting)
+            }
         }
         .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
@@ -618,36 +753,60 @@ struct RootPaletteView: View {
     }
 
     private var appMenuButton: some View {
-        MenuCircleButton {
-            withAnimation(Self.menuAnimation) { showAppMenu.toggle() }
-        }
+        MenuCircleButton { toggle(.app) }
     }
 
     /// The footer control group: primary action and the Actions toggle sharing one glass capsule.
-    private func actionGroup(pillLabel: String) -> some View {
+    private func actionGroup(
+        pillLabel: String, destructive: Bool = false, showActionsToggle: Bool = true
+    ) -> some View {
         HStack(spacing: 2) {
             BarButton(action: activateSelection) {
                 HStack(spacing: Theme.Spacing.sm) {
                     Text(pillLabel)
                         .font(Theme.Typography.bar)
-                        .foregroundStyle(.primary)
+                        // Red carries the same meaning it does on a destructive menu row.
+                        .foregroundStyle(destructive ? Color.red : Color.primary)
                     KeyCapChip(text: "↵", style: .outline)
                 }
             }
-            BarButton(action: toggleActions) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Text("Actions")
-                        .font(Theme.Typography.bar)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                    HStack(spacing: Theme.Spacing.xxs) {
-                        KeyCapChip(text: "⌘", style: .outline)
-                        KeyCapChip(text: "K", style: .outline)
-                    }
-                }
+            if showActionsToggle {
+                actionsToggleButton
             }
         }
         .padding(Theme.Spacing.xs)
         .frosted(in: Capsule())
+    }
+
+    private var actionsToggleButton: some View {
+        BarButton {
+            toggle(.actions)
+        } label: {
+            HStack(spacing: Theme.Spacing.sm) {
+                Text("Actions")
+                    .font(Theme.Typography.bar)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                HStack(spacing: Theme.Spacing.xxs) {
+                    KeyCapChip(text: "⌘", style: .outline)
+                    KeyCapChip(text: "K", style: .outline)
+                }
+            }
+        }
+    }
+
+    /// Whether the footer's primary/Actions group is shown: nothing to act on means no group (no results
+    /// in any mode, or an error calc card, which is selectable but action-less). The uninstall screen is
+    /// the exception — its summary has a Done button with no rows behind it, and its progress screen has
+    /// no action at all.
+    private func showsActionGroup(count: Int, calcBlocked: Bool) -> Bool {
+        if vm.mode == .uninstall {
+            switch uninstall.phase {
+            case .selecting: return count > 0
+            case .removing: return false
+            case .done: return true
+            }
+        }
+        return count > 0 && !calcBlocked
     }
 
     /// Pill label for the current selection, derived from the selection already resolved in `body` so it never re-runs the (unmemoized) `appResults` filter/sort.
@@ -657,6 +816,16 @@ struct RootPaletteView: View {
             return vm.pasteTarget?.pasteTitle ?? "Paste"
         case .calculatorHistory:
             return "Copy Answer"
+        case .uninstall:
+            switch uninstall.phase {
+            case .removing: return "Removing…"
+            // Names where ↵ lands, since it goes back to the search rather than closing the palette.
+            case .done: return "Back to Search"
+            case .selecting:
+                // The status line above the list carries the count and the total, so the button just
+                // names the act; nothing checked means nothing to name.
+                return uninstall.checkedItems.isEmpty ? "Nothing Checked" : "Uninstall Application"
+            }
         case .launcher:
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
@@ -676,22 +845,27 @@ struct RootPaletteView: View {
         } else {
             selectionIsRunning = false
         }
-        withAnimation(Self.menuAnimation) { showActions = true }
+        // Never open an empty panel — a screen with no actions (the uninstall summary) would otherwise
+        // swallow the keyboard behind an invisible menu.
+        guard actionsContent != nil else { return }
+        show(.actions)
     }
 
-    private func toggleActions() {
-        if showActions {
-            withAnimation(Self.menuAnimation) { showActions = false }
-        } else {
-            openActions()
+    /// Opens `menu`, or closes it if it is already the open one. The mutual exclusion and the first-row
+    /// highlight live here, so no caller has to remember either.
+    private func toggle(_ menu: PaletteMenu) {
+        if openMenu == menu { closeMenus() } else { show(menu) }
+    }
+
+    private func show(_ menu: PaletteMenu) {
+        withAnimation(Self.menuAnimation) {
+            menuSelection = 0
+            openMenu = menu
         }
     }
 
     private func closeMenus() {
-        withAnimation(Self.menuAnimation) {
-            showActions = false
-            showAppMenu = false
-        }
+        withAnimation(Self.menuAnimation) { openMenu = nil }
     }
 
     /// Inset of the menu panels from the window's bottom corners, kept just inside the rounded corner so the menu's own corner isn't clipped.
@@ -750,6 +924,11 @@ struct RootPaletteView: View {
 
     /// Back out to a fresh root search — `prepare` is the same reset used when the palette is shown (clears query/selection, bumps focusToken to refocus the field).
     private func exitToLauncher() {
+        // The uninstall screen owns a scan beyond the palette's own state, so it backs out via AppCore.
+        if vm.mode == .uninstall {
+            core.exitUninstall()
+            return
+        }
         vm.prepare(mode: .launcher)
     }
 
@@ -781,8 +960,22 @@ struct RootPaletteView: View {
         case .emoji:
             guard emojiResults.indices.contains(selection) else { return }
             core.pasteEmoji(emojiResults[selection])
+        case .uninstall:
+            switch uninstall.phase {
+            case .selecting: core.confirmUninstall()
+            case .removing: break  // nothing to activate while it runs
+            case .done: core.finishUninstall()
+            }
         }
     }
+}
+
+/// The palette's popover menus. Exactly one can be open, which is why the view tracks the open one
+/// rather than a flag per menu.
+private enum PaletteMenu {
+    case app
+    case actions
+    case sort
 }
 
 /// Change key for the clipboard list's follow-the-moved-row handler: the newest stored clip (a capture or promote puts a different row there) plus the token an action bumps when it reorders the list (pin/unpin). Deliberately read from the store, not the filtered results, so typing a query never reads as a row that moved.
