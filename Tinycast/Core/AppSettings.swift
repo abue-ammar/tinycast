@@ -106,11 +106,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen) }
     }
 
-    /// Global opt-in for listening for snippet keywords while the user types in other apps.
     @Published var snippetHUD: Bool {
         didSet { defaults.set(snippetHUD, forKey: Key.snippetHUD) }
     }
 
+    /// Global opt-in for listening for snippet keywords while the user types in other apps.
     @Published var snippetKeywordExpansion: Bool {
         didSet { defaults.set(snippetKeywordExpansion, forKey: Key.snippetKeywordExpansion) }
     }

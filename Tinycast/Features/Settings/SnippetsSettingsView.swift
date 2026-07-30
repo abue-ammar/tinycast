@@ -72,16 +72,16 @@ final class SnippetEditingSession: ObservableObject {
         return sourceRecord?.fileURL.lastPathComponent
     }
 
-    func start(records: [StoredSnippet]) {
+    func start(records: [StoredSnippet], isEditing: Bool) {
         guard !hasStarted else {
-            reconcile(records: records)
+            reconcile(records: records, isEditing: isEditing)
             return
         }
         hasStarted = true
         selectFirst(in: records)
     }
 
-    func reconcile(records: [StoredSnippet]) {
+    func reconcile(records: [StoredSnippet], isEditing: Bool) {
         guard !isSaving, !isDeleting else { return }
         guard let sourceRecord else {
             if draft == nil, !isNew { selectFirst(in: records) }
@@ -89,7 +89,8 @@ final class SnippetEditingSession: ObservableObject {
         }
 
         guard let current = records.first(where: { $0.id == sourceRecord.id }) else {
-            if isDirty {
+            // An open editor holds the only copy of the draft, so never swap it for another record — or for nothing when the library empties.
+            if isDirty || isEditing {
                 externalChange = .removed
                 clearError()
             } else {
@@ -396,10 +397,11 @@ struct SnippetsSettingsView: View {
             libraryNotices
         }
         .onAppear {
-            session.start(records: snippetsStore.snippets)
+            session.start(records: snippetsStore.snippets, isEditing: editorTarget != nil)
         }
+        // The pane owns reconciliation for both itself and the editor sheet, which stays presented across library changes.
         .onChange(of: snippetsStore.snippets) { _, records in
-            session.reconcile(records: records)
+            session.reconcile(records: records, isEditing: editorTarget != nil)
         }
         .sheet(item: $editorTarget) { target in
             SnippetEditorSheet(
@@ -801,9 +803,6 @@ private struct SnippetEditorSheet: View {
         .frame(minHeight: Theme.Size.snippetEditorHeight)
         .onAppear {
             focusedField = .name
-        }
-        .onChange(of: snippetsStore.snippets) { _, records in
-            session.reconcile(records: records)
         }
         .interactiveDismissDisabled(session.isDirty || session.externalChange != nil || session.isBusy)
     }

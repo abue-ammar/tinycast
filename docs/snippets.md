@@ -203,6 +203,6 @@ main-actor watcher against temporary roots:
 
 ```sh
 swiftc -swift-version 6 Tinycast/Core/NotificationToken.swift \
-  Tinycast/Core/Snippets/{Snippet,SnippetMarkdownSerializer,SnippetTemplateEngine,SnippetRepository,RaycastSnippetImport,SnippetKeywordPolicy,SnippetKeywordListener,SnippetTextInjector,SnippetsStore}.swift \
+  Tinycast/Core/Snippets/*.swift \
   Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test
 ```

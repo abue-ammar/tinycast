@@ -33,6 +33,9 @@ final class SnippetDeliveryCompletion {
 final class SnippetTextInjector {
     typealias AutomaticGeneration = UInt
 
+    /// Generous for a responsive app, short enough that a wedged one can't visibly stall a keystroke.
+    private static let accessibilityTimeout: Float = 1
+
     private let clipboardManager: ClipboardManager
     private let settings: AppSettings
     private let deliveryQueue = SnippetDeliveryQueue()
@@ -504,14 +507,19 @@ final class SnippetTextInjector {
 
     private func focusedElement(in targetApp: NSRunningApplication) -> AXUIElement? {
         let application = AXUIElementCreateApplication(targetApp.processIdentifier)
+        // A hung target would otherwise stall the main actor for the global default. The timeout is per element and never inherited, so the focused element needs its own.
+        AXUIElementSetMessagingTimeout(application, Self.accessibilityTimeout)
         var focusedValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(
             application,
             kAXFocusedUIElementAttribute as CFString,
             &focusedValue) == .success,
-            let focusedValue
+            let focusedValue,
+            CFGetTypeID(focusedValue) == AXUIElementGetTypeID()
         else { return nil }
-        return (focusedValue as! AXUIElement)
+        let element = focusedValue as! AXUIElement
+        AXUIElementSetMessagingTimeout(element, Self.accessibilityTimeout)
+        return element
     }
 
     private func stringValue(in element: AXUIElement) -> String? {
@@ -530,9 +538,11 @@ final class SnippetTextInjector {
             element,
             kAXSelectedTextRangeAttribute as CFString,
             &value) == .success,
-            let axValue = value as! AXValue?,
-            AXValueGetType(axValue) == .cfRange
+            let value,
+            CFGetTypeID(value) == AXValueGetTypeID()
         else { return nil }
+        let axValue = value as! AXValue
+        guard AXValueGetType(axValue) == .cfRange else { return nil }
         var range = CFRange()
         guard AXValueGetValue(axValue, .cfRange, &range) else { return nil }
         return NSRange(location: range.location, length: range.length)
@@ -563,20 +573,14 @@ final class SnippetTextInjector {
     }
 
     private func selectedText(in targetApp: NSRunningApplication?) -> String? {
-        guard Permissions.isAccessibilityTrusted(), let targetApp else { return nil }
-        let application = AXUIElementCreateApplication(targetApp.processIdentifier)
-        var focusedValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            application,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedValue) == .success,
-            let focusedValue
+        guard Permissions.isAccessibilityTrusted(),
+            let targetApp,
+            let element = focusedElement(in: targetApp)
         else { return nil }
 
-        let focusedElement = focusedValue as! AXUIElement
         var selectionValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(
-            focusedElement,
+            element,
             kAXSelectedTextAttribute as CFString,
             &selectionValue) == .success
         else { return nil }

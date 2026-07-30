@@ -61,11 +61,12 @@ enum BackupActions {
                 return try RaycastImport.parse(decrypted).selecting(options)
             }
         }.value
+        // Snippet import is the only throwing step, so it runs first: a failure must not leave settings and clipboard already committed.
+        let snippetsImported = try await AppCore.shared.snippetsStore.importSnippets(result.snippets).count
         let summary = result.backup.apply()
         let imported =
             result.clipboard.isEmpty
             ? 0 : AppCore.shared.clipboardStore.importEntries(result.clipboard)
-        let snippetsImported = try await AppCore.shared.snippetsStore.importSnippets(result.snippets).count
         return RaycastOutcome(
             summary: summary,
             clipboardImported: imported,
@@ -100,14 +101,21 @@ enum BackupActions {
     // MARK: - Helpers
 
     static func summaryText(_ s: SettingsBackup.ApplySummary) -> String {
+        appliedText(s) ?? nothingImportedText
+    }
+
+    static let nothingImportedText = "Nothing to import from this file."
+
+    /// `nil` when the backup applied no settings, so callers that also import clipboard or snippets can compose one combined sentence instead of contradicting the empty-import wording.
+    static func appliedText(_ s: SettingsBackup.ApplySummary) -> String? {
         var parts: [String] = []
         if s.settingsFields > 0 { parts.append("\(s.settingsFields) settings") }
         if s.hotkeys > 0 { parts.append("\(s.hotkeys) shortcuts") }
         if s.favorites > 0 { parts.append("\(s.favorites) favorites") }
         if s.hiddenItems > 0 { parts.append("\(s.hiddenItems) hidden items") }
         if s.customCommands > 0 { parts.append("\(s.customCommands) custom commands") }
-        return parts.isEmpty
-            ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
+        guard !parts.isEmpty else { return nil }
+        return "Applied " + parts.joined(separator: ", ") + "."
     }
 
     private static func confirmExecutableImport(commands: Int, shortcuts: Int) -> Bool {

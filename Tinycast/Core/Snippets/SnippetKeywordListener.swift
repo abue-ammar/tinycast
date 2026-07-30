@@ -14,6 +14,12 @@ private func snippetKeywordCallback(
         return Unmanaged.passUnretained(event)
     }
 
+    // A click relocates the caret, so the buffered prefix no longer describes what precedes the insertion point.
+    if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
+        MainActor.assumeIsolated { listener.clearBuffer() }
+        return Unmanaged.passUnretained(event)
+    }
+
     let eventUserData = event.getIntegerValueField(.eventSourceUserData)
     let secureEventInputEnabled = IsSecureEventInputEnabled()
     let typeRaw = type.rawValue
@@ -62,6 +68,9 @@ private final class SystemSnippetKeywordTapController: SnippetKeywordTapControll
         let mask: CGEventMask =
             (1 << CGEventType.keyDown.rawValue)
             | (1 << CGEventType.flagsChanged.rawValue)
+            | (1 << CGEventType.leftMouseDown.rawValue)
+            | (1 << CGEventType.rightMouseDown.rawValue)
+            | (1 << CGEventType.otherMouseDown.rawValue)
         guard let port = CGEvent.tapCreate(
             tap: .cgAnnotatedSessionEventTap,
             place: .headInsertEventTap,

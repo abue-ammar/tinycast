@@ -263,12 +263,14 @@ enum SnippetTemplateEngine {
         snippets: [StoredSnippet]
     ) -> StoredSnippet? {
         let normalizedKey = normalizeReference(key)
-        if let nameMatch = snippets.first(where: {
+        // A disabled snippet is never expandable on its own, so it must not become expandable by nesting either.
+        let candidates = snippets.filter { $0.snippet.isEnabled }
+        if let nameMatch = candidates.first(where: {
             normalizeReference($0.snippet.name) == normalizedKey
         }) {
             return nameMatch
         }
-        return snippets.first(where: {
+        return candidates.first(where: {
             guard let keyword = $0.snippet.keyword else { return false }
             return normalizeReference(keyword) == normalizedKey
         })

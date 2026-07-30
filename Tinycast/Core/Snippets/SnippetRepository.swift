@@ -338,7 +338,15 @@ struct SnippetRepository: Sendable {
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles])
             .filter { $0.pathExtension.lowercased() == "md" }
+            .filter(Self.isLoadableFile)
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    // Keeps a directory or device node named `*.md` out of the loader. The prefetched key answers for real files; only the rest pay for resolving, which is what keeps a symlinked snippet file loadable.
+    private static func isLoadableFile(_ url: URL) -> Bool {
+        if (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true { return true }
+        return (try? url.resolvingSymlinksInPath()
+            .resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
     }
 
     private func write(_ snippets: [Snippet], to directory: URL) throws {

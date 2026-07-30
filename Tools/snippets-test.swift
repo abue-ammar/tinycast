@@ -50,15 +50,17 @@ struct SnippetsTests {
             ["name": "Missing Text"],
         ])
 
+        check("Raycast import ignores an unrecognized container",
+            RaycastSnippetImport.parse(["snippets": []]).isEmpty)
         check("Raycast import keeps valid entries and source order",
             imported.map(\.name) == ["Email", "Multiline 雪", "Blank Keyword"])
+        // The remaining assertions index into the result, so a wrong count has to fail rather than trap.
+        guard imported.count == 3 else { return }
         check("Raycast import preserves text and Unicode", imported[1].text == "First\nSecond")
         check("Raycast import trims keywords and normalizes blanks",
             imported[0].keyword == "!email" && imported[2].keyword == nil)
         check("Raycast import uses safe Tinycast defaults",
             imported.allSatisfy { $0.isEnabled && $0.showInLauncher && !$0.showHUD })
-        check("Raycast import ignores an unrecognized container",
-            RaycastSnippetImport.parse(["snippets": []]).isEmpty)
     }
 
     private static func testMarkdownCodec() throws {
@@ -133,6 +135,15 @@ struct SnippetsTests {
             fileURL: URL(fileURLWithPath: "/tmp/body-only-name.md"))
         check("content without an exact opening delimiter remains the body", bodyOnlyParsed.text == bodyOnly)
         check("filename fallback is deterministic", bodyOnlyParsed.name == "Body Only Name")
+
+        let blankNameParsed = try SnippetMarkdownSerializer.parse(
+            content: "---\nname: \" \\t \"\n---\nBody",
+            fileURL: URL(fileURLWithPath: "/tmp/blank-name-file.md"))
+        let emptyNameParsed = try SnippetMarkdownSerializer.parse(
+            content: "---\nname: \"\"\n---\nBody",
+            fileURL: URL(fileURLWithPath: "/tmp/blank-name-file.md"))
+        check("a blank frontmatter name falls back to the filename",
+            blankNameParsed.name == "Blank Name File" && emptyNameParsed.name == "Blank Name File")
 
         expectParseError("missing closing delimiter is rejected", content: "---\nname: \"Broken\"\n", fileURL: fileURL)
         expectParseError("non-exact closing delimiter is rejected", content: "---\nname: \"Broken\"\n--- \n", fileURL: fileURL)
@@ -272,6 +283,25 @@ struct SnippetsTests {
             partial.issues.count == 1
                 && partial.issues[0].fileURL.standardizedFileURL.path == invalidURL.standardizedFileURL.path)
 
+        let directoryEntryURL = corruptRepository.snippetsDirectory.appendingPathComponent(
+            "folder.md",
+            isDirectory: true)
+        try fm.createDirectory(at: directoryEntryURL, withIntermediateDirectories: true)
+        let linkedEntryURL = corruptRepository.snippetsDirectory.appendingPathComponent("linked.md")
+        try fm.createSymbolicLink(at: linkedEntryURL, withDestinationURL: validURL)
+        let nonRegularEntries = try corruptRepository.load()
+        check("a directory named like a snippet is neither loaded nor reported as an issue",
+            !nonRegularEntries.records.contains {
+                $0.id == directoryEntryURL.standardizedFileURL.path
+            }
+                && !nonRegularEntries.issues.contains {
+                    $0.fileURL.standardizedFileURL.path == directoryEntryURL.standardizedFileURL.path
+                })
+        check("a snippet file symlinked into the folder still loads",
+            nonRegularEntries.records.contains {
+                $0.id == linkedEntryURL.standardizedFileURL.path
+            })
+
         let crudRoot = root.appendingPathComponent("crud", isDirectory: true)
         let crudRepository = SnippetRepository(
             bundleIdentifier: "com.example.crud",
@@ -338,29 +368,35 @@ struct SnippetsTests {
         } catch SnippetRepository.RepositoryError.conflict {
             check("stale deletes report a revision conflict", true)
         }
-        let currentSaved = try crudRepository.load().records.first { $0.id == saved.id }!
-        try crudRepository.delete(
-            fileURL: currentSaved.fileURL,
-            expectedRevision: currentSaved.sourceRevision)
-        check("delete removes exactly the requested file",
-            !fm.fileExists(atPath: currentSaved.fileURL.path)
-                && fm.fileExists(atPath: externallyRenamedURL.path))
-        do {
-            _ = try crudRepository.save(
-                currentSaved.snippet,
-                fileURL: root.appendingPathComponent("outside.md"),
-                expectedRevision: currentSaved.sourceRevision)
-            check("repository rejects writes outside the channel directory", false)
-        } catch SnippetRepository.RepositoryError.invalidFileLocation {
-            check("repository rejects writes outside the channel directory", true)
-        }
-        do {
+        // Everything below needs the reloaded record; report the loss instead of trapping, and keep the migration contracts running.
+        if let currentSaved = try crudRepository.load().records.first(where: { $0.id == saved.id }) {
             try crudRepository.delete(
                 fileURL: currentSaved.fileURL,
                 expectedRevision: currentSaved.sourceRevision)
+            check("delete removes exactly the requested file",
+                !fm.fileExists(atPath: currentSaved.fileURL.path)
+                    && fm.fileExists(atPath: externallyRenamedURL.path))
+            do {
+                _ = try crudRepository.save(
+                    currentSaved.snippet,
+                    fileURL: root.appendingPathComponent("outside.md"),
+                    expectedRevision: currentSaved.sourceRevision)
+                check("repository rejects writes outside the channel directory", false)
+            } catch SnippetRepository.RepositoryError.invalidFileLocation {
+                check("repository rejects writes outside the channel directory", true)
+            }
+            do {
+                try crudRepository.delete(
+                    fileURL: currentSaved.fileURL,
+                    expectedRevision: currentSaved.sourceRevision)
+                check("deleting an already removed file reports file not found", false)
+            } catch SnippetRepository.RepositoryError.fileNotFound {
+                check("deleting an already removed file reports file not found", true)
+            }
+        } else {
+            check("delete removes exactly the requested file", false)
+            check("repository rejects writes outside the channel directory", false)
             check("deleting an already removed file reports file not found", false)
-        } catch SnippetRepository.RepositoryError.fileNotFound {
-            check("deleting an already removed file reports file not found", true)
         }
 
         let retryRoot = root.appendingPathComponent("migration-retry", isDirectory: true)
@@ -403,7 +439,8 @@ struct SnippetsTests {
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: root) }
 
-        for index in 0..<25 {
+        var initializationHeld = true
+        for index in 0..<25 where initializationHeld {
             let iterationRoot = root.appendingPathComponent("init-\(index)", isDirectory: true)
             let repository = SnippetRepository(
                 bundleIdentifier: "com.example.concurrent-init",
@@ -417,14 +454,11 @@ struct SnippetsTests {
             }.value
             let results = await [first, second]
             let records = results.compactMap { try? $0.get() }
-            guard records.count == 2,
-                records.allSatisfy({ fm.fileExists(atPath: $0.fileURL.path) })
-            else {
-                check("concurrent initialization and creates preserve both committed files", false)
-                return
-            }
+            initializationHeld = records.count == 2
+                && records.allSatisfy { fm.fileExists(atPath: $0.fileURL.path) }
         }
-        check("concurrent initialization and creates preserve both committed files", true)
+        check("concurrent initialization and creates preserve both committed files",
+            initializationHeld)
 
         let saveRoot = root.appendingPathComponent("save", isDirectory: true)
         let repository = SnippetRepository(
@@ -472,7 +506,8 @@ struct SnippetsTests {
         let symlinkedSupport = root.appendingPathComponent("symlinked-support", isDirectory: true)
         try fm.createDirectory(at: physicalSupport, withIntermediateDirectories: true)
         try fm.createSymbolicLink(at: symlinkedSupport, withDestinationURL: physicalSupport)
-        for index in 0..<20 {
+        var aliasCoordinationHeld = true
+        for index in 0..<20 where aliasCoordinationHeld {
             let bundleIdentifier = "com.example.symlink-save-\(index)"
             let revalidation = RevalidationRendezvous()
             let hooks = SnippetRepository.MutationHooks(afterRevalidation: { mutation, _ in
@@ -493,9 +528,12 @@ struct SnippetsTests {
             for record in initial.records { try fm.removeItem(at: record.fileURL) }
             let symlinkedRecord = try symlinkedRepository.create(
                 Snippet(name: "Alias Race", text: "Original"))
-            let directRecord = try directRepository.load().records.first {
+            guard let directRecord = try directRepository.load().records.first(where: {
                 $0.fileURL.lastPathComponent == symlinkedRecord.fileURL.lastPathComponent
-            }!
+            }) else {
+                aliasCoordinationHeld = false
+                continue
+            }
             var directEdit = directRecord.snippet
             directEdit.text = "Direct \(index)"
             var symlinkedEdit = symlinkedRecord.snippet
@@ -524,12 +562,10 @@ struct SnippetsTests {
                 else { return false }
                 return true
             }.count
-            guard successes == 1, conflicts == 1 else {
-                check("direct and symlinked channel aliases share revision coordination", false)
-                return
-            }
+            aliasCoordinationHeld = successes == 1 && conflicts == 1
         }
-        check("direct and symlinked channel aliases share revision coordination", true)
+        check("direct and symlinked channel aliases share revision coordination",
+            aliasCoordinationHeld)
 
         let boundaryRoot = root.appendingPathComponent("mutation-boundary", isDirectory: true)
         let boundaryBundle = "com.example.mutation-boundary"
@@ -565,19 +601,22 @@ struct SnippetsTests {
             check("save revalidates inside coordinated access at the mutation boundary",
                 content == "External before save")
         }
-        let deleteRecord = try boundaryRepository.load().records.first {
+        if let deleteRecord = try boundaryRepository.load().records.first(where: {
             $0.id == boundaryRecord.id
-        }!
-        do {
-            try racingRepository.delete(
-                fileURL: deleteRecord.fileURL,
-                expectedRevision: deleteRecord.sourceRevision)
+        }) {
+            do {
+                try racingRepository.delete(
+                    fileURL: deleteRecord.fileURL,
+                    expectedRevision: deleteRecord.sourceRevision)
+                check("delete revalidates inside coordinated access at the mutation boundary", false)
+            } catch SnippetRepository.RepositoryError.conflict {
+                let content = try String(contentsOf: deleteRecord.fileURL, encoding: .utf8)
+                check("delete revalidates inside coordinated access at the mutation boundary",
+                    fm.fileExists(atPath: deleteRecord.fileURL.path)
+                        && content == "External before delete")
+            }
+        } else {
             check("delete revalidates inside coordinated access at the mutation boundary", false)
-        } catch SnippetRepository.RepositoryError.conflict {
-            let content = try String(contentsOf: deleteRecord.fileURL, encoding: .utf8)
-            check("delete revalidates inside coordinated access at the mutation boundary",
-                fm.fileExists(atPath: deleteRecord.fileURL.path)
-                    && content == "External before delete")
         }
     }
 
@@ -713,6 +752,7 @@ struct SnippetsTests {
         let root = fm.temporaryDirectory.appendingPathComponent(
             "tinycast-snippets-watcher-\(UUID().uuidString)",
             isDirectory: true)
+        defer { try? fm.removeItem(at: root) }
         let repository = SnippetRepository(
             bundleIdentifier: "com.example.watcher",
             applicationSupportRoot: root,
@@ -825,7 +865,6 @@ struct SnippetsTests {
         check("retry after stop cannot restart loading or watchers",
             snapshotCount == stoppedSnapshotCount)
         store.stop()
-        try fm.removeItem(at: root)
     }
 
     private static func testTemplateExpansion() {
@@ -910,6 +949,19 @@ struct SnippetsTests {
         check("duplicate name references resolve by stable path identity", referenced.text == "A|K|{snippet:missing}")
         check("name and keyword references are case-insensitive", referenced.text.hasPrefix("A|K|"))
         check("missing references remain visible", referenced.text.hasSuffix("{snippet:missing}"))
+
+        let disabledChild = record(
+            "/tmp/disabled-child.md",
+            Snippet(name: "Disabled", text: "Secret", keyword: "!disabled", isEnabled: false))
+        let disabledReferences = record(
+            "/tmp/disabled-references.md",
+            Snippet(name: "Disabled References", text: "{snippet:Disabled}|{snippet:!disabled}"))
+        let disabledResult = SnippetTemplateEngine.expand(
+            disabledReferences,
+            snippets: [disabledChild, disabledReferences],
+            context: context)
+        check("a disabled snippet cannot be expanded by name or keyword reference",
+            disabledResult.text == "{snippet:Disabled}|{snippet:!disabled}")
 
         let cursorChild = record(
             "/tmp/cursor-child.md",

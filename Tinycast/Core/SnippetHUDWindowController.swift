@@ -11,11 +11,13 @@ final class SnippetHUDWindowController {
         self.settings = settings
     }
 
-    // Transient success HUDs are recommended primarily for Custom Commands.
     func show(snippetName: String) {
         dismissalTask?.cancel()
         let panel = panel ?? makePanel()
-        panel.contentView = NSHostingView(rootView: SnippetHUDView(snippetName: snippetName))
+        let host = NSHostingView(rootView: SnippetHUDView(snippetName: snippetName))
+        // This controller owns the HUD frame; SwiftUI must never resize the panel out from under position(_:).
+        host.sizingOptions = []
+        panel.contentView = host
         position(panel)
         panel.orderFrontRegardless()
         dismissalTask = Task { @MainActor [weak self, weak panel] in
