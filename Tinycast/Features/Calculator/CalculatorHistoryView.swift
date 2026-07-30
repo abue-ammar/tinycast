@@ -4,8 +4,8 @@ import SwiftUI
 struct CalculatorHistoryList: View {
     let results: [CalcHistoryEntry]
     let selectedID: CalcHistoryEntry.ID?
-    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so mouse selection never yanks the scroll position.
-    let scrollToken: UUID
+    /// Present only when the list should follow selection or return to its origin.
+    let scrollIntent: ListScrollIntent?
     /// Live answer for a calculation typed into the history search — same card and flat-index-0 contract as the launcher (`LauncherList.calc`).
     var calc: CalcResult?
     var calcSelected = false
@@ -50,43 +50,49 @@ struct CalculatorHistoryList: View {
         let rows = rows
         return ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        switch row {
-                        case .header(let title):
-                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                        case .calc(let result):
-                            CalculatorCard(result: result, selected: calcSelected)
-                                .contentShape(Rectangle())
-                                .onTapGesture(perform: onActivateCalc)
-                                .onRightClick(perform: onCalcActions)
-                                .padding(.bottom, Theme.Spacing.xs)
-                        case .entry(let entry):
-                            CalcHistoryRow(entry: entry, selected: entry.id == selectedID)
-                                .contentShape(Rectangle())
-                                .onTapGesture { onSelect(entry) }
-                                .simultaneousGesture(
-                                    TapGesture(count: 2).onEnded {
-                                        onSelect(entry)
-                                        onActivate()
-                                    }
-                                )
-                                .onRightClick { onActions(entry) }
+                VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(rows) { row in
+                            switch row {
+                            case .header(let title):
+                                SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                            case .calc(let result):
+                                CalculatorCard(result: result, selected: calcSelected)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture(perform: onActivateCalc)
+                                    .onRightClick(perform: onCalcActions)
+                                    .padding(.bottom, Theme.Spacing.xs)
+                            case .entry(let entry):
+                                CalcHistoryRow(entry: entry, selected: entry.id == selectedID)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { onSelect(entry) }
+                                    .simultaneousGesture(
+                                        TapGesture(count: 2).onEnded {
+                                            onSelect(entry)
+                                            onActivate()
+                                        }
+                                    )
+                                    .onRightClick { onActions(entry) }
+                            }
                         }
                     }
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.top, Theme.Spacing.xs)
+                    .padding(.bottom, Theme.Spacing.md)
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
                 .hideNativeScrollers()
+                .resetNativeScrollToTop(
+                    id: scrollIntent?.kind == .top ? scrollIntent?.id : nil
+                )
             }
             .edgeDissolve()
             .thinScrollbar()
-            .onChange(of: scrollToken) {
-                if calcSelected {
-                    proxy.scrollTo(Self.calcRowID, anchor: .center)
-                } else if let selectedID {
-                    proxy.scrollTo(selectedID.uuidString, anchor: .center)
+            .task(id: scrollIntent) {
+                guard let scrollIntent else { return }
+                if scrollIntent.kind == .follow, calcSelected {
+                    proxy.scrollTo(Self.calcRowID)
+                } else if scrollIntent.kind == .follow, let selectedID {
+                    proxy.scrollTo(selectedID.uuidString)
                 }
             }
         }

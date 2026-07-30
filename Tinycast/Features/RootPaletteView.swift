@@ -1,5 +1,16 @@
 import SwiftUI
 
+/// A cancellable list-scroll request that either minimally reveals the selection or restores the content origin.
+struct ListScrollIntent: Equatable {
+    enum Kind: Equatable {
+        case follow
+        case top
+    }
+
+    let id = UUID()
+    let kind: Kind
+}
+
 struct RootPaletteView: View {
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var vm: PaletteViewModel
@@ -22,9 +33,9 @@ struct RootPaletteView: View {
     @State private var selectionIsRunning = false
     /// Highlighted row of whichever popover menu is open; reset to the first row on open, moved by ↑/↓ and hover, activated by ↵/click.
     @State private var menuSelection = 0
-    /// Bumped only when the selection should pull the scroll view with it (keyboard nav, list resets); mouse selection targets a visible row, so it leaves this and the list put.
-    @State private var scrollToken = UUID()
-    /// The emoji grid's scroll request — the lazy grid needs distinct reset/follow scroll ops, unlike the 1-D lists that recenter fine on `scrollToken`.
+    /// Changes only when a query/reset/navigation/reorder needs the list to move; mouse selection never changes it.
+    @State private var listScroll: ListScrollIntent?
+    /// The emoji grid's scroll request — the lazy grid needs distinct reset/follow scroll ops.
     @State private var emojiScroll = EmojiScrollIntent(kind: .top)
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -251,18 +262,18 @@ struct RootPaletteView: View {
         }
         .onChange(of: vm.query) {
             vm.selection = 0
-            scrollToken = UUID()
+            listScroll = ListScrollIntent(kind: .top)
             emojiScroll = EmojiScrollIntent(kind: .top)
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
             showActions = false
-            scrollToken = UUID()
+            listScroll = ListScrollIntent(kind: .top)
             emojiScroll = EmojiScrollIntent(kind: .top)
         }
-        // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this token guarantees the scroll itself snaps back to the top.
+        // Pop-to-root can leave query and mode unchanged, so explicitly restore the content origin.
         .onChange(of: vm.resetToken) {
-            scrollToken = UUID()
+            listScroll = ListScrollIntent(kind: .top)
             emojiScroll = EmojiScrollIntent(kind: .top)
         }
         // Opening either menu highlights its first row and closes the other, so exactly one menu is ever open and always has a highlight.
@@ -289,11 +300,19 @@ struct RootPaletteView: View {
             {
                 vm.selection = index
             }
-            scrollToken = UUID()
+            listScroll = ListScrollIntent(kind: .top)
         }
         .onAppear { searchFocused = true }
-        // Typing/clearing/overflow/settings all flip `paletteIsCollapsed`; resize the window to match.
-        .onChange(of: core.paletteIsCollapsed) { core.syncPaletteSize() }
+        // Resize first, then reassert the top after a compact→expanded layout has adopted the full frame.
+        .onChange(of: core.paletteIsCollapsed) { oldCollapsed, collapsed in
+            core.syncPaletteSize()
+            guard oldCollapsed, !collapsed else { return }
+            Task { @MainActor in
+                await Task.yield()
+                guard !core.paletteIsCollapsed else { return }
+                listScroll = ListScrollIntent(kind: .top)
+            }
+        }
         // ⌘1–⌘5 launch the compact bar's favorite slots (or expand, for the "…" overflow slot).
         .onKeyPress(keys: ["1", "2", "3", "4", "5"], phases: .down) { press in
             guard isCollapsed, settings.showFavoritesInCompactMode,
@@ -511,7 +530,7 @@ struct RootPaletteView: View {
                 selectedID: calcSelected ? nil : selectedID,
                 favoriteCount: favoriteCount,
                 showSections: showSections,
-                scrollToken: scrollToken,
+                scrollIntent: listScroll,
                 calc: calc,
                 calcSelected: calcSelected,
                 onActivateCalc: {
@@ -539,7 +558,7 @@ struct RootPaletteView: View {
                     ClipboardList(
                         results: clips,
                         selectedID: selected?.id,
-                        scrollToken: scrollToken,
+                        scrollIntent: listScroll,
                         onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
                         onActivate: activateSelection,
                         onActions: { item in
@@ -566,7 +585,7 @@ struct RootPaletteView: View {
                 CalculatorHistoryList(
                     results: hist,
                     selectedID: calcSelected ? nil : selected?.id,
-                    scrollToken: scrollToken,
+                    scrollIntent: listScroll,
                     calc: calc,
                     calcSelected: calcSelected,
                     onActivateCalc: {
@@ -721,8 +740,10 @@ struct RootPaletteView: View {
 
     private func move(_ delta: Int) {
         guard resultCount > 0 else { return }
-        vm.selection = min(max(selection + delta, 0), resultCount - 1)
-        scrollToken = UUID()
+        let nextSelection = min(max(selection + delta, 0), resultCount - 1)
+        vm.selection = nextSelection
+        let kind: ListScrollIntent.Kind = delta < 0 && nextSelection == 0 ? .top : .follow
+        listScroll = ListScrollIntent(kind: kind)
         emojiScroll = EmojiScrollIntent(kind: .follow)
     }
 

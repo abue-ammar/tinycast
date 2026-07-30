@@ -178,6 +178,73 @@ extension View {
     func hideNativeScrollers() -> some View {
         background(NativeScrollerHider().frame(width: 0, height: 0))
     }
+
+    /// Attach inside a `ScrollView` to restore its backing clip view to AppKit's exact inset-aware top edge when lazy filtering would otherwise preserve a stale offset.
+    func resetNativeScrollToTop(id: UUID?) -> some View {
+        background(NativeScrollTopResetter(resetID: id).frame(width: 0, height: 0))
+    }
+}
+
+/// Resets immediately to clear the old offset before drawing, then once next run loop to win over late lazy-stack layout restoration.
+private struct NativeScrollTopResetter: NSViewRepresentable {
+    let resetID: UUID?
+
+    func makeNSView(context: Context) -> NSView { ResetterView() }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? ResetterView)?.requestReset(id: resetID)
+    }
+
+    private final class ResetterView: NSView {
+        private var requestedID: UUID?
+        private var passesLeft = 0
+        private var hierarchyRetriesLeft = 0
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError() }
+        override init(frame: NSRect) { super.init(frame: frame) }
+
+        func requestReset(id: UUID?) {
+            guard id != requestedID else { return }
+            requestedID = id
+            guard id != nil else {
+                passesLeft = 0
+                hierarchyRetriesLeft = 0
+                return
+            }
+            passesLeft = 2
+            hierarchyRetriesLeft = 10
+            resetIfCurrent(id)
+        }
+
+        private func resetIfCurrent(_ id: UUID?) {
+            guard id != nil, id == requestedID, passesLeft > 0 else { return }
+
+            if let scrollView = enclosingScrollView {
+                passesLeft -= 1
+                scrollView.layoutSubtreeIfNeeded()
+                scrollView.documentView?.layoutSubtreeIfNeeded()
+
+                let clip = scrollView.contentView
+                var probe = clip.bounds
+                probe.origin.y = -1_000_000_000
+                var origin = clip.bounds.origin
+                origin.y = clip.constrainBoundsRect(probe).origin.y
+                clip.scroll(to: origin)
+                scrollView.reflectScrolledClipView(clip)
+            } else {
+                // Preserve the second pass when SwiftUI updates the representable before splicing it into the scroll hierarchy.
+                guard hierarchyRetriesLeft > 0 else {
+                    passesLeft = 0
+                    return
+                }
+                hierarchyRetriesLeft -= 1
+            }
+
+            guard passesLeft > 0 else { return }
+            DispatchQueue.main.async { [weak self] in self?.resetIfCurrent(id) }
+        }
+    }
 }
 
 /// Forces the backing `NSScrollView` to a hidden `.overlay` scroller (removing the always-on legacy widget and its reserved gutter), re-asserting it on `preferredScrollerStyleDidChangeNotification` since macOS otherwise resets it.

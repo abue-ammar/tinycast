@@ -120,7 +120,7 @@ the `ScrollView`, **before `.thinScrollbar()`** (so the scrollbar overlay stays 
 
 - Fade bands: top = `headerHeight + headerPadding + 32`, bottom = `bottomBarHeight + 28` — each overshoots its bar into the visible list, so the ramp finishes ~32/28px _past_ the bar rather than cliffing at its edge.
 - Alpha floors mid-scroll (not to 0): **top 0.15, bottom 0.25**, eased by how much content is hidden past the edge (`1 − (1 − floor)·clamp(dist/band, 0, 1)`).
-- Only masks when the list is scrollable; the edge stop stays transparent so rubber-band bounces still dissolve. A list that fits gets no mask.
+- The outer edge is opaque at its resting boundary and dissolves continuously as content passes behind it. A list that fits gets no mask.
 - The mask spans the scroll view's **full** frame (`.ignoresSafeArea()`) — otherwise the bars' safe-area insets shift the gradient onto at-rest rows.
 
 ---
@@ -132,7 +132,7 @@ All lists share one row grammar so launcher and clipboard look identical:
 - `HStack(spacing: lg)`: leading 24pt icon/thumbnail, title (`.body`, `lineLimit(1)`), optional trailing keycaps/kind label, `Spacer`. Insets: `.horizontal md`, `.vertical sm`.
 - Background is a `RoundedRectangle(row, .continuous)` filled by `fill`: **selection → hover → clear**, in that precedence. This `fill` computed property is copy-identical across `AppRow`, `ClipboardRow`, `CalculatorCard` — keep them in sync.
 - **Hover state lives on the row**, not the list, so a mouse sweep repaints only the rows entering/leaving (a list-level hover rebuilds every row per move — don't do that).
-- **Scroll follows selection only on keyboard nav/reset**, driven by a `scrollToken` UUID — mouse selection targets a visible row and never yanks scroll.
+- **Scroll follows explicit intent only**, driven by a cancellable `ListScrollIntent` — mouse selection never yanks scroll and arrows minimally reveal rows. Top intents reset the backing clip view to AppKit's exact inset-aware minimum, and the scroll view retains its identity across query changes so lazy filtering cannot restore a stale offset or briefly lose the header inset.
 - **Keycaps** use `KeyCapChip`: `.outline` (white-0.20 border) for hotkey hints on rows, `.filled` (white-0.10 fill) for footer shortcuts.
 
 ### Section headers

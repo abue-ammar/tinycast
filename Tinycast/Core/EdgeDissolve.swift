@@ -50,16 +50,18 @@ struct EdgeDissolveMask: ViewModifier {
 
     private func stops(height: CGFloat) -> [Gradient.Stop] {
         guard canScroll, height > 0 else { return [.init(color: .black, location: 0)] }
-        // Midpoint alpha eases from 1 toward the floor as a full band of content scrolls past (Raycast: opacity = 1 − (1 − min) · clamp(scrollDistance / fadeHeight, 0, 1)).
-        let topAlpha = 1 - (1 - Self.topMinAlpha) * min(topDistance / topFade, 1)
-        let bottomAlpha = 1 - (1 - Self.bottomMinAlpha) * min(bottomDistance / bottomFade, 1)
+        // Each edge stays opaque at its resting boundary, then dissolves as content passes behind it.
+        let topProgress = min(topDistance / topFade, 1)
+        let bottomProgress = min(bottomDistance / bottomFade, 1)
+        let topAlpha = 1 - (1 - Self.topMinAlpha) * topProgress
+        let bottomAlpha = 1 - (1 - Self.bottomMinAlpha) * bottomProgress
         return [
-            .init(color: .black.opacity(0), location: 0),
+            .init(color: .black.opacity(1 - topProgress), location: 0),
             .init(color: .black.opacity(topAlpha), location: topFade / 2 / height),
             .init(color: .black, location: topFade / height),
             .init(color: .black, location: 1 - bottomFade / height),
             .init(color: .black.opacity(bottomAlpha), location: 1 - bottomFade / 2 / height),
-            .init(color: .black.opacity(0), location: 1),
+            .init(color: .black.opacity(1 - bottomProgress), location: 1),
         ]
     }
 }

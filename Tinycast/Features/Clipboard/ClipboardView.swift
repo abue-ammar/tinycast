@@ -4,8 +4,8 @@ import SwiftUI
 struct ClipboardList: View {
     let results: [ClipboardItem]
     let selectedID: ClipboardItem.ID?
-    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so mouse selection never yanks the scroll position.
-    let scrollToken: UUID
+    /// Present only when the list should follow selection or return to its origin.
+    let scrollIntent: ListScrollIntent?
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
     let onActions: (ClipboardItem) -> Void
@@ -41,38 +41,46 @@ struct ClipboardList: View {
         let rows = rows
         return ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        switch row {
-                        case .header(let title):
-                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                        case .item(let item):
-                            ClipboardRow(
-                                item: item, selected: item.id == selectedID,
-                                imageURL: store.imageURL(for: item)
-                            )
-                            .contentShape(Rectangle())
-                            // Single click selects instantly (double-click-to-paste is a `.simultaneousGesture`, so the tap never waits on the double-click timeout); right-click uses the lightweight catcher, since `.contextMenu` stalls clicks for seconds in a LazyVStack.
-                            .onTapGesture { onSelect(item) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    onSelect(item)
-                                    onActivate()
-                                }
-                            )
-                            .onRightClick { onActions(item) }
+                VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(rows) { row in
+                            switch row {
+                            case .header(let title):
+                                SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                            case .item(let item):
+                                ClipboardRow(
+                                    item: item, selected: item.id == selectedID,
+                                    imageURL: store.imageURL(for: item)
+                                )
+                                .contentShape(Rectangle())
+                                // Single click selects instantly (double-click-to-paste is a `.simultaneousGesture`, so the tap never waits on the double-click timeout); right-click uses the lightweight catcher, since `.contextMenu` stalls clicks for seconds in a LazyVStack.
+                                .onTapGesture { onSelect(item) }
+                                .simultaneousGesture(
+                                    TapGesture(count: 2).onEnded {
+                                        onSelect(item)
+                                        onActivate()
+                                    }
+                                )
+                                .onRightClick { onActions(item) }
+                            }
                         }
                     }
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.top, Theme.Spacing.xs)
+                    .padding(.bottom, Theme.Spacing.md)
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
                 .hideNativeScrollers()
+                .resetNativeScrollToTop(
+                    id: scrollIntent?.kind == .top ? scrollIntent?.id : nil
+                )
             }
             .edgeDissolve()
             .thinScrollbar()
-            .onChange(of: scrollToken) {
-                if let selectedID { proxy.scrollTo(selectedID.uuidString, anchor: .center) }
+            .task(id: scrollIntent) {
+                guard let scrollIntent else { return }
+                if scrollIntent.kind == .follow, let selectedID {
+                    proxy.scrollTo(selectedID.uuidString)
+                }
             }
         }
     }
