@@ -74,6 +74,8 @@ enum SystemCommandRunner {
                             failure: SystemCommandFailure(error.localizedDescription))
                     }
                 }
+        case .playPause:
+            try postMediaKey(16)
         }
         return nil
     }
@@ -92,6 +94,22 @@ enum SystemCommandRunner {
         up.flags = flags
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
+    }
+
+    private static func postMediaKey(_ key: Int32) throws {
+        guard Permissions.ensureAccessibility() else {
+            throw SystemCommandFailure(
+                "Allow Tinycast to control your Mac in Accessibility settings, then try again.",
+                settings: .accessibility)
+        }
+        // Auxiliary-key events are the same route as the keyboard's media keys; 0xA/0xB are their down/up states.
+        for state in [0xA, 0xB] {
+            let data1 = Int((key << 16) | (Int32(state) << 8))
+            let event = NSEvent.otherEvent(
+                with: .systemDefined, location: .zero, modifierFlags: [], timestamp: 0,
+                windowNumber: 0, context: nil, subtype: 8, data1: data1, data2: -1)
+            event?.cgEvent?.post(tap: .cghidEventTap)
+        }
     }
 
     @discardableResult
