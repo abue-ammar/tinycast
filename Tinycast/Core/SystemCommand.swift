@@ -14,6 +14,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case previousTrack = "previous-track"
         case toggleMute = "toggle-mute"
         case volumeUp = "volume-up"
+        case volumeDown = "volume-down"
     }
 
     enum Confirmation: String, Sendable {
@@ -56,6 +57,7 @@ enum SystemCommandCatalog {
         case .previousTrack: return "Previous Track"
         case .toggleMute: return "Toggle Mute"
         case .volumeUp: return "Turn Volume Up"
+        case .volumeDown: return "Turn Volume Down"
         }
     }
 
@@ -73,6 +75,7 @@ enum SystemCommandCatalog {
         case .previousTrack: return "backward.end"
         case .toggleMute: return "speaker.slash"
         case .volumeUp: return "speaker.plus"
+        case .volumeDown: return "speaker.minus"
         }
     }
 

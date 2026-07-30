@@ -425,7 +425,7 @@ final class AppCore: ObservableObject {
 
     /// Commands that change the output level or mute state; macOS only draws its own HUD for real media keys, so these get Tinycast's.
     private static let showsVolumeFeedback: Set<SystemCommand.ID> = [
-        .volumeUp, .toggleMute,
+        .volumeUp, .volumeDown, .toggleMute,
     ]
 
     private static func confirmationTitle(_ command: SystemCommand) -> String {

@@ -86,6 +86,8 @@ enum SystemCommandRunner {
             try toggleMute()
         case .volumeUp:
             try changeVolume(by: volumeStep)
+        case .volumeDown:
+            try changeVolume(by: -volumeStep)
         }
         return nil
     }
