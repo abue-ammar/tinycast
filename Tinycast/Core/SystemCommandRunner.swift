@@ -155,6 +155,13 @@ enum SystemCommandRunner {
                 symbol: shown ? "eye" : "eye.slash")
         case .hideOtherApps:
             hideOtherApps(except: previousApp)
+        case .unhideAllApps:
+            let hidden = NSWorkspace.shared.runningApplications.filter(\.isHidden)
+            for app in hidden { app.unhide() }
+            guard !hidden.isEmpty else {
+                return SystemCommandFeedback("Nothing Was Hidden", symbol: "eye", isNoOp: true)
+            }
+            return SystemCommandFeedback("All Apps Unhidden", symbol: "eye")
         }
         return nil
     }
