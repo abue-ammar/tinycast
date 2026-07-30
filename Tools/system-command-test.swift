@@ -33,7 +33,7 @@ struct SystemCommandTests {
                 "\(command.id.rawValue) is namespaced")
         }
 
-        let confirmed: Set<SystemCommand.ID> = [.restart, .shutDown, .logOut]
+        let confirmed: Set<SystemCommand.ID> = [.restart, .shutDown, .logOut, .emptyTrash]
         expect(
             Set(commands.filter { $0.confirmation == .required }.map(\.id)) == confirmed,
             "only the agreed disruptive commands require confirmation")

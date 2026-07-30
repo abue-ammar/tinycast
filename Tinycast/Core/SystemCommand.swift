@@ -25,6 +25,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case toggleAppearance = "toggle-system-appearance"
         case toggleStageManager = "toggle-stage-manager"
         case openTrash = "open-trash"
+        case emptyTrash = "empty-trash"
     }
 
     enum Confirmation: String, Sendable {
@@ -78,6 +79,7 @@ enum SystemCommandCatalog {
         case .toggleAppearance: return "Toggle System Appearance"
         case .toggleStageManager: return "Toggle Stage Manager"
         case .openTrash: return "Open Trash"
+        case .emptyTrash: return "Empty Trash"
         }
     }
 
@@ -102,12 +104,13 @@ enum SystemCommandCatalog {
         case .toggleAppearance: return "circle.lefthalf.filled"
         case .toggleStageManager: return "squares.leading.rectangle"
         case .openTrash: return "trash"
+        case .emptyTrash: return "trash.slash"
         }
     }
 
     private static func confirmation(for id: SystemCommand.ID) -> SystemCommand.Confirmation {
         switch id {
-        case .restart, .shutDown, .logOut:
+        case .restart, .shutDown, .logOut, .emptyTrash:
             return .required
         default:
             return .none

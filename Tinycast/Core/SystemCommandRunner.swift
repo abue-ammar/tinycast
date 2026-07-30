@@ -123,6 +123,19 @@ enum SystemCommandRunner {
             guard NSWorkspace.shared.open(trash) else {
                 throw SystemCommandFailure("Finder could not open the Trash.")
             }
+        case .emptyTrash:
+            // Finder errors out on an already-empty Trash, so ask it for the count first. Finder is also the
+            // right oracle rather than reading `~/.Trash` ourselves: that folder is TCC-protected, so a
+            // direct read fails without Full Disk Access and would look indistinguishable from "empty".
+            let items =
+                try runAppleScript("tell application \"Finder\" to count items of trash")?
+                .int32Value ?? 0
+            guard items > 0 else {
+                return SystemCommandFeedback(
+                    "Trash Is Already Empty", symbol: "trash", isNoOp: true)
+            }
+            try runAppleScript("tell application \"Finder\" to empty trash")
+            return SystemCommandFeedback("Trash Emptied", symbol: "trash")
         }
         return nil
     }
