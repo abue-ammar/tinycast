@@ -162,6 +162,8 @@ enum SystemCommandRunner {
                 return SystemCommandFeedback("Nothing Was Hidden", symbol: "eye", isNoOp: true)
             }
             return SystemCommandFeedback("All Apps Unhidden", symbol: "eye")
+        case .quitAllApps:
+            for app in AppLauncher.quitAllTargets() { app.terminate() }
         }
         return nil
     }

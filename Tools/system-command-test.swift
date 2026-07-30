@@ -28,12 +28,14 @@ struct SystemCommandTests {
             expect(
                 SystemCommandCatalog.command(forEntryID: command.entryID) == command,
                 "\(command.id.rawValue) round-trips through its entry ID")
-            expect(
-                command.entryID.hasPrefix("system-command:"),
-                "\(command.id.rawValue) is namespaced")
+            if command.id == .quitAllApps {
+                expect(command.entryID == "command:quit-all-apps", "Quit All preserves its old key")
+            } else {
+                expect(command.entryID.hasPrefix("system-command:"), "\(command.id.rawValue) is namespaced")
+            }
         }
 
-        let confirmed: Set<SystemCommand.ID> = [.restart, .shutDown, .logOut, .emptyTrash]
+        let confirmed: Set<SystemCommand.ID> = [.restart, .shutDown, .logOut, .emptyTrash, .quitAllApps]
         expect(
             Set(commands.filter { $0.confirmation == .required }.map(\.id)) == confirmed,
             "only the agreed disruptive commands require confirmation")

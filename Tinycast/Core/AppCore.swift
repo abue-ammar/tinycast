@@ -399,6 +399,10 @@ final class AppCore: ObservableObject {
 
     /// The one place a system command runs, so the confirmation gate can't be bypassed by the palette, a favorite slot, or the compact bar.
     private func perform(_ command: SystemCommand, previousApp: NSRunningApplication?) async {
+        if command.id == .quitAllApps {
+            await quitAllApps()
+            return
+        }
         if command.confirmation == .required,
             await !modals.confirm(
                 title: Self.confirmationTitle(command),
@@ -634,10 +638,6 @@ final class AppCore: ObservableObject {
         case .about:
             hidePalette(restoreFocus: false)
             showAbout()
-        case .quitAllApps:
-            // Hide before confirming: the palette is a floating panel and would sit above the dialog.
-            hidePalette(restoreFocus: false)
-            Task { await quitAllApps() }
         case .quit:
             NSApp.terminate(nil)
         case nil:

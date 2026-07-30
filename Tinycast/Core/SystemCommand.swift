@@ -30,6 +30,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case toggleHiddenFiles = "toggle-hidden-files"
         case hideOtherApps = "hide-all-apps-except-frontmost"
         case unhideAllApps = "unhide-all-hidden-apps"
+        case quitAllApps = "quit-all-apps"
     }
 
     enum Confirmation: String, Sendable {
@@ -42,7 +43,10 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
     let sfSymbol: String
     let confirmation: Confirmation
 
-    var entryID: String { "system-command:" + id.rawValue }
+    var entryID: String {
+        // Preserve the existing Quit All launcher's persisted favorite, visibility and ranking key.
+        id == .quitAllApps ? "command:quit-all-apps" : "system-command:" + id.rawValue
+    }
 }
 
 enum SystemCommandCatalog {
@@ -88,6 +92,7 @@ enum SystemCommandCatalog {
         case .toggleHiddenFiles: return "Toggle Hidden Files"
         case .hideOtherApps: return "Hide All Apps Except Frontmost"
         case .unhideAllApps: return "Unhide All Hidden Apps"
+        case .quitAllApps: return "Quit All Applications"
         }
     }
 
@@ -117,12 +122,13 @@ enum SystemCommandCatalog {
         case .toggleHiddenFiles: return "eye.slash"
         case .hideOtherApps: return "eye.slash.circle"
         case .unhideAllApps: return "eye.circle"
+        case .quitAllApps: return "xmark.circle"
         }
     }
 
     private static func confirmation(for id: SystemCommand.ID) -> SystemCommand.Confirmation {
         switch id {
-        case .restart, .shutDown, .logOut, .emptyTrash:
+        case .restart, .shutDown, .logOut, .emptyTrash, .quitAllApps:
             return .required
         default:
             return .none

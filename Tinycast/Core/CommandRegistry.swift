@@ -10,7 +10,6 @@ enum CommandID: String, CaseIterable, Sendable {
     case importFromRaycast = "command:import-from-raycast"
     case settings = "command:settings"
     case about = "command:about"
-    case quitAllApps = "command:quit-all-apps"
     case quit = "command:quit"
 
     var name: String {
@@ -23,7 +22,6 @@ enum CommandID: String, CaseIterable, Sendable {
         case .importFromRaycast: return "Import from Raycast"
         case .settings: return "Settings"
         case .about: return "About Tinycast"
-        case .quitAllApps: return "Quit All Applications"
         case .quit: return "Quit Tinycast"
         }
     }
@@ -38,7 +36,6 @@ enum CommandID: String, CaseIterable, Sendable {
         case .importFromRaycast: return "arrow.down.doc"
         case .settings: return "gearshape"
         case .about: return "info.circle"
-        case .quitAllApps: return "xmark.circle"
         case .quit: return "power"
         }
     }
