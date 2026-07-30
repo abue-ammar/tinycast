@@ -59,7 +59,7 @@ Security → Accessibility**.
 
 1. Open **Settings → General** and record a global shortcut to summon Tinycast.
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
-3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
+3. **Tab** switches between Apps and Clipboard; **↑/↓** (or **⌃P/⌃N**) move, **Esc** dismisses.
 4. **Settings → Shortcuts** — search an app or custom command and record a global shortcut.
 
 ## Building from source
