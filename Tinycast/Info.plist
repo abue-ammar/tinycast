@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Tinycast uses automation to perform system commands you explicitly run.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Tinycast</string>
 </dict>

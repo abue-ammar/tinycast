@@ -54,6 +54,8 @@ enum SystemCommandRunner {
             try await runProcess("/usr/bin/pmset", arguments: ["sleepnow"])
         case .sleepDisplays:
             try await runProcess("/usr/bin/pmset", arguments: ["displaysleepnow"])
+        case .restart:
+            try runAppleScript("tell application \"System Events\" to restart")
         }
         return nil
     }
@@ -72,6 +74,24 @@ enum SystemCommandRunner {
         up.flags = flags
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
+    }
+
+    @discardableResult
+    private static func runAppleScript(_ source: String) throws -> NSAppleEventDescriptor? {
+        guard let script = NSAppleScript(source: source) else {
+            throw SystemCommandFailure("The system automation could not be prepared.")
+        }
+        var errorInfo: NSDictionary?
+        let result = script.executeAndReturnError(&errorInfo)
+        guard let errorInfo else { return result }
+        let number = errorInfo[NSAppleScript.errorNumber] as? Int
+        let detail = errorInfo[NSAppleScript.errorMessage] as? String ?? "Unknown automation error."
+        if number == -1743 {
+            throw SystemCommandFailure(
+                "Allow Tinycast to control the requested app in Automation settings, then try again.",
+                settings: .automation)
+        }
+        throw SystemCommandFailure(detail)
     }
 
     private static func runProcess(_ executable: String, arguments: [String]) async throws {
