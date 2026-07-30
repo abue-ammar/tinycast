@@ -40,7 +40,7 @@ The command text is deliberately not searchable. Only the user-facing name enter
 - the user's home directory as the working directory
 - standard input and output connected to `/dev/null`
 - `TINYCAST=1` added to the inherited environment
-- up to 8 KiB of standard error retained for a failure alert
+- up to 8 KiB of standard error retained for a failure dialog
 
 No Terminal window or pseudo-terminal is created. `waitUntilExit` blocks for the whole life of the
 command, so it runs on a private concurrent `DispatchQueue` rather than a cooperative-pool thread a
@@ -73,17 +73,18 @@ is dropped while the actual error survives.
 ### Needs confirmation
 
 `AppCore.runCustomCommand(id:)` is the one funnel both palette activation and the global hotkey reach,
-so the gate lives there and neither path can bypass it. The palette hides before the alert — it is a
-floating panel and would sit above it. The alert shows the command text as well as its name, and ↵ is
+so the gate lives there and neither path can bypass it. The palette hides before the dialog it is a
+floating panel and would sit above it. The dialog shows the command text as well as its name, and ↵ is
 bound to **Cancel**: the command is one ↵ away in the palette, and a reflexive second ↵ must not fire
-something the user asked to be warned about. `NSAlert.runModal` spins a nested run loop where Carbon
-hotkeys keep firing, so a re-entrancy flag stops a held shortcut stacking alerts.
+something the user asked to be warned about. The gate is Tinycast's own modal, not an `NSAlert`
+([ui.md](ui.md#modals--hud)): presentation is `async` with no nested run loop, and the presenter itself
+refuses a second dialog while one is up, so a held shortcut can't stack them.
 
 ### Reporting
 
 Tinycast dismisses an open palette before starting a custom command. A zero exit status is silent; a
-launch failure or non-zero status activates Tinycast and shows the bounded error detail. When the
-status is 127 and **Load shell environment** is off, the alert adds a one-line hint and an **Open
+launch failure or non-zero status opens a Tinycast dialog with the bounded error detail. When the
+status is 127 and **Load shell environment** is off, the dialog adds a one-line hint and an **Open
 Settings…** button that lands on the Custom Commands pane — the hint is gated on the status alone, not
 on grepping stderr, since 127 is equally a plain typo. The command string itself is never logged.
 
@@ -92,8 +93,8 @@ on grepping stderr, since 127 is equally a plain typo. The command string itself
 `requiresConfirmation` lives in `AppCore` (AppKit, `@MainActor`) and so is out of reach of the
 Foundation-only harness. Verify by hand:
 
-1. Activating a gated command from the palette hides the palette *before* the alert appears.
-2. ↵ at the alert cancels; clicking **Run** runs.
-3. Pressing the command's hotkey while its alert is up does not stack a second alert.
+1. Activating a gated command from the palette hides the palette *before* the dialog appears.
+2. ↵ at the dialog cancels; clicking **Run** runs.
+3. Pressing the command's hotkey while its dialog is up does not stack a second dialog.
 4. A gated command triggered by hotkey with no palette open still confirms.
 5. An rc-file-only alias with the flag off shows the 127 hint, and **Open Settings…** opens the pane.

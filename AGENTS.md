@@ -110,6 +110,13 @@ Never break these without an explicit task to do so.
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
+- **Tinycast presents its own dialogs, never `NSAlert` / `NSSlider` / system popovers.** Every
+  confirmation, failure report, value prompt and transient readout goes through
+  `ModalWindowController` (owned by `AppCore`; reachable elsewhere via `AppCore.showNotice` /
+  `askConfirmation`). Presentation is `async`, so there is no nested run loop, and the presenter
+  refuses a second dialog while one is up that, not a flag, is what stops a held hotkey stacking
+  dialogs. **↵ belongs to Cancel on every destructive dialog.** See
+  [ui.md](docs/ui.md#modals--hud).
 - **Read [`docs/ui.md`](docs/ui.md) before any restyle or new view.** `Core/Theme.swift` is the single
   design-token source.
 - **`Core/EdgeDissolve.swift` and `Core/ThinScrollbar.swift` are off-limits.** Both are tuned by eye

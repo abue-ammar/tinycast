@@ -38,6 +38,7 @@
 		5568D02AE095293A15A7F30D /* RightClick.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E9ACD504E016DFF6FE6C1B /* RightClick.swift */; };
 		57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */; };
 		5E49E070BDBB91A2829F5321 /* SnippetTextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 309908BAB8C19B67F4608DA9 /* SnippetTextInjector.swift */; };
+		62002F021B21EC91AB77ED4D /* ModalWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B4C27209F650DAB6262F0D9 /* ModalWindowController.swift */; };
 		649961AA51BA4D87626C27D5 /* CalcFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09093BF10EA97BDCA45A241F /* CalcFormatter.swift */; };
 		664D2BD485F3C5DB3F90B3C6 /* CustomCommandsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCBF70B1C646861FDF20ED2D /* CustomCommandsSettingsView.swift */; };
 		68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B629EC3B716FEE881BB0075 /* TinycastApp.swift */; };
@@ -67,6 +68,7 @@
 		A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D045D032498C2294A99890E /* LaunchAtLogin.swift */; };
 		A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */; };
 		A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB750D045194AE34D39D792 /* FavoritesStore.swift */; };
+		A7508663E4B5D80572E7BAAC /* TinycastModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C27BF1320391CF684429FA6 /* TinycastModalView.swift */; };
 		A9D8B54D88A60DE9FC1F43BF /* CalcDateTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */; };
 		AA8050D9A547CDDD37C581C4 /* CurrencyData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */; };
 		AB9B998DB62EE2D18A058C78 /* SnippetsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3579618BC7FA235EBF9E93 /* SnippetsSettingsView.swift */; };
@@ -133,6 +135,7 @@
 		46C3E740AA883770481A6A8C /* SnippetsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsStore.swift; sourceTree = "<group>"; };
 		4802942FF89B327A76432A9B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		4B432D84D8F9C10521342199 /* RunningApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningApps.swift; sourceTree = "<group>"; };
+		4C27BF1320391CF684429FA6 /* TinycastModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinycastModalView.swift; sourceTree = "<group>"; };
 		4DA7B926405DAC632C056418 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		5043CD44B4B40C49BE79852A /* SettingsBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackup.swift; sourceTree = "<group>"; };
@@ -171,6 +174,7 @@
 		99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageThumbnail.swift; sourceTree = "<group>"; };
 		9A228BEF62103605DE7A8F38 /* FrequentEmojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentEmojiStore.swift; sourceTree = "<group>"; };
 		9AA0E1FD530C764A021E6053 /* SearchScopes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScopes.swift; sourceTree = "<group>"; };
+		9B4C27209F650DAB6262F0D9 /* ModalWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModalWindowController.swift; sourceTree = "<group>"; };
 		9C37CCD024267EB21876C7E9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		9FB750D045194AE34D39D792 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
 		A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinScrollbar.swift; sourceTree = "<group>"; };
@@ -240,6 +244,7 @@
 				99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */,
 				0D045D032498C2294A99890E /* LaunchAtLogin.swift */,
 				87B6E442944C99B4D1FE1C74 /* LauncherRankingStore.swift */,
+				9B4C27209F650DAB6262F0D9 /* ModalWindowController.swift */,
 				7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */,
 				B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */,
 				3FF10C4F5E4F73503F58D03B /* OverlayScroller.swift */,
@@ -342,6 +347,7 @@
 				005F026A8F7D5E209B1CE917 /* Clipboard */,
 				15CFCD6B1429C5F0944CBCC4 /* Emoji */,
 				7DE06EE636C14E50EE172D9E /* Launcher */,
+				B3A555C03131736B19C3B243 /* Modal */,
 				0ED457107377ECF8147C6B9D /* Onboarding */,
 				E3202F504002B7792FC50B2F /* Settings */,
 				7CD438390F8FA4B3C2AE5F28 /* Snippets */,
@@ -349,6 +355,14 @@
 				0F50886DC766B9923C3875A5 /* RootPaletteView.swift */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		B3A555C03131736B19C3B243 /* Modal */ = {
+			isa = PBXGroup;
+			children = (
+				4C27BF1320391CF684429FA6 /* TinycastModalView.swift */,
+			);
+			path = Modal;
 			sourceTree = "<group>";
 		};
 		BB6DB69437E85BCDB2530225 /* Tinycast */ = {
@@ -577,6 +591,7 @@
 				3FEBE1C993C5BD92F1C3D95B /* LauncherRankingStore.swift in Sources */,
 				DCC36924E538C11136CEC060 /* LauncherView.swift in Sources */,
 				8F7431A1340D0A5783599087 /* MiscellaneousSettingsView.swift in Sources */,
+				62002F021B21EC91AB77ED4D /* ModalWindowController.swift in Sources */,
 				6962B8A2850A45401275F677 /* NotificationToken.swift in Sources */,
 				DA5BCA13045FF91B3FC8EB35 /* OnboardingState.swift in Sources */,
 				0DD808F80666846F4E74BAD8 /* OnboardingView.swift in Sources */,
@@ -617,6 +632,7 @@
 				72ACD144841BF1117CD4E705 /* Theme.swift in Sources */,
 				85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */,
 				68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */,
+				A7508663E4B5D80572E7BAAC /* TinycastModalView.swift in Sources */,
 				693E88D22D00CF6FD9CD7413 /* VisibilityStore.swift in Sources */,
 				A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */,
 			);

@@ -38,6 +38,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **The panel corner is clipped once, at the root.** `RootPaletteView.body` ends with `.background(black 40%) → .background(VisualEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. Keep that order; the scrim goes _over_ the vibrancy, and the clip is last.
 - **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`.
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
+- **No `NSAlert`, no `NSSlider`, no system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Modals & HUD"). An Aqua alert on a white-alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
 
 ---
 
@@ -60,7 +61,9 @@ section's closing padding). See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `row 10` · `card 10` · `modal 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+
+`modal` sits between `menuPanel` and `panel` so a dialog reads as a smaller sibling of the palette, not a second palette.
 
 `menu` is the shared small-control corner (sidebar tiles, About link pills); `menuRow` is the slightly rounder hover highlight behind popover-menu rows.
 
@@ -70,7 +73,8 @@ Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corn
 
 `panelWidth 750` · `panelHeight 475` · `headerHeight 44` · `bottomBarHeight 52` · `rowIcon 24` ·
 `keyCap 18` · `recorderKeyCap 16` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
-`settingsSidebar 184` · `settingsRowIcon 20`
+`settingsSidebar 184` · `settingsRowIcon 20` · `modalWidth 420` · `modalIcon 26` · `hudWidth 200` ·
+`hudHeight 92` · `volumeTrackHeight 6` · `volumeKnob 16`
 
 `keyCap` sizes the palette's keycap chips; `recorderKeyCap` (both size and radius) is the intentionally-smaller Settings shortcut-recorder chip.
 
@@ -164,6 +168,39 @@ Glass is **only** for floating controls, never the main surface.
 - Menu rows are the one place that uses `sm` for the icon→label gap instead of the row-standard `lg`, because that slot's built-in slack already contributes 2–3pt of apparent space.
 
 ---
+
+## Modals & HUD `Core/ModalWindowController.swift`, `Features/Modal/TinycastModalView.swift`
+
+Tinycast owns its dialogs; `NSAlert` is never used. `ModalWindowController` is owned by `AppCore` (the
+sole owner rule) and is the only presenter, so every confirmation in the app looks and behaves alike.
+
+- **Surface.** A modal reuses the palette's recipe `black panelDimming` → `VisualEffectView()` →
+  `clipShape(RoundedRectangle(modal 20))`, in that order at `modalWidth 420`. Glass is reserved for
+  the buttons, matching the "glass only on floating controls" rule. The HUD is the exception: it is a
+  floating control with no content of its own, so it is stock `glassEffect` throughout.
+- **Layout.** Leading tone glyph (`modalIcon 26`, red when the dialog is destructive), title
+  (`.headline`) + wrapped secondary message, optional accessory, then right-aligned buttons.
+- **Keys.** `ModalPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
+  `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons print only
+  the caps the panel actually handles (`↵`, `esc`), so a printed cap can't drift from behavior.
+  **↵ goes to Cancel on every destructive dialog** the triggering command is one ↵ away in the
+  palette, and a reflexive second press must not run it. Arrow keys step the volume slider by the same
+  1/16 the volume commands use; click-away resolves as a dismissal.
+- **Async, not modal.** Presentation is `async` (`withCheckedContinuation`), so there is no nested run
+  loop. A held hotkey can't stack dialogs: while one is up, a second request resolves immediately as a
+  dismissal which is why the old `isConfirmingCommand` re-entrancy flag is gone.
+- **Non-activating**, like the palette: the dialog takes key focus for its own keys without pulling app
+  focus off whatever the user was in. It sits at `.modalPanel`, above the palette's `.floating`, and is
+  centred on the **cursor's** display with the same slight optical lift the palette uses.
+- **`VolumeSlider`** is hand-drawn (track `volumeTrackHeight 6`, knob `volumeKnob 16`, `controlSurface`
+  rail under a white-0.85 fill) with a monospaced-digit percentage in a fixed slot so the track doesn't
+  resize between `0%` and `100%`. A click anywhere on the track jumps the level.
+- **`TinycastHUDView`** is the transient readout, in two flavours over one shared panel (so a volume
+  change and a confirmation can never overlap): a **volume bar** for the volume/mute commands macOS
+  only draws its own HUD for real media keys, so a CoreAudio change would otherwise be silent and a
+  **one-line message** confirming a command whose effect is invisible (`Trash Emptied`,
+  `Hidden Files Shown`, `Bluetooth Off`). It is non-key, auto-dismisses after ~1.5s, and a repeat
+  command refreshes the live content instead of stacking a second panel.
 
 ## Scrollbars — `Core/ThinScrollbar.swift`
 

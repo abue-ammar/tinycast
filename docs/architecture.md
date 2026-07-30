@@ -11,7 +11,9 @@ How Tinycast is wired together. See the per-subsystem docs for internals:
 manager — `AppIndex`, `ClipboardStore`, `ClipboardManager`, `SnippetsStore`,
 `SnippetKeywordListener`, `SnippetTextInjector`, `HotKeyManager`, `AppSettings`, `FavoritesStore`,
 `VisibilityStore`, `LauncherRankingStore`, `CustomCommandStore`, `CalculatorHistoryStore`,
-`CurrencyRateStore`, `RunningAppsMonitor`, `PaletteViewModel` — plus the window controllers.
+`CurrencyRateStore`, `RunningAppsMonitor`, `PaletteViewModel` — plus the window controllers, including
+`ModalWindowController` (dialogs are reached from elsewhere via `AppCore.showNotice` /
+`askConfirmation`, so the controller stays single-owned).
 `AppDelegate.applicationDidFinishLaunching` calls
 `AppCore.shared.start()` and nothing else; that is the single wiring point. All palette / paste /
 launch actions are methods on `AppCore` that the SwiftUI views call.
@@ -31,6 +33,11 @@ imperatively from AppKit.
 - **Settings / About** — plain `NSWindow`s via `AuxWindowController` (in
   `Features/About/AboutView.swift`). SwiftUI `Settings` / `Window` scenes are unreliable for accessory
   apps, so this is deliberate.
+- **Dialogs / HUD** borderless `ModalPanel`s driven by `ModalWindowController`, the app's only
+  presenter for confirmations, failure reports and value prompts. `NSAlert` is deliberately unused: its
+  `runModal` nested run loop lets Carbon hotkeys stack dialogs, and an Aqua alert clashes with the
+  forced-dark surface. Presentation is `async`, so nothing blocks the main actor. See
+  [ui.md](ui.md#modals--hud).
 
 The app forces `.darkAqua` appearance globally; the Liquid Glass material is tuned for a dark surface
 only.

@@ -31,7 +31,7 @@ struct BackupSettingsView: View {
                     systemImage: "square.and.arrow.up",
                     tint: .blue
                 ) {
-                    Button("Export…") { BackupActions.exportSettings() }
+                    Button("Export…") { Task { await BackupActions.exportSettings() } }
                         .controlSize(.small)
                 }
                 SettingsDivider()
@@ -42,7 +42,7 @@ struct BackupSettingsView: View {
                     systemImage: "square.and.arrow.down",
                     tint: .green
                 ) {
-                    Button("Import…") { BackupActions.importSettings() }
+                    Button("Import…") { Task { await BackupActions.importSettings() } }
                         .controlSize(.small)
                 }
             }

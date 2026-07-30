@@ -25,6 +25,8 @@ enum Theme {
         /// Hover highlight behind a popover menu row.
         static let menuRow: CGFloat = 10
         static let menuPanel: CGFloat = 16
+        /// Tinycast's own modal / HUD surface, sized between `menuPanel` and `panel`, so a dialog reads as a smaller sibling of the palette rather than a second palette.
+        static let modal: CGFloat = 20
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
@@ -69,6 +71,16 @@ enum Theme {
         /// Confirmation HUD: it sizes to its message, up to this ceiling, and sits this far above the bottom of the screen.
         static let hudMaxWidth: CGFloat = 420
         static let hudEdgeOffset: CGFloat = 48
+        /// Tinycast's own modal: fixed width, height measured from the SwiftUI content.
+        static let modalWidth: CGFloat = 420
+        /// Leading glyph on a modal, larger than a row icon because it carries the dialog's tone (warning / question).
+        static let modalIcon: CGFloat = 26
+        /// Transient volume HUD shown after any volume or mute command.
+        static let hudWidth: CGFloat = 200
+        static let hudHeight: CGFloat = 92
+        /// Volume slider geometry, shared by the Set Volume modal and the HUD's read-only bar.
+        static let volumeTrackHeight: CGFloat = 6
+        static let volumeKnob: CGFloat = 16
     }
 
     enum Duration {

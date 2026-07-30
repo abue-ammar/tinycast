@@ -114,8 +114,8 @@ final class AppCore: ObservableObject {
     private lazy var windowController = PaletteWindowController(core: self)
     private lazy var hud = HUDWindowController(settings: settings)
     private let auxWindows = AuxWindowController()
-    /// Guards only the confirmation modal, not execution — two deliberate runs of an unguarded command still run twice.
-    private var isConfirmingCommand = false
+    /// Every confirmation, failure report and value prompt in the app; it also guards against a held hotkey stacking dialogs.
+    private let modals = ModalWindowController()
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
@@ -384,6 +384,22 @@ final class AppCore: ObservableObject {
         launcherRanking.reset(itemKey: app.preferenceKey)
     }
 
+    // MARK: - Dialogs
+    //
+    // Routed through `AppCore` so `modals` stays the single owner; flows outside the palette (the backup
+    // actions) reach the same dialogs instead of falling back to an `NSAlert`.
+
+    func showNotice(title: String, message: String, symbol: String = "info.circle") async {
+        await modals.notice(title: title, message: message, symbol: symbol)
+    }
+
+    func askConfirmation(
+        title: String, message: String, confirmTitle: String, destructive: Bool = true
+    ) async -> Bool {
+        await modals.confirm(
+            title: title, message: message, confirmTitle: confirmTitle, destructive: destructive)
+    }
+
     // MARK: - Custom commands
 
     @discardableResult
@@ -417,16 +433,16 @@ final class AppCore: ObservableObject {
         // Also the feature switch: with custom commands off a still-registered global hotkey must not run anything.
         guard settings.customCommandsEnabled else { return }
         guard let command = customCommands.command(id: id) else { return }
-        // Hide before confirming: the palette is a floating panel and would sit above the alert.
         if windowController.isVisible { hidePalette(restoreFocus: false) }
-        if command.requiresConfirmation {
-            // Carbon hotkeys keep firing during a modal session; without this a held shortcut stacks alerts.
-            guard !isConfirmingCommand else { return }
-            isConfirmingCommand = true
-            defer { isConfirmingCommand = false }
-            guard Self.confirmRun(command) else { return }
-        }
         Task {
+            if command.requiresConfirmation {
+                guard
+                    await modals.confirm(
+                        title: command.name,
+                        message: "Are you sure you want to run this command?\n\n\(command.command)",
+                        confirmTitle: "Run", destructive: true)
+                else { return }
+            }
             let outcome = await ShellCommandRunner.run(
                 command.command, loadingShellEnvironment: command.loadsShellEnvironment)
             guard outcome != .success else {
@@ -434,7 +450,7 @@ final class AppCore: ObservableObject {
                 if command.showsConfirmation { self.hud.show(message: "Ran \(command.name)") }
                 return
             }
-            self.presentCustomCommandFailure(command: command, outcome: outcome)
+            await presentCustomCommandFailure(command: command, outcome: outcome)
         }
     }
 
@@ -451,21 +467,9 @@ final class AppCore: ObservableObject {
         }
     }
 
-    private static func confirmRun(_ command: CustomCommand) -> Bool {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = command.name
-        alert.informativeText = "Are you sure you want to run this command?"
-        alert.alertStyle = .warning
-        // ↵ runs and Esc cancels — AppKit's defaults for the first button and the one titled "Cancel".
-        alert.addButton(withTitle: "Run")
-        alert.addButton(withTitle: "Cancel")
-        return alert.runModal() == .alertFirstButtonReturn
-    }
-
     private func presentCustomCommandFailure(
         command: CustomCommand, outcome: ShellCommandOutcome
-    ) {
+    ) async {
         let message: String
         // `127` is the shell's "command not found", so an alias or function that only exists in the user's config lands here.
         var suggestsShellEnvironment = false
@@ -483,14 +487,11 @@ final class AppCore: ObservableObject {
                     ? "\n\nIf this is a shell alias or function, turn on Load Shell Environment for "
                         + "this command." : "")
         }
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "“\(command.name)” Failed"
-        alert.informativeText = message
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
-        if suggestsShellEnvironment { alert.addButton(withTitle: "Open Settings…") }
-        guard alert.runModal() == .alertSecondButtonReturn else { return }
+        guard
+            await modals.report(
+                title: "“\(command.name)” Failed", message: message,
+                settingsTitle: suggestsShellEnvironment ? "Open Settings…" : nil)
+        else { return }
         showSettings(tab: .customCommands)
     }
 
@@ -504,25 +505,16 @@ final class AppCore: ObservableObject {
     }
 
     /// Quit All: the one action whose blast radius reaches outside Tinycast, so it confirms first. The target list is resolved once and both counted and terminated, so the set the user approves is the set that quits.
-    private func quitAllApps() {
+    private func quitAllApps() async {
         let targets = AppLauncher.quitAllTargets()
-        guard !targets.isEmpty, Self.confirmQuitAll(count: targets.count) else { return }
+        guard !targets.isEmpty,
+            await modals.confirm(
+                title: targets.count == 1
+                    ? "Quit 1 application?" : "Quit \(targets.count) applications?",
+                message: "Applications with unsaved changes will ask you to save.",
+                confirmTitle: "Quit All", destructive: true)
+        else { return }
         for app in targets { app.terminate() }
-    }
-
-    private static func confirmQuitAll(count: Int) -> Bool {
-        // An accessory app's alert opens behind the frontmost app unless it activates first (same as `BackupActions`).
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = count == 1 ? "Quit 1 application?" : "Quit \(count) applications?"
-        alert.informativeText = "Applications with unsaved changes will ask you to save."
-        alert.alertStyle = .warning
-        let quitButton = alert.addButton(withTitle: "Quit All")
-        quitButton.hasDestructiveAction = true
-        // `hasDestructiveAction` only tints the button — it stays the ↵ default. Hand ↵ to Cancel instead: this command is one ↵ away in the palette, and a second reflexive ↵ must not quit the desktop.
-        quitButton.keyEquivalent = ""
-        alert.addButton(withTitle: "Cancel").keyEquivalent = "\r"
-        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private func runCommand(_ entry: AppEntry) {
@@ -535,10 +527,10 @@ final class AppCore: ObservableObject {
             showPalette(mode: .emoji)
         case .exportSettings:
             hidePalette(restoreFocus: false)
-            BackupActions.exportSettings()
+            Task { await BackupActions.exportSettings() }
         case .importSettings:
             hidePalette(restoreFocus: false)
-            BackupActions.importSettings()
+            Task { await BackupActions.importSettings() }
         case .importFromRaycast:
             hidePalette(restoreFocus: false)
             showBackupSettings()
@@ -549,9 +541,9 @@ final class AppCore: ObservableObject {
             hidePalette(restoreFocus: false)
             showAbout()
         case .quitAllApps:
-            // Hide before confirming: the palette is a floating panel and would sit above the alert.
+            // Hide before confirming: the palette is a floating panel and would sit above the dialog.
             hidePalette(restoreFocus: false)
-            quitAllApps()
+            Task { await quitAllApps() }
         case .quit:
             NSApp.terminate(nil)
         case nil:

@@ -13,9 +13,9 @@ enum BackupActions {
         var missingImages: Int
     }
 
-    // MARK: - Tinycast native (self-contained: own file panels + alerts)
+    // MARK: - Tinycast native (own file panels; dialogs come from `AppCore`)
 
-    static func exportSettings() {
+    static func exportSettings() async {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "Tinycast-Settings-\(dateStamp()).json"
@@ -25,11 +25,11 @@ enum BackupActions {
         do {
             try SettingsBackup.gather().encoded().write(to: url, options: .atomic)
         } catch {
-            present(title: "Export Failed", message: error.localizedDescription, style: .warning)
+            await present(title: "Export Failed", message: error.localizedDescription)
         }
     }
 
-    static func importSettings() {
+    static func importSettings() async {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
@@ -39,15 +39,13 @@ enum BackupActions {
             let backup = try SettingsBackup(json: try Data(contentsOf: url))
             let commandCount = backup.customCommands?.count ?? 0
             let shortcutCount = backup.hotkeys?.customCommands?.count ?? 0
-            guard confirmExecutableImport(commands: commandCount, shortcuts: shortcutCount) else {
-                return
-            }
-            present(
+            guard await confirmExecutableImport(commands: commandCount, shortcuts: shortcutCount)
+            else { return }
+            await present(
                 title: "Settings Imported", message: summaryText(backup.apply()),
-                style: .informational
-            )
+                symbol: "checkmark.circle")
         } catch {
-            present(title: "Import Failed", message: error.localizedDescription, style: .warning)
+            await present(title: "Import Failed", message: error.localizedDescription)
         }
     }
 
@@ -134,22 +132,17 @@ enum BackupActions {
         return "Applied " + parts.joined(separator: ", ") + "."
     }
 
-    private static func confirmExecutableImport(commands: Int, shortcuts: Int) -> Bool {
+    private static func confirmExecutableImport(commands: Int, shortcuts: Int) async -> Bool {
         guard commands > 0 || shortcuts > 0 else { return true }
         let commandText = commands == 1 ? "1 custom command" : "\(commands) custom commands"
         let shortcutText =
             shortcuts == 1 ? "1 global shortcut" : "\(shortcuts) global shortcuts"
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "Import executable commands?"
-        alert.informativeText =
-            "This backup contains \(commandText) and \(shortcutText). Custom commands can run "
-            + "arbitrary shell code. Only import files you trust."
-        alert.alertStyle = .warning
-        let importButton = alert.addButton(withTitle: "Import")
-        importButton.keyEquivalent = ""
-        alert.addButton(withTitle: "Cancel").keyEquivalent = "\r"
-        return alert.runModal() == .alertFirstButtonReturn
+        return await AppCore.shared.askConfirmation(
+            title: "Import executable commands?",
+            message:
+                "This backup contains \(commandText) and \(shortcutText). Custom commands can run "
+                + "arbitrary shell code. Only import files you trust.",
+            confirmTitle: "Import")
     }
 
     private static func dateStamp() -> String {
@@ -158,12 +151,9 @@ enum BackupActions {
         return formatter.string(from: Date())
     }
 
-    private static func present(title: String, message: String, style: NSAlert.Style) {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = message
-        alert.alertStyle = style
-        alert.runModal()
+    private static func present(
+        title: String, message: String, symbol: String = "exclamationmark.triangle"
+    ) async {
+        await AppCore.shared.showNotice(title: title, message: message, symbol: symbol)
     }
 }
