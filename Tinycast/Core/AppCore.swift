@@ -166,14 +166,10 @@ final class AppCore: ObservableObject {
             self.applySnippetsLauncherPresence()
             self.snippetListener.update(snapshot.records)
         }
+        // Off out of the box, so a user who never enables snippets pays for no load, no watcher and no tap.
         if settings.snippetsEnabled {
-            if settings.snippetKeywordExpansion {
-                Task { await snippetsStore.start() }
-                startSnippetKeywordListener()
-            } else {
-                // Users who never touch snippets shouldn't pay for the store's directory watcher; the Settings pane and the Raycast import start it on demand.
-                Task { await snippetsStore.startIfLibraryExists() }
-            }
+            Task { await snippetsStore.start() }
+            startSnippetKeywordListener()
         }
 
         // @Published emits synchronously before the property is written (as in `AppIndex.start`), so every re-projection defers to a task that reads the settled value.
@@ -237,7 +233,7 @@ final class AppCore: ObservableObject {
             Task { await snippetsStore.start() }
             // A stop/start round-trip over an unchanged library publishes no snapshot, so re-project the records the store already holds.
             applySnippetsLauncherPresence()
-            if settings.snippetKeywordExpansion { startSnippetKeywordListener() }
+            startSnippetKeywordListener()
             return
         }
         snippetListener.stop()
@@ -656,31 +652,27 @@ final class AppCore: ObservableObject {
         NSWorkspace.shared.open(snippetsStore.snippetsDirectory)
     }
 
-    func setSnippetKeywordExpansion(_ enabled: Bool) {
-        guard enabled != settings.snippetKeywordExpansion else { return }
+    /// The pane's switch funnels through here so enabling — which is also keyword-expansion consent — confirms first. The settings sink then reconciles the store, listener and launcher presence.
+    func setSnippetsEnabled(_ enabled: Bool) {
+        guard enabled != settings.snippetsEnabled else { return }
         if !enabled {
-            settings.snippetKeywordExpansion = false
-            snippetTextInjector.cancelAutomaticExpansion()
-            snippetListener.stop()
+            settings.snippetsEnabled = false
             return
         }
 
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "Enable keyword expansion?"
+        alert.messageText = "Enable snippets?"
         alert.informativeText =
-            "Requires the Accessibility permission. Keystrokes stay on this Mac."
+            "Keyword expansion requires the Accessibility permission. Keystrokes stay on this Mac."
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Continue")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
-        settings.snippetKeywordExpansion = true
+        settings.snippetsEnabled = true
         // The one prompt for this feature, raised from the gesture that asked for it.
         Permissions.ensureAccessibility()
-        // The listener matches against the store's records, so make sure the (lazily started) store is running.
-        Task { await snippetsStore.start() }
-        startSnippetKeywordListener()
     }
 
     private func startSnippetKeywordListener() {

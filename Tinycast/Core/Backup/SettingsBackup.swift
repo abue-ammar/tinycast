@@ -26,9 +26,9 @@ struct SettingsBackup: Codable {
         var showFavoritesInCompactMode: Bool?
         var searchScopes: [String]?
         var openOnCursorScreen: Bool?
+        // `snippetsEnabled` is deliberately absent: it doubles as keyword-expansion consent, and an import must not enable keystroke listening.
         var customCommandsEnabled: Bool?
         var customCommandsShowInLauncher: Bool?
-        var snippetsEnabled: Bool?
         var snippetsShowInLauncher: Bool?
     }
 
@@ -76,7 +76,6 @@ extension SettingsBackup {
             openOnCursorScreen: s.openOnCursorScreen,
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
-            snippetsEnabled: s.snippetsEnabled,
             snippetsShowInLauncher: s.snippetsShowInLauncher)
 
         let hk = core.hotKeys
@@ -194,10 +193,6 @@ extension SettingsBackup {
         }
         if let flag = s.customCommandsShowInLauncher {
             settings.customCommandsShowInLauncher = flag
-            count += 1
-        }
-        if let flag = s.snippetsEnabled {
-            settings.snippetsEnabled = flag
             count += 1
         }
         if let flag = s.snippetsShowInLauncher {

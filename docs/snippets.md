@@ -24,17 +24,18 @@ The first load creates the folder and nothing else: a new channel starts with an
 snippets only ever arrive from the editor or a Raycast import. Malformed Markdown is reported per file
 while valid files stay available.
 
-The store starts lazily. With the feature enabled, launch arms it only when snippet files already
-exist on disk or keyword expansion is consented; otherwise opening **Settings → Snippets** or running
-a Raycast snippet import starts it on demand, so a user who never touches snippets pays for no load
-and no directory watcher.
+The store runs only while the feature is enabled: launch starts it for an enabled feature, and a
+user who never enables snippets pays for no load, no directory watcher and no event tap.
 
-**Settings → Snippets** carries the feature switch and its launcher-visibility companion. Switching
-the feature off is a full teardown — the keyword listener, the store and its watchers stop, and the
-launcher section disappears — while the files, the keyword-expansion consent and the toggle states all
-survive for re-enabling. "Show in launcher" only hides the launcher section; keyword expansion keeps
-working. Both flags live in `AppSettings`, travel in settings backups, and are re-projected by
-`AppCore`'s settings sinks, so an import behaves exactly like flipping the switches.
+**Settings → Snippets** carries the feature switch and its launcher-visibility companion. The switch
+is the whole feature, keyword expansion included — there is no separate expansion toggle — so
+enabling it doubles as keyword-expansion consent: it confirms with an explanation first, then
+requests Accessibility, and it ships off. Switching it off is a full teardown — the keyword listener,
+the store and its watchers stop, and the launcher section disappears — while the files and the toggle
+states survive for re-enabling. "Show in launcher" only hides the launcher section; keyword expansion
+keeps working. `snippetsShowInLauncher` travels in settings backups; `snippetsEnabled` deliberately
+does not, so an import can never enable keystroke listening. `AppCore`'s settings sinks re-project on
+every change.
 
 ## Importing from Raycast
 
@@ -137,10 +138,10 @@ Its name and keyword are both searchable, scored in the same tiers as an app's n
 above an app only when it genuinely matches better. Launcher expansion may interactively request
 Accessibility because it begins from an explicit user action.
 
-Automatic keyword expansion is disabled by default. Enabling it in **Settings → Snippets** first
-shows an explanation, then stores consent and requests Accessibility if it is missing. The consent flag
-is intentionally excluded from settings backups, so importing a backup cannot enable keystroke
-listening.
+Automatic keyword expansion comes with the feature switch: enabling snippets in
+**Settings → Snippets** first shows an explanation, then stores the flag and requests Accessibility if
+it is missing. The flag is intentionally excluded from settings backups, so importing a backup cannot
+enable keystroke listening.
 
 **Accessibility is the only permission snippets need.** The keyword listener installs a listen-only
 `CGEventTap`, which the Accessibility grant already authorizes — the same grant `HyperKeyTap` uses for
@@ -151,8 +152,8 @@ managed or revoked. It is managed where it always was, in **Settings → Permiss
 
 Runtime status is explicit:
 
-- **Off** — consent is disabled and no keyword tap is retained.
-- **Needs Accessibility** — consent is enabled, but the grant, an active session, or a live event tap is missing.
+- **Off** — the feature is disabled and no keyword tap is retained.
+- **Needs Accessibility** — the feature is enabled, but the grant, an active session, or a live event tap is missing.
 - **Active** — both grants are present and the listen-only event tap is running.
 
 The listener never prompts from startup, a callback, or its health check. It preflights grants,
@@ -170,7 +171,7 @@ generation. A failed gate leaves the typed keyword untouched.
 
 The confirmation is per snippet and off by default: the only gate is `show_confirmation: true`, set
 from the snippet's editor in **Settings → Snippets**. Nothing about it reaches settings backups.
-Keyword-monitoring consent is separate and also excluded from backups.
+The feature switch — which carries keyword-monitoring consent — is likewise excluded from backups.
 
 `HUDWindowController` is shared rather than snippet-specific — it takes a message, a symbol and a tint,
 so a custom command confirms a run through the same panel.

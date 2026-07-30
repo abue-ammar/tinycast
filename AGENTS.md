@@ -97,10 +97,11 @@ Never break these without an explicit task to do so.
   `CurrencyRateStore` is the reference implementation — follow it rather than inventing a second shape.
 - **Snippets are channel-isolated and path-identified.** Persist them under
   `~/Library/Application Support/<bundle-id>/Snippets/`; `StoredSnippet.ID` is the standardized source
-  path, and external rename is delete + create. Automatic keyword expansion defaults off, is excluded
-  from settings backups, and may request Accessibility — its only permission, since the listen-only tap
-  needs nothing more — only from its explicit Settings opt-in gesture, never from startup, callbacks,
-  watchers or health checks. See [snippets.md](docs/snippets.md).
+  path, and external rename is delete + create. The feature ships off and its enable switch doubles as
+  keyword-expansion consent: `snippetsEnabled` is excluded from settings backups, and Accessibility —
+  the only permission, since the listen-only tap needs nothing more — may be requested only from that
+  explicit Settings gesture, never from startup, callbacks, watchers or health checks.
+  See [snippets.md](docs/snippets.md).
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for

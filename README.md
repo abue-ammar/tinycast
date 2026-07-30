@@ -55,7 +55,7 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 
 **Accessibility** — needed when Tinycast pastes or expands text into another app, and the only
 permission snippet keyword expansion needs. You're prompted when you first use a feature that needs
-it; grant access in **System Settings → Privacy & Security → Accessibility**. Keyword expansion ships
+it; grant access in **System Settings → Privacy & Security → Accessibility**. Snippets ship
 disabled, and keystrokes are matched locally, never stored and never sent anywhere.
 
 ## Using it
@@ -64,7 +64,7 @@ disabled, and keystrokes are matched locally, never stored and never sent anywhe
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
 4. **Settings → Shortcuts** — search an app or custom command and record a global shortcut.
-5. **Settings → Snippets** — create templates and optionally enable local keyword expansion.
+5. **Settings → Snippets** — enable the feature, then create templates with expansion keywords.
 
 ## Building from source
 

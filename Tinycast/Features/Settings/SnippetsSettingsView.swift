@@ -18,14 +18,29 @@ struct SnippetsSettingsView: View {
             FeatureSwitchCard(
                 header: "Snippets",
                 enableTitle: "Enable snippets",
-                enableSubtitle: "Reusable Markdown templates, expanded where you're typing.",
+                enableSubtitle:
+                    "Reusable Markdown templates, expanded from the launcher or a typed keyword.",
                 systemImage: "curlybraces",
                 launcherSubtitle: "Find your snippets in launcher search.",
-                isEnabled: $settings.snippetsEnabled,
+                // Enabling is also keyword-expansion consent, so it funnels through the confirming setter.
+                isEnabled: Binding(
+                    get: { settings.snippetsEnabled },
+                    set: { core.setSnippetsEnabled($0) }),
                 showsInLauncher: $settings.snippetsShowInLauncher)
 
+            if settings.snippetsEnabled, keywordListener.status == .needsAccessibility {
+                SettingsCallout(
+                    title: "Keyword expansion needs the Accessibility permission.",
+                    message: "The same grant pasting uses. Launcher search keeps working meanwhile.",
+                    systemImage: "exclamationmark.triangle",
+                    tint: .orange
+                ) {
+                    Button("Grant Access…") { Permissions.openAccessibilitySettings() }
+                        .controlSize(.small)
+                }
+            }
+
             Group {
-                keywordExpansionCard
                 snippetsCard
                 libraryNotices
             }
@@ -45,42 +60,6 @@ struct SnippetsSettingsView: View {
                     delete(record)
                 },
                 secondaryButton: .cancel())
-        }
-        // The store starts lazily; opening this pane is one of the gestures that arms it (and creates the folder "Open Folder" reveals). With the feature off, AppCore's switch sink starts it instead.
-        .task {
-            guard settings.snippetsEnabled else { return }
-            await snippetsStore.start()
-        }
-    }
-
-    private var keywordExpansionCard: some View {
-        SettingsCard(header: "Automatic Expansion") {
-            SettingsRow(
-                title: "Expand keywords while typing",
-                subtitle: keywordExpansionSubtitle,
-                systemImage: "keyboard",
-                tint: .green,
-                statusDot: keywordExpansionStatusDot
-            ) {
-                HStack(spacing: Theme.Spacing.md) {
-                    if keywordListener.status == .needsAccessibility {
-                        Button("Grant Access…") { Permissions.openAccessibilitySettings() }
-                            .controlSize(.small)
-                    }
-                    Toggle(
-                        "Automatic snippet expansion",
-                        isOn: Binding(
-                            get: { core.settings.snippetKeywordExpansion },
-                            set: { core.setSnippetKeywordExpansion($0) })
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .accessibilityLabel("Automatic snippet expansion")
-                    .accessibilityHint(
-                        "When enabled, Tinycast recognizes snippet keywords while you type in other apps."
-                    )
-                }
-            }
         }
     }
 
@@ -189,25 +168,6 @@ struct SnippetsSettingsView: View {
         }
         return
             "\(first.fileURL.lastPathComponent): \(first.message) Plus \(snippetsStore.issues.count - 1) more."
-    }
-
-    private var keywordExpansionStatusDot: Color? {
-        switch keywordListener.status {
-        case .off: return nil
-        case .needsAccessibility: return .orange
-        case .active: return .green
-        }
-    }
-
-    private var keywordExpansionSubtitle: String {
-        switch keywordListener.status {
-        case .off:
-            return "Off. Enable to recognize snippet keywords in other apps."
-        case .needsAccessibility:
-            return "Needs the Accessibility permission, the same one pasting uses."
-        case .active:
-            return "Active. Keystrokes are matched locally in memory and are never stored."
-        }
     }
 
     private func delete(_ record: StoredSnippet) {

@@ -91,7 +91,7 @@ final class SnippetTextInjector {
         targetApp: NSRunningApplication?
     ) -> Bool {
         guard generation == automaticGeneration,
-            settings.snippetKeywordExpansion,
+            settings.snippetsEnabled,
             Permissions.isAccessibilityTrusted(),
             !IsSecureEventInputEnabled(),
             let targetApp,

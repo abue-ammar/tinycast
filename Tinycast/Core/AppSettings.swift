@@ -40,7 +40,6 @@ final class AppSettings: ObservableObject {
         static let showFavoritesInCompactMode = "showFavoritesInCompactMode"
         static let searchScopes = "launcherSearchScopes"
         static let openOnCursorScreen = "openOnCursorScreen"
-        static let snippetKeywordExpansion = "snippetKeywordExpansion"
         static let customCommandsEnabled = "customCommandsEnabled"
         static let customCommandsShowInLauncher = "customCommandsShowInLauncher"
         static let snippetsEnabled = "snippetsEnabled"
@@ -109,12 +108,7 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen) }
     }
 
-    /// Global opt-in for listening for snippet keywords while the user types in other apps.
-    @Published var snippetKeywordExpansion: Bool {
-        didSet { defaults.set(snippetKeywordExpansion, forKey: Key.snippetKeywordExpansion) }
-    }
-
-    // Feature switches: off means fully off — no launcher entries, no shortcuts, no expansion, no store. `AppCore` observes all four and re-projects.
+    // Feature switches, off out of the box: off means fully off — no launcher entries, no shortcuts, no keyword expansion, no store. `AppCore` observes all four and re-projects.
     @Published var customCommandsEnabled: Bool {
         didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled) }
     }
@@ -126,6 +120,7 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Doubles as keyword-expansion consent, so it only flips on through `AppCore.setSnippetsEnabled`'s confirmation and never rides in a settings backup.
     @Published var snippetsEnabled: Bool {
         didSet { defaults.set(snippetsEnabled, forKey: Key.snippetsEnabled) }
     }
@@ -171,17 +166,12 @@ final class AppSettings: ObservableObject {
         openOnCursorScreen =
             defaults.object(forKey: Key.openOnCursorScreen) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen)
-        snippetKeywordExpansion = defaults.bool(forKey: Key.snippetKeywordExpansion)
-        // All four feature flags default to true, so absence must be distinguished from a stored `false`.
-        customCommandsEnabled =
-            defaults.object(forKey: Key.customCommandsEnabled) == nil
-            || defaults.bool(forKey: Key.customCommandsEnabled)
+        // The enable switches ship off; the launcher toggles default to true, so absence must be distinguished from a stored `false`.
+        customCommandsEnabled = defaults.bool(forKey: Key.customCommandsEnabled)
         customCommandsShowInLauncher =
             defaults.object(forKey: Key.customCommandsShowInLauncher) == nil
             || defaults.bool(forKey: Key.customCommandsShowInLauncher)
-        snippetsEnabled =
-            defaults.object(forKey: Key.snippetsEnabled) == nil
-            || defaults.bool(forKey: Key.snippetsEnabled)
+        snippetsEnabled = defaults.bool(forKey: Key.snippetsEnabled)
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher) == nil
             || defaults.bool(forKey: Key.snippetsShowInLauncher)
