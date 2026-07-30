@@ -100,6 +100,10 @@ enum SystemCommandRunner {
             try setVolume(0.75)
         case .volume100:
             try setVolume(1)
+        case .showDesktop:
+            try await runProcess(
+                "/System/Applications/Mission Control.app/Contents/MacOS/Mission Control",
+                arguments: ["1"])
         }
         return nil
     }
