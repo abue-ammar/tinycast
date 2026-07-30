@@ -143,6 +143,16 @@ enum SystemCommandRunner {
             }
             return SystemCommandFeedback(
                 ejected == 1 ? "1 Disk Ejected" : "\(ejected) Disks Ejected", symbol: "eject")
+        case .toggleHiddenFiles:
+            let shown = try await toggleDefault(
+                domain: "com.apple.finder", key: "AppleShowAllFiles")
+            let output = try await process("/usr/bin/killall", arguments: ["Finder"])
+            if output.status != 0 && output.status != 1 {
+                throw processFailure(output, executable: "killall")
+            }
+            return SystemCommandFeedback(
+                shown ? "Hidden Files Shown" : "Hidden Files Hidden",
+                symbol: shown ? "eye" : "eye.slash")
         }
         return nil
     }
