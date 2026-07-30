@@ -4,6 +4,8 @@ How Tinycast is wired together. See the per-subsystem docs for internals:
 [palette](palette.md), [launcher](launcher.md), [calculator](calculator.md),
 [clipboard](clipboard.md), [custom commands](custom-commands.md), [snippets](snippets.md),
 [hotkeys](hotkeys.md), [ui](ui.md).
+System-command catalog, launcher integration and permission behavior are documented in
+[launcher](launcher.md#system-commands).
 
 ## Single-owner core
 
@@ -72,6 +74,8 @@ The target builds in **Swift 6 language mode** (tools version 6.0, no language-m
 data-race safety violations are hard errors. Almost everything is `@MainActor`; cross-actor model
 types are `Sendable`. Heavy / IO work (app scan, image decode, the FX rate fetch) is deliberately
 pushed off-main via `Task.detached` / `nonisolated`. Keep that boundary when adding code.
+`SystemCommand.swift` is the pure, `Sendable` metadata boundary; `SystemCommandRunner` owns AppKit,
+CoreAudio, process and Accessibility side effects, while `AppCore` owns confirmation and failure UI.
 
 House idioms for the sharp edges:
 

@@ -76,7 +76,9 @@ Never break these without an explicit task to do so.
   confirmation gate lives in `AppCore` and not in the runner. All of `Core/Snippets/` compiles into
   `Tools/snippets-test.swift` (the harness globs the directory), so the model, Markdown serializer,
   template engine, repository and keyword policies stay Foundation-only, and the AppKit files there
-  keep their dependencies to what the harness can stub.
+  keep their dependencies to what the harness can stub. `Core/SystemCommand.swift` is also
+  Foundation-only for `Tools/system-command-test.swift`; platform effects belong in
+  `SystemCommandRunner`, while confirmation and failure UI remain in `AppCore`.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and

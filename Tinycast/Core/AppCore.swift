@@ -364,6 +364,10 @@ final class AppCore: ObservableObject {
             }
             return
         }
+        if app.kind == .systemCommand {
+            runSystemCommand(app)
+            return
+        }
         let previous = windowController.previousApp
         hidePalette(restoreFocus: false)
         switch app.kind {
@@ -375,13 +379,57 @@ final class AppCore: ObservableObject {
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
             expandSnippet(id: snippetID, targetApp: previous)
-        case .command:
+        case .command, .systemCommand:
             break  // handled above
         }
     }
 
     func resetRanking(for app: AppEntry) {
         launcherRanking.reset(itemKey: app.preferenceKey)
+    }
+
+    // MARK: - System commands
+
+    private func runSystemCommand(_ entry: AppEntry) {
+        guard let command = SystemCommandCatalog.command(forEntryID: entry.id) else { return }
+        let previousApp = windowController.previousApp
+        if windowController.isVisible { hidePalette(restoreFocus: false) }
+        Task { await perform(command, previousApp: previousApp) }
+    }
+
+    /// The one place a system command runs, so the confirmation gate can't be bypassed by the palette, a favorite slot, or the compact bar.
+    private func perform(_ command: SystemCommand, previousApp: NSRunningApplication?) async {
+        if command.confirmation == .required,
+            await !modals.confirm(
+                title: Self.confirmationTitle(command),
+                message: Self.confirmationMessage(command),
+                confirmTitle: command.name, destructive: true)
+        {
+            return
+        }
+        do {
+            let feedback = try await SystemCommandRunner.run(command.id, previousApp: previousApp)
+            if let feedback {
+                modals.showToast(symbol: feedback.symbol, title: feedback.title)
+            }
+        } catch let failure as SystemCommandFailure {
+            await presentFailure(name: command.name, failure: failure)
+        } catch {
+            await presentFailure(
+                name: command.name, failure: SystemCommandFailure(error.localizedDescription))
+        }
+    }
+
+    private static func confirmationTitle(_ command: SystemCommand) -> String {
+        switch command.id {
+        default: return "Run \(command.name)?"
+        }
+    }
+
+    private static func confirmationMessage(_ command: SystemCommand) -> String {
+        switch command.id {
+        default: return "This system action may interrupt your work."
+        }
     }
 
     // MARK: - Dialogs
@@ -398,6 +446,30 @@ final class AppCore: ObservableObject {
     ) async -> Bool {
         await modals.confirm(
             title: title, message: message, confirmTitle: confirmTitle, destructive: destructive)
+    }
+
+    /// Sync entry point for the runner's own async completion handlers, which can't await.
+    func presentSystemCommandFailure(name: String, failure: SystemCommandFailure) {
+        Task { await presentFailure(name: name, failure: failure) }
+    }
+
+    private func presentFailure(name: String, failure: SystemCommandFailure) async {
+        let settingsTitle = failure.settings == nil ? nil : "Open System Settings…"
+        guard
+            await modals.report(
+                title: "“\(name)” Failed", message: failure.message,
+                settingsTitle: settingsTitle),
+            let settings = failure.settings
+        else { return }
+        let pane: String
+        switch settings {
+        case .accessibility: pane = "Privacy_Accessibility"
+        case .automation: pane = "Privacy_Automation"
+        case .bluetooth: pane = "Privacy_Bluetooth"
+        }
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     // MARK: - Custom commands

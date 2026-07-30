@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings → Shortcuts: everything the launcher can open, one tab per category (Applications / System Settings / Commands), each row with a visibility checkbox and hotkey recorder; never applies the visibility filter itself, so hidden rows stay re-checkable here.
+/// Settings → Shortcuts: everything the launcher can open, one tab per category, each row with a visibility checkbox and optional hotkey recorder; never applies the visibility filter itself, so hidden rows stay re-checkable here.
 struct ShortcutsSettingsView: View {
     @EnvironmentObject private var appIndex: AppIndex
     @State private var tab: AppEntry.Kind = .application
@@ -23,6 +23,7 @@ struct ShortcutsSettingsView: View {
             Picker("Category", selection: $tab) {
                 Text("Applications").tag(AppEntry.Kind.application)
                 Text("System Settings").tag(AppEntry.Kind.systemSettings)
+                Text("System Commands").tag(AppEntry.Kind.systemCommand)
                 Text("Commands").tag(AppEntry.Kind.command)
             }
             .pickerStyle(.segmented)
@@ -44,6 +45,7 @@ struct ShortcutsSettingsView: View {
         case .command: return "Search commands…"
         // Unreachable — snippets have no tab here; they're managed in Settings › Snippets.
         case .snippet: return ""
+        case .systemCommand: return "Search system commands…"
         }
     }
 

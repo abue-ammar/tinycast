@@ -45,6 +45,50 @@ Rankings are memoized one query deep and keyed by the ranking store's revision, 
 invalidates the cached order. `rank` resolves the whole learned table for a query up front via
 `boosts(query:)` — one fold and one clock read per pass, not per candidate.
 
+## System commands
+
+`SystemCommandCatalog` is a Foundation-only inventory of the macOS actions Tinycast exposes. Its
+stable entry IDs, labels, symbols and confirmation policy are covered by
+`Tools/system-command-test.swift`; platform side effects live separately in `SystemCommandRunner`.
+`AppCore.runSystemCommand` remains the one execution funnel, hiding the floating palette before any
+confirmation or value dialog and surfacing permission-aware failures.
+
+System commands occupy their own launcher and Shortcuts Settings category. The empty-query publication
+order is applications, System Settings, system commands, then built-in/custom commands; the sectioned
+view filters in that same order so the visible rows remain identical to the flat selection index.
+Search, favorites, visibility and learned ranking work through the normal `AppEntry` path. Dedicated
+global hotkeys are deliberately out of scope.
+
+Public AppKit, CoreAudio and workspace APIs are preferred. Commands without a stable public macOS API
+use fixed system tools, Apple Events, Accessibility, or a dynamically resolved Bluetooth power API.
+Those routes run only on explicit activation. Automation, Accessibility or Bluetooth permission is
+requested at first use, and denial produces an alert linking to the relevant System Settings pane.
+Tinycast remains locked to dark appearance even when Toggle System Appearance changes macOS.
+
+Restart, Shut Down, Log Out, Empty Trash and Quit All Applications confirm before execution, with
+Return assigned to Cancel. Every dialog is Tinycast's own: confirmations, failure reports and the Set
+Volume slider all render through `ModalWindowController` rather than an `NSAlert`
+(see [ui.md](ui.md#modals--hud)). Volume and mute commands also show Tinycast's transient volume HUD,
+since macOS only draws its own for real media keys.
+
+A command whose effect is invisible reports back through the same HUD rather than finishing silently:
+`SystemCommandRunner.run` returns a `SystemCommandFeedback` naming the state it landed in
+(`Trash Emptied`, `Hidden Files Shown`, `Dark Appearance`, `Bluetooth Off`, `3 Disks Ejected`), and
+`AppCore` shows it. Commands that are their own confirmation, such as Show Desktop, Hide Others, Quit All and the
+power actions, return nothing.
+
+**Nothing-to-do is an outcome, not a failure.** Empty Trash asks Finder for `count items of trash`
+first and reports `Trash Is Already Empty`, because Finder raises an error when told to empty an empty
+Trash. The count deliberately goes through Finder instead of reading `~/.Trash` directly: that folder
+is TCC-protected, so an unprivileged read fails in a way indistinguishable from "empty", which would
+silently skip a real empty. Eject All Disks, Dismiss Notifications and Unhide All Apps report the same
+way when there is nothing to act on. Volume and mute fall back to the output's preferred stereo channels when the device exposes
+no master element (common on HDMI), and Toggle Mute parks the level at zero when there is no mute
+control at all. Multi-disk ejection excludes internal and network volumes, treats a sibling volume
+that the same physical eject already unmounted as done, and reports remaining failures together.
+Preference-backed toggles refuse to write when the current value can't be read, and notification
+dismissal matches Accessibility subroles rather than English labels.
+
 ## Custom commands
 
 `CustomCommandStore` supplies user-authored entries to `AppIndex` without joining the off-main
@@ -84,7 +128,7 @@ running dot and the availability of the quit actions:
   `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
   anything was running; the palette only dismisses when something was, and it restores focus unless
   the app it just quit *was* `previousApp`.
-- **Quit All Applications** — a `CommandRegistry` command. `AppLauncher.quitAllTargets()` is the
+- **Quit All Applications** a system command. `AppLauncher.quitAllTargets()` is the
   policy (every `.regular` app except Finder — `terminate()` only relaunches it — and Tinycast,
   excluded by PID because About/Settings temporarily flips it to `.regular`). `AppCore.quitAllApps()`
   resolves that list **once**, confirms it with an `NSAlert`, then terminates exactly what was

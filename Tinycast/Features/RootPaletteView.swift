@@ -662,6 +662,7 @@ struct RootPaletteView: View {
             switch selectedApp?.kind {
             case .systemSettings: return "Open System Setting"
             case .command: return "Run Command"
+            case .systemCommand: return "Run System Command"
             default: return "Open Application"
             }
         }

@@ -49,15 +49,17 @@ struct LauncherList: View {
         var rows: [Row] = calcRows
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
-        // `rest` is apps, panes, snippets, custom commands, then built-in commands by the AppIndex sort invariant, so filtering by kind keeps row order identical and the flat selection index valid.
+        // `rest` is apps, panes, snippets, system commands, custom commands, then built-in commands by the AppIndex sort invariant, so filtering by kind keeps row order identical and the flat selection index valid.
         let apps = rest.filter { $0.kind == .application }
         let panes = rest.filter { $0.kind == .systemSettings }
         let snippets = rest.filter { $0.kind == .snippet }
+        let systemCommands = rest.filter { $0.kind == .systemCommand }
         let customCommands = rest.filter(\.isCustomCommand)
         let commands = rest.filter { $0.kind == .command && !$0.isCustomCommand }
         for (title, group) in [
             ("Favorites", Array(favorites)), ("Applications", apps),
             ("System Settings", panes), ("Snippets", snippets),
+            ("System Commands", systemCommands),
             ("Custom Commands", customCommands), ("Commands", commands),
         ]
         where !group.isEmpty {
@@ -290,6 +292,7 @@ enum AppActionsMenu {
         case .systemSettings: return "Open System Setting"
         case .command: return "Run Command"
         case .snippet: return "Paste Snippet"
+        case .systemCommand: return "Run System Command"
         }
     }
 }

@@ -7,6 +7,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case systemSettings
         case command
         case snippet
+        case systemCommand
     }
 
     let id: String  // file path (or "command:…" id) — always unique
@@ -29,6 +30,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .systemSettings: return "System Setting"
         case .command: return isCustomCommand ? "Custom Command" : "Command"
         case .snippet: return "Snippet"
+        case .systemCommand: return "System Command"
         }
     }
 
@@ -41,18 +43,19 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return bundleID.map { .settingsPane(bundleID: $0) }
         case .command:
             return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
-        case .snippet:
+        case .snippet, .systemCommand:
             return nil
         }
     }
 
-    /// Command entries are synthetic — no file behind them to reveal.
-    var canRevealInFinder: Bool { kind != .command }
+    /// Synthetic command entries have no file behind them to reveal.
+    var canRevealInFinder: Bool { kind == .application || kind == .systemSettings || kind == .snippet }
 
-    /// Command and snippet entries draw an SF Symbol tile; everything else uses its file icon.
-    var isSymbolIcon: Bool { kind == .command || kind == .snippet }
+    /// Command, snippet and system-command entries draw an SF Symbol tile; everything else uses its file icon.
+    var isSymbolIcon: Bool { kind == .command || kind == .snippet || kind == .systemCommand }
     var symbolIconName: String {
         if kind == .snippet { return "text.quote" }
+        if let system = SystemCommandCatalog.command(forEntryID: id) { return system.sfSymbol }
         if let builtIn = CommandRegistry.command(for: self) { return builtIn.sfSymbol }
         return isCustomCommand ? "terminal" : "questionmark"
     }
@@ -176,6 +179,15 @@ final class AppIndex: ObservableObject {
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
     private var matchCache: (query: String, rankingRevision: Int, result: [AppEntry])?
 
+    private static let systemCommandEntries: [AppEntry] = SystemCommandCatalog.all
+        .map { command in
+            AppEntry(
+                id: command.entryID, name: command.name,
+                url: URL(string: "tinycast://system-command/" + command.id.rawValue)!,
+                bundleID: nil, kind: .systemCommand)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
     private var discoveredEntries: [AppEntry] = []
     private var customCommandEntries: [AppEntry] = []
     private var isRefreshing = false
@@ -282,7 +294,9 @@ final class AppIndex: ObservableObject {
 
     private func publishEntries() {
         // Each slice is already alphabetical; the slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
-        let updated = discoveredEntries + snippetEntries + customCommandEntries + CommandRegistry.all
+        let updated =
+            discoveredEntries + snippetEntries + Self.systemCommandEntries
+            + customCommandEntries + CommandRegistry.all
         guard updated != apps else { return }
         apps = updated
         matchCache = nil
