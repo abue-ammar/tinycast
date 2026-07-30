@@ -424,13 +424,14 @@ final class AppCore: ObservableObject {
         switch command.id {
         case .restart: return "Restart your Mac?"
         case .shutDown: return "Shut down your Mac?"
+        case .logOut: return "Log out now?"
         default: return "Run \(command.name)?"
         }
     }
 
     private static func confirmationMessage(_ command: SystemCommand) -> String {
         switch command.id {
-        case .restart, .shutDown:
+        case .restart, .shutDown, .logOut:
             return "Applications with unsaved changes may ask you to save."
         default: return "This system action may interrupt your work."
         }

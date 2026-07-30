@@ -58,6 +58,8 @@ enum SystemCommandRunner {
             try runAppleScript("tell application \"System Events\" to restart")
         case .shutDown:
             try runAppleScript("tell application \"System Events\" to shut down")
+        case .logOut:
+            try runAppleScript("tell application \"System Events\" to log out")
         }
         return nil
     }

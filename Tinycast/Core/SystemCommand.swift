@@ -7,6 +7,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case sleepDisplays = "sleep-displays"
         case restart
         case shutDown = "shut-down"
+        case logOut = "log-out"
     }
 
     enum Confirmation: String, Sendable {
@@ -42,6 +43,7 @@ enum SystemCommandCatalog {
         case .sleepDisplays: return "Sleep Displays"
         case .restart: return "Restart"
         case .shutDown: return "Shut Down"
+        case .logOut: return "Log Out"
         }
     }
 
@@ -52,12 +54,13 @@ enum SystemCommandCatalog {
         case .sleepDisplays: return "display"
         case .restart: return "arrow.clockwise"
         case .shutDown: return "power"
+        case .logOut: return "rectangle.portrait.and.arrow.right"
         }
     }
 
     private static func confirmation(for id: SystemCommand.ID) -> SystemCommand.Confirmation {
         switch id {
-        case .restart, .shutDown:
+        case .restart, .shutDown, .logOut:
             return .required
         default:
             return .none
