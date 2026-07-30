@@ -6,7 +6,7 @@ extension Notification.Name {
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, snippets, permissions, shortcuts, customCommands, backup,
+    case general, clipboard, emoji, snippets, shortcuts, customCommands, backup,
         miscellaneous, about
     var id: Int { rawValue }
 
@@ -16,7 +16,6 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .emoji: return "Emoji & Symbols"
         case .snippets: return "Snippets"
-        case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         case .customCommands: return "Custom Commands"
         case .backup: return "Backup"
@@ -31,7 +30,6 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.clipboard"
         case .emoji: return "face.smiling"
         case .snippets: return "curlybraces"
-        case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         case .customCommands: return "terminal"
         case .backup: return "arrow.up.arrow.down.circle"
@@ -47,7 +45,6 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return .orange
         case .emoji: return .yellow
         case .snippets: return .green
-        case .permissions: return .blue
         case .shortcuts: return .indigo
         case .customCommands: return .green
         case .backup: return .teal
@@ -59,12 +56,9 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
 
 struct SettingsRootView: View {
     @State private var tab: SettingsTab
-    @State private var isChangingTab = false
-    @StateObject private var snippetsSession: SnippetEditingSession
 
-    init(initialTab: SettingsTab = .general, snippetsSession: SnippetEditingSession) {
+    init(initialTab: SettingsTab = .general) {
         _tab = State(initialValue: initialTab)
-        _snippetsSession = StateObject(wrappedValue: snippetsSession)
     }
 
     var body: some View {
@@ -77,8 +71,7 @@ struct SettingsRootView: View {
                 case .general: GeneralSettingsView()
                 case .clipboard: ClipboardSettingsView()
                 case .emoji: EmojiSettingsView()
-                case .snippets: SnippetsSettingsView(session: snippetsSession)
-                case .permissions: PermissionsSettingsView()
+                case .snippets: SnippetsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .customCommands: CustomCommandsSettingsView()
                 case .backup: BackupSettingsView()
@@ -95,7 +88,7 @@ struct SettingsRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectSettingsTab)) { note in
-            if let target = note.object as? SettingsTab { requestTab(target) }
+            if let target = note.object as? SettingsTab { tab = target }
         }
     }
 
@@ -129,22 +122,7 @@ struct SettingsRootView: View {
             systemImage: item.systemImage,
             tint: item.tint,
             isSelected: tab == item
-        ) { requestTab(item) }
-    }
-
-    private func requestTab(_ target: SettingsTab) {
-        guard target != tab, !isChangingTab else { return }
-        guard tab == .snippets else {
-            tab = target
-            return
-        }
-
-        isChangingTab = true
-        Task {
-            defer { isChangingTab = false }
-            guard await snippetsSession.prepareForDeparture() else { return }
-            tab = target
-        }
+        ) { tab = item }
     }
 }
 

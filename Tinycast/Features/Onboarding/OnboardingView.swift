@@ -34,12 +34,10 @@ struct OnboardingView: View {
         // Extend under the transparent titlebar (top padding clears the traffic lights) so the window height equals the fixed content height.
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.2), value: step)
-        .onAppear {
-            accessibilityTrusted = Permissions.isAccessibilityTrusted()
-        }
+        .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
         .onReceive(refreshTimer) { _ in
-            let acc = Permissions.isAccessibilityTrusted()
-            if acc != accessibilityTrusted { accessibilityTrusted = acc }
+            let trusted = Permissions.isAccessibilityTrusted()
+            if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
         }
     }
 
@@ -78,7 +76,7 @@ struct OnboardingView: View {
     private var title: String {
         switch step {
         case 0: "Welcome to Tinycast"
-        case 1: "Enable Accessibility"
+        case 1: "Enable Pasting"
         case 2: "Import from Raycast"
         default: "You're all set"
         }
@@ -87,7 +85,7 @@ struct OnboardingView: View {
     private var subtitle: String {
         switch step {
         case 0: "Set a shortcut to summon the launcher from anywhere."
-        case 1: "Grant Accessibility so Tinycast can paste into other apps."
+        case 1: "Let Tinycast paste items back into the app you were using."
         case 2: "Bring your shortcuts, favorites, and clipboard history along."
         default: readyMessage
         }
@@ -161,10 +159,10 @@ struct OnboardingView: View {
                         "Allows pasting clipboard items and expanded snippets into active apps.",
                     systemImage: "accessibility", tint: .blue
                 ) {
-                    statusBadge(isGranted: accessibilityTrusted)
+                    statusBadge
                 }
             }
-            caption("Optional — you can manage this anytime in Settings › Permissions.")
+            caption("Optional — you can enable this later in Settings › Clipboard.")
         }
     }
 
@@ -260,19 +258,17 @@ struct OnboardingView: View {
 
     private var primaryTitle: String {
         switch step {
-        case 0: return "Continue"
-        case 1:
-            if !accessibilityTrusted { return "Grant Accessibility" }
-            return "Continue"
+        case 0: "Continue"
+        case 1: accessibilityTrusted ? "Continue" : "Grant Access"
         case 2:
             if model.didImport {
-                return "Continue"
+                "Continue"
             } else if model.importing {
-                return "Importing…"
+                "Importing…"
             } else {
-                return "Import"
+                "Import"
             }
-        default: return "Get Started"
+        default: "Get Started"
         }
     }
 
@@ -282,12 +278,8 @@ struct OnboardingView: View {
 
     private func primaryAction() {
         switch step {
-        case 1:
-            if !accessibilityTrusted {
-                Permissions.openAccessibilitySettings()
-            } else {
-                advance()
-            }
+        case 1 where !accessibilityTrusted:
+            Permissions.openAccessibilitySettings()
         case 2 where !model.didImport:
             model.run()
         case Self.lastStep:
@@ -329,15 +321,15 @@ struct OnboardingView: View {
         .padding(.horizontal, Theme.Spacing.xs)
     }
 
-    private func statusBadge(isGranted: Bool) -> some View {
+    private var statusBadge: some View {
         HStack(spacing: Theme.Spacing.xs + 1) {
             Image(
-                systemName: isGranted
+                systemName: accessibilityTrusted
                     ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-            Text(isGranted ? "Granted" : "Not granted")
+            Text(accessibilityTrusted ? "Granted" : "Not granted")
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(isGranted ? Color.green : Color.orange)
+        .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.xs)
         .background(

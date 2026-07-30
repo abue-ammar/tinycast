@@ -118,6 +118,10 @@ shows an explanation, then stores consent and requests only missing Input Monito
 Accessibility grants. The consent flag is intentionally excluded from settings backups, so importing
 a backup cannot enable keystroke listening.
 
+Each permission is managed by the pane whose feature needs it, through one shared `PermissionCard`:
+Input Monitoring in **Settings → Snippets**, Accessibility (which snippet delivery shares with
+clipboard pasting) in **Settings → Clipboard**.
+
 Runtime status is explicit:
 
 - **Off** — consent is disabled and no keyword tap is retained.
@@ -137,10 +141,9 @@ generation. A failed gate leaves the typed keyword untouched.
 
 ## Insertion HUD
 
-The insertion HUD is disabled by default at both levels. **Settings → Snippets** provides the harmless
-global display preference, which is included in settings backups. Each snippet must also enable
-`show_hud: true`; the effective gate is global AND per-snippet. Keyword-monitoring consent remains
-separate and excluded from backups.
+The insertion HUD is per snippet and off by default: the only gate is `show_hud: true`, set from the
+snippet's editor in **Settings → Snippets**. There is no global preference and nothing HUD-related in
+settings backups. Keyword-monitoring consent is separate and also excluded from backups.
 
 After either launcher or keyword delivery is confirmed, Tinycast may show a brief non-activating,
 click-through overlay with the snippet name. The AppCore-owned controller replaces and restarts a

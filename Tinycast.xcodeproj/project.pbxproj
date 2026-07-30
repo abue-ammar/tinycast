@@ -16,7 +16,6 @@
 		1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */; };
 		1F39D145DBE2290532C93614 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */; };
 		1F555347D7CE8F37A2C37BAF /* SnippetRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C069647C67120EBAED14422 /* SnippetRepository.swift */; };
-		2085C9433B7534044E0A8A7D /* PermissionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */; };
 		20C8E98F5BC0FDDB0F646F3D /* OverlayScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FF10C4F5E4F73503F58D03B /* OverlayScroller.swift */; };
 		212B9B44D7EED18A0DEF47AF /* ShellCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 286B7598B81017C746558C7C /* ShellCommandRunner.swift */; };
 		24842144273FF92228540DBE /* FrequentEmojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A228BEF62103605DE7A8F38 /* FrequentEmojiStore.swift */; };
@@ -107,7 +106,6 @@
 		041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
 		05970D61D4E595D0658D0D94 /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
 		09093BF10EA97BDCA45A241F /* CalcFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcFormatter.swift; sourceTree = "<group>"; };
-		0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsView.swift; sourceTree = "<group>"; };
 		0D045D032498C2294A99890E /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		0F50886DC766B9923C3875A5 /* RootPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootPaletteView.swift; sourceTree = "<group>"; };
 		1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportSelection.swift; sourceTree = "<group>"; };
@@ -407,7 +405,6 @@
 				041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */,
 				4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */,
 				297F819E291F33E43E490359 /* MiscellaneousSettingsView.swift */,
-				0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */,
 				1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */,
 				98AD515E679D78C6F2A37E03 /* SearchScopesCard.swift */,
 				D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */,
@@ -573,7 +570,6 @@
 				F25D58ED6EF3308D38D01732 /* PaletteWindowController.swift in Sources */,
 				F2B68DBA258D85DD5C6DC1CC /* Paster.swift in Sources */,
 				32697AB3853D043A12888B96 /* Permissions.swift in Sources */,
-				2085C9433B7534044E0A8A7D /* PermissionsSettingsView.swift in Sources */,
 				80F1A591DB0F5385F5C9A06C /* PopoverMenu.swift in Sources */,
 				8EF55652F19A1E0C5FF644B4 /* RaycastImport.swift in Sources */,
 				ABBB2A811EB5C69D55A93B1C /* RaycastImportSelection.swift in Sources */,

@@ -163,7 +163,7 @@ private struct CustomCommandEditorSheet: View {
                     .font(.body.monospaced())
                     .scrollContentBackground(.hidden)
                     .padding(Theme.Spacing.sm)
-                    .frame(height: Theme.Size.customCommandEditorHeight)
+                    .frame(height: Theme.Size.editorTextHeight)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                             .fill(Theme.Colors.cardFill)

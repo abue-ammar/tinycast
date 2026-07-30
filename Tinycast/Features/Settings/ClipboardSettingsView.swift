@@ -11,6 +11,12 @@ struct ClipboardSettingsView: View {
             title: "Clipboard",
             subtitle: "Control how much history Tinycast keeps and which apps are recorded."
         ) {
+            PermissionCard(
+                permission: .accessibility,
+                explanation:
+                    "Lets Tinycast paste clipboard items and expanded snippets into the app you were using."
+            )
+
             SettingsCard(header: "Shortcut") {
                 SettingsRow(
                     title: "Clipboard History",

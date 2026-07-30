@@ -7,6 +7,7 @@ enum Permissions {
         AXIsProcessTrusted()
     }
 
+    /// Preflight only — never prompts, so it is safe to poll.
     static func isInputMonitoringTrusted() -> Bool {
         CGPreflightListenEventAccess()
     }
@@ -26,13 +27,21 @@ enum Permissions {
 
     @MainActor
     static func openAccessibilitySettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else { return }
+        guard
+            let url = URL(
+                string:
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        else { return }
         NSWorkspace.shared.open(url)
     }
 
     @MainActor
     static func openInputMonitoringSettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") else { return }
+        guard
+            let url = URL(
+                string:
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
+        else { return }
         NSWorkspace.shared.open(url)
     }
 }

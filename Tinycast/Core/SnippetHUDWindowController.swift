@@ -28,12 +28,6 @@ final class SnippetHUDWindowController {
         }
     }
 
-    func hide() {
-        dismissalTask?.cancel()
-        dismissalTask = nil
-        panel?.orderOut(nil)
-    }
-
     private func makePanel() -> NSPanel {
         let panel = NSPanel(
             contentRect: NSRect(

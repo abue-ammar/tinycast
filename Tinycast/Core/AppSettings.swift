@@ -41,7 +41,6 @@ final class AppSettings: ObservableObject {
         static let searchScopes = "launcherSearchScopes"
         static let openOnCursorScreen = "openOnCursorScreen"
         static let snippetKeywordExpansion = "snippetKeywordExpansion"
-        static let snippetHUD = "snippetHUD"
     }
 
     /// Folders (and individual `.app` bundles) `AppIndex` scans, in scan order. Editing this re-indexes — `AppIndex.start(settings:)` observes it.
@@ -106,10 +105,6 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen) }
     }
 
-    @Published var snippetHUD: Bool {
-        didSet { defaults.set(snippetHUD, forKey: Key.snippetHUD) }
-    }
-
     /// Global opt-in for listening for snippet keywords while the user types in other apps.
     @Published var snippetKeywordExpansion: Bool {
         didSet { defaults.set(snippetKeywordExpansion, forKey: Key.snippetKeywordExpansion) }
@@ -153,6 +148,5 @@ final class AppSettings: ObservableObject {
             defaults.object(forKey: Key.openOnCursorScreen) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen)
         snippetKeywordExpansion = defaults.bool(forKey: Key.snippetKeywordExpansion)
-        snippetHUD = defaults.bool(forKey: Key.snippetHUD)
     }
 }

@@ -115,8 +115,6 @@ final class AppCore: ObservableObject {
     private let auxWindows = AuxWindowController()
     /// Guards only the confirmation modal, not execution — two deliberate runs of an unguarded command still run twice.
     private var isConfirmingCommand = false
-    private var settingsSnippetsSession: SnippetEditingSession?
-    private var isReviewingTermination = false
 
     private init() {
         let launcherRanking = LauncherRankingStore()
@@ -177,26 +175,12 @@ final class AppCore: ObservableObject {
         }
     }
 
-    func applicationShouldTerminate() -> NSApplication.TerminateReply {
-        guard let session = settingsSnippetsSession,
-            session.isDirty || session.externalChange != nil
-        else { return .terminateNow }
-        guard !isReviewingTermination else { return .terminateLater }
-
-        isReviewingTermination = true
-        Task {
-            let approved = await session.prepareForDeparture()
-            isReviewingTermination = false
-            NSApp.reply(toApplicationShouldTerminate: approved)
-        }
-        return .terminateLater
-    }
-
     func prepareForTermination() {
+        // Caps Lock first: its HID remap is the only teardown that outlives the process, so nothing else may come before it.
+        hyperKeyTap.prepareForTermination()
         snippetTextInjector.prepareForTermination()
         snippetListener.stop()
         snippetsStore.stop()
-        hyperKeyTap.prepareForTermination()
     }
 
     // MARK: - Palette control
@@ -266,20 +250,11 @@ final class AppCore: ObservableObject {
 
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory apps). A fresh window mounts directly on `tab` (no first-frame flicker); an already-open one is switched in place.
     func showSettings(tab: SettingsTab = .general) {
-        let snippetsSession = settingsSnippetsSession
-            ?? SnippetEditingSession(store: snippetsStore)
-        settingsSnippetsSession = snippetsSession
         let isNew = auxWindows.show(
             id: "settings", title: "Settings", size: CGSize(width: 720, height: 550),
-            seamlessTitleBar: true,
-            shouldClose: { completion in
-                snippetsSession.requestWindowClose(completion: completion)
-            },
-            onClose: { [weak self] in
-                self?.settingsSnippetsSession = nil
-            }
+            seamlessTitleBar: true
         ) {
-            SettingsRootView(initialTab: tab, snippetsSession: snippetsSession)
+            SettingsRootView(initialTab: tab)
                 .environmentObject(self)
                 .environmentObject(self.appIndex)
                 .environmentObject(self.visibility)
@@ -609,11 +584,6 @@ final class AppCore: ObservableObject {
 
     // MARK: - Snippets
 
-    private struct SnippetHUDPresentation: Sendable {
-        let name: String
-        let isEnabled: Bool
-    }
-
     func revealSnippetsInFinder() {
         NSWorkspace.shared.open(snippetsStore.snippetsDirectory)
     }
@@ -691,9 +661,7 @@ final class AppCore: ObservableObject {
         } else {
             guard snippetTextInjector.prepareInteractiveExpansion(targetApp: targetApp) else { return }
         }
-        let hudPresentation = SnippetHUDPresentation(
-            name: record.snippet.name,
-            isEnabled: record.snippet.showHUD)
+        let hudName = record.snippet.showHUD ? record.snippet.name : nil
         let context = snippetTextInjector.captureExpansionContext(targetApp: targetApp)
         let result = SnippetTemplateEngine.expand(
             record,
@@ -709,7 +677,7 @@ final class AppCore: ObservableObject {
                 expectedKeyword: expectedKeyword,
                 keywordLength: keywordLength,
                 automaticGeneration: automaticGeneration,
-                hudPresentation: hudPresentation)
+                hudName: hudName)
             return
         }
         completeSnippetExpansion(
@@ -718,7 +686,7 @@ final class AppCore: ObservableObject {
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
-            hudPresentation: hudPresentation)
+            hudName: hudName)
     }
 
     private func promptSnippetArguments(
@@ -730,7 +698,7 @@ final class AppCore: ObservableObject {
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: UInt?,
-        hudPresentation: SnippetHUDPresentation
+        hudName: String?
     ) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
@@ -776,7 +744,7 @@ final class AppCore: ObservableObject {
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
-            hudPresentation: hudPresentation)
+            hudName: hudName)
     }
 
     private func completeSnippetExpansion(
@@ -785,7 +753,7 @@ final class AppCore: ObservableObject {
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: UInt?,
-        hudPresentation: SnippetHUDPresentation
+        hudName: String?
     ) {
         snippetTextInjector.deliver(
             result,
@@ -794,8 +762,8 @@ final class AppCore: ObservableObject {
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
             onDelivered: { [weak self] in
-                guard let self, self.settings.snippetHUD, hudPresentation.isEnabled else { return }
-                self.snippetHUDController.show(snippetName: hudPresentation.name)
+                guard let self, let hudName else { return }
+                self.snippetHUDController.show(snippetName: hudName)
             })
     }
 }
