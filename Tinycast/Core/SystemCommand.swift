@@ -26,6 +26,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case toggleStageManager = "toggle-stage-manager"
         case openTrash = "open-trash"
         case emptyTrash = "empty-trash"
+        case ejectAllDisks = "eject-all-disks"
     }
 
     enum Confirmation: String, Sendable {
@@ -80,6 +81,7 @@ enum SystemCommandCatalog {
         case .toggleStageManager: return "Toggle Stage Manager"
         case .openTrash: return "Open Trash"
         case .emptyTrash: return "Empty Trash"
+        case .ejectAllDisks: return "Eject All Disks"
         }
     }
 
@@ -105,6 +107,7 @@ enum SystemCommandCatalog {
         case .toggleStageManager: return "squares.leading.rectangle"
         case .openTrash: return "trash"
         case .emptyTrash: return "trash.slash"
+        case .ejectAllDisks: return "eject"
         }
     }
 

@@ -136,6 +136,13 @@ enum SystemCommandRunner {
             }
             try runAppleScript("tell application \"Finder\" to empty trash")
             return SystemCommandFeedback("Trash Emptied", symbol: "trash")
+        case .ejectAllDisks:
+            let ejected = try ejectAllDisks()
+            guard ejected > 0 else {
+                return SystemCommandFeedback("No Disks to Eject", symbol: "eject", isNoOp: true)
+            }
+            return SystemCommandFeedback(
+                ejected == 1 ? "1 Disk Ejected" : "\(ejected) Disks Ejected", symbol: "eject")
         }
         return nil
     }
@@ -327,6 +334,44 @@ enum SystemCommandRunner {
                 windowNumber: 0, context: nil, subtype: 8, data1: data1, data2: -1)
             event?.cgEvent?.post(tap: .cghidEventTap)
         }
+    }
+
+    @discardableResult
+    private static func ejectAllDisks() throws -> Int {
+        let keys: Set<URLResourceKey> = [
+            .volumeIsEjectableKey, .volumeIsInternalKey, .volumeIsLocalKey,
+        ]
+        let urls = FileManager.default.mountedVolumeURLs(
+            includingResourceValuesForKeys: Array(keys), options: [.skipHiddenVolumes]) ?? []
+        let ejectable = urls.filter { url in
+            guard let values = try? url.resourceValues(forKeys: keys) else { return false }
+            return values.volumeIsEjectable == true
+                && values.volumeIsInternal != true
+                && values.volumeIsLocal != false
+        }
+        var failures: [String] = []
+        var ejected = 0
+        for url in ejectable {
+            // One physical disk can publish several volumes, and ejecting the first takes the whole device with it, so a sibling that vanished is done, not failed.
+            guard mountedVolumeExists(url) else { continue }
+            do {
+                try NSWorkspace.shared.unmountAndEjectDevice(at: url)
+                ejected += 1
+            } catch {
+                guard mountedVolumeExists(url) else { continue }
+                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+        guard failures.isEmpty else {
+            throw SystemCommandFailure("Some disks could not be ejected:\n\n" + failures.joined(separator: "\n"))
+        }
+        return ejected
+    }
+
+    private static func mountedVolumeExists(_ url: URL) -> Bool {
+        let mounted = FileManager.default.mountedVolumeURLs(
+            includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
+        return mounted.contains { $0.standardizedFileURL == url.standardizedFileURL }
     }
 
     /// Returns the state the toggle landed in, so the caller can name it rather than re-reading the preference.
