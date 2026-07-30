@@ -17,6 +17,7 @@ struct SystemCommandTests {
 
     static func main() {
         let commands = SystemCommandCatalog.all
+        expect(commands.count == 31, "catalog contains all 31 agreed commands")
         expect(commands.map(\.id) == SystemCommand.ID.allCases, "catalog covers every ID once")
         expect(Set(commands.map(\.id)).count == commands.count, "IDs are unique")
         expect(Set(commands.map(\.entryID)).count == commands.count, "entry IDs are unique")
@@ -42,6 +43,10 @@ struct SystemCommandTests {
         expect(
             SystemCommandCatalog.command(forEntryID: "system-command:unknown") == nil,
             "unknown entry IDs are rejected")
+        expect(
+            !commands.contains { $0.id.rawValue == "quit-all-apps-except-frontmost" },
+            "Quit All Except Frontmost remains out of scope")
+
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }

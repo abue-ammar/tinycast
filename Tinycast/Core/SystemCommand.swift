@@ -32,6 +32,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case unhideAllApps = "unhide-all-hidden-apps"
         case quitAllApps = "quit-all-apps"
         case dismissNotifications = "dismiss-notifications"
+        case toggleBluetooth = "toggle-bluetooth"
     }
 
     enum Confirmation: String, Sendable {
@@ -95,6 +96,7 @@ enum SystemCommandCatalog {
         case .unhideAllApps: return "Unhide All Hidden Apps"
         case .quitAllApps: return "Quit All Applications"
         case .dismissNotifications: return "Dismiss Notifications"
+        case .toggleBluetooth: return "Toggle Bluetooth"
         }
     }
 
@@ -126,6 +128,7 @@ enum SystemCommandCatalog {
         case .unhideAllApps: return "eye.circle"
         case .quitAllApps: return "xmark.circle"
         case .dismissNotifications: return "bell.slash"
+        case .toggleBluetooth: return "bluetooth"
         }
     }
 

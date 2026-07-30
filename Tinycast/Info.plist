@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Tinycast uses automation to perform system commands you explicitly run.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Tinycast uses Bluetooth access only when you run the Toggle Bluetooth command.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Tinycast</string>
 </dict>

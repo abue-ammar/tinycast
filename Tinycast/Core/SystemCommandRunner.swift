@@ -171,6 +171,10 @@ enum SystemCommandRunner {
                     "No Notifications", symbol: "bell.slash", isNoOp: true)
             }
             return SystemCommandFeedback("Notifications Dismissed", symbol: "bell.slash")
+        case .toggleBluetooth:
+            let on = try await toggleBluetooth()
+            return SystemCommandFeedback(
+                on ? "Bluetooth On" : "Bluetooth Off", symbol: "bluetooth")
         }
         return nil
     }
@@ -532,6 +536,37 @@ enum SystemCommandRunner {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else { return nil }
         return value as? String
+    }
+
+    /// Returns the power state the controller settled into; the setter is `void`, so polling the getter is the only confirmation available.
+    private static func toggleBluetooth() async throws -> Bool {
+        let path = "/System/Library/Frameworks/IOBluetooth.framework/IOBluetooth"
+        guard let handle = dlopen(path, RTLD_NOW) else {
+            throw SystemCommandFailure("Bluetooth control is unavailable on this Mac.")
+        }
+        defer { dlclose(handle) }
+        typealias Available = @convention(c) () -> Int32
+        typealias GetPower = @convention(c) () -> Int32
+        typealias SetPower = @convention(c) (Int32) -> Void
+        guard let availableSymbol = dlsym(handle, "IOBluetoothPreferencesAvailable"),
+            let getSymbol = dlsym(handle, "IOBluetoothPreferenceGetControllerPowerState"),
+            let setSymbol = dlsym(handle, "IOBluetoothPreferenceSetControllerPowerState")
+        else { throw SystemCommandFailure("This macOS version does not expose Bluetooth power control.") }
+        let available = unsafeBitCast(availableSymbol, to: Available.self)
+        let getPower = unsafeBitCast(getSymbol, to: GetPower.self)
+        let setPower = unsafeBitCast(setSymbol, to: SetPower.self)
+        guard available() != 0 else {
+            throw SystemCommandFailure("No Bluetooth controller is available.", settings: .bluetooth)
+        }
+        let requested: Int32 = getPower() == 0 ? 1 : 0
+        setPower(requested)
+        for _ in 0..<20 {
+            try await Task.sleep(for: .milliseconds(100))
+            if getPower() == requested { return requested == 1 }
+        }
+        throw SystemCommandFailure(
+            "Bluetooth did not change state. Check Tinycast’s Bluetooth permission.",
+            settings: .bluetooth)
     }
 
     @discardableResult
