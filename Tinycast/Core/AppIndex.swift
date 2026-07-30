@@ -14,8 +14,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let url: URL
     let bundleID: String?
     let kind: Kind
-    var searchAliases: [String] = []
-    var keywordAlias: String? = nil
+    /// Extra strings this entry also matches on in search — a snippet's keyword and category. Empty for every other kind.
+    var matchAliases: [String] = []
 
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
@@ -169,7 +169,6 @@ enum IconCache {
 final class AppIndex: ObservableObject {
     @Published private(set) var apps: [AppEntry] = []
 
-    private var scannedEntries: [AppEntry] = []
     private var snippetEntries: [AppEntry] = []
 
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
@@ -203,7 +202,7 @@ final class AppIndex: ObservableObject {
     }
 
     func updateSnippets(_ records: [StoredSnippet]) {
-        snippetEntries = records
+        let entries = records
             .filter { $0.snippet.isEnabled && $0.snippet.showInLauncher }
             .map { record in
                 AppEntry(
@@ -212,10 +211,12 @@ final class AppIndex: ObservableObject {
                     url: record.fileURL,
                     bundleID: nil,
                     kind: .snippet,
-                    searchAliases: [record.snippet.category].compactMap { $0 },
-                    keywordAlias: record.snippet.keyword)
+                    matchAliases: [record.snippet.keyword, record.snippet.category]
+                        .compactMap { $0 })
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        guard entries != snippetEntries else { return }
+        snippetEntries = entries
         publishEntries()
     }
 
@@ -305,15 +306,11 @@ final class AppIndex: ObservableObject {
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let learned = ranking.boosts(query: q)
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
+            // An entry matches on its name or on any alias it carries (snippet keyword, category), whichever scores best — all inside the same tiers, so an alias can never outrank a better name match.
             var bestScore = FuzzyMatch.score(query: q, candidate: app.name)
-            if let keyword = app.keywordAlias,
-                let keywordScore = FuzzyMatch.score(query: q, candidate: keyword)
-            {
-                bestScore = max(bestScore ?? -1, keywordScore + 200)
-            }
-            for alias in app.searchAliases {
-                guard let aliasScore = FuzzyMatch.score(query: q, candidate: alias) else { continue }
-                bestScore = max(bestScore ?? -1, aliasScore)
+            for candidate in app.matchAliases {
+                guard let aliasScore = FuzzyMatch.score(query: q, candidate: candidate) else { continue }
+                bestScore = max(bestScore ?? aliasScore, aliasScore)
             }
             guard let score = bestScore else { return nil }
             return (app, score + (learned[app.preferenceKey] ?? 0))

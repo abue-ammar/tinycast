@@ -2,36 +2,69 @@ import Foundation
 
 enum SnippetTemplateEngine {
     struct ExpansionContext: Sendable {
-        let clipboard: String
+        /// Clipboard history, most recent first: `{clipboard}` is offset 0, `{clipboard offset=1}` the one before it.
+        let clipboardHistory: [String]
         let selection: String
         let now: Date
         let calendar: Calendar
         let locale: Locale
         let timeZone: TimeZone
+        /// Injected so `{uuid}` is reproducible under test.
+        let makeUUID: @Sendable () -> String
 
+        var clipboard: String { clipboardHistory.first ?? "" }
+
+        init(
+            clipboardHistory: [String],
+            selection: String,
+            now: Date,
+            calendar: Calendar,
+            locale: Locale,
+            timeZone: TimeZone,
+            makeUUID: @escaping @Sendable () -> String = { UUID().uuidString }
+        ) {
+            var calendar = calendar
+            calendar.timeZone = timeZone
+            self.clipboardHistory = clipboardHistory
+            self.selection = selection
+            self.now = now
+            self.calendar = calendar
+            self.locale = locale
+            self.timeZone = timeZone
+            self.makeUUID = makeUUID
+        }
+
+        /// Convenience for a caller that only knows the current clipboard.
         init(
             clipboard: String,
             selection: String,
             now: Date,
             calendar: Calendar,
             locale: Locale,
-            timeZone: TimeZone
+            timeZone: TimeZone,
+            makeUUID: @escaping @Sendable () -> String = { UUID().uuidString }
         ) {
-            var calendar = calendar
-            calendar.timeZone = timeZone
-            self.clipboard = clipboard
-            self.selection = selection
-            self.now = now
-            self.calendar = calendar
-            self.locale = locale
-            self.timeZone = timeZone
+            self.init(
+                clipboardHistory: [clipboard],
+                selection: selection,
+                now: now,
+                calendar: calendar,
+                locale: locale,
+                timeZone: timeZone,
+                makeUUID: makeUUID)
         }
+    }
+
+    /// An `{argument}` the template still needs a value for, with any `options=` the prompt should offer.
+    struct MissingArgument: Sendable, Equatable {
+        let name: String
+        let options: [String]
     }
 
     struct ExpansionResult: Sendable, Equatable {
         let text: String
         let cursorOffsetFromEnd: Int?
-        let missingArguments: [String]
+        let missingArguments: [MissingArgument]
     }
 
     private static let maximumReferenceDepth = 5
@@ -63,8 +96,8 @@ enum SnippetTemplateEngine {
     private struct Expansion {
         var text = ""
         var cursorCharacterOffset: Int?
-        var missingArguments: [String] = []
-        var missingArgumentSet = Set<String>()
+        var missingArguments: [MissingArgument] = []
+        var missingArgumentNames = Set<String>()
 
         mutating func append(_ value: String) {
             text += value
@@ -87,24 +120,64 @@ enum SnippetTemplateEngine {
             }
         }
 
-        mutating func addMissingArgument(_ argument: String) {
-            if missingArgumentSet.insert(argument).inserted {
+        mutating func addMissingArgument(_ argument: MissingArgument) {
+            if missingArgumentNames.insert(argument.name).inserted {
                 missingArguments.append(argument)
             }
         }
     }
 
+    // MARK: - Tokens
+
     private enum Segment {
         case literal(String)
-        case clipboard
-        case selection
-        case date
-        case time
-        case formattedDate(String)
-        case argument(name: String, source: String)
+        case clipboard(offset: Int, modifiers: [Modifier])
+        case selection(modifiers: [Modifier])
+        case dateTime(DateTimeToken, modifiers: [Modifier])
+        case uuid(modifiers: [Modifier])
+        case argument(ArgumentToken, source: String, modifiers: [Modifier])
         case cursor
         case snippetReference(key: String, source: String)
     }
+
+    private struct DateTimeToken {
+        enum Kind {
+            case date
+            case time
+            case dateTime
+            case weekday
+        }
+
+        let kind: Kind
+        /// Signed calendar offsets, applied in written order.
+        let offsets: [Offset]
+        let format: String?
+        let localeIdentifier: String?
+
+        struct Offset {
+            let component: Calendar.Component
+            let value: Int
+        }
+    }
+
+    private struct ArgumentToken {
+        let name: String
+        let options: [String]
+        let defaultValue: String?
+    }
+
+    /// Post-processing applied to a placeholder's value, left to right.
+    private enum Modifier: String {
+        case uppercase
+        case lowercase
+        case trim
+        case percentEncode = "percent-encode"
+        case jsonStringify = "json-stringify"
+        /// Opts out of automatic formatting. Tinycast applies none, so this is accepted and does nothing.
+        case raw
+    }
+
+    // MARK: - Expansion
 
     private static func expandRecord(
         _ record: StoredSnippet,
@@ -119,22 +192,23 @@ enum SnippetTemplateEngine {
             switch segment {
             case .literal(let value):
                 result.append(value)
-            case .clipboard:
-                result.append(context.clipboard)
-            case .selection:
-                result.append(context.selection)
-            case .date:
-                result.append(formatDate(context.now, dateStyle: .medium, timeStyle: .none, context: context))
-            case .time:
-                result.append(formatDate(context.now, dateStyle: .none, timeStyle: .short, context: context))
-            case .formattedDate(let format):
-                result.append(formatDate(context.now, format: format, context: context))
-            case .argument(let name, let source):
-                if let value = userArguments[name] {
-                    result.append(value)
+            case .clipboard(let offset, let modifiers):
+                let value = offset < context.clipboardHistory.count
+                    ? context.clipboardHistory[offset] : ""
+                result.append(apply(modifiers, to: value))
+            case .selection(let modifiers):
+                result.append(apply(modifiers, to: context.selection))
+            case .dateTime(let token, let modifiers):
+                result.append(apply(modifiers, to: format(token, context: context)))
+            case .uuid(let modifiers):
+                result.append(apply(modifiers, to: context.makeUUID()))
+            case .argument(let token, let source, let modifiers):
+                if let value = userArguments[token.name] ?? token.defaultValue {
+                    result.append(apply(modifiers, to: value))
                 } else {
                     result.append(source)
-                    result.addMissingArgument(name)
+                    result.addMissingArgument(
+                        MissingArgument(name: token.name, options: token.options))
                 }
             case .cursor:
                 result.markCursor()
@@ -160,6 +234,49 @@ enum SnippetTemplateEngine {
         }
         return result
     }
+
+    private static func apply(_ modifiers: [Modifier], to value: String) -> String {
+        modifiers.reduce(value) { partial, modifier in
+            switch modifier {
+            case .uppercase: return partial.uppercased()
+            case .lowercase: return partial.lowercased()
+            case .trim: return partial.trimmingCharacters(in: .whitespacesAndNewlines)
+            case .percentEncode: return percentEncoded(partial)
+            case .jsonStringify: return jsonEscaped(partial)
+            case .raw: return partial
+            }
+        }
+    }
+
+    /// Percent-encodes everything outside RFC 3986's unreserved set, so the result is safe in any URL component.
+    private static func percentEncoded(_ value: String) -> String {
+        let unreserved = CharacterSet(
+            charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+        return value.addingPercentEncoding(withAllowedCharacters: unreserved) ?? value
+    }
+
+    /// Escapes the value for use *inside* a JSON string; the surrounding quotes stay the template's job.
+    private static func jsonEscaped(_ value: String) -> String {
+        var escaped = ""
+        for scalar in value.unicodeScalars {
+            switch scalar {
+            case "\"": escaped += "\\\""
+            case "\\": escaped += "\\\\"
+            case "\n": escaped += "\\n"
+            case "\r": escaped += "\\r"
+            case "\t": escaped += "\\t"
+            default:
+                if scalar.value < 0x20 {
+                    escaped += String(format: "\\u%04x", scalar.value)
+                } else {
+                    escaped.unicodeScalars.append(scalar)
+                }
+            }
+        }
+        return escaped
+    }
+
+    // MARK: - Parsing
 
     private static func parseSegments(_ source: String) -> [Segment] {
         var segments: [Segment] = []
@@ -195,44 +312,239 @@ enum SnippetTemplateEngine {
     }
 
     private static func segment(for body: String, source: String) -> Segment? {
-        switch body {
-        case "clipboard": return .clipboard
-        case "selection": return .selection
-        case "date": return .date
-        case "time": return .time
-        case "argument": return .argument(name: "Argument", source: source)
-        case "cursor": return .cursor
-        default: break
+        guard let parts = splitOnPipes(body), let head = parts.first else { return nil }
+        var modifiers: [Modifier] = []
+        for raw in parts.dropFirst() {
+            guard let modifier = Modifier(rawValue: raw) else { return nil }
+            modifiers.append(modifier)
         }
 
-        if body.hasPrefix("snippet:") {
-            let key = body.dropFirst("snippet:".count).trimmingCharacters(in: .whitespaces)
-            guard !key.isEmpty else { return nil }
+        // Structural tokens produce no text of their own, so a modifier on one is a malformed token.
+        if head == "cursor" {
+            return modifiers.isEmpty ? .cursor : nil
+        }
+        if head.hasPrefix("snippet:") {
+            let key = head.dropFirst("snippet:".count).trimmingCharacters(in: .whitespaces)
+            guard !key.isEmpty, modifiers.isEmpty else { return nil }
             return .snippetReference(key: key, source: source)
         }
-        if let name = quotedAttribute(in: body, command: "argument", attribute: "name"), !name.isEmpty {
-            return .argument(name: name, source: source)
+
+        guard let token = parseToken(head) else { return nil }
+        switch token.command {
+        case "clipboard":
+            guard let offset = intParameter(token, "offset", default: 0), offset >= 0,
+                token.hasOnly(["offset"])
+            else { return nil }
+            return .clipboard(offset: offset, modifiers: modifiers)
+        case "selection":
+            guard token.parameters.isEmpty else { return nil }
+            return .selection(modifiers: modifiers)
+        case "uuid":
+            guard token.parameters.isEmpty else { return nil }
+            return .uuid(modifiers: modifiers)
+        case "date", "time", "datetime", "day":
+            guard let dateTime = parseDateTime(token) else { return nil }
+            return .dateTime(dateTime, modifiers: modifiers)
+        case "argument":
+            guard let argument = parseArgument(token) else { return nil }
+            return .argument(argument, source: source, modifiers: modifiers)
+        case "snippet":
+            guard let name = token.parameters["name"]?.trimmingCharacters(in: .whitespaces),
+                !name.isEmpty, token.hasOnly(["name"]), modifiers.isEmpty
+            else { return nil }
+            return .snippetReference(key: name, source: source)
+        default:
+            return nil
         }
-        if let format = quotedAttribute(in: body, command: "date", attribute: "format"), !format.isEmpty {
-            return .formattedDate(format)
-        }
-        return nil
     }
 
-    private static func quotedAttribute(in body: String, command: String, attribute: String) -> String? {
-        guard body.hasPrefix(command) else { return nil }
-        var remainder = body.dropFirst(command.count)
-        guard remainder.first?.isWhitespace == true else { return nil }
-        remainder = remainder.drop(while: \Character.isWhitespace)
-        guard remainder.hasPrefix(attribute) else { return nil }
-        remainder = remainder.dropFirst(attribute.count)
-        remainder = remainder.drop(while: \Character.isWhitespace)
-        guard remainder.first == "=" else { return nil }
-        remainder = remainder.dropFirst()
-        remainder = remainder.drop(while: \Character.isWhitespace)
-        guard remainder.first == "\"" else { return nil }
-        remainder = remainder.dropFirst()
+    private static func parseDateTime(_ token: ParsedToken) -> DateTimeToken? {
+        guard token.hasOnly(["offset", "format", "locale"]) else { return nil }
+        let format = token.parameters["format"]
+        let localeIdentifier = token.parameters["locale"]
+        // Raycast documents these as mutually exclusive; a template asking for both is ambiguous.
+        if format != nil, localeIdentifier != nil { return nil }
+        if let format, format.isEmpty { return nil }
+        if let localeIdentifier, localeIdentifier.isEmpty { return nil }
 
+        var offsets: [DateTimeToken.Offset] = []
+        if let raw = token.parameters["offset"] {
+            guard let parsed = parseOffsets(raw) else { return nil }
+            offsets = parsed
+        }
+
+        let kind: DateTimeToken.Kind
+        switch token.command {
+        case "date": kind = .date
+        case "time": kind = .time
+        case "datetime": kind = .dateTime
+        default: kind = .weekday
+        }
+        return DateTimeToken(
+            kind: kind, offsets: offsets, format: format, localeIdentifier: localeIdentifier)
+    }
+
+    /// `"+2y +5M"` / `"-3d"` — signed amounts with a unit suffix, applied in order.
+    private static func parseOffsets(_ raw: String) -> [DateTimeToken.Offset]? {
+        let pieces = raw.split(whereSeparator: \Character.isWhitespace)
+        guard !pieces.isEmpty else { return nil }
+
+        var offsets: [DateTimeToken.Offset] = []
+        for piece in pieces {
+            guard let unit = piece.last, let component = component(for: unit) else { return nil }
+            let amount = piece.dropLast()
+            guard let value = Int(amount), !amount.isEmpty else { return nil }
+            offsets.append(DateTimeToken.Offset(component: component, value: value))
+        }
+        return offsets
+    }
+
+    private static func component(for unit: Character) -> Calendar.Component? {
+        switch unit {
+        case "m": return .minute
+        case "h": return .hour
+        case "d": return .day
+        case "M": return .month
+        case "y": return .year
+        default: return nil
+        }
+    }
+
+    private static func parseArgument(_ token: ParsedToken) -> ArgumentToken? {
+        guard token.hasOnly(["name", "default", "options"]) else { return nil }
+        let name = token.parameters["name"]?.trimmingCharacters(in: .whitespaces) ?? "Argument"
+        guard !name.isEmpty else { return nil }
+        let options = (token.parameters["options"] ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        if token.parameters["options"] != nil, options.isEmpty { return nil }
+        return ArgumentToken(
+            name: name, options: options, defaultValue: token.parameters["default"])
+    }
+
+    private static func format(_ token: DateTimeToken, context: ExpansionContext) -> String {
+        var date = context.now
+        for offset in token.offsets {
+            date =
+                context.calendar.date(byAdding: offset.component, value: offset.value, to: date)
+                ?? date
+        }
+
+        let formatter = DateFormatter()
+        formatter.calendar = context.calendar
+        formatter.timeZone = context.timeZone
+        formatter.locale = token.localeIdentifier.map(Locale.init(identifier:)) ?? context.locale
+        if let format = token.format {
+            formatter.dateFormat = format
+            return formatter.string(from: date)
+        }
+        switch token.kind {
+        case .date:
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .none
+        case .time:
+            formatter.dateStyle = .none
+            formatter.timeStyle = .short
+        case .dateTime:
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+        case .weekday:
+            formatter.dateFormat = "EEEE"
+        }
+        return formatter.string(from: date)
+    }
+
+    // MARK: - Token body parsing
+
+    private struct ParsedToken {
+        let command: String
+        let parameters: [String: String]
+
+        func hasOnly(_ allowed: Set<String>) -> Bool {
+            parameters.keys.allSatisfy(allowed.contains)
+        }
+    }
+
+    private static func intParameter(
+        _ token: ParsedToken, _ key: String, default fallback: Int
+    ) -> Int? {
+        guard let raw = token.parameters[key] else { return fallback }
+        return Int(raw)
+    }
+
+    /// Splits `clipboard | trim | uppercase` on pipes that sit outside a quoted value, trimming each part.
+    private static func splitOnPipes(_ body: String) -> [String]? {
+        var parts: [String] = []
+        var current = ""
+        var inQuotes = false
+        var escaped = false
+
+        for character in body {
+            if escaped {
+                current.append(character)
+                escaped = false
+                continue
+            }
+            switch character {
+            case "\\" where inQuotes:
+                current.append(character)
+                escaped = true
+            case "\"":
+                inQuotes.toggle()
+                current.append(character)
+            case "|" where !inQuotes:
+                parts.append(current.trimmingCharacters(in: .whitespaces))
+                current = ""
+            default:
+                current.append(character)
+            }
+        }
+        guard !inQuotes, !escaped else { return nil }
+        parts.append(current.trimmingCharacters(in: .whitespaces))
+        guard parts.allSatisfy({ !$0.isEmpty }) else { return nil }
+        return parts
+    }
+
+    /// `date offset="+1d" format="yyyy"` → command `date` plus its parameters. Values may be quoted (with escapes) or bare.
+    private static func parseToken(_ head: String) -> ParsedToken? {
+        var remainder = Substring(head)
+        remainder = remainder.drop(while: \Character.isWhitespace)
+        let command = remainder.prefix { !$0.isWhitespace && $0 != "=" }
+        guard !command.isEmpty else { return nil }
+        remainder = remainder.dropFirst(command.count)
+
+        var parameters: [String: String] = [:]
+        while true {
+            remainder = remainder.drop(while: \Character.isWhitespace)
+            if remainder.isEmpty { break }
+
+            let key = remainder.prefix { !$0.isWhitespace && $0 != "=" }
+            guard !key.isEmpty else { return nil }
+            remainder = remainder.dropFirst(key.count)
+            remainder = remainder.drop(while: \Character.isWhitespace)
+            guard remainder.first == "=" else { return nil }
+            remainder = remainder.dropFirst()
+            remainder = remainder.drop(while: \Character.isWhitespace)
+
+            let value: String
+            if remainder.first == "\"" {
+                remainder = remainder.dropFirst()
+                guard let decoded = decodeQuoted(&remainder) else { return nil }
+                value = decoded
+            } else {
+                let bare = remainder.prefix { !$0.isWhitespace }
+                guard !bare.isEmpty else { return nil }
+                remainder = remainder.dropFirst(bare.count)
+                value = String(bare)
+            }
+            guard parameters.updateValue(value, forKey: String(key)) == nil else { return nil }
+        }
+        return ParsedToken(command: String(command).lowercased(), parameters: parameters)
+    }
+
+    /// Consumes a quoted value from `remainder`, leaving it positioned after the closing quote.
+    private static func decodeQuoted(_ remainder: inout Substring) -> String? {
         var decoded = ""
         var escaped = false
         while let character = remainder.first {
@@ -250,13 +562,15 @@ enum SnippetTemplateEngine {
             } else if character == "\\" {
                 escaped = true
             } else if character == "\"" {
-                return remainder.allSatisfy(\Character.isWhitespace) ? decoded : nil
+                return decoded
             } else {
                 decoded.append(character)
             }
         }
         return nil
     }
+
+    // MARK: - References
 
     private static func resolveReference(
         _ key: String,
@@ -278,33 +592,5 @@ enum SnippetTemplateEngine {
 
     private static func normalizeReference(_ value: String) -> String {
         value.folding(options: [.caseInsensitive], locale: comparisonLocale)
-    }
-
-    private static func formatDate(
-        _ date: Date,
-        dateStyle: DateFormatter.Style,
-        timeStyle: DateFormatter.Style,
-        context: ExpansionContext
-    ) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = context.calendar
-        formatter.locale = context.locale
-        formatter.timeZone = context.timeZone
-        formatter.dateStyle = dateStyle
-        formatter.timeStyle = timeStyle
-        return formatter.string(from: date)
-    }
-
-    private static func formatDate(
-        _ date: Date,
-        format: String,
-        context: ExpansionContext
-    ) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = context.calendar
-        formatter.locale = context.locale
-        formatter.timeZone = context.timeZone
-        formatter.dateFormat = format
-        return formatter.string(from: date)
     }
 }

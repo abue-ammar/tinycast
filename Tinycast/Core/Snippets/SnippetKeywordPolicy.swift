@@ -2,7 +2,7 @@ import Foundation
 
 enum SnippetKeywordListenerStatus: Equatable, Sendable {
     case off
-    case waitingForPermissions
+    case needsAccessibility
     case active
 }
 
@@ -28,7 +28,6 @@ struct SnippetKeywordLifecyclePolicy: Sendable {
     static func decide(
         isRequested: Bool,
         isSessionActive: Bool,
-        hasInputMonitoring: Bool,
         hasAccessibility: Bool,
         tapState: TapState
     ) -> Decision {
@@ -37,17 +36,17 @@ struct SnippetKeywordLifecyclePolicy: Sendable {
                 status: .off,
                 tapAction: tapState == .absent ? .none : .tearDown)
         }
-        guard isSessionActive, hasInputMonitoring, hasAccessibility else {
+        guard isSessionActive, hasAccessibility else {
             return Decision(
-                status: .waitingForPermissions,
+                status: .needsAccessibility,
                 tapAction: tapState == .absent ? .none : .tearDown)
         }
 
         switch tapState {
         case .absent:
-            return Decision(status: .waitingForPermissions, tapAction: .install)
+            return Decision(status: .needsAccessibility, tapAction: .install)
         case .disabled:
-            return Decision(status: .waitingForPermissions, tapAction: .reenable)
+            return Decision(status: .needsAccessibility, tapAction: .reenable)
         case .active:
             return Decision(status: .active, tapAction: .none)
         }

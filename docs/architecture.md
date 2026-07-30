@@ -48,8 +48,9 @@ launcher identity. `AppCore` projects every successful store snapshot into `AppI
 `SnippetKeywordListener`; neither consumer reads or parses snippet files independently.
 
 Keyword expansion is an explicit opt-in and the consent flag is excluded from settings backups. When
-consent is restored at startup, the listener enters Waiting until both Input Monitoring and
-Accessibility are granted, then its health check installs the tap without prompting. Permission prompts
+consent is restored at startup, the listener waits until Accessibility is granted — the only
+permission it needs, since its tap is listen-only — then its health check installs the tap without
+prompting. Permission prompts
 originate only from the enabling gesture in Settings, never from startup, the listener, callbacks or the
 health check. The listener owns only matching and tap lifecycle; `AppCore` owns template expansion and
 argument prompts, while `SnippetTextInjector` owns target activation, keyword deletion, text delivery,

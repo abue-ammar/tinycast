@@ -6,7 +6,7 @@ extension Notification.Name {
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, snippets, shortcuts, customCommands, backup,
+    case general, clipboard, emoji, snippets, permissions, shortcuts, customCommands, backup,
         miscellaneous, about
     var id: Int { rawValue }
 
@@ -16,6 +16,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .emoji: return "Emoji & Symbols"
         case .snippets: return "Snippets"
+        case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         case .customCommands: return "Custom Commands"
         case .backup: return "Backup"
@@ -30,6 +31,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.clipboard"
         case .emoji: return "face.smiling"
         case .snippets: return "curlybraces"
+        case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         case .customCommands: return "terminal"
         case .backup: return "arrow.up.arrow.down.circle"
@@ -45,6 +47,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return .orange
         case .emoji: return .yellow
         case .snippets: return .green
+        case .permissions: return .blue
         case .shortcuts: return .indigo
         case .customCommands: return .green
         case .backup: return .teal
@@ -72,6 +75,7 @@ struct SettingsRootView: View {
                 case .clipboard: ClipboardSettingsView()
                 case .emoji: EmojiSettingsView()
                 case .snippets: SnippetsSettingsView()
+                case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .customCommands: CustomCommandsSettingsView()
                 case .backup: BackupSettingsView()

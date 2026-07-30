@@ -40,7 +40,7 @@ are added in source order without overwriting the existing library. Duplicate na
 filename suffixes as snippets created in Tinycast, and duplicate keywords are preserved.
 
 Imported snippets are enabled and launcher-visible, while their insertion HUD remains off. Importing
-never enables automatic keyword expansion or grants Input Monitoring or Accessibility consent.
+never enables automatic keyword expansion.
 
 ## Markdown format
 
@@ -75,24 +75,43 @@ lines, CR/LF choices, Unicode, and later lines containing `---` are preserved ex
 
 ## Template tokens
 
-The template engine is Foundation-only and receives one captured expansion context containing the
-clipboard text, selected text, clock, calendar, locale, and time zone. If arguments require a prompt,
-the same context is reused afterward, so clipboard, selection, date, and time cannot drift while the
-prompt is open.
+The template engine is Foundation-only and receives one captured expansion context: clipboard
+history, selected text, clock, calendar, locale, time zone, and a UUID source. Everything the engine
+needs is injected, so the whole placeholder surface is covered by the standalone harness. If arguments
+require a prompt, the same context is reused afterward, so nothing can drift while the prompt is open.
 
-Supported tokens:
+The token set follows [Raycast's dynamic placeholders](https://manual.raycast.com/dynamic-placeholders)
+so a migrated snippet keeps working.
 
 | Token | Result |
 | --- | --- |
 | `{clipboard}` | Captured plain-text clipboard value |
+| `{clipboard offset=1}` | Nth most recent clipboard text; `offset=1` is the one before the current |
 | `{selection}` | Captured selected text from the target app, when Accessibility can read it |
-| `{date}` | Captured date in the current locale |
-| `{time}` | Captured time in the current locale |
-| `{date format="yyyy-MM-dd"}` | Captured date using the supplied `DateFormatter` format |
+| `{date}` · `{time}` · `{datetime}` | Captured date / time / both, in the context locale |
+| `{day}` | Weekday name |
+| `{uuid}` | A fresh UUID per token |
+| `{date format="yyyy-MM-dd"}` | Any `DateFormatter` format |
+| `{date locale="fr-FR"}` | Renders in another locale; cannot be combined with `format` |
+| `{time offset="+3h +30m"}` | Signed offsets, space-separated: `m` minutes, `h` hours, `d` days, `M` months, `y` years |
 | `{argument}` | An argument named `Argument` |
 | `{argument name="Recipient"}` | A named argument requested before expansion |
-| `{snippet:Name}` | Another snippet resolved by name, then keyword |
+| `{argument default="Hi"}` | Optional argument — the default expands without prompting |
+| `{argument options="a, b, c"}` | The prompt offers a picker instead of a text field |
+| `{snippet:Name}` · `{snippet name="Name"}` | Another snippet resolved by name, then keyword |
 | `{cursor}` | Final insertion point |
+
+Any value-producing token accepts a modifier pipeline, applied left to right:
+`{clipboard | trim | uppercase}`. The modifiers are `uppercase`, `lowercase`, `trim`,
+`percent-encode` (escapes everything outside RFC 3986's unreserved set), `json-stringify` (escapes for
+use *inside* a JSON string, without adding the quotes), and `raw` — accepted for Raycast
+compatibility and doing nothing, since Tinycast applies no automatic formatting to opt out of.
+`{cursor}` and snippet references are structural, so they take no modifiers.
+
+A token Tinycast cannot parse — an unknown name, an unknown modifier, a duplicated or unsupported
+parameter, an unterminated quote — is left in the text exactly as written rather than silently
+dropped. `{browser-tab}` and `{calculator}` are not supported: the first needs a browser extension,
+and the second has no defined input inside a snippet.
 
 Arguments are unique and requested in first-appearance order, including arguments inside referenced
 snippets. Inserted clipboard, selection, and argument values are literal: token-shaped text inside a
@@ -108,24 +127,27 @@ the caret correctly.
 
 ## Launcher and automatic keywords
 
-An enabled snippet with `show_in_launcher: true` appears in launcher search. Its name, category, and
-keyword are searchable; only a keyword match receives the keyword ranking boost. Launcher expansion
-may interactively request Accessibility because it begins from an explicit user action. Input
-Monitoring is not needed for launcher expansion.
+An enabled snippet with `show_in_launcher: true` appears in launcher search. Its name, keyword and
+category are all searchable, scored in the same tiers as an app's name so a snippet ranks above an app
+only when it genuinely matches better. Launcher expansion may interactively request Accessibility
+because it begins from an explicit user action.
 
 Automatic keyword expansion is disabled by default. Enabling it in **Settings → Snippets** first
-shows an explanation, then stores consent and requests only missing Input Monitoring and
-Accessibility grants. The consent flag is intentionally excluded from settings backups, so importing
-a backup cannot enable keystroke listening.
+shows an explanation, then stores consent and requests Accessibility if it is missing. The consent flag
+is intentionally excluded from settings backups, so importing a backup cannot enable keystroke
+listening.
 
-Each permission is managed by the pane whose feature needs it, through one shared `PermissionCard`:
-Input Monitoring in **Settings → Snippets**, Accessibility (which snippet delivery shares with
-clipboard pasting) in **Settings → Clipboard**.
+**Accessibility is the only permission snippets need.** The keyword listener installs a listen-only
+`CGEventTap`, which the Accessibility grant already authorizes — the same grant `HyperKeyTap` uses for
+its *modifying* tap, and the same one clipboard pasting needs. Input Monitoring is deliberately not
+used: `CGPreflightListenEventAccess()` reports success whenever Accessibility is granted, so a second
+permission would show as permanently granted while never appearing in System Settings, which cannot be
+managed or revoked. It is managed where it always was, in **Settings → Permissions**.
 
 Runtime status is explicit:
 
 - **Off** — consent is disabled and no keyword tap is retained.
-- **Waiting** — consent is enabled, but a permission, active session, or live event tap is missing.
+- **Needs Accessibility** — consent is enabled, but the grant, an active session, or a live event tap is missing.
 - **Active** — both grants are present and the listen-only event tap is running.
 
 The listener never prompts from startup, a callback, or its health check. It preflights grants,
@@ -188,16 +210,16 @@ any pasteboard restoration still owned by Tinycast.
 I/O runs off-main. Its debounced watcher observes external edits and atomic replacements, discards
 stale load generations, and rearms after the directory is renamed, replaced, or deleted.
 
-Settings keeps an in-memory draft and writes only on **Save** or Command-S. **New** creates no file
-until its first save. Saves and deletes include the loaded source revision. All repository instances
+The editor keeps its draft in memory and writes only on **Save**; **New** creates no file until that
+first save. Saves and deletes include the loaded source revision. All repository instances
 for one channel share a serialized owner, and each mutation uses `NSFileCoordinator` before
 revalidating the path and source revision immediately beside the atomic write or removal. Cooperative
 writers therefore produce a conflict instead of being overwritten. macOS path-based APIs cannot
 provide a true compare-and-swap against an uncooperative process that writes in the final interval
 between revalidation and mutation, so Tinycast does not claim that impossible guarantee.
 
-Clean drafts adopt external changes. Dirty drafts offer Reload or Keep Editing, while externally
-removed or renamed files offer Save as New or Discard and are never recreated implicitly.
+An editor open over a file that changed underneath it does not reconcile silently: the save is
+rejected with the conflict above, and reopening the snippet shows what is now on disk.
 
 ## Standalone harness
 

@@ -66,6 +66,8 @@ enum Theme {
         static let editorSheetWidth: CGFloat = 480
         /// The multi-line text box inside those modals (shell command, snippet template) — it scrolls internally rather than growing the sheet.
         static let editorTextHeight: CGFloat = 120
+        /// Field column in the snippet argument prompt, sized to sit inside an `NSAlert`'s accessory area.
+        static let argumentPromptWidth: CGFloat = 300
         /// Snippet insertion HUD, and its inset from the top of the screen.
         static let hudWidth: CGFloat = 320
         static let hudHeight: CGFloat = 56

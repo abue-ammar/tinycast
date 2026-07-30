@@ -43,12 +43,9 @@ struct Snippet: Codable, Sendable, Hashable {
     }
 }
 
-struct SnippetSourceRevision: RawRepresentable, Codable, Sendable, Hashable {
-    let rawValue: String
-
-    init(rawValue: String) {
-        self.rawValue = rawValue
-    }
+/// Fingerprint of a snippet file's bytes, used to detect an external edit before a save or delete commits.
+struct SnippetSourceRevision: Sendable, Hashable {
+    private let value: String
 
     init(content: String) {
         var hash: UInt64 = 14_695_981_039_346_656_037
@@ -58,7 +55,7 @@ struct SnippetSourceRevision: RawRepresentable, Codable, Sendable, Hashable {
             hash &*= 1_099_511_628_211
             byteCount += 1
         }
-        rawValue = "\(byteCount):\(String(hash, radix: 16))"
+        value = "\(byteCount):\(String(hash, radix: 16))"
     }
 }
 

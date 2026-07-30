@@ -80,13 +80,13 @@ swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift Tools/ranking-t
     -o /tmp/ranking-test && /tmp/ranking-test                      # learned launcher ranking
 swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                           # calculator engine
-swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
-    Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
-    -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog
 swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.swift \
     -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
 swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
     -o /tmp/scopes-test && /tmp/scopes-test                       # launcher search scopes
+swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
+    Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
+    -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog + geometry
 swiftc -swift-version 6 Tinycast/Core/CustomCommand.swift \
     Tinycast/Core/ShellCommandRunner.swift Tools/custom-command-test.swift \
     -o /tmp/custom-command-test && /tmp/custom-command-test        # custom command store + runner

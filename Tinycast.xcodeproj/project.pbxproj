@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF5AE919A2699E6EB8BF7DC8 /* ShortcutsSettingsView.swift */; };
+		0674D8E1567253879EF50150 /* SnippetArgumentsPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F919FBD5F2E0399523AA56 /* SnippetArgumentsPrompt.swift */; };
 		0DD808F80666846F4E74BAD8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23591B301A183579098AA019 /* OnboardingView.swift */; };
 		11C4CC0D767EFD44AB28D6DD /* SearchScopes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AA0E1FD530C764A021E6053 /* SearchScopes.swift */; };
 		14712478C37E6E8760CA47EC /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DC5A4706854493D23FD18A /* HyperKey.swift */; };
@@ -16,6 +17,7 @@
 		1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */; };
 		1F39D145DBE2290532C93614 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */; };
 		1F555347D7CE8F37A2C37BAF /* SnippetRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C069647C67120EBAED14422 /* SnippetRepository.swift */; };
+		2085C9433B7534044E0A8A7D /* PermissionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */; };
 		20C8E98F5BC0FDDB0F646F3D /* OverlayScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FF10C4F5E4F73503F58D03B /* OverlayScroller.swift */; };
 		212B9B44D7EED18A0DEF47AF /* ShellCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 286B7598B81017C746558C7C /* ShellCommandRunner.swift */; };
 		24842144273FF92228540DBE /* FrequentEmojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A228BEF62103605DE7A8F38 /* FrequentEmojiStore.swift */; };
@@ -106,6 +108,7 @@
 		041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
 		05970D61D4E595D0658D0D94 /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
 		09093BF10EA97BDCA45A241F /* CalcFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcFormatter.swift; sourceTree = "<group>"; };
+		0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsView.swift; sourceTree = "<group>"; };
 		0D045D032498C2294A99890E /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		0F50886DC766B9923C3875A5 /* RootPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootPaletteView.swift; sourceTree = "<group>"; };
 		1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportSelection.swift; sourceTree = "<group>"; };
@@ -175,6 +178,7 @@
 		A76E4099082D59FA686C3485 /* ClipboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManager.swift; sourceTree = "<group>"; };
 		AF5AE919A2699E6EB8BF7DC8 /* ShortcutsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsSettingsView.swift; sourceTree = "<group>"; };
 		B275099E59BD2531A838F7D8 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		B2F919FBD5F2E0399523AA56 /* SnippetArgumentsPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetArgumentsPrompt.swift; sourceTree = "<group>"; };
 		B4049668745FD438D5792A2F /* RaycastImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImport.swift; sourceTree = "<group>"; };
 		B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
 		BA7CE23482F7DF563A268806 /* AppIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndex.swift; sourceTree = "<group>"; };
@@ -313,6 +317,14 @@
 			path = About;
 			sourceTree = "<group>";
 		};
+		7CD438390F8FA4B3C2AE5F28 /* Snippets */ = {
+			isa = PBXGroup;
+			children = (
+				B2F919FBD5F2E0399523AA56 /* SnippetArgumentsPrompt.swift */,
+			);
+			path = Snippets;
+			sourceTree = "<group>";
+		};
 		7DE06EE636C14E50EE172D9E /* Launcher */ = {
 			isa = PBXGroup;
 			children = (
@@ -332,6 +344,7 @@
 				7DE06EE636C14E50EE172D9E /* Launcher */,
 				0ED457107377ECF8147C6B9D /* Onboarding */,
 				E3202F504002B7792FC50B2F /* Settings */,
+				7CD438390F8FA4B3C2AE5F28 /* Snippets */,
 				98B7211D27EDF764EC477A0F /* PopoverMenu.swift */,
 				0F50886DC766B9923C3875A5 /* RootPaletteView.swift */,
 			);
@@ -405,6 +418,7 @@
 				041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */,
 				4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */,
 				297F819E291F33E43E490359 /* MiscellaneousSettingsView.swift */,
+				0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */,
 				1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */,
 				98AD515E679D78C6F2A37E03 /* SearchScopesCard.swift */,
 				D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */,
@@ -570,6 +584,7 @@
 				F25D58ED6EF3308D38D01732 /* PaletteWindowController.swift in Sources */,
 				F2B68DBA258D85DD5C6DC1CC /* Paster.swift in Sources */,
 				32697AB3853D043A12888B96 /* Permissions.swift in Sources */,
+				2085C9433B7534044E0A8A7D /* PermissionsSettingsView.swift in Sources */,
 				80F1A591DB0F5385F5C9A06C /* PopoverMenu.swift in Sources */,
 				8EF55652F19A1E0C5FF644B4 /* RaycastImport.swift in Sources */,
 				ABBB2A811EB5C69D55A93B1C /* RaycastImportSelection.swift in Sources */,
@@ -589,6 +604,7 @@
 				57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */,
 				05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */,
 				85A9ACCB19D9502A79F1A508 /* Snippet.swift in Sources */,
+				0674D8E1567253879EF50150 /* SnippetArgumentsPrompt.swift in Sources */,
 				9D1946ACCD19DF0DC3C44734 /* SnippetHUDWindowController.swift in Sources */,
 				1AF562E00FCB98B12076F01D /* SnippetKeywordListener.swift in Sources */,
 				465B8661E7399F3AA32BD75C /* SnippetKeywordPolicy.swift in Sources */,

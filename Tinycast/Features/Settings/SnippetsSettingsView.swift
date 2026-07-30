@@ -15,13 +15,6 @@ struct SnippetsSettingsView: View {
                 "Create reusable text templates and expand them from the launcher or with a keyword."
         ) {
             keywordExpansionCard
-
-            PermissionCard(
-                permission: .inputMonitoring,
-                explanation:
-                    "Lets Tinycast recognize a snippet keyword (like !notes) as you type it in another app."
-            )
-
             snippetsCard
             libraryNotices
         }
@@ -50,12 +43,10 @@ struct SnippetsSettingsView: View {
                 statusDot: keywordExpansionStatusDot
             ) {
                 HStack(spacing: Theme.Spacing.md) {
-                    SettingsStatusBadge(
-                        title: keywordExpansionStatusTitle,
-                        tint: keywordExpansionStatusColor
-                    )
-                    .accessibilityLabel("Automatic expansion status: \(keywordExpansionStatusTitle)")
-
+                    if keywordListener.status == .needsAccessibility {
+                        Button("Grant Access…") { Permissions.openAccessibilitySettings() }
+                            .controlSize(.small)
+                    }
                     Toggle(
                         "Automatic snippet expansion",
                         isOn: Binding(
@@ -180,26 +171,10 @@ struct SnippetsSettingsView: View {
             "\(first.fileURL.lastPathComponent): \(first.message) Plus \(snippetsStore.issues.count - 1) more."
     }
 
-    private var keywordExpansionStatusTitle: String {
-        switch keywordListener.status {
-        case .off: return "Off"
-        case .waitingForPermissions: return "Waiting"
-        case .active: return "Active"
-        }
-    }
-
-    private var keywordExpansionStatusColor: Color {
-        switch keywordListener.status {
-        case .off: return Theme.Colors.textSecondary
-        case .waitingForPermissions: return .orange
-        case .active: return .green
-        }
-    }
-
     private var keywordExpansionStatusDot: Color? {
         switch keywordListener.status {
         case .off: return nil
-        case .waitingForPermissions: return .orange
+        case .needsAccessibility: return .orange
         case .active: return .green
         }
     }
@@ -208,8 +183,8 @@ struct SnippetsSettingsView: View {
         switch keywordListener.status {
         case .off:
             return "Off. Enable to recognize snippet keywords in other apps."
-        case .waitingForPermissions:
-            return "Waiting for Input Monitoring below, and Accessibility in Clipboard settings."
+        case .needsAccessibility:
+            return "Needs the Accessibility permission, the same one pasting uses."
         case .active:
             return "Active. Keystrokes are matched locally in memory and are never stored."
         }

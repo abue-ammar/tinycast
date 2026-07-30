@@ -53,13 +53,10 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 
 ## Permissions
 
-**Accessibility** — needed when Tinycast pastes or expands text into another app. You're prompted
-when you first use a feature that needs it; grant access in **System Settings → Privacy & Security →
-Accessibility**.
-
-**Input Monitoring** — optional and used only for automatic snippet keyword expansion. Tinycast
-explains why before requesting it, and the feature ships disabled. Keystrokes are processed locally,
-never stored and never sent anywhere.
+**Accessibility** — needed when Tinycast pastes or expands text into another app, and the only
+permission snippet keyword expansion needs. You're prompted when you first use a feature that needs
+it; grant access in **System Settings → Privacy & Security → Accessibility**. Keyword expansion ships
+disabled, and keystrokes are matched locally, never stored and never sent anywhere.
 
 ## Using it
 

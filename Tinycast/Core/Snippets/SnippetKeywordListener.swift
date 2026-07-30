@@ -124,7 +124,6 @@ final class SnippetKeywordListener: ObservableObject {
     private var loggedTapFailure = false
 
     private let tapController: any SnippetKeywordTapControlling
-    private let inputMonitoringTrusted: () -> Bool
     private let accessibilityTrusted: () -> Bool
     private let secureEventInputEnabled: () -> Bool
     private let now: () -> Date
@@ -133,7 +132,6 @@ final class SnippetKeywordListener: ObservableObject {
 
     init(
         tapController: (any SnippetKeywordTapControlling)? = nil,
-        inputMonitoringTrusted: @escaping () -> Bool = CGPreflightListenEventAccess,
         accessibilityTrusted: @escaping () -> Bool = AXIsProcessTrusted,
         secureEventInputEnabled: @escaping () -> Bool = IsSecureEventInputEnabled,
         now: @escaping () -> Date = Date.init,
@@ -141,7 +139,6 @@ final class SnippetKeywordListener: ObservableObject {
         logsTapFailures: Bool = true
     ) {
         self.tapController = tapController ?? SystemSnippetKeywordTapController()
-        self.inputMonitoringTrusted = inputMonitoringTrusted
         self.accessibilityTrusted = accessibilityTrusted
         self.secureEventInputEnabled = secureEventInputEnabled
         self.now = now
@@ -184,9 +181,8 @@ final class SnippetKeywordListener: ObservableObject {
 
     private var isRequested: Bool { onMatch != nil }
 
-    private var hasRequiredPermissions: Bool {
-        inputMonitoringTrusted() && accessibilityTrusted()
-    }
+    /// A listen-only tap needs the Accessibility grant and nothing else — the same grant `HyperKeyTap` uses for its modifying tap.
+    private var hasAccessibility: Bool { accessibilityTrusted() }
 
     private func installObserversIfNeeded() {
         guard observers.isEmpty else { return }
@@ -256,7 +252,7 @@ final class SnippetKeywordListener: ObservableObject {
         guard tapController.state == .absent,
             isRequested,
             sessionActive,
-            hasRequiredPermissions
+            hasAccessibility
         else { return }
         guard tapController.install(listener: self) else {
             if !loggedTapFailure {
@@ -274,7 +270,6 @@ final class SnippetKeywordListener: ObservableObject {
         SnippetKeywordLifecyclePolicy.decide(
             isRequested: isRequested,
             isSessionActive: sessionActive,
-            hasInputMonitoring: inputMonitoringTrusted(),
             hasAccessibility: accessibilityTrusted(),
             tapState: tapController.state)
     }

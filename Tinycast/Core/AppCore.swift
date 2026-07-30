@@ -584,6 +584,9 @@ final class AppCore: ObservableObject {
 
     // MARK: - Snippets
 
+    /// How far back `{clipboard offset=N}` can reach; deeper offsets aren't a snippet idiom and this keeps the per-expansion sort trivial.
+    private static let clipboardHistoryDepth = 20
+
     func revealSnippetsInFinder() {
         NSWorkspace.shared.open(snippetsStore.snippetsDirectory)
     }
@@ -600,35 +603,25 @@ final class AppCore: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "Enable keyword expansion?"
-        alert.informativeText = "Requires Input Monitoring and Accessibility. Keystrokes stay on this Mac."
+        alert.informativeText =
+            "Requires the Accessibility permission. Keystrokes stay on this Mac."
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Continue")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
         settings.snippetKeywordExpansion = true
-        if !Permissions.isInputMonitoringTrusted() {
-            Permissions.requestInputMonitoringFromSnippetOptIn()
-        }
-        if !Permissions.isAccessibilityTrusted() {
-            Permissions.ensureAccessibility()
-        }
+        // The one prompt for this feature, raised from the gesture that asked for it.
+        Permissions.ensureAccessibility()
         startSnippetKeywordListener()
     }
 
     private func startSnippetKeywordListener() {
+        // `beginAutomaticExpansion` is the gate: it re-checks consent, permission, Secure Event Input and the target on the injector side, so this callback doesn't duplicate it.
         snippetListener.start { [weak self] id, keyword, keywordLength, targetApp in
             guard let self,
-                self.settings.snippetKeywordExpansion,
-                Permissions.isInputMonitoringTrusted(),
-                Permissions.isAccessibilityTrusted(),
-                let targetApp,
-                !targetApp.isTerminated,
-                targetApp.bundleIdentifier != Bundle.main.bundleIdentifier
-            else { return }
-
-            guard let generation = self.snippetTextInjector.beginAutomaticExpansion(
-                targetApp: targetApp)
+                let generation = self.snippetTextInjector.beginAutomaticExpansion(
+                    targetApp: targetApp)
             else { return }
             self.expandSnippet(
                 id: id,
@@ -637,6 +630,19 @@ final class AppCore: ObservableObject {
                 keywordLength: keywordLength,
                 automaticGeneration: generation)
         }
+    }
+
+    /// Recent text copies, newest first, for `{clipboard offset=N}`. The live pasteboard leads because the poller may not have recorded the newest copy yet.
+    private func clipboardHistoryForExpansion() -> [String] {
+        var history = clipboardStore.items
+            .filter { $0.kind == .text }
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(Self.clipboardHistoryDepth)
+            .compactMap(\.text)
+        if let current = NSPasteboard.general.string(forType: .string), current != history.first {
+            history.insert(current, at: 0)
+        }
+        return history
     }
 
     private func expandSnippet(
@@ -653,16 +659,14 @@ final class AppCore: ObservableObject {
                 targetApp: targetApp)
             return
         }
-        if let automaticGeneration {
-            guard snippetTextInjector.automaticExpansionIsAllowed(
-                generation: automaticGeneration,
-                targetApp: targetApp)
-            else { return }
-        } else {
+        // The automatic path was gated by `beginAutomaticExpansion` in the same turn, and `deliver` gates both again. Only the interactive path needs a check here: it must fail before the argument prompt, not after it.
+        if automaticGeneration == nil {
             guard snippetTextInjector.prepareInteractiveExpansion(targetApp: targetApp) else { return }
         }
         let hudName = record.snippet.showHUD ? record.snippet.name : nil
-        let context = snippetTextInjector.captureExpansionContext(targetApp: targetApp)
+        let context = snippetTextInjector.captureExpansionContext(
+            targetApp: targetApp,
+            clipboardHistory: clipboardHistoryForExpansion())
         let result = SnippetTemplateEngine.expand(
             record,
             snippets: records,
@@ -693,46 +697,23 @@ final class AppCore: ObservableObject {
         record: StoredSnippet,
         records: [StoredSnippet],
         context: SnippetTemplateEngine.ExpansionContext,
-        missingArgs: [String],
+        missingArgs: [SnippetTemplateEngine.MissingArgument],
         targetApp: NSRunningApplication?,
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: UInt?,
         hudName: String?
     ) {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "Snippet: \(record.snippet.name)"
-        alert.informativeText = "Fill in the required template fields:"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Expand")
-        alert.addButton(withTitle: "Cancel")
-
-        let stackView = NSStackView()
-        stackView.orientation = .vertical
-        stackView.alignment = .leading
-        stackView.spacing = 8
-        stackView.frame = NSRect(x: 0, y: 0, width: 320, height: CGFloat(missingArgs.count * 52))
-        var fields: [String: NSTextField] = [:]
-        for argument in missingArgs {
-            let label = NSTextField(labelWithString: "\(argument):")
-            label.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
-            let field = NSTextField(string: "")
-            field.placeholderString = argument
-            fields[argument] = field
-            stackView.addArrangedSubview(label)
-            stackView.addArrangedSubview(field)
-            field.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
-        }
-        alert.accessoryView = stackView
-        guard alert.runModal() == .alertFirstButtonReturn else {
+        guard let arguments = SnippetArgumentsPrompt.run(
+            snippetName: record.snippet.name,
+            arguments: missingArgs)
+        else {
             snippetTextInjector.cancelArgumentPrompt(
                 automaticGeneration: automaticGeneration,
                 targetApp: targetApp)
             return
         }
 
-        let arguments = fields.mapValues(\.stringValue)
         let result = SnippetTemplateEngine.expand(
             record,
             snippets: records,

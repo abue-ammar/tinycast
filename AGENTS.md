@@ -73,10 +73,10 @@ Never break these without an explicit task to do so.
   `Core/CustomCommand.swift` and `Core/ShellCommandRunner.swift` must likewise stay free of AppKit /
   SwiftUI (Foundation plus Combine for `ObservableObject` and Darwin for `mkstemp`) so
   `Tools/custom-command-test.swift` can compile them standalone — which is why the custom-command
-  confirmation gate lives in `AppCore` and not in the runner. Snippets' model, Markdown serializer,
-  template engine, repository and keyword policies are likewise Foundation-only inputs to
-  `Tools/snippets-test.swift`; keep AppKit capture, event taps and text injection at their existing
-  boundary files.
+  confirmation gate lives in `AppCore` and not in the runner. All of `Core/Snippets/` compiles into
+  `Tools/snippets-test.swift` (the harness globs the directory), so the model, Markdown serializer,
+  template engine, repository and keyword policies stay Foundation-only, and the AppKit files there
+  keep their dependencies to what the harness can stub.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
@@ -98,8 +98,9 @@ Never break these without an explicit task to do so.
 - **Snippets are channel-isolated and path-identified.** Persist them under
   `~/Library/Application Support/<bundle-id>/Snippets/`; `StoredSnippet.ID` is the standardized source
   path, and external rename is delete + create. Automatic keyword expansion defaults off, is excluded
-  from settings backups, and may request Input Monitoring/Accessibility only from its explicit Settings
-  opt-in gesture — never from startup, callbacks, watchers or health checks. See [snippets.md](docs/snippets.md).
+  from settings backups, and may request Accessibility — its only permission, since the listen-only tap
+  needs nothing more — only from its explicit Settings opt-in gesture, never from startup, callbacks,
+  watchers or health checks. See [snippets.md](docs/snippets.md).
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for
@@ -119,8 +120,8 @@ Never break these without an explicit task to do so.
 ## Project Layout
 
 - `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
-  `Core/Calculator/` and `Core/Emoji/` are Foundation-only engines; the pure parts of
-  `Core/Snippets/` are standalone-harness inputs; `Core/Theme.swift` is the design-token source;
+  `Core/Calculator/` and `Core/Emoji/` are Foundation-only engines; `Core/Snippets/` is a
+  standalone-harness input in full; `Core/Theme.swift` is the design-token source;
   `Core/HotKey/` is the in-house hotkey stack.
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
   `Emoji/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.

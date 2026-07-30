@@ -5,12 +5,9 @@ enum SnippetAccessibilityReplacement: Equatable {
     case delivered
     case unavailable
     case rejected
-}
 
-enum SnippetAccessibilityFallbackPolicy {
-    static func shouldUseEvents(after replacement: SnippetAccessibilityReplacement) -> Bool {
-        replacement == .unavailable
-    }
+    /// Only an unavailable attempt falls back to synthetic events. A `.rejected` one means the target's text no longer matches what we expected, so it fails closed rather than typing into an unknown position.
+    var fallsBackToEvents: Bool { self == .unavailable }
 }
 
 @MainActor
@@ -95,7 +92,6 @@ final class SnippetTextInjector {
     ) -> Bool {
         guard generation == automaticGeneration,
             settings.snippetKeywordExpansion,
-            Permissions.isInputMonitoringTrusted(),
             Permissions.isAccessibilityTrusted(),
             !IsSecureEventInputEnabled(),
             let targetApp,
@@ -106,16 +102,16 @@ final class SnippetTextInjector {
     }
 
     func captureExpansionContext(
-        targetApp: NSRunningApplication?
+        targetApp: NSRunningApplication?,
+        clipboardHistory: [String]
     ) -> SnippetTemplateEngine.ExpansionContext {
-        let timeZone = TimeZone.current
-        return SnippetTemplateEngine.ExpansionContext(
-            clipboard: NSPasteboard.general.string(forType: .string) ?? "",
+        SnippetTemplateEngine.ExpansionContext(
+            clipboardHistory: clipboardHistory,
             selection: selectedText(in: targetApp) ?? "",
             now: Date(),
             calendar: Calendar.current,
             locale: Locale.current,
-            timeZone: timeZone)
+            timeZone: .current)
     }
 
     func deliver(
@@ -176,9 +172,7 @@ final class SnippetTextInjector {
             completion.confirm()
             return
         }
-        guard SnippetAccessibilityFallbackPolicy.shouldUseEvents(
-            after: accessibilityReplacement)
-        else { return }
+        guard accessibilityReplacement.fallsBackToEvents else { return }
 
         guard await deliverUsingEvents(
             result.text,
@@ -234,10 +228,7 @@ final class SnippetTextInjector {
         activePasteboardLease = lease
         defer { finish(lease) }
 
-        guard let pasteEvents = makeKeyEvents(
-            code: CGKeyCode(kVK_ANSI_V),
-            flags: .maskCommand),
-            let deletionEvents = makeDeletionEvents(count: keywordLength),
+        guard let deletionEvents = makeDeletionEvents(count: keywordLength),
             await wait(for: .milliseconds(80)),
             lease.isOwned,
             deliveryIsAllowed(
@@ -257,7 +248,7 @@ final class SnippetTextInjector {
         else { return false }
 
         let stateBeforePaste = accessibilityTextState(in: targetApp)
-        post(pasteEvents, targetApp: targetApp)
+        Paster.postCommandV(toPid: targetApp?.processIdentifier)
         return await waitForPasteConfirmation(
             previousState: stateBeforePaste,
             pasteboardLease: lease,
@@ -337,14 +328,17 @@ final class SnippetTextInjector {
     }
 
     private func finish(_ lease: TemporaryPasteboardLease) {
-        let result = lease.restoreIfOwned()
-        if case .restored(let changeCount) = result {
-            clipboardManager.synchronizeAfterTinycastPasteboardMutation(
-                changeCount: changeCount)
+        switch lease.restoreIfOwned() {
+        case .restored(let changeCount):
+            // Keeps the poller from recording the restored original as a second copy.
+            clipboardManager.synchronizeAfterTinycastPasteboardMutation(changeCount: changeCount)
+        case .superseded:
+            break
+        case .failed:
+            // Still ours, so leave `activePasteboardLease` in place for the retry below.
+            return
         }
-        if !lease.isOwned, activePasteboardLease === lease {
-            activePasteboardLease = nil
-        }
+        if activePasteboardLease === lease { activePasteboardLease = nil }
     }
 
     private func deliveryIsAllowed(
@@ -755,12 +749,11 @@ final class TemporaryPasteboardLease {
         case failed
     }
 
-    let pasteboard: any SnippetPasteboardAccess
-    let ownedChangeCount: Int
-
+    private let pasteboard: any SnippetPasteboardAccess
+    private let ownedChangeCount: Int
     private let originalStringData: Data
     private let temporaryItem: NSPasteboardItem
-    private(set) var isFinished = false
+    private var isFinished = false
 
     var isOwned: Bool {
         !isFinished && pasteboard.changeCount == ownedChangeCount
@@ -872,10 +865,10 @@ struct PasteboardSnapshot {
         pasteboardItems.reserveCapacity(items.count)
         for (index, item) in items.enumerated() {
             let pasteboardItem = NSPasteboardItem()
-            if index == 0, let firstString,
-                !pasteboardItem.setString(firstString, forType: .string)
-            {
-                return nil
+            if index == 0, let firstString {
+                guard pasteboardItem.setString(firstString, forType: .string),
+                    pasteboardItem.setData(Data(), forType: ClipboardManager.internalType)
+                else { return nil }
             }
             for value in item.values where index != 0 || firstString == nil || value.type != .string {
                 guard pasteboardItem.setData(value.data, forType: value.type) else { return nil }

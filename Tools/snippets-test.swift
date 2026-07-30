@@ -18,6 +18,7 @@ struct SnippetsTests {
         try await testDeliveryQueueAndPasteboard()
         try await testStoreWatcher()
         testTemplateExpansion()
+        testDynamicPlaceholders()
         testKeywordPolicy()
         testKeywordLifecycle()
         testKeywordListenerLifecycle()
@@ -654,9 +655,9 @@ struct SnippetsTests {
             completion.isConfirmed && completionCount == 1)
 
         check("unavailable AX text attributes use the event delivery fallback",
-            SnippetAccessibilityFallbackPolicy.shouldUseEvents(after: .unavailable))
+            SnippetAccessibilityReplacement.unavailable.fallsBackToEvents)
         check("a rejected AX keyword replacement fails closed instead of deleting by events",
-            !SnippetAccessibilityFallbackPolicy.shouldUseEvents(after: .rejected))
+            !SnippetAccessibilityReplacement.rejected.fallsBackToEvents)
         check("unreadable AX state accepts a posted paste after the conservative delay",
             SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: 15,
@@ -897,7 +898,7 @@ struct SnippetsTests {
                 name: "Values",
                 text: "C:{clipboard}|S:{selection}|D:{date format=\"yyyy-MM-dd HH:mm\"}|{argument name=\"First\"}|{argument}|{argument name=\"First\"}"))
         let missing = SnippetTemplateEngine.expand(values, snippets: [values], context: context)
-        check("missing arguments are unique and ordered by appearance", missing.missingArguments == ["First", "Argument"])
+        check("missing arguments are unique and ordered by appearance", missing.missingArguments.map(\.name) == ["First", "Argument"])
         check("missing argument tokens stay visible until values are supplied", missing.text.hasSuffix("{argument name=\"First\"}|{argument}|{argument name=\"First\"}"))
 
         let expandedValues = SnippetTemplateEngine.expand(
@@ -986,7 +987,7 @@ struct SnippetsTests {
             argumentRoot,
             snippets: [argumentRoot, nestedArguments],
             context: context)
-        check("nested arguments follow final appearance order", argumentResult.missingArguments == ["Root", "Nested", "Last"])
+        check("nested arguments follow final appearance order", argumentResult.missingArguments.map(\.name) == ["Root", "Nested", "Last"])
 
         let cycleA = record("/tmp/cycle-a.md", Snippet(name: "A", text: "{snippet:B}"))
         let cycleB = record("/tmp/cycle-b.md", Snippet(name: "B", text: "{snippet:A}"))
@@ -1003,6 +1004,153 @@ struct SnippetsTests {
             snippets: depthRecords,
             context: context)
         check("reference depth limit leaves the unexpanded token visible", depthResult.text == "{snippet:S6}")
+    }
+
+    /// The Raycast-compatible placeholder set: every token, parameter and modifier, against an injected clock, locale, clipboard history and UUID source.
+    private static func testDynamicPlaceholders() {
+        var calendar = Calendar(identifier: .gregorian)
+        let timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = timeZone
+        let now = calendar.date(from: DateComponents(
+            year: 2026, month: 7, day: 24, hour: 13, minute: 5))!
+        let uuids = UUIDSequence()
+        let context = SnippetTemplateEngine.ExpansionContext(
+            clipboardHistory: ["  newest  ", "older", "oldest"],
+            selection: "picked",
+            now: now,
+            calendar: calendar,
+            locale: Locale(identifier: "en_US_POSIX"),
+            timeZone: timeZone,
+            makeUUID: { uuids.next() })
+
+        func expand(_ text: String, arguments: [String: String] = [:]) -> SnippetTemplateEngine
+            .ExpansionResult
+        {
+            let subject = record("/tmp/placeholders.md", Snippet(name: "Subject", text: text))
+            return SnippetTemplateEngine.expand(
+                subject, snippets: [subject], context: context, userArguments: arguments)
+        }
+
+        // New date/time tokens.
+        check("datetime combines the date and time styles",
+            expand("{datetime}").text == "Jul 24, 2026 at 1:05\u{202F}PM")
+        check("day renders the weekday name", expand("{day}").text == "Friday")
+
+        // Offsets: signed, multi-unit, and every documented unit.
+        check("a single signed offset shifts the date",
+            expand("{date offset=\"+1d\"}").text == "Jul 25, 2026")
+        check("offsets accept a bare unquoted value", expand("{day offset=-3d}").text == "Tuesday")
+        check("multiple offsets apply in order",
+            expand("{date offset=\"+2y +5M\"}").text == "Dec 24, 2028")
+        check("minute and hour offsets shift the time",
+            expand("{time offset=\"+3h +30m\"}").text == "4:35\u{202F}PM")
+        check("an unknown offset unit leaves the token literal",
+            expand("{date offset=\"+1w\"}").text == "{date offset=\"+1w\"}")
+        check("an offset without an amount leaves the token literal",
+            expand("{date offset=\"d\"}").text == "{date offset=\"d\"}")
+
+        // Locale and format.
+        check("locale overrides the context locale",
+            expand("{date locale=\"fr-FR\"}").text == "24 juil. 2026")
+        check("format and locale together are rejected as ambiguous",
+            expand("{date format=\"yyyy\" locale=\"fr-FR\"}").text
+                == "{date format=\"yyyy\" locale=\"fr-FR\"}")
+        check("format still applies with an offset",
+            expand("{date offset=\"-1d\" format=\"yyyy-MM-dd\"}").text == "2026-07-23")
+
+        // UUID comes from the injected source, once per token.
+        check("each uuid token draws a fresh value", expand("{uuid}|{uuid}").text == "uuid-1|uuid-2")
+
+        // Clipboard history.
+        check("clipboard offset zero is the current clipboard",
+            expand("{clipboard}").text == "  newest  ")
+        check("clipboard offset reaches back through history",
+            expand("{clipboard offset=1}|{clipboard offset=2}").text == "older|oldest")
+        check("a clipboard offset past the end expands to nothing",
+            expand("{clipboard offset=9}").text.isEmpty)
+        check("a negative clipboard offset leaves the token literal",
+            expand("{clipboard offset=-1}").text == "{clipboard offset=-1}")
+
+        // Modifier pipeline.
+        check("uppercase and lowercase modifiers apply",
+            expand("{selection | uppercase}|{selection | lowercase}").text == "PICKED|picked")
+        check("trim strips surrounding whitespace", expand("{clipboard | trim}").text == "newest")
+        check("modifiers chain left to right",
+            expand("{clipboard | trim | uppercase}").text == "NEWEST")
+        check("percent-encode escapes everything outside the unreserved set",
+            expand("{argument name=\"U\" | percent-encode}", arguments: ["U": "a b/c?d&e=f~g-h"]).text
+                == "a%20b%2Fc%3Fd%26e%3Df~g-h")
+        check("json-stringify escapes without adding quotes",
+            expand("{argument name=\"J\" | json-stringify}", arguments: ["J": "a\"b\\c\nd"]).text
+                == "a\\\"b\\\\c\\nd")
+        check("raw is accepted and changes nothing",
+            expand("{clipboard | raw}").text == "  newest  ")
+        check("an unknown modifier leaves the token literal",
+            expand("{clipboard | shout}").text == "{clipboard | shout}")
+        check("a modifier on a structural token leaves it literal",
+            expand("{cursor | uppercase}").text == "{cursor | uppercase}")
+        check("a pipe inside a quoted value is not a modifier separator",
+            expand("{date format=\"yyyy|MM\"}").text == "2026|07")
+
+        // Arguments: defaults and options.
+        let defaulted = expand("{argument name=\"Tone\" default=\"happy\"}")
+        check("an argument default expands without prompting",
+            defaulted.text == "happy" && defaulted.missingArguments.isEmpty)
+        check("a supplied value beats the default",
+            expand("{argument name=\"Tone\" default=\"happy\"}", arguments: ["Tone": "sad"]).text
+                == "sad")
+        let optioned = expand("{argument name=\"Tone\" options=\"happy, sad, professional\"}")
+        check("options travel with the missing argument",
+            optioned.missingArguments == [
+                .init(name: "Tone", options: ["happy", "sad", "professional"])
+            ])
+        check("an empty options list leaves the token literal",
+            expand("{argument name=\"Tone\" options=\", \"}").text
+                == "{argument name=\"Tone\" options=\", \"}")
+
+        // Raycast's snippet spelling resolves like Tinycast's.
+        let child = record("/tmp/ph-child.md", Snippet(name: "Child", text: "nested"))
+        let byName = record("/tmp/ph-name.md", Snippet(name: "ByName", text: "{snippet name=\"Child\"}"))
+        let byColon = record("/tmp/ph-colon.md", Snippet(name: "ByColon", text: "{snippet:Child}"))
+        let pool = [child, byName, byColon]
+        check("snippet name= resolves identically to snippet:",
+            SnippetTemplateEngine.expand(byName, snippets: pool, context: context).text == "nested"
+                && SnippetTemplateEngine.expand(byColon, snippets: pool, context: context).text
+                    == "nested")
+        let disabledChild = record(
+            "/tmp/ph-disabled.md", Snippet(name: "Off", text: "secret", isEnabled: false))
+        let referencesDisabled = record(
+            "/tmp/ph-ref-off.md", Snippet(name: "Ref", text: "{snippet name=\"Off\"}"))
+        check("snippet name= cannot reach a disabled snippet",
+            SnippetTemplateEngine.expand(
+                referencesDisabled,
+                snippets: [disabledChild, referencesDisabled],
+                context: context
+            ).text == "{snippet name=\"Off\"}")
+
+        // Malformed tokens stay literal rather than vanishing.
+        check("an unknown placeholder stays literal", expand("{weather}").text == "{weather}")
+        check("an unknown parameter leaves the token literal",
+            expand("{date style=\"long\"}").text == "{date style=\"long\"}")
+        check("a duplicated parameter leaves the token literal",
+            expand("{date offset=\"+1d\" offset=\"+2d\"}").text
+                == "{date offset=\"+1d\" offset=\"+2d\"}")
+        check("an unterminated quote leaves the token literal",
+            expand("{date format=\"yyyy}").text == "{date format=\"yyyy}")
+        check("a parameter on a token that takes none leaves it literal",
+            expand("{uuid offset=1}").text == "{uuid offset=1}")
+        check("an empty clipboard history expands the clipboard to nothing",
+            SnippetTemplateEngine.expand(
+                record("/tmp/ph-empty.md", Snippet(name: "E", text: "[{clipboard}]")),
+                snippets: [],
+                context: SnippetTemplateEngine.ExpansionContext(
+                    clipboardHistory: [],
+                    selection: "",
+                    now: now,
+                    calendar: calendar,
+                    locale: Locale(identifier: "en_US_POSIX"),
+                    timeZone: timeZone)
+            ).text == "[]")
     }
 
     private static func testKeywordPolicy() {
@@ -1115,7 +1263,6 @@ struct SnippetsTests {
         let consentOff = Lifecycle.decide(
             isRequested: false,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .absent)
         check("listener remains off without consent",
@@ -1124,7 +1271,6 @@ struct SnippetsTests {
         let stopWithTap = Lifecycle.decide(
             isRequested: false,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .active)
         check("stop tears down an installed tap synchronously",
@@ -1133,24 +1279,21 @@ struct SnippetsTests {
         let waiting = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: false,
             tapState: .absent)
-        check("consent waits without both grants and does not install a tap",
-            waiting == .init(status: .waitingForPermissions, tapAction: .none))
+        check("consent waits without the Accessibility grant and does not install a tap",
+            waiting == .init(status: .needsAccessibility, tapAction: .none))
 
         let grantsArrived = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .absent)
-        check("a later health check installs the tap after grants arrive",
-            grantsArrived == .init(status: .waitingForPermissions, tapAction: .install))
+        check("a later health check installs the tap after the grant arrives",
+            grantsArrived == .init(status: .needsAccessibility, tapAction: .install))
         let retryAfterFailure = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .absent)
         check("tap creation failure remains retryable on the next health check",
@@ -1159,63 +1302,56 @@ struct SnippetsTests {
         let active = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .active)
-        check("listener reports active only with both grants and a live tap",
+        check("listener reports active only with the grant and a live tap",
             active == .init(status: .active, tapAction: .none))
         check("repeated start is idempotent when the tap is already active",
             Lifecycle.decide(
                 isRequested: true,
                 isSessionActive: true,
-                hasInputMonitoring: true,
                 hasAccessibility: true,
                 tapState: .active) == active)
 
         let revoked = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
-            hasInputMonitoring: false,
-            hasAccessibility: true,
+            hasAccessibility: false,
             tapState: .active)
         check("permission revocation moves to waiting and tears down the tap",
-            revoked == .init(status: .waitingForPermissions, tapAction: .tearDown))
+            revoked == .init(status: .needsAccessibility, tapAction: .tearDown))
 
         let disabled = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .disabled)
         check("a disabled tap is re-enabled before the listener can be active",
-            disabled == .init(status: .waitingForPermissions, tapAction: .reenable))
+            disabled == .init(status: .needsAccessibility, tapAction: .reenable))
 
         let inactiveSession = Lifecycle.decide(
             isRequested: true,
             isSessionActive: false,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .active)
         check("session resignation tears down the tap and leaves consent waiting",
-            inactiveSession == .init(status: .waitingForPermissions, tapAction: .tearDown))
+            inactiveSession == .init(status: .needsAccessibility, tapAction: .tearDown))
 
         let rapidOff = Lifecycle.decide(
             isRequested: false,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .active)
         let rapidOn = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
-            hasInputMonitoring: true,
             hasAccessibility: true,
             tapState: .absent)
         check("rapid off then on cannot preserve a stale active tap",
             rapidOff.tapAction == .tearDown
                 && rapidOff.status == .off
                 && rapidOn.tapAction == .install
-                && rapidOn.status == .waitingForPermissions)
+                && rapidOn.status == .needsAccessibility)
     }
 
     private static func testKeywordListenerLifecycle() {
@@ -1224,7 +1360,6 @@ struct SnippetsTests {
         tap.installFailuresRemaining = 1
         let listener = SnippetKeywordListener(
             tapController: tap,
-            inputMonitoringTrusted: { permissions.inputMonitoring },
             accessibilityTrusted: { permissions.accessibility },
             secureEventInputEnabled: { false },
             now: { Date(timeIntervalSince1970: 1_000) },
@@ -1233,13 +1368,12 @@ struct SnippetsTests {
 
         listener.start { _, _, _, _ in }
         check("real listener waits without permissions and does not install",
-            listener.status == .waitingForPermissions && tap.installCount == 0)
+            listener.status == .needsAccessibility && tap.installCount == 0)
 
-        permissions.inputMonitoring = true
         permissions.accessibility = true
         listener.healthCheck()
         check("real listener keeps a failed tap installation retryable",
-            listener.status == .waitingForPermissions
+            listener.status == .needsAccessibility
                 && tap.installCount == 1
                 && tap.state == .absent)
         listener.healthCheck()
@@ -1268,12 +1402,12 @@ struct SnippetsTests {
                 && tap.installCount == 3)
         tap.reenableSucceeds = true
 
-        permissions.inputMonitoring = false
+        permissions.accessibility = false
         listener.healthCheck()
         check("real listener tears down synchronously on permission revocation",
-            listener.status == .waitingForPermissions && tap.state == .absent)
+            listener.status == .needsAccessibility && tap.state == .absent)
 
-        permissions.inputMonitoring = true
+        permissions.accessibility = true
         listener.healthCheck()
         check("real listener reinstalls after permission regrant",
             listener.status == .active && tap.state == .active)
@@ -1379,6 +1513,7 @@ private final class CountingPasteboard: SnippetPasteboardAccess {
 
 @MainActor
 final class ClipboardManager {
+    static let internalType = NSPasteboard.PasteboardType("com.tinycast.internal")
     func prepareForTinycastPasteboardMutation() {}
     func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {}
 }
@@ -1391,16 +1526,28 @@ final class AppSettings {
 enum Permissions {
     static func ensureAccessibility() -> Bool { false }
     static func isAccessibilityTrusted() -> Bool { false }
-    static func isInputMonitoringTrusted() -> Bool { false }
 }
 
 enum Paster {
     static let tinycastEventTag: Int64 = 0x54494E59
+    @MainActor static func postCommandV(toPid pid: pid_t? = nil) {}
+}
+
+/// Deterministic `{uuid}` source. `@unchecked Sendable` with a lock because `makeUUID` is a `@Sendable` closure.
+private final class UUIDSequence: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    func next() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        count += 1
+        return "uuid-\(count)"
+    }
 }
 
 @MainActor
 private final class FakeSnippetPermissions {
-    var inputMonitoring = false
     var accessibility = false
 }
 

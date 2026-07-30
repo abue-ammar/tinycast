@@ -106,9 +106,9 @@ enum Paster {
         return true
     }
 
-    /// Synthesize ⌘V — delivered to `pid` alone when given, otherwise through the system tap to whatever is frontmost.
+    /// Synthesize ⌘V — delivered to `pid` alone when given, otherwise through the system tap to whatever is frontmost. Shared with `SnippetTextInjector`, which pastes long snippet text the same way.
     @MainActor
-    private static func postCommandV(toPid pid: pid_t? = nil) {
+    static func postCommandV(toPid pid: pid_t? = nil) {
         guard Permissions.ensureAccessibility() else { return }
         let source = CGEventSource(stateID: .combinedSessionState)
 
