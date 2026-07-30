@@ -6,7 +6,7 @@ extension Notification.Name {
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, permissions, shortcuts, backup, miscellaneous, about
+    case general, clipboard, emoji, permissions, shortcuts, aiChat, backup, miscellaneous, about
     var id: Int { rawValue }
 
     var title: String {
@@ -16,6 +16,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return "Emoji & Symbols"
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
+        case .aiChat: return "AI Chat"
         case .backup: return "Backup"
         case .miscellaneous: return "Miscellaneous"
         case .about: return "About"
@@ -29,6 +30,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return "face.smiling"
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
+        case .aiChat: return "sparkles"
         case .backup: return "arrow.up.arrow.down.circle"
         case .miscellaneous: return "ellipsis.circle"
         case .about: return "info.circle"
@@ -43,6 +45,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return .yellow
         case .permissions: return .blue
         case .shortcuts: return .indigo
+        case .aiChat: return .purple
         case .backup: return .teal
         case .miscellaneous: return .purple
         case .about: return .pink
@@ -69,6 +72,7 @@ struct SettingsRootView: View {
                 case .emoji: EmojiSettingsView()
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
+                case .aiChat: AIChatSettingsView()
                 case .backup: BackupSettingsView()
                 case .miscellaneous: MiscellaneousSettingsView()
                 case .about: AboutView()

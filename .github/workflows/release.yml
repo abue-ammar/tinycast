@@ -80,6 +80,14 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed 's/"//g')
           rm -f "$RUNNER_TEMP/cert.p12"
 
+      # Install XcodeGen to auto-generate the Xcode project from project.yml.
+      # This ensures new source files are automatically included without manual Xcode editing.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
       # Build the signed .app into an ephemeral DerivedData dir. Channel identity (name, bundle id,
       # version) comes from build-setting overrides so beta/stable ship side-by-side.
       - name: Build app

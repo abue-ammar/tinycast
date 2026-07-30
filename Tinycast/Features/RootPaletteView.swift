@@ -600,6 +600,8 @@ struct RootPaletteView: View {
                     }
                 )
             }
+        case .aiChat:
+            AIChatView()
         }
     }
 
@@ -779,6 +781,12 @@ struct RootPaletteView: View {
         case .emoji:
             guard emojiResults.indices.contains(selection) else { return }
             core.pasteEmoji(emojiResults[selection])
+        case .aiChat:
+            // Enter sends the message
+            Task {
+                await core.aiStore.sendMessage(vm.query)
+                vm.query = ""
+            }
         }
     }
 }

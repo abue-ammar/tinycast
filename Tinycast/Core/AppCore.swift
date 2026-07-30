@@ -6,6 +6,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case clipboard
     case calculatorHistory
     case emoji
+    case aiChat
 
     var id: String { rawValue }
     var title: String {
@@ -14,6 +15,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .calculatorHistory: return "Calculator History"
         case .emoji: return "Emoji & Symbols"
+        case .aiChat: return "AI Chat"
         }
     }
     var systemImage: String {
@@ -22,6 +24,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.doc"
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .emoji: return "face.smiling"
+        case .aiChat: return "sparkles"
         }
     }
     var placeholder: String {
@@ -30,6 +33,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         case .emoji: return "Search emoji and symbols…"
+        case .aiChat: return "Ask me anything…"
         }
     }
 }
@@ -103,6 +107,7 @@ final class AppCore: ObservableObject {
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
+    let aiStore = AIStore()
     let palette = PaletteViewModel()
 
     private lazy var windowController = PaletteWindowController(core: self)
@@ -169,6 +174,14 @@ final class AppCore: ObservableObject {
             hidePalette()
         } else {
             showPalette(mode: .emoji)
+        }
+    }
+
+    func toggleAIChat() {
+        if windowController.isVisible, palette.mode == .aiChat {
+            hidePalette()
+        } else {
+            showPalette(mode: .aiChat)
         }
     }
 
@@ -316,6 +329,8 @@ final class AppCore: ObservableObject {
             showPalette(mode: .clipboard)
         case .searchEmoji:
             showPalette(mode: .emoji)
+        case .aiChat:
+            showPalette(mode: .aiChat)
         case .exportSettings:
             hidePalette(restoreFocus: false)
             BackupActions.exportSettings()
