@@ -25,24 +25,6 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
         self.showsConfirmation = showsConfirmation
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case id, name, command, loadsShellEnvironment, requiresConfirmation, showsConfirmation
-    }
-
-    /// Hand-written so every option decodes with `decodeIfPresent`: the store reads its whole array with `try?`, so one missing key in synthesized `Codable` would throw for the array and silently empty the library.
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-        command = try container.decode(String.self, forKey: .command)
-        loadsShellEnvironment =
-            try container.decodeIfPresent(Bool.self, forKey: .loadsShellEnvironment) ?? false
-        requiresConfirmation =
-            try container.decodeIfPresent(Bool.self, forKey: .requiresConfirmation) ?? false
-        showsConfirmation =
-            try container.decodeIfPresent(Bool.self, forKey: .showsConfirmation) ?? false
-    }
-
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
     static func id(fromEntryID entryID: String) -> UUID? {

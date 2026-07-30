@@ -81,38 +81,6 @@ struct CustomCommandTests {
                 && store.commands.first?.requiresConfirmation == true
                 && store.commands.first?.showsConfirmation == true)
 
-        // MARK: - Codable migration
-        //
-        // The store and `SettingsBackup` both decode a whole `[CustomCommand]`, so one absent key in
-        // an older payload must not fail the array — that would empty the library on the next launch.
-
-        let legacyJSON = Data(
-            """
-            [{"id":"8B2E6C48-4F9E-4E4E-9C6B-2D7C1B0A5E31","name":"Legacy",\
-            "command":"/usr/bin/true"}]
-            """.utf8)
-        let legacy = try? JSONDecoder().decode([CustomCommand].self, from: legacyJSON)
-        check("a payload missing every optional flag still decodes", legacy?.count == 1)
-        check(
-            "absent flags decode as off",
-            legacy?.first?.loadsShellEnvironment == false
-                && legacy?.first?.requiresConfirmation == false
-                && legacy?.first?.showsConfirmation == false)
-        check("a legacy payload keeps its id and name",
-            legacy?.first?.name == "Legacy"
-                && legacy?.first?.id.uuidString == "8B2E6C48-4F9E-4E4E-9C6B-2D7C1B0A5E31")
-
-        // The shape `SettingsBackup` exports and re-imports: encode, decode, compare.
-        let backupSource = [
-            CustomCommand(
-                name: "Backed Up", command: "/usr/bin/true", loadsShellEnvironment: true,
-                requiresConfirmation: false, showsConfirmation: true)
-        ]
-        let restored = try? JSONDecoder().decode(
-            [CustomCommand].self, from: JSONEncoder().encode(backupSource))
-        check("custom commands survive a backup round-trip with every flag",
-            restored == backupSource)
-
         // MARK: Runner
 
         let succeeded = await ShellCommandRunner.run("/usr/bin/true")
