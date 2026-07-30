@@ -409,7 +409,10 @@ final class AppCore: ObservableObject {
         }
         do {
             let feedback = try await SystemCommandRunner.run(command.id, previousApp: previousApp)
-            if let feedback {
+            if Self.showsVolumeFeedback.contains(command.id) {
+                let state = try SystemCommandRunner.outputState()
+                modals.showVolumeHUD(level: state.level, muted: state.muted)
+            } else if let feedback {
                 modals.showToast(symbol: feedback.symbol, title: feedback.title)
             }
         } catch let failure as SystemCommandFailure {
@@ -419,6 +422,11 @@ final class AppCore: ObservableObject {
                 name: command.name, failure: SystemCommandFailure(error.localizedDescription))
         }
     }
+
+    /// Commands that change the output level or mute state; macOS only draws its own HUD for real media keys, so these get Tinycast's.
+    private static let showsVolumeFeedback: Set<SystemCommand.ID> = [
+        .toggleMute,
+    ]
 
     private static func confirmationTitle(_ command: SystemCommand) -> String {
         switch command.id {
