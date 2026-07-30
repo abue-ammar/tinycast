@@ -56,6 +56,8 @@ enum SystemCommandRunner {
             try await runProcess("/usr/bin/pmset", arguments: ["displaysleepnow"])
         case .restart:
             try runAppleScript("tell application \"System Events\" to restart")
+        case .shutDown:
+            try runAppleScript("tell application \"System Events\" to shut down")
         }
         return nil
     }
