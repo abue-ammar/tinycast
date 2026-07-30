@@ -24,6 +24,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case showDesktop = "show-desktop"
         case toggleAppearance = "toggle-system-appearance"
         case toggleStageManager = "toggle-stage-manager"
+        case openTrash = "open-trash"
     }
 
     enum Confirmation: String, Sendable {
@@ -76,6 +77,7 @@ enum SystemCommandCatalog {
         case .showDesktop: return "Show Desktop"
         case .toggleAppearance: return "Toggle System Appearance"
         case .toggleStageManager: return "Toggle Stage Manager"
+        case .openTrash: return "Open Trash"
         }
     }
 
@@ -99,6 +101,7 @@ enum SystemCommandCatalog {
         case .showDesktop: return "macwindow.on.rectangle"
         case .toggleAppearance: return "circle.lefthalf.filled"
         case .toggleStageManager: return "squares.leading.rectangle"
+        case .openTrash: return "trash"
         }
     }
 

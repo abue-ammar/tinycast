@@ -118,6 +118,11 @@ enum SystemCommandRunner {
             return SystemCommandFeedback(
                 on ? "Stage Manager On" : "Stage Manager Off",
                 symbol: "squares.leading.rectangle")
+        case .openTrash:
+            let trash = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")
+            guard NSWorkspace.shared.open(trash) else {
+                throw SystemCommandFailure("Finder could not open the Trash.")
+            }
         }
         return nil
     }
