@@ -4,31 +4,28 @@ struct Snippet: Codable, Sendable, Hashable {
     var name: String
     var text: String
     var keyword: String?
-    var category: String?
     var isEnabled: Bool
     var showInLauncher: Bool
-    var showHUD: Bool
+    var showsConfirmation: Bool
 
     init(
         name: String,
         text: String,
         keyword: String? = nil,
-        category: String? = nil,
         isEnabled: Bool = true,
         showInLauncher: Bool = true,
-        showHUD: Bool = false
+        showsConfirmation: Bool = false
     ) {
         self.name = name
         self.text = text
         self.keyword = keyword
-        self.category = category
         self.isEnabled = isEnabled
         self.showInLauncher = showInLauncher
-        self.showHUD = showHUD
+        self.showsConfirmation = showsConfirmation
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name, text, keyword, category, isEnabled, showInLauncher, showHUD
+        case name, text, keyword, isEnabled, showInLauncher, showsConfirmation
     }
 
     init(from decoder: Decoder) throws {
@@ -36,10 +33,9 @@ struct Snippet: Codable, Sendable, Hashable {
         name = try container.decode(String.self, forKey: .name)
         text = try container.decode(String.self, forKey: .text)
         keyword = try container.decodeIfPresent(String.self, forKey: .keyword)
-        category = try container.decodeIfPresent(String.self, forKey: .category)
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         showInLauncher = try container.decodeIfPresent(Bool.self, forKey: .showInLauncher) ?? true
-        showHUD = try container.decodeIfPresent(Bool.self, forKey: .showHUD) ?? false
+        showsConfirmation = try container.decodeIfPresent(Bool.self, forKey: .showsConfirmation) ?? false
     }
 }
 

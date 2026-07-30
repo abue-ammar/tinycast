@@ -61,7 +61,7 @@ struct SnippetsTests {
         check("Raycast import trims keywords and normalizes blanks",
             imported[0].keyword == "!email" && imported[2].keyword == nil)
         check("Raycast import uses safe Tinycast defaults",
-            imported.allSatisfy { $0.isEnabled && $0.showInLauncher && !$0.showHUD })
+            imported.allSatisfy { $0.isEnabled && $0.showInLauncher && !$0.showsConfirmation })
     }
 
     private static func testMarkdownCodec() throws {
@@ -70,16 +70,15 @@ struct SnippetsTests {
             name: "Quote \" slash \\ line\nreturn\rtab\t雪",
             text: "\nFirst body line\n\nLast body line\r\n",
             keyword: "!\"\\\n\t",
-            category: "Work\rNotes",
             isEnabled: false,
             showInLauncher: true,
-            showHUD: true)
+            showsConfirmation: true)
         let serialized = SnippetMarkdownSerializer.serialize(snippet)
         let parsed = try SnippetMarkdownSerializer.parse(content: serialized, fileURL: fileURL)
 
         check("Markdown codec round-trips escaped quoted scalars", parsed == snippet)
         check("serializer emits canonical key order", serialized.hasPrefix(
-            "---\nname: \"Quote \\\" slash \\\\ line\\nreturn\\rtab\\t雪\"\nkeyword: \"!\\\"\\\\\\n\\t\"\ncategory: \"Work\\rNotes\"\nenabled: false\nshow_in_launcher: true\nshow_hud: true\n---\n"))
+            "---\nname: \"Quote \\\" slash \\\\ line\\nreturn\\rtab\\t雪\"\nkeyword: \"!\\\"\\\\\\n\\t\"\nenabled: false\nshow_in_launcher: true\nshow_confirmation: true\n---\n"))
         check("Markdown codec preserves leading, blank, CRLF, and trailing body boundaries", parsed.text == snippet.text)
 
         let injection = Snippet(name: "Safe\"\nenabled: false", text: "Body")
@@ -93,7 +92,7 @@ struct SnippetsTests {
         let crlfInjection = Snippet(
             name: "Safe\r\nenabled: false",
             text: "Body",
-            category: "Work\r\nshow_in_launcher: false")
+            keyword: "!key\r\nshow_in_launcher: false")
         let crlfInjectionSource = SnippetMarkdownSerializer.serialize(crlfInjection)
         let parsedCRLFInjection = try SnippetMarkdownSerializer.parse(
             content: crlfInjectionSource,
@@ -117,12 +116,12 @@ struct SnippetsTests {
         let missingHUD = try SnippetMarkdownSerializer.parse(
             content: "---\nname: \"No HUD\"\n---\nBody",
             fileURL: fileURL)
-        check("missing show_hud defaults false", !missingHUD.showHUD)
-        expectParseError("show_hud uses strict booleans", content: "---\nshow_hud: TRUE\n---\n", fileURL: fileURL)
+        check("missing show_confirmation defaults false", !missingHUD.showsConfirmation)
+        expectParseError("show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n", fileURL: fileURL)
 
         let legacyJSON = Data("{\"name\":\"Legacy\",\"text\":\"Body\",\"isEnabled\":true,\"showInLauncher\":true}".utf8)
         let decodedLegacy = try JSONDecoder().decode(Snippet.self, from: legacyJSON)
-        check("legacy JSON without showHUD decodes with HUD off", !decodedLegacy.showHUD)
+        check("legacy JSON without showsConfirmation decodes with HUD off", !decodedLegacy.showsConfirmation)
 
         let delimiterBody = "---\nname: \"Delimiter Body\"\nenabled: true\nshow_in_launcher: true\n---\nFirst\n---\nLast\n"
         let delimiterParsed = try SnippetMarkdownSerializer.parse(
@@ -153,6 +152,9 @@ struct SnippetsTests {
         expectParseError("non-strict boolean is rejected", content: "---\nenabled: FALSE\n---\n", fileURL: fileURL)
         expectParseError("duplicate aliases are rejected", content: "---\nlauncher: true\nshow_in_launcher: false\n---\n", fileURL: fileURL)
         expectParseError("unknown frontmatter key is rejected", content: "---\nunknown: \"value\"\n---\n", fileURL: fileURL)
+        // Both keys were removed or renamed; a file still carrying one is reported, not silently half-loaded.
+        expectParseError("the removed category key is rejected", content: "---\ncategory: \"Work\"\n---\n", fileURL: fileURL)
+        expectParseError("the renamed show_hud key is rejected", content: "---\nshow_hud: true\n---\n", fileURL: fileURL)
     }
 
     private static func testRepositoryStorage() throws {
@@ -249,7 +251,7 @@ struct SnippetsTests {
             .appendingPathComponent("snippets.json")
         try fm.createDirectory(at: jsonURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode([
-            Snippet(name: "Same Name", text: "One", showHUD: true),
+            Snippet(name: "Same Name", text: "One", showsConfirmation: true),
             Snippet(name: "Same Name", text: "Two"),
         ]).write(to: jsonURL, options: .atomic)
         let jsonRepository = SnippetRepository(
@@ -262,7 +264,7 @@ struct SnippetsTests {
         check("JSON migration keeps duplicate names in distinct files",
             Set(jsonMigration.records.map { $0.fileURL.lastPathComponent }) == ["same-name.md", "same-name-2.md"])
         check("JSON migration persists per-snippet HUD preference",
-            jsonMigration.records.contains { $0.snippet.showHUD })
+            jsonMigration.records.contains { $0.snippet.showsConfirmation })
 
         let corruptRoot = root.appendingPathComponent("partial-load", isDirectory: true)
         let corruptRepository = SnippetRepository(

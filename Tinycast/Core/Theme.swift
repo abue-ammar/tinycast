@@ -30,7 +30,7 @@ enum Theme {
         static let keyCap: CGFloat = 6
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 4
-        /// Snippet insertion HUD — rounder than a card, matching its pill-like proportions.
+        /// Confirmation HUD — rounder than a card, matching its pill-like proportions.
         static let hud: CGFloat = 14
     }
 
@@ -66,16 +66,16 @@ enum Theme {
         static let editorSheetWidth: CGFloat = 480
         /// The multi-line text box inside those modals (shell command, snippet template) — it scrolls internally rather than growing the sheet.
         static let editorTextHeight: CGFloat = 120
-        /// Field column in the snippet argument prompt, sized to sit inside an `NSAlert`'s accessory area.
-        static let argumentPromptWidth: CGFloat = 300
-        /// Snippet insertion HUD, and its inset from the top of the screen.
+        /// Field column in the snippet argument prompt. At or below 220 the alert keeps its natural 260pt width, so its buttons sit exactly where every other alert's do.
+        static let argumentPromptWidth: CGFloat = 220
+        /// Confirmation HUD, and its inset from the top of the screen.
         static let hudWidth: CGFloat = 320
         static let hudHeight: CGFloat = 56
         static let hudEdgeOffset: CGFloat = 24
     }
 
     enum Duration {
-        /// How long the snippet insertion HUD stays on screen.
+        /// How long the confirmation HUD stays on screen.
         static let hud: TimeInterval = 1.6
     }
 

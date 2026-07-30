@@ -263,11 +263,11 @@ private struct SnippetEditorSheet: View {
     @FocusState private var isTemplateFocused: Bool
     @State private var name: String
     @State private var keyword: String
-    @State private var category: String
     @State private var text: String
+    @State private var selection: TextSelection?
     @State private var isEnabled: Bool
     @State private var showInLauncher: Bool
-    @State private var showHUD: Bool
+    @State private var showsConfirmation: Bool
     @State private var errorMessage: String?
     @State private var isSaving = false
 
@@ -276,11 +276,10 @@ private struct SnippetEditorSheet: View {
         let snippet = record?.snippet
         _name = State(initialValue: snippet?.name ?? "")
         _keyword = State(initialValue: snippet?.keyword ?? "")
-        _category = State(initialValue: snippet?.category ?? "")
         _text = State(initialValue: snippet?.text ?? "")
         _isEnabled = State(initialValue: snippet?.isEnabled ?? true)
         _showInLauncher = State(initialValue: snippet?.showInLauncher ?? true)
-        _showHUD = State(initialValue: snippet?.showHUD ?? false)
+        _showsConfirmation = State(initialValue: snippet?.showsConfirmation ?? false)
     }
 
     var body: some View {
@@ -290,13 +289,10 @@ private struct SnippetEditorSheet: View {
 
             field(
                 title: "Name", placeholder: "Email Sign-off", text: $name,
-                hint: "Required. This name appears in the library and launcher.")
+                hint: "Required. Shown in the library and launcher.")
             field(
                 title: "Keyword", placeholder: "Optional, for example !notes", text: $keyword,
-                hint: "Optional text that triggers automatic expansion when the feature is active.")
-            field(
-                title: "Category", placeholder: "Optional", text: $category,
-                hint: "Optional category used when searching snippets.")
+                hint: "Optional. Type this to expand the snippet.")
 
             templateEditor
 
@@ -306,10 +302,10 @@ private struct SnippetEditorSheet: View {
                     detail: "Disabled snippets cannot be expanded.")
                 optionToggle(
                     "Show in Launcher", isOn: $showInLauncher,
-                    detail: "Include this snippet in launcher search results.")
+                    detail: "Find this snippet in launcher search.")
                 optionToggle(
-                    "Show insertion HUD", isOn: $showHUD,
-                    detail: "Briefly confirm on screen after this snippet is inserted.")
+                    "Show confirmation", isOn: $showsConfirmation,
+                    detail: "Flash a confirmation on screen when it runs.")
             }
 
             if let errorMessage {
@@ -335,10 +331,13 @@ private struct SnippetEditorSheet: View {
 
     private var templateEditor: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Template")
-                .font(.callout.weight(.medium))
-            variableToolbar
-            TextEditor(text: $text)
+            HStack {
+                Text("Template")
+                    .font(.callout.weight(.medium))
+                Spacer()
+                placeholderMenu
+            }
+            TextEditor(text: $text, selection: $selection)
                 .font(.body.monospaced())
                 .scrollContentBackground(.hidden)
                 .padding(Theme.Spacing.sm)
@@ -353,40 +352,53 @@ private struct SnippetEditorSheet: View {
                 )
                 .focused($isTemplateFocused)
                 .accessibilityLabel("Snippet template")
-                .accessibilityHint(
-                    "Enter the text Tinycast expands. Variable buttons append template tokens.")
+                .accessibilityHint("Enter the text Tinycast expands.")
         }
     }
 
-    private var variableToolbar: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: Theme.Spacing.sm) { variableButtons }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.sm) { variableButtons }
+    /// Every placeholder the engine understands. Parameters and modifiers (`offset=`, `| uppercase`) are documented rather than listed here — see docs/snippets.md.
+    private var placeholderMenu: some View {
+        Menu("Insert…") {
+            Section("Text") {
+                placeholderItem("{cursor}")
+                placeholderItem("{clipboard}")
+                placeholderItem("{selection}")
+                placeholderItem("{uuid}")
             }
-            .accessibilityLabel("Template variables")
+            Section("Date & Time") {
+                placeholderItem("{date}")
+                placeholderItem("{time}")
+                placeholderItem("{datetime}")
+                placeholderItem("{day}")
+            }
+            Section("Arguments") {
+                placeholderItem("{argument name=\"Name\"}")
+            }
+            Section("Snippets") {
+                placeholderItem("{snippet name=\"Name\"}")
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .accessibilityLabel("Insert a placeholder")
     }
 
-    @ViewBuilder
-    private var variableButtons: some View {
-        variableButton("{cursor}")
-        variableButton("{clipboard}")
-        variableButton("{date}")
-        variableButton("{argument name=\"Name\"}")
-        variableButton("{snippet:Name}")
+    private func placeholderItem(_ token: String) -> some View {
+        Button(token) { insert(token) }
     }
 
-    private func variableButton(_ token: String) -> some View {
-        Button(token) {
+    /// Replaces the selection, or lands at the caret; appends when there is no usable one (the menu can be used before the editor is ever focused).
+    private func insert(_ token: String) {
+        if let selection, case .selection(let range) = selection.indices,
+            range.lowerBound >= text.startIndex, range.upperBound <= text.endIndex
+        {
+            text.replaceSubrange(range, with: token)
+        } else {
             text += token
-            isTemplateFocused = true
         }
-        .font(.system(.caption, design: .monospaced))
-        .buttonStyle(.bordered)
-        .accessibilityLabel("Insert \(token) variable")
-        .accessibilityHint("Appends this token to the snippet template.")
+        // Those indices belong to the string we just replaced, so they must not survive into the next insert.
+        selection = nil
+        isTemplateFocused = true
     }
 
     private func field(
@@ -422,10 +434,9 @@ private struct SnippetEditorSheet: View {
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             text: text,
             keyword: trimmedOrNil(keyword),
-            category: trimmedOrNil(category),
             isEnabled: isEnabled,
             showInLauncher: showInLauncher,
-            showHUD: showHUD)
+            showsConfirmation: showsConfirmation)
     }
 
     private func trimmedOrNil(_ value: String) -> String? {

@@ -39,7 +39,7 @@ the backup's `builtin_package_snippets.snippets` collection. Invalid entries are
 are added in source order without overwriting the existing library. Duplicate names receive the same
 filename suffixes as snippets created in Tinycast, and duplicate keywords are preserved.
 
-Imported snippets are enabled and launcher-visible, while their insertion HUD remains off. Importing
+Imported snippets are enabled and launcher-visible, with their confirmation off. Importing
 never enables automatic keyword expansion.
 
 ## Markdown format
@@ -53,17 +53,16 @@ Canonical output uses this order:
 ---
 name: "Meeting Notes"
 keyword: "!notes"
-category: "Work"
 enabled: true
 show_in_launcher: true
-show_hud: false
+show_confirmation: false
 ---
 Template body
 ```
 
-`name` is optional when reading and defaults from the filename. `keyword` and `category` are
-optional. `enabled` and `show_in_launcher` default to `true`; `show_hud` defaults to `false`.
-The legacy JSON migration also defaults a missing `showHUD` field to `false`.
+`name` is optional when reading and defaults from the filename, and `keyword` is optional. `enabled`
+and `show_in_launcher` default to `true`; `show_confirmation` defaults to `false`. Every optional key
+also defaults when a legacy `snippets.json` is migrated.
 
 String values must use double quotes. The codec escapes and decodes `\\`, `\"`, `\n`, `\r`, and
 `\t`; unsupported escapes, unquoted strings, duplicate or unknown keys, non-exact delimiters, and
@@ -101,6 +100,8 @@ so a migrated snippet keeps working.
 | `{snippet:Name}` · `{snippet name="Name"}` | Another snippet resolved by name, then keyword |
 | `{cursor}` | Final insertion point |
 
+The editor's **Insert…** menu lists every token above; parameters and modifiers are typed by hand.
+
 Any value-producing token accepts a modifier pipeline, applied left to right:
 `{clipboard | trim | uppercase}`. The modifiers are `uppercase`, `lowercase`, `trim`,
 `percent-encode` (escapes everything outside RFC 3986's unreserved set), `json-stringify` (escapes for
@@ -127,9 +128,9 @@ the caret correctly.
 
 ## Launcher and automatic keywords
 
-An enabled snippet with `show_in_launcher: true` appears in launcher search. Its name, keyword and
-category are all searchable, scored in the same tiers as an app's name so a snippet ranks above an app
-only when it genuinely matches better. Launcher expansion may interactively request Accessibility
+An enabled snippet with `show_in_launcher: true` appears in launcher search. Its name and keyword are
+both searchable, scored in the same tiers as an app's name so a snippet ranks above an app only when it
+genuinely matches better. Launcher expansion may interactively request Accessibility
 because it begins from an explicit user action.
 
 Automatic keyword expansion is disabled by default. Enabling it in **Settings → Snippets** first
@@ -161,11 +162,14 @@ Immediately before deleting a matched keyword and before inserting its expansion
 re-checks consent, both permissions, Secure Event Input, the captured target app, and cancellation
 generation. A failed gate leaves the typed keyword untouched.
 
-## Insertion HUD
+## Confirmation HUD
 
-The insertion HUD is per snippet and off by default: the only gate is `show_hud: true`, set from the
-snippet's editor in **Settings → Snippets**. There is no global preference and nothing HUD-related in
-settings backups. Keyword-monitoring consent is separate and also excluded from backups.
+The confirmation is per snippet and off by default: the only gate is `show_confirmation: true`, set
+from the snippet's editor in **Settings → Snippets**. Nothing about it reaches settings backups.
+Keyword-monitoring consent is separate and also excluded from backups.
+
+`HUDWindowController` is shared rather than snippet-specific — it takes a message, a symbol and a tint,
+so a custom command confirms a run through the same panel.
 
 After either launcher or keyword delivery is confirmed, Tinycast may show a brief non-activating,
 click-through overlay with the snippet name. The AppCore-owned controller replaces and restarts a

@@ -1,8 +1,9 @@
 import AppKit
 import SwiftUI
 
+/// Transient, non-interactive confirmation panel: a message flashed near the top of the active screen after something succeeds. Any feature can use it — snippets confirm an insertion, custom commands confirm a run.
 @MainActor
-final class SnippetHUDWindowController {
+final class HUDWindowController {
     private let settings: AppSettings
     private var panel: NSPanel?
     private var dismissalTask: Task<Void, Never>?
@@ -11,10 +12,15 @@ final class SnippetHUDWindowController {
         self.settings = settings
     }
 
-    func show(snippetName: String) {
+    func show(
+        message: String,
+        symbol: String = "checkmark.circle.fill",
+        tint: Color = .green
+    ) {
         dismissalTask?.cancel()
         let panel = panel ?? makePanel()
-        let host = NSHostingView(rootView: SnippetHUDView(snippetName: snippetName))
+        let host = NSHostingView(
+            rootView: HUDView(message: message, symbol: symbol, tint: tint))
         // This controller owns the HUD frame; SwiftUI must never resize the panel out from under position(_:).
         host.sizingOptions = []
         panel.contentView = host
@@ -65,14 +71,16 @@ final class SnippetHUDWindowController {
     }
 }
 
-private struct SnippetHUDView: View {
-    let snippetName: String
+private struct HUDView: View {
+    let message: String
+    let symbol: String
+    let tint: Color
 
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-            Text("Inserted \(snippetName)")
+            Image(systemName: symbol)
+                .foregroundStyle(tint)
+            Text(message)
                 .font(.body.weight(.medium))
                 .lineLimit(1)
         }

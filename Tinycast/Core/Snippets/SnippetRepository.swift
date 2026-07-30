@@ -472,15 +472,13 @@ struct SnippetRepository: Sendable {
         Snippet(
             name: "Email Sign-off",
             text: "Best regards,\n\n{cursor}\n{snippet:My Name}",
-            keyword: "!bye",
-            category: "Personal"
+            keyword: "!bye"
         ),
-        Snippet(name: "My Name", text: "Alex", category: "Personal"),
+        Snippet(name: "My Name", text: "Alex"),
         Snippet(
             name: "Meeting Notes",
             text: "## Meeting Notes - {date}\n\n**Attendees:** {argument name=\"Attendees\"}\n\n**Action Items:**\n- {cursor}",
-            keyword: "!notes",
-            category: "Work"
+            keyword: "!notes"
         ),
     ]
 }

@@ -34,6 +34,7 @@
 		48AB20B04EB50F9F4A68BD66 /* SnippetTemplateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */; };
 		4F3D96E59E117459153336F4 /* SettingsPaneScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */; };
 		4F740AF85545CF4133C89B82 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4802942FF89B327A76432A9B /* AboutView.swift */; };
+		5297CAFA81058CEF3E9BD212 /* HUDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194447A4EEDD6A641CDB2F5A /* HUDWindowController.swift */; };
 		5568D02AE095293A15A7F30D /* RightClick.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E9ACD504E016DFF6FE6C1B /* RightClick.swift */; };
 		57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */; };
 		5E49E070BDBB91A2829F5321 /* SnippetTextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 309908BAB8C19B67F4608DA9 /* SnippetTextInjector.swift */; };
@@ -62,7 +63,6 @@
 		9969E6858C4FDC5CCCDEB5D8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C45190564C9D9F1722E83943 /* Assets.xcassets */; };
 		9A254BEE278D7B78B76553A9 /* Scrypt.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE0C0DC05F958A4B4DCAA8C /* Scrypt.swift */; };
 		9A3972BE11AE353EFBB839A0 /* PalettePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555E9C7EA62BDB40891A5751 /* PalettePanel.swift */; };
-		9D1946ACCD19DF0DC3C44734 /* SnippetHUDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE5C03D33C0CE90FBD20A31 /* SnippetHUDWindowController.swift */; };
 		9EC89A6398BD075275FECC9E /* CalcUnits.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B8A7D8DBB0CE2ACEDB3979 /* CalcUnits.swift */; };
 		A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D045D032498C2294A99890E /* LaunchAtLogin.swift */; };
 		A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */; };
@@ -111,6 +111,7 @@
 		0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsView.swift; sourceTree = "<group>"; };
 		0D045D032498C2294A99890E /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		0F50886DC766B9923C3875A5 /* RootPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootPaletteView.swift; sourceTree = "<group>"; };
+		194447A4EEDD6A641CDB2F5A /* HUDWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDWindowController.swift; sourceTree = "<group>"; };
 		1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportSelection.swift; sourceTree = "<group>"; };
 		1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
 		23591B301A183579098AA019 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -150,7 +151,6 @@
 		68952539C0BD045BA175CBB6 /* SettingsRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRootView.swift; sourceTree = "<group>"; };
 		68BD5E61831CB92150C62E1F /* CalculatorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryView.swift; sourceTree = "<group>"; };
 		6BB7C545EFD9589A77AD7BE2 /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
-		6CE5C03D33C0CE90FBD20A31 /* SnippetHUDWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetHUDWindowController.swift; sourceTree = "<group>"; };
 		74F450E10D107C1E30EA2BC6 /* EmojiIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiIndex.swift; sourceTree = "<group>"; };
 		79DB24EE452A7CA120B56FA6 /* EmojiData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.generated.swift; sourceTree = "<group>"; };
 		7BC2DEA0A052116A92F9A539 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -236,6 +236,7 @@
 				33A13DB27EE627AC08051165 /* EdgeDissolve.swift */,
 				9FB750D045194AE34D39D792 /* FavoritesStore.swift */,
 				D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */,
+				194447A4EEDD6A641CDB2F5A /* HUDWindowController.swift */,
 				99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */,
 				0D045D032498C2294A99890E /* LaunchAtLogin.swift */,
 				87B6E442944C99B4D1FE1C74 /* LauncherRankingStore.swift */,
@@ -252,7 +253,6 @@
 				9AA0E1FD530C764A021E6053 /* SearchScopes.swift */,
 				C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */,
 				286B7598B81017C746558C7C /* ShellCommandRunner.swift */,
-				6CE5C03D33C0CE90FBD20A31 /* SnippetHUDWindowController.swift */,
 				7BC2DEA0A052116A92F9A539 /* Theme.swift */,
 				A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */,
 				825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */,
@@ -566,6 +566,7 @@
 				24842144273FF92228540DBE /* FrequentEmojiStore.swift in Sources */,
 				1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */,
 				AD2141EBF98A246BDA3BAB8E /* Gunzip.swift in Sources */,
+				5297CAFA81058CEF3E9BD212 /* HUDWindowController.swift in Sources */,
 				DEC660F280699E43AA028E8A /* HotKeyCenter.swift in Sources */,
 				903E82F78D3FCEF3A1AF3752 /* HotKeyManager.swift in Sources */,
 				14712478C37E6E8760CA47EC /* HyperKey.swift in Sources */,
@@ -605,7 +606,6 @@
 				05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */,
 				85A9ACCB19D9502A79F1A508 /* Snippet.swift in Sources */,
 				0674D8E1567253879EF50150 /* SnippetArgumentsPrompt.swift in Sources */,
-				9D1946ACCD19DF0DC3C44734 /* SnippetHUDWindowController.swift in Sources */,
 				1AF562E00FCB98B12076F01D /* SnippetKeywordListener.swift in Sources */,
 				465B8661E7399F3AA32BD75C /* SnippetKeywordPolicy.swift in Sources */,
 				B9CED4B06F36998A67097FC5 /* SnippetMarkdownSerializer.swift in Sources */,

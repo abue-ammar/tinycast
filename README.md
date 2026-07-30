@@ -29,8 +29,8 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 - **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
 - **Calculator** — do math, unit and live currency conversions inline, right in the palette.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
-- **Snippets** — reusable Markdown templates with arguments, nested references, cursor placement, and
-  optional keyword expansion.
+- **Snippets** — reusable Markdown templates with dynamic placeholders, arguments, nested references
+  and optional keyword expansion.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
 

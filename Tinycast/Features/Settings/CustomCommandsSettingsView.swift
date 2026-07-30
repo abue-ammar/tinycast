@@ -12,10 +12,7 @@ struct CustomCommandsSettingsView: View {
         ) {
             SettingsCallout(
                 title: "Commands run with your user account.",
-                message:
-                    "Tinycast uses /bin/zsh from your home folder without an interactive Terminal, "
-                    + "so your shell config is skipped. Use full executable paths, or turn on Load "
-                    + "Shell Environment for a command needing an alias, function or custom PATH.",
+                message: "Tinycast runs them in /bin/zsh, so use full executable paths.",
                 systemImage: "terminal",
                 tint: .green
             )
@@ -44,7 +41,7 @@ struct CustomCommandsSettingsView: View {
 
                 SettingsRow(
                     title: "Add Custom Command",
-                    subtitle: "Give the command a searchable name and optional global shortcut.",
+                    subtitle: "Name it, then give it a shortcut if you want one.",
                     systemImage: "plus.circle",
                     tint: .green
                 ) {
@@ -134,6 +131,7 @@ private struct CustomCommandEditorSheet: View {
     @State private var shellCommand: String
     @State private var loadsShellEnvironment: Bool
     @State private var requiresConfirmation: Bool
+    @State private var showsConfirmation: Bool
     @State private var errorMessage: String?
 
     init(command: CustomCommand?) {
@@ -142,6 +140,7 @@ private struct CustomCommandEditorSheet: View {
         _shellCommand = State(initialValue: command?.command ?? "")
         _loadsShellEnvironment = State(initialValue: command?.loadsShellEnvironment ?? false)
         _requiresConfirmation = State(initialValue: command?.requiresConfirmation ?? false)
+        _showsConfirmation = State(initialValue: command?.showsConfirmation ?? false)
     }
 
     var body: some View {
@@ -181,14 +180,13 @@ private struct CustomCommandEditorSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 optionToggle(
                     "Load shell environment", isOn: $loadsShellEnvironment,
-                    detail:
-                        "Runs in an interactive login shell so aliases, functions and PATH from "
-                        + "your shell config resolve. Slightly slower to start.")
+                    detail: "Resolves aliases, functions and PATH. Slower to start.")
                 optionToggle(
                     "Needs confirmation", isOn: $requiresConfirmation,
-                    detail:
-                        "Ask before running, from the launcher and from its global shortcut. Useful "
-                        + "for a command that changes or destroys something.")
+                    detail: "Ask before running this command.")
+                optionToggle(
+                    "Show confirmation", isOn: $showsConfirmation,
+                    detail: "Flash a confirmation on screen when it runs.")
             }
 
             if let errorMessage {
@@ -232,7 +230,8 @@ private struct CustomCommandEditorSheet: View {
         let draft = CustomCommand(
             id: command?.id ?? UUID(), name: name, command: shellCommand,
             loadsShellEnvironment: loadsShellEnvironment,
-            requiresConfirmation: requiresConfirmation)
+            requiresConfirmation: requiresConfirmation,
+            showsConfirmation: showsConfirmation)
         do {
             if command == nil {
                 try AppCore.shared.addCustomCommand(draft)

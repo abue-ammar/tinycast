@@ -10,16 +10,37 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     /// Sources the user's shell config so aliases, functions and `PATH` resolve; opt-in because a heavy `.zshrc` costs far more than the command itself.
     var loadsShellEnvironment: Bool
     var requiresConfirmation: Bool
+    var showsConfirmation: Bool
 
     init(
         id: UUID = UUID(), name: String, command: String,
-        loadsShellEnvironment: Bool = false, requiresConfirmation: Bool = false
+        loadsShellEnvironment: Bool = false, requiresConfirmation: Bool = false,
+        showsConfirmation: Bool = false
     ) {
         self.id = id
         self.name = name
         self.command = command
         self.loadsShellEnvironment = loadsShellEnvironment
         self.requiresConfirmation = requiresConfirmation
+        self.showsConfirmation = showsConfirmation
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, command, loadsShellEnvironment, requiresConfirmation, showsConfirmation
+    }
+
+    /// Hand-written so every option decodes with `decodeIfPresent`: the store reads its whole array with `try?`, so one missing key in synthesized `Codable` would throw for the array and silently empty the library.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        command = try container.decode(String.self, forKey: .command)
+        loadsShellEnvironment =
+            try container.decodeIfPresent(Bool.self, forKey: .loadsShellEnvironment) ?? false
+        requiresConfirmation =
+            try container.decodeIfPresent(Bool.self, forKey: .requiresConfirmation) ?? false
+        showsConfirmation =
+            try container.decodeIfPresent(Bool.self, forKey: .showsConfirmation) ?? false
     }
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }

@@ -111,7 +111,7 @@ final class AppCore: ObservableObject {
     let palette = PaletteViewModel()
 
     private lazy var windowController = PaletteWindowController(core: self)
-    private lazy var snippetHUDController = SnippetHUDWindowController(settings: settings)
+    private lazy var hud = HUDWindowController(settings: settings)
     private let auxWindows = AuxWindowController()
     /// Guards only the confirmation modal, not execution — two deliberate runs of an unguarded command still run twice.
     private var isConfirmingCommand = false
@@ -368,7 +368,11 @@ final class AppCore: ObservableObject {
         Task {
             let outcome = await ShellCommandRunner.run(
                 command.command, loadingShellEnvironment: command.loadsShellEnvironment)
-            guard outcome != .success else { return }
+            guard outcome != .success else {
+                // Fires when the command finishes, not when it starts, so a slow one confirms late rather than lying early.
+                if command.showsConfirmation { self.hud.show(message: "Ran \(command.name)") }
+                return
+            }
             self.presentCustomCommandFailure(command: command, outcome: outcome)
         }
     }
@@ -663,7 +667,7 @@ final class AppCore: ObservableObject {
         if automaticGeneration == nil {
             guard snippetTextInjector.prepareInteractiveExpansion(targetApp: targetApp) else { return }
         }
-        let hudName = record.snippet.showHUD ? record.snippet.name : nil
+        let confirmation = record.snippet.showsConfirmation ? "Inserted \(record.snippet.name)" : nil
         let context = snippetTextInjector.captureExpansionContext(
             targetApp: targetApp,
             clipboardHistory: clipboardHistoryForExpansion())
@@ -681,7 +685,7 @@ final class AppCore: ObservableObject {
                 expectedKeyword: expectedKeyword,
                 keywordLength: keywordLength,
                 automaticGeneration: automaticGeneration,
-                hudName: hudName)
+                confirmation: confirmation)
             return
         }
         completeSnippetExpansion(
@@ -690,7 +694,7 @@ final class AppCore: ObservableObject {
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
-            hudName: hudName)
+            confirmation: confirmation)
     }
 
     private func promptSnippetArguments(
@@ -702,7 +706,7 @@ final class AppCore: ObservableObject {
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: UInt?,
-        hudName: String?
+        confirmation: String?
     ) {
         guard let arguments = SnippetArgumentsPrompt.run(
             snippetName: record.snippet.name,
@@ -725,7 +729,7 @@ final class AppCore: ObservableObject {
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
-            hudName: hudName)
+            confirmation: confirmation)
     }
 
     private func completeSnippetExpansion(
@@ -734,7 +738,7 @@ final class AppCore: ObservableObject {
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: UInt?,
-        hudName: String?
+        confirmation: String?
     ) {
         snippetTextInjector.deliver(
             result,
@@ -743,8 +747,8 @@ final class AppCore: ObservableObject {
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
             onDelivered: { [weak self] in
-                guard let self, let hudName else { return }
-                self.snippetHUDController.show(snippetName: hudName)
+                guard let self, let confirmation else { return }
+                self.hud.show(message: confirmation)
             })
     }
 }
