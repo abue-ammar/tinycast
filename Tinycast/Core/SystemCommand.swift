@@ -31,6 +31,7 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case hideOtherApps = "hide-all-apps-except-frontmost"
         case unhideAllApps = "unhide-all-hidden-apps"
         case quitAllApps = "quit-all-apps"
+        case dismissNotifications = "dismiss-notifications"
     }
 
     enum Confirmation: String, Sendable {
@@ -93,6 +94,7 @@ enum SystemCommandCatalog {
         case .hideOtherApps: return "Hide All Apps Except Frontmost"
         case .unhideAllApps: return "Unhide All Hidden Apps"
         case .quitAllApps: return "Quit All Applications"
+        case .dismissNotifications: return "Dismiss Notifications"
         }
     }
 
@@ -123,6 +125,7 @@ enum SystemCommandCatalog {
         case .hideOtherApps: return "eye.slash.circle"
         case .unhideAllApps: return "eye.circle"
         case .quitAllApps: return "xmark.circle"
+        case .dismissNotifications: return "bell.slash"
         }
     }
 

@@ -164,6 +164,13 @@ enum SystemCommandRunner {
             return SystemCommandFeedback("All Apps Unhidden", symbol: "eye")
         case .quitAllApps:
             for app in AppLauncher.quitAllTargets() { app.terminate() }
+        case .dismissNotifications:
+            let dismissed = try await dismissNotifications()
+            guard dismissed > 0 else {
+                return SystemCommandFeedback(
+                    "No Notifications", symbol: "bell.slash", isNoOp: true)
+            }
+            return SystemCommandFeedback("Notifications Dismissed", symbol: "bell.slash")
         }
         return nil
     }
@@ -444,6 +451,87 @@ enum SystemCommandRunner {
         case "0", "false", "no": return false
         default: return nil
         }
+    }
+
+    /// Returns how many notifications were dismissed, so "nothing on screen" can read as information instead of a silent no-op.
+    private static func dismissNotifications() async throws -> Int {
+        guard Permissions.ensureAccessibility() else {
+            throw SystemCommandFailure(
+                "Allow Tinycast to control your Mac in Accessibility settings, then try again.",
+                settings: .accessibility)
+        }
+        guard let app = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.apple.notificationcenterui").first
+        else { return 0 }
+        let root = AXUIElementCreateApplication(app.processIdentifier)
+        var dismissed = 0
+        for _ in 0..<100 {
+            // The tree is rebuilt every pass: pressing one control invalidates its siblings.
+            let notifications = notificationElements(in: root, depth: 0)
+            guard !notifications.isEmpty else { return dismissed }
+            guard let button = notifications.compactMap({ dismissControl(in: $0, depth: 0) }).first
+            else {
+                throw SystemCommandFailure(
+                    "This version of Notification Center exposes no dismiss control Tinycast can use.")
+            }
+            let result = AXUIElementPerformAction(button, kAXPressAction as CFString)
+            guard result == .success || result == .invalidUIElement else {
+                throw SystemCommandFailure("Notification Center did not allow a notification to be dismissed.")
+            }
+            dismissed += 1
+            try await Task.sleep(for: .milliseconds(150))
+        }
+        throw SystemCommandFailure("Some notifications remain after the safety limit was reached.")
+    }
+
+    /// Notification containers, matched on Accessibility subrole so the search never depends on the UI language.
+    private static func notificationElements(in element: AXUIElement, depth: Int) -> [AXUIElement] {
+        guard depth < 20 else { return [] }
+        let subrole = axString(element, attribute: kAXSubroleAttribute as CFString)?.lowercased()
+        if let subrole, subrole.contains("notificationcenter") { return [element] }
+        return axChildren(element).flatMap { notificationElements(in: $0, depth: depth + 1) }
+    }
+
+    /// A Close / Clear All control inside one notification: the close subrole is language-independent, and the label match is only a fallback. Never falls through to an arbitrary button, because a notification's own action rows (Reply, Open) also press.
+    private static func dismissControl(in element: AXUIElement, depth: Int) -> AXUIElement? {
+        guard depth < 20 else { return nil }
+        if canPress(element) {
+            let subrole = axString(element, attribute: kAXSubroleAttribute as CFString)?.lowercased()
+            if subrole == (kAXCloseButtonSubrole as String).lowercased() { return element }
+            let text = [kAXTitleAttribute, kAXDescriptionAttribute, kAXHelpAttribute]
+                .compactMap { axString(element, attribute: $0 as CFString) }
+                .joined(separator: " ").lowercased()
+            if text.contains("clear all") || text == "close" || text.contains("dismiss") {
+                return element
+            }
+        }
+        for child in axChildren(element) {
+            if let found = dismissControl(in: child, depth: depth + 1) { return found }
+        }
+        return nil
+    }
+
+    private static func canPress(_ element: AXUIElement) -> Bool {
+        var actions: CFArray?
+        guard AXUIElementCopyActionNames(element, &actions) == .success,
+            let names = actions as? [String]
+        else { return false }
+        return names.contains(kAXPressAction)
+    }
+
+    private static func axChildren(_ element: AXUIElement) -> [AXUIElement] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value)
+            == .success,
+            let children = value as? [AXUIElement]
+        else { return [] }
+        return children
+    }
+
+    private static func axString(_ element: AXUIElement, attribute: CFString) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else { return nil }
+        return value as? String
     }
 
     @discardableResult
