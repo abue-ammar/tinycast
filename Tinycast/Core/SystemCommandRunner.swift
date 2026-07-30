@@ -98,6 +98,8 @@ enum SystemCommandRunner {
             try setVolume(0.5)
         case .volume75:
             try setVolume(0.75)
+        case .volume100:
+            try setVolume(1)
         }
         return nil
     }
