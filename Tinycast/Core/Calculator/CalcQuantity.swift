@@ -343,6 +343,8 @@ private struct QuantityParser {
         case .op("^"):
             return ("^", 30, 30, true)
         default:
+            // Juxtaposition against a bracket multiplies (`$5(2)`, `5(2)$`), matching the scalar parser.
+            if case .op("(") = current { return ("*", 20, 21, false) }
             if !isScalar(left.kind), startsQuantity(current) {
                 return ("+", 10, 11, false)
             }

@@ -2,7 +2,7 @@ import Foundation
 
 enum CalcToken: Equatable, Sendable {
     case number(Double)
-    /// An attached thousands suffix (`10k` / `2.5K`), kept distinct so a lone shorthand still earns a calculator card.
+    /// A number written in shorthand (`10k` / `2.5K`, `1e5`), kept distinct so a lone one still earns a calculator card.
     case compactNumber(Double)
     /// Radix-prefixed integer literal (0xff / 0b1010 / 0o777), kept exact for base conversion.
     case intLiteral(UInt64, radix: Int)
@@ -59,11 +59,29 @@ enum CalcTokenizer {
                     }
                     i += 1
                 }
-                guard let value = Double(text) else { return nil }
+                // Scientific notation, but only while the exponent hugs the mantissa — a spaced `2 e` stays 2 × e.
+                var isShorthand = false
+                if i < chars.count, chars[i] == "e" || chars[i] == "E" {
+                    var digits = i + 1
+                    if digits < chars.count, chars[digits] == "+" || chars[digits] == "-" {
+                        digits += 1
+                    }
+                    var end = digits
+                    while end < chars.count, isDigit(chars[end]) { end += 1 }
+                    if end > digits {
+                        text += String(chars[i..<end])
+                        i = end
+                        isShorthand = true
+                    }
+                }
+                // An overflowing literal ("1e400") isn't calculator input at all, so no card rather than a bogus one.
+                guard let value = Double(text), value.isFinite else { return nil }
                 // Attached `k` means ×1,000; whitespace keeps Kelvin explicit, and `10kg` remains a unit literal.
                 if i < chars.count, chars[i] == "k" || chars[i] == "K", isCompactSuffix(chars, i) {
                     tokens.append(.compactNumber(value * 1_000))
                     i += 1
+                } else if isShorthand {
+                    tokens.append(.compactNumber(value))
                 } else {
                     tokens.append(.number(value))
                 }
@@ -219,8 +237,9 @@ private struct Parser {
     var isAtEnd: Bool { pos == tokens.count }
     private var current: CalcToken? { pos < tokens.count ? tokens[pos] : nil }
 
-    // Binding powers: additive 10, multiplicative (incl. "of") 20, unary minus 25, power 30 (right-assoc), postfix ! % deg tightest.
+    // Binding powers: additive 10, multiplicative (incl. "of" and juxtaposition) 20, unary minus 25, power 30 (right-assoc), postfix ! % deg tightest.
     private static let unaryBP = 25
+    private static let mulBP = 20
 
     mutating func parseExpression(minBP: Int) -> Value? {
         guard var lhs = parseOperand() else { return nil }
@@ -233,8 +252,8 @@ private struct Parser {
                 continue
             }
             // Juxtaposition is the operator here, so there's no token to consume before the rhs.
-            if impliesMultiplication(), 20 >= minBP {
-                guard let rhs = parseExpression(minBP: 21) else { return nil }
+            if impliesMultiplication(), Self.mulBP >= minBP {
+                guard let rhs = parseExpression(minBP: Self.mulBP + 1) else { return nil }
                 guard let combined = apply("*", lhs, rhs) else { return nil }
                 lhs = combined
                 continue
@@ -257,8 +276,8 @@ private struct Parser {
     private func peekBinary() -> (Character, Int, Int)? {
         switch current {
         case .op(let op) where op == "+" || op == "-": return (op, 10, 11)
-        case .op(let op) where op == "*" || op == "/": return (op, 20, 21)
-        case .ident("of"): return ("*", 20, 21)
+        case .op(let op) where op == "*" || op == "/": return (op, Self.mulBP, Self.mulBP + 1)
+        case .ident("of"): return ("*", Self.mulBP, Self.mulBP + 1)
         case .op("^"): return ("^", 30, 30)  // right-associative: 2^3^2 = 512
         default: return nil
         }

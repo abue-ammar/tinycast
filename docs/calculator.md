@@ -62,6 +62,25 @@ An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace kee
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
 target makes the intent unambiguous (`273.15K to C`).
 
+Scientific notation (`1e5` → `100,000`, `5e-3km`, `3e+2`) is read only while the exponent hugs the
+mantissa, which is what keeps `2 e` and `2e` reading as 2 × Euler's *e* — an exponent needs digits
+after the `e`. Like `10k`, it tokenizes as a shorthand rather than a plain literal, so a lone `1e5`
+still earns a card where a lone `100000` deliberately doesn't. A literal that overflows to infinity
+(`1e400`) is treated as non-calculator input, not as a card.
+
+## Implicit multiplication
+
+Juxtaposition means `*` at the same binding power as an explicit one (`4(2+3)` → 20, `2pi`,
+`2sqrt(9)`, `(2+3)(2+3)`), so it binds tighter than `+` and looser than `^`, and `6/2(1+2)` agrees
+with `6/2*(1+2)`. `CalcParser.parseExpression` checks it after `peekBinary()` fails and, unlike a real
+operator, consumes no token before parsing the right operand.
+
+The scalar side is deliberately narrow: only `(` or a name in `CalcParser.constants` / `functions`
+starts an implicit product. Adjacent *numbers* never do — `5 3` stays an app search — and no unit or
+currency name is a constant or function, so `10km` keeps its own path. `QuantityParser.peekBinary`
+carries the same `(` rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
+`2*(3)kg`); adjacency there still means the composite-quantity `+` described above, never a product.
+
 A query ending in a binary operator keeps the last complete prefix visible while the next operand is
 being typed: `10 +` shows `10`, `10kg + 500g +` shows `10,500 g`, and `$10 +` shows `10.00 USD`
 when currency is enabled. The prefix must itself be valid, so malformed input and incomplete

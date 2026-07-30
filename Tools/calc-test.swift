@@ -64,8 +64,27 @@ struct CalcTests {
         expectDisplay("2π", "6.283185307")
         expectDisplay("2sqrt(9)", "6")
         expectDisplay("2(3+1)+1", "9")  // implicit "*" binds like explicit "*", not looser
+        expectDisplay("10π ^e", "224.5915772")  // and looser than "^"
         // Units are never mistaken for a constant/function, so this stays untouched
         expectDisplay("10km to mi", "6.213711922 mi")
+        // Juxtaposition against a bracket carries the unit through, matching explicit "*"
+        expectDisplay("2(3)kg", "6 kg")
+        expectDisplay("2*(3)kg", "6 kg")
+
+        // Scientific notation — only when the exponent hugs the mantissa
+        expectDisplay("1e5", "100,000")
+        expectDisplay("2e10", "20,000,000,000")
+        expectDisplay("1E5", "100,000")
+        expectDisplay("1.5e3", "1,500")
+        expectDisplay("3e+2", "300")
+        expectCopy("1e-5", "1e-05")
+        expectDisplay("2e10/2", "10,000,000,000")
+        expectDisplay("1e5 to hex", "0x186A0")
+        expectDisplay("5e-3km", "0.003106855961 mi")
+        expectDisplay("2e", "5.436563657")  // no digits after "e" — still 2 × Euler's e
+        expectDisplay("1 e", "2.718281828")  // detached — never an exponent
+        expectNil("1e400")  // overflows to infinity, so not calculator input
+        expectNil("1e5e5")
 
         // Percent
         expectDisplay("20% of 450", "90")
@@ -489,6 +508,12 @@ struct CalcTests {
         expectDisplay("($10 + $5) to eur", "13.80 EUR")
         expectDisplay("$10 +", "10.00 USD")
         expectBadges("$10 +", source: "Expression", target: "US Dollar")
+        // Juxtaposition multiplies on either side of the amount, same as an explicit "*"
+        expectDisplay("$5(2)", "10.00 USD")
+        expectDisplay("5(2)$", "10.00 USD")
+        expectDisplay("$5(2) to eur", "9.20 EUR")
+        expectNilWithoutConsent("$5(2)")
+        expectNilWithoutConsent("5(2)$")
         expectError("$10 + 5kg", "Cannot add Currency and Weight.")
         expectErrorWithoutRates(
             "$10 + $5", "Exchange rates unavailable — check your connection.")
