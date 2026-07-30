@@ -92,6 +92,8 @@ enum SystemCommandRunner {
             break  // AppCore owns the value-picking dialog and calls setVolume directly.
         case .volume0:
             try setVolume(0)
+        case .volume25:
+            try setVolume(0.25)
         }
         return nil
     }
