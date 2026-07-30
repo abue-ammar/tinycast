@@ -76,6 +76,8 @@ enum SystemCommandRunner {
                 }
         case .playPause:
             try postMediaKey(16)
+        case .nextTrack:
+            try postMediaKey(17)
         }
         return nil
     }
