@@ -72,11 +72,16 @@ Volume slider all render through `ModalWindowController` rather than an `NSAlert
 (see [ui.md](ui.md#modals--hud)). Volume and mute commands also show Tinycast's transient volume HUD,
 since macOS only draws its own for real media keys.
 
-A command whose effect is invisible reports back through the same HUD rather than finishing silently:
+A command whose effect is invisible reports back through a pill (`HUDWindowController`, the same one
+Custom Commands and Snippets confirm through) rather than finishing silently:
 `SystemCommandRunner.run` returns a `SystemCommandFeedback` naming the state it landed in
 (`Trash Emptied`, `Hidden Files Shown`, `Dark Appearance`, `Bluetooth Off`, `3 Disks Ejected`), and
-`AppCore` shows it. Commands that are their own confirmation, such as Show Desktop, Hide Others, Quit All and the
-power actions, return nothing.
+`AppCore` shows it with a `ModalKind` derived from the feedback's `isNoOp` flag: `.success` when
+something actually changed, `.info` when there was nothing to do, shown as the pill's leading status
+dot rather than a per-command icon, since the message already names the state. Commands that are
+their own confirmation, such as Show Desktop, Hide Others,
+Quit All and the power actions, return nothing. Volume and mute are the one case that stays on the
+palette's own square HUD, since that one has an actual level to show, not just a message.
 
 **Nothing-to-do is an outcome, not a failure.** Empty Trash asks Finder for `count items of trash`
 first and reports `Trash Is Already Empty`, because Finder raises an error when told to empty an empty

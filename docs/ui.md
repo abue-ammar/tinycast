@@ -159,7 +159,7 @@ leading gap. Headers are non-selectable display rows, so selection (keyed by id)
 
 Glass is **only** for floating controls, never the main surface.
 
-- `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with a whitish frost tint (`glassFrost`) so the glass reads brighter than clear. Used on the action-group capsule and the menu circle; tune the frost amount via the `glassFrost` token, not per call site.
+- `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with a whitish frost tint (`glassFrost`) so the glass reads brighter than clear. Used on the action-group capsule, the menu circle, the modal's buttons, and both HUDs (`VolumeHUDView`, `HUDWindowController`'s capsule); a HUD floats alone over the desktop with nothing dark behind it, so plain untinted `glassEffect` reads flat there even though it's fine inside the palette. Tune the frost amount via the `glassFrost` token, not per call site.
 - **Menus are in-window overlays, not system popovers.** `.contextMenu`/`NSMenu` stall clicks for seconds inside a `LazyVStack` and spill outside the panel. Use `PopoverMenu` anchored to a bottom corner via `.overlay`, inset `menuInset` (8pt) so its own corner isn't clipped by the panel's.
 - **`PopoverMenu`** uses `glassEffect(.regular, in: RoundedRectangle(menuPanel 16))` with **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native.
 - `PopoverMenuRow`: leading glyph, label, trailing shortcut glyph, `menuHover` fill on hover, `menuRow 10` corner. Menus animate in with `.opacity + .scale(0.96)` from the anchored corner, `easeOut 0.14`.
@@ -169,7 +169,7 @@ Glass is **only** for floating controls, never the main surface.
 
 ---
 
-## Modals & HUD `Core/ModalWindowController.swift`, `Features/Modal/TinycastModalView.swift`
+## Modals & HUD `Core/ModalWindowController.swift`, `Features/Modal/TinycastModalView.swift`, `Core/HUDWindowController.swift`
 
 Tinycast owns its dialogs; `NSAlert` is never used. `ModalWindowController` is owned by `AppCore` (the
 sole owner rule) and is the only presenter, so every confirmation in the app looks and behaves alike.
@@ -178,14 +178,14 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   `clipShape(RoundedRectangle(modal 20))`, in that order at `modalWidth 420`. Glass is reserved for
   the buttons, matching the "glass only on floating controls" rule. The HUD is the exception: it is a
   floating control with no content of its own, so it is stock `glassEffect` throughout.
-- **Layout.** Leading tone glyph (`modalIcon 26`, red when the dialog is destructive), title
+- **Layout.** Leading tone glyph (`modalIcon 26`, tinted by the dialog's `ModalKind`), title
   (`.headline`) + wrapped secondary message, optional accessory, then buttons at the trailing edge
   with **Cancel rendered leading** among them, matching macOS convention.
   `TinycastModalView.visualOrder` reorders only the display; `onChoose(index)` still dispatches
   against `ModalRequest.actions`' original order, so a caller never has to think about layout
   position when it builds a request.
 - **Kind.** `ModalKind` is `.info`, `.success`, `.warning`, `.error`, or `.custom(Color)`. The first
-  four carry a fixed tint and a default icon (`ModalKind.defaultSymbol`, used whenever
+  four carry a fixed tint and a default dialog icon (`ModalKind.defaultSymbol`, used whenever
   `ModalRequest.symbol` is left `nil`): `.info` secondary-gray/`info.circle`, `.success`
   green/`checkmark.circle.fill`, `.warning` orange/`exclamationmark.triangle.fill`, `.error`
   red/`exclamationmark.octagon.fill`. `.info` stays gray rather than system blue on purpose, since a
@@ -197,7 +197,12 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   something already went wrong.** Every `confirm()` dialog is `.warning`; every `report()` dialog
   is `.error`. That split, not any per-command choice, is what keeps every destructive
   confirmation and every failure across all 31 system commands correctly colored. A completed import
-  is `.success`; a value prompt like Set Volume is `.info`.
+  is `.success`; a value prompt like Set Volume is `.info`. `HUDWindowController.show(message:kind:)`
+  (the pill; see below) takes the same `ModalKind` for its status dot, so the pill and the dialogs
+  speak one tint vocabulary even though they render it differently. `AppCore` derives that `kind` for
+  a system command from `SystemCommandFeedback.isNoOp`, so "Trash Emptied" reads `.success` and
+  "Trash Is Already Empty" reads `.info`, rather than every pill defaulting to the same green dot
+  regardless of whether anything happened.
 - **Keys.** `ModalPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
   `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons print only
   the caps the panel actually handles (`↵`, `esc`), so a printed cap can't drift from behavior.
@@ -213,12 +218,23 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
 - **`VolumeSlider`** is hand-drawn (track `volumeTrackHeight 6`, knob `volumeKnob 16`, `controlSurface`
   rail under a white-0.85 fill) with a monospaced-digit percentage in a fixed slot so the track doesn't
   resize between `0%` and `100%`. A click anywhere on the track jumps the level.
-- **`TinycastHUDView`** is the transient readout, in two flavours over one shared panel (so a volume
-  change and a confirmation can never overlap): a **volume bar** for the volume/mute commands macOS
-  only draws its own HUD for real media keys, so a CoreAudio change would otherwise be silent and a
-  **one-line message** confirming a command whose effect is invisible (`Trash Emptied`,
-  `Hidden Files Shown`, `Bluetooth Off`). It is non-key, auto-dismisses after ~1.5s, and a repeat
-  command refreshes the live content instead of stacking a second panel.
+- **`VolumeHUDView`** is the square, non-key readout for the volume/mute commands, since macOS only
+  draws its own HUD for real media keys and a CoreAudio change would otherwise be silent. It exists
+  because a level needs an actual bar, not a one-line message; auto-dismisses after
+  `Duration.hud` (~1.6s), and a repeat command refreshes the live level instead of stacking a second
+  panel. Its icon stays neutral (`Color.primary`), since a level isn't a success/info/warning
+  statement.
+- **`HUDWindowController`'s pill** (`Core/HUDWindowController.swift`) is every *other* transient
+  confirmation: Custom Commands and Snippets confirming a run, and every system command whose effect
+  is invisible (`Trash Emptied`, `Hidden Files Shown`, `Bluetooth Off`). One capsule shape, sized to
+  its message (`hudMaxWidth 420` ceiling), `frosted(in: Capsule())`, with a leading `statusDot` (6pt,
+  `Circle().fill(kind.tint)`, the same token `SettingsRow`'s status dot uses) in place of an icon. No
+  per-command icon (a trash can, an eye) survives here, deliberately: the message already names the
+  resulting state ("Trash Emptied"), so the dot only needs to carry the tint, not a symbol, and stays
+  lighter than the dialogs' 26pt icon since a pill has nothing to decide, only to glance at. Leading,
+  not trailing like `SettingsRow`'s dot, since a pill is read left to right in one glance rather than
+  scanned as part of a longer row. Auto-dismisses after `Duration.hud`, same as the volume HUD, and a
+  repeat call replaces rather than stacks.
 
 ## Scrollbars — `Core/ThinScrollbar.swift`
 

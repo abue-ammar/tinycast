@@ -75,9 +75,9 @@ is dropped while the actual error survives.
 `AppCore.runCustomCommand(id:)` is the one funnel both palette activation and the global hotkey reach,
 so the gate lives there and neither path can bypass it. The palette hides before the dialog it is a
 floating panel and would sit above it. The dialog shows the command text as well as its name; ↵ runs
-it and Escape cancels. The gate is Tinycast's own modal, not an `NSAlert`
-([ui.md](ui.md#modals--hud)): presentation is `async` with no nested run loop, and the presenter itself
-refuses a second dialog while one is up, so a held shortcut can't stack them.
+it and Escape cancels, with Cancel rendered on the left of the two buttons. The gate is Tinycast's own
+modal, not an `NSAlert` ([ui.md](ui.md#modals--hud)): presentation is `async` with no nested run loop,
+and the presenter itself refuses a second dialog while one is up, so a held shortcut can't stack them.
 
 ### Reporting
 

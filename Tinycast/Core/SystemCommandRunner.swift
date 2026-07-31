@@ -23,13 +23,11 @@ struct SystemCommandFailure: LocalizedError, Sendable {
 
 struct SystemCommandFeedback: Sendable {
     let title: String
-    let symbol: String
     /// Set when the command found nothing to do; it reads as information rather than a completed change.
     let isNoOp: Bool
 
-    init(_ title: String, symbol: String, isNoOp: Bool = false) {
+    init(_ title: String, isNoOp: Bool = false) {
         self.title = title
-        self.symbol = symbol
         self.isNoOp = isNoOp
     }
 }
@@ -109,15 +107,11 @@ enum SystemCommandRunner {
             let result = try runAppleScript(
                 "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode")
             let dark = result?.booleanValue ?? false
-            return SystemCommandFeedback(
-                dark ? "Dark Appearance" : "Light Appearance",
-                symbol: dark ? "moon.fill" : "sun.max.fill")
+            return SystemCommandFeedback(dark ? "Dark Appearance" : "Light Appearance")
         case .toggleStageManager:
             let on = try await toggleDefault(
                 domain: "com.apple.WindowManager", key: "GloballyEnabled")
-            return SystemCommandFeedback(
-                on ? "Stage Manager On" : "Stage Manager Off",
-                symbol: "squares.leading.rectangle")
+            return SystemCommandFeedback(on ? "Stage Manager On" : "Stage Manager Off")
         case .openTrash:
             let trash = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")
             guard NSWorkspace.shared.open(trash) else {
@@ -131,18 +125,16 @@ enum SystemCommandRunner {
                 try runAppleScript("tell application \"Finder\" to count items of trash")?
                 .int32Value ?? 0
             guard items > 0 else {
-                return SystemCommandFeedback(
-                    "Trash Is Already Empty", symbol: "trash", isNoOp: true)
+                return SystemCommandFeedback("Trash Is Already Empty", isNoOp: true)
             }
             try runAppleScript("tell application \"Finder\" to empty trash")
-            return SystemCommandFeedback("Trash Emptied", symbol: "trash")
+            return SystemCommandFeedback("Trash Emptied")
         case .ejectAllDisks:
             let ejected = try ejectAllDisks()
             guard ejected > 0 else {
-                return SystemCommandFeedback("No Disks to Eject", symbol: "eject", isNoOp: true)
+                return SystemCommandFeedback("No Disks to Eject", isNoOp: true)
             }
-            return SystemCommandFeedback(
-                ejected == 1 ? "1 Disk Ejected" : "\(ejected) Disks Ejected", symbol: "eject")
+            return SystemCommandFeedback(ejected == 1 ? "1 Disk Ejected" : "\(ejected) Disks Ejected")
         case .toggleHiddenFiles:
             let shown = try await toggleDefault(
                 domain: "com.apple.finder", key: "AppleShowAllFiles")
@@ -150,31 +142,27 @@ enum SystemCommandRunner {
             if output.status != 0 && output.status != 1 {
                 throw processFailure(output, executable: "killall")
             }
-            return SystemCommandFeedback(
-                shown ? "Hidden Files Shown" : "Hidden Files Hidden",
-                symbol: shown ? "eye" : "eye.slash")
+            return SystemCommandFeedback(shown ? "Hidden Files Shown" : "Hidden Files Hidden")
         case .hideOtherApps:
             hideOtherApps(except: previousApp)
         case .unhideAllApps:
             let hidden = NSWorkspace.shared.runningApplications.filter(\.isHidden)
             for app in hidden { app.unhide() }
             guard !hidden.isEmpty else {
-                return SystemCommandFeedback("Nothing Was Hidden", symbol: "eye", isNoOp: true)
+                return SystemCommandFeedback("Nothing Was Hidden", isNoOp: true)
             }
-            return SystemCommandFeedback("All Apps Unhidden", symbol: "eye")
+            return SystemCommandFeedback("All Apps Unhidden")
         case .quitAllApps:
             for app in AppLauncher.quitAllTargets() { app.terminate() }
         case .dismissNotifications:
             let dismissed = try await dismissNotifications()
             guard dismissed > 0 else {
-                return SystemCommandFeedback(
-                    "No Notifications", symbol: "bell.slash", isNoOp: true)
+                return SystemCommandFeedback("No Notifications", isNoOp: true)
             }
-            return SystemCommandFeedback("Notifications Dismissed", symbol: "bell.slash")
+            return SystemCommandFeedback("Notifications Dismissed")
         case .toggleBluetooth:
             let on = try await toggleBluetooth()
-            return SystemCommandFeedback(
-                on ? "Bluetooth On" : "Bluetooth Off", symbol: "bluetooth")
+            return SystemCommandFeedback(on ? "Bluetooth On" : "Bluetooth Off")
         }
         return nil
     }

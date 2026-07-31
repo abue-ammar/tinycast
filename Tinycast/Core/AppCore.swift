@@ -469,7 +469,7 @@ final class AppCore: ObservableObject {
                 let state = try SystemCommandRunner.outputState()
                 modals.showVolumeHUD(level: state.level, muted: state.muted)
             } else if let feedback {
-                modals.showToast(symbol: feedback.symbol, title: feedback.title)
+                hud.show(message: feedback.title, kind: feedback.isNoOp ? .info : .success)
             }
         } catch let failure as SystemCommandFailure {
             await presentFailure(name: command.name, failure: failure)

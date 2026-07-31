@@ -13,11 +13,11 @@ struct ModalAction {
     var role: Role = .normal
 }
 
-/// A dialog's visual tone, which drives its leading glyph's tint and default icon. `.warning` is a
-/// confirmation asking before something happens; `.error` is a report that something already went
-/// wrong, so the two stay visually distinct even though both are "serious". `.custom(Color)` is the
-/// template for a one-off dialog that doesn't fit the other four: it supplies its own tint via the
-/// associated color and its own icon via `ModalRequest.symbol`, rather than deriving either.
+/// A dialog's visual tone, which drives its leading glyph's tint, default icon, and the pill's
+/// status dot. `.warning` is a confirmation asking before something happens; `.error` is a report
+/// that something already went wrong, so the two stay visually distinct even though both are
+/// "serious". `.custom` is the template for a one-off dialog that doesn't fit the other four: it
+/// carries its own tint and, via `ModalRequest.symbol`, its own icon, rather than deriving either.
 enum ModalKind: Sendable {
     case info
     case success
@@ -134,21 +134,12 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// The transient HUD's content. One panel serves both kinds so a volume change and a confirmation can never overlap on screen.
-    final class HUDState: ObservableObject {
-        enum Content {
-            case volume(level: Double, muted: Bool)
-            case message(symbol: String, title: String)
-        }
-
-        @Published var content: Content = .volume(level: 0, muted: false)
-    }
-
     private var panel: ModalPanel?
     private var continuation: CheckedContinuation<Int, Never>?
     private var volume = VolumeState(level: 0)
     private var hud: ModalPanel?
-    private let hudState = HUDState()
+    /// The volume HUD's own level/muted, distinct from `volume` above: that one is the live Set Volume slider's binding, this is a snapshot for the read-only bar.
+    private let hudVolume = VolumeState(level: 0)
     private var hudDismissal: Task<Void, Never>?
 
     func confirm(title: String, message: String?, confirmTitle: String, destructive: Bool) async
@@ -198,21 +189,13 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         return Float32(volume.level)
     }
 
-    /// Feedback for the volume and mute commands, which otherwise change the output with nothing on screen, since macOS only draws its own HUD for real media keys.
+    /// Feedback for the volume and mute commands, which otherwise change the output with nothing on screen, since macOS only draws its own HUD for real media keys. Success/info toasts for other commands go through `HUDWindowController`'s pill instead, since this box's whole point is showing the level.
     func showVolumeHUD(level: Float32, muted: Bool) {
-        showHUD(.volume(level: Double(level), muted: muted))
-    }
-
-    /// Confirmation for a command whose effect is invisible (Empty Trash, a toggle). Without it a successful run is indistinguishable from nothing happening.
-    func showToast(symbol: String, title: String) {
-        showHUD(.message(symbol: symbol, title: title))
-    }
-
-    private func showHUD(_ content: HUDState.Content) {
-        hudState.content = content
+        hudVolume.level = Double(level)
+        hudVolume.muted = muted
         if hud == nil {
             let view = hostingView(
-                TinycastHUDView(state: hudState), width: Theme.Size.hudWidth,
+                VolumeHUDView(state: hudVolume), width: Theme.Size.hudWidth,
                 minHeight: Theme.Size.hudHeight)
             let panel = ModalPanel(content: view, acceptsKey: false)
             place(panel, anchor: .hud)
@@ -221,7 +204,7 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         }
         hudDismissal?.cancel()
         hudDismissal = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(1500))
+            try? await Task.sleep(for: .seconds(Theme.Duration.hud))
             guard !Task.isCancelled else { return }
             self?.dismissHUD()
         }

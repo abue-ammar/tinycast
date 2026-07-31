@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Transient, non-interactive confirmation flashed at the bottom of the active screen after something succeeds. Any feature can use it — snippets confirm an insertion, custom commands confirm a run.
+/// Transient, non-interactive confirmation flashed at the bottom of the active screen after something succeeds. Any feature can use it — snippets confirm an insertion, custom commands confirm a run. A leading status dot, not an icon, carries the `ModalKind` tint: lighter weight for a glance-and-forget surface than the dialogs' full symbol.
 @MainActor
 final class HUDWindowController {
     private let settings: AppSettings
@@ -12,15 +12,10 @@ final class HUDWindowController {
         self.settings = settings
     }
 
-    func show(
-        message: String,
-        symbol: String = "checkmark.circle.fill",
-        tint: Color = .green
-    ) {
+    func show(message: String, kind: ModalKind = .success) {
         dismissalTask?.cancel()
         let panel = panel ?? makePanel()
-        let host = NSHostingView(
-            rootView: HUDView(message: message, symbol: symbol, tint: tint))
+        let host = NSHostingView(rootView: HUDView(message: message, tint: kind.tint))
         // The capsule is only as wide as its message, so the panel takes its size from SwiftUI rather than a fixed frame.
         panel.contentView = host
         panel.setContentSize(host.fittingSize)
@@ -71,23 +66,22 @@ final class HUDWindowController {
 
 private struct HUDView: View {
     let message: String
-    let symbol: String
     let tint: Color
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: symbol)
-                .font(.callout)
-                .foregroundStyle(tint)
+            Circle()
+                .fill(tint)
+                .frame(width: Theme.Size.statusDot, height: Theme.Size.statusDot)
             Text(message)
-                .font(.callout.weight(.medium))
-                .foregroundStyle(.white)
+                .font(Theme.Typography.bar)
+                .foregroundStyle(Color.primary)
                 .lineLimit(1)
         }
         .padding(.horizontal, Theme.Spacing.xl)
         .padding(.vertical, Theme.Spacing.md)
         .frame(maxWidth: Theme.Size.hudMaxWidth, alignment: .leading)
         .fixedSize()
-        .glassEffect(.regular, in: Capsule())
+        .frosted(in: Capsule())
     }
 }

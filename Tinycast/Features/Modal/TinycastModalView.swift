@@ -148,9 +148,9 @@ struct VolumeSlider: View {
     }
 }
 
-/// The transient readout: a volume bar, or a one-line confirmation for a command whose effect is invisible. Glass, because it is a floating control rather than a surface with content.
-struct TinycastHUDView: View {
-    @ObservedObject var state: ModalWindowController.HUDState
+/// The transient volume readout shown after a volume or mute command, since macOS only draws its own HUD for real media keys. A success/info confirmation for every other command is `HUDWindowController`'s pill instead, not this box, because that one has an actual level to show. Glass, because it is a floating control rather than a surface with content.
+struct VolumeHUDView: View {
+    @ObservedObject var state: ModalWindowController.VolumeState
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
@@ -158,39 +158,23 @@ struct TinycastHUDView: View {
                 .font(.system(size: Theme.Size.modalIcon, weight: .regular))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Color.primary)
-            switch state.content {
-            case .volume(let level, let muted):
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Theme.Colors.controlSurface)
-                    Capsule()
-                        .fill(Color.white.opacity(muted ? 0.35 : 0.85))
-                        .frame(width: fill(level: muted ? 0 : level))
-                }
-                .frame(height: Theme.Size.volumeTrackHeight)
-            case .message(_, let title):
-                Text(title)
-                    .font(Theme.Typography.rowTrailing)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Theme.Colors.controlSurface)
+                Capsule()
+                    .fill(Color.white.opacity(state.muted ? 0.35 : 0.85))
+                    .frame(width: fill(level: state.muted ? 0 : state.level))
             }
+            .frame(height: Theme.Size.volumeTrackHeight)
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: Theme.Size.hudWidth, height: Theme.Size.hudHeight)
-        .glassEffect(
-            .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.modal, style: .continuous))
+        .frosted(in: RoundedRectangle(cornerRadius: Theme.Radius.modal, style: .continuous))
     }
 
     private var symbol: String {
-        switch state.content {
-        case .volume(let level, let muted):
-            if muted || level == 0 { return "speaker.slash.fill" }
-            return level < 0.5 ? "speaker.wave.1.fill" : "speaker.wave.3.fill"
-        case .message(let symbol, _):
-            return symbol
-        }
+        if state.muted || state.level == 0 { return "speaker.slash.fill" }
+        return state.level < 0.5 ? "speaker.wave.1.fill" : "speaker.wave.3.fill"
     }
 
     private func fill(level: Double) -> CGFloat {
