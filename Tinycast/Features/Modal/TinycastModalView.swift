@@ -33,7 +33,7 @@ struct TinycastModalView: View {
 
             HStack(spacing: Theme.Spacing.md) {
                 Spacer(minLength: 0)
-                ForEach(request.actions.indices, id: \.self) { index in
+                ForEach(visualOrder, id: \.self) { index in
                     ModalButton(
                         action: request.actions[index],
                         keyCap: keyCap(for: index),
@@ -51,6 +51,15 @@ struct TinycastModalView: View {
 
     private var isDestructive: Bool {
         request.actions.contains { $0.role == .destructive }
+    }
+
+    /// Cancel renders leading, matching macOS convention and the panel's Escape/Return keys, while `onChoose(index)` still dispatches against `request.actions`' original order so callers never have to think about display position.
+    private var visualOrder: [Int] {
+        request.actions.indices.sorted { rank(of: $0) < rank(of: $1) }
+    }
+
+    private func rank(of index: Int) -> Int {
+        request.actions[index].role == .cancel ? 0 : 1
     }
 
     /// Only the two keys the panel actually handles are advertised, so a printed cap can't drift from the behavior.

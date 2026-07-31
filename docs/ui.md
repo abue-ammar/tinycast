@@ -179,7 +179,11 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   the buttons, matching the "glass only on floating controls" rule. The HUD is the exception: it is a
   floating control with no content of its own, so it is stock `glassEffect` throughout.
 - **Layout.** Leading tone glyph (`modalIcon 26`, red when the dialog is destructive), title
-  (`.headline`) + wrapped secondary message, optional accessory, then right-aligned buttons.
+  (`.headline`) + wrapped secondary message, optional accessory, then buttons at the trailing edge
+  with **Cancel rendered leading** among them, matching macOS convention.
+  `TinycastModalView.visualOrder` reorders only the display; `onChoose(index)` still dispatches
+  against `ModalRequest.actions`' original order, so a caller never has to think about layout
+  position when it builds a request.
 - **Keys.** `ModalPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
   `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons print only
   the caps the panel actually handles (`↵`, `esc`), so a printed cap can't drift from behavior.
