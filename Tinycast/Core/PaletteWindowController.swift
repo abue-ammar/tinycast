@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import SwiftUI
 
 @MainActor
@@ -131,6 +132,24 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             }
             vm.prepare(mode: .launcher)
             return true
+        }
+        // The field editor swallows some `⌘` chords (e.g. `⌘,`) before SwiftUI `.onKeyPress` can fire, and `LSUIElement` apps have no main menu for `⌘W` or `⌘Esc`. Handle them at the panel level.
+        panel.onCommandShortcut = { [weak self] event in
+            let commandOnly = event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
+            guard commandOnly, let self else { return false }
+            switch Int(event.keyCode) {
+            case kVK_ANSI_Comma:
+                self.core.showSettings()
+                return true
+            case kVK_ANSI_W:
+                self.core.hidePalette()
+                return true
+            case kVK_Escape:
+                self.core.palette.prepare(mode: .launcher)
+                return true
+            default:
+                return false
+            }
         }
         self.panel = panel
         return panel

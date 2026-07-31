@@ -414,11 +414,6 @@ struct RootPaletteView: View {
             toggleMode()
             return .handled
         }
-        .onKeyPress(keys: [","], phases: .down) { press in
-            guard press.modifiers.contains(.command) else { return .ignored }
-            core.showSettings()
-            return .handled
-        }
         // ⌘K toggles the actions panel for the current selection.
         .onKeyPress(keys: ["k"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }

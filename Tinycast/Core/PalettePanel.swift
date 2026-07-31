@@ -6,6 +6,8 @@ import SwiftUI
 final class PalettePanel: NSPanel {
     /// Called for a bare backspace before it reaches the field editor (return true to consume); the field editor swallows plain backspace itself, so SwiftUI `onKeyPress` up the hierarchy never sees it.
     var onBareBackspace: (() -> Bool)?
+    /// Called for command-key chords before they reach the field editor; return true to consume the event. The field editor swallows some `⌘` chords (e.g. `⌘,`) before SwiftUI `.onKeyPress` can see them, and `LSUIElement` apps have no main menu to handle standard window equivalents like `⌘W`.
+    var onCommandShortcut: ((NSEvent) -> Bool)?
     /// Arms the hover highlight from `sendEvent` — the one place both event streams pass through, so a keyboard-driven scroll under a still pointer never fires `.mouseMoved` and hover stays disarmed. Also carries the caret-hide hook fired when a footer menu opens.
     weak var paletteViewModel: PaletteViewModel? {
         didSet {
@@ -44,6 +46,13 @@ final class PalettePanel: NSPanel {
             Int(event.keyCode) == kVK_Delete,
             event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
             onBareBackspace?() == true {
+            return
+        }
+        // The field editor swallows some command chords (e.g. `⌘,`) before SwiftUI `.onKeyPress` can fire, and `LSUIElement` apps have no main menu for standard equivalents like `⌘W`. Let the controller own those so the rest still reach SwiftUI.
+        if event.type == .keyDown,
+            event.modifierFlags.contains(.command),
+            onCommandShortcut?(event) == true
+        {
             return
         }
         super.sendEvent(event)
