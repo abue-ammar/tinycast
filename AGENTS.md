@@ -132,9 +132,13 @@ Never break these without an explicit task to do so.
   that, not a flag, is what stops a held hotkey stacking dialogs. **↵ runs the primary action, Escape
   cancels, and Cancel always renders leading** (the left button), matching macOS convention. A
   dialog's tone is one of five `ModalKind` cases (`.info` / `.success` / `.warning` / `.error` /
-  `.custom(Color)`), which drives its glyph's tint and default icon. **`.warning` (orange) is a
-  confirmation before something happens; `.error` (red) is a report that something already went
-  wrong.** Don't conflate the two. A transient readout is a HUD, not a dialog: `ModalWindowController`'s
+  `.custom(Color)`), which drives its glyph's tint and default icon. **`.warning` is a
+  confirmation before something happens; `.error` is a report that something already went
+  wrong.** Don't conflate the two — even though both now share the same red tint (only the default
+  icon's triangle-vs-circle shape tells them apart), the semantic split still governs which one a
+  caller reaches for. A button never prints its key cap; hovering it shows a `Tooltip`
+  (`Core/Tooltip.swift`) instead, styled like the palette's own keycap chips. A transient readout is
+  a HUD, not a dialog: `ModalWindowController`'s
   square box is volume/mute only, since that one needs an actual level; every other success/info
   confirmation (system commands, Custom Commands, Snippets) goes through `HUDWindowController`'s
   pill, a leading `statusDot` tinted by the same `ModalKind` standing in for an icon. See

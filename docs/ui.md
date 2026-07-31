@@ -187,28 +187,32 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
 - **Kind.** `ModalKind` is `.info`, `.success`, `.warning`, `.error`, or `.custom(Color)`. The first
   four carry a fixed tint and a default dialog icon (`ModalKind.defaultSymbol`, used whenever
   `ModalRequest.symbol` is left `nil`): `.info` secondary-gray/`info.circle`, `.success`
-  green/`checkmark.circle.fill`, `.warning` orange/`exclamationmark.triangle.fill`, `.error`
-  red/`exclamationmark.octagon.fill`. `.info` stays gray rather than system blue on purpose, since a
+  green/`checkmark.circle.fill`, `.warning` red/`exclamationmark.triangle.fill`, `.error`
+  red/`exclamationmark.circle.fill`. `.info` stays gray rather than system blue on purpose, since a
   hue here should mark a state the way the other three do, not just decorate an otherwise neutral
   message. **`.custom(Color)` is the template for a one-off dialog that doesn't fit the other
   four: it supplies its own tint via the associated color and its own icon via `ModalRequest.symbol`,
   rather than deriving either.** Nothing constructs it yet.
   **`.warning` is a confirmation asking before something happens; `.error` is a report that
-  something already went wrong.** Every `report()` dialog is `.error`. Most `confirm()` dialogs are
-  `.warning`, but `confirm(kind:)` lets a caller opt a particularly severe confirmation into `.error`'s
-  stronger red without it claiming something already failed: `AppCore.confirmationKind` does this for
-  Restart, Shut Down, Log Out and Empty Trash, since those end the session or destroy data outright,
-  while every other confirmation (Quit All Applications, a custom command) stays `.warning`. A completed import
-  is `.success`; a value prompt like Set Volume is `.info`. `HUDWindowController.show(message:kind:)`
+  something already went wrong.** `.warning` and `.error` share the same red tint — a warning and an
+  error read equally severe — so the default icon's shape (triangle vs. circle) is what distinguishes
+  them, not color. Every `report()` dialog is `.error`. Most `confirm()` dialogs are `.warning`, but
+  `confirm(kind:)` lets a caller opt a particularly severe confirmation into `.error`'s icon without it
+  claiming something already failed: `AppCore.confirmationKind` does this for Restart, Shut Down, Log
+  Out and Empty Trash, since those end the session or destroy data outright, while every other
+  confirmation (Quit All Applications, a custom command) stays `.warning`. A completed import is
+  `.success`; a value prompt like Set Volume is `.info`. `HUDWindowController.show(message:kind:)`
   (the pill; see below) takes the same `ModalKind` for its status dot, so the pill and the dialogs
   speak one tint vocabulary even though they render it differently. `AppCore` derives that `kind` for
   a system command from `SystemCommandFeedback.isNoOp`, so "Trash Emptied" reads `.success` and
   "Trash Is Already Empty" reads `.info`, rather than every pill defaulting to the same green dot
   regardless of whether anything happened.
 - **Keys.** `ModalPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
-  `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons print only
-  the caps the panel actually handles (`↵`, `esc`), so a printed cap can't drift from behavior.
-  **↵ runs the dialog's primary action; Escape cancels**, on every dialog including destructive ones.
+  `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons don't print
+  a key cap; hovering one shows a `Tooltip` (`Core/Tooltip.swift`) with the cap the panel actually
+  handles (`↵`, `esc`), styled like the palette's own `KeyCapChip` but hover-triggered instead of
+  always-on, so a shown cap can't drift from behavior. **↵ runs the dialog's primary action; Escape
+  cancels**, on every dialog including destructive ones.
   Arrow keys step the volume slider by the same 1/16 the volume commands use; click-away resolves as
   a dismissal.
 - **Async, not modal.** Presentation is `async` (`withCheckedContinuation`), so there is no nested run

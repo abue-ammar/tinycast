@@ -74,7 +74,7 @@ enum Theme {
         /// Tinycast's own modal: fixed width, height measured from the SwiftUI content.
         static let modalWidth: CGFloat = 420
         /// Leading glyph on a modal, larger than a row icon because it carries the dialog's tone (warning / question).
-        static let modalIcon: CGFloat = 26
+        static let modalIcon: CGFloat = 32
         /// Transient volume HUD shown after any volume or mute command.
         static let hudWidth: CGFloat = 200
         static let hudHeight: CGFloat = 92
@@ -86,6 +86,8 @@ enum Theme {
     enum Duration {
         /// How long the confirmation HUD stays on screen.
         static let hud: TimeInterval = 1.6
+        /// Fade-in/out for a hover `Tooltip`.
+        static let tooltip: TimeInterval = 0.15
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
@@ -126,11 +128,8 @@ enum Theme {
         static let glassFrost = Color.white.opacity(0.05)
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
-        /// Destructive tint: a destructive button's label, and a modal's leading glyph for an `.error` kind dialog.
+        /// Destructive tint: a destructive button's label, and a modal's leading glyph for `.warning`/`.error` kind dialogs — both read equally severe; only the default icon's shape tells them apart.
         static let destructive = Color.red
-        /// Caution tint: a modal's leading glyph for a `.warning` kind dialog. A confirmation asking
-        /// before something happens, never a report of something that already went wrong.
-        static let warning = Color.orange
         /// Success tint: a modal's leading glyph for a `.success` kind dialog.
         static let success = Color.green
     }

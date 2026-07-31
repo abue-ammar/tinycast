@@ -15,9 +15,10 @@ struct ModalAction {
 
 /// A dialog's visual tone, which drives its leading glyph's tint, default icon, and the pill's
 /// status dot. `.warning` is a confirmation asking before something happens; `.error` is a report
-/// that something already went wrong, so the two stay visually distinct even though both are
-/// "serious". `.custom` is the template for a one-off dialog that doesn't fit the other four: it
-/// carries its own tint and, via `ModalRequest.symbol`, its own icon, rather than deriving either.
+/// that something already went wrong — both share the same red tint (severity reads the same either
+/// way), so the shape of the default icon is what tells them apart. `.custom` is the template for a
+/// one-off dialog that doesn't fit the other four: it carries its own tint and, via
+/// `ModalRequest.symbol`, its own icon, rather than deriving either.
 enum ModalKind: Sendable {
     case info
     case success
@@ -29,7 +30,7 @@ enum ModalKind: Sendable {
         switch self {
         case .info: return .secondary
         case .success: return Theme.Colors.success
-        case .warning: return Theme.Colors.warning
+        case .warning: return Theme.Colors.destructive
         case .error: return Theme.Colors.destructive
         case .custom(let color): return color
         }
@@ -40,7 +41,7 @@ enum ModalKind: Sendable {
         case .info: return "info.circle"
         case .success: return "checkmark.circle.fill"
         case .warning: return "exclamationmark.triangle.fill"
-        case .error: return "exclamationmark.octagon.fill"
+        case .error: return "exclamationmark.circle.fill"
         case .custom: return "questionmark.circle"
         }
     }
@@ -173,9 +174,10 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
     func report(title: String, message: String, settingsTitle: String?) async -> Bool {
         var actions = [ModalAction(title: "OK", role: .cancel)]
         if let settingsTitle { actions.append(ModalAction(title: settingsTitle)) }
+        // ↵ lands on the settings action when there is one to take, not on the OK dismissal.
         let request = ModalRequest(
             title: title, message: message, kind: .error,
-            actions: actions, defaultIndex: 0, cancelIndex: 0)
+            actions: actions, defaultIndex: actions.count - 1, cancelIndex: 0)
         return await present(request) == 1
     }
 

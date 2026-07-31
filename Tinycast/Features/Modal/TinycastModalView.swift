@@ -7,7 +7,7 @@ struct TinycastModalView: View {
     let onChoose: (Int) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             HStack(alignment: .top, spacing: Theme.Spacing.lg) {
                 Image(systemName: request.symbol ?? request.kind.defaultSymbol)
                     .font(.system(size: Theme.Size.modalIcon, weight: .regular))
@@ -59,7 +59,7 @@ struct TinycastModalView: View {
         request.actions[index].role == .cancel ? 0 : 1
     }
 
-    /// Only the two keys the panel actually handles are advertised, so a printed cap can't drift from the behavior.
+    /// Only the two keys the panel actually handles are advertised, so a hover tooltip can't drift from the behavior.
     private func keyCap(for index: Int) -> String? {
         if index == request.defaultIndex { return "↵" }
         if index == request.cancelIndex { return "esc" }
@@ -76,22 +76,18 @@ private struct ModalButton: View {
 
     var body: some View {
         Button(action: onActivate) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Text(action.title)
-                    .font(Theme.Typography.bar)
-                    .foregroundStyle(action.role == .cancel ? Color.primary : kind.tint)
-                if let keyCap {
-                    KeyCapChip(text: keyCap, style: .outline)
-                }
-            }
-            .padding(.horizontal, Theme.Spacing.xl)
-            .frame(height: Theme.Size.menuButton)
-            .contentShape(Capsule())
-            .background(Capsule().fill(hovered ? Theme.Colors.menuHover : Color.clear))
+            Text(action.title)
+                .font(Theme.Typography.bar)
+                .foregroundStyle(action.role == .cancel ? Theme.Colors.textSecondary : kind.tint)
+                .padding(.horizontal, Theme.Spacing.xl)
+                .frame(height: Theme.Size.menuButton)
+                .contentShape(Capsule())
+                .background(Capsule().fill(hovered ? Theme.Colors.menuHover : Color.clear))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .frosted(in: Capsule())
+        .tooltip(keyCap)
     }
 }
 

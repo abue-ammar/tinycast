@@ -92,6 +92,7 @@
 		C7D8BB669C3DBC0D26EB6E32 /* WindowActionMemory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B940224413903867EF5A60E /* WindowActionMemory.swift */; };
 		C7DD1345A6BFB1D9EB22FCEE /* RunningApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B432D84D8F9C10521342199 /* RunningApps.swift */; };
 		C8F4555ECA895F63A34A327C /* EmojiGridGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABCE058D38F493D58F6E072 /* EmojiGridGeometry.swift */; };
+		CAD10A49DBDEFD2A9C03A7BE /* Tooltip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586627A59FDF9011136939A5 /* Tooltip.swift */; };
 		CFB516312C4694DDFD99DBCA /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68952539C0BD045BA175CBB6 /* SettingsRootView.swift */; };
 		D322804853973E1C19F2A408 /* AppIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7CE23482F7DF563A268806 /* AppIndex.swift */; };
 		D3CA50C1CFABC31E6BC7B73C /* CalcPercent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A65B4EC5AE7E22594BFC5E /* CalcPercent.swift */; };
@@ -152,6 +153,7 @@
 		52ADC36002F1A5B04D61B4D3 /* ClipboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardView.swift; sourceTree = "<group>"; };
 		5392500F86E23C099D33561D /* Tinycast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tinycast.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		555E9C7EA62BDB40891A5751 /* PalettePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalettePanel.swift; sourceTree = "<group>"; };
+		586627A59FDF9011136939A5 /* Tooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tooltip.swift; sourceTree = "<group>"; };
 		596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorder.swift; sourceTree = "<group>"; };
 		5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTemplateEngine.swift; sourceTree = "<group>"; };
 		5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
@@ -277,6 +279,7 @@
 				AFE4F95DF8572910DFE602BA /* SystemCommandRunner.swift */,
 				7BC2DEA0A052116A92F9A539 /* Theme.swift */,
 				A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */,
+				586627A59FDF9011136939A5 /* Tooltip.swift */,
 				825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */,
 				EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */,
 			);
@@ -664,6 +667,7 @@
 				85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */,
 				68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */,
 				A7508663E4B5D80572E7BAAC /* TinycastModalView.swift in Sources */,
+				CAD10A49DBDEFD2A9C03A7BE /* Tooltip.swift in Sources */,
 				693E88D22D00CF6FD9CD7413 /* VisibilityStore.swift in Sources */,
 				A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */,
 				C7D8BB669C3DBC0D26EB6E32 /* WindowActionMemory.swift in Sources */,
