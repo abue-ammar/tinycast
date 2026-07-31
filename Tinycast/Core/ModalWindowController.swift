@@ -142,11 +142,15 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
     private let hudVolume = VolumeState(level: 0)
     private var hudDismissal: Task<Void, Never>?
 
-    func confirm(title: String, message: String?, confirmTitle: String, destructive: Bool) async
-        -> Bool
-    {
+    /// `kind` defaults to the usual `.warning`/`.info` split by `destructive`, but a caller can pass
+    /// `.error` instead to make a particularly severe confirmation (data loss, ending the session)
+    /// read as more alarming than a routine one, without that dialog claiming something already went wrong.
+    func confirm(
+        title: String, message: String?, confirmTitle: String, destructive: Bool,
+        kind: ModalKind? = nil
+    ) async -> Bool {
         let request = ModalRequest(
-            title: title, message: message, kind: destructive ? .warning : .info,
+            title: title, message: message, kind: kind ?? (destructive ? .warning : .info),
             actions: [
                 ModalAction(title: confirmTitle, role: destructive ? .destructive : .normal),
                 ModalAction(title: "Cancel", role: .cancel),

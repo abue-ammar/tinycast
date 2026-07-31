@@ -194,9 +194,11 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   four: it supplies its own tint via the associated color and its own icon via `ModalRequest.symbol`,
   rather than deriving either.** Nothing constructs it yet.
   **`.warning` is a confirmation asking before something happens; `.error` is a report that
-  something already went wrong.** Every `confirm()` dialog is `.warning`; every `report()` dialog
-  is `.error`. That split, not any per-command choice, is what keeps every destructive
-  confirmation and every failure across all 31 system commands correctly colored. A completed import
+  something already went wrong.** Every `report()` dialog is `.error`. Most `confirm()` dialogs are
+  `.warning`, but `confirm(kind:)` lets a caller opt a particularly severe confirmation into `.error`'s
+  stronger red without it claiming something already failed: `AppCore.confirmationKind` does this for
+  Restart, Shut Down, Log Out and Empty Trash, since those end the session or destroy data outright,
+  while every other confirmation (Quit All Applications, a custom command) stays `.warning`. A completed import
   is `.success`; a value prompt like Set Volume is `.info`. `HUDWindowController.show(message:kind:)`
   (the pill; see below) takes the same `ModalKind` for its status dot, so the pill and the dialogs
   speak one tint vocabulary even though they render it differently. `AppCore` derives that `kind` for

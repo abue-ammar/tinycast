@@ -36,6 +36,7 @@ struct TinycastModalView: View {
                 ForEach(visualOrder, id: \.self) { index in
                     ModalButton(
                         action: request.actions[index],
+                        kind: request.kind,
                         keyCap: keyCap(for: index),
                         onActivate: { onChoose(index) }
                     )
@@ -68,6 +69,7 @@ struct TinycastModalView: View {
 
 private struct ModalButton: View {
     let action: ModalAction
+    let kind: ModalKind
     let keyCap: String?
     let onActivate: () -> Void
     @State private var hovered = false
@@ -77,8 +79,7 @@ private struct ModalButton: View {
             HStack(spacing: Theme.Spacing.sm) {
                 Text(action.title)
                     .font(Theme.Typography.bar)
-                    .foregroundStyle(
-                        action.role == .destructive ? Theme.Colors.destructive : Color.primary)
+                    .foregroundStyle(action.role == .cancel ? Color.primary : kind.tint)
                 if let keyCap {
                     KeyCapChip(text: keyCap, style: .outline)
                 }

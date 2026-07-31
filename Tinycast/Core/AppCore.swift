@@ -452,7 +452,8 @@ final class AppCore: ObservableObject {
             await !modals.confirm(
                 title: Self.confirmationTitle(command),
                 message: Self.confirmationMessage(command),
-                confirmTitle: command.name, destructive: true)
+                confirmTitle: command.name, destructive: true,
+                kind: Self.confirmationKind(command))
         {
             return
         }
@@ -501,6 +502,16 @@ final class AppCore: ObservableObject {
         case .restart, .shutDown, .logOut:
             return "Applications with unsaved changes may ask you to save."
         default: return "This system action may interrupt your work."
+        }
+    }
+
+    /// Most confirmations read as the usual `.warning` orange; the four that end the session
+    /// (`.restart`, `.shutDown`, `.logOut`) or destroy data outright (`.emptyTrash`) read `.error`
+    /// red instead, so their weight on screen matches their weight in practice.
+    private static func confirmationKind(_ command: SystemCommand) -> ModalKind {
+        switch command.id {
+        case .restart, .shutDown, .logOut, .emptyTrash: return .error
+        default: return .warning
         }
     }
 
