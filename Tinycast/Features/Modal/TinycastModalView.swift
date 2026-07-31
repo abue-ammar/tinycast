@@ -9,10 +9,10 @@ struct TinycastModalView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
             HStack(alignment: .top, spacing: Theme.Spacing.lg) {
-                Image(systemName: request.symbol)
+                Image(systemName: request.symbol ?? request.kind.defaultSymbol)
                     .font(.system(size: Theme.Size.modalIcon, weight: .regular))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(isDestructive ? Color.red : Color.secondary)
+                    .foregroundStyle(request.kind.tint)
                     .frame(width: Theme.Size.modalIcon)
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text(request.title)
@@ -49,10 +49,6 @@ struct TinycastModalView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.modal, style: .continuous))
     }
 
-    private var isDestructive: Bool {
-        request.actions.contains { $0.role == .destructive }
-    }
-
     /// Cancel renders leading, matching macOS convention and the panel's Escape/Return keys, while `onChoose(index)` still dispatches against `request.actions`' original order so callers never have to think about display position.
     private var visualOrder: [Int] {
         request.actions.indices.sorted { rank(of: $0) < rank(of: $1) }
@@ -81,7 +77,8 @@ private struct ModalButton: View {
             HStack(spacing: Theme.Spacing.sm) {
                 Text(action.title)
                     .font(Theme.Typography.bar)
-                    .foregroundStyle(action.role == .destructive ? Color.red : Color.primary)
+                    .foregroundStyle(
+                        action.role == .destructive ? Theme.Colors.destructive : Color.primary)
                 if let keyCap {
                     KeyCapChip(text: keyCap, style: .outline)
                 }

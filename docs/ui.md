@@ -184,6 +184,20 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   `TinycastModalView.visualOrder` reorders only the display; `onChoose(index)` still dispatches
   against `ModalRequest.actions`' original order, so a caller never has to think about layout
   position when it builds a request.
+- **Kind.** `ModalKind` is `.info`, `.success`, `.warning`, `.error`, or `.custom(Color)`. The first
+  four carry a fixed tint and a default icon (`ModalKind.defaultSymbol`, used whenever
+  `ModalRequest.symbol` is left `nil`): `.info` secondary-gray/`info.circle`, `.success`
+  green/`checkmark.circle.fill`, `.warning` orange/`exclamationmark.triangle.fill`, `.error`
+  red/`exclamationmark.octagon.fill`. `.info` stays gray rather than system blue on purpose, since a
+  hue here should mark a state the way the other three do, not just decorate an otherwise neutral
+  message. **`.custom(Color)` is the template for a one-off dialog that doesn't fit the other
+  four: it supplies its own tint via the associated color and its own icon via `ModalRequest.symbol`,
+  rather than deriving either.** Nothing constructs it yet.
+  **`.warning` is a confirmation asking before something happens; `.error` is a report that
+  something already went wrong.** Every `confirm()` dialog is `.warning`; every `report()` dialog
+  is `.error`. That split, not any per-command choice, is what keeps every destructive
+  confirmation and every failure across all 31 system commands correctly colored. A completed import
+  is `.success`; a value prompt like Set Volume is `.info`.
 - **Keys.** `ModalPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
   `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons print only
   the caps the panel actually handles (`↵`, `esc`), so a printed cap can't drift from behavior.

@@ -131,7 +131,10 @@ Never break these without an explicit task to do so.
   `askConfirmation`). Presentation is `async`, so there is no nested run loop, and the presenter
   refuses a second dialog while one is up that, not a flag, is what stops a held hotkey stacking
   dialogs. **↵ runs the dialog's primary action, Escape cancels**, on every dialog including
-  destructive ones. See [ui.md](docs/ui.md#modals--hud).
+  destructive ones. A dialog's tone is one of five `ModalKind` cases (`.info` / `.success` /
+  `.warning` / `.error` / `.custom(Color)`), which drives its glyph's tint and default icon.
+  **`.warning` (orange) is a confirmation before something happens; `.error` (red) is a report that
+  something already went wrong.** Don't conflate the two. See [ui.md](docs/ui.md#modals--hud).
 - **Read [`docs/ui.md`](docs/ui.md) before any restyle or new view.** `Core/Theme.swift` is the single
   design-token source.
 - **`Core/EdgeDissolve.swift` and `Core/ThinScrollbar.swift` are off-limits.** Both are tuned by eye

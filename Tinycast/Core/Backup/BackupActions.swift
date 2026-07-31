@@ -42,8 +42,7 @@ enum BackupActions {
             guard await confirmExecutableImport(commands: commandCount, shortcuts: shortcutCount)
             else { return }
             await present(
-                title: "Settings Imported", message: summaryText(backup.apply()),
-                symbol: "checkmark.circle")
+                title: "Settings Imported", message: summaryText(backup.apply()), kind: .success)
         } catch {
             await present(title: "Import Failed", message: error.localizedDescription)
         }
@@ -152,8 +151,8 @@ enum BackupActions {
     }
 
     private static func present(
-        title: String, message: String, symbol: String = "exclamationmark.triangle"
+        title: String, message: String, kind: ModalKind = .error
     ) async {
-        await AppCore.shared.showNotice(title: title, message: message, symbol: symbol)
+        await AppCore.shared.showNotice(title: title, message: message, kind: kind)
     }
 }

@@ -124,8 +124,15 @@ enum Theme {
         static let cardStroke = Color.white.opacity(0.10)
         /// Whitish tint layered into the Liquid Glass floating controls (action group + menu circle) so the glass reads frosted rather than clear.
         static let glassFrost = Color.white.opacity(0.05)
-        /// The violet of the app mark. The one non-white hue in the system, used only to tint the About support callout.
+        /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
+        /// Destructive tint: a destructive button's label, and a modal's leading glyph for an `.error` kind dialog.
+        static let destructive = Color.red
+        /// Caution tint: a modal's leading glyph for a `.warning` kind dialog. A confirmation asking
+        /// before something happens, never a report of something that already went wrong.
+        static let warning = Color.orange
+        /// Success tint: a modal's leading glyph for a `.success` kind dialog.
+        static let success = Color.green
     }
 }
 

@@ -509,8 +509,10 @@ final class AppCore: ObservableObject {
     // Routed through `AppCore` so `modals` stays the single owner; flows outside the palette (the backup
     // actions) reach the same dialogs instead of falling back to an `NSAlert`.
 
-    func showNotice(title: String, message: String, symbol: String = "info.circle") async {
-        await modals.notice(title: title, message: message, symbol: symbol)
+    func showNotice(
+        title: String, message: String, symbol: String? = nil, kind: ModalKind = .info
+    ) async {
+        await modals.notice(title: title, message: message, symbol: symbol, kind: kind)
     }
 
     func askConfirmation(

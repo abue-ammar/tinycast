@@ -13,10 +13,45 @@ struct ModalAction {
     var role: Role = .normal
 }
 
+/// A dialog's visual tone, which drives its leading glyph's tint and default icon. `.warning` is a
+/// confirmation asking before something happens; `.error` is a report that something already went
+/// wrong, so the two stay visually distinct even though both are "serious". `.custom(Color)` is the
+/// template for a one-off dialog that doesn't fit the other four: it supplies its own tint via the
+/// associated color and its own icon via `ModalRequest.symbol`, rather than deriving either.
+enum ModalKind: Sendable {
+    case info
+    case success
+    case warning
+    case error
+    case custom(Color)
+
+    var tint: Color {
+        switch self {
+        case .info: return .secondary
+        case .success: return Theme.Colors.success
+        case .warning: return Theme.Colors.warning
+        case .error: return Theme.Colors.destructive
+        case .custom(let color): return color
+        }
+    }
+
+    var defaultSymbol: String {
+        switch self {
+        case .info: return "info.circle"
+        case .success: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .error: return "exclamationmark.octagon.fill"
+        case .custom: return "questionmark.circle"
+        }
+    }
+}
+
 struct ModalRequest {
     let title: String
     var message: String?
-    var symbol: String = "exclamationmark.triangle"
+    /// Falls back to `kind.defaultSymbol` when unset; a `.custom` kind should always set this explicitly.
+    var symbol: String? = nil
+    var kind: ModalKind = .warning
     var actions: [ModalAction]
     /// The button ↵ fires, normally the primary/confirm action.
     var defaultIndex: Int
@@ -120,8 +155,7 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         -> Bool
     {
         let request = ModalRequest(
-            title: title, message: message,
-            symbol: destructive ? "exclamationmark.triangle" : "questionmark.circle",
+            title: title, message: message, kind: destructive ? .warning : .info,
             actions: [
                 ModalAction(title: confirmTitle, role: destructive ? .destructive : .normal),
                 ModalAction(title: "Cancel", role: .cancel),
@@ -130,19 +164,22 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         return await present(request) == 0
     }
 
-    func notice(title: String, message: String, symbol: String) async {
+    func notice(title: String, message: String, symbol: String? = nil, kind: ModalKind = .info)
+        async
+    {
         let request = ModalRequest(
-            title: title, message: message, symbol: symbol,
+            title: title, message: message, symbol: symbol, kind: kind,
             actions: [ModalAction(title: "OK", role: .cancel)], defaultIndex: 0, cancelIndex: 0)
         _ = await present(request)
     }
 
-    /// A failure report. Returns true when the user asked to be taken to the relevant settings.
+    /// A failure report: something already went wrong, as opposed to `confirm`'s "about to happen".
+    /// Returns true when the user asked to be taken to the relevant settings.
     func report(title: String, message: String, settingsTitle: String?) async -> Bool {
         var actions = [ModalAction(title: "OK", role: .cancel)]
         if let settingsTitle { actions.append(ModalAction(title: settingsTitle)) }
         let request = ModalRequest(
-            title: title, message: message, symbol: "exclamationmark.triangle",
+            title: title, message: message, kind: .error,
             actions: actions, defaultIndex: 0, cancelIndex: 0)
         return await present(request) == 1
     }
@@ -151,6 +188,7 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         volume = VolumeState(level: Double(current))
         let request = ModalRequest(
             title: "Set Volume", message: "Choose the output volume.", symbol: "speaker.wave.2",
+            kind: .info,
             actions: [
                 ModalAction(title: "Set Volume"),
                 ModalAction(title: "Cancel", role: .cancel),
