@@ -131,11 +131,7 @@ enum IconCache {
             NSColor.white.withAlphaComponent(0.09).setFill()
             NSBezierPath(roundedRect: tile, xRadius: 9, yRadius: 9).fill()
 
-            let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
-                .applying(.init(paletteColors: [.white.withAlphaComponent(0.85)]))
-            guard
-                let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
-                    .withSymbolConfiguration(config)
+            guard let symbol = glyph(named: name, tint: .white.withAlphaComponent(0.85))
             else { return true }
             let size = symbol.size
             symbol.draw(
@@ -147,6 +143,26 @@ enum IconCache {
         let (icon, cost) = downsampled(image)
         cache.setObject(icon, forKey: key, cost: cost)
         return icon
+    }
+
+    /// Most command tiles draw a real SF Symbol, pre-tinted via `NSImage.SymbolConfiguration`; a few (Bluetooth has
+    /// no SF Symbol glyph) fall back to a template asset from `Assets.xcassets`, tinted by compositing instead.
+    private static func glyph(named name: String, tint: NSColor) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
+            .applying(.init(paletteColors: [tint]))
+        if let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+        {
+            return symbol
+        }
+        guard let asset = NSImage(named: name) else { return nil }
+        let assetSize = NSSize(width: 21, height: 21)
+        return NSImage(size: assetSize, flipped: false) { rect in
+            asset.draw(in: rect)
+            tint.set()
+            rect.fill(using: .sourceAtop)
+            return true
+        }
     }
 
     /// Rasterize the multi-rep workspace icon into one `displayPixel`-square bitmap, returning it and its decoded byte cost.
