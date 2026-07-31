@@ -145,8 +145,7 @@ enum IconCache {
         return icon
     }
 
-    /// Most command tiles draw a real SF Symbol, pre-tinted via `NSImage.SymbolConfiguration`; a few (Bluetooth has
-    /// no SF Symbol glyph) fall back to a template asset from `Assets.xcassets`, tinted by compositing instead.
+    /// Most tiles draw an SF Symbol, pre-tinted via `SymbolConfiguration`; names SF Symbols lacks (Bluetooth, a SIG trademark) fall back to a template asset tinted by compositing.
     private static func glyph(named name: String, tint: NSColor) -> NSImage? {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
             .applying(.init(paletteColors: [tint]))
@@ -156,7 +155,8 @@ enum IconCache {
             return symbol
         }
         guard let asset = NSImage(named: name) else { return nil }
-        let assetSize = NSSize(width: 21, height: 21)
+        // A 24pt box lands the asset's ink at the ~22pt optical height the SF Symbols above draw at pointSize 21.
+        let assetSize = NSSize(width: 24, height: 24)
         return NSImage(size: assetSize, flipped: false) { rect in
             asset.draw(in: rect)
             tint.set()
