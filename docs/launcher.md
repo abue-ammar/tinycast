@@ -35,6 +35,36 @@ frecency boost (frequency plus decaying recency). The boost can reorder results 
 tier but cannot make a weaker match kind beat a stronger one. Matching strips invisible Unicode
 format scalars first, since app metadata can contain bidi/zero-width markers before the visible name.
 
+## Pinyin
+
+An entry whose name carries a Han character also matches on its Latin reading. `Pinyin.aliases`
+(`Core/Pinyin.swift`) returns the full reading and the per-character initials, and `AppEntry.init`
+attaches them to every entry it builds — so applications, System Settings panes, snippets, system
+commands and custom commands all get them from one place rather than each call site. 微信 answers to
+`weixin` and to `wx`, 网易云音乐 to `wangyiyunyinyue` and `wyyyy`. A name in no Han script costs one
+scalar range check and gets no alias.
+
+Readings come from `CFStringTokenizer`'s Latin transcription rather than
+`kCFStringTransformMandarinLatin`, because the tokenizer segments words before reading them and so
+resolves a polyphone in context where a character-at-a-time transform cannot: 音乐 is `yinyue`, not
+`yinle`, and 地图 is `ditu`, not `detu`.
+
+Initials need one syllable per character, but the transcription arrives word-grouped
+(`wangyi yun yinyue`), so `Pinyin.syllables` cuts it against the syllable inventory macOS itself
+transliterates to. Pinyin is ambiguous on its own — `xian` is 西安 or 险 — and it is the known
+character count that makes the boundaries decidable; the cut is longest-first, so `pingan` is 平安. A
+reading that won't cut still searches in full, it just contributes no initial-letter shortcut, and a
+one-letter initial is dropped rather than matching everything it leads.
+
+A reading is a weaker claim on the query than the name itself, so `AppEntry` keeps the two apart:
+`literalAliases` holds literal strings (a snippet's keyword) and scores in the name's own tiers,
+while `romanizedAliases` is scored `FuzzyMatch.romanizedPenalty` lower — half the gap between two
+tiers, and deliberately more than `LauncherRankingStore.maximumBoost`, so learned ranking cannot lift
+a reading back over the literal match it sits under. A reading therefore lands under the literal
+match of the same kind without falling past the kind below it: typing `safari` can never lose Safari
+to something whose pinyin spells it, but `wx` still reaches 微信 ahead of a longer name that merely
+starts with those letters. Names are read once per scan, off-main with the rest of `AppIndex.scan`.
+
 Selecting a launcher result records every prefix of the submitted query, so choosing WhatsApp for
 `wha` also teaches `w` and `wh`. Direct hotkeys and empty-query favorites do not affect learned
 ranking. Learned data stays on device in `launcher-ranking.json`; a result that has learned ranking
@@ -102,7 +132,7 @@ execution semantics.
 
 > **Invariant:** `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from
 > `Tinycast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test
-> is meaningless.
+> is meaningless. It compiles the real `Core/Pinyin.swift`, which must therefore stay Foundation-only.
 
 The ranking harness covers prefix learning, frequency/recency scoring, persistence, and both reset
 paths; see the command in `development.md`.

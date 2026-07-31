@@ -75,7 +75,8 @@ app; changes always apply (fixed build path — no need to delete `build/`).
 There's no XCTest target. Standalone harnesses:
 
 ```sh
-swift Tools/fuzz-test.swift                                        # launcher fuzzy matcher
+swiftc -swift-version 6 Tinycast/Core/Pinyin.swift Tools/fuzz-test.swift \
+    -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher fuzzy matcher + pinyin
 swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
     -o /tmp/ranking-test && /tmp/ranking-test                      # learned launcher ranking
 swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
@@ -98,8 +99,9 @@ swiftc -swift-version 6 Tinycast/Core/SystemCommand.swift Tools/system-command-t
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
-change the scoring in one and mirror it in the other. The calc harness compiles the real engine
-sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only. The system-command harness
+change the scoring in one and mirror it in the other. It also compiles the real `Pinyin.swift`, which
+must therefore stay Foundation-only. The calc harness compiles the real engine sources, which is why
+`Tinycast/Core/Calculator/` must stay Foundation-only. The system-command harness
 similarly keeps `SystemCommand.swift` independent from AppKit and all command side effects.
 
 The clipboard harness likewise compiles the real `ClipboardStore.swift`, so that file must keep to

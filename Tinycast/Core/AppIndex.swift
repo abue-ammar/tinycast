@@ -15,8 +15,24 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let url: URL
     let bundleID: String?
     let kind: Kind
-    /// Extra strings this entry also matches on in search — a snippet's keyword. Empty for every other kind.
-    var matchAliases: [String] = []
+    /// Extra literal strings this entry also matches on — a snippet's keyword. Scored in the name's own tiers.
+    let literalAliases: [String]
+    /// Latin readings of a Han-script name, scored half a tier below the literal ladder.
+    let romanizedAliases: [String]
+
+    /// Readings are derived here rather than at the call sites, so no entry kind can be added without them.
+    init(
+        id: String, name: String, url: URL, bundleID: String?, kind: Kind,
+        literalAliases: [String] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.url = url
+        self.bundleID = bundleID
+        self.kind = kind
+        self.literalAliases = literalAliases
+        self.romanizedAliases = Pinyin.aliases(for: name)
+    }
 
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
@@ -225,7 +241,7 @@ final class AppIndex: ObservableObject {
                     url: record.fileURL,
                     bundleID: nil,
                     kind: .snippet,
-                    matchAliases: [record.snippet.keyword].compactMap { $0 })
+                    literalAliases: [record.snippet.keyword].compactMap { $0 })
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != snippetEntries else { return }
@@ -319,12 +335,19 @@ final class AppIndex: ObservableObject {
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let learned = ranking.boosts(query: q)
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
-            // An entry matches on its name or on any alias it carries (a snippet's keyword), whichever scores best — all inside the same tiers, so an alias can never outrank a better name match.
+            // An entry matches on its name, on a literal alias it carries (a snippet's keyword), or on a reading — whichever scores best.
             var bestScore = FuzzyMatch.score(query: q, candidate: app.name)
-            for candidate in app.matchAliases {
-                guard let aliasScore = FuzzyMatch.score(query: q, candidate: candidate) else { continue }
-                bestScore = max(bestScore ?? aliasScore, aliasScore)
+            func consider(_ candidates: [String], penalty: Int = 0) {
+                for candidate in candidates {
+                    guard let score = FuzzyMatch.score(query: q, candidate: candidate) else {
+                        continue
+                    }
+                    bestScore = max(bestScore ?? score - penalty, score - penalty)
+                }
             }
+            consider(app.literalAliases)
+            // A reading is a weaker claim on the query than the name itself, so it lands below the literal match of the same kind but still above the next kind down: typing "safari" can never lose Safari to something whose pinyin spells it.
+            consider(app.romanizedAliases, penalty: FuzzyMatch.romanizedPenalty)
             guard let score = bestScore else { return nil }
             return (app, score + (learned[app.preferenceKey] ?? 0))
         }
@@ -341,6 +364,9 @@ final class AppIndex: ObservableObject {
 }
 
 enum FuzzyMatch {
+    /// Half the gap between two tiers, subtracted from a transliterated match so it ranks under the literal match of the same kind without falling past the kind below it. It also has to stay above `LauncherRankingStore.maximumBoost`, or learned ranking could lift a reading back over the literal match it sits under.
+    static let romanizedPenalty = 5_000
+
     /// Tiered relevance score (higher is better), or nil when the query doesn't match; tiers are spaced so a better kind always wins.
     static func score(query: String, candidate: String) -> Int? {
         let q = normalized(query)

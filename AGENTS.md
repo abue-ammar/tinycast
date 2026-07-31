@@ -78,9 +78,11 @@ Never break these without an explicit task to do so.
   template engine, repository and keyword policies stay Foundation-only, and the AppKit files there
   keep their dependencies to what the harness can stub. `Core/SystemCommand.swift` is also
   Foundation-only for `Tools/system-command-test.swift`; platform effects belong in
-  `SystemCommandRunner`, while confirmation and failure UI remain in `AppCore`.
+  `SystemCommandRunner`, while confirmation and failure UI remain in `AppCore`. `Core/Pinyin.swift` is
+  the same for `Tools/fuzz-test.swift`, which compiles it alongside its `FuzzyMatch` copy.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
-  scoring in one, mirror it in the other, or the test is meaningless.
+  scoring in one, mirror it in the other, or the test is meaningless. It also compiles the real
+  `Core/Pinyin.swift`, so build it with `swiftc`, not `swift`.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
   `CurrencyData.generated.swift` by `node Tools/gen-currencies.js`** — never edit either by hand.
   Currency names, signs and uncontested nouns are generated (Frankfurter × CLDR); the only
@@ -130,9 +132,9 @@ Never break these without an explicit task to do so.
 ## Project Layout
 
 - `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
-  `Core/Calculator/` and `Core/Emoji/` are Foundation-only engines; `Core/Snippets/` is a
-  standalone-harness input in full; `Core/Theme.swift` is the design-token source;
-  `Core/HotKey/` is the in-house hotkey stack.
+  `Core/Calculator/` and `Core/Emoji/` are Foundation-only engines, as is `Core/Pinyin.swift`;
+  `Core/Snippets/` is a standalone-harness input in full; `Core/Theme.swift` is the design-token
+  source; `Core/HotKey/` is the in-house hotkey stack.
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
   `Emoji/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
 - `Tinycast/App/` — `@main` app + delegate.
