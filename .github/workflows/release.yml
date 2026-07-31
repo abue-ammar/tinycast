@@ -82,6 +82,10 @@ jobs:
 
       # Build the signed .app into an ephemeral DerivedData dir. Channel identity (name, bundle id,
       # version) comes from build-setting overrides so beta/stable ship side-by-side.
+      # ARCHS is passed explicitly: with no -destination, xcodebuild resolves the default one to the
+      # runner's own arch and that narrows ARCHS to it, overriding the config's `arm64 x86_64`. On
+      # this arm64 runner that silently shipped arm64-only DMGs. A command-line value outranks the
+      # destination, so this is what actually pins the universal build.
       - name: Build app
         env:
           VERSION: ${{ steps.meta.outputs.full_version }}
@@ -91,11 +95,27 @@ jobs:
         run: |
           xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Tinycast Self-Signed" \
             OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
             PRODUCT_NAME="$DISPLAY_NAME" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
+
+      # A single-arch slip is invisible until an Intel user reports it, so fail the release here.
+      - name: Verify universal binary
+        env:
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+        run: |
+          BIN="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app/Contents/MacOS/${DISPLAY_NAME}"
+          ARCHS_BUILT="$(lipo -archs "$BIN")"
+          echo "Built architectures: $ARCHS_BUILT"
+          for want in arm64 x86_64; do
+            case " $ARCHS_BUILT " in
+              *" $want "*) ;;
+              *) echo "::error::Missing $want slice — got '$ARCHS_BUILT'"; exit 1 ;;
+            esac
+          done
 
       # Pack the .app + an /Applications symlink into a compressed DMG under dist/.
       - name: Package DMG
