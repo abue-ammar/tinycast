@@ -66,8 +66,8 @@ Those routes run only on explicit activation. Automation, Accessibility or Bluet
 requested at first use, and denial produces an alert linking to the relevant System Settings pane.
 Tinycast remains locked to dark appearance even when Toggle System Appearance changes macOS.
 
-Restart, Shut Down, Log Out, Empty Trash and Quit All Applications confirm before execution, with
-Return assigned to Cancel. Every dialog is Tinycast's own: confirmations, failure reports and the Set
+Restart, Shut Down, Log Out, Empty Trash and Quit All Applications confirm before execution: ↵ runs
+the action, Escape cancels. Every dialog is Tinycast's own: confirmations, failure reports and the Set
 Volume slider all render through `ModalWindowController` rather than an `NSAlert`
 (see [ui.md](ui.md#modals--hud)). Volume and mute commands also show Tinycast's transient volume HUD,
 since macOS only draws its own for real media keys.

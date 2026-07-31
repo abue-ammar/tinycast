@@ -74,9 +74,8 @@ is dropped while the actual error survives.
 
 `AppCore.runCustomCommand(id:)` is the one funnel both palette activation and the global hotkey reach,
 so the gate lives there and neither path can bypass it. The palette hides before the dialog it is a
-floating panel and would sit above it. The dialog shows the command text as well as its name, and ↵ is
-bound to **Cancel**: the command is one ↵ away in the palette, and a reflexive second ↵ must not fire
-something the user asked to be warned about. The gate is Tinycast's own modal, not an `NSAlert`
+floating panel and would sit above it. The dialog shows the command text as well as its name; ↵ runs
+it and Escape cancels. The gate is Tinycast's own modal, not an `NSAlert`
 ([ui.md](ui.md#modals--hud)): presentation is `async` with no nested run loop, and the presenter itself
 refuses a second dialog while one is up, so a held shortcut can't stack them.
 
@@ -94,7 +93,7 @@ on grepping stderr, since 127 is equally a plain typo. The command string itself
 Foundation-only harness. Verify by hand:
 
 1. Activating a gated command from the palette hides the palette *before* the dialog appears.
-2. ↵ at the dialog cancels; clicking **Run** runs.
+2. ↵ at the dialog runs the command; Escape or clicking **Cancel** cancels.
 3. Pressing the command's hotkey while its dialog is up does not stack a second dialog.
 4. A gated command triggered by hotkey with no palette open still confirms.
 5. An rc-file-only alias with the flag off shows the 127 hint, and **Open Settings…** opens the pane.

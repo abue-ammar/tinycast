@@ -130,8 +130,8 @@ Never break these without an explicit task to do so.
   `ModalWindowController` (owned by `AppCore`; reachable elsewhere via `AppCore.showNotice` /
   `askConfirmation`). Presentation is `async`, so there is no nested run loop, and the presenter
   refuses a second dialog while one is up that, not a flag, is what stops a held hotkey stacking
-  dialogs. **↵ belongs to Cancel on every destructive dialog.** See
-  [ui.md](docs/ui.md#modals--hud).
+  dialogs. **↵ runs the dialog's primary action, Escape cancels**, on every dialog including
+  destructive ones. See [ui.md](docs/ui.md#modals--hud).
 - **Read [`docs/ui.md`](docs/ui.md) before any restyle or new view.** `Core/Theme.swift` is the single
   design-token source.
 - **`Core/EdgeDissolve.swift` and `Core/ThinScrollbar.swift` are off-limits.** Both are tuned by eye

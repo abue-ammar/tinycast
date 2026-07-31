@@ -183,9 +183,9 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
 - **Keys.** `ModalPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
   `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons print only
   the caps the panel actually handles (`↵`, `esc`), so a printed cap can't drift from behavior.
-  **↵ goes to Cancel on every destructive dialog** the triggering command is one ↵ away in the
-  palette, and a reflexive second press must not run it. Arrow keys step the volume slider by the same
-  1/16 the volume commands use; click-away resolves as a dismissal.
+  **↵ runs the dialog's primary action; Escape cancels**, on every dialog including destructive ones.
+  Arrow keys step the volume slider by the same 1/16 the volume commands use; click-away resolves as
+  a dismissal.
 - **Async, not modal.** Presentation is `async` (`withCheckedContinuation`), so there is no nested run
   loop. A held hotkey can't stack dialogs: while one is up, a second request resolves immediately as a
   dismissal which is why the old `isConfirmingCommand` re-entrancy flag is gone.

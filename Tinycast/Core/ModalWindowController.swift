@@ -18,7 +18,7 @@ struct ModalRequest {
     var message: String?
     var symbol: String = "exclamationmark.triangle"
     var actions: [ModalAction]
-    /// The button ↵ fires. Destructive dialogs point it at Cancel, so a reflexive second Return can't run the very thing the user asked to be warned about (same rule the old `NSAlert` gate used).
+    /// The button ↵ fires, normally the primary/confirm action.
     var defaultIndex: Int
     /// Resolved when the modal goes away without a choice: Esc, or losing key status to a click elsewhere.
     var cancelIndex: Int
@@ -126,7 +126,7 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
                 ModalAction(title: confirmTitle, role: destructive ? .destructive : .normal),
                 ModalAction(title: "Cancel", role: .cancel),
             ],
-            defaultIndex: 1, cancelIndex: 1)
+            defaultIndex: 0, cancelIndex: 1)
         return await present(request) == 0
     }
 
