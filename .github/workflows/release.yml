@@ -21,6 +21,10 @@ on:
 permissions:
   contents: write
 
+# Pinned in one place so the appcast signer can never drift from the Sparkle SPM pin in project.yml.
+env:
+  SPARKLE_VERSION: "2.9.4"
+
 jobs:
   build:
     runs-on: macos-26
@@ -44,10 +48,12 @@ jobs:
           CHANNEL="${{ github.event.inputs.channel }}"
           BASE_VERSION="${{ github.event.inputs.version }}"
           # Each channel is a distinct, side-by-side app: its own display name + bundle id,
-          # and its own Homebrew cask in the abue-ammar/homebrew-tinycast tap.
+          # its own Homebrew cask in the abue-ammar/homebrew-tinycast tap, and its own Sparkle feed
+          # (two separate appcasts, never sparkle:channel — a beta host must never be offered the
+          # stable DMG). This is the single place channel identity is decided.
           case "$CHANNEL" in
-            beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.tinycast.app.beta";  CASK="tinycast@beta";  PRERELEASE=true ;;
-            stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.tinycast.app";       CASK="tinycast";       PRERELEASE=false ;;
+            beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.tinycast.app.beta";  CASK="tinycast@beta";  APPCAST="appcast-beta.xml";  PRERELEASE=true ;;
+            stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.tinycast.app";       CASK="tinycast";       APPCAST="appcast.xml";       PRERELEASE=false ;;
           esac
           FULL="${BASE_VERSION}${SUFFIX}"
           {
@@ -55,6 +61,7 @@ jobs:
             echo "display_name=${DISPLAY}"
             echo "bundle_id=${BUNDLE}"
             echo "cask_name=${CASK}"
+            echo "appcast_file=${APPCAST}"
             echo "dmg_file=Tinycast-${FULL}.dmg"
             echo "prerelease=${PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
@@ -141,6 +148,56 @@ jobs:
           xattr -dr com.apple.quarantine \"/Applications/${{ steps.meta.outputs.display_name }}.app\"
           \`\`\`" \
             $PRERELEASE_FLAG
+
+      # Sign the DMG with the Sparkle EdDSA key and rewrite this channel's appcast. Runs after the
+      # release is published because the item's download URL must already resolve, and before the
+      # cask bump so a failure here can't leave the tap ahead of the feed.
+      - name: Sign DMG and update appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          APPCAST: ${{ steps.meta.outputs.appcast_file }}
+          CASK: ${{ steps.meta.outputs.cask_name }}
+          VERSION: ${{ steps.meta.outputs.full_version }}
+        run: |
+          if [ -z "${SPARKLE_ED_PRIVATE_KEY}" ]; then
+            echo "::warning::SPARKLE_ED_PRIVATE_KEY secret not set — skipping appcast update. Add it to enable in-app updates."
+            exit 0
+          fi
+          curl -fsSL -o /tmp/sparkle.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p /tmp/sparkle
+          tar -xJf /tmp/sparkle.tar.xz -C /tmp/sparkle
+          # --ed-key-file - reads the key from stdin, so it never lands in a Keychain, a file or the
+          # log. dist/ holds only the DMG just built, so the feed ends up with exactly that one item
+          # — which is all Sparkle needs — and deltas are off because there is no older archive here.
+          echo "${SPARKLE_ED_PRIVATE_KEY}" | /tmp/sparkle/bin/generate_appcast \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/abue-ammar/tinycast/releases/download/v${VERSION}/" \
+            --maximum-deltas 0 \
+            -o "website/public/${APPCAST}" \
+            dist/
+          # Land the appcast on main and nothing else: the workflow can be dispatched from any ref,
+          # so pushing HEAD would drop that ref's whole history onto main. Replay just this one file.
+          git fetch --depth=1 origin main
+          cp "website/public/${APPCAST}" "${RUNNER_TEMP}/${APPCAST}"
+          git checkout -B appcast-publish FETCH_HEAD
+          cp "${RUNNER_TEMP}/${APPCAST}" "website/public/${APPCAST}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "website/public/${APPCAST}"
+          if git diff --cached --quiet; then
+            echo "No appcast changes to commit."
+            exit 0
+          fi
+          git commit -m "appcast: ${CASK} ${VERSION}"
+          # The commit touches website/, which is exactly what .github/workflows/website.yml watches,
+          # so pushing it is what deploys the new feed to GitHub Pages.
+          if ! git push origin HEAD:main; then
+            # main moved while we were building — replay this one commit on top of it and retry once.
+            git fetch --depth=1 origin main
+            git rebase FETCH_HEAD || { echo "::error::Could not rebase the appcast commit onto main."; exit 1; }
+            git push origin HEAD:main || { echo "::error::Could not push the appcast commit to main."; exit 1; }
+          fi
 
       - name: Update Homebrew cask
         env:

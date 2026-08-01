@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sparkle feed for the beta channel (com.tinycast.app.beta / Tinycast Beta.app). A separate feed,
+     never sparkle:channel — a beta host must never be offered the stable DMG. Regenerated in full by
+     the "Sign DMG and update appcast" step of .github/workflows/release.yml — do not edit by hand.
+     No <item> means "no update available", which is the correct answer until the first Sparkle-era
+     release exists and keeps the very first update check from 404ing. -->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Tinycast Beta</title>
+    <link>https://abue-ammar.github.io/tinycast/appcast-beta.xml</link>
+    <description>Update feed for the Tinycast beta channel.</description>
+  </channel>
+</rss>
