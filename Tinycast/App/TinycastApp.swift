@@ -15,6 +15,11 @@ struct TinycastApp: App {
         ) {
             Button("Open \(appName)") { AppCore.shared.showPalette(mode: .launcher) }
             Button("Clipboard History") { AppCore.shared.showPalette(mode: .clipboard) }
+            // Absent on the dev channel, which has no update feed.
+            if AppCore.shared.updates.isSupported {
+                Divider()
+                Button("Check for Updates…") { AppCore.shared.checkForUpdates() }
+            }
             Divider()
             Button("Settings...") { AppCore.shared.showSettings() }
                 .keyboardShortcut(",")

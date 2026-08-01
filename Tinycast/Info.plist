@@ -32,5 +32,18 @@
 	<string>Tinycast uses Bluetooth access only when you run the Toggle Bluetooth command.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Tinycast</string>
+	<key>SUPublicEDKey</key>
+	<string>OsIfXjEIsBSnebzgkLBB4ChJlKe32Kw2KW+EHtmc/Sw=</string>
+	<!-- Present and NO: the key merely being present is what permanently suppresses Sparkle's own permission prompt, and it keeps startUpdater() from arming a timer or touching the network. The Settings toggle writes the matching user default, which SUHost prefers over this. -->
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<!-- Nothing about this machine is ever appended to the feed request. -->
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<!-- No SUFeedURL on purpose: the feed comes from SPUUpdaterDelegate, which returns nil on the dev channel so a local build can never update itself. -->
 </dict>
 </plist>

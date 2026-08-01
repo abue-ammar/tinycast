@@ -26,12 +26,21 @@ settings:
       STRIP_SWIFT_SYMBOLS: YES
       DEAD_CODE_STRIPPING: YES
 
+# Sparkle ships as a prebuilt xcframework binary target, so this resolves to a download, not a
+# source build. Pin >= 2.9.4: 2.9.3 opened the update window behind everything for dockless apps.
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.9.4
+
 targets:
   Tinycast:
     type: application
     platform: macOS
     sources:
       - path: Tinycast
+    dependencies:
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app
