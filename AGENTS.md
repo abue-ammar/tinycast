@@ -42,7 +42,7 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
   [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
   [snippets](docs/snippets.md) · [window management](docs/window-management.md) ·
-  [hotkeys](docs/hotkeys.md) · [UI & design system](docs/ui.md).
+  [hotkeys](docs/hotkeys.md) · [updates](docs/updates.md) · [UI & design system](docs/ui.md).
 
 ## Critical Invariants
 
@@ -110,6 +110,20 @@ Never break these without an explicit task to do so.
   **cacheless** `URLSession` (`.ephemeral`, `urlCache = nil`), never `URLSession.shared` — a cacheable
   response would leave a second copy in the on-disk `URLCache` that opting out doesn't delete.
   `CurrencyRateStore` is the reference implementation — follow it rather than inventing a second shape.
+- **Updates use one feed per channel, never `sparkle:channel`.** Sparkle's default channel is always
+  allowed, so a channel attribute would offer a beta host the stable DMG, whose app name and bundle id
+  match neither — the install is then rejected. The feed comes from
+  `SPUUpdaterDelegate.feedURLStringForUpdater:` (there is no `SUFeedURL` in Info.plist) and is `nil`
+  on the dev channel, which is what makes dev provably un-updatable. Validation rests on two strands:
+  the stable self-signed cert (Sparkle checks the new bundle against the *old* one's designated
+  requirement — a leaf hash match, never Gatekeeper) **and** the EdDSA key; either alone recovers the
+  channel, losing both leaves every install unupdatable, and the Developer-ID rotation fallback never
+  fires for us because it hardcodes `anchor apple generic`. So never ship an unsigned build, and
+  **never add an `NSUpdateSecurityPolicy` dict** — it forces Sparkle off its atomic-swap path and
+  brings back the "wants to manage apps" prompt (Sparkle #2591). Background checks are networked, so
+  they ship off behind `SUEnableAutomaticChecks = NO` (which also zeroes startup network I/O and
+  suppresses Sparkle's own prompt), and the flag stays out of `AppSettings` so a `SettingsBackup`
+  import can't grant network access. See [updates.md](docs/updates.md).
 - **Snippets are channel-isolated and path-identified.** Persist them under
   `~/Library/Application Support/<bundle-id>/Snippets/`; `StoredSnippet.ID` is the standardized source
   path, and external rename is delete + create. The feature ships off and its enable switch doubles as
@@ -171,7 +185,7 @@ Never break these without an explicit task to do so.
   [`docs/clipboard.md`](docs/clipboard.md) · [`docs/emoji.md`](docs/emoji.md) ·
   [`docs/snippets.md`](docs/snippets.md) ·
   [`docs/window-management.md`](docs/window-management.md) ·
-  [`docs/hotkeys.md`](docs/hotkeys.md) — subsystem internals.
+  [`docs/hotkeys.md`](docs/hotkeys.md) · [`docs/updates.md`](docs/updates.md) — subsystem internals.
 - [`docs/ui.md`](docs/ui.md) — the full visual design system, tokens, scrollbars, section headers.
 - [`docs/development.md`](docs/development.md) — build, test, package, release.
 - [`docs/signing.md`](docs/signing.md) — signing model and Gatekeeper.

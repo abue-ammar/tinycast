@@ -70,13 +70,68 @@ rm -f /tmp/signing.p12.base64   # holds your private key — delete it
 ```
 
 If you ever lose the secrets, just re-run this section — as long as the `Tinycast Self-Signed`
-identity is still in your keychain, the exported identity is the same, so users are unaffected. If you
-lose the identity entirely, recreate it (step 1) and re-do this; existing users will re-grant
-Accessibility once on their next update, then it's stable again.
+identity is still in your keychain, the exported identity is the same, so users are unaffected.
+
+## 3. Generate the Sparkle EdDSA key (once)
+
+[In-app updates](updates.md) are signed with an Ed25519 key separate from the code-signing
+identity. It lives in the login keychain the same way the identity does — service
+`https://sparkle-project.org`, account `ed25519` — and, like the identity, you create it once and
+never rotate it.
+
+The matching public key is already in `Tinycast/Info.plist` as
+`SUPublicEDKey` = `OsIfXjEIsBSnebzgkLBB4ChJlKe32Kw2KW+EHtmc/Sw=`, so the key below is not a new one to
+invent: it is the private half of that, exported out of the keychain and handed to CI.
+
+`generate_keys` ships in Sparkle's release tarball, which unpacks **flat** (no top-level directory),
+so give it a directory of its own:
+
+```sh
+curl -fsSL -o /tmp/sparkle.tar.xz \
+  https://github.com/sparkle-project/Sparkle/releases/download/2.9.4/Sparkle-2.9.4.tar.xz
+mkdir -p /tmp/sparkle && tar -xJf /tmp/sparkle.tar.xz -C /tmp/sparkle
+
+# Export the existing private key from the login keychain (approve the dialog if asked).
+# Run it with no arguments first if the key doesn't exist yet — that generates and stores it,
+# and prints the public key to put in Info.plist.
+/tmp/sparkle/bin/generate_keys -x /tmp/sparkle-ed.key
+
+gh secret set SPARKLE_ED_PRIVATE_KEY --repo abue-ammar/tinycast < /tmp/sparkle-ed.key
+
+rm -rf /tmp/sparkle /tmp/sparkle.tar.xz
+rm -f /tmp/sparkle-ed.key   # holds your private key — delete it
+```
+
+The release workflow uses that secret to sign each DMG and stamp the signature into the channel's
+appcast. Without it, releases still publish but no client will accept them.
+
+## What losing a key actually costs
+
+Sparkle validates an update if **either** the EdDSA signature checks out **or** the new bundle matches
+the old bundle's code-signing designated requirement, so the `.p12` and the EdDSA key are *both*
+load-bearing and **either one alone can recover the update channel**. Losing one is survivable; losing
+both leaves every existing install with no in-app path forward.
+
+That matters more here than it would elsewhere, because Sparkle's usual escape hatch doesn't exist for
+us. Its key-rotation fallback — accepting an update signed by a new key when the bundle still
+validates against a Developer ID — hardcodes `anchor apple generic`, which a self-signed certificate
+can never satisfy. So there is no "sign with the new key and let the old code signature vouch for it"
+recovery here.
+
+Practically:
+
+- **Lost the CI secrets, still have the keychain** — re-run §2 and §3. Nothing changes for users.
+- **Lost the code-signing identity, still have the EdDSA key** — recreate the identity (§1), re-do §2.
+  Updates keep flowing on the EdDSA signature; existing users re-grant Accessibility once on that
+  update, then it's stable again.
+- **Lost the EdDSA key, still have the identity** — generate a new one (§3, no arguments) and update
+  `SUPublicEDKey`. Updates keep flowing on the code-signature match.
+- **Lost both** — existing installs can no longer be updated in place. Back up the login keychain.
 
 ## Quarantine (separate from signing)
 
 macOS quarantines anything downloaded from the internet, and Gatekeeper blocks even a correctly
 self-signed app with an "unverified developer" warning. The Homebrew cask runs
 `xattr -dr com.apple.quarantine` in `postflight`, so **brew users never touch it**. People who
-download the DMG directly clear it once by hand.
+download the DMG directly clear it once by hand. In-app updates need neither: Sparkle strips the
+attribute from the bundle it installs (see [updates.md](updates.md)).

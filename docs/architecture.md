@@ -13,9 +13,9 @@ System-command catalog, launcher integration and permission behavior are documen
 manager — `AppIndex`, `ClipboardStore`, `ClipboardManager`, `SnippetsStore`,
 `SnippetKeywordListener`, `SnippetTextInjector`, `HotKeyManager`, `AppSettings`, `FavoritesStore`,
 `VisibilityStore`, `LauncherRankingStore`, `CustomCommandStore`, `CalculatorHistoryStore`,
-`CurrencyRateStore`, `RunningAppsMonitor`, `PaletteViewModel` — plus the window controllers, including
-`ModalWindowController` (dialogs are reached from elsewhere via `AppCore.showNotice` /
-`askConfirmation`, so the controller stays single-owned).
+`CurrencyRateStore`, `UpdateStore`, `RunningAppsMonitor`, `PaletteViewModel` — plus the window
+controllers, including `ModalWindowController` (dialogs are reached from elsewhere via
+`AppCore.showNotice` / `askConfirmation`, so the controller stays single-owned).
 `AppDelegate.applicationDidFinishLaunching` calls
 `AppCore.shared.start()` and nothing else; that is the single wiring point. All palette / paste /
 launch actions are methods on `AppCore` that the SwiftUI views call.

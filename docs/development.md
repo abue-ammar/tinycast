@@ -129,6 +129,10 @@ frame. All of it runs headless because the layer is pure: `WindowMover` owns eve
 and is deliberately not compiled in. The full contract is in
 [window-management.md](window-management.md).
 
+Updates have no harness on purpose: Sparkle is a binary framework and both `UpdateStore` and
+`UpdateUserDriver` are AppKit-bound, so there is no pure layer to compile standalone (see
+[updates.md](updates.md#no-standalone-harness)).
+
 ## Format & lint
 
 Formatting is whatever Xcode's own reindent does — there's no separate formatter. Linting is
@@ -219,6 +223,17 @@ It builds on a `macos-26` runner with Xcode 26 and publishes a GitHub Release ta
 `v<full-version>` with a versioned DMG asset (`Tinycast-<full-version>.dmg`), marked prerelease
 for beta. On success it also bumps the matching cask in the tap (below).
 
+### Appcast signing
+
+The same DMG is the Sparkle update archive, so the job runs `generate_appcast` over it — which
+EdDSA-signs the archive and rewrites the
+channel's appcast — `website/public/appcast.xml` for stable, `website/public/appcast-beta.xml` for
+beta — with the new `<item>`, then commits it. That commit touches `website/`, which is exactly what
+the website workflow (below) triggers on, so the appcast reaches GitHub Pages through the existing
+site deploy. Signing needs a `SPARKLE_ED_PRIVATE_KEY` repo secret — the Ed25519 private key exported
+from the login keychain, set up once per **[signing.md](signing.md) §3**. The full update contract,
+including the two-feed channel model, is in [updates.md](updates.md).
+
 ### Homebrew tap automation
 
 The release job's final step rewrites the `version` + `sha256` of the channel's cask (`tinycast`
@@ -226,6 +241,10 @@ or `tinycast@beta`) in the
 [`homebrew-tinycast`](https://github.com/abue-ammar/homebrew-tinycast) tap and pushes. It needs a
 `HOMEBREW_TAP_TOKEN` repo secret — a fine-grained PAT with **Contents: read/write** on the tap
 repo. Without the secret the step logs a warning and skips (the release still publishes).
+
+Each cask must also declare `auto_updates true` so `brew upgrade` compares against the installed
+app's `Info.plist` instead of clobbering a self-updated install. That's a one-line manual edit in the
+tap, not something CI writes — see [updates.md](updates.md#homebrew-coexistence).
 
 ## Website
 

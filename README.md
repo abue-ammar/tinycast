@@ -19,8 +19,9 @@ A tiny, fully native macOS launcher — the essentials, without the bloat.
   <img src="docs/screenshot.png" alt="Tinycast command palette" width="720">
 </p>
 
-Around **3 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
-CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there's nothing to it.
+Around **7 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
+CPU churn. Just SwiftUI + AppKit, with [Sparkle](https://sparkle-project.org) for updates as the one
+dependency. It's fast because there's nothing to it.
 
 ## Features
 
