@@ -135,17 +135,22 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
         // The field editor swallows some `⌘` chords (e.g. `⌘,`) before SwiftUI `.onKeyPress` can fire, and `LSUIElement` apps have no main menu for `⌘W` or `⌘Esc`. Handle them at the panel level.
         panel.onCommandShortcut = { [weak self] event in
-            let commandOnly = event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
-            guard commandOnly, let self else { return false }
-            switch Int(event.keyCode) {
-            case kVK_ANSI_Comma:
+            guard let self, !event.isARepeat,
+                event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
+            else { return false }
+            // Escape has no character, so it matches by key code.
+            if Int(event.keyCode) == kVK_Escape {
+                self.core.palette.prepare(mode: .launcher)
+                return true
+            }
+            // `⌘,` and `⌘W` are character chords like the rest of the palette's (⌘K, ⌘P): matching their QWERTY key codes would fire the wrong action on Dvorak, where the two are transposed.
+            guard let character = event.charactersIgnoringModifiers?.lowercased() else { return false }
+            switch character {
+            case ",":
                 self.core.showSettings()
                 return true
-            case kVK_ANSI_W:
+            case "w":
                 self.core.hidePalette()
-                return true
-            case kVK_Escape:
-                self.core.palette.prepare(mode: .launcher)
                 return true
             default:
                 return false
