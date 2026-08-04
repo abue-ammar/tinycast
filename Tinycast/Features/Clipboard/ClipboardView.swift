@@ -77,6 +77,7 @@ struct ClipboardList: View {
             }
             .edgeDissolve()
             .thinScrollbar()
+            .pinOriginOnInsetSettle(scroll, proxy: proxy)
             .onChange(of: scroll) { _, scroll in
                 switch scroll.kind {
                 case .top:
