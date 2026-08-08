@@ -125,6 +125,8 @@ struct RootPaletteView: View {
                     pillLabel: screen.primaryActionTitle, showActionGroup: showActionGroup)
             }
         }
+        // The panel has no title bar, so this thin top margin is the only place left to grab it.
+        .overlay(alignment: .top) { topDragStrip }
         // In-window overlays, so a menu stays clipped inside the panel.
         .overlay {
             if showAppMenu || showActions {
@@ -345,6 +347,11 @@ struct RootPaletteView: View {
             else { return .ignored }
             return launcher.quit(at: selection(in: launcher)) ? .handled : .ignored
         }
+    }
+
+    /// A thin invisible strip along the top edge, for grabbing the window with no title bar.
+    private var topDragStrip: some View {
+        Color.clear.frame(height: Theme.Size.headerPadding).windowDraggable()
     }
 
     private var header: some View {
