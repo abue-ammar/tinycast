@@ -93,17 +93,14 @@ struct CalculatorHistoryList: View {
             }
             .edgeDissolve()
             .thinScrollbar()
+            .applyTopScrollIntent(scroll, proxy: proxy)
             .onChange(of: scroll) { _, scroll in
-                switch scroll.kind {
-                case .top:
+                guard scroll.kind == .follow else { return }
+                // Snap to the origin on the first row so its section header shows too.
+                if firstRowSelected {
                     proxy.scrollToOrigin()
-                case .follow:
-                    // Snap to the origin on the first row so its section header shows too.
-                    if firstRowSelected {
-                        proxy.scrollToOrigin()
-                    } else if let selectedRowID {
-                        proxy.reveal(selectedRowID)
-                    }
+                } else if let selectedRowID {
+                    proxy.reveal(selectedRowID)
                 }
             }
         }

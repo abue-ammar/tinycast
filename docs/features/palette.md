@@ -17,6 +17,9 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   instead; resigning shifts the text a point or two.
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`).
+- **A mount-time top scroll is consumed once, after the header inset settles.** Later scroll intents
+  cancel that pending correction, so keyboard or mouse navigation cannot be pulled back to the
+  origin.
 
 ## Summoning
 

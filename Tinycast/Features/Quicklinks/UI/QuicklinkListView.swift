@@ -75,16 +75,13 @@ struct QuicklinkList: View {
             }
             .edgeDissolve()
             .thinScrollbar()
+            .applyTopScrollIntent(scroll, proxy: proxy)
             .onChange(of: scroll) { _, scroll in
-                switch scroll.kind {
-                case .top:
+                guard scroll.kind == .follow else { return }
+                if firstRowSelected {
                     proxy.scrollToOrigin()
-                case .follow:
-                    if firstRowSelected {
-                        proxy.scrollToOrigin()
-                    } else if let selectedID {
-                        proxy.reveal(selectedID.uuidString)
-                    }
+                } else if let selectedID {
+                    proxy.reveal(selectedID.uuidString)
                 }
             }
         }

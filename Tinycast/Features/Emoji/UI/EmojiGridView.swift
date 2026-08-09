@@ -125,18 +125,14 @@ struct EmojiGridView: View {
             }
             .edgeDissolve()
             .thinScrollbar()
+            .applyTopScrollIntent(scroll, proxy: proxy)
             .onChange(of: scroll) { _, scroll in
-                switch scroll.kind {
-                case .top:
+                guard scroll.kind == .follow, let selectedRowID else { return }
+                // Snap to the origin on the first row so its header shows too.
+                if selectedRowID == firstRowID {
                     proxy.scrollToOrigin()
-                case .follow:
-                    guard let selectedRowID else { return }
-                    // Snap to the origin on the first row so its header shows too.
-                    if selectedRowID == firstRowID {
-                        proxy.scrollToOrigin()
-                    } else {
-                        proxy.reveal(selectedRowID)
-                    }
+                } else {
+                    proxy.reveal(selectedRowID)
                 }
             }
         }

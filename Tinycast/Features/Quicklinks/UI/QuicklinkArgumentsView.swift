@@ -79,11 +79,10 @@ struct QuicklinkArgumentsView: View {
             }
             .edgeDissolve()
             .thinScrollbar()
+            .applyTopScrollIntent(scroll, proxy: proxy)
             .onChange(of: scroll) { _, scroll in
-                switch scroll.kind {
-                case .top: proxy.scrollToOrigin()
-                case .follow: proxy.reveal(String(selection))
-                }
+                guard scroll.kind == .follow else { return }
+                proxy.reveal(String(selection))
             }
         }
     }

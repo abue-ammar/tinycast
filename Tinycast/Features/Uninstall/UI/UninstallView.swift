@@ -49,17 +49,14 @@ struct UninstallList: View {
             }
             .edgeDissolve()
             .thinScrollbar()
+            .applyTopScrollIntent(scroll, proxy: proxy)
             .onChange(of: scroll) { _, scroll in
-                switch scroll.kind {
-                case .top:
+                guard scroll.kind == .follow else { return }
+                // On the first row, snap to the origin so the summary header shows too.
+                if firstRowSelected {
                     proxy.scrollToOrigin()
-                case .follow:
-                    // On the first row, snap to the origin so the summary header shows too.
-                    if firstRowSelected {
-                        proxy.scrollToOrigin()
-                    } else if let selectedID {
-                        proxy.reveal(selectedID)
-                    }
+                } else if let selectedID {
+                    proxy.reveal(selectedID)
                 }
             }
         }
