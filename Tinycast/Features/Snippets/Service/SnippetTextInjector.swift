@@ -887,8 +887,7 @@ struct PasteboardSnapshot {
                     pasteboardItem.setData(Data(), forType: ClipboardManager.internalType)
                 else { return nil }
             }
-            for value in item.values where index != 0 || firstString == nil || value.type != .string
-            {
+            for value in item.values where index != 0 || firstString == nil || value.type != .string {
                 guard pasteboardItem.setData(value.data, forType: value.type) else { return nil }
             }
             pasteboardItems.append(pasteboardItem)

@@ -180,9 +180,10 @@ final class SnippetExpansionCoordinator {
         automaticGeneration: UInt?,
         confirmation: String?
     ) {
-        guard let arguments = SnippetArgumentsPrompt.run(
-            snippetName: record.snippet.name,
-            arguments: missingArgs)
+        guard
+            let arguments = SnippetArgumentsPrompt.run(
+                snippetName: record.snippet.name,
+                arguments: missingArgs)
         else {
             injector.cancelArgumentPrompt(
                 automaticGeneration: automaticGeneration,

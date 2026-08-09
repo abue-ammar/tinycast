@@ -2,17 +2,15 @@ import SwiftUI
 
 struct ApplicationsSettingsView: View {
     var body: some View {
-        SettingsPane(
-            title: "Applications",
-            subtitle: "Choose where Tinycast looks for apps, which ones appear in the launcher, and how to reach them."
-        ) {
+        Form {
             // Scopes first: they decide what gets indexed, so they read before the results.
-            SearchScopesCard()
+            SearchScopesSection()
 
-            LauncherItemsCard(
+            LauncherItemsSection(
                 kind: .application,
                 header: "Applications",
                 searchPrompt: "Search applications…")
         }
+        .formStyle(.grouped)
     }
 }

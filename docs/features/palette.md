@@ -128,6 +128,23 @@ frozen instead:
   force-casts its field editor to a private subclass, so vending a custom one crashes — only the
   existing one can be tuned.
 
+## Emacs navigation chords
+
+⌃N/⌃P and ⌃F/⌃B navigate exactly as ↓/↑ and →/← do — on the emoji grid all four step the selection,
+and everywhere else the horizontal pair falls through to the caret, which is what a native search field
+does.
+
+None of them reach `onKeyPress` on their own: AppKit's key-binding table hands the field editor
+`moveDown:` / `moveUp:` / `moveForward:` / `moveBackward:` first, and in a one-line field the vertical
+pair walks the caret to the end or the start rather than moving anything.
+
+`PalettePanel.sendEvent` therefore rewrites each chord into its arrow and re-dispatches, ahead of every
+other rule it applies. Nothing else changes: the arrow handlers in `RootPaletteView` are the only
+navigation code, so the compact bar's expand-on-↓, the grid's row and column steps, menu highlight
+movement and the scroll-into-view intent all follow for free. The caret keeps ⌃F/⌃B off the grid
+because `moveHorizontally` leaves →/← `.ignored` there, and the field editor then moves by a character
+exactly as the chord natively would. A chord carrying any modifier beyond ⌃ — ⌃⇧Q, say — is left alone.
+
 ## Focus restoration (load-bearing)
 
 `PaletteWindowController` records `previousApp` (the frontmost app) on show. Paste then targets that

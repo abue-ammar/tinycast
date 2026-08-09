@@ -114,7 +114,8 @@ enum BackupActions {
     static func quitRaycast() {
         for app in NSWorkspace.shared.runningApplications
         where app.bundleIdentifier.map(isRaycastBundleID) == true
-            && app.activationPolicy != .prohibited {
+            && app.activationPolicy != .prohibited
+        {
             app.terminate()
         }
     }
@@ -155,7 +156,9 @@ enum BackupActions {
         return "Applied " + parts.joined(separator: ", ") + "."
     }
 
-    private static func confirmExecutableImport(core: AppCore, commands: Int, shortcuts: Int) async
+    private static func confirmExecutableImport(
+        core: AppCore, commands: Int, shortcuts: Int
+    ) async
         -> Bool
     {
         guard commands > 0 || shortcuts > 0 else { return true }

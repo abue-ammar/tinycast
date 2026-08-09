@@ -52,7 +52,8 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
         case (.none, .some): return false
         case (.none, .none):
             let order = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
-            return order != .orderedSame ? order == .orderedAscending
+            return order != .orderedSame
+                ? order == .orderedAscending
                 : lhs.id.uuidString < rhs.id.uuidString
         }
     }

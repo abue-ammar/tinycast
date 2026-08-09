@@ -185,8 +185,9 @@ Tinycast/
         Service/    effects — stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator
         Settings/   the feature's own panes
-    Settings/       the Settings shell only: SettingsCoordinator, SettingsRootView, SettingsTab,
-                    AppSettings, AppSettingsKey, and Panes/ for the two panes no feature owns
+    Settings/       the Settings shell only: SettingsCoordinator, the sidebar/detail/toolbar and
+                    navigation types, SettingsTab, AppSettings, AppSettingsKey, and Panes/ for the
+                    two panes no feature owns
 Tests/              the standalone harnesses, one Swift file each
 Scripts/            run-tests.sh, the two data generators, packaging, formatting, editor setup
 ```
@@ -195,7 +196,12 @@ A larger feature splits into all four sub-folders; a small one stays flat, as `O
 `WindowManagement/` do. `HotKeys/` has no `Settings/` because its Shortcuts pane is part of the Settings
 shell rather than the feature.
 
-Every `SettingsTab` maps to one `…SettingsView` built on the `SettingsPane` / `SettingsCard` scaffold in
-`DesignSystem/SettingsComponents.swift`. A pane lives with its feature; only a pane no feature owns
-(General, Permissions) lives in `Settings/Panes/`. The four launcher-category panes — Applications,
-System Settings, System Actions, Commands — are thin wrappers over the shared `LauncherItemsCard`.
+Every `SettingsTab` maps to one `…SettingsView`, and each is a stock `Form` with
+`.formStyle(.grouped)` — see [ui.md](ui.md#settings). A pane lives with its feature; only a pane no
+feature owns (General, Permissions) lives in `Settings/Panes/`. The four launcher-category panes —
+Applications, System Settings, System Actions, Commands — are thin wrappers over the shared
+`LauncherItemsSection`.
+
+`SettingsTab` and `SettingsSection` both identify by the case itself, never by an index. A selectable
+`List` flattens section and row IDs into one namespace, so overlapping `Int` IDs make SwiftUI drop
+whole sidebar groups; `Tests/settings-history-test.swift` pins the two namespaces apart.

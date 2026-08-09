@@ -63,20 +63,28 @@ Xcode works out of the box and needs nothing here. Everything below is optional,
 use is your business — the repo prescribes none of it.
 
 VS Code gets code intelligence from SourceKit-LSP, which needs a `buildServer.json` because there is no
-`Package.swift`. Generate it once:
+`Package.swift`. Build once, then hand the log to the sync script — that writes both `buildServer.json`
+and the flag database:
 
 ```sh
 brew install xcode-build-server
-xcode-build-server config -project Tinycast.xcodeproj -scheme Tinycast \
-    --build_root "$PWD/build/DerivedData"
+xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug \
+    -derivedDataPath build/DerivedData build 2>&1 | tee /tmp/tinycast-build.log
+./Scripts/sync-lsp.sh /tmp/tinycast-build.log
 ```
 
-`--build_root` must match the `-derivedDataPath` in `.vscode/tasks.json`, or the editor indexes a
-different build than the one **F5** runs. The file is git-ignored because it embeds an absolute path,
-and `sourcekit-lsp` looks for it at the workspace root by name, so it cannot live in a subfolder.
+Both files are git-ignored because they embed absolute paths, and `sourcekit-lsp` looks for
+`buildServer.json` at the workspace root by name, so it cannot live in a subfolder. After this the
+**Build Tinycast.app (debug)** task (⌘⇧B) and **F5** re-run the script on every build, so new and
+renamed files keep resolving.
 
-Then populate the index with one build — the **Build Tinycast.app (debug)** task (⌘⇧B) or **F5**. That
-task keeps `.compile` in sync afterwards, so new and renamed files keep resolving.
+**Do not run `xcode-build-server config`.** It writes `kind: xcode`, and in that mode the server ignores
+`.compile` entirely — it serves flags from a cache it scrapes out of `.xcactivitylog` instead. That
+cache is only refreshed when `LogStoreManifest.plist` advances, and when the manifest stops updating
+(it does) the editor silently pins itself to the source list from some older build: every reference to a
+file added since reads *cannot find type X in scope*, in every file, until you restart the server. It
+also mixes Release entries in with Debug and lets them win. `Scripts/sync-lsp.sh` keeps the mode
+`manual`, where `.compile` is the single source of truth.
 
 ### Symbols in `Tests/`
 
@@ -89,9 +97,12 @@ find in scope*. Measured on `fuzz-test.swift`: 60 errors with no entry, 0 with o
 ```
 
 It reads the source lists from `run-tests.sh` itself, so they cannot drift from what the suite actually
-compiles. The build task runs it too. Two things it has to get right, both of which fail silently
-otherwise: every path is absolute, because `sourcekit-lsp` resolves the command itself and does not
-apply `directory` to relative arguments; and the command carries an explicit `-sdk`.
+compiles. `Scripts/sync-lsp.sh` runs it too. Three things it has to get right, all of which fail
+silently otherwise: every path is absolute, because `sourcekit-lsp` resolves the command itself and does
+not apply `directory` to relative arguments; the command carries an explicit `-sdk`; and each entry
+claims **only its own harness** in `files`. The command still lists every shipped source it compiles, so
+symbols resolve inside the harness — but claiming those sources too would hand them this three-file
+command instead of the app's, and `.compile` is last-wins.
 
 Re-run it after adding a harness, then **Swift: Restart LSP Server** from the Command Palette — an
 already-running server does not re-read `.compile`.
@@ -104,8 +115,28 @@ already-running server does not re-read `.compile`.
 ```
 
 [SwiftLint](https://github.com/realm/SwiftLint) is the only code-quality tool here. `.swiftlint.yml` at
-the repo root excludes the generated files and the two off-limits files in `DesignSystem/Scrolling/`,
-and carries the two comment rules from [standards.md](standards.md#comments) as `custom_rules`.
+the repo root excludes the generated files and the two off-limits files in `DesignSystem/Scrolling/`.
+The comment policy in [standards.md](standards.md#comments) is deliberately not among its rules.
+
+## Formatting
+
+```sh
+./Scripts/format.sh            # format Tinycast/ and Tests/ in place
+./Scripts/format.sh --check    # report what would change, write nothing (exit 1 if any)
+```
+
+`swift-format` from the Xcode toolchain — the same binary sourcekit-lsp formats with, so ⌘S in VS Code
+and this script cannot disagree. `.swift-format` at the repo root tunes it to this tree; without it the
+stock config defaults to 2-space indent and rewrites all 200 files.
+
+Both `*.generated.swift` files are excluded: formatting one is hand-editing it, and the next
+`node Scripts/gen-emoji.js` would revert it. swift-format also refuses any file that does not parse, so
+a failure from either command is a syntax error rather than a tooling problem — and it is why ⌘S looks
+like it does nothing while a file is mid-edit with unbalanced braces.
+
+**Read [decisions.md](decisions.md) entry 26 before leaning on this.** A formatter was rejected here on
+measured evidence, and the entry stands: running it over the tree touched 68 files, and 67 of those
+changed more than whitespace.
 
 The config sticks to rules that catch defects and stays quiet about style, because **there is no
 formatter** — see [decisions.md](decisions.md) entry 26 for the measurements behind that. Formatting is

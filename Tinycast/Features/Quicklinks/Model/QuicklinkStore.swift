@@ -182,9 +182,11 @@ final class QuicklinkStore {
         var value = draft
         value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         value.link = draft.link.trimmingCharacters(in: .whitespacesAndNewlines)
-        value.iconSymbol = draft.iconSymbol?.trimmingCharacters(in: .whitespacesAndNewlines)
+        value.iconSymbol =
+            draft.iconSymbol?.trimmingCharacters(in: .whitespacesAndNewlines)
             .nilIfEmpty
-        value.openWithBundleID = draft.openWithBundleID?
+        value.openWithBundleID =
+            draft.openWithBundleID?
             .trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         guard !value.name.isEmpty else { throw .emptyName }
         guard !value.link.isEmpty else { throw .emptyLink }
@@ -192,8 +194,9 @@ final class QuicklinkStore {
             throw .invalidCharacter
         }
         // A templated link is only knowable once filled, so it is reported at open time.
-        guard QuicklinkDestination.containsPlaceholder(value.link)
-            || QuicklinkDestination.detect(value.link) != nil
+        guard
+            QuicklinkDestination.containsPlaceholder(value.link)
+                || QuicklinkDestination.detect(value.link) != nil
         else { throw .unresolvableLink }
         guard
             !quicklinks.contains(where: {

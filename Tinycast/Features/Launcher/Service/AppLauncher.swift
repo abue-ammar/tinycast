@@ -45,7 +45,8 @@ enum AppLauncher {
             return
         }
         if let url = running?.bundleURL
-            ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+        {
             // Dock-click semantics; a bare `activate()` does none of it reliably.
             NSWorkspace.shared.openApplication(
                 at: url, configuration: NSWorkspace.OpenConfiguration())

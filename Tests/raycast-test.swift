@@ -260,7 +260,8 @@ enum RaycastTests {
         expect(parsed.toggleEmoji?.carbonKeyCode == 49, "emoji command hotkey")
 
         // A v1 export has no global palette hotkey and no launch-at-login flag to find.
-        let empty = payload("""
+        let empty = payload(
+            """
             {"builtin_package_raycastPreferences": {"preferencesGeneral": {
                 "raycastAlternativeEscape": false}}}
             """)
@@ -269,7 +270,8 @@ enum RaycastTests {
         expect(empty?.appHotkeys.isEmpty == true, "no rootSearch means no hotkeys")
 
         // Wrong-typed values must be ignored, not crash or coerce.
-        let wrongTypes = payload("""
+        let wrongTypes = payload(
+            """
             {"builtin_package_raycastPreferences": {"preferencesAdvanced": {
                 "popToRootTimeout": "90", "emojiSkinTone": 3,
                 "raycast_hyperKey_state": {"enabled": true}}}}
@@ -278,7 +280,8 @@ enum RaycastTests {
         expect(wrongTypes?.emojiSkinTone == nil, "a numeric skin tone is ignored")
         expect(wrongTypes?.hyperKey == nil, "a hyper key without a key code is ignored")
 
-        let disabledHyper = payload("""
+        let disabledHyper = payload(
+            """
             {"builtin_package_raycastPreferences": {"preferencesAdvanced": {
                 "raycast_hyperKey_state": {"enabled": false, "keyCode": 57}}}}
             """)
@@ -362,7 +365,8 @@ enum RaycastTests {
     // MARK: - Favorites and snippets
 
     static func favoritesAndSnippets() {
-        let favorites = payload("""
+        let favorites = payload(
+            """
             {"builtin_package_navigation": {"pinnedMenuItems": [
                 {"key": "org.alacritty"},
                 "com.apple.Safari",
@@ -377,7 +381,8 @@ enum RaycastTests {
             "app favorites keep their order; commands and junk are dropped")
         expect(payload("{}")?.favorites.isEmpty == true, "no navigation provider means no favorites")
 
-        let snippets = payload("""
+        let snippets = payload(
+            """
             {"builtin_package_snippets": {"snippets": [
                 {"name": "Sig", "text": "Best,\\nAB", "keyword": ";sig"},
                 {"name": "  Padded  ", "text": "x", "keyword": "   "},

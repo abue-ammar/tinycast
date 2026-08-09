@@ -16,11 +16,15 @@ struct PaletteRowIndexTests {
     }
 
     static func expect(_ actual: PaletteRow?, _ expected: PaletteRow?, _ message: String) {
-        expect(actual == expected, "\(message) — got \(String(describing: actual)), want \(String(describing: expected))")
+        expect(
+            actual == expected,
+            "\(message) — got \(String(describing: actual)), want \(String(describing: expected))")
     }
 
     static func expect(_ actual: Int?, _ expected: Int?, _ message: String) {
-        expect(actual == expected, "\(message) — got \(String(describing: actual)), want \(String(describing: expected))")
+        expect(
+            actual == expected,
+            "\(message) — got \(String(describing: actual)), want \(String(describing: expected))")
     }
 
     /// Where a flat index lands in the rendered grid: its visual row, and its column of that row.

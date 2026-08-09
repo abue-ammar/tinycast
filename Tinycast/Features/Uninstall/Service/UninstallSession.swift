@@ -108,7 +108,9 @@ final class UninstallSession {
     }
 
     /// Off-main: it opens a file.
-    private nonisolated static func makeTarget(url: URL, name: String, bundleID: String?)
+    private nonisolated static func makeTarget(
+        url: URL, name: String, bundleID: String?
+    )
         -> UninstallTarget
     {
         let info = Bundle(url: url)?.infoDictionary

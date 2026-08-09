@@ -265,7 +265,8 @@ extension SettingsBackup {
             count += 1
         }
         if let raw = s.quicklinkSelectionFallback,
-            let fallback = QuicklinkSelectionFallback(rawValue: raw) {
+            let fallback = QuicklinkSelectionFallback(rawValue: raw)
+        {
             settings.quicklinkSelectionFallback = fallback
             count += 1
         }

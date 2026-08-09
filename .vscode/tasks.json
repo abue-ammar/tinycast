@@ -5,13 +5,13 @@
       // Build the .app with xcodebuild into a fixed path (build/DerivedData) so the app
       // location is stable — that's what lets F5 find it and keeps the Accessibility grant.
       // DEVELOPER_DIR forces Xcode's toolchain (the SwiftUI macros aren't in the CLT).
-      // The build log is piped to `xcode-build-server parse` so SourceKit-LSP's flag
-      // database (.compile) stays in sync on every build — that's what keeps cross-file
-      // symbols resolving in VS Code as you add/rename files. pipefail preserves the
-      // xcodebuild exit code so a failed build still blocks F5 / the run step.
+      // The build log is handed to Scripts/sync-lsp.sh, which rebuilds SourceKit-LSP's flag
+      // database from it — that's what keeps cross-file symbols resolving in VS Code as you
+      // add and rename files. pipefail preserves the xcodebuild exit code so a failed build
+      // still blocks F5 / the run step.
       "label": "Build Tinycast.app (debug)",
       "type": "shell",
-      "command": "bash -c 'set -o pipefail; xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug -derivedDataPath build/DerivedData build 2>&1 | tee \"${TMPDIR:-/tmp}/tinycast-build.log\"; ec=$?; if command -v xcode-build-server >/dev/null; then xcode-build-server parse -a -o .compile < \"${TMPDIR:-/tmp}/tinycast-build.log\" >/dev/null 2>&1 || true; ./Scripts/run-tests.sh --index >/dev/null 2>&1 || true; fi; exit $ec'",
+      "command": "bash -c 'set -o pipefail; xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug -derivedDataPath build/DerivedData build 2>&1 | tee \"${TMPDIR:-/tmp}/tinycast-build.log\"; ec=$?; ./Scripts/sync-lsp.sh \"${TMPDIR:-/tmp}/tinycast-build.log\" >/dev/null 2>&1 || true; exit $ec'",
       "options": {
         "cwd": "${workspaceFolder}",
         "env": { "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer" }

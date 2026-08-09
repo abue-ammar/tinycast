@@ -44,8 +44,11 @@ enum SystemActionRunner {
     }
 
     /// What an action reports on success; only the ones whose effect is invisible do.
-    static func run(_ id: SystemAction.ID, previousApp: NSRunningApplication?) async throws
-        -> SystemActionFeedback? {
+    static func run(
+        _ id: SystemAction.ID, previousApp: NSRunningApplication?
+    ) async throws
+        -> SystemActionFeedback?
+    {
         switch id {
         case .lockScreen:
             try postKey(keyCode: CGKeyCode(kVK_ANSI_Q), flags: [.maskControl, .maskCommand])
@@ -65,13 +68,14 @@ enum SystemActionRunner {
                 throw SystemActionFailure("The macOS screen saver could not be found.")
             }
             NSWorkspace.shared.openApplication(
-                at: url, configuration: NSWorkspace.OpenConfiguration()) { _, error in
-                    guard let error else { return }
-                    Task { @MainActor in
-                        onAsyncFailure?(
-                            .showScreenSaver, SystemActionFailure(error.localizedDescription))
-                    }
+                at: url, configuration: NSWorkspace.OpenConfiguration()
+            ) { _, error in
+                guard let error else { return }
+                Task { @MainActor in
+                    onAsyncFailure?(
+                        .showScreenSaver, SystemActionFailure(error.localizedDescription))
                 }
+            }
         case .playPause:
             try postMediaKey(16)
         case .nextTrack:
@@ -103,7 +107,8 @@ enum SystemActionRunner {
         case .toggleAppearance:
             // The script returns the resulting state, so the confirmation can name it.
             let result = try await runAppleScript(
-                "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode")
+                "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode"
+            )
             let dark = result.flag
             return SystemActionFeedback(dark ? "Dark Appearance" : "Light Appearance")
         case .toggleStageManager:
@@ -244,8 +249,11 @@ enum SystemActionRunner {
         return elements
     }
 
-    private static func volumeAddress(element: AudioObjectPropertyElement)
-        -> AudioObjectPropertyAddress {
+    private static func volumeAddress(
+        element: AudioObjectPropertyElement
+    )
+        -> AudioObjectPropertyAddress
+    {
         AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyVolumeScalar,
             mScope: kAudioDevicePropertyScopeOutput,
@@ -284,7 +292,8 @@ enum SystemActionRunner {
         var muted: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         if AudioObjectHasProperty(device, &address),
-            AudioObjectGetPropertyData(device, &address, 0, nil, &size, &muted) == noErr {
+            AudioObjectGetPropertyData(device, &address, 0, nil, &size, &muted) == noErr
+        {
             try setMuted(muted == 0, on: device)
             return
         }
@@ -356,7 +365,8 @@ enum SystemActionRunner {
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular
             && app.processIdentifier != ownPID
-            && app.processIdentifier != keptPID {
+            && app.processIdentifier != keptPID
+        {
             app.hide()
         }
         previousApp?.unhide()
@@ -368,8 +378,9 @@ enum SystemActionRunner {
         let keys: Set<URLResourceKey> = [
             .volumeIsEjectableKey, .volumeIsInternalKey, .volumeIsLocalKey
         ]
-        let urls = FileManager.default.mountedVolumeURLs(
-            includingResourceValuesForKeys: Array(keys), options: [.skipHiddenVolumes]) ?? []
+        let urls =
+            FileManager.default.mountedVolumeURLs(
+                includingResourceValuesForKeys: Array(keys), options: [.skipHiddenVolumes]) ?? []
         let ejectable = urls.filter { url in
             guard let values = try? url.resourceValues(forKeys: keys) else { return false }
             return values.volumeIsEjectable == true
@@ -390,14 +401,16 @@ enum SystemActionRunner {
             }
         }
         guard failures.isEmpty else {
-            throw SystemActionFailure("Some disks could not be ejected:\n\n" + failures.joined(separator: "\n"))
+            throw SystemActionFailure(
+                "Some disks could not be ejected:\n\n" + failures.joined(separator: "\n"))
         }
         return ejected
     }
 
     private static func mountedVolumeExists(_ url: URL) -> Bool {
-        let mounted = FileManager.default.mountedVolumeURLs(
-            includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
+        let mounted =
+            FileManager.default.mountedVolumeURLs(
+                includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
         return mounted.contains { $0.standardizedFileURL == url.standardizedFileURL }
     }
 
@@ -445,8 +458,10 @@ enum SystemActionRunner {
                 "Allow Tinycast to control your Mac in Accessibility settings, then try again.",
                 settings: .accessibility)
         }
-        guard let app = NSRunningApplication.runningApplications(
-            withBundleIdentifier: "com.apple.notificationcenterui").first
+        guard
+            let app = NSRunningApplication.runningApplications(
+                withBundleIdentifier: "com.apple.notificationcenterui"
+            ).first
         else { return 0 }
         let root = AXUIElementCreateApplication(app.processIdentifier)
         var dismissed = 0
@@ -506,8 +521,9 @@ enum SystemActionRunner {
 
     private static func axChildren(_ element: AXUIElement) -> [AXUIElement] {
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value)
-            == .success,
+        guard
+            AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value)
+                == .success,
             let children = value as? [AXUIElement]
         else { return [] }
         return children
@@ -596,7 +612,9 @@ enum SystemActionRunner {
             process.standardOutput = stdout
             process.standardError = stderr
             do { try process.run() } catch {
-                throw SystemActionFailure("\(URL(fileURLWithPath: executable).lastPathComponent) could not start: \(error.localizedDescription)")
+                throw SystemActionFailure(
+                    "\(URL(fileURLWithPath: executable).lastPathComponent) could not start: \(error.localizedDescription)"
+                )
             }
             process.waitUntilExit()
             let outData = stdout.fileHandleForReading.readDataToEndOfFile()

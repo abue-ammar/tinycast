@@ -50,7 +50,7 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var paletteCoordinator = PaletteCoordinator(
         palette: palette, settings: settings, appIndex: appIndex,
         windowController: windowController)
-    /// Its own window and its own lifecycle: neither coordinator shows or closes the other's surface.
+    /// Its own window and lifecycle: neither coordinator shows or closes the other's surface.
     @ObservationIgnored private(set) lazy var settingsCoordinator = SettingsCoordinator(core: self)
     @ObservationIgnored private(set) lazy var onboardingCoordinator = OnboardingCoordinator(
         core: self)
@@ -224,18 +224,21 @@ final class AppCore {
     // MARK: - Feature switches
 
     private func observeFeatureSwitches() {
-        track({
-            _ = $0.windowManagementEnabled
-            _ = $0.windowManagementShowInLauncher
-        }, reproject: { $0.applyWindowCommandsPresence() })
-        track({
-            _ = $0.customCommandsEnabled
-            _ = $0.customCommandsShowInLauncher
-        }, reproject: { $0.customCommandCoordinator.applyCustomCommandsPresence() })
-        track({
-            _ = $0.quicklinksEnabled
-            _ = $0.quicklinksShowInLauncher
-        }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
+        track(
+            {
+                _ = $0.windowManagementEnabled
+                _ = $0.windowManagementShowInLauncher
+            }, reproject: { $0.applyWindowCommandsPresence() })
+        track(
+            {
+                _ = $0.customCommandsEnabled
+                _ = $0.customCommandsShowInLauncher
+            }, reproject: { $0.customCommandCoordinator.applyCustomCommandsPresence() })
+        track(
+            {
+                _ = $0.quicklinksEnabled
+                _ = $0.quicklinksShowInLauncher
+            }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
         track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetExpansion.applySnippetsEnabled() })
         // Not a feature switch, but the same re-projection: a combo has the chord's ⇧ bit baked in.
         track({ _ = $0.hyperKeyIncludesShift }, reproject: { $0.applyHyperChord() })
@@ -288,7 +291,9 @@ final class AppCore {
     }
 
     /// A failure with one usable second option; `true` when the user takes it.
-    func reportFailure(title: String, message: String, symbol: String, recovery: String?) async
+    func reportFailure(
+        title: String, message: String, symbol: String, recovery: String?
+    ) async
         -> Bool
     {
         await dialogs.reportFailure(

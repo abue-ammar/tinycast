@@ -86,7 +86,8 @@ struct SnippetRepository: Sendable {
         var errorDescription: String? {
             switch self {
             case .conflict(let fileURL, _, _):
-                return "The snippet changed on disk. Reload it before saving or deleting. (\(fileURL.lastPathComponent))"
+                return
+                    "The snippet changed on disk. Reload it before saving or deleting. (\(fileURL.lastPathComponent))"
             case .fileNotFound(let fileURL):
                 return "The snippet file no longer exists. (\(fileURL.lastPathComponent))"
             case .invalidFileLocation(let fileURL):
@@ -136,10 +137,11 @@ struct SnippetRepository: Sendable {
                         let snippet = try SnippetMarkdownSerializer.parse(
                             content: content,
                             fileURL: fileURL)
-                        records.append(StoredSnippet(
-                            fileURL: fileURL,
-                            snippet: snippet,
-                            sourceRevision: SnippetSourceRevision(content: content)))
+                        records.append(
+                            StoredSnippet(
+                                fileURL: fileURL,
+                                snippet: snippet,
+                                sourceRevision: SnippetSourceRevision(content: content)))
                     } catch {
                         issues.append(Issue(fileURL: fileURL, message: error.localizedDescription))
                     }
@@ -245,16 +247,18 @@ struct SnippetRepository: Sendable {
         try FileManager.default.contentsOfDirectory(
             at: directory,
             includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles])
-            .filter { $0.pathExtension.lowercased() == "md" }
-            .filter(Self.isLoadableFile)
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            options: [.skipsHiddenFiles]
+        )
+        .filter { $0.pathExtension.lowercased() == "md" }
+        .filter(Self.isLoadableFile)
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     // Keeps a directory or device node named `*.md` out; only non-files pay for resolving.
     private static func isLoadableFile(_ url: URL) -> Bool {
         if (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true { return true }
-        return (try? url.resolvingSymlinksInPath()
+        return
+            (try? url.resolvingSymlinksInPath()
             .resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
     }
 

@@ -354,7 +354,8 @@ struct RootPaletteView: View {
             searchField
             // Compact pins favorites beside the field; expanded shows them as rows.
             if isCollapsed, settings.showFavoritesInCompactMode,
-                let launcher = screen as? LauncherScreen {
+                let launcher = screen as? LauncherScreen
+            {
                 let slots = launcher.compactFavoriteSlots
                 if !slots.isEmpty {
                     CompactFavoritesRow(

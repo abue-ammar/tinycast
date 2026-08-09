@@ -166,6 +166,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Reopening focuses the search field with an empty query, in the same position and at the same size
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - Typing filters instantly; ↑/↓ move the highlight and scroll it into view without yanking the list
+- ⌃N/⌃P move the highlight as ↓/↑ do; ⌃F/⌃B step the emoji grid's selection, and the caret elsewhere
 - The highlight always sits on the row the footer pill describes
 - With a calculation typed, the calculator card is first and is selected first
 - Section headers appear in order: Favorites, Applications, System Settings, Quicklinks, Snippets,

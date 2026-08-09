@@ -136,9 +136,10 @@ final class SnippetsStore {
             } catch let error as SnippetRepository.RepositoryError {
                 return RepositoryResult.failure(error)
             } catch {
-                return RepositoryResult.failure(.io(
-                    fileURL: repository.snippetsDirectory,
-                    message: error.localizedDescription))
+                return RepositoryResult.failure(
+                    .io(
+                        fileURL: repository.snippetsDirectory,
+                        message: error.localizedDescription))
             }
         }.value
 
@@ -165,9 +166,10 @@ final class SnippetsStore {
             } catch let error as SnippetRepository.RepositoryError {
                 return RepositoryResult.failure(error)
             } catch {
-                return RepositoryResult.failure(.io(
-                    fileURL: repository.snippetsDirectory,
-                    message: error.localizedDescription))
+                return RepositoryResult.failure(
+                    .io(
+                        fileURL: repository.snippetsDirectory,
+                        message: error.localizedDescription))
             }
         }.value
 
@@ -182,14 +184,16 @@ final class SnippetsStore {
     }
 
     private func publishLocal(records: [StoredSnippet]) {
-        apply(SnippetRepository.Snapshot(
-            records: records.sorted(by: recordOrder),
-            issues: issues))
+        apply(
+            SnippetRepository.Snapshot(
+                records: records.sorted(by: recordOrder),
+                issues: issues))
     }
 
     private func apply(_ snapshot: SnippetRepository.Snapshot) {
         guard isStarted else { return }
-        let isUnchanged = state == .ready
+        let isUnchanged =
+            state == .ready
             && snippets == snapshot.records
             && issues == snapshot.issues
         if !isUnchanged {

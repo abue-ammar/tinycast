@@ -77,7 +77,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             core.palette.prepare(mode: .launcher)
             return
         }
-        popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) { [weak self] _ in
+        popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
+            [weak self] _ in
             MainActor.assumeIsolated {
                 self?.popToRootTimer = nil
                 self?.core.palette.prepare(mode: .launcher)
@@ -149,7 +150,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             else { return false }
             // The argument form steps back through the answers first, one key per field.
             if core.palette.mode == .quicklinkArguments,
-                let previous = core.quicklinkArguments.retreat() {
+                let previous = core.quicklinkArguments.retreat()
+            {
                 core.palette.query = previous
                 core.palette.selection = 0
                 return true

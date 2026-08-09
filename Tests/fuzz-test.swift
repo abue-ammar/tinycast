@@ -53,7 +53,7 @@ struct FuzzTest {
         // Ships an untranslated localization placeholder — see SearchFields.usableAlternateNames.
         App(name: "Maps", alternates: ["ALTERNATE_NAME_1", "Maps.app"]),
         // Alternate that only repeats the display name; contributes nothing.
-        App(name: "Image Playground", alternates: ["Image Playground", "Image Playground.app"]),
+        App(name: "Image Playground", alternates: ["Image Playground", "Image Playground.app"])
     ]
 
     static func app(_ name: String) -> App { apps.first { $0.name == name }! }
@@ -69,7 +69,8 @@ struct FuzzTest {
             return (app.name, s + boosts[app.name, default: 0])
         }
         .sorted {
-            $0.1 != $1.1 ? $0.1 > $1.1
+            $0.1 != $1.1
+                ? $0.1 > $1.1
                 : $0.0.localizedCaseInsensitiveCompare($1.0) == .orderedAscending
         }
         .map(\.0)
@@ -282,8 +283,11 @@ struct FuzzTest {
         func identifierHits(_ query: String) -> [String] {
             rank(query).filter { score(query, $0)! < 2 * SearchRelevance.bandStride }
         }
-        check("'com' matches nothing by bundle id", identifierHits("com").isEmpty, "got \(identifierHits("com"))")
-        check("'co' matches nothing by bundle id", identifierHits("co").isEmpty, "got \(identifierHits("co"))")
+        check(
+            "'com' matches nothing by bundle id", identifierHits("com").isEmpty,
+            "got \(identifierHits("com"))")
+        check(
+            "'co' matches nothing by bundle id", identifierHits("co").isEmpty, "got \(identifierHits("co"))")
         check("'com.' matches nothing by bundle id", identifierHits("com.").isEmpty)
         check(
             "a bundle id with no dot still matches",
@@ -298,7 +302,8 @@ struct FuzzTest {
             above(rank("chrome"), "Google Chrome", "Chess") || !rank("chrome").contains("Chess"))
 
         let noID = SearchFields(names: ["Solo"])
-        check("an entry with no bundle id or executable still matches on its name",
+        check(
+            "an entry with no bundle id or executable still matches on its name",
             SearchRelevance.score(query: "solo", fields: noID) != nil)
         check("...and matches nothing else", SearchRelevance.score(query: "com", fields: noID) == nil)
     }
@@ -447,6 +452,8 @@ struct FuzzTest {
             if let bundleID, let alternate, bundleID >= alternate { inversions += 1 }
             if let executable, let bundleID, executable >= bundleID { inversions += 1 }
         }
-        check("the same text always scores lower in a weaker field", inversions == 0, "\(inversions) inversions")
+        check(
+            "the same text always scores lower in a weaker field", inversions == 0, "\(inversions) inversions"
+        )
     }
 }

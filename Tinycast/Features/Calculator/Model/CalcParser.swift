@@ -30,7 +30,8 @@ enum CalcTokenizer {
 
             // Radix literals need ≥1 digit after the prefix, else "0" is a plain number.
             if ch == "0", i + 2 < chars.count,
-                let radix = ["x": 16, "b": 2, "o": 8][String(chars[i + 1]).lowercased()] {
+                let radix = ["x": 16, "b": 2, "o": 8][String(chars[i + 1]).lowercased()]
+            {
                 let start = i + 2
                 var end = start
                 while end < chars.count, chars[end].isHexDigit { end += 1 }

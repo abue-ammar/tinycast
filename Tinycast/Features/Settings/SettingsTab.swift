@@ -1,13 +1,8 @@
-import SwiftUI
-
-enum SettingsTab: Int, CaseIterable, Identifiable {
-    // Declaration order is sidebar order: general, the categories, then the rest.
+enum SettingsTab: CaseIterable, Identifiable {
     case general, applications, systemSettings, systemActions, commands, quicklinks, snippets,
         windowManagement, clipboard, emoji, permissions, backup, miscellaneous, about
-    var id: Int { rawValue }
-
-    /// The neighbouring pane in sidebar order, or nil at either end — arrows clamp, never wrap.
-    func stepping(_ delta: Int) -> SettingsTab? { SettingsTab(rawValue: rawValue + delta) }
+    /// The case, never an index: a selectable `List` flattens section and row IDs together.
+    var id: Self { self }
 
     var title: String {
         switch self {
@@ -46,24 +41,30 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .about: return "info.circle"
         }
     }
+}
 
-    /// Colored icon tile, System Settings style — a small cue that makes the sidebar scannable.
-    var tint: Color {
+/// Declaration order is display order; not `.Section`, which would shadow SwiftUI's `Section`.
+enum SettingsSection: CaseIterable, Identifiable {
+    case general, launcher, features, advanced
+    /// See `SettingsTab.id`: distinct types keep the two namespaces from colliding.
+    var id: Self { self }
+
+    var title: String {
         switch self {
-        case .general: return .gray
-        case .applications: return .blue
-        case .systemSettings: return .indigo
-        case .systemActions: return .orange
-        case .commands: return .green
-        case .quicklinks: return .cyan
-        case .snippets: return .green
-        case .windowManagement: return .blue
-        case .clipboard: return .orange
-        case .emoji: return .yellow
-        case .permissions: return .blue
-        case .backup: return .teal
-        case .miscellaneous: return .purple
-        case .about: return .pink
+        case .general: return "General"
+        case .launcher: return "Launcher"
+        case .features: return "Features"
+        case .advanced: return "Advanced"
+        }
+    }
+
+    var tabs: [SettingsTab] {
+        switch self {
+        case .general: return [.general, .permissions]
+        case .launcher:
+            return [.applications, .systemSettings, .systemActions, .commands, .quicklinks]
+        case .features: return [.snippets, .windowManagement, .clipboard, .emoji]
+        case .advanced: return [.backup, .miscellaneous, .about]
         }
     }
 }

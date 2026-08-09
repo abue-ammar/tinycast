@@ -12,7 +12,8 @@ private struct Keyboard {
         _ modifiers: Set<DoubleTapModifier>, other: Bool = false, at time: TimeInterval
     ) {
         if let modifier = detector.handle(
-            .modifiers(modifiers, hasOtherModifiers: other), at: time) {
+            .modifiers(modifiers, hasOtherModifiers: other), at: time)
+        {
             fired.append(modifier)
         }
     }
@@ -130,8 +131,10 @@ struct DoubleTapDetectorTests {
             "an ordinary combo is untouched, and stays in ⌃⌥⇧⌘ order rather than press order")
 
         expect(
-            KeyShortcut(keyCode: kVK_ANSI_G, modifierFlags: KeyShortcut.hyperChord(
-                includesShift: true))?.carbonModifiers
+            KeyShortcut(
+                keyCode: kVK_ANSI_G,
+                modifierFlags: KeyShortcut.hyperChord(
+                    includesShift: true))?.carbonModifiers
                 == combo([.control, .option, .shift, .command]).carbonModifiers,
             "recording while Hyper is held captures exactly the chord")
     }
@@ -162,8 +165,10 @@ struct DoubleTapDetectorTests {
             "the masking initializer keeps a stray flag out of the retargeted chord")
 
         // Anything that isn't the other chord is left exactly as recorded.
-        for flags in [[.command, .shift], [.option], [.control, .option], []] as [NSEvent
-            .ModifierFlags] {
+        for flags in [[.command, .shift], [.option], [.control, .option], []]
+            as [NSEvent
+            .ModifierFlags]
+        {
             let shortcut = combo(flags)
             for includesShift in [false, true] {
                 expect(

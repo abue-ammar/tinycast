@@ -70,13 +70,14 @@ private final class SystemSnippetKeywordTapController: SnippetKeywordTapControll
             | (1 << CGEventType.leftMouseDown.rawValue)
             | (1 << CGEventType.rightMouseDown.rawValue)
             | (1 << CGEventType.otherMouseDown.rawValue)
-        guard let port = CGEvent.tapCreate(
-            tap: .cgAnnotatedSessionEventTap,
-            place: .headInsertEventTap,
-            options: .listenOnly,
-            eventsOfInterest: mask,
-            callback: snippetKeywordCallback,
-            userInfo: Unmanaged.passUnretained(listener).toOpaque())
+        guard
+            let port = CGEvent.tapCreate(
+                tap: .cgAnnotatedSessionEventTap,
+                place: .headInsertEventTap,
+                options: .listenOnly,
+                eventsOfInterest: mask,
+                callback: snippetKeywordCallback,
+                userInfo: Unmanaged.passUnretained(listener).toOpaque())
         else { return false }
         guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0) else {
             CFMachPortInvalidate(port)
@@ -150,10 +151,11 @@ final class SnippetKeywordListener: HealthCheckable {
     }
 
     func update(_ records: [StoredSnippet]) {
-        policy.update(records.compactMap { record in
-            guard record.snippet.isEnabled, let keyword = record.snippet.keyword else { return nil }
-            return SnippetKeywordPolicy.Keyword(snippetID: record.id, value: keyword)
-        })
+        policy.update(
+            records.compactMap { record in
+                guard record.snippet.isEnabled, let keyword = record.snippet.keyword else { return nil }
+                return SnippetKeywordPolicy.Keyword(snippetID: record.id, value: keyword)
+            })
     }
 
     func start(onMatch: @escaping (StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void) {

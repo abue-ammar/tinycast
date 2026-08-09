@@ -62,10 +62,7 @@ enum FuzzyMatch {
     /// The widest score `match` returns; the bands are sized off it so they never overlap.
     static let maximumScore = 100_000
 
-    /// Invisible format scalars ship in real display names and must not demote a prefix hit.
-    ///
-    /// Runs once per candidate field per keystroke, so the common cases skip the rebuild: no
-    /// scalar below U+00AD is `.format`, which settles every ASCII name without an ICU lookup.
+    /// No scalar below U+00AD is `.format`, so ASCII names skip the rebuild and the ICU lookup.
     private static func normalized(_ value: String) -> String {
         guard value.unicodeScalars.contains(where: { $0.value >= 0xAD }) else {
             return value.lowercased()
@@ -84,10 +81,7 @@ enum FuzzyMatch {
         return !before.isLetter && !before.isNumber
     }
 
-    /// Subsequence match with bonuses for consecutive hits and word boundaries, else nil.
-    ///
-    /// Walks the candidate in place, carrying the previous character instead of indexing an
-    /// `Array(c)` — the array was one allocation per candidate field per keystroke.
+    /// Walks in place, carrying the previous character: `Array(c)` was an allocation per keystroke.
     private static func subsequenceScore(_ q: [Character], _ c: String) -> Int? {
         var qi = 0
         var score = 0

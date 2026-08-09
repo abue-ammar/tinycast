@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// The editable list of folders (and individual `.app` bundles) the launcher indexes.
-struct SearchScopesCard: View {
+struct SearchScopesSection: View {
     @Environment(AppSettings.self) private var settings
     /// Recomputed only on change: a `fileExists` per row is too much per body render.
     @State private var missing: Set<String> = []
@@ -10,32 +10,26 @@ struct SearchScopesCard: View {
     private var isDefault: Bool { settings.searchScopes == SearchScopes.defaults }
 
     var body: some View {
-        SettingsCard(header: "Search Scopes") {
+        Section {
             ForEach(settings.searchScopes, id: \.self) { scope in
                 ScopeRow(scope: scope, isMissing: missing.contains(scope)) {
                     settings.searchScopes.removeAll { $0 == scope }
                 }
-                SettingsDivider()
             }
 
             HStack(spacing: Theme.Spacing.lg) {
-                Text("Folders searched when indexing applications.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: Theme.Spacing.xl)
+                Button("Add…", action: addScopes)
+                    .help("Add a folder or application to search.")
                 if !isDefault {
                     Button("Restore Defaults") { settings.searchScopes = SearchScopes.defaults }
-                        .controlSize(.small)
                 }
-                Button(action: addScopes) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .buttonStyle(.borderless)
-                .help("Add a folder or application to search.")
             }
-            .padding(.horizontal, Theme.Spacing.xl)
-            .padding(.vertical, Theme.Spacing.md)
+        } header: {
+            Text("Search Scopes")
+        } footer: {
+            Text("Folders searched when indexing applications.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .onAppear(perform: refreshMissing)
         .onChange(of: settings.searchScopes) { _, _ in refreshMissing() }
@@ -71,29 +65,29 @@ private struct ScopeRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
-            Image(systemName: (scope as NSString).pathExtension == "app" ? "app" : "folder")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: Theme.Size.settingsRowIcon)
-            Text(scope)
-                .font(Theme.Typography.rowTitle)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .foregroundStyle(isMissing ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
-            Spacer(minLength: Theme.Spacing.xl)
-            if isMissing {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .help("This location no longer exists.")
+        LabeledContent {
+            HStack(spacing: Theme.Spacing.sm) {
+                if isMissing {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .help("This location no longer exists.")
+                }
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(scope)")
             }
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.tertiary)
+        } label: {
+            Label {
+                Text(scope)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .foregroundStyle(isMissing ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
+            } icon: {
+                Image(systemName: (scope as NSString).pathExtension == "app" ? "app" : "folder")
             }
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.lg)
     }
 }

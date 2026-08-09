@@ -618,7 +618,7 @@ struct CalcTests {
         base: "USD",
         rates: [
             "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
-            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725,
+            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725
         ],
         fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))
 

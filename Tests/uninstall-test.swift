@@ -49,7 +49,9 @@ struct UninstallTests {
         return root
     }
 
-    static func evidence(_ name: String, _ relativePath: String, _ identity: UninstallIdentity)
+    static func evidence(
+        _ name: String, _ relativePath: String, _ identity: UninstallIdentity
+    )
         -> UninstallEvidence?
     {
         UninstallRules.evidence(for: name, in: root(relativePath), identity: identity)
@@ -386,7 +388,9 @@ struct UninstallTests {
         let environment = UninstallEnvironment(home: home, hasFullDiskAccess: false)
         let withFDA = UninstallEnvironment(home: home, hasFullDiskAccess: true)
 
-        func classify(_ facts: PathFacts, _ env: UninstallEnvironment = environment)
+        func classify(
+            _ facts: PathFacts, _ env: UninstallEnvironment = environment
+        )
             -> UninstallProtection
         {
             UninstallProtectionRules.classify(facts, environment: env)
@@ -545,7 +549,7 @@ struct UninstallTests {
             target: target,
             candidates: [
                 candidate("/a", bytes: nil), candidate("/b", protection: .systemProtected, bytes: 20),
-                candidate("/c", bytes: nil),
+                candidate("/c", bytes: nil)
             ],
             isTargetRunning: false)
 
@@ -607,8 +611,10 @@ struct UninstallTests {
                 for (other, otherIdentity) in identities where other.id != owner.id {
                     for root in UninstallSearchRoot.all
                     where UninstallRules.evidence(for: artifact, in: root, identity: otherIdentity)
-                        != nil {
-                        leaks.append("\(artifact) (\(owner.name)) matched \(other.name) in \(root.relativePath)")
+                        != nil
+                    {
+                        leaks.append(
+                            "\(artifact) (\(owner.name)) matched \(other.name) in \(root.relativePath)")
                     }
                 }
             }

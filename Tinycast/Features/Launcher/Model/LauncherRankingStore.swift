@@ -33,7 +33,8 @@ final class LauncherRankingStore {
         self.now = now
 
         if let data = try? Data(contentsOf: self.fileURL),
-            let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data) {
+            let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data)
+        {
             records = decoded.filter {
                 !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0
             }

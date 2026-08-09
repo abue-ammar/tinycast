@@ -237,7 +237,8 @@ enum SnippetTemplateEngine {
             case .literal(let value):
                 result.append(value)
             case .clipboard(let offset, let modifiers):
-                let value = offset < context.clipboardHistory.count
+                let value =
+                    offset < context.clipboardHistory.count
                     ? context.clipboardHistory[offset] : ""
                 result.append(apply(modifiers, to: value, encoding: encoding))
             case .selection(let modifiers):
@@ -267,15 +268,16 @@ enum SnippetTemplateEngine {
                 }
                 var nestedVisited = visitedIDs
                 nestedVisited.insert(target.id)
-                result.append(expandText(
-                    target.snippet.text,
-                    snippets: snippets,
-                    context: context,
-                    userArguments: userArguments,
-                    encoding: encoding,
-                    depth: depth + 1,
-                    visitedIDs: nestedVisited
-                ))
+                result.append(
+                    expandText(
+                        target.snippet.text,
+                        snippets: snippets,
+                        context: context,
+                        userArguments: userArguments,
+                        encoding: encoding,
+                        depth: depth + 1,
+                        visitedIDs: nestedVisited
+                    ))
             }
         }
         return result
@@ -336,7 +338,8 @@ enum SnippetTemplateEngine {
         var position = source.startIndex
 
         while position < source.endIndex,
-            let opening = source[position...].firstIndex(of: "{") {
+            let opening = source[position...].firstIndex(of: "{")
+        {
             if position < opening {
                 segments.append(.literal(String(source[position..<opening])))
             }

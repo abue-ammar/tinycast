@@ -120,7 +120,8 @@ enum Paster {
 
         let v = CGKeyCode(kVK_ANSI_V)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: false) else { return }
+            let up = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: false)
+        else { return }
 
         down.flags = .maskCommand
         up.flags = .maskCommand

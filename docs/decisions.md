@@ -304,18 +304,30 @@ For the same reason SwiftLint's `empty_count` rule is **disabled**: it flags the
 **What would change this:** several regular contributors, at which point re-run this experiment — but
 keep `isEmpty`/`empty_count` off, and verify against the harnesses before committing the result.
 
-### 26a — SwiftLint carries the two comment rules
+**Amended:** format-on-save is now **on** in `.vscode/settings.json`, by explicit request, with a
+`.swift-format` at the repo root tuning `swift-format` to this tree — 4-space indent, `lineLength` 110,
+`respectsExistingLineBreaks`, trailing commas off, and the rules that rewrite rather than lay out
+disabled. That cuts the blast radius from **200 files of 200** at stock settings (which default to
+2-space indent) to **58**. It does not cut it to zero, and the objection above still stands for those
+58 — this entry is the record of what a formatter costs here, not a claim that one is now safe.
+`EmojiData.generated.swift` is the sharpest edge: saving it rewrites ~4 000 lines, and generated files
+are never hand-edited. Have `Scripts/gen-emoji.js` emit `// swift-format-ignore-file` before relying on
+it.
 
-The 100-character cap and the ban on stacked comment lines are `custom_rules` in `.swiftlint.yml`,
-scoped to `Tinycast/`.
+### 26a — The comment policy is not linted
 
-**Why:** they were two `awk`/`grep` one-liners pasted into three documents, run by hand at the end of a
-change. As lint rules they are written once and surface at the point the comment is typed. The scope is
-`Tinycast/` because that is exactly what the shell checks covered — the harnesses in `Tests/` were never
-held to it.
+The 100-character cap and the ban on stacked comment lines live in
+[standards.md](standards.md#comments) and [AGENTS.md](../AGENTS.md) only. They were `custom_rules` in
+`.swiftlint.yml` for a while; the rules were removed and the policy kept.
 
-**What would change this:** deciding the harnesses should be held to the comment policy too, which is a
-change to the policy, not to the tooling.
+**Why:** a linter reports a comment after it has been written, so the cost of a violation is a second
+edit rather than a better first one — and as warnings they never blocked anything, which made them
+scenery. What actually drove the drift they were meant to catch was the code itself: thirty-two stacked
+comments in the tree taught every reader, human or agent, that stacking was the house style, and no
+amount of restating the rule outweighed that. Cleaning those out fixed it; the rules had not.
+
+**What would change this:** stacked comments returning at a rate that a manual read does not catch. The
+fix then is still to delete the counter-examples first — reach for a rule only if that stops working.
 
 ### 27 — Zero third-party dependencies
 

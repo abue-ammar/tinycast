@@ -57,21 +57,4 @@ type_name:
 line_length:
   warning: 130
   ignores_urls: true
-  ignores_comments: false     # the 100-char comment cap below relies on comments being measured
-
-# The two comment rules from docs/standards.md#comments, replacing the awk/grep one-liners that used
-# to be pasted into three documents. Scoped to shipped code, which is what those checks covered.
-custom_rules:
-  comment_line_length:
-    name: "Comment length"
-    regex: '^(?=[ \t]*\/\/)[^\n]{101,}'
-    included: ".*/Tinycast/.*"
-    message: "Comments cap at 100 characters. Longer prose belongs in docs/."
-    severity: warning
-
-  stacked_comments:
-    name: "Stacked comments"
-    regex: '^[ \t]*\/{2,3}[^\n]*\n[ \t]*\/{2,3}'
-    included: ".*/Tinycast/.*"
-    message: "Never two consecutive comment lines. If it needs two, it needs a name."
-    severity: warning
+  ignores_comments: false

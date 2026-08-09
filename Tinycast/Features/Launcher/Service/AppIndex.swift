@@ -208,7 +208,8 @@ final class AppIndex {
 
     /// Replaces the quicklink slice and its built-ins together, so a toggle can't split them.
     func setQuicklinks(_ quicklinks: [Quicklink], commandsVisible: Bool) {
-        let entries = quicklinks
+        let entries =
+            quicklinks
             .filter(\.showsInRootSearch)
             .sorted(by: Quicklink.precedes)
             .map { quicklink in
@@ -219,7 +220,8 @@ final class AppIndex {
                     symbolName: quicklink.iconSymbol
                         ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
             }
-        let commands = commandsVisible
+        let commands =
+            commandsVisible
             ? CommandCatalog.all
             : CommandCatalog.all.filter { entry in
                 CommandCatalog.command(for: entry).map { !$0.isQuicklinkCommand } ?? true
@@ -239,7 +241,8 @@ final class AppIndex {
     }
 
     func updateSnippets(_ records: [StoredSnippet]) {
-        let entries = records
+        let entries =
+            records
             .filter { $0.snippet.isEnabled }
             .map { record in
                 AppEntry(

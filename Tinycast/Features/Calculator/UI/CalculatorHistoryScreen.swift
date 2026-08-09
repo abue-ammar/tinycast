@@ -129,8 +129,11 @@ struct CalculatorHistoryScreen: PaletteScreen {
 /// Actions menu content for a calculator-history entry, shown bottom-right like the other modes.
 @MainActor
 enum CalcHistoryActionsMenu {
-    static func content(entry: CalcHistoryEntry, core: AppCore, calcHistory: CalculatorHistoryStore)
-        -> PopoverMenuContent {
+    static func content(
+        entry: CalcHistoryEntry, core: AppCore, calcHistory: CalculatorHistoryStore
+    )
+        -> PopoverMenuContent
+    {
         PopoverMenuContent(
             header: entry.expression,
             items: [

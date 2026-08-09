@@ -9,84 +9,67 @@ struct ClipboardSettingsView: View {
 
     var body: some View {
         @Bindable var settings = settings
-        return SettingsPane(
-            title: "Clipboard",
-            subtitle: "Control how much history Tinycast keeps and which apps are recorded."
-        ) {
-            SettingsCard(header: "Shortcut") {
-                SettingsRow(
-                    title: "Clipboard History",
-                    subtitle: "Open the clipboard history browser.",
-                    systemImage: "doc.on.clipboard",
-                    tint: .orange
-                ) {
+        return Form {
+            Section {
+                SettingsRow(title: "Clipboard History") {
                     ShortcutRecorder(action: .toggleClipboard)
                 }
+            } header: {
+                Text("Global Shortcuts")
+            } footer: {
+                Text("Open the clipboard history browser.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            SettingsCard(header: "History") {
-                SettingsRow(
-                    title: "Keep history for",
-                    subtitle: "Entries older than this are deleted automatically.",
-                    systemImage: "clock.arrow.circlepath",
-                    tint: .orange
-                ) {
-                    Picker("", selection: $settings.clipboardRetention) {
-                        ForEach(ClipboardRetention.allCases) { retention in
-                            Text(retention.title).tag(retention)
-                        }
+            Section {
+                Picker(selection: $settings.clipboardRetention) {
+                    ForEach(ClipboardRetention.allCases) { retention in
+                        Text(retention.title).tag(retention)
                     }
-                    .labelsHidden()
-                    .fixedSize()
-                    .onChange(of: settings.clipboardRetention) {
-                        core.clipboardCoordinator.applyRetention(settings.clipboardRetention)
-                    }
+                } label: {
+                    Text("Keep history for")
+                    Text("Entries older than this are deleted automatically.")
                 }
+                .onChange(of: settings.clipboardRetention) {
+                    core.clipboardCoordinator.applyRetention(settings.clipboardRetention)
+                }
+            } header: {
+                Text("History")
             }
 
-            SettingsCard(header: "Disabled Applications") {
+            Section {
                 ForEach(settings.clipboardDisabledApps, id: \.self) { bundleID in
                     DisabledAppRow(bundleID: bundleID) {
                         settings.clipboardDisabledApps.removeAll { $0 == bundleID }
                     }
-                    SettingsDivider()
                 }
 
-                HStack(spacing: Theme.Spacing.lg) {
-                    Text("Clipboard changes from these apps won't be recorded.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer(minLength: Theme.Spacing.xl)
-                    Button {
-                        showingAppPicker = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .buttonStyle(.borderless)
+                Button("Add Application…") { showingAppPicker = true }
                     .popover(isPresented: $showingAppPicker, arrowEdge: .bottom) {
                         AppPickerPopover(excluded: Set(settings.clipboardDisabledApps)) { bundleID in
                             if let bundleID { settings.clipboardDisabledApps.append(bundleID) }
                             showingAppPicker = false
                         }
                     }
-                }
-                .padding(.horizontal, Theme.Spacing.xl)
-                .padding(.vertical, Theme.Spacing.md)
+            } header: {
+                Text("Disabled Applications")
+            } footer: {
+                Text("Clipboard changes from these apps won't be recorded.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            SettingsCard(header: "Danger Zone") {
-                SettingsRow(
-                    title: "Clear history",
-                    subtitle: "Permanently remove every saved clip and image.",
-                    systemImage: "trash",
-                    tint: .red
-                ) {
+            Section {
+                LabeledContent {
                     Button("Clear…", role: .destructive) { confirmingClear = true }
-                        .controlSize(.regular)
+                } label: {
+                    Text("Clear history")
+                    Text("Permanently remove every saved clip and image.")
                 }
             }
         }
+        .formStyle(.grouped)
         .confirmationDialog(
             "Clear clipboard history?",
             isPresented: $confirmingClear,
@@ -111,21 +94,21 @@ private struct DisabledAppRow: View {
 
     var body: some View {
         let (name, icon) = AppPresentation.resolve(bundleID: bundleID, in: appIndex)
-        HStack(spacing: Theme.Spacing.lg) {
-            Image(nsImage: icon)
-                .resizable()
-                .frame(width: 22, height: 22)
-            Text(name)
-                .font(.body)
-                .lineLimit(1)
-            Spacer(minLength: Theme.Spacing.xl)
+        LabeledContent {
             Button(action: onRemove) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Stop excluding \(name)")
+        } label: {
+            Label {
+                Text(name).lineLimit(1)
+            } icon: {
+                Image(nsImage: icon)
+                    .resizable()
+                    .frame(width: 18, height: 18)
+            }
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.lg)
     }
 }

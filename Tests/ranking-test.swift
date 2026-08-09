@@ -42,7 +42,8 @@ struct RankingTest {
                 && LauncherRankingStore.normalize("I")
                     != "I".folding(
                         options: [.caseInsensitive, .diacriticInsensitive],
-                        locale: Locale(identifier: "tr_TR")))
+                        locale: Locale(identifier: "tr_TR"))
+        )
 
         check("unvisited result has no boost", boost(store, whatsApp, "w") == 0)
         check("an unlearned query yields an empty table", store.boosts(query: "w").isEmpty)

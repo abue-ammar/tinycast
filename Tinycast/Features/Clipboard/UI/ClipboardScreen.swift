@@ -54,7 +54,8 @@ struct ClipboardScreen: PaletteScreen {
         guard old.id != nil else { return }
         let rows = rows
         if vm.query.trimmingCharacters(in: .whitespaces).isEmpty, old.id != new.id, let id = new.id,
-            let index = rows.firstIndex(where: { $0.id == id }) {
+            let index = rows.firstIndex(where: { $0.id == id })
+        {
             vm.selection = index
         }
         scrollToFollow()

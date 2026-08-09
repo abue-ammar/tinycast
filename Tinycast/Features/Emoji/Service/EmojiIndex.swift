@@ -51,7 +51,8 @@ final class EmojiIndex {
                 let nameScore = FuzzyMatch.score(query: q, candidate: entry.name)
                 var best = nameScore
                 if !entry.keywords.isEmpty,
-                    let keywordScore = FuzzyMatch.score(query: q, candidate: entry.keywords) {
+                    let keywordScore = FuzzyMatch.score(query: q, candidate: entry.keywords)
+                {
                     best = max(best ?? Int.min, keywordScore - 500)
                 }
                 if let best { scored.append(ScoredEntry(entry: entry, score: best, order: order)) }

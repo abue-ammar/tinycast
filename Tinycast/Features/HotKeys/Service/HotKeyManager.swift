@@ -96,7 +96,8 @@ final class HotKeyManager {
         let previous = bindings[action]
         if let binding,
             let data = try? encoder.encode(binding),
-            let json = String(data: data, encoding: .utf8) {
+            let json = String(data: data, encoding: .utf8)
+        {
             bindings[action] = binding
             UserDefaults.standard.set(json, forKey: action.defaultsKey)
         } else {

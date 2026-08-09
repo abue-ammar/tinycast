@@ -81,7 +81,7 @@ struct ScopesTest {
         check(
             "normalize dedups after abbreviating",
             SearchScopes.normalize([
-                "/Applications", "/Applications/", home + "/Applications", "~/Applications",
+                "/Applications", "/Applications/", home + "/Applications", "~/Applications"
             ])
                 == ["/Applications", "~/Applications"])
         check("normalize preserves order", SearchScopes.normalize(["/B", "/A"]) == ["/B", "/A"])

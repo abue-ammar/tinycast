@@ -92,7 +92,7 @@ struct ClipboardTests {
             _ = store.importEntries([
                 entry("ancient-pinned", at: old),
                 entry("ancient-loose", at: old.addingTimeInterval(1)),
-                entry("fresh", at: Date()),
+                entry("fresh", at: Date())
             ])
             store.togglePinned(item(store, "ancient-pinned"))
 

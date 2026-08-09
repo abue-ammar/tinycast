@@ -77,7 +77,8 @@ enum IconCache {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
             .applying(.init(paletteColors: [tint]))
         if let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
-            .withSymbolConfiguration(config) {
+            .withSymbolConfiguration(config)
+        {
             return symbol
         }
         guard let asset = NSImage(named: name) else { return nil }
@@ -160,7 +161,8 @@ enum IconCache {
 
     /// Rasterize the multi-rep icon into one square bitmap, with its decoded byte cost.
     private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
-        rasterized(source, into: NSRect(origin: .zero, size: NSSize(width: displayPixel, height: displayPixel)))
+        rasterized(
+            source, into: NSRect(origin: .zero, size: NSSize(width: displayPixel, height: displayPixel)))
     }
 
     /// Draws `source` into `frame` on a `displayPixel`-square canvas.

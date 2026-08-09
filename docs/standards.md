@@ -207,8 +207,8 @@ Minimal code, not annotated prose.
 6. A `///` doc comment on a public type or method follows the same rules. It is not a licence to stack
    lines.
 
-Rules 1 and 2 are SwiftLint `custom_rules`, scoped to `Tinycast/` — `./Scripts/lint.sh` reports them.
-`EdgeDissolve.swift` and `ThinScrollbar.swift` are exempt because they are off-limits entirely.
+None of this is linted, by choice — [decisions.md](decisions.md) entry 26a. A rule that fires after the
+comment is written buys a second edit; these are cheap to get right on the first pass instead.
 
 ## Accessibility
 

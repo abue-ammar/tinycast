@@ -1,8 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// One titled app window with its own lifecycle: built on first show, torn down on close so its
-/// SwiftUI tree deallocates. Closing it never touches another surface, and never quits the app.
+/// Built on first show, torn down on close so its SwiftUI tree deallocates. Never quits the app.
 @MainActor
 final class AppWindowController: NSObject, NSWindowDelegate {
     private let title: String
@@ -11,6 +10,8 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     private let autosaveName: String?
     private let activation: ActivationPolicy
     private var window: NSWindow?
+    /// Rebuilt with the window, so a chrome's state never outlives the window it decorated.
+    private var chrome: WindowChrome?
 
     init(
         title: String, contentSize: CGSize, resizable: Bool = false, autosaveName: String? = nil,
@@ -25,12 +26,29 @@ final class AppWindowController: NSObject, NSWindowDelegate {
 
     /// Returns `true` when a window was built, `false` when an already-open one was re-raised.
     @discardableResult
-    func show<Content: View>(@ViewBuilder content: () -> Content) -> Bool {
+    func show<Content: View>(
+        chrome: WindowChrome? = nil, @ViewBuilder content: () -> Content
+    ) -> Bool {
+        let root = content()
+        return show(chrome: chrome) {
+            let hosting = NSHostingController(rootView: root)
+            // Keep the window's size authoritative: an unconstrained fill would drive the frame.
+            hosting.sizingOptions = []
+            return hosting
+        }
+    }
+
+    /// AppKit-built content; Settings needs it for a real `NSSplitViewController`.
+    @discardableResult
+    func show(chrome: WindowChrome? = nil, contentViewController: () -> NSViewController) -> Bool {
         if let window {
             raise(window)
             return false
         }
-        let window = makeWindow(hosting: content())
+        let window = makeWindow(content: contentViewController())
+        // After the content so the inset lands on a mounted view; before `raise` to avoid a flash.
+        self.chrome = chrome
+        chrome?.install(in: window)
         self.window = window
         activation.windowDidOpen(window)
         raise(window)
@@ -54,12 +72,13 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         guard let window else { return }
         self.window = nil
+        self.chrome = nil
         activation.windowDidClose(window)
     }
 
     // MARK: - Private
 
-    private func makeWindow<Content: View>(hosting root: Content) -> NSWindow {
+    private func makeWindow(content: NSViewController) -> NSWindow {
         var style: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         if isResizable { style.insert(.resizable) }
         let window = NSWindow(
@@ -79,10 +98,9 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         window.contentMinSize = contentSize
         window.delegate = self
 
-        let hosting = NSHostingView(rootView: root)
-        // Keep the window's size authoritative: an unconstrained fill would drive the frame instead.
-        hosting.sizingOptions = []
-        window.contentView = hosting
+        window.contentViewController = content
+        // `contentViewController` resets the frame to the controller's fitting size.
+        window.setContentSize(contentSize)
 
         if let autosaveName {
             window.setFrameAutosaveName(autosaveName)

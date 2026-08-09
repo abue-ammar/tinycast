@@ -29,8 +29,11 @@ final class DialogController: NSObject, NSWindowDelegate {
     }
 
     /// Something already went wrong, unlike `confirm`; true if recovery was taken.
-    func reportFailure(title: String, message: String, symbol: String, recovery: String?) async
-        -> Bool {
+    func reportFailure(
+        title: String, message: String, symbol: String, recovery: String?
+    ) async
+        -> Bool
+    {
         var actions = [DialogAction(title: "OK", role: .cancel)]
         if let recovery { actions.append(DialogAction(title: recovery)) }
         // ↵ lands on the recovery action when there is one to take, not on the OK dismissal.

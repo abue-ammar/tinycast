@@ -29,9 +29,7 @@ struct TinycastApp: App {
         .commands { menuBarCommands }
     }
 
-    /// Tinycast is an agent with a settings window, so ⌘Q closes that window and the agent lives on.
-    /// Declared here rather than assigned to `NSApp.mainMenu`: SwiftUI rebuilds the menu on any scene
-    /// change — toggling Show in Menu Bar is one — and an imperative install is wiped when it does.
+    /// Declared, not assigned to `NSApp.mainMenu`: SwiftUI rebuilds the menu on any scene change.
     @CommandsBuilder
     private var menuBarCommands: some Commands {
         CommandGroup(replacing: .appInfo) {

@@ -121,7 +121,9 @@ enum UninstallScanner {
     }
 
     /// Serial: four directories of cheap symlink reads, and nothing here needs a walk.
-    private static func binRows(environment: UninstallEnvironment, bundlePath: String) throws
+    private static func binRows(
+        environment: UninstallEnvironment, bundlePath: String
+    ) throws
         -> [UninstallCandidate]
     {
         var rows: [UninstallCandidate] = []
@@ -174,7 +176,9 @@ enum UninstallScanner {
     }
 
     /// `lstat`, never `stat`: a symlink is judged as the link, not as whatever it points at.
-    private static func inspect(_ path: String, parent: ParentFacts?)
+    private static func inspect(
+        _ path: String, parent: ParentFacts?
+    )
         -> (facts: PathFacts, isDirectory: Bool, byteSize: Int64)?
     {
         var info = stat()

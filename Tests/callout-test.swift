@@ -76,7 +76,8 @@ struct CalloutPlacementTests {
 
         expect(
             size.width / 2 + inset <= fieldInsetFromPaneEdge,
-            "the callout is narrow enough to centre on a trailing-edge recorder — widen it and the caret skews")
+            "the callout is narrow enough to centre on a trailing-edge recorder — widen it and the caret skews"
+        )
     }
 
     // MARK: - Above vs below

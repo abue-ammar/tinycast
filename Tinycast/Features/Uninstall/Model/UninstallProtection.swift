@@ -61,8 +61,7 @@ enum UninstallProtection: String, Hashable, Sendable, CaseIterable {
 
 enum UninstallProtectionRules {
     /// Precedence is asserted; a SIP file is also root-owned, and "part of macOS" reads best.
-    static func classify(_ facts: PathFacts, environment: UninstallEnvironment) -> UninstallProtection
-    {
+    static func classify(_ facts: PathFacts, environment: UninstallEnvironment) -> UninstallProtection {
         guard facts.exists else { return .missing }
         if facts.isSystemRestricted || facts.volumeIsReadOnly { return .systemProtected }
         if facts.isUserImmutable { return .userLocked }

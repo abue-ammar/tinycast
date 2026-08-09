@@ -39,7 +39,7 @@ struct AppPickerPopover: View {
                 .padding(Theme.Spacing.sm)
             }
         }
-        .frame(width: 280, height: 320)
+        .frame(width: 220, height: 240)
     }
 
     private func row(title: String, icon: NSImage?, action: @escaping () -> Void) -> some View {

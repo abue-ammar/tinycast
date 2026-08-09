@@ -9,44 +9,26 @@ struct MiscellaneousSettingsView: View {
     @State private var refreshFailed = false
 
     var body: some View {
-        SettingsPane(
-            title: "Miscellaneous",
-            subtitle: "Options that don't belong to a single feature."
-        ) {
-            SettingsCard(header: "Calculator") {
-                SettingsRow(
-                    title: "Currency Conversion",
-                    subtitle: conversionStatus,
-                    systemImage: "dollarsign.arrow.circlepath",
-                    tint: .green,
-                    statusDot: currencyRates.isEnabled ? .green : nil
+        Form {
+            Section {
+                // Not bound to the setting: flipping on opens the sheet, so it springs back.
+                Toggle(
+                    isOn: Binding(
+                        get: { currencyRates.isEnabled },
+                        set: { wantsOn in
+                            if wantsOn {
+                                askingConsent = true
+                            } else {
+                                currencyRates.setEnabled(false)
+                            }
+                        })
                 ) {
-                    // Not bound to the setting: flipping on opens the sheet, so it springs back.
-                    Toggle(
-                        "",
-                        isOn: Binding(
-                            get: { currencyRates.isEnabled },
-                            set: { wantsOn in
-                                if wantsOn {
-                                    askingConsent = true
-                                } else {
-                                    currencyRates.setEnabled(false)
-                                }
-                            })
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
+                    Text("Currency Conversion")
+                    Text(conversionStatus)
                 }
 
                 if currencyRates.isEnabled {
-                    SettingsDivider()
-                    SettingsRow(
-                        title: "Exchange Rates",
-                        subtitle: ratesStatus,
-                        systemImage: "clock.arrow.circlepath",
-                        tint: .gray
-                    ) {
+                    LabeledContent {
                         Button("Update Now") {
                             refreshing = true
                             Task {
@@ -56,10 +38,16 @@ struct MiscellaneousSettingsView: View {
                             }
                         }
                         .disabled(refreshing)
+                    } label: {
+                        Text("Exchange Rates")
+                        Text(ratesStatus)
                     }
                 }
+            } header: {
+                Text("Calculator")
             }
         }
+        .formStyle(.grouped)
         .sheet(isPresented: $askingConsent) {
             CurrencyConsentSheet(
                 onCancel: { askingConsent = false },
@@ -104,8 +92,8 @@ private struct CurrencyConsentSheet: View {
 
             Text(
                 "Tinycast downloads exchange rates from \(CurrencyRateStore.provider) once a day and "
-                + "keeps a copy on your Mac. No account, no identifiers, nothing you type. "
-                + "Turning it off deletes the cached rates."
+                    + "keeps a copy on your Mac. No account, no identifiers, nothing you type. "
+                    + "Turning it off deletes the cached rates."
             )
             .font(.callout)
             .foregroundStyle(.secondary)

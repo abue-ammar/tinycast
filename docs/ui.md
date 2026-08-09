@@ -313,7 +313,14 @@ style; `.thinScrollbar()` on the scroll view draws a hairline thumb (`Color.prim
 
 Routing: the palette lists (App Launcher, Clipboard history, Emoji, Calculator history) use
 `.thinScrollbar()` + `.hideNativeScrollers()`; the Clipboard preview (right pane) and every Settings
-pane use the native `.overlayScroller()`. Don't reintroduce native scrollers on the palette lists.
+pane take the native scroller as-is. Don't reintroduce native scrollers on the palette lists.
+
+**Native scrollers are overlay app-wide, set once.** `AppDelegate.applicationWillFinishLaunching`
+writes `AppleShowScrollBars = WhenScrolling` into Tinycast's own defaults domain, which outranks the
+global one. Under the system's "Automatic" setting AppKit otherwise switches every scroll view to
+thick legacy scrollers the moment it sees a mouse — a scroll view is born overlay and flips ~half a
+second later, which read as a thick bar flashing at the right edge of each pane. There is no
+per-scroll-view shim: chasing that flip after the fact is what caused the flash.
 
 ---
 
@@ -323,12 +330,30 @@ Source: `DesignSystem/SettingsComponents.swift`.
 
 Settings runs in its own resizable `NSWindow` (the SwiftUI `Settings` scene is unreliable for accessory
 apps) with real traffic lights and a lifecycle wholly its own — see
-[decisions.md](decisions.md) entry 32. It shares the palette's `Theme` vocabulary but reads as macOS
-System Settings, not the palette:
+[decisions.md](decisions.md) entry 32. It does not share the palette's look: **every pane is a stock
+`Form` with `.formStyle(.grouped)`**, so the cards, headers, row insets and hairlines are all
+system-drawn and a pane reads exactly as macOS System Settings does.
 
-- **`SettingsPane`**: bold `.title2` title + secondary subtitle header, then scrollable content, `xxl` inset all around, the same thin scrollbar.
-- **`SettingsCard`**: rounded `card 10` container, `cardFill` (white 0.05) fill, `cardStroke` (white 0.10) hairline border. Rows inside are split by `SettingsDivider` — an inset hairline aligned under the row title (past the icon).
-- **`SettingsRow`**: optional 20pt SF Symbol, title + optional caption subtitle, trailing control, fixed `.horizontal xl / .vertical lg` rhythm.
+- **A row is a stock control.** `LabeledContent`, `Toggle` or `Picker`, each with a two-view label —
+  the first view is the title, the rest become the secondary subtitle. Never a hand-built `HStack`
+  with its own padding.
+- **A row with a custom trailing control uses `SettingsRow`, not `LabeledContent`.** `LabeledContent`
+  wraps its value in a selectable text field, which swallows the taps a `ShortcutRecorder` needs —
+  the recorder renders but never starts recording. Stock `Toggle`/`Picker`/`Button` trailing content
+  is unaffected.
+- **`.settingsEnabled(_:)`, never a bare `.disabled(_:)`.** It dims as well as disables, so a
+  switched-off row reads as unavailable rather than merely unresponsive.
+- **A group is a `Section`**, with `header:` for its name and `footer:` for the caption that used to
+  ride under the last row.
+- **The pane's own title is not in the pane.** `SettingsToolbarController` puts it in the titlebar,
+  seated in the detail column by `.sidebarTrackingSeparator`.
+- `SettingsComponents.swift` holds only what more than one pane needs: **`SettingsRow`**,
+  **`FeatureSwitchSection`** (a feature's master switch plus its launcher-visibility companion) and
+  **`SettingsFilterField`** (the filter row above a long list). `Onboarding/OnboardingCard.swift`
+  keeps the older hand-drawn card, which that window still uses.
+- **A `Form` realizes every row it is handed.** `LauncherItemsSection` therefore holds its items in
+  a `LazyVStack` inside one Form row — 400 apps cost 55 ms and 69 views that way against 750 ms and
+  2040 eager. Any other unbounded list must do the same.
 
 ### The shortcut recorder callout
 
@@ -339,11 +364,11 @@ the bottom-right corner. Three states in one fixed frame — prompt (`⌥ A` at 
 shortcut"), live held modifiers, and conflict (rejected caps + owner, orange).
 
 - **An ancestor draws it.** The open recorder publishes its bounds via `ShortcutRecorderAnchorKey`;
-  `.shortcutRecorderPopoverHost()` sits on `SettingsPane` **outside** its `ScrollView` (and on
-  `OnboardingView`) and positions it. An overlay on the row would be clipped by the scroll view.
-- **`shortcutPopover.width` is load-bearing.** A recorder's centre is `xxl + xl + half the field` in
-  from the pane edge, so the callout must stay under twice that to centre on it with the caret dead
-  centre. Widen it and the clamp kicks in and skews the caret. `Tests/callout-test.swift` pins this.
+  `.shortcutRecorderPopoverHost()` sits on `SettingsDetailView` — one host above every pane's
+  `Form`, and on `OnboardingView`. An overlay on the row would be clipped by the scroll view.
+- **`shortcutPopover.width` is load-bearing.** The callout centres on the recorder only while it
+  fits either side of it; wider than that and the clamp kicks in and skews the caret.
+  `Tests/callout-test.swift` pins this.
 - **One glass shape.** `CalloutShape` (`HotKeys/UI/`) draws body and caret as a single path so `glassEffect`
   lenses them together. The caret is two straight edges meeting at an arc — a rounded-tip triangle,
   not a dome. Stock `.regular` glass, no hand-tuned shadow, as in `PopoverMenu`.

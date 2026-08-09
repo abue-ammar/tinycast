@@ -227,7 +227,9 @@ final class WindowMover {
     // MARK: - Screens
 
     /// Cocoa screens converted into the AX space `WindowLayout` works in.
-    private static func screens(_ screens: [NSScreen], geometry: AXGeometry)
+    private static func screens(
+        _ screens: [NSScreen], geometry: AXGeometry
+    )
         -> [WindowLayout.Screen]
     {
         screens.enumerated().map { index, screen in
@@ -278,8 +280,7 @@ final class WindowMover {
         return size
     }
 
-    private func axValue(_ element: AXUIElement, _ attribute: String, type: AXValueType) -> AXValue?
-    {
+    private func axValue(_ element: AXUIElement, _ attribute: String, type: AXValueType) -> AXValue? {
         var value: CFTypeRef?
         guard
             AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,

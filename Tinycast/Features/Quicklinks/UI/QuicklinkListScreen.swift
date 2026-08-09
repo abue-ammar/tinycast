@@ -111,8 +111,9 @@ enum QuicklinkActionsMenu {
             })
         items.append(
             quicklink.isPinned
-                ? PopoverMenuItem(title: "Unpin Quicklink", systemImage: "pin.slash", shortcut: "⌘P")
-                { core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id) }
+                ? PopoverMenuItem(title: "Unpin Quicklink", systemImage: "pin.slash", shortcut: "⌘P") {
+                    core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
+                }
                 : PopoverMenuItem(title: "Pin Quicklink", systemImage: "pin", shortcut: "⌘P") {
                     core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
                 })
@@ -122,11 +123,13 @@ enum QuicklinkActionsMenu {
                     ? "Hide from Root Search" : "Show in Root Search",
                 systemImage: quicklink.showsInRootSearch ? "eye.slash" : "eye"
             ) {
-                core.quicklinkCoordinator.setQuicklinkShowsInRootSearch(!quicklink.showsInRootSearch, id: quicklink.id)
+                core.quicklinkCoordinator.setQuicklinkShowsInRootSearch(
+                    !quicklink.showsInRootSearch, id: quicklink.id)
             })
         // Revealing needs a real path, which a template lacks until it expands.
         if case .path(let path)? = QuicklinkDestination.detect(quicklink.link),
-            !QuicklinkDestination.containsPlaceholder(quicklink.link) {
+            !QuicklinkDestination.containsPlaceholder(quicklink.link)
+        {
             items.append(
                 PopoverMenuItem(title: "Show in Finder", systemImage: "folder", shortcut: "⌘F") {
                     core.paletteCoordinator.hidePalette(restoreFocus: false)

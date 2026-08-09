@@ -42,14 +42,10 @@ run() {
         printf '{"directory":"%s","command":"swiftc -swift-version 6 -sdk %s' \
             "$PWD" "$(xcrun --show-sdk-path --sdk macosx)" >> "$DB"
         printf ' %s' "${sources[@]}" >> "$DB"
-        printf '","files":[' >> "$DB"
-        local first=1
-        for source in "${sources[@]}"; do
-            [ "$first" -eq 0 ] && printf ',' >> "$DB"
-            printf '"%s"' "$source" >> "$DB"
-            first=0
-        done
-        printf ']}' >> "$DB"
+        # Claim only the harness itself. The command still lists every shipped source it compiles, so
+        # symbols resolve inside the harness — but claiming those sources here would hand them this
+        # 3-file command instead of the app's, and `.compile` is last-wins.
+        printf '","files":["%s/Tests/%s.swift"]}' "$PWD" "$name" >> "$DB"
         return 0
     fi
 
@@ -109,6 +105,8 @@ run raycast-test           Tinycast/Features/Backup/Model/RaycastFormat.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift
 run settings-backup-test   Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/Backup/Model/SettingsBackupCoverage.swift
+run settings-history-test  Tinycast/Features/Settings/SettingsTab.swift \
+                           Tinycast/Features/Settings/SettingsHistory.swift
 
 if [ "$emit_db" -eq 1 ]; then
     printf ']\n' >> "$DB"

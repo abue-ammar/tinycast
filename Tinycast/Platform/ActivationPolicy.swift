@@ -1,8 +1,6 @@
 import AppKit
 
-/// The app runs as an accessory; a titled window needs `.regular` for a Dock icon, a main menu and
-/// working traffic lights. Held by window identity rather than a count, so a repeated open or close
-/// is a no-op instead of stranding the Dock icon on a drifted tally.
+/// Keyed by window identity, not a count: a repeated open or close can't strand the Dock icon.
 @MainActor
 final class ActivationPolicy {
     private var openWindows: Set<ObjectIdentifier> = []

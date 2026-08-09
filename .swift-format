@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "indentation": {
+    "spaces": 4
+  },
+  "lineLength": 110,
+  "respectsExistingLineBreaks": true,
+  "maximumBlankLines": 1,
+  "multiElementCollectionTrailingCommas": false,
+  "indentSwitchCaseLabels": false,
+  "lineBreakBeforeControlFlowKeywords": false,
+  "lineBreakBeforeEachArgument": false,
+  "lineBreakBeforeEachGenericRequirement": false,
+  "lineBreakBetweenDeclarationAttributes": false,
+  "prioritizeKeepingFunctionOutputTogether": true,
+  "reflowMultilineStringLiterals": "never",
+  "rules": {
+    "GroupNumericLiterals": false,
+    "OrderedImports": false,
+    "FileScopedDeclarationPrivacy": false,
+    "NoAccessLevelOnExtensionDeclaration": false,
+    "UseShorthandTypeNames": false,
+    "ReturnVoidInsteadOfEmptyTuple": false,
+    "AlwaysUseLowerCamelCase": false,
+    "UseLetInEveryBoundCaseVariable": false,
+    "NoBlockComments": false
+  }
+}

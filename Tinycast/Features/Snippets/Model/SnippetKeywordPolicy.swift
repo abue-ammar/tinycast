@@ -92,7 +92,8 @@ struct SnippetKeywordPolicy: Sendable {
     }
 
     mutating func update(_ keywords: [Keyword]) {
-        self.keywords = keywords
+        self.keywords =
+            keywords
             .filter { !$0.value.isEmpty && $0.deletionCount <= Self.maximumBufferLength }
             .sorted {
                 if $0.value.count != $1.value.count { return $0.value.count > $1.value.count }

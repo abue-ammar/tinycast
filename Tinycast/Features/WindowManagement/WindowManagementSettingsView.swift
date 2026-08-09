@@ -5,91 +5,63 @@ struct WindowManagementSettingsView: View {
 
     var body: some View {
         @Bindable var settings = settings
-        return SettingsPane(
-            title: "Window Management",
-            subtitle:
-                "Snap, resize and move the frontmost window from the launcher or a global shortcut."
-        ) {
-            FeatureSwitchCard(
+        return Form {
+            FeatureSwitchSection(
                 header: "Window Management",
                 enableTitle: "Enable window management",
                 enableSubtitle:
                     "Moves the window you were last in, using the Accessibility permission Tinycast already uses to paste.",
-                systemImage: "macwindow",
                 launcherSubtitle: "Find the window commands in launcher search.",
                 isEnabled: $settings.windowManagementEnabled,
                 showsInLauncher: $settings.windowManagementShowInLauncher)
 
             Group {
-                optionsCard
-                commandsCard
+                options
+                commands
             }
-            // Same dim as the hidden-category card; the switch above stays live.
-            .opacity(settings.windowManagementEnabled ? 1 : 0.45)
-            .disabled(!settings.windowManagementEnabled)
+            .settingsEnabled(settings.windowManagementEnabled)
         }
+        .formStyle(.grouped)
     }
 
-    private var optionsCard: some View {
+    private var options: some View {
         @Bindable var settings = settings
-        return SettingsCard(header: "Options") {
-            SettingsRow(
-                title: "Cycle sizes on repeat",
-                subtitle:
-                    "Triggering a half again steps it through a third and two thirds before returning.",
-                systemImage: "arrow.triangle.2.circlepath",
-                tint: .blue
-            ) {
-                Toggle("Cycle sizes on repeat", isOn: $settings.windowCycleOnRepeat)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .accessibilityLabel("Cycle sizes on repeat")
+        return Section {
+            Toggle(isOn: $settings.windowCycleOnRepeat) {
+                Text("Cycle sizes on repeat")
+                Text(
+                    "Triggering a half again steps it through a third and two thirds before returning."
+                )
             }
 
-            SettingsDivider()
-
-            SettingsRow(
-                title: "Gap between windows",
-                subtitle: "Points left between tiled windows and around the screen edge.",
-                systemImage: "square.split.2x1",
-                tint: .blue
-            ) {
+            LabeledContent {
                 HStack(spacing: Theme.Spacing.sm) {
                     Text("\(settings.windowGap) pt")
-                        .font(.body.monospacedDigit())
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
-                    Stepper(
-                        "Gap between windows", value: $settings.windowGap, in: 0...64, step: 2)
+                    Stepper("Gap between windows", value: $settings.windowGap, in: 0...64, step: 2)
                         .labelsHidden()
                 }
+            } label: {
+                Text("Gap between windows")
+                Text("Points left between tiled windows and around the screen edge.")
             }
+        } header: {
+            Text("Options")
         }
     }
 
-    private var commandsCard: some View {
-        SettingsCard(header: "Commands") {
-            ForEach(Array(WindowCommandCatalog.grouped().enumerated()), id: \.element.group) { index, section in
-                if index > 0 { SettingsDivider() }
-                WindowCommandGroupHeader(title: section.group.title)
+    /// One section per catalog group, so the sidebar's own grouping carries the headings.
+    private var commands: some View {
+        ForEach(WindowCommandCatalog.grouped(), id: \.group) { section in
+            Section {
                 ForEach(section.commands) { command in
                     WindowCommandSettingsRow(command: command)
                 }
+            } header: {
+                Text(section.group.title)
             }
         }
-    }
-}
-
-private struct WindowCommandGroupHeader: View {
-    let title: String
-
-    var body: some View {
-        Text(title)
-            .font(Theme.Typography.sectionHeader)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.xl)
-            .padding(.top, Theme.Spacing.lg)
-            .padding(.bottom, Theme.Spacing.xs)
     }
 }
 
@@ -97,22 +69,11 @@ private struct WindowCommandGroupHeader: View {
 private struct WindowCommandSettingsRow: View {
     let command: WindowCommand
     @Environment(VisibilityStore.self) private var visibility
-    // Hover lives on the row so a mouse sweep repaints only the rows entering and leaving.
-    @State private var hovered = false
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        SettingsRow(title: command.name) {
             Image(systemName: command.sfSymbol)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.blue)
-                .frame(width: Theme.Size.settingsRowIcon)
-
-            Text(command.name)
-                .font(.body)
-                .lineLimit(1)
-
-            Spacer(minLength: Theme.Spacing.lg)
-
+        } trailing: {
             ShortcutRecorder(action: .windowCommand(id: command.id))
 
             Toggle("", isOn: visibilityBinding)
@@ -121,14 +82,6 @@ private struct WindowCommandSettingsRow: View {
                 .help("Show in launcher")
                 .accessibilityLabel("Show \(command.name) in launcher")
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(hovered ? Theme.Colors.rowHover : .clear)
-                .padding(.horizontal, Theme.Spacing.sm)
-        )
-        .onHover { hovered = $0 }
     }
 
     /// `VisibilityStore` keys on the entry, so this builds the same entry `AppIndex` publishes.

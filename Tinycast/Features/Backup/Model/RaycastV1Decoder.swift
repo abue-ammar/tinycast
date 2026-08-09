@@ -130,7 +130,8 @@ enum RaycastV1Decoder {
         payload.popToRootTimeout = advanced?["popToRootTimeout"] as? Int
         payload.emojiSkinTone = advanced?["emojiSkinTone"] as? String
         if let state = advanced?["raycast_hyperKey_state"] as? [String: Any],
-            let keyCode = state["keyCode"] as? Int {
+            let keyCode = state["keyCode"] as? Int
+        {
             payload.hyperKey = .init(
                 enabled: state["enabled"] as? Bool ?? true,
                 keyCode: keyCode,

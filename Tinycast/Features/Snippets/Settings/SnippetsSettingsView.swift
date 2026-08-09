@@ -10,17 +10,12 @@ struct SnippetsSettingsView: View {
 
     var body: some View {
         @Bindable var settings = settings
-        return SettingsPane(
-            title: "Snippets",
-            subtitle:
-                "Create reusable text templates and expand them from the launcher or with a keyword."
-        ) {
-            FeatureSwitchCard(
+        return Form {
+            FeatureSwitchSection(
                 header: "Snippets",
                 enableTitle: "Enable snippets",
                 enableSubtitle:
                     "Reusable Markdown templates, expanded from the launcher or a typed keyword.",
-                systemImage: "curlybraces",
                 launcherSubtitle: "Find your snippets in launcher search.",
                 // Enabling is also keyword-expansion consent, so it uses the confirming setter.
                 isEnabled: Binding(
@@ -29,25 +24,28 @@ struct SnippetsSettingsView: View {
                 showsInLauncher: $settings.snippetsShowInLauncher)
 
             if settings.snippetsEnabled, core.snippetListener.status == .needsAccessibility {
-                SettingsCallout(
-                    title: "Keyword expansion needs the Accessibility permission.",
-                    message: "The same grant pasting uses. Launcher search keeps working meanwhile.",
-                    systemImage: "exclamationmark.triangle",
-                    tint: .orange
-                ) {
-                    Button("Grant Access…") { Permissions.openAccessibilitySettings() }
-                        .controlSize(.small)
+                Section {
+                    LabeledContent {
+                        Button("Grant Access…") { Permissions.openAccessibilitySettings() }
+                    } label: {
+                        Label(
+                            "Keyword expansion needs the Accessibility permission.",
+                            systemImage: "exclamationmark.triangle"
+                        )
+                        .foregroundStyle(.orange)
+                        Text(
+                            "The same grant pasting uses. Launcher search keeps working meanwhile.")
+                    }
                 }
             }
 
             Group {
-                snippetsCard
+                library
                 libraryNotices
             }
-            // Same dim as the hidden-category card; the switch above stays live.
-            .opacity(settings.snippetsEnabled ? 1 : 0.45)
-            .disabled(!settings.snippetsEnabled)
+            .settingsEnabled(settings.snippetsEnabled)
         }
+        .formStyle(.grouped)
         .sheet(item: $editor) { target in
             SnippetEditorSheet(record: target.record)
         }
@@ -63,20 +61,13 @@ struct SnippetsSettingsView: View {
         }
     }
 
-    private var snippetsCard: some View {
-        SettingsCard(header: "Library") {
+    private var library: some View {
+        Section {
             if sortedSnippets.isEmpty {
-                SettingsRow(
-                    title: snippetsStore.state == .loading ? "Loading snippets…" : "No snippets",
-                    subtitle: "Add one to make it searchable from the launcher.",
-                    systemImage: "doc.text",
-                    tint: .secondary
-                ) {
-                    EmptyView()
-                }
+                Text(snippetsStore.state == .loading ? "Loading snippets…" : "No snippets yet.")
+                    .foregroundStyle(.secondary)
             } else {
-                ForEach(Array(sortedSnippets.enumerated()), id: \.element.id) { index, record in
-                    if index > 0 { SettingsDivider() }
+                ForEach(sortedSnippets) { record in
                     SnippetSettingsRow(
                         record: record,
                         onEdit: { editor = EditorTarget(record: record) },
@@ -84,69 +75,62 @@ struct SnippetsSettingsView: View {
                 }
             }
 
-            SettingsDivider()
-            SettingsRow(
-                title: "New Snippet",
-                subtitle: "Give the snippet a searchable name and an optional expansion keyword.",
-                systemImage: "plus.circle",
-                tint: .green
-            ) {
+            LabeledContent {
                 Button("Add…") { editor = EditorTarget(record: nil) }
-                    .controlSize(.small)
+            } label: {
+                Text("New Snippet")
+                Text("Give the snippet a searchable name and an optional expansion keyword.")
             }
 
-            SettingsDivider()
-            SettingsRow(
-                title: "Snippets Folder",
-                subtitle: "Plain Markdown files in this channel’s Application Support folder.",
-                systemImage: "folder",
-                tint: .green
-            ) {
+            LabeledContent {
                 Button("Open Folder", action: core.snippetExpansion.revealSnippetsInFinder)
-                    .controlSize(.small)
                     .accessibilityHint("Reveals this Tinycast channel’s snippets folder in Finder.")
+            } label: {
+                Text("Snippets Folder")
+                Text("Plain Markdown files in this channel’s Application Support folder.")
             }
+        } header: {
+            Text("Library")
         }
     }
 
     @ViewBuilder
     private var libraryNotices: some View {
         if case .failed(let message) = snippetsStore.state {
-            SettingsCallout(
-                title: "Couldn’t load the snippet library",
-                message: message,
-                systemImage: "exclamationmark.triangle",
-                tint: .orange
-            ) {
-                Button("Retry", action: snippetsStore.retry)
-                    .accessibilityHint("Tries to load the snippet library again.")
-            }
-            .accessibilityElement(children: .contain)
+            noticeSection(
+                "Couldn’t load the snippet library", message, tint: .orange,
+                retryHint: "Tries to load the snippet library again.")
         }
 
         if !snippetsStore.issues.isEmpty {
-            SettingsCallout(
-                title: snippetIssueTitle,
-                message: snippetIssueMessage,
-                systemImage: "doc.badge.ellipsis",
-                tint: .orange
-            ) {
-                Button("Retry", action: snippetsStore.retry)
-                    .accessibilityHint("Reloads snippet files after you fix them on disk.")
-            }
-            .accessibilityElement(children: .contain)
+            noticeSection(
+                snippetIssueTitle, snippetIssueMessage, tint: .orange,
+                retryHint: "Reloads snippet files after you fix them on disk.")
         }
 
         // The editor reports its own failures, so this covers the ones with no sheet behind.
         if editor == nil, let operationError = snippetsStore.operationError {
-            SettingsCallout(
-                title: "The snippet operation failed",
-                message: operationError,
-                systemImage: "exclamationmark.triangle",
-                tint: .red
-            )
-            .accessibilityElement(children: .contain)
+            noticeSection(
+                "The snippet operation failed", operationError, tint: .red, retryHint: nil)
         }
+    }
+
+    private func noticeSection(
+        _ title: String, _ message: String, tint: Color, retryHint: String?
+    ) -> some View {
+        Section {
+            LabeledContent {
+                if let retryHint {
+                    Button("Retry", action: snippetsStore.retry)
+                        .accessibilityHint(retryHint)
+                }
+            } label: {
+                Label(title, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(tint)
+                Text(message)
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     private var sortedSnippets: [StoredSnippet] {
@@ -187,26 +171,9 @@ private struct SnippetSettingsRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        SettingsRow(title: record.snippet.name, subtitle: metadata) {
             Image(systemName: "doc.text")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.green)
-                .frame(width: Theme.Size.settingsRowIcon)
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
-                Text(record.snippet.name)
-                    .font(.body)
-                    .lineLimit(1)
-                Text(metadata)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .help(metadata)
-            }
-
-            Spacer(minLength: Theme.Spacing.lg)
-
+        } trailing: {
             Button(action: onEdit) {
                 Image(systemName: "pencil")
             }
@@ -222,8 +189,6 @@ private struct SnippetSettingsRow: View {
             .help("Delete Snippet")
             .accessibilityLabel("Delete \(record.snippet.name)")
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.lg)
     }
 
     private var metadata: String {
@@ -366,7 +331,8 @@ private struct SnippetEditorSheet: View {
     /// Replaces the selection or lands at the caret; appends when there is no usable one.
     private func insert(_ token: String) {
         if let selection, case .selection(let range) = selection.indices,
-            range.lowerBound >= text.startIndex, range.upperBound <= text.endIndex {
+            range.lowerBound >= text.startIndex, range.upperBound <= text.endIndex
+        {
             text.replaceSubrange(range, with: token)
         } else {
             text += token

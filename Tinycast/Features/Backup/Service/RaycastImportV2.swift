@@ -94,7 +94,8 @@ enum RaycastImportV2 {
         }
         // Exact-match only: a timeout outside our option set is skipped, not clamped.
         if let secs = general?["popToRootTimeout"] as? Int,
-            let timeout = PopToRootTimeout(rawValue: secs) {
+            let timeout = PopToRootTimeout(rawValue: secs)
+        {
             data.popToRootSeconds = timeout.rawValue
             mapped = true
         }
@@ -118,7 +119,8 @@ enum RaycastImportV2 {
         var mapped = false
 
         if let general = settings?["general"] as? [String: Any],
-            let binding = binding(from: general["globalHotkey"]) {
+            let binding = binding(from: general["globalHotkey"])
+        {
             hotkeys.togglePalette = binding
             mapped = true
         }
@@ -134,7 +136,8 @@ enum RaycastImportV2 {
                 mapped = true
             case "e:r:applications":
                 if let path = appPath(fromCommandID: command["id"] as? String),
-                    let bundleID = Bundle(url: URL(fileURLWithPath: path))?.bundleIdentifier {
+                    let bundleID = Bundle(url: URL(fileURLWithPath: path))?.bundleIdentifier
+                {
                     apps[bundleID] = binding
                     mapped = true
                 }

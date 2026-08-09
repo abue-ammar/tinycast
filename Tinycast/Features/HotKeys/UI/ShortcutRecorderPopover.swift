@@ -49,7 +49,8 @@ struct ShortcutRecorderPopover: View {
         .padding(.vertical, Theme.Spacing.sm)
         .padding(placement.caretEdge == .top ? .top : .bottom, Theme.Size.calloutCaretHeight)
         .frame(
-            width: Theme.Size.shortcutPopover.width, height: Theme.Size.shortcutPopover.height)
+            width: Theme.Size.shortcutPopover.width, height: Theme.Size.shortcutPopover.height
+        )
         // Stock glass owns its elevation, as in `PopoverMenu` — no hand-tuned shadow.
         .glassEffect(
             .regular, in: CalloutShape(caretEdge: placement.caretEdge, caretX: placement.caretX))

@@ -40,7 +40,8 @@ final class ShortcutCaptureSession {
                         hotKeys: hotKeys)
                 }
                 return nil  // always consume: no beeps, no leaking keys to the window
-            }) {
+            })
+        {
             monitors.append(monitor)
         }
 
@@ -61,7 +62,8 @@ final class ShortcutCaptureSession {
                         hotKeys: hotKeys)
                 }
                 return event
-            }) {
+            })
+        {
             monitors.append(monitor)
         }
 
@@ -71,7 +73,8 @@ final class ShortcutCaptureSession {
             handler: { [weak hotKeys] event in
                 MainActor.assumeIsolated { hotKeys?.recordingAction = nil }
                 return event
-            }) {
+            })
+        {
             monitors.append(monitor)
         }
 
@@ -134,8 +137,11 @@ final class ShortcutCaptureSession {
         commit(.doubleTap(modifier), action: action, hotKeys: hotKeys)
     }
 
-    private static func doubleTapModifiers(in flags: NSEvent.ModifierFlags)
-        -> Set<DoubleTapModifier> {
+    private static func doubleTapModifiers(
+        in flags: NSEvent.ModifierFlags
+    )
+        -> Set<DoubleTapModifier>
+    {
         var held: Set<DoubleTapModifier> = []
         if flags.contains(.control) { held.insert(.control) }
         if flags.contains(.option) { held.insert(.option) }

@@ -97,9 +97,11 @@ feature-specific lives in that feature's doc, under its own `## Invariants`.
   suffix consistency:** pick the suffix that describes the type honestly, add a new one when none fits,
   and never rename a well-named type just to match the table.
   Full table: [standards.md#naming](docs/standards.md#naming).
-- **Comments are rare, one line, capped at 100 characters, and explain the *why*** — the gotcha or the
-  invariant, never the what. Prefer deleting a comment to updating it, and never write one to explain a
-  change you just made. Full rules: [standards.md#comments](docs/standards.md#comments).
+- **Comments are rare, one line, and explain the *why*** — the gotcha or invariant, never the what.
+  **Never two in a row, never extended into a block**: if one line can't carry it, name a function,
+  constant or type instead. Cap 100 characters, delete rather than update, and never comment a change
+  you just made. Nothing lints this; get it right the first time.
+  Full rules: [standards.md#comments](docs/standards.md#comments).
 - **Debug builds are their own channel** — `Tinycast Dev.app` / `com.tinycast.app.dev` — so a local run
   never shares prefs, caches, TCC grants or the login item with an installed copy. Anything newly
   persisted must stay keyed by `Bundle.main.bundleIdentifier`.

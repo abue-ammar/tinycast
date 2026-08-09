@@ -176,7 +176,7 @@ struct WindowCommandTests {
 
         let quarters = [
             frame(.topLeftQuarter)!, frame(.topRightQuarter)!, frame(.bottomLeftQuarter)!,
-            frame(.bottomRightQuarter)!,
+            frame(.bottomRightQuarter)!
         ]
         expect(
             quarters.reduce(CGRect.null) { $0.union($1) } == mainScreen.visibleFrame,
@@ -303,7 +303,8 @@ struct WindowCommandTests {
         expectRect(
             frame(.topHalf, on: reserved)!, CGRect(x: 0, y: 25, width: 1440, height: 400),
             "tiles respect a reserved visible frame")
-        expectRect(frame(.maximize, on: reserved)!, reserved.visibleFrame, "maximize never covers the menu bar")
+        expectRect(
+            frame(.maximize, on: reserved)!, reserved.visibleFrame, "maximize never covers the menu bar")
     }
 
     // MARK: - Gaps
@@ -325,7 +326,7 @@ struct WindowCommandTests {
         // Every outer edge is inset by the full gap, every gutter is exactly one gap.
         let quarters = [
             frame(.topLeftQuarter, gap: 10)!, frame(.topRightQuarter, gap: 10)!,
-            frame(.bottomLeftQuarter, gap: 10)!, frame(.bottomRightQuarter, gap: 10)!,
+            frame(.bottomLeftQuarter, gap: 10)!, frame(.bottomRightQuarter, gap: 10)!
         ]
         expect(quarters[0].maxX + 10 == quarters[1].minX, "quarters: vertical gutter is the gap")
         expect(quarters[0].maxY + 10 == quarters[2].minY, "quarters: horizontal gutter is the gap")
@@ -347,7 +348,8 @@ struct WindowCommandTests {
             frame(.leftHalf, gap: 9)!.maxX + 9 == frame(.rightHalf, gap: 9)!.minX,
             "an odd gap still produces an exact gutter")
 
-        expectRect(frame(.maximize, gap: 12)!, CGRect(x: 12, y: 12, width: 1416, height: 876),
+        expectRect(
+            frame(.maximize, gap: 12)!, CGRect(x: 12, y: 12, width: 1416, height: 876),
             "maximize honours the gap")
 
         // Degenerate gaps must never produce an unusable window.
@@ -565,7 +567,8 @@ struct WindowCommandTests {
             frame(.leftHalf, on: right, gap: 10)!,
             "a remembered tile is re-derived exactly on the destination")
         expectRect(
-            frame(.nextDisplay, window: frame(.firstThird, on: left)!, lastTile: .firstThird,
+            frame(
+                .nextDisplay, window: frame(.firstThird, on: left)!, lastTile: .firstThird,
                 allScreens: both)!,
             frame(.firstThird, on: right)!,
             "a remembered third is re-derived exactly on the destination")
@@ -799,7 +802,7 @@ struct WindowCommandTests {
                 mainScreen,
                 WindowLayout.Screen(
                     id: 2, frame: CGRect(x: 1440, y: -200, width: 2560, height: 1440),
-                    visibleFrame: CGRect(x: 1440, y: -175, width: 2560, height: 1390)),
+                    visibleFrame: CGRect(x: 1440, y: -175, width: 2560, height: 1390))
             ],
             [
                 WindowLayout.Screen(
@@ -807,15 +810,15 @@ struct WindowCommandTests {
                     visibleFrame: CGRect(x: 0, y: 25, width: 1024, height: 590)),
                 WindowLayout.Screen(
                     id: 6, frame: CGRect(x: -3840, y: 0, width: 3840, height: 2160),
-                    visibleFrame: CGRect(x: -3840, y: 25, width: 3840, height: 2060)),
-            ],
+                    visibleFrame: CGRect(x: -3840, y: 25, width: 3840, height: 2060))
+            ]
         ]
         let windows: [CGRect] = [
             CGRect(x: 100, y: 100, width: 600, height: 400),
             CGRect(x: 0, y: 0, width: 0, height: 0),
             CGRect(x: -900, y: -900, width: 200, height: 150),
             CGRect(x: 200, y: 200, width: 5000, height: 4000),
-            CGRect(x: 1439, y: 899, width: 1, height: 1),
+            CGRect(x: 1439, y: 899, width: 1, height: 1)
         ]
         let gaps: [CGFloat] = [0, 1, 8, 25, 200]
 

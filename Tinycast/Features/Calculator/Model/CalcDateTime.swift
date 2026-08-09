@@ -5,8 +5,11 @@ enum CalcDateTime {
     /// Which occurrence of a bare, recurring date/time a phrase resolves to.
     private enum MomentBias { case future, past }
 
-    static func evaluate(_ raw: String, now: Date = Date(), calendar: Calendar = .current)
-        -> CalcResult? {
+    static func evaluate(
+        _ raw: String, now: Date = Date(), calendar: Calendar = .current
+    )
+        -> CalcResult?
+    {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let query = echo.lowercased()
         guard !query.isEmpty else { return nil }
@@ -32,8 +35,11 @@ enum CalcDateTime {
 
     // MARK: - Grammar A: duration until a moment
 
-    private static func parseUntil(_ query: String, echo: String, now: Date, calendar: Calendar)
-        -> CalcResult? {
+    private static func parseUntil(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    )
+        -> CalcResult?
+    {
         guard let connector = [" until ", " till ", " til "].first(where: query.contains) else {
             return nil
         }
@@ -78,8 +84,11 @@ enum CalcDateTime {
 
     // MARK: - Grammar B: duration since a past moment
 
-    private static func parseSince(_ query: String, echo: String, now: Date, calendar: Calendar)
-        -> CalcResult? {
+    private static func parseSince(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    )
+        -> CalcResult?
+    {
         let parts = query.components(separatedBy: " since ")
         guard parts.count == 2,
             let unit = durationUnit(parts[0]),
@@ -281,7 +290,8 @@ enum CalcDateTime {
                     month: month, day: day, now: now, calendar: calendar, bias: bias)
             }
             if parts.count == 3, let month = Int(parts[0]), let day = Int(parts[1]),
-                let year = Int(parts[2]), let date = makeDate(fullYear(year), month, day, calendar) {
+                let year = Int(parts[2]), let date = makeDate(fullYear(year), month, day, calendar)
+            {
                 return Moment(date: date, hasTime: false)
             }
         }
@@ -401,8 +411,11 @@ enum CalcDateTime {
 
     // MARK: - Formatting
 
-    private static func momentString(_ date: Date, hasTime: Bool, now: Date, calendar: Calendar)
-        -> String {
+    private static func momentString(
+        _ date: Date, hasTime: Bool, now: Date, calendar: Calendar
+    )
+        -> String
+    {
         let day = dateString(date, now: now, calendar: calendar)
         return hasTime ? "\(day) at \(timeString(date, calendar: calendar))" : day
     }
@@ -477,8 +490,11 @@ enum CalcDateTime {
         return (hour, 0)
     }
 
-    private static func makeDate(_ year: Int, _ month: Int, _ day: Int, _ calendar: Calendar)
-        -> Date? {
+    private static func makeDate(
+        _ year: Int, _ month: Int, _ day: Int, _ calendar: Calendar
+    )
+        -> Date?
+    {
         guard (1...12).contains(month), (1...31).contains(day) else { return nil }
         var components = DateComponents()
         components.year = year

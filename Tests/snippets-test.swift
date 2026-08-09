@@ -49,19 +49,23 @@ struct SnippetsTests {
             ["name": "Multiline 雪", "text": "First\nSecond"],
             ["name": "Blank Keyword", "text": "Body", "keyword": "   "],
             ["name": "   ", "text": "Skipped"],
-            ["name": "Missing Text"],
+            ["name": "Missing Text"]
         ])
 
-        check("Raycast import ignores an unrecognized container",
+        check(
+            "Raycast import ignores an unrecognized container",
             RaycastSnippetImport.parse(["snippets": []]).isEmpty)
-        check("Raycast import keeps valid entries and source order",
+        check(
+            "Raycast import keeps valid entries and source order",
             imported.map(\.name) == ["Email", "Multiline 雪", "Blank Keyword"])
         // The remaining assertions index into the result, so a wrong count has to fail rather than trap.
         guard imported.count == 3 else { return }
         check("Raycast import preserves text and Unicode", imported[1].text == "First\nSecond")
-        check("Raycast import trims keywords and normalizes blanks",
+        check(
+            "Raycast import trims keywords and normalizes blanks",
             imported[0].keyword == "!email" && imported[2].keyword == nil)
-        check("Raycast import uses safe Tinycast defaults",
+        check(
+            "Raycast import uses safe Tinycast defaults",
             imported.allSatisfy { $0.isEnabled && !$0.showsConfirmation })
     }
 
@@ -77,13 +81,20 @@ struct SnippetsTests {
         let parsed = try SnippetMarkdownSerializer.parse(content: serialized, fileURL: fileURL)
 
         check("Markdown codec round-trips escaped quoted scalars", parsed == snippet)
-        check("serializer emits canonical key order", serialized.hasPrefix(
-            "---\nname: \"Quote \\\" slash \\\\ line\\nreturn\\rtab\\t雪\"\nkeyword: \"!\\\"\\\\\\n\\t\"\nenabled: false\nshow_confirmation: true\n---\n"))
-        check("Markdown codec preserves leading, blank, CRLF, and trailing body boundaries", parsed.text == snippet.text)
+        check(
+            "serializer emits canonical key order",
+            serialized.hasPrefix(
+                "---\nname: \"Quote \\\" slash \\\\ line\\nreturn\\rtab\\t雪\"\nkeyword: \"!\\\"\\\\\\n\\t\"\nenabled: false\nshow_confirmation: true\n---\n"
+            ))
+        check(
+            "Markdown codec preserves leading, blank, CRLF, and trailing body boundaries",
+            parsed.text == snippet.text)
 
         let injection = Snippet(name: "Safe\"\nenabled: false", text: "Body")
         let injectionSource = SnippetMarkdownSerializer.serialize(injection)
-        check("quoted scalar encoding prevents frontmatter line injection", !injectionSource.contains("\nenabled: false\nenabled:"))
+        check(
+            "quoted scalar encoding prevents frontmatter line injection",
+            !injectionSource.contains("\nenabled: false\nenabled:"))
         let parsedInjection = try SnippetMarkdownSerializer.parse(
             content: injectionSource,
             fileURL: fileURL)
@@ -97,7 +108,8 @@ struct SnippetsTests {
         let parsedCRLFInjection = try SnippetMarkdownSerializer.parse(
             content: crlfInjectionSource,
             fileURL: fileURL)
-        check("CRLF scalar graphemes are escaped and round-trip literally",
+        check(
+            "CRLF scalar graphemes are escaped and round-trip literally",
             parsedCRLFInjection == crlfInjection
                 && !crlfInjectionSource.contains("Safe\r\nenabled"))
         expectParseError(
@@ -113,13 +125,17 @@ struct SnippetsTests {
             content: "---\nname: \"No HUD\"\n---\nBody",
             fileURL: fileURL)
         check("missing show_confirmation defaults false", !missingHUD.showsConfirmation)
-        expectParseError("show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n", fileURL: fileURL)
+        expectParseError(
+            "show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n",
+            fileURL: fileURL)
 
         let delimiterBody = "---\nname: \"Delimiter Body\"\nenabled: true\n---\nFirst\n---\nLast\n"
         let delimiterParsed = try SnippetMarkdownSerializer.parse(
             content: delimiterBody,
             fileURL: fileURL)
-        check("frontmatter delimiters inside the body remain literal", delimiterParsed.text == "First\n---\nLast\n")
+        check(
+            "frontmatter delimiters inside the body remain literal",
+            delimiterParsed.text == "First\n---\nLast\n")
 
         let bodyOnly = "--- not frontmatter\n\nBody"
         let bodyOnlyParsed = try SnippetMarkdownSerializer.parse(
@@ -134,21 +150,37 @@ struct SnippetsTests {
         let emptyNameParsed = try SnippetMarkdownSerializer.parse(
             content: "---\nname: \"\"\n---\nBody",
             fileURL: URL(fileURLWithPath: "/tmp/blank-name-file.md"))
-        check("a blank frontmatter name falls back to the filename",
+        check(
+            "a blank frontmatter name falls back to the filename",
             blankNameParsed.name == "Blank Name File" && emptyNameParsed.name == "Blank Name File")
 
-        expectParseError("missing closing delimiter is rejected", content: "---\nname: \"Broken\"\n", fileURL: fileURL)
-        expectParseError("non-exact closing delimiter is rejected", content: "---\nname: \"Broken\"\n--- \n", fileURL: fileURL)
+        expectParseError(
+            "missing closing delimiter is rejected", content: "---\nname: \"Broken\"\n", fileURL: fileURL)
+        expectParseError(
+            "non-exact closing delimiter is rejected", content: "---\nname: \"Broken\"\n--- \n",
+            fileURL: fileURL)
         expectParseError("unquoted scalar is rejected", content: "---\nname: Broken\n---\n", fileURL: fileURL)
-        expectParseError("invalid scalar escape is rejected", content: "---\nname: \"Bad\\q\"\n---\n", fileURL: fileURL)
-        expectParseError("non-strict boolean is rejected", content: "---\nenabled: FALSE\n---\n", fileURL: fileURL)
-        expectParseError("duplicate keys are rejected", content: "---\nname: \"A\"\nname: \"B\"\n---\n", fileURL: fileURL)
-        expectParseError("the removed showInLauncher alias is rejected", content: "---\nshowInLauncher: false\n---\n", fileURL: fileURL)
-        expectParseError("unknown frontmatter key is rejected", content: "---\nunknown: \"value\"\n---\n", fileURL: fileURL)
+        expectParseError(
+            "invalid scalar escape is rejected", content: "---\nname: \"Bad\\q\"\n---\n", fileURL: fileURL)
+        expectParseError(
+            "non-strict boolean is rejected", content: "---\nenabled: FALSE\n---\n", fileURL: fileURL)
+        expectParseError(
+            "duplicate keys are rejected", content: "---\nname: \"A\"\nname: \"B\"\n---\n", fileURL: fileURL)
+        expectParseError(
+            "the removed showInLauncher alias is rejected", content: "---\nshowInLauncher: false\n---\n",
+            fileURL: fileURL)
+        expectParseError(
+            "unknown frontmatter key is rejected", content: "---\nunknown: \"value\"\n---\n", fileURL: fileURL
+        )
         // These keys were removed or renamed; a file still carrying one is reported, not silently half-loaded.
-        expectParseError("the removed category key is rejected", content: "---\ncategory: \"Work\"\n---\n", fileURL: fileURL)
-        expectParseError("the removed show_in_launcher key is rejected", content: "---\nshow_in_launcher: true\n---\n", fileURL: fileURL)
-        expectParseError("the renamed show_hud key is rejected", content: "---\nshow_hud: true\n---\n", fileURL: fileURL)
+        expectParseError(
+            "the removed category key is rejected", content: "---\ncategory: \"Work\"\n---\n",
+            fileURL: fileURL)
+        expectParseError(
+            "the removed show_in_launcher key is rejected", content: "---\nshow_in_launcher: true\n---\n",
+            fileURL: fileURL)
+        expectParseError(
+            "the renamed show_hud key is rejected", content: "---\nshow_hud: true\n---\n", fileURL: fileURL)
     }
 
     private static func testRepositoryStorage() throws {
@@ -170,14 +202,18 @@ struct SnippetsTests {
             bundleIdentifier: "com.tinycast.app.dev",
             applicationSupportRoot: channelRoot)
 
-        check("stable, beta, and dev repositories use isolated directories",
+        check(
+            "stable, beta, and dev repositories use isolated directories",
             Set([stable.snippetsDirectory, beta.snippetsDirectory, dev.snippetsDirectory]).count == 3)
         let firstLoad = try stable.load()
-        check("a fresh channel starts with an empty library",
+        check(
+            "a fresh channel starts with an empty library",
             firstLoad.records.isEmpty && firstLoad.issues.isEmpty)
-        check("the first load creates the channel's snippets folder",
+        check(
+            "the first load creates the channel's snippets folder",
             fm.fileExists(atPath: stable.snippetsDirectory.path))
-        check("loading one channel does not create another",
+        check(
+            "loading one channel does not create another",
             !fm.fileExists(atPath: dev.snippetsDirectory.path))
         let secondLoad = try stable.load()
         check("a repeated load of an empty library stays empty", secondLoad.records.isEmpty)
@@ -196,8 +232,10 @@ struct SnippetsTests {
             atomically: true,
             encoding: .utf8)
         let partial = try corruptRepository.load()
-        check("a malformed file does not hide valid records", partial.records.map(\.snippet.name) == ["Valid"])
-        check("malformed files are returned as per-file issues",
+        check(
+            "a malformed file does not hide valid records", partial.records.map(\.snippet.name) == ["Valid"])
+        check(
+            "malformed files are returned as per-file issues",
             partial.issues.count == 1
                 && partial.issues[0].fileURL.standardizedFileURL.path == invalidURL.standardizedFileURL.path)
 
@@ -208,14 +246,16 @@ struct SnippetsTests {
         let linkedEntryURL = corruptRepository.snippetsDirectory.appendingPathComponent("linked.md")
         try fm.createSymbolicLink(at: linkedEntryURL, withDestinationURL: validURL)
         let nonRegularEntries = try corruptRepository.load()
-        check("a directory named like a snippet is neither loaded nor reported as an issue",
+        check(
+            "a directory named like a snippet is neither loaded nor reported as an issue",
             !nonRegularEntries.records.contains {
                 $0.id == directoryEntryURL.standardizedFileURL.path
             }
                 && !nonRegularEntries.issues.contains {
                     $0.fileURL.standardizedFileURL.path == directoryEntryURL.standardizedFileURL.path
                 })
-        check("a snippet file symlinked into the folder still loads",
+        check(
+            "a snippet file symlinked into the folder still loads",
             nonRegularEntries.records.contains {
                 $0.id == linkedEntryURL.standardizedFileURL.path
             })
@@ -226,24 +266,29 @@ struct SnippetsTests {
             applicationSupportRoot: crudRoot)
         let imported = try crudRepository.create([
             Snippet(name: "Imported", text: "One"),
-            Snippet(name: "Imported", text: "Two", keyword: "!two"),
+            Snippet(name: "Imported", text: "Two", keyword: "!two")
         ])
-        check("batch import creates every snippet without overwriting duplicate names",
+        check(
+            "batch import creates every snippet without overwriting duplicate names",
             imported.map { $0.fileURL.lastPathComponent } == ["imported.md", "imported-2.md"])
         let importedReload = try crudRepository.load()
-        check("batch import round-trips through Markdown storage",
+        check(
+            "batch import round-trips through Markdown storage",
             importedReload.records.filter { $0.snippet.name == "Imported" }.count == 2)
 
         let first = try crudRepository.create(Snippet(name: "Same", text: "One"))
         let second = try crudRepository.create(Snippet(name: "Same", text: "Two"))
-        check("create never overwrites an existing slug",
+        check(
+            "create never overwrites an existing slug",
             first.fileURL.lastPathComponent == "same.md" && second.fileURL.lastPathComponent == "same-2.md")
         let oddURL = crudRepository.snippetsDirectory.appendingPathComponent("unrelated-filename.md")
         try SnippetMarkdownSerializer.serialize(Snippet(name: "Frontmatter Name", text: "Odd"))
             .write(to: oddURL, atomically: true, encoding: .utf8)
         let withOddFilename = try crudRepository.load()
-        check("frontmatter names do not replace path identity",
-            withOddFilename.records.contains { $0.id == oddURL.path && $0.snippet.name == "Frontmatter Name" })
+        check(
+            "frontmatter names do not replace path identity",
+            withOddFilename.records.contains { $0.id == oddURL.path && $0.snippet.name == "Frontmatter Name" }
+        )
 
         var edited = first.snippet
         edited.name = "Renamed in Frontmatter"
@@ -254,14 +299,21 @@ struct SnippetsTests {
             expectedRevision: first.sourceRevision)
         let afterSave = try crudRepository.load()
         check("save keeps the original file identity", saved.id == first.id)
-        check("save updates in place without creating duplicates",
+        check(
+            "save updates in place without creating duplicates",
             afterSave.records.filter { $0.id == first.id }.count == 1
-                && !fm.fileExists(atPath: crudRepository.snippetsDirectory.appendingPathComponent("renamed-in-frontmatter.md").path))
+                && !fm.fileExists(
+                    atPath: crudRepository.snippetsDirectory.appendingPathComponent(
+                        "renamed-in-frontmatter.md"
+                    ).path)
+        )
 
-        let externallyRenamedURL = crudRepository.snippetsDirectory.appendingPathComponent("external-rename.md")
+        let externallyRenamedURL = crudRepository.snippetsDirectory.appendingPathComponent(
+            "external-rename.md")
         try fm.moveItem(at: second.fileURL, to: externallyRenamedURL)
         let afterRename = try crudRepository.load()
-        check("an external rename is modeled as delete plus create",
+        check(
+            "an external rename is modeled as delete plus create",
             !afterRename.records.contains { $0.id == second.id }
                 && afterRename.records.contains { $0.id == externallyRenamedURL.path })
 
@@ -288,7 +340,8 @@ struct SnippetsTests {
             try crudRepository.delete(
                 fileURL: currentSaved.fileURL,
                 expectedRevision: currentSaved.sourceRevision)
-            check("delete removes exactly the requested file",
+            check(
+                "delete removes exactly the requested file",
                 !fm.fileExists(atPath: currentSaved.fileURL.path)
                     && fm.fileExists(atPath: externallyRenamedURL.path))
             do {
@@ -338,10 +391,12 @@ struct SnippetsTests {
             }.value
             let results = await [first, second]
             let records = results.compactMap { try? $0.get() }
-            initializationHeld = records.count == 2
+            initializationHeld =
+                records.count == 2
                 && records.allSatisfy { fm.fileExists(atPath: $0.fileURL.path) }
         }
-        check("concurrent initialization and creates preserve both committed files",
+        check(
+            "concurrent initialization and creates preserve both committed files",
             initializationHeld)
 
         let saveRoot = root.appendingPathComponent("save", isDirectory: true)
@@ -357,16 +412,20 @@ struct SnippetsTests {
         var secondEdit = stored.snippet
         secondEdit.text = "Second"
         async let firstSave = Task.detached {
-            Result { try repository.save(
-                firstEdit,
-                fileURL: stored.fileURL,
-                expectedRevision: stored.sourceRevision) }
+            Result {
+                try repository.save(
+                    firstEdit,
+                    fileURL: stored.fileURL,
+                    expectedRevision: stored.sourceRevision)
+            }
         }.value
         async let secondSave = Task.detached {
-            Result { try secondRepositoryOwner.save(
-                secondEdit,
-                fileURL: stored.fileURL,
-                expectedRevision: stored.sourceRevision) }
+            Result {
+                try secondRepositoryOwner.save(
+                    secondEdit,
+                    fileURL: stored.fileURL,
+                    expectedRevision: stored.sourceRevision)
+            }
         }.value
         let saveResults = await [firstSave, secondSave]
         let successCount = saveResults.filter {
@@ -379,7 +438,8 @@ struct SnippetsTests {
             else { return false }
             return true
         }.count
-        check("per-channel repository owners serialize revision validation with commit",
+        check(
+            "per-channel repository owners serialize revision validation with commit",
             successCount == 1 && conflictCount == 1)
 
         let physicalSupport = root.appendingPathComponent("physical-support", isDirectory: true)
@@ -404,9 +464,11 @@ struct SnippetsTests {
                 mutationHooks: hooks)
             let symlinkedRecord = try symlinkedRepository.create(
                 Snippet(name: "Alias Race", text: "Original"))
-            guard let directRecord = try directRepository.load().records.first(where: {
-                $0.fileURL.lastPathComponent == symlinkedRecord.fileURL.lastPathComponent
-            }) else {
+            guard
+                let directRecord = try directRepository.load().records.first(where: {
+                    $0.fileURL.lastPathComponent == symlinkedRecord.fileURL.lastPathComponent
+                })
+            else {
                 aliasCoordinationHeld = false
                 continue
             }
@@ -416,16 +478,20 @@ struct SnippetsTests {
             symlinkedEdit.text = "Symlinked \(index)"
 
             async let directSave = Task.detached {
-                Result { try directRepository.save(
-                    directEdit,
-                    fileURL: directRecord.fileURL,
-                    expectedRevision: directRecord.sourceRevision) }
+                Result {
+                    try directRepository.save(
+                        directEdit,
+                        fileURL: directRecord.fileURL,
+                        expectedRevision: directRecord.sourceRevision)
+                }
             }.value
             async let symlinkedSave = Task.detached {
-                Result { try symlinkedRepository.save(
-                    symlinkedEdit,
-                    fileURL: symlinkedRecord.fileURL,
-                    expectedRevision: symlinkedRecord.sourceRevision) }
+                Result {
+                    try symlinkedRepository.save(
+                        symlinkedEdit,
+                        fileURL: symlinkedRecord.fileURL,
+                        expectedRevision: symlinkedRecord.sourceRevision)
+                }
             }.value
             let results = await [directSave, symlinkedSave]
             let successes = results.filter {
@@ -440,7 +506,8 @@ struct SnippetsTests {
             }.count
             aliasCoordinationHeld = successes == 1 && conflicts == 1
         }
-        check("direct and symlinked channel aliases share revision coordination",
+        check(
+            "direct and symlinked channel aliases share revision coordination",
             aliasCoordinationHeld)
 
         let boundaryRoot = root.appendingPathComponent("mutation-boundary", isDirectory: true)
@@ -454,10 +521,11 @@ struct SnippetsTests {
             bundleIdentifier: boundaryBundle,
             applicationSupportRoot: boundaryRoot,
             mutationHooks: .init(beforeRevalidation: { mutation, fileURL in
-                let text = switch mutation {
-                case .save: "External before save"
-                case .delete: "External before delete"
-                }
+                let text =
+                    switch mutation {
+                    case .save: "External before save"
+                    case .delete: "External before delete"
+                    }
                 try? Data(text.utf8).write(to: fileURL, options: .atomic)
             }))
         var boundaryEdit = boundaryRecord.snippet
@@ -470,7 +538,8 @@ struct SnippetsTests {
             check("save revalidates inside coordinated access at the mutation boundary", false)
         } catch SnippetRepository.RepositoryError.conflict {
             let content = try String(contentsOf: boundaryRecord.fileURL, encoding: .utf8)
-            check("save revalidates inside coordinated access at the mutation boundary",
+            check(
+                "save revalidates inside coordinated access at the mutation boundary",
                 content == "External before save")
         }
         if let deleteRecord = try boundaryRepository.load().records.first(where: {
@@ -483,7 +552,8 @@ struct SnippetsTests {
                 check("delete revalidates inside coordinated access at the mutation boundary", false)
             } catch SnippetRepository.RepositoryError.conflict {
                 let content = try String(contentsOf: deleteRecord.fileURL, encoding: .utf8)
-                check("delete revalidates inside coordinated access at the mutation boundary",
+                check(
+                    "delete revalidates inside coordinated access at the mutation boundary",
                     fm.fileExists(atPath: deleteRecord.fileURL.path)
                         && content == "External before delete")
             }
@@ -504,7 +574,8 @@ struct SnippetsTests {
             order.append("second")
         }
         await queue.drain()
-        check("interactive deliveries are retained and serialized",
+        check(
+            "interactive deliveries are retained and serialized",
             order == ["first-start", "first-end", "second"] && queue.isIdle)
 
         var automaticRan = false
@@ -522,19 +593,24 @@ struct SnippetsTests {
         let completion = SnippetDeliveryCompletion { completionCount += 1 }
         completion.confirm()
         completion.confirm()
-        check("delivery completion invokes its callback exactly once after confirmation",
+        check(
+            "delivery completion invokes its callback exactly once after confirmation",
             completion.isConfirmed && completionCount == 1)
 
-        check("unavailable AX text attributes use the event delivery fallback",
+        check(
+            "unavailable AX text attributes use the event delivery fallback",
             SnippetAccessibilityReplacement.unavailable.fallsBackToEvents)
-        check("a rejected AX keyword replacement fails closed instead of deleting by events",
+        check(
+            "a rejected AX keyword replacement fails closed instead of deleting by events",
             !SnippetAccessibilityReplacement.rejected.fallsBackToEvents)
-        check("unreadable AX state accepts a posted paste after the conservative delay",
+        check(
+            "unreadable AX state accepts a posted paste after the conservative delay",
             SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: 15,
                 hadPreviousState: true,
                 readStateAfterPaste: false))
-        check("readable unchanged AX state is not treated as a confirmed paste",
+        check(
+            "readable unchanged AX state is not treated as a confirmed paste",
             !SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: 79,
                 hadPreviousState: true,
@@ -551,31 +627,36 @@ struct SnippetsTests {
         let secondType = NSPasteboard.PasteboardType("com.example.second")
         let secondItem = NSPasteboardItem()
         secondItem.setData(Data([4, 5, 6]), forType: secondType)
-        check("pasteboard fixture writes multiple items and types",
+        check(
+            "pasteboard fixture writes multiple items and types",
             pasteboard.replaceObjects([firstItem, secondItem]))
 
         let lease = TemporaryPasteboardLease.begin(
             text: "Temporary",
             pasteboard: pasteboard)
-        check("temporary pasteboard ownership preserves the original item shape",
+        check(
+            "temporary pasteboard ownership preserves the original item shape",
             lease?.isOwned == true
                 && pasteboard.string(forType: .string) == "Temporary"
                 && pasteboard.pasteboardItems?.count == 2
                 && pasteboard.pasteboardItems?[0].data(forType: customType)
                     == Data([0, 1, 2, 3])
                 && pasteboard.pasteboardItems?[1].data(forType: secondType)
-                    == Data([4, 5, 6]))
+                    == Data([4, 5, 6])
+        )
         let clearCountBeforeRestore = pasteboard.clearCount
         let writeCountBeforeRestore = pasteboard.writeCount
         let restoreResult = lease?.restoreIfOwned()
         let restoredItems = pasteboard.pasteboardItems
-        check("pasteboard restoration preserves every item, type, and payload",
+        check(
+            "pasteboard restoration preserves every item, type, and payload",
             restoreResult != nil
                 && restoredItems?.count == 2
                 && restoredItems?[0].string(forType: .string) == "Original"
                 && restoredItems?[0].data(forType: customType) == Data([0, 1, 2, 3])
                 && restoredItems?[1].data(forType: secondType) == Data([4, 5, 6]))
-        check("pasteboard restoration does not clear before a fallible write",
+        check(
+            "pasteboard restoration does not clear before a fallible write",
             pasteboard.clearCount == clearCountBeforeRestore
                 && pasteboard.writeCount == writeCountBeforeRestore)
 
@@ -585,7 +666,8 @@ struct SnippetsTests {
             text: "Temporary failure",
             pasteboard: pasteboard,
             onMutation: { recoveredMutationCount = $0 })
-        check("a failed temporary write restores the original clipboard before falling back",
+        check(
+            "a failed temporary write restores the original clipboard before falling back",
             failedLease == nil
                 && pasteboard.string(forType: .string) == "Original"
                 && pasteboard.pasteboardItems?.count == 2
@@ -597,12 +679,14 @@ struct SnippetsTests {
         let newerItem = NSPasteboardItem()
         newerItem.setString("Newer copy", forType: .string)
         _ = pasteboard.replaceObjects([newerItem])
-        check("pasteboard restoration never overwrites a newer copy",
+        check(
+            "pasteboard restoration never overwrites a newer copy",
             supersededLease?.restoreIfOwned() == .superseded
                 && pasteboard.string(forType: .string) == "Newer copy")
 
         _ = pasteboard.replaceObjects([])
-        check("an empty clipboard declines temporary ownership for the Unicode fallback",
+        check(
+            "an empty clipboard declines temporary ownership for the Unicode fallback",
             TemporaryPasteboardLease.begin(
                 text: "Temporary from empty",
                 pasteboard: pasteboard) == nil
@@ -611,7 +695,8 @@ struct SnippetsTests {
         let imageOnlyItem = NSPasteboardItem()
         imageOnlyItem.setData(Data([9, 8, 7]), forType: .png)
         _ = pasteboard.replaceObjects([imageOnlyItem])
-        check("a non-text clipboard declines temporary ownership without changing its payload",
+        check(
+            "a non-text clipboard declines temporary ownership without changing its payload",
             TemporaryPasteboardLease.begin(
                 text: "Temporary over image",
                 pasteboard: pasteboard) == nil
@@ -633,20 +718,23 @@ struct SnippetsTests {
         store.onSnapshot = { _ in snapshotCount += 1 }
 
         await store.start()
-        check("store initialization publishes a ready snapshot",
+        check(
+            "store initialization publishes a ready snapshot",
             store.state == .ready && store.snippets.isEmpty && snapshotCount == 1)
 
         let externalURL = repository.snippetsDirectory.appendingPathComponent("external.md")
         try SnippetMarkdownSerializer.serialize(Snippet(name: "External", text: "One"))
             .write(to: externalURL, atomically: true, encoding: .utf8)
         try await Task.sleep(for: .milliseconds(500))
-        check("watcher reloads an externally created file",
+        check(
+            "watcher reloads an externally created file",
             store.snippets.contains { $0.id == externalURL.path && $0.snippet.text == "One" })
 
         try SnippetMarkdownSerializer.serialize(Snippet(name: "External", text: "Two"))
             .write(to: externalURL, atomically: true, encoding: .utf8)
         try await Task.sleep(for: .milliseconds(500))
-        check("watcher observes atomic file replacement",
+        check(
+            "watcher observes atomic file replacement",
             store.record(id: externalURL.path)?.snippet.text == "Two")
 
         let inPlaceSource = SnippetMarkdownSerializer.serialize(
@@ -656,7 +744,8 @@ struct SnippetsTests {
         try handle.write(contentsOf: Data(inPlaceSource.utf8))
         try handle.close()
         try await Task.sleep(for: .milliseconds(500))
-        check("watcher observes same-inode truncate and write",
+        check(
+            "watcher observes same-inode truncate and write",
             store.record(id: externalURL.path)?.snippet.text == "Three")
 
         let replacementDirectory = repository.channelDirectory.appendingPathComponent(
@@ -673,7 +762,8 @@ struct SnippetsTests {
             options: [])
         try await Task.sleep(for: .milliseconds(700))
         let installedReplacementURL = repository.snippetsDirectory.appendingPathComponent("replacement.md")
-        check("watcher rearms after directory replacement",
+        check(
+            "watcher rearms after directory replacement",
             store.snippets.count == 1 && store.snippets.first?.id == installedReplacementURL.path)
 
         let renamedDirectory = repository.channelDirectory.appendingPathComponent(
@@ -685,32 +775,37 @@ struct SnippetsTests {
         try SnippetMarkdownSerializer.serialize(Snippet(name: "Recreated", text: "Newest"))
             .write(to: recreatedURL, atomically: true, encoding: .utf8)
         try await Task.sleep(for: .milliseconds(700))
-        check("watcher rearms after an explicit rename-away and recreation",
+        check(
+            "watcher rearms after an explicit rename-away and recreation",
             store.snippets.count == 1
                 && store.record(id: recreatedURL.path)?.snippet.text == "Newest")
         try fm.removeItem(at: renamedDirectory)
 
         try fm.removeItem(at: repository.snippetsDirectory)
         try await Task.sleep(for: .milliseconds(700))
-        check("watcher recreates a deleted initialized directory without samples",
+        check(
+            "watcher recreates a deleted initialized directory without samples",
             store.state == .ready && store.snippets.isEmpty
                 && fm.fileExists(atPath: repository.snippetsDirectory.path))
         let afterDeleteURL = repository.snippetsDirectory.appendingPathComponent("after-delete.md")
         try SnippetMarkdownSerializer.serialize(Snippet(name: "After Delete", text: "Rearmed"))
             .write(to: afterDeleteURL, atomically: true, encoding: .utf8)
         try await Task.sleep(for: .milliseconds(500))
-        check("watcher continues after deleted-directory recovery",
+        check(
+            "watcher continues after deleted-directory recovery",
             store.record(id: afterDeleteURL.path)?.snippet.text == "Rearmed")
 
         let beforeBurst = snapshotCount
         for index in 0..<3 {
             let fileURL = repository.snippetsDirectory.appendingPathComponent("burst-\(index).md")
             try SnippetMarkdownSerializer.serialize(
-                Snippet(name: "Burst \(index)", text: "\(index)"))
-                .write(to: fileURL, atomically: true, encoding: .utf8)
+                Snippet(name: "Burst \(index)", text: "\(index)")
+            )
+            .write(to: fileURL, atomically: true, encoding: .utf8)
         }
         try await Task.sleep(for: .milliseconds(500))
-        check("watcher debounces a burst into one published reload",
+        check(
+            "watcher debounces a burst into one published reload",
             snapshotCount == beforeBurst + 1
                 && store.snippets.filter { $0.snippet.name.hasPrefix("Burst ") }.count == 3)
 
@@ -720,7 +815,8 @@ struct SnippetsTests {
             atomically: true,
             encoding: .utf8)
         try await Task.sleep(for: .milliseconds(500))
-        check("watcher publishes corrupt-file issues without dropping valid files",
+        check(
+            "watcher publishes corrupt-file issues without dropping valid files",
             store.issues.contains { $0.fileURL.lastPathComponent == "corrupt.md" }
                 && store.record(id: afterDeleteURL.path) != nil)
 
@@ -733,7 +829,8 @@ struct SnippetsTests {
                 atomically: true,
                 encoding: .utf8)
         try await Task.sleep(for: .milliseconds(400))
-        check("retry after stop cannot restart loading or watchers",
+        check(
+            "retry after stop cannot restart loading or watchers",
             snapshotCount == stoppedSnapshotCount)
         store.stop()
     }
@@ -742,8 +839,9 @@ struct SnippetsTests {
         var calendar = Calendar(identifier: .gregorian)
         let timeZone = TimeZone(secondsFromGMT: 0)!
         calendar.timeZone = timeZone
-        let now = calendar.date(from: DateComponents(
-            year: 2026, month: 7, day: 24, hour: 13, minute: 5))!
+        let now = calendar.date(
+            from: DateComponents(
+                year: 2026, month: 7, day: 24, hour: 13, minute: 5))!
         let context = SnippetTemplateEngine.ExpansionContext(
             clipboard: "{date} 📋",
             selection: "{cursor} selected",
@@ -759,25 +857,37 @@ struct SnippetsTests {
             dateValues,
             snippets: [dateValues],
             context: context)
-        check("default date and time tokens use the injected locale, calendar, and time zone",
+        check(
+            "default date and time tokens use the injected locale, calendar, and time zone",
             expandedDateValues.text == "Jul 24, 2026|1:05\u{202F}PM")
 
         let values = record(
             "/tmp/values.md",
             Snippet(
                 name: "Values",
-                text: "C:{clipboard}|S:{selection}|D:{date format=\"yyyy-MM-dd HH:mm\"}|{argument name=\"First\"}|{argument}|{argument name=\"First\"}"))
+                text:
+                    "C:{clipboard}|S:{selection}|D:{date format=\"yyyy-MM-dd HH:mm\"}|{argument name=\"First\"}|{argument}|{argument name=\"First\"}"
+            ))
         let missing = SnippetTemplateEngine.expand(values, snippets: [values], context: context)
-        check("missing arguments are unique and ordered by appearance", missing.missingArguments.map(\.name) == ["First", "Argument"])
-        check("missing argument tokens stay visible until values are supplied", missing.text.hasSuffix("{argument name=\"First\"}|{argument}|{argument name=\"First\"}"))
+        check(
+            "missing arguments are unique and ordered by appearance",
+            missing.missingArguments.map(\.name) == ["First", "Argument"])
+        check(
+            "missing argument tokens stay visible until values are supplied",
+            missing.text.hasSuffix("{argument name=\"First\"}|{argument}|{argument name=\"First\"}"))
 
         let expandedValues = SnippetTemplateEngine.expand(
             values,
             snippets: [values],
             context: context,
             userArguments: ["First": "{clipboard}", "Argument": "{cursor}"])
-        check("clipboard, selection, and arguments insert token-shaped text literally", expandedValues.text == "C:{date} 📋|S:{cursor} selected|D:2026-07-24 13:05|{clipboard}|{cursor}|{clipboard}")
-        check("injected cursor-shaped text does not set cursor position", expandedValues.cursorOffsetFromEnd == nil)
+        check(
+            "clipboard, selection, and arguments insert token-shaped text literally",
+            expandedValues.text
+                == "C:{date} 📋|S:{cursor} selected|D:2026-07-24 13:05|{clipboard}|{cursor}|{clipboard}")
+        check(
+            "injected cursor-shaped text does not set cursor position",
+            expandedValues.cursorOffsetFromEnd == nil)
         check("all supplied arguments clear the missing list", expandedValues.missingArguments.isEmpty)
 
         let literalBraces = record(
@@ -787,12 +897,15 @@ struct SnippetsTests {
             literalBraces,
             snippets: [literalBraces],
             context: context)
-        check("literal JSON and code braces do not mask nested valid tokens",
+        check(
+            "literal JSON and code braces do not mask nested valid tokens",
             literalBraceResult.text == "{\"generated\":\"Jul 24, 2026\"}|struct { value: 1:05\u{202F}PM }")
 
         let promptContextSnippet = record(
             "/tmp/prompt-context.md",
-            Snippet(name: "Prompt Context", text: "{clipboard}|{selection}|{date format=\"HH:mm\"}|{argument name=\"Value\"}"))
+            Snippet(
+                name: "Prompt Context",
+                text: "{clipboard}|{selection}|{date format=\"HH:mm\"}|{argument name=\"Value\"}"))
         let beforePrompt = SnippetTemplateEngine.expand(
             promptContextSnippet,
             snippets: [promptContextSnippet],
@@ -802,7 +915,8 @@ struct SnippetsTests {
             snippets: [promptContextSnippet],
             context: context,
             userArguments: ["Value": "Done"])
-        check("argument prompts reuse the captured expansion context",
+        check(
+            "argument prompts reuse the captured expansion context",
             beforePrompt.text.replacingOccurrences(
                 of: "{argument name=\"Value\"}",
                 with: "Done") == afterPrompt.text)
@@ -817,7 +931,9 @@ struct SnippetsTests {
             references,
             snippets: [duplicateZ, keywordTarget, references, duplicateA],
             context: context)
-        check("duplicate name references resolve by stable path identity", referenced.text == "A|K|{snippet:missing}")
+        check(
+            "duplicate name references resolve by stable path identity",
+            referenced.text == "A|K|{snippet:missing}")
         check("name and keyword references are case-insensitive", referenced.text.hasPrefix("A|K|"))
         check("missing references remain visible", referenced.text.hasSuffix("{snippet:missing}"))
 
@@ -831,7 +947,8 @@ struct SnippetsTests {
             disabledReferences,
             snippets: [disabledChild, disabledReferences],
             context: context)
-        check("a disabled snippet cannot be expanded by name or keyword reference",
+        check(
+            "a disabled snippet cannot be expanded by name or keyword reference",
             disabledResult.text == "{snippet:Disabled}|{snippet:!disabled}")
 
         let cursorChild = record(
@@ -852,17 +969,23 @@ struct SnippetsTests {
             Snippet(name: "Nested Arguments", text: "{argument name=\"Nested\"}|{argument name=\"Root\"}"))
         let argumentRoot = record(
             "/tmp/argument-root.md",
-            Snippet(name: "Argument Root", text: "{argument name=\"Root\"}|{snippet:Nested Arguments}|{argument name=\"Last\"}"))
+            Snippet(
+                name: "Argument Root",
+                text: "{argument name=\"Root\"}|{snippet:Nested Arguments}|{argument name=\"Last\"}"))
         let argumentResult = SnippetTemplateEngine.expand(
             argumentRoot,
             snippets: [argumentRoot, nestedArguments],
             context: context)
-        check("nested arguments follow final appearance order", argumentResult.missingArguments.map(\.name) == ["Root", "Nested", "Last"])
+        check(
+            "nested arguments follow final appearance order",
+            argumentResult.missingArguments.map(\.name) == ["Root", "Nested", "Last"])
 
         let cycleA = record("/tmp/cycle-a.md", Snippet(name: "A", text: "{snippet:B}"))
         let cycleB = record("/tmp/cycle-b.md", Snippet(name: "B", text: "{snippet:A}"))
         let cycleResult = SnippetTemplateEngine.expand(cycleA, snippets: [cycleA, cycleB], context: context)
-        check("cycles are detected with stable record IDs and remain visible", cycleResult.text == "{snippet:A}")
+        check(
+            "cycles are detected with stable record IDs and remain visible", cycleResult.text == "{snippet:A}"
+        )
 
         let depthRecords = (0...6).map { index in
             record(
@@ -881,8 +1004,9 @@ struct SnippetsTests {
         var calendar = Calendar(identifier: .gregorian)
         let timeZone = TimeZone(secondsFromGMT: 0)!
         calendar.timeZone = timeZone
-        let now = calendar.date(from: DateComponents(
-            year: 2026, month: 7, day: 24, hour: 13, minute: 5))!
+        let now = calendar.date(
+            from: DateComponents(
+                year: 2026, month: 7, day: 24, hour: 13, minute: 5))!
         let uuids = UUIDSequence()
         let context = SnippetTemplateEngine.ExpansionContext(
             clipboardHistory: ["  newest  ", "older", "oldest"],
@@ -893,7 +1017,10 @@ struct SnippetsTests {
             timeZone: timeZone,
             makeUUID: { uuids.next() })
 
-        func expand(_ text: String, arguments: [String: String] = [:]) -> SnippetTemplateEngine
+        func expand(
+            _ text: String, arguments: [String: String] = [:]
+        )
+            -> SnippetTemplateEngine
             .ExpansionResult
         {
             let subject = record("/tmp/placeholders.md", Snippet(name: "Subject", text: text))
@@ -902,79 +1029,104 @@ struct SnippetsTests {
         }
 
         // New date/time tokens.
-        check("datetime combines the date and time styles",
+        check(
+            "datetime combines the date and time styles",
             expand("{datetime}").text == "Jul 24, 2026 at 1:05\u{202F}PM")
         check("day renders the weekday name", expand("{day}").text == "Friday")
 
         // Offsets: signed, multi-unit, and every documented unit.
-        check("a single signed offset shifts the date",
+        check(
+            "a single signed offset shifts the date",
             expand("{date offset=\"+1d\"}").text == "Jul 25, 2026")
         check("offsets accept a bare unquoted value", expand("{day offset=-3d}").text == "Tuesday")
-        check("multiple offsets apply in order",
+        check(
+            "multiple offsets apply in order",
             expand("{date offset=\"+2y +5M\"}").text == "Dec 24, 2028")
-        check("minute and hour offsets shift the time",
+        check(
+            "minute and hour offsets shift the time",
             expand("{time offset=\"+3h +30m\"}").text == "4:35\u{202F}PM")
-        check("an unknown offset unit leaves the token literal",
+        check(
+            "an unknown offset unit leaves the token literal",
             expand("{date offset=\"+1w\"}").text == "{date offset=\"+1w\"}")
-        check("an offset without an amount leaves the token literal",
+        check(
+            "an offset without an amount leaves the token literal",
             expand("{date offset=\"d\"}").text == "{date offset=\"d\"}")
 
         // Locale and format.
-        check("locale overrides the context locale",
+        check(
+            "locale overrides the context locale",
             expand("{date locale=\"fr-FR\"}").text == "24 juil. 2026")
-        check("format and locale together are rejected as ambiguous",
+        check(
+            "format and locale together are rejected as ambiguous",
             expand("{date format=\"yyyy\" locale=\"fr-FR\"}").text
                 == "{date format=\"yyyy\" locale=\"fr-FR\"}")
-        check("format still applies with an offset",
+        check(
+            "format still applies with an offset",
             expand("{date offset=\"-1d\" format=\"yyyy-MM-dd\"}").text == "2026-07-23")
 
         // UUID comes from the injected source, once per token.
         check("each uuid token draws a fresh value", expand("{uuid}|{uuid}").text == "uuid-1|uuid-2")
 
         // Clipboard history.
-        check("clipboard offset zero is the current clipboard",
+        check(
+            "clipboard offset zero is the current clipboard",
             expand("{clipboard}").text == "  newest  ")
-        check("clipboard offset reaches back through history",
+        check(
+            "clipboard offset reaches back through history",
             expand("{clipboard offset=1}|{clipboard offset=2}").text == "older|oldest")
-        check("a clipboard offset past the end expands to nothing",
+        check(
+            "a clipboard offset past the end expands to nothing",
             expand("{clipboard offset=9}").text.isEmpty)
-        check("a negative clipboard offset leaves the token literal",
+        check(
+            "a negative clipboard offset leaves the token literal",
             expand("{clipboard offset=-1}").text == "{clipboard offset=-1}")
 
         // Modifier pipeline.
-        check("uppercase and lowercase modifiers apply",
+        check(
+            "uppercase and lowercase modifiers apply",
             expand("{selection | uppercase}|{selection | lowercase}").text == "PICKED|picked")
         check("trim strips surrounding whitespace", expand("{clipboard | trim}").text == "newest")
-        check("modifiers chain left to right",
+        check(
+            "modifiers chain left to right",
             expand("{clipboard | trim | uppercase}").text == "NEWEST")
-        check("percent-encode escapes everything outside the unreserved set",
+        check(
+            "percent-encode escapes everything outside the unreserved set",
             expand("{argument name=\"U\" | percent-encode}", arguments: ["U": "a b/c?d&e=f~g-h"]).text
                 == "a%20b%2Fc%3Fd%26e%3Df~g-h")
-        check("json-stringify escapes without adding quotes",
+        check(
+            "json-stringify escapes without adding quotes",
             expand("{argument name=\"J\" | json-stringify}", arguments: ["J": "a\"b\\c\nd"]).text
                 == "a\\\"b\\\\c\\nd")
-        check("raw is accepted and changes nothing",
+        check(
+            "raw is accepted and changes nothing",
             expand("{clipboard | raw}").text == "  newest  ")
-        check("an unknown modifier leaves the token literal",
+        check(
+            "an unknown modifier leaves the token literal",
             expand("{clipboard | shout}").text == "{clipboard | shout}")
-        check("a modifier on a structural token leaves it literal",
+        check(
+            "a modifier on a structural token leaves it literal",
             expand("{cursor | uppercase}").text == "{cursor | uppercase}")
-        check("a pipe inside a quoted value is not a modifier separator",
+        check(
+            "a pipe inside a quoted value is not a modifier separator",
             expand("{date format=\"yyyy|MM\"}").text == "2026|07")
 
         // Arguments: defaults and options.
         let defaulted = expand("{argument name=\"Tone\" default=\"happy\"}")
-        check("an argument default expands without prompting",
+        check(
+            "an argument default expands without prompting",
             defaulted.text == "happy" && defaulted.missingArguments.isEmpty)
-        check("a supplied value beats the default",
+        check(
+            "a supplied value beats the default",
             expand("{argument name=\"Tone\" default=\"happy\"}", arguments: ["Tone": "sad"]).text
                 == "sad")
         let optioned = expand("{argument name=\"Tone\" options=\"happy, sad, professional\"}")
-        check("options travel with the missing argument",
+        check(
+            "options travel with the missing argument",
             optioned.missingArguments == [
                 .init(name: "Tone", options: ["happy", "sad", "professional"])
             ])
-        check("an empty options list leaves the token literal",
+        check(
+            "an empty options list leaves the token literal",
             expand("{argument name=\"Tone\" options=\", \"}").text
                 == "{argument name=\"Tone\" options=\", \"}")
 
@@ -983,15 +1135,18 @@ struct SnippetsTests {
         let byName = record("/tmp/ph-name.md", Snippet(name: "ByName", text: "{snippet name=\"Child\"}"))
         let byColon = record("/tmp/ph-colon.md", Snippet(name: "ByColon", text: "{snippet:Child}"))
         let pool = [child, byName, byColon]
-        check("snippet name= resolves identically to snippet:",
+        check(
+            "snippet name= resolves identically to snippet:",
             SnippetTemplateEngine.expand(byName, snippets: pool, context: context).text == "nested"
                 && SnippetTemplateEngine.expand(byColon, snippets: pool, context: context).text
-                    == "nested")
+                    == "nested"
+        )
         let disabledChild = record(
             "/tmp/ph-disabled.md", Snippet(name: "Off", text: "secret", isEnabled: false))
         let referencesDisabled = record(
             "/tmp/ph-ref-off.md", Snippet(name: "Ref", text: "{snippet name=\"Off\"}"))
-        check("snippet name= cannot reach a disabled snippet",
+        check(
+            "snippet name= cannot reach a disabled snippet",
             SnippetTemplateEngine.expand(
                 referencesDisabled,
                 snippets: [disabledChild, referencesDisabled],
@@ -1000,16 +1155,21 @@ struct SnippetsTests {
 
         // Malformed tokens stay literal rather than vanishing.
         check("an unknown placeholder stays literal", expand("{weather}").text == "{weather}")
-        check("an unknown parameter leaves the token literal",
+        check(
+            "an unknown parameter leaves the token literal",
             expand("{date style=\"long\"}").text == "{date style=\"long\"}")
-        check("a duplicated parameter leaves the token literal",
+        check(
+            "a duplicated parameter leaves the token literal",
             expand("{date offset=\"+1d\" offset=\"+2d\"}").text
                 == "{date offset=\"+1d\" offset=\"+2d\"}")
-        check("an unterminated quote leaves the token literal",
+        check(
+            "an unterminated quote leaves the token literal",
             expand("{date format=\"yyyy}").text == "{date format=\"yyyy}")
-        check("a parameter on a token that takes none leaves it literal",
+        check(
+            "a parameter on a token that takes none leaves it literal",
             expand("{uuid offset=1}").text == "{uuid offset=1}")
-        check("an empty clipboard history expands the clipboard to nothing",
+        check(
+            "an empty clipboard history expands the clipboard to nothing",
             SnippetTemplateEngine.expand(
                 record("/tmp/ph-empty.md", Snippet(name: "E", text: "[{clipboard}]")),
                 snippets: [],
@@ -1047,58 +1207,77 @@ struct SnippetsTests {
         }
 
         // The text entry point.
-        check("a bare template expands without a snippet record",
+        check(
+            "a bare template expands without a snippet record",
             expand("q={clipboard}").text == "q=a b&c")
-        check("a snippet reference has nothing to resolve against and stays literal",
+        check(
+            "a snippet reference has nothing to resolve against and stays literal",
             expand("{snippet:Child}").text == "{snippet:Child}")
-        check("missing arguments are reported from the text entry point too",
+        check(
+            "missing arguments are reported from the text entry point too",
             expand("{argument name=\"Repository\"}").missingArguments
                 == [.init(name: "Repository", options: [])])
 
         // Percent encoding of produced values.
-        check("percent encoding escapes a value substituted into a URL",
+        check(
+            "percent encoding escapes a value substituted into a URL",
             expand("https://x.com/?q={clipboard}", encoding: .percentEncoding).text
                 == "https://x.com/?q=a%20b%26c")
-        check("the literal parts of the template are never encoded",
+        check(
+            "the literal parts of the template are never encoded",
             expand("https://x.com/a b?q={selection}", encoding: .percentEncoding).text
                 == "https://x.com/a b?q=a%20b%26c")
-        check("encoding runs after the pipeline, so uppercase cannot rewrite the hex",
+        check(
+            "encoding runs after the pipeline, so uppercase cannot rewrite the hex",
             expand("{clipboard | uppercase}", encoding: .percentEncoding).text == "A%20B%26C")
-        check("raw opts a value out of automatic encoding",
+        check(
+            "raw opts a value out of automatic encoding",
             expand("{clipboard | raw}", encoding: .percentEncoding).text == "a b&c")
-        check("an explicit percent-encode is not applied twice",
+        check(
+            "an explicit percent-encode is not applied twice",
             expand("{clipboard | percent-encode}", encoding: .percentEncoding).text
                 == "a%20b%26c")
-        check("encoding reaches every value-producing token",
+        check(
+            "encoding reaches every value-producing token",
             expand("{argument name=\"A\"}", encoding: .percentEncoding, arguments: ["A": "x y"]).text
                 == "x%20y")
-        check("snippets ask for no encoding, so their expansion is unchanged",
+        check(
+            "snippets ask for no encoding, so their expansion is unchanged",
             expand("{clipboard}").text == "a b&c")
 
         // {selectedText} is an accepted spelling of {selection}.
-        check("selectedText resolves to the selection",
+        check(
+            "selectedText resolves to the selection",
             expand("{selectedText}").text == expand("{selection}").text)
-        check("the alias is case-insensitive like every other token name",
+        check(
+            "the alias is case-insensitive like every other token name",
             expand("{SelectedText}").text == "a b&c")
-        check("the alias takes the same modifier pipeline",
+        check(
+            "the alias takes the same modifier pipeline",
             expand("{selectedText | trim | uppercase}").text == "A B&C")
-        check("the alias is encoded like the canonical spelling",
+        check(
+            "the alias is encoded like the canonical spelling",
             expand("{selectedText}", encoding: .percentEncoding).text == "a%20b%26c")
-        check("the alias rejects parameters, exactly as selection does",
+        check(
+            "the alias rejects parameters, exactly as selection does",
             expand("{selectedText offset=1}").text == "{selectedText offset=1}")
         let aliasSnippet = record(
             "/tmp/alias.md", Snippet(name: "Alias", text: "[{selectedText}]"))
-        check("a snippet may use the alias too — it is not quicklink-only",
+        check(
+            "a snippet may use the alias too — it is not quicklink-only",
             SnippetTemplateEngine.expand(aliasSnippet, snippets: [], context: context).text
                 == "[a b&c]")
 
         // usesSelection drives the selection-fallback setting.
-        check("usesSelection sees both spellings",
+        check(
+            "usesSelection sees both spellings",
             SnippetTemplateEngine.usesSelection("a {selection} b")
                 && SnippetTemplateEngine.usesSelection("a {selectedText} b"))
-        check("usesSelection is false for a template that reads no selection",
+        check(
+            "usesSelection is false for a template that reads no selection",
             !SnippetTemplateEngine.usesSelection("{clipboard} {date}"))
-        check("usesSelection parses rather than searches, so a malformed token does not count",
+        check(
+            "usesSelection parses rather than searches, so a malformed token does not count",
             !SnippetTemplateEngine.usesSelection("{selection offset=1}"))
     }
 
@@ -1112,21 +1291,25 @@ struct SnippetsTests {
             .init(snippetID: "/tmp/trimmed.md", value: "  !trim  "),
             .init(
                 snippetID: "/tmp/too-long.md",
-                value: String(repeating: "x", count: SnippetKeywordPolicy.maximumBufferLength + 1)),
+                value: String(repeating: "x", count: SnippetKeywordPolicy.maximumBufferLength + 1))
         ])
 
         let longest = policy.process(.text("abc"), at: base)
         check("keyword matching prefers the longest suffix", longest?.snippetID == "/tmp/long.md")
         let duplicate = policy.process(.text("!DuP"), at: base.addingTimeInterval(1))
-        check("duplicate keywords resolve by stable snippet identity",
+        check(
+            "duplicate keywords resolve by stable snippet identity",
             duplicate?.snippetID == "/tmp/a-duplicate.md")
         let trimmed = policy.process(.text("!trim"), at: base.addingTimeInterval(1.5))
-        check("keyword matching trims surrounding whitespace and deletes only the trigger",
-            trimmed == .init(
-                snippetID: "/tmp/trimmed.md",
-                keyword: "!trim",
-                deletionCount: 5))
-        check("keywords longer than the buffer cap are excluded",
+        check(
+            "keyword matching trims surrounding whitespace and deletes only the trigger",
+            trimmed
+                == .init(
+                    snippetID: "/tmp/trimmed.md",
+                    keyword: "!trim",
+                    deletionCount: 5))
+        check(
+            "keywords longer than the buffer cap are excluded",
             !policy.keywords.contains { $0.snippetID == "/tmp/too-long.md" })
 
         let syntheticInput = SnippetKeywordPolicy.classifyInput(
@@ -1142,7 +1325,8 @@ struct SnippetsTests {
         _ = policy.process(.text("!du"), at: base.addingTimeInterval(2))
         _ = policy.process(syntheticInput, at: base.addingTimeInterval(2.5))
         let afterSynthetic = policy.process(.text("p"), at: base.addingTimeInterval(3))
-        check("ignored synthetic events do not alter the keyword buffer",
+        check(
+            "ignored synthetic events do not alter the keyword buffer",
             afterSynthetic?.snippetID == "/tmp/a-duplicate.md")
 
         let secureInput = SnippetKeywordPolicy.classifyInput(
@@ -1183,18 +1367,21 @@ struct SnippetsTests {
         let shiftedKeywordMatch = shiftedKeywordPolicy.process(
             .text("notes"),
             at: base.addingTimeInterval(10.2))
-        check("Shift and Option flag transitions preserve modifier-produced keywords",
+        check(
+            "Shift and Option flag transitions preserve modifier-produced keywords",
             shiftTransition == .ignored
                 && shiftedKeywordMatch?.snippetID == "/tmp/notes.md")
 
         _ = policy.process(.text("a"), at: base.addingTimeInterval(40))
         let afterTimeout = policy.process(.text("bc"), at: base.addingTimeInterval(56))
-        check("keyword buffer resets after the inactivity timeout", afterTimeout?.snippetID == "/tmp/short.md")
+        check(
+            "keyword buffer resets after the inactivity timeout", afterTimeout?.snippetID == "/tmp/short.md")
 
         _ = policy.process(.text("!dux"), at: base.addingTimeInterval(60))
         _ = policy.process(.deleteBackward, at: base.addingTimeInterval(61))
         let afterDelete = policy.process(.text("p"), at: base.addingTimeInterval(62))
-        check("backspace updates the buffered suffix deterministically",
+        check(
+            "backspace updates the buffered suffix deterministically",
             afterDelete?.snippetID == "/tmp/a-duplicate.md")
 
         _ = policy.process(
@@ -1214,7 +1401,8 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: true,
             tapState: .absent)
-        check("listener remains off without consent",
+        check(
+            "listener remains off without consent",
             consentOff == .init(status: .off, tapAction: .none))
 
         let stopWithTap = Lifecycle.decide(
@@ -1222,7 +1410,8 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: true,
             tapState: .active)
-        check("stop tears down an installed tap synchronously",
+        check(
+            "stop tears down an installed tap synchronously",
             stopWithTap == .init(status: .off, tapAction: .tearDown))
 
         let waiting = Lifecycle.decide(
@@ -1230,7 +1419,8 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: false,
             tapState: .absent)
-        check("consent waits without the Accessibility grant and does not install a tap",
+        check(
+            "consent waits without the Accessibility grant and does not install a tap",
             waiting == .init(status: .needsAccessibility, tapAction: .none))
 
         let grantsArrived = Lifecycle.decide(
@@ -1238,14 +1428,16 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: true,
             tapState: .absent)
-        check("a later health check installs the tap after the grant arrives",
+        check(
+            "a later health check installs the tap after the grant arrives",
             grantsArrived == .init(status: .needsAccessibility, tapAction: .install))
         let retryAfterFailure = Lifecycle.decide(
             isRequested: true,
             isSessionActive: true,
             hasAccessibility: true,
             tapState: .absent)
-        check("tap creation failure remains retryable on the next health check",
+        check(
+            "tap creation failure remains retryable on the next health check",
             grantsArrived.tapAction == .install && retryAfterFailure.tapAction == .install)
 
         let active = Lifecycle.decide(
@@ -1253,9 +1445,11 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: true,
             tapState: .active)
-        check("listener reports active only with the grant and a live tap",
+        check(
+            "listener reports active only with the grant and a live tap",
             active == .init(status: .active, tapAction: .none))
-        check("repeated start is idempotent when the tap is already active",
+        check(
+            "repeated start is idempotent when the tap is already active",
             Lifecycle.decide(
                 isRequested: true,
                 isSessionActive: true,
@@ -1267,7 +1461,8 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: false,
             tapState: .active)
-        check("permission revocation moves to waiting and tears down the tap",
+        check(
+            "permission revocation moves to waiting and tears down the tap",
             revoked == .init(status: .needsAccessibility, tapAction: .tearDown))
 
         let disabled = Lifecycle.decide(
@@ -1275,7 +1470,8 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: true,
             tapState: .disabled)
-        check("a disabled tap is re-enabled before the listener can be active",
+        check(
+            "a disabled tap is re-enabled before the listener can be active",
             disabled == .init(status: .needsAccessibility, tapAction: .reenable))
 
         let inactiveSession = Lifecycle.decide(
@@ -1283,7 +1479,8 @@ struct SnippetsTests {
             isSessionActive: false,
             hasAccessibility: true,
             tapState: .active)
-        check("session resignation tears down the tap and leaves consent waiting",
+        check(
+            "session resignation tears down the tap and leaves consent waiting",
             inactiveSession == .init(status: .needsAccessibility, tapAction: .tearDown))
 
         let rapidOff = Lifecycle.decide(
@@ -1296,7 +1493,8 @@ struct SnippetsTests {
             isSessionActive: true,
             hasAccessibility: true,
             tapState: .absent)
-        check("rapid off then on cannot preserve a stale active tap",
+        check(
+            "rapid off then on cannot preserve a stale active tap",
             rapidOff.tapAction == .tearDown
                 && rapidOff.status == .off
                 && rapidOn.tapAction == .install
@@ -1316,28 +1514,33 @@ struct SnippetsTests {
             logsTapFailures: false)
 
         listener.start { _, _, _, _ in }
-        check("real listener waits without permissions and does not install",
+        check(
+            "real listener waits without permissions and does not install",
             listener.status == .needsAccessibility && tap.installCount == 0)
 
         permissions.accessibility = true
         listener.healthCheck()
-        check("real listener keeps a failed tap installation retryable",
+        check(
+            "real listener keeps a failed tap installation retryable",
             listener.status == .needsAccessibility
                 && tap.installCount == 1
                 && tap.state == .absent)
         listener.healthCheck()
-        check("real listener applies installation after grants arrive",
+        check(
+            "real listener applies installation after grants arrive",
             listener.status == .active
                 && tap.installCount == 2
                 && tap.state == .active)
 
         listener.start { _, _, _, _ in }
-        check("real listener repeated start does not install a second tap",
+        check(
+            "real listener repeated start does not install a second tap",
             listener.status == .active && tap.installCount == 2)
 
         tap.state = .disabled
         listener.healthCheck()
-        check("real listener applies tap re-enable and returns active",
+        check(
+            "real listener applies tap re-enable and returns active",
             listener.status == .active
                 && tap.reenableCount == 1
                 && tap.state == .active)
@@ -1345,7 +1548,8 @@ struct SnippetsTests {
         tap.reenableSucceeds = false
         tap.state = .disabled
         listener.healthCheck()
-        check("real listener recreates a tap when re-enable fails",
+        check(
+            "real listener recreates a tap when re-enable fails",
             listener.status == .active
                 && tap.tearDownCount >= 1
                 && tap.installCount == 3)
@@ -1353,20 +1557,24 @@ struct SnippetsTests {
 
         permissions.accessibility = false
         listener.healthCheck()
-        check("real listener tears down synchronously on permission revocation",
+        check(
+            "real listener tears down synchronously on permission revocation",
             listener.status == .needsAccessibility && tap.state == .absent)
 
         permissions.accessibility = true
         listener.healthCheck()
-        check("real listener reinstalls after permission regrant",
+        check(
+            "real listener reinstalls after permission regrant",
             listener.status == .active && tap.state == .active)
 
         listener.stop()
-        check("real listener stop is authoritative",
+        check(
+            "real listener stop is authoritative",
             listener.status == .off && tap.state == .absent)
         listener.start { _, _, _, _ in }
         listener.stop()
-        check("real listener rapid on and off leaves no tap",
+        check(
+            "real listener rapid on and off leaves no tap",
             listener.status == .off && tap.state == .absent)
     }
 

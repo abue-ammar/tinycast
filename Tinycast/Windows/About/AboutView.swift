@@ -12,7 +12,8 @@ struct AboutView: View {
     @MainActor private static let appIcon: NSImage = {
         if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
             let url = Bundle.main.url(forResource: name, withExtension: "icns"),
-            let image = NSImage(contentsOf: url) {
+            let image = NSImage(contentsOf: url)
+        {
             return image
         }
         return NSApp.applicationIconImage
@@ -22,23 +23,21 @@ struct AboutView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                // Tighter than `SettingsPane`, so every block lands above the fold.
-                VStack(spacing: Theme.Spacing.xl) {
+            Form {
+                Section {
                     hero
-                    links
-                    support
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.lg)
                 }
-                // Ignore the titlebar safe area; one fixed inset every side, as in `SettingsPane`.
-                .padding(Theme.Spacing.xxl)
-                .frame(maxWidth: .infinity)
-                .overlayScroller()
+                links
+                support
             }
-            // Outside the scroll view, so the copyright stays pinned to the bottom edge.
+            .formStyle(.grouped)
+
+            // Outside the form, so the copyright stays pinned to the bottom edge.
             footer
                 .padding(.bottom, Theme.Spacing.xxl)
         }
-        .ignoresSafeArea(edges: .top)
     }
 
     private var hero: some View {
@@ -72,27 +71,32 @@ struct AboutView: View {
     }
 
     private var links: some View {
-        SettingsCard(header: "Links") {
-            // Rows paint a full-bleed fill, so clip the stack to the card's corner.
-            VStack(spacing: 0) {
-                ForEach(AboutLink.all) { link in
-                    if link.id != AboutLink.all.first?.id { SettingsDivider() }
-                    AboutLinkRow(link: link)
-                }
+        Section {
+            ForEach(AboutLink.all) { link in
+                AboutLinkRow(link: link)
             }
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        } header: {
+            Text("Links")
         }
     }
 
-    // No section header: the callout's own title is the header.
     private var support: some View {
-        SettingsCallout(
-            title: "Buy Me Brave Origin",
-            message:
-                "If you enjoy my work and would like to support me or buy me Brave Origin, feel free to reach out on Discord, X, or via email.",
-            systemImage: "bolt.fill",
-            tint: Theme.Colors.brand
-        )
+        Section {
+            HStack(alignment: .top, spacing: Theme.Spacing.lg) {
+                Image(systemName: "bolt.fill")
+                    .foregroundStyle(Theme.Colors.brand)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Buy Me Brave Origin")
+                    Text(
+                        "If you enjoy my work and would like to support me or buy me Brave Origin,"
+                            + " feel free to reach out on Discord, X, or via email."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 
     private var footer: some View {
@@ -148,24 +152,22 @@ private struct AboutLinkRow: View {
         Button {
             NSWorkspace.shared.open(link.url)
         } label: {
-            HStack(spacing: Theme.Spacing.lg) {
-                glyph
-                    .frame(width: Theme.Size.settingsRowIcon)
-                    .foregroundStyle(.secondary)
-                Text(link.title)
-                    .font(.body)
-                Spacer(minLength: Theme.Spacing.xl)
-                Text(link.detail)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                Image(systemName: "arrow.up.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(hovered ? .secondary : .tertiary)
+            LabeledContent {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(link.detail)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(hovered ? .secondary : .tertiary)
+                }
+            } label: {
+                Label {
+                    Text(link.title)
+                } icon: {
+                    glyph
+                }
             }
-            .padding(.horizontal, Theme.Spacing.xl)
-            .padding(.vertical, Theme.Spacing.lg)
-            .background(hovered ? Theme.Colors.rowHover : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

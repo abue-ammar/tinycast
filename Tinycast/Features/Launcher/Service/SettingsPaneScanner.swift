@@ -81,7 +81,8 @@ enum SettingsPaneScanner {
         codes.append("en")
         for code in codes {
             if let entry = table[code] as? [String: Any],
-                let name = entry["CFBundleDisplayName"] as? String {
+                let name = entry["CFBundleDisplayName"] as? String
+            {
                 return name
             }
         }

@@ -11,30 +11,25 @@ struct QuicklinksSettingsView: View {
     var body: some View {
         @Bindable var core = core
         @Bindable var settings = settings
-        return SettingsPane(
-            title: "Quicklinks",
-            subtitle: "Turn a URL, search, file, folder or deeplink into its own command."
-        ) {
-            FeatureSwitchCard(
+        return Form {
+            FeatureSwitchSection(
                 header: "Quicklinks",
                 enableTitle: "Enable quicklinks",
                 enableSubtitle:
                     "Open saved destinations from the launcher, a shortcut, or Search Quicklinks.",
-                systemImage: Quicklink.sfSymbol,
                 launcherSubtitle: "Find your quicklinks in launcher search.",
                 isEnabled: $settings.quicklinksEnabled,
                 showsInLauncher: $settings.quicklinksShowInLauncher)
 
             Group {
-                if !store.isAvailable { storageCallout }
+                if !store.isAvailable { storageNotice }
                 library
                 behaviour
                 transfer
             }
-            // Same dim as a hidden launcher category; the switch above stays live.
-            .opacity(settings.quicklinksEnabled ? 1 : 0.45)
-            .disabled(!settings.quicklinksEnabled)
+            .settingsEnabled(settings.quicklinksEnabled)
         }
+        .formStyle(.grouped)
         // Presented from the pane, so "Create Quicklink" can open it from the palette.
         .sheet(item: $core.pendingQuicklinkEdit) { request in
             QuicklinkEditorSheet(quicklink: request.quicklink)
@@ -44,126 +39,99 @@ struct QuicklinksSettingsView: View {
                 title: Text("Delete “\(quicklink.name)”?"),
                 message: Text("Its global shortcut and launcher references will also be removed."),
                 primaryButton: .destructive(Text("Delete")) {
-                    Task { await core.quicklinkCoordinator.deleteQuicklink(id: quicklink.id, confirming: false) }
+                    Task {
+                        await core.quicklinkCoordinator.deleteQuicklink(id: quicklink.id, confirming: false)
+                    }
                 },
                 secondaryButton: .cancel())
         }
     }
 
-    // MARK: - Cards
+    // MARK: - Sections
 
-    private var storageCallout: some View {
-        SettingsCallout(
-            title: "Quicklinks can't be saved",
-            message:
-                "The quicklinks database couldn't be opened, so nothing you change here will stick. "
-                + "The existing file was left untouched.",
-            systemImage: "exclamationmark.triangle.fill",
-            tint: .orange)
+    private var storageNotice: some View {
+        Section {
+            Label(
+                "Quicklinks can't be saved: the database couldn't be opened, so nothing you change"
+                    + " here will stick. The existing file was left untouched.",
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            .foregroundStyle(.orange)
+        }
     }
 
     @ViewBuilder
     private var library: some View {
-        if !store.quicklinks.isEmpty {
-            SettingsSearchField(prompt: "Search quicklinks…", query: $query)
-        }
-        SettingsCard {
+        Section {
+            if !store.quicklinks.isEmpty {
+                SettingsFilterField(prompt: "Search quicklinks…", query: $query)
+            }
             if results.isEmpty {
-                SettingsRow(
-                    title: store.quicklinks.isEmpty ? "No quicklinks" : "No matches",
-                    subtitle: store.quicklinks.isEmpty
+                Text(
+                    store.quicklinks.isEmpty
                         ? "Add one to make it searchable from the launcher."
-                        : "No quicklink matches “\(query)”.",
-                    systemImage: Quicklink.sfSymbol,
-                    tint: .secondary
-                ) {
-                    EmptyView()
-                }
+                        : "No quicklink matches “\(query)”."
+                )
+                .foregroundStyle(.secondary)
             } else {
-                ForEach(Array(results.enumerated()), id: \.element.id) { index, quicklink in
-                    if index > 0 { SettingsDivider() }
+                ForEach(results) { quicklink in
                     QuicklinkSettingsRow(
                         quicklink: quicklink,
                         onEdit: { core.quicklinkCoordinator.editQuicklink(quicklink) },
                         onDelete: { pendingDeletion = quicklink })
                 }
             }
-            SettingsDivider()
-
-            SettingsRow(
-                title: "Add Quicklink",
-                subtitle: "Name it, paste a link, then give it a shortcut if you want one.",
-                systemImage: "plus.circle",
-                tint: .green
-            ) {
-                Button("Add…") { core.quicklinkCoordinator.editQuicklink(nil) }
-                    .controlSize(.small)
-            }
+            Button("Add Quicklink…") { core.quicklinkCoordinator.editQuicklink(nil) }
+        } footer: {
+            Text("Name it, paste a link, then give it a shortcut if you want one.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
     private var behaviour: some View {
         @Bindable var settings = settings
-        return SettingsCard(header: "Behaviour") {
-            SettingsRow(
-                title: "Open in a new window",
-                subtitle:
+        return Section {
+            Toggle(isOn: $settings.quicklinkOpensNewWindow) {
+                Text("Open in a new window")
+                Text(
                     "Ask the handler for a new window instead of reusing its frontmost tab. "
-                    + "Only apps that accept a new-window argument can honour this.",
-                systemImage: "macwindow.badge.plus",
-                tint: .blue
-            ) {
-                Toggle("", isOn: $settings.quicklinkOpensNewWindow).labelsHidden()
+                        + "Only apps that accept a new-window argument can honour this.")
             }
-            SettingsDivider()
-            SettingsRow(
-                title: "When there's no selected text",
-                subtitle: "What {selection} does when the app in front exposes nothing to read.",
-                systemImage: "text.cursor",
-                tint: .indigo
-            ) {
-                Picker("", selection: $settings.quicklinkSelectionFallback) {
-                    ForEach(QuicklinkSelectionFallback.allCases) { option in
-                        Text(option.title).tag(option)
-                    }
+            Picker(selection: $settings.quicklinkSelectionFallback) {
+                ForEach(QuicklinkSelectionFallback.allCases) { option in
+                    Text(option.title).tag(option)
                 }
-                .labelsHidden()
-                .fixedSize()
+            } label: {
+                Text("When there's no selected text")
+                Text("What {selection} does when the app in front exposes nothing to read.")
             }
-            SettingsDivider()
-            SettingsRow(
-                title: "Confirm before deleting",
-                subtitle: "Ask first when deleting a quicklink from the launcher's Actions menu.",
-                systemImage: "trash",
-                tint: .red
-            ) {
-                Toggle("", isOn: $settings.quicklinkConfirmsBeforeDelete).labelsHidden()
+            Toggle(isOn: $settings.quicklinkConfirmsBeforeDelete) {
+                Text("Confirm before deleting")
+                Text("Ask first when deleting a quicklink from the launcher's Actions menu.")
             }
+        } header: {
+            Text("Behaviour")
         }
     }
 
     private var transfer: some View {
-        SettingsCard(header: "Import & Export") {
-            SettingsRow(
-                title: "Import quicklinks",
-                subtitle: "Add quicklinks from a JSON file, skipping any you already have.",
-                systemImage: "square.and.arrow.down",
-                tint: .teal
-            ) {
+        Section {
+            LabeledContent {
                 Button("Import…") { Task { await core.quicklinkCoordinator.importQuicklinks() } }
-                    .controlSize(.small)
+            } label: {
+                Text("Import quicklinks")
+                Text("Add quicklinks from a JSON file, skipping any you already have.")
             }
-            SettingsDivider()
-            SettingsRow(
-                title: "Export quicklinks",
-                subtitle: "Write your whole library to a JSON file.",
-                systemImage: "square.and.arrow.up",
-                tint: .teal
-            ) {
+            LabeledContent {
                 Button("Export…") { Task { await core.quicklinkCoordinator.exportQuicklinks() } }
-                    .controlSize(.small)
                     .disabled(store.quicklinks.isEmpty)
+            } label: {
+                Text("Export quicklinks")
+                Text("Write your whole library to a JSON file.")
             }
+        } header: {
+            Text("Import & Export")
         }
     }
 
@@ -184,38 +152,20 @@ private struct QuicklinkSettingsRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        SettingsRow(title: quicklink.name, subtitle: quicklink.link) {
             SymbolImage(name: symbol, size: 13)
-                .foregroundStyle(.cyan)
-                .frame(width: Theme.Size.settingsRowIcon)
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Text(quicklink.name)
-                        .font(.body)
-                        .lineLimit(1)
-                    if quicklink.isPinned {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
-                            .help("Pinned to the top")
-                    }
-                    if !quicklink.showsInRootSearch {
-                        Image(systemName: "eye.slash")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
-                            .help("Hidden from root search")
-                    }
-                }
-                Text(quicklink.link)
-                    .font(.caption.monospaced())
+        } trailing: {
+            if quicklink.isPinned {
+                Image(systemName: "pin.fill")
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .help(quicklink.link)
+                    .help("Pinned to the top")
+            }
+            if !quicklink.showsInRootSearch {
+                Image(systemName: "eye.slash")
+                    .foregroundStyle(.secondary)
+                    .help("Hidden from root search")
             }
 
-            Spacer(minLength: Theme.Spacing.lg)
             ShortcutRecorder(action: .quicklink(id: quicklink.id))
 
             Button(action: onEdit) {
@@ -233,8 +183,6 @@ private struct QuicklinkSettingsRow: View {
             .help("Delete Quicklink")
             .accessibilityLabel("Delete \(quicklink.name)")
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.lg)
     }
 
     private var symbol: String {
