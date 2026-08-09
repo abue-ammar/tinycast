@@ -16,6 +16,10 @@ enum Theme {
         static let sectionHeaderBottom: CGFloat = 4
         /// Space above every header but the first, reading as the previous section's close.
         static let sectionSpacing: CGFloat = 12
+        /// Horizontal inset of a palette list row; with `Size.rowIcon` it sets the row width.
+        static let horizontal: CGFloat = 8
+        /// Vertical inset of a palette list row; with `Size.rowIcon` it sets the row height.
+        static let vertical: CGFloat = 8
     }
 
     enum Radius {
@@ -47,7 +51,7 @@ enum Theme {
         /// Collapsed compact bar: the search row centered in symmetric `headerPadding` slack.
         static let compactHeight: CGFloat = headerHeight + headerPadding * 2
         static let bottomBarHeight: CGFloat = 52
-        static let rowIcon: CGFloat = 24
+        static let rowIcon: CGFloat = 32
         static let keyCap: CGFloat = 18
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 16

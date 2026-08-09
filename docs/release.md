@@ -6,12 +6,15 @@ the signing identity itself is in [signing.md](signing.md).
 ## Packaging a DMG locally
 
 ```sh
-./Scripts/build-dmg.sh            # -> build/Tinycast-<version>.dmg (version from project.yml)
-./Scripts/build-dmg.sh 0.5.7      # -> build/Tinycast-0.5.7.dmg
+./Scripts/build-dmg.sh               # -> build/Tinycast-<version>.dmg (universal: Apple Silicon + Intel)
+./Scripts/build-dmg.sh 0.5.7         # -> build/Tinycast-0.5.7.dmg
+./Scripts/build-dmg.sh 0.5.7 x86_64  # -> build/Tinycast-0.5.7-x86_64.dmg (Intel-only)
+./Scripts/build-dmg.sh 0.5.7 arm64   # -> build/Tinycast-0.5.7-arm64.dmg (Apple Silicon-only)
 ```
 
 It builds a Release `Tinycast.app` signed with `Tinycast Self-Signed` and packs it with an
-`/Applications` symlink. Official per-channel releases are built by CI, below.
+`/Applications` symlink. The default is a universal binary; pass `arm64` or `x86_64` as the second
+argument to ship a single-architecture DMG. Official per-channel releases are built by CI, below.
 
 ## Signing & Gatekeeper
 

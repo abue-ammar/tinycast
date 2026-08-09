@@ -39,11 +39,11 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`.
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
 - **No `NSAlert`, no `NSSlider`, no system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). An Aqua alert on a white-alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
-- **A dialog has three independent axes; never let one infer another.** The **icon** (`DialogRequest.symbol`, required) is always the *subject's* own glyph — a command being confirmed uses its `SystemAction.sfSymbol`, so the Restart dialog shows the same icon as the Restart row. Tone never picks an icon. The **tone** (`DialogTone`: `.neutral` / `.success` / `.danger`) tints only that glyph. The **button** takes its color from `DialogAction.Role` (`.standard` white / `.destructive` red / `.cancel` secondary), so a red-glyph security warning can still carry a plain white button — as "Import executable commands?" does.
+- **A dialog has three independent axes; never let one infer another.** The **icon** (`DialogRequest.symbol`, required) is always the _subject's_ own glyph — a command being confirmed uses its `SystemAction.sfSymbol`, so the Restart dialog shows the same icon as the Restart row. Tone never picks an icon. The **tone** (`DialogTone`: `.neutral` / `.success` / `.danger`) tints only that glyph. The **button** takes its color from `DialogAction.Role` (`.standard` white / `.destructive` red / `.cancel` secondary), so a red-glyph security warning can still carry a plain white button — as "Import executable commands?" does.
 - **Resolve every glyph through `SymbolImage`, not `Image(systemName:)`.** Some catalog symbols are bundled assets in `Assets.xcassets` (`toggleBluetooth`), and `Image(systemName:)` silently renders nothing for those.
 - **↵ runs the primary action, Escape cancels, and Cancel always renders leading** (the left button), matching macOS convention. A button never prints its key cap; hovering it shows a `Tooltip` instead, styled like the palette's own keycap chips.
-- **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose trailing glyph *is* its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it — and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
-- **Glass is for controls; content takes the panel recipe.** `glassEffect` needs a backdrop to lens, so it only works *inside* a window that already has a `VisualEffectView` — the action capsule, the menu circle, `PopoverMenu`, a dialog's buttons. On a bare borderless panel it falls back to an opaque backing and shows as a dark edge. Both HUDs therefore use `black panelDimming` → `VisualEffectView()` → `clipShape`, exactly like a dialog.
+- **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose trailing glyph _is_ its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it — and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
+- **Glass is for controls; content takes the panel recipe.** `glassEffect` needs a backdrop to lens, so it only works _inside_ a window that already has a `VisualEffectView` — the action capsule, the menu circle, `PopoverMenu`, a dialog's buttons. On a bare borderless panel it falls back to an opaque backing and shows as a dark edge. Both HUDs therefore use `black panelDimming` → `VisualEffectView()` → `clipShape`, exactly like a dialog.
 
 ---
 
@@ -56,11 +56,11 @@ Add a token rather than a magic number when introducing a new value.
 
 ### Spacing (`Theme.Spacing`)
 
-`xxs 2` · `xs 4` · `sm 6` · `md 8` · `lg 10` · `xl 12` · `xxl 20`
+`xxs 2` · `xs 4` · `sm 6` · `md 8` · `lg 10` · `xl 12` · `xxl 20` · `horizontal 8` · `vertical 8`
 
 `xxs` is the tight gap between adjacent keycap chips (used everywhere keycaps sit side by side).
 
-Row content insets are `md`; list horizontal inset is `md`; the search icon aligns with rows via `md * 2`.
+Row content insets are `md`; list horizontal inset is `horizontal`; list vertical inset is `vertical` vertical; the search icon aligns with rows via `md * 2`.
 
 Section-header rhythm has two dedicated tokens: `sectionHeaderBottom` (header → first row) and
 `sectionSpacing` (gap above every header **except the list's first**, which reads as the previous
@@ -78,7 +78,7 @@ Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corn
 
 ### Size (`Theme.Size`)
 
-`panelWidth 750` · `panelHeight 475` · `headerHeight 44` · `bottomBarHeight 52` · `rowIcon 24` ·
+`panelWidth 750` · `panelHeight 475` · `headerHeight 44` · `bottomBarHeight 52` · `rowIcon 32` ·
 `keyCap 18` · `recorderKeyCap 16` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
 `settingsSidebar 184` · `settingsRowIcon 20` · `dialogWidth 420` · `dialogIcon 32` · `hudWidth 200` ·
 `hudHeight 100` · `volumeTrackHeight 6` · `volumeKnob 16` · `volumeReadout 38`
@@ -147,8 +147,8 @@ Source: `Launcher/UI/LauncherList.swift`, `Clipboard/UI/ClipboardView.swift`,
 
 All lists share one row grammar so launcher and clipboard look identical:
 
-- `HStack(spacing: lg)`: leading 24pt icon/thumbnail, title (`.body`, `lineLimit(1)`), optional trailing keycaps/kind label, `Spacer`. Insets: `.horizontal md`, `.vertical sm`.
-- **The leading slot is always `Theme.Size.rowIcon`, whatever fills it.** A glyph smaller than an app icon — the uninstall list's 16pt checkbox — is centred _inside_ that 24pt slot rather than sizing the slot to itself. Every list then starts its title at the same x, so switching palette modes doesn't jog the column sideways. The slot doubles as the hit target.
+- `HStack(spacing: lg)`: leading 32pt icon/thumbnail, title (`.body`, `lineLimit(1)`), optional trailing keycaps/kind label, `Spacer`. Insets: `.horizontal horizontal`, `.vertical vertical`.
+- **The leading slot is always `Theme.Size.rowIcon`, whatever fills it.** A glyph smaller than an app icon — the uninstall list's 16pt checkbox — is centred _inside_ that 32pt slot rather than sizing the slot to itself. Every list then starts its title at the same x, so switching palette modes doesn't jog the column sideways. The slot doubles as the hit target.
 - Background is a `RoundedRectangle(row, .continuous)` filled by `fill`: **selection → hover → clear**, in that precedence. This `fill` computed property is copy-identical across `AppRow`, `ClipboardRow`, `CalculatorCard` and `UninstallRow` — keep them in sync.
 - **Hover state lives on the row**, not the list, so a mouse sweep repaints only the rows entering/leaving (a list-level hover rebuilds every row per move — don't do that).
 - **Scroll moves only on keyboard nav/reset**, driven by a `ScrollIntent` (`DesignSystem/Scrolling/ScrollIntent.swift`) — mouse selection targets a visible row and never yanks scroll. `.follow` is a minimal scroll-to-visible (nil anchor), so the list stays stationary while the selection walks across it and only advances by a row at the viewport edges; `.top` scrolls to the origin anchor that `scrollOriginAnchor()` installs — a zero-height overlay applied to the scrolled content _after_ its padding, so it marks offset 0 without joining the layout and the restored origin is exact (targeting the first row instead leaves the top padding hidden under the header). A `.follow` that lands on flat index 0 restores the origin instead, so that row's section header comes back into view. One intent state serves all four modes — they never coexist.

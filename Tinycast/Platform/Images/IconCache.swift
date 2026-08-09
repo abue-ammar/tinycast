@@ -5,7 +5,7 @@ enum IconCache {
     /// `NSCache` is thread-safe but not `Sendable`, so assert the guarantee once here.
     private final class Cache: NSCache<NSString, NSImage>, @unchecked Sendable {}
 
-    // Plenty for the ≤24pt draw, and a scrolled `LazyVStack` pins every row's icon.
+    // Plenty for the ≤32pt `rowIcon` draw, and a scrolled `LazyVStack` pins every row's icon.
     private static let displayPixel: CGFloat = 48
 
     private static let cache: Cache = {

@@ -142,8 +142,8 @@ private struct CalcHistoryRow: View {
                 .font(Theme.Typography.rowTitle.weight(.semibold))
                 .lineLimit(1)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, Theme.Spacing.horizontal)
+        .padding(.vertical, Theme.Spacing.vertical)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)

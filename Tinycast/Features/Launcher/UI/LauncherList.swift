@@ -155,8 +155,8 @@ private struct AppRow: View {
                     if running {
                         Circle()
                             .fill(.secondary)
-                            .frame(width: 3, height: 3)
-                            .offset(y: 3)
+                            .frame(width: 4, height: 4)
+                            .offset(y: 4)
                     }
                 }
             Text(app.name)
@@ -174,8 +174,8 @@ private struct AppRow: View {
                 .font(Theme.Typography.rowTrailing)
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, Theme.Spacing.horizontal)
+        .padding(.vertical, Theme.Spacing.vertical)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
