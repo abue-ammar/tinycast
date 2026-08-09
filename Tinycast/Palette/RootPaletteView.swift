@@ -25,6 +25,7 @@ struct RootPaletteView: View {
     @State private var menuSelection = 0
     /// The pending scroll request; modes are exclusive, so one piece of state serves all.
     @State private var scroll = ScrollIntent(kind: .top)
+    @State private var mountScrollResetTask: Task<Void, Never>?
 
     /// Compact vs. full; the source of truth is on `AppCore`, so the two can't disagree.
     private var isCollapsed: Bool { core.paletteCoordinator.paletteIsCollapsed }
@@ -43,7 +44,7 @@ struct RootPaletteView: View {
         case .quicklinkArguments:
             return QuicklinkArgumentsScreen(
                 session: quicklinkArguments, core: core, vm: vm,
-                scrollToTop: { scroll = ScrollIntent(kind: .top) })
+                scrollToTop: { sendScrollIntent(.top) })
         case .quicklinks:
             return QuicklinkListScreen(
                 store: quicklinks, core: core, vm: vm, openActions: openActions)
@@ -54,7 +55,7 @@ struct RootPaletteView: View {
         case .clipboard:
             return ClipboardScreen(
                 store: store, core: core, vm: vm, openActions: openActions,
-                scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
+                scrollToFollow: { sendScrollIntent(.follow) })
         case .calculatorHistory:
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
@@ -167,12 +168,12 @@ struct RootPaletteView: View {
         }
         .onChange(of: vm.query) {
             vm.selection = 0
-            scroll = ScrollIntent(kind: .top)
+            sendScrollIntent(.top)
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
             showActions = false
-            scroll = ScrollIntent(kind: .top)
+            resetScrollAfterMount(in: vm.mode)
             // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
             if vm.mode != .uninstall { uninstall.cancel() }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
@@ -180,7 +181,7 @@ struct RootPaletteView: View {
         }
         // `prepare` may change nothing, so this intent still snaps the scroll to the origin.
         .onChange(of: vm.resetToken) {
-            scroll = ScrollIntent(kind: .top)
+            resetScrollAfterMount(in: vm.mode)
         }
         // Opening either menu closes the other, so exactly one is open and highlighted.
         .onChange(of: showActions) {
@@ -201,6 +202,8 @@ struct RootPaletteView: View {
         // Several paths flip `paletteIsCollapsed`, so resize the window to match.
         .onChange(of: core.paletteCoordinator.paletteIsCollapsed) {
             core.paletteCoordinator.syncPaletteSize()
+            guard !core.paletteCoordinator.paletteIsCollapsed else { return }
+            resetScrollAfterMount(in: vm.mode)
         }
         // ⌘1–⌘5 launch the compact bar's favorite slots, or expand for the overflow.
         .onKeyPress(keys: ["1", "2", "3", "4", "5"], phases: .down) { press in
@@ -484,11 +487,27 @@ struct RootPaletteView: View {
 
     // MARK: - Actions
 
+    private func sendScrollIntent(_ kind: ScrollIntent.Kind) {
+        mountScrollResetTask?.cancel()
+        mountScrollResetTask = nil
+        scroll = ScrollIntent(kind: kind)
+    }
+
+    private func resetScrollAfterMount(in mode: PaletteMode) {
+        sendScrollIntent(.top)
+        mountScrollResetTask = Task { @MainActor in
+            await Task.yield()
+            guard !Task.isCancelled, vm.mode == mode, !isCollapsed else { return }
+            scroll = ScrollIntent(kind: .top)
+            mountScrollResetTask = nil
+        }
+    }
+
     private func move(_ delta: Int, in screen: any PaletteScreen) {
         let count = screen.rows.count
         guard count > 0 else { return }
         vm.selection = min(max(selection(count: count) + delta, 0), count - 1)
-        scroll = ScrollIntent(kind: .follow)
+        sendScrollIntent(.follow)
     }
 
     /// ↑/↓: the screen's own move where it has one, else a linear step through the rows.
@@ -499,7 +518,7 @@ struct RootPaletteView: View {
             return
         }
         vm.selection = next
-        scroll = ScrollIntent(kind: .follow)
+        sendScrollIntent(.follow)
     }
 
     /// ←/→: consumed only by a horizontally navigating screen, else the caret keeps them.
@@ -509,7 +528,7 @@ struct RootPaletteView: View {
             return false
         }
         vm.selection = next
-        scroll = ScrollIntent(kind: .follow)
+        sendScrollIntent(.follow)
         return true
     }
 
