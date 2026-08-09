@@ -7,7 +7,9 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
 
 - **`PaletteWindowController` solely owns the palette frame.** The hosting view sets
   `sizingOptions = []` so SwiftUI never drives the window size — otherwise the hosting view resizes the
-  panel to fit content and the top edge drifts on the compact↔expanded swap.
+  panel to fit content and the top edge drifts on the compact↔expanded swap. A user drag is the one
+  frame change that starts elsewhere, and `windowDidMove` folds it back into the anchor so the
+  controller stays the authority.
 - **The flat `selection` index must match the visible row order exactly**, including the inline
   calculator card at index 0 when present. Selection is the single source of truth for highlight and
   activation. `Features/PaletteRowIndex.swift` is that mapping and stays **Foundation-only and pure** —
@@ -76,6 +78,14 @@ match the visible row order**, including the inline calculator card at index 0 w
 `PaletteWindowController` resolves an anchor (left edge + top edge) **once per summon** and reuses it
 for every compact↔expanded resize, so only the height changes and the top edge never drifts. The
 anchor is dropped on hide, so the next summon re-resolves for wherever the user is then.
+
+**Drag to reposition** (`AppSettings.paletteDraggable`, off by default) is the only thing that moves a
+panel already on screen: `WindowDragHandle` hands mouse-down to `performDrag(with:)` from a strip along
+the top edge. AppKit moves the frame without going through the controller, so `windowDidMove` writes the
+new top-left back into the anchor — otherwise the next compact↔expanded resize would snap the panel back
+to the position it was summoned at. That write is idempotent, since `positionPanel` places the frame at
+exactly the anchor and its own `setFrame` round-trips the same values. The anchor still dies on hide, so
+a dragged position lasts for that summon only.
 
 Which display it anchors to depends on the **Follow the cursor across displays** setting
 (`AppSettings.openOnCursorScreen`, on by default):

@@ -120,6 +120,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    /// A drag re-anchors the session, so the next resize grows from where the user left it.
+    func windowDidMove(_ notification: Notification) {
+        guard let panel else { return }
+        anchor = (x: panel.frame.minX, topEdgeY: panel.frame.maxY)
+    }
+
     // MARK: - Private
 
     private func ensurePanel() -> PalettePanel {
