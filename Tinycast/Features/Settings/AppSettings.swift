@@ -94,6 +94,11 @@ final class AppSettings {
         didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen.rawValue) }
     }
 
+    /// Lets the panel be dragged by its top edge; off by default, so most launches never grab it.
+    var paletteDraggable: Bool {
+        didSet { defaults.set(paletteDraggable, forKey: Key.paletteDraggable.rawValue) }
+    }
+
     // Feature switches, off out of the box, and off means fully off.
     var customCommandsEnabled: Bool {
         didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled.rawValue) }
@@ -212,6 +217,7 @@ final class AppSettings {
         openOnCursorScreen =
             defaults.object(forKey: Key.openOnCursorScreen.rawValue) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen.rawValue)
+        paletteDraggable = defaults.bool(forKey: Key.paletteDraggable.rawValue)
         // These default on, so absence must be distinguished from a stored `false`.
         customCommandsEnabled = defaults.bool(forKey: Key.customCommandsEnabled.rawValue)
         customCommandsShowInLauncher =

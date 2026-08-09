@@ -350,8 +350,15 @@ struct RootPaletteView: View {
     }
 
     /// A thin invisible strip along the top edge, for grabbing the window with no title bar.
+    /// Settings ▸ Appearance ▸ Drag to reposition gates it — most launches never touch it.
+    @ViewBuilder
     private var topDragStrip: some View {
-        Color.clear.frame(height: Theme.Size.headerPadding).windowDraggable()
+        let strip = Color.clear.frame(height: Theme.Size.headerPadding)
+        if settings.paletteDraggable {
+            strip.windowDraggable()
+        } else {
+            strip
+        }
     }
 
     private var header: some View {

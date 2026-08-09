@@ -125,6 +125,12 @@ struct GeneralSettingsView: View {
                         "Open the launcher on whichever display the pointer is on, rather than the one with the menu bar."
                     )
                 }
+                Toggle(isOn: $settings.paletteDraggable) {
+                    Text("Drag to reposition")
+                    Text(
+                        "Grab the thin strip just above the search field to move the launcher out of the way."
+                    )
+                }
             } header: {
                 Text("Appearance")
             }

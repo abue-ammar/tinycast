@@ -27,6 +27,8 @@ struct SettingsBackup: Codable {
         var showFavoritesInCompactMode: Bool?
         var searchScopes: [String]?
         var openOnCursorScreen: Bool?
+        // Safe to carry: it grants no permission class, just repositions the window.
+        var paletteDraggable: Bool?
         // `snippetsEnabled` is absent: an import must not enable keystroke listening.
         var customCommandsEnabled: Bool?
         var customCommandsShowInLauncher: Bool?
@@ -90,6 +92,7 @@ extension SettingsBackup {
             showFavoritesInCompactMode: s.showFavoritesInCompactMode,
             searchScopes: s.searchScopes,
             openOnCursorScreen: s.openOnCursorScreen,
+            paletteDraggable: s.paletteDraggable,
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
             snippetsShowInLauncher: s.snippetsShowInLauncher,
@@ -221,6 +224,10 @@ extension SettingsBackup {
         }
         if let flag = s.openOnCursorScreen {
             settings.openOnCursorScreen = flag
+            count += 1
+        }
+        if let flag = s.paletteDraggable {
+            settings.paletteDraggable = flag
             count += 1
         }
         // Writing through AppSettings is enough; AppCore's sinks re-project the rest.
