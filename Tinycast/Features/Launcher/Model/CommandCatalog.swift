@@ -80,4 +80,9 @@ enum CommandCatalog {
     static func command(for entry: AppEntry) -> CommandID? {
         CommandID(rawValue: entry.id)
     }
+
+    /// From the catalog, not `AppIndex`: a disabled feature's command is absent from the index.
+    static func entry(for command: CommandID) -> AppEntry? {
+        all.first { $0.id == command.rawValue }
+    }
 }

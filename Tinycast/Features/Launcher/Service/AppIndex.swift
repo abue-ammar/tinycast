@@ -86,6 +86,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// The hotkey action for this entry, or nil for built-ins and unaddressable bundles.
     var hotKeyAction: HotKeyAction? {
         switch kind {
+        case .command:
+            // Search Files is the one built-in with its own action; the rest open from the launcher.
+            return CommandCatalog.command(for: self) == .searchFiles ? .searchFiles : nil
         case .application:
             return bundleID.map { .app(bundleID: $0) }
         case .systemSettings:
@@ -98,7 +101,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return WindowCommandCatalog.command(forEntryID: id).map { .windowCommand(id: $0.id) }
         case .quicklink:
             return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
-        case .command, .snippet:
+        case .snippet:
             return nil
         }
     }

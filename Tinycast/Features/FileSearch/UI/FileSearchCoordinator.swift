@@ -28,6 +28,11 @@ final class FileSearchCoordinator {
         if palette.mode == .fileSearch { palette.prepare(mode: .launcher) }
     }
 
+    func applyPolicy() {
+        session.apply(
+            scopes: settings.fileSearchScopes, ignorePatterns: settings.fileSearchIgnorePatterns)
+    }
+
     func show() {
         guard settings.fileSearchEnabled else { return }
         paletteCoordinator.showPalette(mode: .fileSearch)

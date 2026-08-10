@@ -3,7 +3,8 @@ import Foundation
 @MainActor
 @Observable
 final class FileSearchSession {
-    typealias SearchOperation = @Sendable (String, String, URL) async throws -> [FileSearchResult]
+    typealias SearchOperation =
+        @Sendable (String, String, FileSearchPolicy) async throws -> [FileSearchResult]
 
     enum State: Equatable {
         case idle
@@ -19,6 +20,7 @@ final class FileSearchSession {
     @ObservationIgnored private var pendingSearch: PendingSearch?
     @ObservationIgnored private var workerTask: Task<Void, Never>?
     @ObservationIgnored private let homeDirectory: URL
+    @ObservationIgnored private var policy: FileSearchPolicy
     @ObservationIgnored private let debounce: Duration
     @ObservationIgnored private let searchOperation: SearchOperation
 
@@ -29,23 +31,38 @@ final class FileSearchSession {
     }
 
     init() {
-        homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        self.homeDirectory = homeDirectory
+        policy = FileSearchPolicy(
+            scopes: FileSearchScope.defaultScopes, ignorePatterns: [],
+            homeDirectory: homeDirectory)
         debounce = .milliseconds(120)
-        searchOperation = { query, expression, homeDirectory in
+        searchOperation = { query, expression, policy in
             try await Task.detached(priority: .userInitiated) {
                 try FileSearchService.search(
-                    query: query, expression: expression, homeDirectory: homeDirectory)
+                    query: query, expression: expression, policy: policy)
             }.value
         }
     }
 
     init(
-        homeDirectory: URL, debounce: Duration,
+        policy: FileSearchPolicy, debounce: Duration,
         searchOperation: @escaping SearchOperation
     ) {
-        self.homeDirectory = homeDirectory
+        homeDirectory = policy.homeDirectory
+        self.policy = policy
         self.debounce = debounce
         self.searchOperation = searchOperation
+    }
+
+    /// Resolved here rather than per search, so glob compilation stays off the keystroke path.
+    func apply(scopes: [String], ignorePatterns: [String]) {
+        let policy = FileSearchPolicy(
+            scopes: scopes, ignorePatterns: ignorePatterns, homeDirectory: homeDirectory)
+        guard policy != self.policy else { return }
+        self.policy = policy
+        // A result found under the old rules must not publish, and the same query has to re-run.
+        cancel()
     }
 
     func search(_ rawQuery: String) {
@@ -82,10 +99,12 @@ final class FileSearchSession {
             if delay > .zero { try? await Task.sleep(for: delay) }
             guard pendingSearch?.revision == request.revision else { continue }
             pendingSearch = nil
-            guard let expression = FileSearchQuery.expression(for: request.query) else { continue }
+            guard
+                let expression = FileSearchQuery.expression(
+                    for: request.query, excluding: policy.ignore.spotlightNameExclusions)
+            else { continue }
             do {
-                let candidates = try await searchOperation(
-                    request.query, expression, homeDirectory)
+                let candidates = try await searchOperation(request.query, expression, policy)
                 guard revision == request.revision, query == request.query else { continue }
                 results = candidates
                 state = .ready

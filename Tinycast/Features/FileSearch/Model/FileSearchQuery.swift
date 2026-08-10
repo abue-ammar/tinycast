@@ -3,29 +3,26 @@ import Foundation
 enum FileSearchQuery {
     static let candidateLimit = 1_000
     static let resultLimit = 200
-    static let excludedDirectoryNames = [
-        "node_modules", "DerivedData", "build", "dist", "target", "Pods"
-    ]
-    private static let excludedDirectoryNamesFolded = Set(
-        excludedDirectoryNames.map { $0.lowercased() })
 
     static func terms(in query: String) -> [String] {
         query.split(whereSeparator: \Character.isWhitespace).map(String.init)
     }
 
-    static func expression(for query: String) -> String? {
+    static func expression(for query: String, excluding exclusions: [String] = []) -> String? {
         let terms = terms(in: query)
         guard !terms.isEmpty else { return nil }
-        return terms.map { term in
-            "kMDItemFSName == \"*\(escape(term))*\"cd"
-        }
-        .joined(separator: " && ")
+        let matches = terms.map { "kMDItemFSName == \"*\(escape($0))*\"cd" }
+        // Excluding in the predicate keeps ignored files from consuming the candidate cap.
+        let excludes = exclusions.map { "kMDItemFSName != \"\(escapeGlob($0))\"cd" }
+        return (matches + excludes).joined(separator: " && ")
     }
 
-    static func rank(_ results: [FileSearchResult], for query: String) -> [FileSearchResult] {
+    static func rank(
+        _ results: [FileSearchResult], for query: String, ignoring ignore: FileSearchIgnoreList
+    ) -> [FileSearchResult] {
         let terms = terms(in: query)
         guard !terms.isEmpty else { return [] }
-        return results.filter { !isExcludedPath($0.id) }.map { result in
+        return results.filter { !isExcludedPath($0.id, ignoring: ignore) }.map { result in
             let full = FuzzyMatch.score(query: query, candidate: result.name)
             let termScore = terms.compactMap { FuzzyMatch.score(query: $0, candidate: result.name) }
                 .reduce(0, +)
@@ -57,21 +54,29 @@ enum FileSearchQuery {
         }
     }
 
-    static func isExcludedPath(_ path: String) -> Bool {
-        return URL(fileURLWithPath: path).pathComponents.contains { component in
-            let folded = component.lowercased()
-            return (component.hasPrefix(".") && component != "." && component != "..")
-                || excludedDirectoryNamesFolded.contains(folded)
-                || folded.hasSuffix(".app")
+    /// Hidden paths and bundle contents are structural: they are what keeps File Search permission-free.
+    static func isExcludedPath(_ path: String, ignoring ignore: FileSearchIgnoreList) -> Bool {
+        let structural = path.split(separator: "/").contains { component in
+            (component.hasPrefix(".") && component != "." && component != "..")
+                || component.lowercased().hasSuffix(".app")
         }
+        return structural || ignore.excludes(path: path)
     }
 
+    /// A typed term is literal, so its wildcards are neutralized along with the string delimiters.
     private static func escape(_ term: String) -> String {
+        quoting(term, escaping: ["\\", "\"", "*", "?"])
+    }
+
+    /// A user pattern keeps its `*`, since that is the one wildcard Spotlight evaluates.
+    private static func escapeGlob(_ pattern: String) -> String {
+        quoting(pattern, escaping: ["\\", "\""])
+    }
+
+    private static func quoting(_ text: String, escaping characters: Set<Character>) -> String {
         var escaped = ""
-        for character in term {
-            if character == "\\" || character == "\"" || character == "*" || character == "?" {
-                escaped.append("\\")
-            }
+        for character in text {
+            if characters.contains(character) { escaped.append("\\") }
             escaped.append(character)
         }
         return escaped

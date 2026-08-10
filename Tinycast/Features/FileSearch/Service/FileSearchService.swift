@@ -8,21 +8,24 @@ enum FileSearchService {
         case couldNotStartQuery
     }
 
-    nonisolated static func search(query rawQuery: String, expression: String, homeDirectory: URL) throws
-        -> [FileSearchResult]
-    {
+    nonisolated static func search(
+        query rawQuery: String, expression: String, policy: FileSearchPolicy
+    ) throws -> [FileSearchResult] {
         try Signposts.interval("FileSearchService.search") {
-            let selection = discoverScopes(homeDirectory: homeDirectory)
-            let scopes = deduplicated(selection.directories + cloudScopes(homeDirectory: homeDirectory))
+            let selection = resolveScopes(policy)
+            let scopes = selection.directories
             var results = selection.rootItems.compactMap { candidate -> FileSearchResult? in
-                guard FileSearchQuery.matches(
-                    filename: candidate.url.lastPathComponent, query: rawQuery)
+                guard
+                    FileSearchQuery.matches(
+                        filename: candidate.url.lastPathComponent, query: rawQuery)
                 else { return nil }
                 return FileSearchResult(
                     url: candidate.url, isDirectory: candidate.isDirectory,
-                    homeDirectory: homeDirectory)
+                    homeDirectory: policy.homeDirectory)
             }
-            guard !scopes.isEmpty else { return FileSearchQuery.rank(results, for: rawQuery) }
+            guard !scopes.isEmpty else {
+                return FileSearchQuery.rank(results, for: rawQuery, ignoring: policy.ignore)
+            }
 
             guard let query = MDQueryCreate(nil, expression as CFString, nil, nil) else {
                 throw Failure.couldNotCreateQuery
@@ -48,21 +51,37 @@ enum FileSearchService {
                 let result = FileSearchResult(
                     url: URL(fileURLWithPath: path),
                     isDirectory: contentType?.conforms(to: .folder) == true,
-                    homeDirectory: homeDirectory)
+                    homeDirectory: policy.homeDirectory)
                 guard seen.insert(result.id).inserted else { continue }
                 results.append(result)
             }
-            return FileSearchQuery.rank(results, for: rawQuery)
+            return FileSearchQuery.rank(results, for: rawQuery, ignoring: policy.ignore)
         }
+    }
+
+    private nonisolated static func resolveScopes(_ policy: FileSearchPolicy)
+        -> FileSearchScope.Selection
+    {
+        var directories = policy.directRoots
+        var rootItems: [FileSearchScope.Candidate] = []
+        if policy.includesHome {
+            let selection = discoverScopes(homeDirectory: policy.homeDirectory)
+            directories += selection.directories
+            directories += cloudScopes(homeDirectory: policy.homeDirectory)
+            rootItems = selection.rootItems
+        }
+        return FileSearchScope.Selection(
+            directories: deduplicated(directories), rootItems: rootItems)
     }
 
     private nonisolated static func discoverScopes(homeDirectory: URL) -> FileSearchScope.Selection {
         let keys: Set<URLResourceKey> = [
             .isDirectoryKey, .isHiddenKey, .isPackageKey, .contentTypeKey
         ]
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: homeDirectory, includingPropertiesForKeys: Array(keys),
-            options: [.skipsHiddenFiles])) ?? []
+        let urls =
+            (try? FileManager.default.contentsOfDirectory(
+                at: homeDirectory, includingPropertiesForKeys: Array(keys),
+                options: [.skipsHiddenFiles])) ?? []
         let candidates = urls.compactMap { url -> FileSearchScope.Candidate? in
             guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
             return FileSearchScope.Candidate(

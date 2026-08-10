@@ -116,6 +116,18 @@ final class AppSettings {
         didSet { defaults.set(fileSearchEnabled, forKey: Key.fileSearchEnabled.rawValue) }
     }
 
+    /// Tilde-abbreviated, so a backup taken on one machine still points somewhere on another.
+    var fileSearchScopes: [String] {
+        didSet { defaults.set(fileSearchScopes, forKey: Key.fileSearchScopes.rawValue) }
+    }
+
+    /// Only what the user added; the shipped rules are compiled into `FileSearchIgnoreList`.
+    var fileSearchIgnorePatterns: [String] {
+        didSet {
+            defaults.set(fileSearchIgnorePatterns, forKey: Key.fileSearchIgnorePatterns.rawValue)
+        }
+    }
+
     var customCommandsEnabled: Bool {
         didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled.rawValue) }
     }
@@ -238,6 +250,12 @@ final class AppSettings {
         palettePosition = (defaults.array(forKey: Key.palettePosition.rawValue) as? [Double])
             .flatMap { $0.count == 2 ? CGPoint(x: $0[0], y: $0[1]) : nil }
         fileSearchEnabled = defaults.bool(forKey: Key.fileSearchEnabled.rawValue)
+        // Unset seeds home; a stored empty array is a deliberately cleared list that searches nothing.
+        fileSearchScopes =
+            defaults.stringArray(forKey: Key.fileSearchScopes.rawValue)
+            ?? FileSearchScope.defaultScopes
+        fileSearchIgnorePatterns =
+            defaults.stringArray(forKey: Key.fileSearchIgnorePatterns.rawValue) ?? []
         customCommandsEnabled = defaults.bool(forKey: Key.customCommandsEnabled.rawValue)
         // These default on, so absence must be distinguished from a stored `false`.
         customCommandsShowInLauncher =

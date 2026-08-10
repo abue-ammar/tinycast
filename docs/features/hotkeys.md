@@ -53,8 +53,17 @@ export → import within one build is guaranteed to round-trip.
 
 `LegacyHotKeyRecords` adopts the records shipped before this namespace existed — `v0.7.5` wrote a bare
 `{"carbonKeyCode":N,"carbonModifiers":N}` under `KeyboardShortcuts_<name>`. It runs once from
-`start()`, consumes each old record, and never overwrites a key the user has already rebound. It is
-scheduled for deletion; see [decisions.md](../decisions.md) entry 24.
+`start()`, consumes each old record, and never overwrites a key the user has already rebound. Its
+`legacyKey` returns nil for an action that postdates the scheme, so nothing new has to invent a
+migration key it never wrote. It is scheduled for deletion; see
+[decisions.md](../decisions.md) entry 24.
+
+`hotkey.searchFiles` is the singleton case for a built-in launcher command, alongside
+`hotkey.togglePalette`, `hotkey.toggleClipboard` and `hotkey.toggleEmoji`. It is the only `CommandID`
+with an action of its own, so it is also the only one `AppEntry.hotKeyAction` answers for — which is
+what puts a recorder on its row in both Settings ▸ File Search and Settings ▸ Commands, and a keycap on
+its launcher row. Like a window command, the chord registers regardless and the coordinator re-checks
+the feature switch before it opens anything (see [file-search.md](file-search.md#invocation)).
 
 System actions and window commands are the fixed-catalog case: they persist under
 `hotkey.systemAction.<raw-id>` and `hotkey.windowCommand.<raw-id>`

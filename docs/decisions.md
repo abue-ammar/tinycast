@@ -407,10 +407,11 @@ than an agent surviving a closed window.
 
 ### 33 — File Search uses capped `MDQuery`, not `NSMetadataQuery` or a private index
 
-Every filename search creates an on-demand Spotlight `MDQuery`, scopes it to visible top-level home
-folders plus cloud-storage roots, and calls `MDQuerySetMaxCount(1_000)` before execution. Hidden,
-application-bundle and generated paths are removed before fuzzy ranking publishes at most 200 rows. The
-query is synchronous inside detached work and its Core Foundation reference never crosses that boundary.
+Every filename search creates an on-demand Spotlight `MDQuery`, scopes it to the folders the user
+configured — home expanding to its visible children plus cloud-storage roots — and calls
+`MDQuerySetMaxCount(1_000)` before execution. Hidden, application-bundle and ignored paths are removed
+before fuzzy ranking publishes at most 200 rows. The query is synchronous inside detached work and its
+Core Foundation reference never crosses that boundary.
 
 **Why:** `NSMetadataQuery` is the higher-level spelling but exposes no result cap. A broad one-character
 query can therefore retain an unbounded home index and violate the 100 MB ceiling before Tinycast trims
@@ -419,3 +420,24 @@ index would add launch cost, persistence, watching and permission behavior to du
 
 **What would change this:** a current Apple Spotlight API gaining a source-result limit with Swift
 Concurrency delivery.
+
+### 34 — File Search ignore patterns are `fnmatch` globs, and the shipped ones are never persisted
+
+`FileSearchIgnoreList` compiles each pattern once: a pattern without `/` matches any path component, one
+with `/` matches the whole path, and both run through `fnmatch` with `FNM_CASEFOLD` and without
+`FNM_PATHNAME`. `fileSearchIgnorePatterns` stores only what the user added; the six shipped rules live
+in `FileSearchIgnoreList.defaults` and are prepended at resolution. Only bare `*` name globs are pushed
+into the Spotlight expression.
+
+**Why:** libc already implements the grammar the mockup was written in, brackets included, so a
+hand-rolled matcher would be new surface for nothing. Dropping `FNM_PATHNAME` is what makes `**/tmp/**`
+behave as written. Keeping the defaults out of UserDefaults is what makes them genuinely
+non-removable and lets the shipped list change without losing to a stale copy on disk — the cost is
+that a user cannot un-ignore `build` or `target`. Measured on the shipped Spotlight index, five extra
+user patterns cost 5–10 ms against a 191–668 ms query, so matching is not worth optimising further.
+`?` and `[` are literals to Spotlight and `kMDItemPath` is not queryable at all, so anything beyond a
+`*` name glob has no server-side spelling; unescaped quotes in a pushed pattern would nil
+`MDQueryCreate` and break every search, so they are escaped and then kept out of the expression.
+
+**What would change this:** Spotlight gaining a queryable path attribute, which would let ancestor
+exclusions prune the 1,000-candidate cap instead of only filtering after it.

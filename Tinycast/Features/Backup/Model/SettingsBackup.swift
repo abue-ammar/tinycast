@@ -30,6 +30,8 @@ struct SettingsBackup: Codable {
         // Safe to carry: it grants no permission class, just repositions the window.
         var paletteDraggable: Bool?
         var fileSearchEnabled: Bool?
+        var fileSearchScopes: [String]?
+        var fileSearchIgnorePatterns: [String]?
         // `snippetsEnabled` is absent: an import must not enable keystroke listening.
         var customCommandsEnabled: Bool?
         var customCommandsShowInLauncher: Bool?
@@ -52,6 +54,7 @@ struct SettingsBackup: Codable {
         var togglePalette: HotKeyBinding?
         var toggleClipboard: HotKeyBinding?
         var toggleEmoji: HotKeyBinding?
+        var searchFiles: HotKeyBinding?
         var apps: [String: HotKeyBinding]?
         var panes: [String: HotKeyBinding]?
         var customCommands: [String: HotKeyBinding]?
@@ -95,6 +98,8 @@ extension SettingsBackup {
             openOnCursorScreen: s.openOnCursorScreen,
             paletteDraggable: s.paletteDraggable,
             fileSearchEnabled: s.fileSearchEnabled,
+            fileSearchScopes: s.fileSearchScopes,
+            fileSearchIgnorePatterns: s.fileSearchIgnorePatterns,
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
             snippetsShowInLauncher: s.snippetsShowInLauncher,
@@ -113,6 +118,7 @@ extension SettingsBackup {
         hotkeys.togglePalette = hk.binding(for: .togglePalette)
         hotkeys.toggleClipboard = hk.binding(for: .toggleClipboard)
         hotkeys.toggleEmoji = hk.binding(for: .toggleEmoji)
+        hotkeys.searchFiles = hk.binding(for: .searchFiles)
         hotkeys.apps = Dictionary(
             uniqueKeysWithValues: hk.boundBundleIDs.compactMap { id in
                 hk.binding(for: .app(bundleID: id)).map { (id, $0) }
@@ -237,6 +243,14 @@ extension SettingsBackup {
             settings.fileSearchEnabled = flag
             count += 1
         }
+        if let scopes = s.fileSearchScopes {
+            settings.fileSearchScopes = scopes
+            count += 1
+        }
+        if let patterns = s.fileSearchIgnorePatterns {
+            settings.fileSearchIgnorePatterns = patterns
+            count += 1
+        }
         if let flag = s.customCommandsEnabled {
             settings.customCommandsEnabled = flag
             count += 1
@@ -302,6 +316,7 @@ extension SettingsBackup {
         if let b = hotkeys.togglePalette { apply(b, .togglePalette) }
         if let b = hotkeys.toggleClipboard { apply(b, .toggleClipboard) }
         if let b = hotkeys.toggleEmoji { apply(b, .toggleEmoji) }
+        if let b = hotkeys.searchFiles { apply(b, .searchFiles) }
         for (id, b) in hotkeys.apps ?? [:] { apply(b, .app(bundleID: id)) }
         for (id, b) in hotkeys.panes ?? [:] { apply(b, .settingsPane(bundleID: id)) }
         for (rawID, b) in hotkeys.customCommands ?? [:] {

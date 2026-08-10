@@ -126,6 +126,7 @@ final class AppCore {
 
             appIndex.start(settings: settings)
             fileSearchCoordinator.applyEnabled()
+            fileSearchCoordinator.applyPolicy()
             customCommands.onChange = { [weak self] _ in
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
             }
@@ -148,6 +149,7 @@ final class AppCore {
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
             hotKeys.onToggleClipboard = { [weak self] in self?.paletteCoordinator.toggleClipboard() }
             hotKeys.onToggleEmoji = { [weak self] in self?.paletteCoordinator.toggleEmoji() }
+            hotKeys.onSearchFiles = { [weak self] in self?.fileSearchCoordinator.show() }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
             }
@@ -214,7 +216,8 @@ final class AppCore {
             return customCommands.command(id: id)?.name
         case .quicklink(let id):
             return quicklinks.quicklink(id: id)?.name
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .systemAction, .windowCommand:
+        case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
+            .windowCommand:
             return nil
         }
     }
@@ -246,6 +249,11 @@ final class AppCore {
                 _ = $0.quicklinksShowInLauncher
             }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
+        track(
+            {
+                _ = $0.fileSearchScopes
+                _ = $0.fileSearchIgnorePatterns
+            }, reproject: { $0.fileSearchCoordinator.applyPolicy() })
         track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetExpansion.applySnippetsEnabled() })
         // Not a feature switch, but the same re-projection: a combo has the chord's ⇧ bit baked in.
         track({ _ = $0.hyperKeyIncludesShift }, reproject: { $0.applyHyperChord() })

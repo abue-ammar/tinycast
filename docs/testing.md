@@ -139,6 +139,9 @@ swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
 /tmp/file-search-performance
 ```
 
+Every query runs twice: once on the shipped rules and once with five extra user patterns, so the output
+says what the ignore list itself costs rather than only what Spotlight does.
+
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the
 instrument then shows an interval that never closes.
@@ -236,16 +239,23 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### File Search
 
-- With File Search **off**: Search Files is absent, enabling performs no query and no permission appears
+- With File Search **off**: Search Files is absent, its shortcut no-ops, and no permission appears
 - Enabling in Settings exposes Search Files immediately; it persists across relaunch and backup import
 - Disabling during a query cancels it and returns the open screen to the launcher
 - File Search and Quicklinks remain independently visible in all four enabled/disabled combinations
-- Search Files opens from its launcher command and has no global shortcut in Settings
-- An empty query performs no search; a filename query returns only files and folders beneath home
+- An empty query performs no search; a filename query returns only files and folders beneath the scopes
 - Library internals, generated trees, application bundles and hidden paths do not appear
 - Visible custom top-level home folders and cloud-drive files remain searchable
 - Return opens, Command-Return reveals in Finder, and Copy Path keeps the palette open with a HUD
 - Replacing a query quickly never lets an older result list overwrite the current query
+- Removing home and adding one folder narrows results to it; restoring the default brings them back
+- A cleared scope list returns nothing rather than falling back to home, and never hangs
+- A missing scope shows the warning triangle without failing the rest of the search
+- Adding `*.log` takes effect on the next query with no relaunch; removing it restores those results
+- Built-in ignore rows carry no remove button; user rows do, and a duplicate or blank is refused
+- Recording a shortcut opens the palette straight into File Search, hidden from the launcher or not
+- The pane's checkbox and the Search Files row in Settings ▸ Commands move together
+- Export, clear both lists and the shortcut, re-import: all three return, defaults undo not duplicated
 
 ### Snippets
 

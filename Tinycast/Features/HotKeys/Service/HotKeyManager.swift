@@ -7,6 +7,7 @@ final class HotKeyManager {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
     var onToggleEmoji: (() -> Void)?
+    var onSearchFiles: (() -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
@@ -121,7 +122,8 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundCustomCommandKey)
         case .quicklink(let id):
             index(id, bound: binding != nil, key: boundQuicklinkKey)
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .systemAction, .windowCommand:
+        case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
+            .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -156,7 +158,9 @@ final class HotKeyManager {
     /// Every action that could hold a binding: the search space for conflicts and the map.
     private var candidateActions: [HotKeyAction] {
         if let candidateActionsCache { return candidateActionsCache }
-        var actions: [HotKeyAction] = [.togglePalette, .toggleClipboard, .toggleEmoji]
+        var actions: [HotKeyAction] = [
+            .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles
+        ]
         actions += boundBundleIDs.map { .app(bundleID: $0) }
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
@@ -175,6 +179,8 @@ final class HotKeyManager {
             return "Clipboard History"
         case .toggleEmoji:
             return "Emoji & Symbols"
+        case .searchFiles:
+            return CommandID.searchFiles.name
         case .app(let bundleID), .settingsPane(let bundleID):
             return displayName?(action) ?? bundleID
         case .customCommand:
@@ -211,6 +217,7 @@ final class HotKeyManager {
         case .togglePalette: onTogglePalette?()
         case .toggleClipboard: onToggleClipboard?()
         case .toggleEmoji: onToggleEmoji?()
+        case .searchFiles: onSearchFiles?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)

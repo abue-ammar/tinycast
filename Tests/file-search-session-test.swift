@@ -5,7 +5,7 @@ actor FileSearchProbe {
     private var calls: [String] = []
     private var maximumActive = 0
 
-    func search(query: String, homeDirectory: URL) async -> [FileSearchResult] {
+    func search(query: String, policy: FileSearchPolicy) async -> [FileSearchResult] {
         active += 1
         calls.append(query)
         maximumActive = max(maximumActive, active)
@@ -13,8 +13,8 @@ actor FileSearchProbe {
         active -= 1
         return [
             FileSearchResult(
-                url: homeDirectory.appending(path: query), isDirectory: false,
-                homeDirectory: homeDirectory)
+                url: policy.homeDirectory.appending(path: query), isDirectory: false,
+                homeDirectory: policy.homeDirectory)
         ]
     }
 
@@ -40,6 +40,8 @@ struct FileSearchSessionTests {
         await coalescesDebouncingQueries()
         await serializesRunningQueries()
         await cancellationPreventsPendingWork()
+        await policyChangeDiscardsStaleResults()
+        await unchangedPolicyKeepsResults()
 
         print(failures == 0 ? "File search session tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -83,9 +85,40 @@ struct FileSearchSessionTests {
         expect(session.state == .idle && session.results.isEmpty, "cancellation clears the session")
     }
 
+    static func policyChangeDiscardsStaleResults() async {
+        let probe = FileSearchProbe()
+        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        session.search("report")
+        try? await Task.sleep(for: .milliseconds(30))
+        session.apply(scopes: FileSearchScope.defaultScopes, ignorePatterns: ["*.log"])
+        try? await Task.sleep(for: .milliseconds(90))
+
+        expect(
+            session.state == .idle && session.results.isEmpty,
+            "a result found under the old rules never publishes")
+        session.search("report")
+        await waitUntil { session.state == .ready }
+        let snapshot = await probe.snapshot()
+        expect(snapshot.calls == ["report", "report"], "the same query re-runs under the new rules")
+    }
+
+    static func unchangedPolicyKeepsResults() async {
+        let probe = FileSearchProbe()
+        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        session.search("report")
+        await waitUntil { session.state == .ready }
+        session.apply(scopes: FileSearchScope.defaultScopes, ignorePatterns: [])
+
+        expect(
+            session.state == .ready && session.results.first?.name == "report",
+            "re-applying identical settings leaves the published results alone")
+    }
+
     static func makeSession(probe: FileSearchProbe, debounce: Duration) -> FileSearchSession {
-        FileSearchSession(homeDirectory: home, debounce: debounce) { query, _, homeDirectory in
-            await probe.search(query: query, homeDirectory: homeDirectory)
+        let policy = FileSearchPolicy(
+            scopes: FileSearchScope.defaultScopes, ignorePatterns: [], homeDirectory: home)
+        return FileSearchSession(policy: policy, debounce: debounce) { query, _, policy in
+            await probe.search(query: query, policy: policy)
         }
     }
 
