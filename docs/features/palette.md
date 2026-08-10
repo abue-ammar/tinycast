@@ -49,14 +49,14 @@ Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the proto
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
 palette indexes into it. Adding a mode means adding a conformer, not a branch in `RootPaletteView`.
 
-| Mode                  | Screen                     | Inner list                                                                        |
-| --------------------- | -------------------------- | --------------------------------------------------------------------------------- |
-| `.launcher`           | `LauncherScreen`           | `LauncherList`                                                                    |
-| `.clipboard`          | `ClipboardScreen`          | `ClipboardList` + preview                                                         |
-| `.calculatorHistory`  | `CalculatorHistoryScreen`  | `CalculatorHistoryList`                                                           |
-| `.emoji`              | `EmojiScreen`              | `EmojiGridView`                                                                   |
-| `.uninstall`          | `UninstallScreen`          | `UninstallList` (see [uninstall.md](uninstall.md))                                |
-| `.quicklinks`         | `QuicklinkListScreen`      | `QuicklinkList`                                                                   |
+| Mode | Screen | Inner list |
+| --- | --- | --- |
+| `.launcher` | `LauncherScreen` | `LauncherList` |
+| `.clipboard` | `ClipboardScreen` | `ClipboardList` + preview |
+| `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList` |
+| `.emoji` | `EmojiScreen` | `EmojiGridView` |
+| `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
+| `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
 
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab cycles launcher ↔
@@ -80,16 +80,12 @@ for every compact↔expanded resize, so only the height changes and the top edge
 anchor is dropped on hide, so the next summon re-resolves for wherever the user is then.
 
 **Drag to reposition** (`AppSettings.paletteDraggable`, off by default) is the only thing that moves a
-panel already on screen. `WindowDragHandle` hands mouse-down to `performDrag(with:)` from the top strip
-and the header's margins and inter-item gaps (`RootPaletteView.headerGutter`) — everywhere in the header
-no control occupies. The search field itself is also a handle past its visible text: `TextTrailingDragHandle`
-measures the query's rendered width and only claims the hit-test beyond it, so a click or drag on the
-text still edits or selects normally, matching Spotlight's own field. AppKit moves the frame without
-going through the controller, so `windowDidMove` writes the new top-left back into the anchor —
-otherwise the next compact↔expanded resize would snap the panel back to the position it was summoned
-at. That write is idempotent, since `positionPanel` places the frame at exactly the anchor and its own
-`setFrame` round-trips the same values. The anchor still dies on hide, so a dragged position lasts for
-that summon only.
+panel already on screen: `WindowDragHandle` hands mouse-down to `performDrag(with:)` from a strip along
+the top edge. AppKit moves the frame without going through the controller, so `windowDidMove` writes the
+new top-left back into the anchor — otherwise the next compact↔expanded resize would snap the panel back
+to the position it was summoned at. That write is idempotent, since `positionPanel` places the frame at
+exactly the anchor and its own `setFrame` round-trips the same values. The anchor still dies on hide, so
+a dragged position lasts for that summon only.
 
 Which display it anchors to depends on the **Follow the cursor across displays** setting
 (`AppSettings.openOnCursorScreen`, on by default):

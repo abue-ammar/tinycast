@@ -46,6 +46,12 @@ enum Theme {
         static let headerPadding: CGFloat = 10
         /// Collapsed compact bar: the search row centered in symmetric `headerPadding` slack.
         static let compactHeight: CGFloat = headerHeight + headerPadding * 2
+        /// How near the default placement a drag has to land before it snaps home.
+        static let paletteSnapDistance: CGFloat = 24
+        /// A restored position needs this much of the compact bar on a display to still be grabbable.
+        static let paletteMinimumVisible: CGFloat = 44
+        /// Dash and gap of the drop guides, equal so the line reads evenly.
+        static let dropGuideDash: CGFloat = 4
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
         static let keyCap: CGFloat = 18
@@ -118,7 +124,12 @@ enum Theme {
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
     enum Typography {
-        static let searchField = Font.system(size: 20, weight: .regular)
+        /// One size, two frameworks: `TextTrailingDragHandle` measures what the field renders.
+        static let searchFieldSize: CGFloat = 20
+        static let searchField = Font.system(size: searchFieldSize, weight: .regular)
+        /// `NSFont` is not `Sendable`, hence the isolation; every reader is a view anyway.
+        @MainActor static let searchFieldNSFont = NSFont.systemFont(
+            ofSize: searchFieldSize, weight: .regular)
         static let headerIcon = Font.system(size: 18, weight: .medium)
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
@@ -157,6 +168,9 @@ enum Theme {
         static let glassFrost = Color.white.opacity(0.05)
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
+        /// The palette's drop guides while dragging, and once a release would snap it home.
+        static let dropGuide = Color.white.opacity(0.35)
+        static let dropGuideArmed = Color.blue
         /// Destructive tint: a destructive label, and a `.danger` dialog's glyph.
         static let destructive = Color.red
         /// Success tint: the leading glyph of a `.success` dialog.
