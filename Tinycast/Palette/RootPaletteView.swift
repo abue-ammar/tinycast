@@ -350,26 +350,21 @@ struct RootPaletteView: View {
     }
 
     /// A thin strip along the top edge for grabbing the window; the Appearance setting gates it.
-    @ViewBuilder
     private var topDragStrip: some View {
-        let strip = Color.clear.frame(height: Theme.Size.headerPadding)
-        if settings.paletteDraggable {
-            strip.windowDraggable()
-        } else {
-            strip
-        }
+        Color.clear
+            .frame(height: Theme.Size.headerPadding)
+            .windowDraggable(settings.paletteDraggable, onBegan: beginDrag, onEnded: endDrag)
     }
 
     /// A header sliver nothing occupies — safe to drag; the search field handles its own.
-    @ViewBuilder
     private func headerGutter(width: CGFloat) -> some View {
-        let gutter = Color.clear.frame(width: width)
-        if settings.paletteDraggable {
-            gutter.windowDraggable()
-        } else {
-            gutter
-        }
+        Color.clear
+            .frame(width: width)
+            .windowDraggable(settings.paletteDraggable, onBegan: beginDrag, onEnded: endDrag)
     }
+
+    private func beginDrag() { core.paletteCoordinator.beginPaletteDrag() }
+    private func endDrag() { core.paletteCoordinator.endPaletteDrag() }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 0) {
@@ -422,9 +417,6 @@ struct RootPaletteView: View {
         vm.mode == .quicklinkArguments ? quicklinkArguments.prompt : vm.mode.placeholder
     }
 
-    /// Mirrors `Theme.Typography.searchField`; there's no NSFont-valued token to share it from.
-    private static let searchFieldNSFont = NSFont.systemFont(ofSize: 20, weight: .regular)
-
     /// The one search field — past its text it's a drag handle, matching Spotlight.
     private var searchField: some View {
         @Bindable var vm = vm
@@ -451,7 +443,9 @@ struct RootPaletteView: View {
             // Never branches on query — that tore down the field editor mid-keystroke once.
             .overlay {
                 if settings.paletteDraggable {
-                    TextTrailingDragHandle(text: vm.query, font: Self.searchFieldNSFont)
+                    TextTrailingDragHandle(
+                        text: vm.query, font: Theme.Typography.searchFieldNSFont,
+                        onBegan: beginDrag, onEnded: endDrag)
                 }
             }
     }

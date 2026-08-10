@@ -86,4 +86,15 @@ final class PaletteCoordinator {
     func syncPaletteSize() {
         windowController.applyCollapsed(paletteIsCollapsed)
     }
+
+    // MARK: - Dragging
+
+    /// Bracket one drag gesture; the handle tracks it from mouse-down to mouse-up itself.
+    func beginPaletteDrag() {
+        windowController.beginDrag()
+    }
+
+    func endPaletteDrag() {
+        windowController.endDrag()
+    }
 }

@@ -52,6 +52,7 @@ enum Theme {
         static let paletteMinimumVisible: CGFloat = 44
         /// Dash and gap of the drop guides, equal so the line reads evenly.
         static let dropGuideDash: CGFloat = 4
+        static let dropGuideWidth: CGFloat = 2
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
         static let keyCap: CGFloat = 18

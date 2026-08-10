@@ -79,16 +79,58 @@ match the visible row order**, including the inline calculator card at index 0 w
 for every compact↔expanded resize, so only the height changes and the top edge never drifts. The
 anchor is dropped on hide, so the next summon re-resolves for wherever the user is then.
 
-**Drag to reposition** (`AppSettings.paletteDraggable`, off by default) is the only thing that moves a
-panel already on screen: `WindowDragHandle` hands mouse-down to `performDrag(with:)` from a strip along
-the top edge. AppKit moves the frame without going through the controller, so `windowDidMove` writes the
-new top-left back into the anchor — otherwise the next compact↔expanded resize would snap the panel back
-to the position it was summoned at. That write is idempotent, since `positionPanel` places the frame at
-exactly the anchor and its own `setFrame` round-trips the same values. The anchor still dies on hide, so
-a dragged position lasts for that summon only.
+All of the arithmetic lives in `PalettePlacement`, which is CoreGraphics-only and takes every screen
+fact as a parameter, so `palette-placement-test` drives the shipped rules rather than a copy of them.
 
-Which display it anchors to depends on the **Follow the cursor across displays** setting
-(`AppSettings.openOnCursorScreen`, on by default):
+### Drag to reposition
+
+**Drag to reposition** (`AppSettings.paletteDraggable`, off by default) is the only thing that moves a
+panel already on screen. `WindowDragHandle` claims mouse-down on the top strip and on the header's
+margins and inter-item gaps (`RootPaletteView.headerGutter`) — everywhere in the header no control
+occupies. The search field is a handle too, but only past its visible text:
+`TextTrailingDragHandle` measures the query in `Theme.Typography.searchFieldNSFont` and claims the
+hit-test only beyond it, so clicking or dragging the text still edits and selects, matching Spotlight.
+
+AppKit moves the frame without going through the controller, so `windowDidMove` writes the new top-left
+back into the anchor — otherwise the next compact↔expanded resize would snap the panel back to the
+position it was summoned at. That write is idempotent, since `positionPanel` places the frame at exactly
+the anchor and its own `setFrame` round-trips the same values.
+
+**The handle tracks the gesture itself rather than calling `performDrag(with:)`.** That method hands the
+drag to the window server and returns immediately, so it can say when a drag *starts* but never when it
+ends — the mouse-up arrives long after it has returned. `DragView.mouseDown` instead runs
+`trackEvents(matching:timeout:mode:)` over `.leftMouseDragged` / `.leftMouseUp`, moving the window by
+the `NSEvent.mouseLocation` delta, which puts the whole gesture inside one call. It brackets that with
+`PaletteCoordinator.beginPaletteDrag()` / `endPaletteDrag()`, and the controller holds a `DragSession`
+for exactly that span. **Only a move inside a session is a user drag**; without that flag every
+programmatic resize would be recorded as one.
+
+### The drop guides
+
+While a drag is in flight, `PaletteDropGuideController` puts a click-through borderless panel over the
+display the panel is on, one level under `.floating` so it never covers the panel being dragged. It
+draws three dotted lines through the default placement — both panel edges full height, the top edge full
+width — which turn `Theme.Colors.dropGuideArmed` once the anchor is within `Theme.Size.paletteSnapDistance`
+of home. Releasing while armed snaps the panel there.
+
+The guides wait for the first `windowDidMove` of a session rather than appearing on mouse-down, so a
+bare click on a handle never flashes them. Crossing to another display re-points them at that display's
+default placement, which is what a snap would then land on.
+
+### Remembering where it was left
+
+A drop that isn't a snap writes the anchor to `AppSettings.palettePosition`, and the next summon reopens
+there — across relaunches, since it is a persisted setting. **A remembered position outranks the display
+setting below**; `PalettePlacement.restored` drops it only when no display still shows
+`Theme.Size.paletteMinimumVisible` of the compact bar, which is what a disconnected screen or a
+resolution change leaves behind. Snapping onto the guides clears the stored position, so the guides
+double as the way back to default behaviour.
+
+The position is deliberately **not** in a settings backup — it is machine-local geometry, the same
+reason the Settings window autosaves its frame instead ([backup.md](backup.md)).
+
+Which display an *unremembered* palette anchors to depends on the **Follow the cursor across displays**
+setting (`AppSettings.openOnCursorScreen`, on by default):
 
 - **On** — the screen holding `NSEvent.mouseLocation`, i.e. the display under the pointer.
 - **Off** — `NSScreen.main`.
