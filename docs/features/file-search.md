@@ -42,6 +42,16 @@ The synchronous API can finish after its surrounding task is cancelled. That wor
 result is discarded: `Task.checkCancellation()` and the session's current-query check both run before
 publication. Leaving or hiding the screen cancels and clears the session as well.
 
+`FileSearchService.search` emits a `FileSearchService.search` interval on the shared
+`com.tinycast.perf` signpost subsystem. `Tests/file-search-performance.swift` exercises the same service
+against the current user's Spotlight index and reports first-run and repeated-query latency; it stays
+outside `run-tests.sh` because filesystem contents and Spotlight state are machine-dependent.
+
+The 2026-08-10 baseline used a release-optimized standalone process against the developer home. Across
+`a`, `e`, `swift`, `pdf` and `project`, first runs took 598–701 ms, repeated medians took 612–703 ms and
+the process reached 27 MB maximum RSS. The palette's debounce adds 120 ms before that measured service
+interval. These are local orders of magnitude, not budgets; rerun the benchmark after query-policy work.
+
 ## Palette and actions
 
 `FileSearchScreen.rows` is the exact flat selection order rendered by `FileSearchList`. The list uses

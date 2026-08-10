@@ -11,47 +11,49 @@ enum FileSearchService {
     nonisolated static func search(query rawQuery: String, expression: String, homeDirectory: URL) throws
         -> [FileSearchResult]
     {
-        let selection = discoverScopes(homeDirectory: homeDirectory)
-        let scopes = deduplicated(selection.directories + cloudScopes(homeDirectory: homeDirectory))
-        var results = selection.rootItems.compactMap { candidate -> FileSearchResult? in
-            guard FileSearchQuery.matches(
-                filename: candidate.url.lastPathComponent, query: rawQuery)
-            else { return nil }
-            return FileSearchResult(
-                url: candidate.url, isDirectory: candidate.isDirectory,
-                homeDirectory: homeDirectory)
-        }
-        guard !scopes.isEmpty else { return FileSearchQuery.rank(results, for: rawQuery) }
+        try Signposts.interval("FileSearchService.search") {
+            let selection = discoverScopes(homeDirectory: homeDirectory)
+            let scopes = deduplicated(selection.directories + cloudScopes(homeDirectory: homeDirectory))
+            var results = selection.rootItems.compactMap { candidate -> FileSearchResult? in
+                guard FileSearchQuery.matches(
+                    filename: candidate.url.lastPathComponent, query: rawQuery)
+                else { return nil }
+                return FileSearchResult(
+                    url: candidate.url, isDirectory: candidate.isDirectory,
+                    homeDirectory: homeDirectory)
+            }
+            guard !scopes.isEmpty else { return FileSearchQuery.rank(results, for: rawQuery) }
 
-        guard let query = MDQueryCreate(nil, expression as CFString, nil, nil) else {
-            throw Failure.couldNotCreateQuery
-        }
-        MDQuerySetSearchScope(query, scopes as CFArray, 0)
-        MDQuerySetMaxCount(query, FileSearchQuery.candidateLimit)
-        guard MDQueryExecute(query, CFOptionFlags(kMDQuerySynchronous.rawValue)) else {
-            throw Failure.couldNotStartQuery
-        }
+            guard let query = MDQueryCreate(nil, expression as CFString, nil, nil) else {
+                throw Failure.couldNotCreateQuery
+            }
+            MDQuerySetSearchScope(query, scopes as CFArray, 0)
+            MDQuerySetMaxCount(query, FileSearchQuery.candidateLimit)
+            guard MDQueryExecute(query, CFOptionFlags(kMDQuerySynchronous.rawValue)) else {
+                throw Failure.couldNotStartQuery
+            }
 
-        var seen = Set(results.map(\.id))
-        for index in 0..<MDQueryGetResultCount(query) {
-            guard let rawItem = MDQueryGetResultAtIndex(query, index) else { continue }
-            let item = Unmanaged<MDItem>.fromOpaque(rawItem).takeUnretainedValue()
-            guard let path = MDItemCopyAttribute(item, kMDItemPath) as? String else { continue }
-            let hidden = MDItemCopyAttribute(item, kMDItemFSInvisible) as? Bool ?? false
-            guard !hidden else { continue }
+            var seen = Set(results.map(\.id))
+            for index in 0..<MDQueryGetResultCount(query) {
+                guard let rawItem = MDQueryGetResultAtIndex(query, index) else { continue }
+                let item = Unmanaged<MDItem>.fromOpaque(rawItem).takeUnretainedValue()
+                guard let path = MDItemCopyAttribute(item, kMDItemPath) as? String else { continue }
+                let hidden = MDItemCopyAttribute(item, kMDItemFSInvisible) as? Bool ?? false
+                guard !hidden else { continue }
 
-            let contentType = (MDItemCopyAttribute(item, kMDItemContentType) as? String)
-                .flatMap(UTType.init)
-            guard contentType?.conforms(to: .application) != true else { continue }
+                let contentType = (MDItemCopyAttribute(item, kMDItemContentType) as? String)
+                    .flatMap(UTType.init)
+                guard contentType?.conforms(to: .application) != true else { continue }
 
-            let result = FileSearchResult(
-                url: URL(fileURLWithPath: path),
-                isDirectory: contentType?.conforms(to: .folder) == true,
-                homeDirectory: homeDirectory)
-            guard seen.insert(result.id).inserted else { continue }
-            results.append(result)
+                let result = FileSearchResult(
+                    url: URL(fileURLWithPath: path),
+                    isDirectory: contentType?.conforms(to: .folder) == true,
+                    homeDirectory: homeDirectory)
+                guard seen.insert(result.id).inserted else { continue }
+                results.append(result)
+            }
+            return FileSearchQuery.rank(results, for: rawQuery)
         }
-        return FileSearchQuery.rank(results, for: rawQuery)
     }
 
     private nonisolated static func discoverScopes(homeDirectory: URL) -> FileSearchScope.Selection {

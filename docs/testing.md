@@ -121,11 +121,22 @@ formatter, deliberately — the configuration and the measurements behind that a
 
 ## Performance measurement
 
-`Platform/Signposts.swift` emits six intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
+`Platform/Signposts.swift` emits seven intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
 `AppIndex.scan`, `AppIndex.rank`, `PaletteWindowController.show`, `UninstallScanner.discover` and
-`UninstallScanner.measure`. Open the
+`UninstallScanner.measure`, plus `FileSearchService.search`. Open the
 Time Profiler or `os_signpost` instrument in Instruments and filter to that subsystem; nothing needs
 recompiling.
+
+Run the real Spotlight-backed file-search benchmark separately from the deterministic harnesses:
+
+```sh
+swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
+    Tinycast/Features/Launcher/Model/SearchRelevance.swift \
+    Tinycast/Features/FileSearch/Model/*.swift \
+    Tinycast/Features/FileSearch/Service/FileSearchService.swift \
+    Tests/file-search-performance.swift -o /tmp/file-search-performance
+/tmp/file-search-performance
+```
 
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the
