@@ -14,7 +14,8 @@ struct PaletteDropGuideView: View {
                 armed ? Theme.Colors.dropGuideArmed : Theme.Colors.dropGuide,
                 style: StrokeStyle(
                     lineWidth: Theme.Size.dropGuideWidth,
-                    dash: [Theme.Size.dropGuideDash, Theme.Size.dropGuideDash]))
+                    dash: [Theme.Size.dropGuideDash, Theme.Size.dropGuideDash])
+            )
             .animation(.easeInOut(duration: Theme.Duration.tooltip), value: armed)
     }
 }

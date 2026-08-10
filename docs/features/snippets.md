@@ -16,7 +16,7 @@ results, or automatically when an enabled keyword is typed in another app.
   serializer, template engine, repository and keyword policies stay Foundation-only, and the AppKit files
   there keep their dependencies to what the harness can stub.
 - The on-disk Markdown format is user-authored and user-editable — an interchange format, not an internal
-  one. See [decisions.md](../decisions.md) entry 21.
+  one.
 
 ## Storage and identity
 

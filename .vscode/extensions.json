@@ -1,5 +1,5 @@
 {
   // The official Swift extension is the only one this setup needs — it drives SourceKit-LSP for code
-  // intelligence. There is no formatter extension on purpose: see docs/decisions.md entry 26.
+  // intelligence.
   "recommendations": ["swiftlang.swift-vscode"]
 }

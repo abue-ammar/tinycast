@@ -1,6 +1,6 @@
 import Foundation
 
-/// Temporary: adopts the pre-`hotkey.<action>` records. Delete per docs/decisions.md entry 24.
+/// Temporary: adopts the pre-`hotkey.<action>` records, and is scheduled for deletion.
 enum LegacyHotKeyRecords {
     private struct Combo: Decodable {
         let carbonKeyCode: Int

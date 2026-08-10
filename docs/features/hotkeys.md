@@ -29,8 +29,7 @@ the keycap rendering — only the _engine_ differs.
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyTap` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
-- `LegacyHotKeyRecords` is scheduled for deletion and nothing new may depend on it — see
-  [decisions.md](../decisions.md) entry 24.
+- `LegacyHotKeyRecords` is scheduled for deletion and nothing new may depend on it.
 
 ## Persistence
 
@@ -55,8 +54,7 @@ export → import within one build is guaranteed to round-trip.
 `{"carbonKeyCode":N,"carbonModifiers":N}` under `KeyboardShortcuts_<name>`. It runs once from
 `start()`, consumes each old record, and never overwrites a key the user has already rebound. Its
 `legacyKey` returns nil for an action that postdates the scheme, so nothing new has to invent a
-migration key it never wrote. It is scheduled for deletion; see
-[decisions.md](../decisions.md) entry 24.
+migration key it never wrote. It is scheduled for deletion.
 
 `hotkey.searchFiles` is the singleton case for a built-in launcher command, alongside
 `hotkey.togglePalette`, `hotkey.toggleClipboard` and `hotkey.toggleEmoji`. It is the only `CommandID`

@@ -13,8 +13,7 @@ earliest scope wins).
   scorer. It owns both `FuzzyMatch` and the field bands.
 - **Searchable fields stay separate** — display name, Spotlight alternate names, bundle id and executable
   name are never flattened into one string, because the field is what picks the band. A new searchable
-  field means a new `Band` case and a `consider` call, in priority order. See
-  [decisions.md](../decisions.md) entry 16 for the band arithmetic and why it is not tuned.
+  field means a new `Band` case and a `consider` call, in priority order.
 - **`Model/SearchScopes.swift` and `Model/LauncherRankingStore.swift` are pure too** — the ranking store
   takes its clock via `now` and its path via `fileURL`, for `scopes-test` and `ranking-test`.
 
@@ -76,7 +75,7 @@ LauncherRankingStore.maximumBoost                      =     4,500
 So a field can never reach the band above it — the widest possible fuzzy score is a tenth of a stride —
 and the learned frecency boost is two orders of magnitude below a stride, which is what keeps learning
 reordering *within* a tier and never across one. Those three numbers are a contract, not a tuning
-parameter; see [decisions.md](../decisions.md) entry 16.
+parameter.
 
 A _literal_ hit on a weaker field outranks a _subsequence_ hit on a stronger one. That is the point of
 the split: an alias the vendor actually declared (`Codex` for ChatGPT) must beat the incidental

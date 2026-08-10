@@ -4,7 +4,9 @@ import CoreGraphics
 /// controller holds no placement maths of its own and this stays testable off a display.
 enum PalettePlacement {
     /// The untouched placement: centred, top edge a fraction of the way down, growing downward.
-    static func defaultAnchor(in visibleFrame: CGRect, width: CGFloat, topMarginFraction: CGFloat)
+    static func defaultAnchor(
+        in visibleFrame: CGRect, width: CGFloat, topMarginFraction: CGFloat
+    )
         -> CGPoint
     {
         CGPoint(

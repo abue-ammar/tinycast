@@ -12,7 +12,7 @@ also **pure**: the one input it can't compute, the FX rate table, is passed in (
   are injected: the clock via `now`/`calendar`, the FX table via `rates`.
 - **`CalcEngine.evaluate`'s `currency:` parameter defaults to `.off`**, so forgetting to pass a consented
   source disables the feature rather than enabling it. `CurrencyRateStore` owns the fetch, the consent
-  flag and the cacheless `.ephemeral` session — see [decisions.md](../decisions.md) entries 10 and 11.
+  flag and the cacheless `.ephemeral` session.
 - **`CurrencyData.generated.swift` is emitted by `node Scripts/gen-currencies.js`** and never hand-edited.
   The only hand-maintained currency data is `CalcCurrency.contested`, the nouns several currencies share
   (`dollars`, `pounds`). Do not add slang or synonyms there — no source of truth, so they rot.

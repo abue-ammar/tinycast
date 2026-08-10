@@ -59,7 +59,9 @@ enum FileSearchService {
         }
     }
 
-    private nonisolated static func resolveScopes(_ policy: FileSearchPolicy)
+    private nonisolated static func resolveScopes(
+        _ policy: FileSearchPolicy
+    )
         -> FileSearchScope.Selection
     {
         var directories = policy.directRoots

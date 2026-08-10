@@ -90,8 +90,7 @@ fine too; deciding something with one is what the rule forbids. `showNotice`, `c
 `reportFailure`, `showMessage` and `pickVolume` are forwarders on `AppCore` itself, so
 `DialogController` and `MessageHUDController` stay single-owned.
 
-New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a competing singleton — see
-[decisions.md](decisions.md) entry 1 for why this is a singleton and not a container.
+New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a competing singleton: this is a singleton, not a container.
 
 ## Entry points and windows
 
@@ -108,10 +107,10 @@ imperatively from AppKit.
 - **Settings and Onboarding** — titled `NSWindow`s, one `Windows/AppWindowController.swift` each, owned
   by `SettingsCoordinator` and `OnboardingCoordinator`. SwiftUI `Settings` and `Window` scenes are
   unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
-  palette's in both directions — see [decisions.md](decisions.md) entry 32.
+  palette's in both directions.
 - **The main menu** — shaped by `TinycastApp`'s `.commands`, which rebinds ⌘Q to Close Settings. It is
   only ever on screen while a titled window is open, so it is Settings' menu bar. It must stay
-  declarative — see [decisions.md](decisions.md) entry 32.
+  declarative.
 - **Dialogs** — borderless `DialogPanel`s driven by `DialogController`, the app's only presenter for
   confirmations, failure reports and value prompts. Presentation is `async`, so nothing blocks the main
   actor, and the presenter refuses a second dialog while one is up — that, not a flag, is what stops a
@@ -120,8 +119,7 @@ imperatively from AppKit.
   `VolumeHUDController` (the level box), both over a shared `HUDPresenter` that owns the
   one-at-a-time, auto-dismiss and fade policy. See [ui.md](ui.md#dialogs--hud).
 
-`NSAlert` is never used, and the app forces `.darkAqua` globally. Both are load-bearing —
-[decisions.md](decisions.md) entries 3 and 4.
+`NSAlert` is never used, and the app forces `.darkAqua` globally. Both are load-bearing.
 
 ## Observation
 
@@ -149,8 +147,7 @@ are required; removing the `Task` reads the old value.
 The target builds in **Swift 6 language mode**, so data-race violations are hard errors. Almost
 everything is `@MainActor`; cross-actor model types are `Sendable`. Heavy and IO-bound work — the app
 scan, image decode, the settings-pane scan, shell execution, the FX rate fetch — is pushed off-main as
-`nonisolated static` functions driven by `Task.detached`. There is exactly one actor, deliberately
-([decisions.md](decisions.md) entry 18).
+`nonisolated static` functions driven by `Task.detached`. There is exactly one actor, deliberately.
 
 House idioms for the sharp edges:
 

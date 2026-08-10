@@ -10,7 +10,7 @@ feature is enabled in Settings.
 - **Every Spotlight query is capped at 1,000 candidates before execution, and 200 rows after filtering.**
   `MDQuerySetMaxCount` is the reason the
   feature uses `MDQuery`; `NSMetadataQuery` has no source-result cap and can break the 100 MB budget on
-  a broad filename. See [decisions.md](../decisions.md) entry 33.
+  a broad filename.
 - **Everything under `Model/` stays Foundation-only and pure**, `FileSearchIgnoreList`'s `import Darwin`
   included. `file-search-test` compiles the shipped files together with the existing pure fuzzy scorer.
 - **Search is filename-only and on demand.** An empty query does no work and Tinycast creates no

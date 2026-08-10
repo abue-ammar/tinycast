@@ -24,7 +24,7 @@ Write code as if the platform released yesterday:
   than deprecate; raising the minimum macOS *deletes* the code that supported the old one.
 - **Never introduce backwards compatibility unless explicitly asked for it.** No version flags, no
   migration scaffolding, no "just in case" fallbacks. The two migrations that exist are scheduled for
-  deletion in [decisions.md](docs/decisions.md) entry 24; nothing new may depend on them.
+  deletion; nothing new may depend on them.
 
 Carbon is the one deliberate exception, and it is a capability gap rather than inertia: nothing modern
 registers a system-wide chord. Full reasoning in [standards.md](docs/standards.md#posture).
@@ -46,7 +46,6 @@ registers a system-wide chord. Full reasoning in [standards.md](docs/standards.m
 | --- | --- |
 | change how anything is wired or owned | [architecture.md](docs/architecture.md) |
 | write Swift — naming, style, concurrency, budgets, comments | [standards.md](docs/standards.md) |
-| "fix" something that looks wrong | [decisions.md](docs/decisions.md) |
 | claim a change is done | [testing.md](docs/testing.md) |
 | build, run or regenerate data | [development.md](docs/development.md) |
 | add or restyle any view | [ui.md](docs/ui.md) |
@@ -55,32 +54,27 @@ registers a system-wide chord. Full reasoning in [standards.md](docs/standards.m
 
 ## Non-negotiables
 
-Never break these without an explicit task to do so. Each links to its reasoning; anything
-feature-specific lives in that feature's doc, under its own `## Invariants`.
+Never break these without an explicit task to do so. Anything feature-specific lives in that
+feature's doc, under its own `## Invariants`.
 
 - **`AppCore` is the sole owner.** New long-lived state goes on `AppCore`, wired in `start()` — never a
   competing singleton. Views reach a feature's **coordinator** through `@Environment`, not `AppCore`.
-  ([decisions.md](docs/decisions.md) entry 1)
 - **A file under `Features/*/Model/` may not import AppKit or SwiftUI**, and takes every environment
   fact — clock, filesystem, home directory, rates — as an injected parameter. The harnesses compile the
   shipped sources, so this is enforced by compilation rather than convention.
-  ([decisions.md](docs/decisions.md) entries 5, 6)
 - **Swift 6 language mode: data-race violations are hard errors.** `@MainActor` is the default,
   cross-actor model types are `Sendable`, and heavy or IO-bound work goes off-main as `nonisolated`
   functions driven by `Task.detached`. Do not add a second actor.
-  ([decisions.md](docs/decisions.md) entry 18)
 - **The app is locked to `.darkAqua` globally.** The Liquid Glass material is tuned for a deep dark
   surface; light mode is not a switch, it is a second design.
-  ([decisions.md](docs/decisions.md) entry 4)
 - **Tinycast presents its own dialogs — never `NSAlert`, `NSSlider` or a system popover.** A question
   goes through `DialogController`, a report through a HUD via `HUDPresenter`.
-  ([decisions.md](docs/decisions.md) entry 3)
 - **Consent is structural, not a checkbox.** Every networked feature ships off behind a dialog naming
   the provider, the cadence and what leaves the machine; the owning store re-checks consent on both
   sides of every `await` and fetches on a private `.ephemeral`, `urlCache = nil` session. Consent flags
   live on that store, **never** in `AppSettings`, and `snippetsEnabled` is excluded from settings
   backups so an import cannot grant keystroke listening. `CurrencyRateStore` is the reference — copy it
-  rather than inventing a second shape. ([decisions.md](docs/decisions.md) entries 7, 8, 10, 11)
+  rather than inventing a second shape.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from
@@ -88,7 +82,6 @@ feature-specific lives in that feature's doc, under its own `## Invariants`.
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are
   tuned by eye against the palette's floating bars, so any edit is a visual regression. Needing to touch
   one to fix a scroll bug means the real fix belongs elsewhere.
-  ([decisions.md](docs/decisions.md) entry 28)
 
 ## Conventions worth knowing up front
 

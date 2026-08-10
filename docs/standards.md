@@ -124,7 +124,7 @@ Swift 6 language mode: data-race violations are hard errors, and that is the des
   unless there is a reason.
 - Heavy or IO-bound work goes off-main explicitly, as `nonisolated static` pure functions driven by
   `Task.detached` — the app scan, image decode, the settings-pane scan, shell execution. Keep that
-  boundary; do not introduce a custom actor (see [decisions.md](decisions.md), entry 18).
+  boundary; do not introduce a custom actor.
 - Cross-actor model types are `Sendable`. Reach for `@unchecked Sendable` or `nonisolated(unsafe)` only
   with a written reason, and never for convenience.
 - **No new `MainActor.assumeIsolated`.** It traps at runtime if the assumption is ever wrong.
@@ -201,13 +201,13 @@ Minimal code, not annotated prose.
    constant, or a type.
 2. **Hard cap 100 characters**, including indentation. Longer belongs in a doc under `docs/`.
 3. Comment the *why*, the gotcha, or the invariant. Never restate the code, never narrate a sequence,
-   never argue a decision at length in-line — that is what [decisions.md](decisions.md) is for.
+   never argue a decision at length in-line.
 4. **Prefer deleting a comment to updating it.**
 5. Never add a comment explaining a change you just made. The diff is not the audience.
 6. A `///` doc comment on a public type or method follows the same rules. It is not a licence to stack
    lines.
 
-None of this is linted, by choice — [decisions.md](decisions.md) entry 26a. A rule that fires after the
+None of this is linted, by choice. A rule that fires after the
 comment is written buys a second edit; these are cheap to get right on the first pass instead.
 
 ## Accessibility

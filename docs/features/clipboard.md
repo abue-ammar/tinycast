@@ -7,8 +7,7 @@
 - **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so
   `clipboard-test` can compile it standalone. It uses `isolated deinit` for its SQLite teardown.
 - A database that cannot be opened is deleted and recreated. That is only sound because history is
-  regenerable — `QuicklinkStore` deliberately does the opposite. See [decisions.md](../decisions.md)
-  entry 14.
+  regenerable — `QuicklinkStore` deliberately does the opposite.
 
 ## Poll-based capture
 

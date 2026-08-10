@@ -58,9 +58,8 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 Read [`AGENTS.md`](AGENTS.md) first — the posture, the Non-negotiables and the naming and comment rules
 are all there, and they apply to a human contributor exactly as they do to an agent.
 [`docs/standards.md`](docs/standards.md) is the full version: architecture, naming, Swift style,
-concurrency and the performance budgets. [`docs/ui.md`](docs/ui.md) before any new view or restyle, and
-[`docs/decisions.md`](docs/decisions.md) before "fixing" something that looks wrong — it may be
-deliberate, and the entry says what would change it.
+concurrency and the performance budgets. [`docs/ui.md`](docs/ui.md) before any new view or restyle. Look before "fixing" something that looks
+wrong — it may be deliberate.
 
 Two things that are only about contributing, and so are not in those docs:
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Lint the whole project. `--fix` auto-corrects the mechanical subset first.
-# Formatting is a separate tool with its own caveats — ./Scripts/format.sh, docs/decisions.md entry 26.
+# Formatting is a separate tool with its own caveats — see ./Scripts/format.sh.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 

@@ -118,7 +118,7 @@ find ~/Library/Developer/Xcode/DerivedData -name "Tinycast*.app" -maxdepth 6 -pr
 SwiftLint owns the rules that catch defects, including the two checkable comment rules — the
 100-character cap and the ban on stacked comment lines. Errors block; warnings do not. There is no
 formatter, deliberately — the configuration and the measurements behind that are in
-[development.md](development.md#linting) and [decisions.md](decisions.md) entry 26.
+[development.md](development.md#linting).
 
 ## Performance measurement
 
@@ -303,7 +303,7 @@ tccutil reset Accessibility com.tinycast.app.dev 2>/dev/null || true
 - Palette opens and lists apps; clipboard, quicklinks, snippets and calculator history are all empty
   and all accept a first entry
 - **Every setting shows its intended default.** Walk the panes: this is what catches a broken
-  absence-versus-`false` read (see [decisions.md](decisions.md), entry 20)
+  absence-versus-`false` read
 - Quit and relaunch: everything created above persisted
 - Nothing was written outside `com.tinycast.app.dev/`. Channel isolation is not negotiable — a Dev build
   writing into the stable app's directory is a defect even though the data is disposable

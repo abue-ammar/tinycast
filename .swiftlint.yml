@@ -1,5 +1,5 @@
-# SwiftLint is the only code-quality tool here — there is no formatter, deliberately
-# (docs/decisions.md entry 26). So this config sticks to rules that catch defects, and stays quiet
+# SwiftLint is the only code-quality tool here — there is no formatter, deliberately.
+# So this config sticks to rules that catch defects, and stays quiet
 # about style a formatter would otherwise own. See docs/standards.md.
 
 included:

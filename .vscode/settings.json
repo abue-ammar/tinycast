@@ -17,7 +17,6 @@
   // Formatting is swift-format from the Xcode toolchain, reached through sourcekit-lsp — no extra
   // extension or brew package. defaultFormatter is required: without it VS Code refuses to pick one
   // and ⌘S silently does nothing. `.swift-format` tunes it down to this tree's style; it still
-  // restructures more than decisions.md entry 26 wanted, so re-read that before trusting it.
   "[swift]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "swiftlang.swift-vscode"

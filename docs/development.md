@@ -37,7 +37,7 @@ Xcode, prefix with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (t
 
 `Tinycast.xcodeproj` is committed and generated from `project.yml` via XcodeGen — after changing
 project settings in `project.yml`, run `xcodegen generate` and commit the result. There is no
-`Package.swift`, and `Bundle.module` must never be used ([decisions.md](decisions.md) entry 25).
+`Package.swift`, and `Bundle.module` must never be used.
 
 ### The dev channel
 
@@ -134,12 +134,11 @@ Both `*.generated.swift` files are excluded: formatting one is hand-editing it, 
 a failure from either command is a syntax error rather than a tooling problem — and it is why ⌘S looks
 like it does nothing while a file is mid-edit with unbalanced braces.
 
-**Read [decisions.md](decisions.md) entry 26 before leaning on this.** A formatter was rejected here on
-measured evidence, and the entry stands: running it over the tree touched 68 files, and 67 of those
-changed more than whitespace.
+**Think twice before leaning on this.** A formatter was rejected here on measured evidence, and that
+stands: running it over the tree touched 68 files, and 67 of those changed more than whitespace.
 
 The config sticks to rules that catch defects and stays quiet about style, because **there is no
-formatter** — see [decisions.md](decisions.md) entry 26 for the measurements behind that. Formatting is
+formatter**, on measured evidence. Formatting is
 Xcode's re-indent (⌃I), as it always has been. Two consequences worth knowing:
 
 - `empty_count` is **disabled**, and `isEmpty`-style rewrites are unsafe here generally:
