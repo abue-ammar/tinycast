@@ -75,6 +75,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         dropGuides.hide()
         // Drop the multi-MB preview bitmaps, so idle RAM returns near baseline.
         ImageThumbnail.purgePreviews()
+        IconCache.purgeFitted()
         schedulePopToRoot()
         guard restoreFocus else { return }
         // Our own window first: it is still open, and activating another app would bury it.

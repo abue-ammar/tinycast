@@ -45,6 +45,7 @@ struct FileSearchList: View {
                 }
             }
         }
+        .onDisappear { IconCache.purgeFitted() }
     }
 }
 

@@ -248,6 +248,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Visible custom top-level home folders and cloud-drive files remain searchable
 - Return opens, Command-Return reveals in Finder, and Copy Path keeps the palette open with a HUD
 - Replacing a query quickly never lets an older result list overwrite the current query
+- A broad `.` search can be scrolled end to end; leaving it releases its fitted icons, and repeating the
+  cycle does not raise the post-close memory floor
 - Removing home and adding one folder narrows results to it; restoring the default brings them back
 - A cleared scope list returns nothing rather than falling back to home, and never hangs
 - A missing scope shows the warning triangle without failing the rest of the search

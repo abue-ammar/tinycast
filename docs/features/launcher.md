@@ -209,7 +209,8 @@ execution semantics.
 The ranking harness covers prefix learning, frequency/recency scoring, persistence, and both reset
 paths; see the command in `development.md`.
 
-Icons go through a count-capped `NSCache` (`IconCache`).
+Launcher icons use a persistent 32 MB cost-capped `NSCache`. Fitted file-row icons use a separate
+transient 8 MB cache that is purged when its palette list disappears (`IconCache`).
 
 ## Reveal in Finder
 

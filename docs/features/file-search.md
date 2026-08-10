@@ -14,7 +14,7 @@ feature is enabled in Settings.
 - **Everything under `Model/` stays Foundation-only and pure**, `FileSearchIgnoreList`'s `import Darwin`
   included. `file-search-test` compiles the shipped files together with the existing pure fuzzy scorer.
 - **Search is filename-only and on demand.** An empty query does no work and Tinycast creates no
-  content index, history, cache, watcher or search data.
+  content index, history, query cache, watcher or search data.
 - **Hidden paths and application-bundle contents are structural, not patterns.** They are what keeps
   the feature permission-free, so no user setting can re-admit them. Everything else that is dropped
   comes from the ignore list.
@@ -106,6 +106,10 @@ orders of magnitude, not budgets; rerun the benchmark after query-policy work.
 `FileSearchScreen.rows` is the exact flat selection order rendered by `FileSearchList`. The list uses
 the shared Results header, row metrics, edge dissolve, thin scrollbar and scroll intent. A row shows a
 fitted native file icon, the full filename, and its tilde-abbreviated parent path.
+
+Fitted row icons use a separate 8 MB transient cache. Leaving the list or hiding the palette purges it
+and invalidates in-flight decodes, so scrolling stays warm within one result set without retaining its
+icons after File Search closes. Persistent launcher icons remain in their own cache.
 
 - Return calls `FileSearchCoordinator.open`, hides the palette without restoring focus, and uses the
   asynchronous `NSWorkspace` configuration API. A failure goes through Tinycast's dialog controller.
