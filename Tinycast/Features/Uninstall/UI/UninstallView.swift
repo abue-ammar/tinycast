@@ -64,6 +64,7 @@ struct UninstallList: View {
                 }
             }
         }
+        .onDisappear { IconCache.purgeFitted() }
     }
 }
 

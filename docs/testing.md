@@ -229,6 +229,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Locked rows cannot be checked; filtering by name works
 - Confirming moves items to the Trash and they are **recoverable from it**
 - Escaping mid-scan cancels promptly with no spinner left behind
+- Hiding and immediately restoring the screen never strands an in-flight file icon as a placeholder
 
 ### Quicklinks
 
