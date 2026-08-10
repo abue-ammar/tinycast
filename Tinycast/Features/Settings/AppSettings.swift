@@ -99,6 +99,18 @@ final class AppSettings {
         didSet { defaults.set(paletteDraggable, forKey: Key.paletteDraggable.rawValue) }
     }
 
+    /// Where a drag left the panel's top-left, in screen coordinates; nil means the default placement.
+    var palettePosition: CGPoint? {
+        didSet {
+            guard let palettePosition else {
+                defaults.removeObject(forKey: Key.palettePosition.rawValue)
+                return
+            }
+            defaults.set(
+                [palettePosition.x, palettePosition.y], forKey: Key.palettePosition.rawValue)
+        }
+    }
+
     // Feature switches, off out of the box, and off means fully off.
     var customCommandsEnabled: Bool {
         didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled.rawValue) }
@@ -218,6 +230,9 @@ final class AppSettings {
             defaults.object(forKey: Key.openOnCursorScreen.rawValue) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen.rawValue)
         paletteDraggable = defaults.bool(forKey: Key.paletteDraggable.rawValue)
+        // A half-written pair is no position at all, so both coordinates have to be there.
+        palettePosition = (defaults.array(forKey: Key.palettePosition.rawValue) as? [Double])
+            .flatMap { $0.count == 2 ? CGPoint(x: $0[0], y: $0[1]) : nil }
         // These default on, so absence must be distinguished from a stored `false`.
         customCommandsEnabled = defaults.bool(forKey: Key.customCommandsEnabled.rawValue)
         customCommandsShowInLauncher =

@@ -39,6 +39,8 @@ enum SettingsBackupCoverage {
     /// Keys kept out of a backup on purpose, each with the reason it has to stay out.
     static let deliberatelyExcluded: [String: String] = [
         AppSettingsKey.snippetsEnabled.rawValue:
-            "Doubles as keyword-expansion consent; an import must not enable keystroke listening."
+            "Doubles as keyword-expansion consent; an import must not enable keystroke listening.",
+        AppSettingsKey.palettePosition.rawValue:
+            "Machine-local geometry: a point restored onto another display layout lands nowhere."
     ]
 }
