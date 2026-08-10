@@ -5,6 +5,7 @@ enum CommandID: String, CaseIterable, Sendable {
     case calculatorHistory = "command:calculator-history"
     case clipboardHistory = "command:clipboard-history"
     case searchEmoji = "command:search-emoji"
+    case searchFiles = "command:search-files"
     case createQuicklink = "command:create-quicklink"
     case searchQuicklinks = "command:search-quicklinks"
     case importQuicklinks = "command:import-quicklinks"
@@ -21,6 +22,7 @@ enum CommandID: String, CaseIterable, Sendable {
         case .calculatorHistory: return "Calculator History"
         case .clipboardHistory: return "Clipboard History"
         case .searchEmoji: return "Search Emoji & Symbols"
+        case .searchFiles: return "Search Files"
         case .createQuicklink: return "Create Quicklink"
         case .searchQuicklinks: return "Search Quicklinks"
         case .importQuicklinks: return "Import Quicklinks"
@@ -39,6 +41,7 @@ enum CommandID: String, CaseIterable, Sendable {
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .clipboardHistory: return "doc.on.clipboard"
         case .searchEmoji: return "face.smiling"
+        case .searchFiles: return "doc.text.magnifyingglass"
         case .createQuicklink: return "link.badge.plus"
         case .searchQuicklinks: return Quicklink.sfSymbol
         case .importQuicklinks: return "square.and.arrow.down"

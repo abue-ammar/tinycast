@@ -28,6 +28,7 @@ final class AppCore {
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
+    let fileSearch = FileSearchSession()
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let quicklinkArguments = QuicklinkArgumentSession()
@@ -49,6 +50,7 @@ final class AppCore {
 
     @ObservationIgnored private(set) lazy var paletteCoordinator = PaletteCoordinator(
         palette: palette, settings: settings, appIndex: appIndex,
+        fileSearch: fileSearch,
         windowController: windowController)
     /// Its own window and lifecycle: neither coordinator shows or closes the other's surface.
     @ObservationIgnored private(set) lazy var settingsCoordinator = SettingsCoordinator(core: self)
@@ -85,6 +87,8 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator)
     @ObservationIgnored private(set) lazy var calculatorCoordinator = CalculatorCoordinator(
         calcHistory: calcHistory, paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var fileSearchCoordinator = FileSearchCoordinator(
+        paletteCoordinator: paletteCoordinator, core: self)
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)

@@ -64,6 +64,8 @@ run() {
 
 L=Tinycast/Features/Launcher/Model
 run fuzz-test              $L/SearchRelevance.swift
+run file-search-test       $L/SearchRelevance.swift \
+                           Tinycast/Features/FileSearch/Model/*.swift
 run ranking-test           $L/SearchRelevance.swift $L/LauncherRankingStore.swift
 run scopes-test            $L/SearchScopes.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift

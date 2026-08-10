@@ -95,6 +95,8 @@ final class LauncherCoordinator {
             paletteCoordinator.showPalette(mode: .clipboard)
         case .searchEmoji:
             paletteCoordinator.showPalette(mode: .emoji)
+        case .searchFiles:
+            paletteCoordinator.showPalette(mode: .fileSearch)
         case .searchQuicklinks:
             paletteCoordinator.showPalette(mode: .quicklinks)
         case .createQuicklink:

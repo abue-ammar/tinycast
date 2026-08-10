@@ -12,6 +12,7 @@ struct RootPaletteView: View {
     @Environment(CurrencyRateStore.self) private var currencyRates
     @Environment(EmojiIndex.self) private var emojiIndex
     @Environment(FrequentEmojiStore.self) private var frequentEmoji
+    @Environment(FileSearchSession.self) private var fileSearch
     @Environment(UninstallSession.self) private var uninstall
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
@@ -51,6 +52,9 @@ struct RootPaletteView: View {
             return EmojiScreen(
                 index: emojiIndex, frequent: frequentEmoji, core: core, vm: vm,
                 tone: settings.emojiSkinTone, openActions: openActions)
+        case .fileSearch:
+            return FileSearchScreen(
+                session: fileSearch, core: core, vm: vm, openActions: openActions)
         case .clipboard:
             return ClipboardScreen(
                 store: store, core: core, vm: vm, openActions: openActions,
@@ -170,6 +174,7 @@ struct RootPaletteView: View {
         .onChange(of: vm.query) {
             vm.selection = 0
             scroll = ScrollIntent(kind: .top)
+            if vm.mode == .fileSearch { fileSearch.search(vm.query) }
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
@@ -177,6 +182,7 @@ struct RootPaletteView: View {
             scroll = ScrollIntent(kind: .top)
             // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
             if vm.mode != .uninstall { uninstall.cancel() }
+            if vm.mode != .fileSearch { fileSearch.cancel() }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
             if vm.mode != .quicklinkArguments { core.quicklinkCoordinator.cancelQuicklinkArguments() }
         }
