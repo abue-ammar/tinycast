@@ -3,6 +3,8 @@ import Foundation
 @MainActor
 @Observable
 final class FileSearchSession {
+    typealias SearchOperation = @Sendable (String, String, URL) async throws -> [FileSearchResult]
+
     enum State: Equatable {
         case idle
         case searching
@@ -13,7 +15,38 @@ final class FileSearchSession {
     private(set) var results: [FileSearchResult] = []
     private(set) var state: State = .idle
     private var query = ""
-    @ObservationIgnored private var searchTask: Task<Void, Never>?
+    private var revision = 0
+    @ObservationIgnored private var pendingSearch: PendingSearch?
+    @ObservationIgnored private var workerTask: Task<Void, Never>?
+    @ObservationIgnored private let homeDirectory: URL
+    @ObservationIgnored private let debounce: Duration
+    @ObservationIgnored private let searchOperation: SearchOperation
+
+    private struct PendingSearch {
+        let query: String
+        let revision: Int
+        let earliestStart: ContinuousClock.Instant
+    }
+
+    init() {
+        homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        debounce = .milliseconds(120)
+        searchOperation = { query, expression, homeDirectory in
+            try await Task.detached(priority: .userInitiated) {
+                try FileSearchService.search(
+                    query: query, expression: expression, homeDirectory: homeDirectory)
+            }.value
+        }
+    }
+
+    init(
+        homeDirectory: URL, debounce: Duration,
+        searchOperation: @escaping SearchOperation
+    ) {
+        self.homeDirectory = homeDirectory
+        self.debounce = debounce
+        self.searchOperation = searchOperation
+    }
 
     func search(_ rawQuery: String) {
         let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -22,37 +55,46 @@ final class FileSearchSession {
             return
         }
         guard query != self.query || state == .failed else { return }
-        searchTask?.cancel()
+        revision &+= 1
         self.query = query
         state = .searching
-        searchTask = Task { [weak self] in
-            do {
-                try await Task.sleep(for: .milliseconds(120))
-                let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
-                guard let expression = FileSearchQuery.expression(for: query) else { return }
-                let candidates = try await Task.detached(priority: .userInitiated) {
-                    try FileSearchService.search(
-                        query: query, expression: expression, homeDirectory: homeDirectory)
-                }.value
-                try Task.checkCancellation()
-                guard let self, self.query == query else { return }
-                results = candidates
-                state = .ready
-            } catch is CancellationError {
-                return
-            } catch {
-                guard let self, self.query == query else { return }
-                results = []
-                state = .failed
-            }
+        pendingSearch = PendingSearch(
+            query: query, revision: revision,
+            earliestStart: ContinuousClock.now.advanced(by: debounce))
+        guard workerTask == nil else { return }
+        workerTask = Task { [weak self] in
+            guard let self else { return }
+            await runWorker()
         }
     }
 
     func cancel() {
-        searchTask?.cancel()
-        searchTask = nil
+        revision &+= 1
+        pendingSearch = nil
         query = ""
         results = []
         state = .idle
+    }
+
+    private func runWorker() async {
+        while let request = pendingSearch {
+            let delay = ContinuousClock.now.duration(to: request.earliestStart)
+            if delay > .zero { try? await Task.sleep(for: delay) }
+            guard pendingSearch?.revision == request.revision else { continue }
+            pendingSearch = nil
+            guard let expression = FileSearchQuery.expression(for: request.query) else { continue }
+            do {
+                let candidates = try await searchOperation(
+                    request.query, expression, homeDirectory)
+                guard revision == request.revision, query == request.query else { continue }
+                results = candidates
+                state = .ready
+            } catch {
+                guard revision == request.revision, query == request.query else { continue }
+                results = []
+                state = .failed
+            }
+        }
+        workerTask = nil
     }
 }

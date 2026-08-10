@@ -27,7 +27,9 @@ one `kMDItemFSName` clause per term. The clauses are joined with AND, so `annual
 words in the filename without requiring them to be adjacent or in that order.
 
 `FileSearchSession.search` retains the previous rows, debounces for 120 ms, then drives
-`FileSearchService.search` in a detached user-initiated task. The service shallowly enumerates home to
+`FileSearchService.search` in a detached user-initiated task. One worker serializes synchronous
+Spotlight calls and coalesces changes to the newest pending query, so slower typing cannot accumulate
+overlapping queries. The service shallowly enumerates home to
 find visible top-level directory scopes and direct files, adds the current cloud-storage roots, then
 keeps the `MDQuery` reference inside one nonisolated synchronous function. Spotlight returns at most
 1,000 candidates. `FileSearchQuery` removes hidden path components, app-bundle contents and exact
@@ -38,9 +40,9 @@ Visible files and document packages directly under home are matched locally with
 diacritic-insensitive all-terms rule. `~/Library` is never a general scope; only `CloudStorage` and the
 current iCloud Drive root are admitted from it.
 
-The synchronous API can finish after its surrounding task is cancelled. That work is bounded and its
-result is discarded: `Task.checkCancellation()` and the session's current-query check both run before
-publication. Leaving or hiding the screen cancels and clears the session as well.
+The synchronous API cannot stop mid-call. A superseded result is discarded through the session's
+revision check, then the same worker runs only the newest pending query. Leaving or hiding the screen
+cancels and clears the session as well.
 
 `FileSearchService.search` emits a `FileSearchService.search` interval on the shared
 `com.tinycast.perf` signpost subsystem. `Tests/file-search-performance.swift` exercises the same service
