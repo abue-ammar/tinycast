@@ -52,7 +52,7 @@ surface. Light mode is not a switch; it is a second design.
 
 ### 5 — There is no XCTest target
 
-The test suite is `Scripts/run-tests.sh`, driving eighteen standalone harnesses.
+The test suite is `Scripts/run-tests.sh`, driving twenty standalone harnesses.
 
 **Why:** each harness compiles the *shipped* sources it guards, so the pure/effect boundary is enforced by
 compilation rather than by convention — a stray `import AppKit` in a `Model/` folder breaks the build of a
@@ -404,3 +404,18 @@ the clipboard poller and the snippet listener running, or the app silently stops
 
 **What would change this:** Tinycast growing a document surface, where ⌘Q meaning Quit would matter more
 than an agent surviving a closed window.
+
+### 33 — File Search uses capped `MDQuery`, not `NSMetadataQuery` or a private index
+
+Every filename search creates an on-demand Spotlight `MDQuery`, scopes it to visible top-level home
+folders plus cloud-storage roots, and calls `MDQuerySetMaxCount(1_000)` before execution. Hidden,
+application-bundle and generated paths are removed before fuzzy ranking publishes at most 200 rows. The
+query is synchronous inside detached work and its Core Foundation reference never crosses that boundary.
+
+**Why:** `NSMetadataQuery` is the higher-level spelling but exposes no result cap. A broad one-character
+query can therefore retain an unbounded home index and violate the 100 MB ceiling before Tinycast trims
+the rows. `MDQuery` is public and nondeprecated, and source-caps the work at 1,000. A private filesystem
+index would add launch cost, persistence, watching and permission behavior to duplicate Spotlight.
+
+**What would change this:** a current Apple Spotlight API gaining a source-result limit with Swift
+Concurrency delivery.

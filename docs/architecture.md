@@ -14,8 +14,9 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ environment fact is an injected parameter.                                 │
 │ ⇒ Compiled verbatim by a harness, so it cannot drift.                      │
 │                                                                            │
-│ SearchRelevance · SearchScopes · LauncherRankingStore · Calculator/* ·     │
-│ EmojiCatalog · EmojiGridGeometry · SystemAction · VolumeLevel ·            │
+│ SearchRelevance · SearchScopes · LauncherRankingStore · FileSearch{Query,  │
+│ Result,Scope} · Calculator/* · EmojiCatalog · EmojiGridGeometry ·          │
+│ SystemAction · VolumeLevel ·                                               │
 │ WindowCommand · WindowLayout · WindowActionMemory · PaletteRowIndex ·      │
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
 │ Quicklink{,Destination,Store,Archive} · Snippets/Model/* · CustomCommand · │
@@ -25,14 +26,15 @@ Independently of the folder tree, every mature subsystem has converged on the sa
                                    │ consumed by
 ┌─ EFFECT ─────────────────────────▼─────────────────────────────────────────┐
 │ All platform I/O, one folder per feature.                                  │
-│ AppIndex · SpotlightNames · SettingsPaneScanner · IconCache · WindowMover ·│
-│ UninstallScanner · UninstallRunner · SystemActionRunner · QuicklinkLauncher│
-│ SnippetTextInjector · SnippetKeywordListener · CurrencyRateStore · Paster ·│
-│ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor         │
+│ AppIndex · SpotlightNames · FileSearchService · SettingsPaneScanner ·      │
+│ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │
+│ SystemActionRunner · QuicklinkLauncher · SnippetTextInjector ·             │
+│ SnippetKeywordListener · CurrencyRateStore · Paster · HotKeyCenter ·       │
+│ HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor                        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
-│ 26 @MainActor @Observable stores, sessions, indices and State types        │
+│ 27 @MainActor @Observable stores, sessions, indices and State types        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
@@ -73,8 +75,8 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 `FavoritesStore`, `VisibilityStore`, `LauncherRankingStore`, `CalculatorHistoryStore`,
 `CurrencyRateStore`, `FrequentEmojiStore`), the managers and monitors (`ClipboardManager`,
 `HotKeyManager`, `HyperKeyTap`, `RunningAppsMonitor`, `SnippetKeywordListener`), the shared state
-(`AppSettings`, `PaletteState`, `UninstallSession`, `QuicklinkArgumentSession`), the thirteen feature
-coordinators, and the window controllers.
+(`AppSettings`, `PaletteState`, `FileSearchSession`, `UninstallSession`,
+`QuicklinkArgumentSession`), the fourteen feature coordinators, and the window controllers.
 
 `AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start()` and nothing else. That is the
 one wiring point, and `start()` reads as the app's whole boot sequence in one screen.
@@ -83,7 +85,7 @@ one wiring point, and `start()` reads as the app's whole boot sequence in one sc
 into a store to mutate it.** That is the rule; `AppCore` holds only the closure wiring that connects a
 hotkey to a coordinator. Views inject `AppCore` through `@Environment` and use it as the *locator* for
 those coordinators — `core.quicklinkCoordinator.deleteQuicklink(…)` is the shape, and the alternative
-is injecting thirteen coordinators separately for no gain. Reading a store off `AppCore` to render it is
+is injecting fourteen coordinators separately for no gain. Reading a store off `AppCore` to render it is
 fine too; deciding something with one is what the rule forbids. `showNotice`, `confirm`,
 `reportFailure`, `showMessage` and `pickVolume` are forwarders on `AppCore` itself, so
 `DialogController` and `MessageHUDController` stay single-owned.
@@ -123,7 +125,7 @@ imperatively from AppKit.
 
 ## Observation
 
-26 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
+27 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
 state through `@Environment` rather than `@EnvironmentObject`.
 
 Three things about this model are easy to get wrong:
@@ -179,7 +181,7 @@ Tinycast/
   Assets.xcassets/  the app icon and the bundled image sets some catalog symbols resolve to
   Features/
     PaletteRowIndex.swift   the flat selection index — palette-owned, so it sits at the top
-    Launcher/ Clipboard/ Calculator/ Emoji/ Quicklinks/ Snippets/ Uninstall/
+    Launcher/ Clipboard/ Calculator/ Emoji/ FileSearch/ Quicklinks/ Snippets/ Uninstall/
     SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/
         Model/      pure — the harness inputs
         Service/    effects — stores, monitors, runners, AppKit glue

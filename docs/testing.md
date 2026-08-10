@@ -46,6 +46,7 @@ If a change touches anything in the right column, the harness on the left is man
 | Harness | Guards |
 | --- | --- |
 | `fuzz-test` | `Launcher/Model/SearchRelevance.swift` |
+| `file-search-test` | `FileSearch/Model/`, plus the shared `FuzzyMatch` scorer |
 | `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
 | `scopes-test` | `Launcher/Model/SearchScopes.swift` |
 | `calc-test` | all of `Calculator/Model/` |
@@ -86,6 +87,7 @@ when touching a pure file:
 - `WindowManagement/` geometry still touches no `NSScreen` and makes no AX call
 - `Features/PaletteRowIndex.swift` still imports Foundation alone, despite living under `Features/`
 - `Quicklinks/Model/` is still handed the home directory rather than reading it
+- `FileSearch/Model/` is still handed the home directory rather than reading it
 
 ## Build and size checks
 
@@ -219,6 +221,15 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - `{selection}` falls back per the Settings choice
 - Pin, duplicate, delete and Open with Default all behave; import and export round-trip
 - Display order is pinned first by pin time, then by name
+
+### File Search
+
+- Search Files opens from its launcher command and has no global shortcut in Settings
+- An empty query performs no search; a filename query returns only files and folders beneath home
+- Library internals, generated trees, application bundles and hidden paths do not appear
+- Visible custom top-level home folders and cloud-drive files remain searchable
+- Return opens, Command-Return reveals in Finder, and Copy Path keeps the palette open with a HUD
+- Replacing a query quickly never lets an older result list overwrite the current query
 
 ### Snippets
 
