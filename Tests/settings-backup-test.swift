@@ -43,6 +43,9 @@ struct SettingsBackupTest {
         check(
             naming("no two backup fields claim the same key", Array(doubleClaimed)),
             doubleClaimed.isEmpty)
+        check(
+            "fileSearchEnabled rides the settings backup",
+            mirrored["fileSearchEnabled"] == .fileSearchEnabled)
 
         // A reason that only echoes the key name explains nothing, so it fails like a missing one.
         let emptyReasons = excluded.filter { key, reason in

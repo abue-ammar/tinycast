@@ -2,7 +2,8 @@
 
 Search Files is an on-demand palette screen for opening files and folders from visible top-level home
 folders and cloud-storage roots. It searches filenames through Spotlight, adds no private index or
-launch work, and is reached from the built-in Search Files launcher command.
+launch work, and is reached from the built-in Search Files launcher command after the feature is enabled
+in Settings.
 
 ## Invariants
 
@@ -15,6 +16,8 @@ launch work, and is reached from the built-in Search Files launcher command.
 - **Search is filename-only and on demand.** Visible home folders and cloud roots are searched;
   `~/Library`, hidden paths, app bundles and generated trees are not. An empty query does no work and
   Tinycast creates no content index, history, cache, watcher or search data.
+- **File Search is off by default, and off means no entry point or Spotlight work.** Enabling only adds
+  Search Files to the launcher; a nonempty query on that screen is the first operation that searches.
 - **Tinycast asks for no file permission.** Hidden metadata items and application bundles are filtered,
   and Spotlight or TCC omissions produce a thinner result set rather than a prompt for Full Disk Access.
 - **A superseded query never publishes.** The session cancels its pending task and checks cancellation
@@ -72,5 +75,13 @@ query says "No files found", and query creation or execution failure says
 
 ## Invocation
 
-`CommandID.searchFiles` is an ordinary built-in command that switches the palette to `.fileSearch`.
-It deliberately has no `HotKeyAction`, global shortcut, Settings control or persisted state.
+Settings ▸ File Search owns the `fileSearchEnabled` switch, which is off when its preference is absent.
+It is an ordinary setting carried by Tinycast settings backups; importing it grants no permission or
+background access.
+
+`AppCore` observes the switch and asks `FileSearchCoordinator` to project `CommandID.searchFiles` into
+the launcher. The coordinator also guards entry into `.fileSearch`, so a stale selected command cannot
+open the screen after the feature is disabled. Disabling cancels the session and returns an open File
+Search screen to the launcher without changing palette visibility.
+
+There is deliberately no separate launcher-visibility switch, `HotKeyAction` or global shortcut.

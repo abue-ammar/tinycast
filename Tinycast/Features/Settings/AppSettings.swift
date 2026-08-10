@@ -112,6 +112,10 @@ final class AppSettings {
     }
 
     // Feature switches, off out of the box, and off means fully off.
+    var fileSearchEnabled: Bool {
+        didSet { defaults.set(fileSearchEnabled, forKey: Key.fileSearchEnabled.rawValue) }
+    }
+
     var customCommandsEnabled: Bool {
         didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled.rawValue) }
     }
@@ -233,8 +237,9 @@ final class AppSettings {
         // A half-written pair is no position at all, so both coordinates have to be there.
         palettePosition = (defaults.array(forKey: Key.palettePosition.rawValue) as? [Double])
             .flatMap { $0.count == 2 ? CGPoint(x: $0[0], y: $0[1]) : nil }
-        // These default on, so absence must be distinguished from a stored `false`.
+        fileSearchEnabled = defaults.bool(forKey: Key.fileSearchEnabled.rawValue)
         customCommandsEnabled = defaults.bool(forKey: Key.customCommandsEnabled.rawValue)
+        // These default on, so absence must be distinguished from a stored `false`.
         customCommandsShowInLauncher =
             defaults.object(forKey: Key.customCommandsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.customCommandsShowInLauncher.rawValue)

@@ -178,8 +178,9 @@ final class AppIndex {
     private var customCommandEntries: [AppEntry] = []
     private var windowCommandEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
-    /// Built-in commands minus the quicklink ones while the feature is off.
-    private var commandEntries: [AppEntry] = CommandCatalog.all
+    private var commandEntries: [AppEntry]
+    private var quicklinkCommandsVisible = false
+    private var fileSearchCommandVisible = false
     private var alternateNameCache = SpotlightNames.Cache()
     private var paneCache: SettingsPaneScanner.Cache?
     private var isRefreshing = false
@@ -190,6 +191,8 @@ final class AppIndex {
 
     init(ranking: LauncherRankingStore) {
         self.ranking = ranking
+        commandEntries = Self.projectedCommandEntries(
+            quicklinksVisible: false, fileSearchVisible: false)
     }
 
     /// Replaces the command slice without rescanning, so Settings edits land at once.
@@ -220,14 +223,21 @@ final class AppIndex {
                     symbolName: quicklink.iconSymbol
                         ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
             }
-        let commands =
-            commandsVisible
-            ? CommandCatalog.all
-            : CommandCatalog.all.filter { entry in
-                CommandCatalog.command(for: entry).map { !$0.isQuicklinkCommand } ?? true
-            }
+        let commands = Self.projectedCommandEntries(
+            quicklinksVisible: commandsVisible, fileSearchVisible: fileSearchCommandVisible)
         guard entries != quicklinkEntries || commands != commandEntries else { return }
         quicklinkEntries = entries
+        quicklinkCommandsVisible = commandsVisible
+        commandEntries = commands
+        publishEntries()
+    }
+
+    /// Shows or hides Search Files without disturbing another feature's built-in commands.
+    func setFileSearchCommandVisible(_ visible: Bool) {
+        let commands = Self.projectedCommandEntries(
+            quicklinksVisible: quicklinkCommandsVisible, fileSearchVisible: visible)
+        guard commands != commandEntries else { return }
+        fileSearchCommandVisible = visible
         commandEntries = commands
         publishEntries()
     }
@@ -351,6 +361,17 @@ final class AppIndex {
         guard updated != apps else { return }
         apps = updated
         entriesRevision &+= 1
+    }
+
+    private static func projectedCommandEntries(
+        quicklinksVisible: Bool, fileSearchVisible: Bool
+    ) -> [AppEntry] {
+        CommandCatalog.all.filter { entry in
+            guard let command = CommandCatalog.command(for: entry) else { return true }
+            if command.isQuicklinkCommand { return quicklinksVisible }
+            if command == .searchFiles { return fileSearchVisible }
+            return true
+        }
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.

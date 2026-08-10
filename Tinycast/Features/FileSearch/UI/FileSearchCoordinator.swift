@@ -2,12 +2,35 @@ import AppKit
 
 @MainActor
 final class FileSearchCoordinator {
+    private let settings: AppSettings
+    private let appIndex: AppIndex
+    private let session: FileSearchSession
+    private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
     private unowned let core: AppCore
 
-    init(paletteCoordinator: PaletteCoordinator, core: AppCore) {
+    init(
+        settings: AppSettings, appIndex: AppIndex, session: FileSearchSession,
+        palette: PaletteState, paletteCoordinator: PaletteCoordinator, core: AppCore
+    ) {
+        self.settings = settings
+        self.appIndex = appIndex
+        self.session = session
+        self.palette = palette
         self.paletteCoordinator = paletteCoordinator
         self.core = core
+    }
+
+    func applyEnabled() {
+        appIndex.setFileSearchCommandVisible(settings.fileSearchEnabled)
+        guard !settings.fileSearchEnabled else { return }
+        session.cancel()
+        if palette.mode == .fileSearch { palette.prepare(mode: .launcher) }
+    }
+
+    func show() {
+        guard settings.fileSearchEnabled else { return }
+        paletteCoordinator.showPalette(mode: .fileSearch)
     }
 
     func open(_ result: FileSearchResult) {

@@ -12,6 +12,7 @@ final class LauncherCoordinator {
     private let quicklinkCoordinator: QuicklinkCoordinator
     private let windowCommandCoordinator: WindowCommandCoordinator
     private let snippetExpansion: SnippetExpansionCoordinator
+    private let fileSearchCoordinator: FileSearchCoordinator
     /// The backup commands only, which need the live stores to gather from and apply to.
     private unowned let core: AppCore
 
@@ -25,6 +26,7 @@ final class LauncherCoordinator {
         quicklinkCoordinator: QuicklinkCoordinator,
         windowCommandCoordinator: WindowCommandCoordinator,
         snippetExpansion: SnippetExpansionCoordinator,
+        fileSearchCoordinator: FileSearchCoordinator,
         core: AppCore
     ) {
         self.ranking = ranking
@@ -36,6 +38,7 @@ final class LauncherCoordinator {
         self.quicklinkCoordinator = quicklinkCoordinator
         self.windowCommandCoordinator = windowCommandCoordinator
         self.snippetExpansion = snippetExpansion
+        self.fileSearchCoordinator = fileSearchCoordinator
         self.core = core
     }
 
@@ -96,7 +99,7 @@ final class LauncherCoordinator {
         case .searchEmoji:
             paletteCoordinator.showPalette(mode: .emoji)
         case .searchFiles:
-            paletteCoordinator.showPalette(mode: .fileSearch)
+            fileSearchCoordinator.show()
         case .searchQuicklinks:
             paletteCoordinator.showPalette(mode: .quicklinks)
         case .createQuicklink:

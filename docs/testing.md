@@ -236,6 +236,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### File Search
 
+- With File Search **off**: Search Files is absent, enabling performs no query and no permission appears
+- Enabling in Settings exposes Search Files immediately; it persists across relaunch and backup import
+- Disabling during a query cancels it and returns the open screen to the launcher
+- File Search and Quicklinks remain independently visible in all four enabled/disabled combinations
 - Search Files opens from its launcher command and has no global shortcut in Settings
 - An empty query performs no search; a filename query returns only files and folders beneath home
 - Library internals, generated trees, application bundles and hidden paths do not appear
