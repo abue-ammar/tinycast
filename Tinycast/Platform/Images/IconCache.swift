@@ -1,6 +1,19 @@
 import AppKit
 import Synchronization
 
+struct IconCacheGeneration {
+    private(set) var value = 0
+
+    mutating func invalidate() {
+        value &+= 1
+    }
+
+    func publish<Value>(_ item: Value, capturedAt generation: Int, store: (Value) -> Void) -> Value {
+        if value == generation { store(item) }
+        return item
+    }
+}
+
 /// App icons by path, downsampled and byte-bounded, so rows don't re-hit `NSWorkspace`.
 enum IconCache {
     /// `NSCache` is thread-safe but not `Sendable`, so assert the guarantee once here.
@@ -21,7 +34,7 @@ enum IconCache {
         cache.totalCostLimit = 8 * 1024 * 1024
         return cache
     }()
-    private static let fittedGeneration = Mutex(0)
+    private static let fittedGeneration = Mutex(IconCacheGeneration())
 
     /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
     static func cached(forFile path: String) -> NSImage? { cache.object(forKey: path as NSString) }
@@ -120,7 +133,7 @@ enum IconCache {
     /// Like `loadAsync`, normalized so every file type paints to the same visual size.
     static func loadFittedAsync(forFile path: String) async -> NSImage? {
         if let cached = cachedFitted(forFile: path) { return cached }
-        let generation = fittedGeneration.withLock { $0 }
+        let generation = fittedGeneration.withLock { $0.value }
         let decoded = await Task.detached(
             priority: .userInitiated,
             operation: { () -> Decoded in
@@ -132,15 +145,15 @@ enum IconCache {
         ).value
         guard let image = decoded.image, !Task.isCancelled else { return nil }
         return fittedGeneration.withLock { current in
-            guard current == generation else { return nil }
-            fittedCache.setObject(image, forKey: fittedKey(path), cost: decoded.cost)
-            return image
+            current.publish(image, capturedAt: generation) { image in
+                fittedCache.setObject(image, forKey: fittedKey(path), cost: decoded.cost)
+            }
         }
     }
 
     static func purgeFitted() {
         fittedGeneration.withLock { generation in
-            generation &+= 1
+            generation.invalidate()
             fittedCache.removeAllObjects()
         }
     }
