@@ -6,6 +6,9 @@ enum CommandID: String, CaseIterable, Sendable {
     case clipboardHistory = "command:clipboard-history"
     case searchEmoji = "command:search-emoji"
     case searchFiles = "command:search-files"
+    case showNotes = "command:show-notes"
+    case createNote = "command:create-note"
+    case searchNotes = "command:search-notes"
     case createQuicklink = "command:create-quicklink"
     case searchQuicklinks = "command:search-quicklinks"
     case importQuicklinks = "command:import-quicklinks"
@@ -23,6 +26,9 @@ enum CommandID: String, CaseIterable, Sendable {
         case .clipboardHistory: return "Clipboard History"
         case .searchEmoji: return "Search Emoji & Symbols"
         case .searchFiles: return "Search Files"
+        case .showNotes: return "Show Notes"
+        case .createNote: return "Create Note"
+        case .searchNotes: return "Search Notes"
         case .createQuicklink: return "Create Quicklink"
         case .searchQuicklinks: return "Search Quicklinks"
         case .importQuicklinks: return "Import Quicklinks"
@@ -42,6 +48,9 @@ enum CommandID: String, CaseIterable, Sendable {
         case .clipboardHistory: return "doc.on.clipboard"
         case .searchEmoji: return "face.smiling"
         case .searchFiles: return "doc.text.magnifyingglass"
+        case .showNotes: return "note.text"
+        case .createNote: return "note.text.badge.plus"
+        case .searchNotes: return "text.magnifyingglass"
         case .createQuicklink: return "link.badge.plus"
         case .searchQuicklinks: return Quicklink.sfSymbol
         case .importQuicklinks: return "square.and.arrow.down"
@@ -59,6 +68,13 @@ enum CommandID: String, CaseIterable, Sendable {
     var isQuicklinkCommand: Bool {
         switch self {
         case .createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks: return true
+        default: return false
+        }
+    }
+
+    var isNotesCommand: Bool {
+        switch self {
+        case .showNotes, .createNote, .searchNotes: return true
         default: return false
         }
     }

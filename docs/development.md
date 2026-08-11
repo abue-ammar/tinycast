@@ -44,9 +44,9 @@ project settings in `project.yml`, run `xcodegen generate` and commit the result
 Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Every
 persisted thing is keyed by bundle id — `~/Library/Preferences/<id>.plist` (settings and hotkey
 bindings), `~/Library/Caches/<id>/` (clipboard history, calculator history, exchange rates, frequent
-emoji), `~/Library/Application Support/<id>/` (the onboarding marker and snippets), the `SMAppService`
-login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can neither read
-nor clobber an installed app's state, and both run side by side.
+emoji), `~/Library/Application Support/<id>/` (the onboarding marker, Notes and snippets), the
+`SMAppService` login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can
+neither read nor clobber an installed app's state, and both run side by side.
 
 Consequences worth knowing:
 

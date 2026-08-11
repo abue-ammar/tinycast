@@ -64,6 +64,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
 | `quicklink-test` | all four files in `Quicklinks/Model/` |
 | `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
+| `notes-test` | all of `Notes/Model/` and `Notes/Service/`, plus the real fuzzy matcher and signposts |
+| `notes-editor-test` | the Notes projection editor with real TextKit 2 and AppKit undo objects |
 | `raycast-test` | `Backup/Model/RaycastFormat.swift`, `RaycastV1Decoder.swift`, `Service/Gunzip.swift` |
 | `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
 
@@ -122,9 +124,9 @@ formatter, deliberately — the configuration and the measurements behind that a
 
 ## Performance measurement
 
-`Platform/Signposts.swift` emits seven intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
+`Platform/Signposts.swift` emits eight intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
 `AppIndex.scan`, `AppIndex.rank`, `PaletteWindowController.show`, `UninstallScanner.discover` and
-`UninstallScanner.measure`, plus `FileSearchService.search`. Open the
+`UninstallScanner.measure`, `FileSearchService.search`, and `NoteEditor.project`. Open the
 Time Profiler or `os_signpost` instrument in Instruments and filter to that subsystem; nothing needs
 recompiling.
 
@@ -137,6 +139,21 @@ swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
     Tinycast/Features/FileSearch/Service/FileSearchService.swift \
     Tests/file-search-performance.swift -o /tmp/file-search-performance
 /tmp/file-search-performance
+```
+
+Run the mapped Notes editor benchmark separately as well. It performs ten warmups and 100 measured
+edits against a deterministic 250,000-character Markdown note:
+
+```sh
+swiftc -swift-version 6 Tinycast/Platform/Signposts.swift Tinycast/DesignSystem/Theme.swift \
+    Tinycast/Features/Notes/Model/NoteDocument.swift \
+    Tinycast/Features/Notes/Model/NoteMarkdownParser.swift \
+    Tinycast/Features/Notes/Model/NoteDisplayProjection.swift \
+    Tinycast/Features/Notes/Model/NoteMarkdownEditing.swift \
+    Tinycast/Features/Notes/UI/NoteTaskOverlayController.swift \
+    Tinycast/Features/Notes/UI/NoteTextView.swift Tinycast/Features/Notes/UI/NoteEditorView.swift \
+    Tests/notes-editor-performance.swift -o /tmp/notes-editor-performance
+/tmp/notes-editor-performance
 ```
 
 Every query runs twice: once on the shipped rules and once with five extra user patterns, so the output
@@ -216,7 +233,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### Hotkeys
 
-- The palette, clipboard and emoji shortcuts fire; a per-app shortcut still toggles that app
+- The palette, clipboard, emoji, File Search, and all three Notes shortcuts fire; a per-app shortcut
+  toggles that app
 - Recording captures a shortcut, and the old binding does not fire while recording
 - A conflicting binding is rejected and names its current owner
 - A double-tap binding fires; Hyper Key remaps and its status dot is green
@@ -259,6 +277,41 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Recording a shortcut opens the palette straight into File Search, hidden from the launcher or not
 - The pane's checkbox and the Search Files row in Settings ▸ Commands move together
 - Export, clear both lists and the shortcut, re-import: all three return, defaults undo not duplicated
+
+### Notes
+
+- With Notes **off**: all three commands are absent, their shortcuts no-op, and the Notes directory is
+  not created
+- Enabling in Settings projects Show Notes, Create Note, and Search Notes immediately; the pane's
+  visibility checkboxes and recorders match Settings > Commands
+- Show Notes opens the last active note and focuses an already visible window without hiding it
+- Create Note makes one unique Untitled file, including as the first action in an empty channel
+- The title opens the switcher; Command-P focuses search, arrows move selection, Return opens, and
+  Command-N creates
+- Empty switcher search reads the complete recent list; title and body searches rank correctly and a
+  superseded query never publishes
+- Inline rename updates the Markdown filename without changing source; collisions receive a suffix
+- Delete confirms through Tinycast, moves the file to Trash, and selecting another note never loses an
+  unsaved edit
+- An existing `Floating Note.md` appears as an ordinary note without conversion
+- Markdown markers collapse without source-width gaps and return when the caret enters their construct;
+  links show labels, task checkboxes toggle, and images remain literal source
+- The Format button, its keyboard navigation, every formatting action, and Command-B/I/K plus
+  Shift-Command-X/7/8/9 update literal source and undo in one step
+- Edit one note, switch to a shorter note, then Undo and Redo: the new note remains intact and the app
+  does not terminate; repeat after a clean external reload
+- Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, and Command-click links keep
+  exact Markdown and ordinary clicks only reveal source
+- The panel grows downward without moving its header, stops at its screen-aware cap, then scrolls
+- Clicking another app leaves the panel visible; Escape, Command-W, and close hide it
+- Hiding restores the previous external app or Tinycast window, and the dragged position survives relaunch
+- Reveal opens Finder with the active Markdown file selected
+- A clean external edit reloads; a dirty one keeps the draft and reports a conflict without overwriting
+- Dismissing a save or conflict report keeps the draft; clicking its warning offers recovery again
+- Save Copy & Reload preserves the draft beside the canonical file, then displays the external version
+- Quitting inside the debounce window saves the last edit; an unresolved conflict writes a copy first
+- The fixed header slots do not shift between waiting, saving, saved, failure, and conflict states
+- Over a light desktop, the surface has one continuous clip and no dark edge around its glass controls
 
 ### Snippets
 
@@ -305,6 +358,7 @@ tccutil reset Accessibility com.tinycast.app.dev 2>/dev/null || true
 - Launches with every store directory absent — no crash, no hang; onboarding runs
 - Palette opens and lists apps; clipboard, quicklinks, snippets and calculator history are all empty
   and all accept a first entry
+- Notes creates no directory until Show, Create, or Search is first used, then accepts its first edit
 - **Every setting shows its intended default.** Walk the panes: this is what catches a broken
   absence-versus-`false` read
 - Quit and relaunch: everything created above persisted

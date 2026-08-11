@@ -5,6 +5,9 @@ enum HotKeyAction: Hashable, Sendable {
     case togglePalette
     case toggleClipboard
     case toggleEmoji
+    case showNotes
+    case createNote
+    case searchNotes
     case searchFiles
     case app(bundleID: String)
     case settingsPane(bundleID: String)
@@ -19,6 +22,9 @@ enum HotKeyAction: Hashable, Sendable {
         case .togglePalette: "hotkey.togglePalette"
         case .toggleClipboard: "hotkey.toggleClipboard"
         case .toggleEmoji: "hotkey.toggleEmoji"
+        case .showNotes: "hotkey.showNotes"
+        case .createNote: "hotkey.createNote"
+        case .searchNotes: "hotkey.searchNotes"
         case .searchFiles: "hotkey.searchFiles"
         case .app(let bundleID): "hotkey.app." + bundleID
         case .settingsPane(let bundleID): "hotkey.pane." + bundleID

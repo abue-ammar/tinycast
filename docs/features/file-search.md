@@ -134,10 +134,10 @@ guards entry into `.fileSearch`, so neither a stale selected command nor the glo
 the screen after the feature is disabled. Disabling cancels the session and returns an open File Search
 screen to the launcher without changing palette visibility.
 
-Search Files is the only built-in command with a `HotKeyAction` of its own, so `AppEntry.hotKeyAction`
-returns non-nil for it alone. Two consequences follow: its launcher row prints the chord as a keycap,
-and the Search Files row in Settings ▸ Commands carries the same recorder as the one in this pane —
-one binding reachable from two places, not two settings.
+Search Files is one of the built-in commands with a fixed `HotKeyAction` of its own, as are the three
+Notes commands. Two consequences follow for Search Files: its launcher row prints the chord as a keycap,
+and the row in Settings ▸ Commands carries the same recorder as the one in this pane — one binding
+reachable from two places, not two settings.
 
 Launcher visibility is `VisibilityStore`'s, keyed on the entry's `preferenceKey`, which is why the
 pane's checkbox and the one in Settings ▸ Commands move together. The entry behind it comes from

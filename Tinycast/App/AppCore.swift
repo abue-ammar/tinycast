@@ -32,6 +32,7 @@ final class AppCore {
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let quicklinkArguments = QuicklinkArgumentSession()
+    let notesStore: NotesStore
 
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
@@ -69,6 +70,24 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         hotKeys: hotKeys, favorites: favorites, visibility: visibility,
         ranking: launcherRanking, core: self)
+    @ObservationIgnored private(set) lazy var notesCoordinator = NotesCoordinator(
+        store: notesStore,
+        settings: settings,
+        appIndex: appIndex,
+        reportFailure: { [unowned self] title, message, symbol, recovery in
+            await self.reportFailure(
+                title: title, message: message, symbol: symbol, recovery: recovery)
+        },
+        confirmTrash: { [unowned self] title in
+            await self.confirm(
+                title: "Move “\(title)” to Trash?",
+                message: "You can recover it from the Trash in Finder.",
+                symbol: "trash",
+                confirmTitle: "Move to Trash")
+        },
+        showMessage: { [unowned self] message, tone in
+            self.showMessage(message, tone: tone)
+        })
 
     @ObservationIgnored private(set) lazy var launcherCoordinator = LauncherCoordinator(
         ranking: launcherRanking, windowController: windowController,
@@ -78,7 +97,8 @@ final class AppCore {
         systemActionCoordinator: systemActionCoordinator,
         quicklinkCoordinator: quicklinkCoordinator,
         windowCommandCoordinator: windowCommandCoordinator,
-        snippetExpansion: snippetExpansion, fileSearchCoordinator: fileSearchCoordinator, core: self)
+        snippetExpansion: snippetExpansion, fileSearchCoordinator: fileSearchCoordinator,
+        notesCoordinator: notesCoordinator, core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, palette: palette, windowController: windowController,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -109,6 +129,19 @@ final class AppCore {
         snippetTextInjector = SnippetTextInjector(
             clipboardManager: clipboardManager,
             settings: settings)
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
+        let applicationSupport = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(bundleID, isDirectory: true)
+        let noteSelectionKey = "notesActiveFileName"
+        notesStore = NotesStore(
+            repository: NotesRepository(applicationSupportDirectory: applicationSupport),
+            loadSelection: {
+                UserDefaults.standard.string(forKey: noteSelectionKey).map(NoteID.init(rawValue:))
+            },
+            saveSelection: { id in
+                UserDefaults.standard.set(id.rawValue, forKey: noteSelectionKey)
+            })
     }
 
     func start() {
@@ -127,6 +160,7 @@ final class AppCore {
             appIndex.start(settings: settings)
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
+            notesCoordinator.applyEnabled()
             customCommands.onChange = { [weak self] _ in
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
             }
@@ -149,6 +183,9 @@ final class AppCore {
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
             hotKeys.onToggleClipboard = { [weak self] in self?.paletteCoordinator.toggleClipboard() }
             hotKeys.onToggleEmoji = { [weak self] in self?.paletteCoordinator.toggleEmoji() }
+            hotKeys.onShowNotes = { [weak self] in self?.notesCoordinator.show() }
+            hotKeys.onCreateNote = { [weak self] in self?.notesCoordinator.createNote() }
+            hotKeys.onSearchNotes = { [weak self] in self?.notesCoordinator.searchNotes() }
             hotKeys.onSearchFiles = { [weak self] in self?.fileSearchCoordinator.show() }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
@@ -217,9 +254,21 @@ final class AppCore {
         case .quicklink(let id):
             return quicklinks.quicklink(id: id)?.name
         case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
-            .windowCommand:
+            .showNotes, .createNote, .searchNotes, .windowCommand:
             return nil
         }
+    }
+
+    func prepareNotesForTermination() async -> Bool {
+        guard await notesStore.preserveConflictForTermination() else {
+            await showNotice(
+                title: "Couldn't Preserve Note",
+                message: "Tinycast is staying open so the unsaved note is not lost. Try saving again.",
+                symbol: "exclamationmark.triangle",
+                tone: .danger)
+            return false
+        }
+        return true
     }
 
     func prepareForTermination() {
@@ -249,6 +298,7 @@ final class AppCore {
                 _ = $0.quicklinksShowInLauncher
             }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
+        track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track(
             {
                 _ = $0.fileSearchScopes

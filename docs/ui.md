@@ -68,7 +68,7 @@ section's closing padding). See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `note 20` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
 
 `dialog` sits between `menuPanel` and `panel` so a dialog reads as a smaller sibling of the palette, not a second palette.
 
@@ -82,6 +82,10 @@ Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corn
 `keyCap 18` · `recorderKeyCap 16` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
 `settingsSidebar 184` · `settingsRowIcon 20` · `dialogWidth 420` · `dialogIcon 32` · `hudWidth 200` ·
 `hudHeight 100` · `volumeTrackHeight 6` · `volumeKnob 16` · `volumeReadout 38`
+
+Notes adds `noteWidth 520`, `noteMinimumHeight 220`, `noteMaximumHeight 640`,
+`noteMaximumScreenFraction 0.7`, `noteHeaderHeight 44`, `noteEditorInset 16`,
+`noteHeaderButton 30`, and `noteStatus 16`. `noteCenterLiftFraction 0.08` is its initial optical lift.
 
 `keyCap` sizes the palette's keycap chips; `recorderKeyCap` (both size and radius) is the intentionally-smaller Settings shortcut-recorder chip.
 
@@ -107,6 +111,11 @@ explicit size (20pt regular). Use `rowTitle` (`.body`), `sectionHeader` (`.subhe
 | `cardFill`       | white 0.05     | settings/calc card fill                          |
 | `cardStroke`     | white 0.10     | settings/calc card border + inset dividers       |
 | `glassFrost`     | white 0.01     | whitish tint layered into the floating glass     |
+| `noteText`       | white 0.90     | Notes Markdown source                            |
+| `noteMarkup`     | white 0.45     | Markdown markers                                 |
+| `noteCode`       | white 0.72     | inline and fenced code                           |
+| `noteLink`       | white 0.80     | Markdown links                                   |
+| `noteQuote`      | white 0.62     | blockquotes                                      |
 
 Beyond these, `.secondary`/`.tertiary` foreground styles are fine for SF Symbols (they resolve against
 the forced-dark environment). **Selection always beats hover** when a row is both.
@@ -122,6 +131,43 @@ Source: `Palette/PalettePanel.swift`, `Palette/RootPaletteView.swift`.
 - **Header** (`headerHeight 44`): a back-chevron _or_ mode glyph, then the plain `TextField` (no border/background). Sub-screens (Clipboard, Calculator History) show the back chevron; the launcher shows a magnifying glass. The search icon aligns horizontally with row content.
 - **Compact keyboard entry:** pressing `↓` in the collapsed launcher expands the results and selects the first row without replacing or defocusing the shared search field.
 - **Bottom bar** (`bottomBarHeight 52`): a menu circle on the left, the action group on the right — both floating glass, no bar background. The action group is one glass `Capsule` holding the primary-action pill (label + `↵`) and the Actions toggle (`⌘K`).
+
+---
+
+## Notes panel
+
+Source: `Features/Notes/UI/`.
+
+Notes is a sibling surface, not a palette mode. `NotesPanel` uses the same borderless,
+non-activating, transparent AppKit recipe, but deliberately does not dismiss on resign-key. Its root
+applies `black panelDimming` → `VisualEffectView()` → one continuous `note` corner clip. The fixed
+header and editor are ordinary content; only the circular Format, Create, Reveal, and hide controls use
+glass.
+
+`NotesWindowController` owns every frame change. TextKit 2 supplies the laid-out editor height, the
+controller adds the header, clamps to the note minimum and screen-aware maximum, and preserves the top
+edge so existing text never jumps upward. After the cap, the native editor scrolls internally. Frame
+autosaving restores position only; content determines size on every show.
+
+The header keeps a fixed slot for status so Saving, Saved, failure, and conflict symbols cannot move
+the controls. Failure and conflict symbols can be clicked to reopen their recovery report after a
+dismissal. The title opens the in-window note switcher; the central spacer alone is a
+`WindowDragHandle`. Escape closes the switcher before hiding, while Command-W and the hide control
+order the panel out. Show Notes only shows or focuses; focus loss leaves the panel visible.
+
+The editor is one native TextKit 2 surface backed by a literal-source/display projection. Inactive
+Markdown markers occupy no layout width; entering a construct reveals its source without moving the
+panel's top edge. The `textformat` header control opens a three-row in-window formatting surface rather
+than an `NSMenu` or system popover. It overlays the editor, restores editor focus after a command, and
+closes before the same outside click continues to its original target.
+
+The switcher occupies the editor region without changing the frame. Its plain search field and
+keyboard-navigable rows use the shared selection/hover ramp; rename and Trash remain row actions rather
+than adding another toolbar or window.
+
+The Markdown editor is an `NSTextView(usingTextLayoutManager: true)` with literal source in its text
+storage. Rendering attributes provide the white-alpha and system-font hierarchy without hiding syntax
+or changing copied and saved text. See [features/notes.md](features/notes.md).
 
 ---
 

@@ -19,7 +19,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ SystemAction · VolumeLevel ·                                               │
 │ WindowCommand · WindowLayout · WindowActionMemory · PaletteRowIndex ·      │
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
-│ Quicklink{,Destination,Store,Archive} · Snippets/Model/* · CustomCommand · │
+│ Quicklink{,Destination,Store,Archive} · Notes/Model/* · Snippets/Model/* · │
 │ ShellCommandRunner · DoubleTap{Modifier,Detector} · ClipboardStore ·       │
 │ RaycastFormat · RaycastV1Decoder · AppSettingsKey · SettingsBackupCoverage │
 └──────────────────────────────────┬─────────────────────────────────────────┘
@@ -34,7 +34,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
-│ 27 @MainActor @Observable stores, sessions, indices and State types        │
+│ 29 @MainActor @Observable stores, sessions, indices and State types        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
@@ -76,7 +76,7 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 `CurrencyRateStore`, `FrequentEmojiStore`), the managers and monitors (`ClipboardManager`,
 `HotKeyManager`, `HyperKeyTap`, `RunningAppsMonitor`, `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `UninstallSession`,
-`QuicklinkArgumentSession`), the fourteen feature coordinators, and the window controllers.
+`QuicklinkArgumentSession`), `NotesStore`, the fifteen feature coordinators, and the window controllers.
 
 `AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start()` and nothing else. That is the
 one wiring point, and `start()` reads as the app's whole boot sequence in one screen.
@@ -85,7 +85,7 @@ one wiring point, and `start()` reads as the app's whole boot sequence in one sc
 into a store to mutate it.** That is the rule; `AppCore` holds only the closure wiring that connects a
 hotkey to a coordinator. Views inject `AppCore` through `@Environment` and use it as the *locator* for
 those coordinators — `core.quicklinkCoordinator.deleteQuicklink(…)` is the shape, and the alternative
-is injecting fourteen coordinators separately for no gain. Reading a store off `AppCore` to render it is
+is injecting fifteen coordinators separately for no gain. Reading a store off `AppCore` to render it is
 fine too; deciding something with one is what the rule forbids. `showNotice`, `confirm`,
 `reportFailure`, `showMessage` and `pickVolume` are forwarders on `AppCore` itself, so
 `DialogController` and `MessageHUDController` stay single-owned.
@@ -108,6 +108,11 @@ imperatively from AppKit.
   by `SettingsCoordinator` and `OnboardingCoordinator`. SwiftUI `Settings` and `Window` scenes are
   unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
   palette's in both directions.
+- **Notes** — a persistent, borderless `NotesPanel` managed by `NotesWindowController`. It keeps its
+  top edge fixed while its mapped TextKit 2 editor grows downward, switches among local Markdown files,
+  and remains visible on focus loss. Canonical source and display projection remain separate so
+  collapsed syntax never changes the local Markdown files.
+  See [features/notes.md](features/notes.md).
 - **The main menu** — shaped by `TinycastApp`'s `.commands`, which rebinds ⌘Q to Close Settings. It is
   only ever on screen while a titled window is open, so it is Settings' menu bar. It must stay
   declarative.
@@ -123,7 +128,7 @@ imperatively from AppKit.
 
 ## Observation
 
-27 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
+29 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
 state through `@Environment` rather than `@EnvironmentObject`.
 
 Three things about this model are easy to get wrong:
@@ -178,7 +183,7 @@ Tinycast/
   Assets.xcassets/  the app icon and the bundled image sets some catalog symbols resolve to
   Features/
     PaletteRowIndex.swift   the flat selection index — palette-owned, so it sits at the top
-    Launcher/ Clipboard/ Calculator/ Emoji/ FileSearch/ Quicklinks/ Snippets/ Uninstall/
+    Launcher/ Clipboard/ Calculator/ Emoji/ FileSearch/ Notes/ Quicklinks/ Snippets/ Uninstall/
     SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/
         Model/      pure — the harness inputs
         Service/    effects — stores, monitors, runners, AppKit glue

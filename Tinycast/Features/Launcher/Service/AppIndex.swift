@@ -83,12 +83,17 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     var kindLabel: String { kind.descriptor.label }
 
-    /// The hotkey action for this entry, or nil for built-ins and unaddressable bundles.
+    /// The hotkey action for this entry, or nil when the entry cannot be addressed directly.
     var hotKeyAction: HotKeyAction? {
         switch kind {
         case .command:
-            // Search Files is the one built-in with its own action; the rest open from the launcher.
-            return CommandCatalog.command(for: self) == .searchFiles ? .searchFiles : nil
+            switch CommandCatalog.command(for: self) {
+            case .searchFiles: return .searchFiles
+            case .showNotes: return .showNotes
+            case .createNote: return .createNote
+            case .searchNotes: return .searchNotes
+            default: return nil
+            }
         case .application:
             return bundleID.map { .app(bundleID: $0) }
         case .systemSettings:
@@ -184,6 +189,7 @@ final class AppIndex {
     private var commandEntries: [AppEntry]
     private var quicklinkCommandsVisible = false
     private var fileSearchCommandVisible = false
+    private var notesCommandsVisible = false
     private var alternateNameCache = SpotlightNames.Cache()
     private var paneCache: SettingsPaneScanner.Cache?
     private var isRefreshing = false
@@ -195,7 +201,7 @@ final class AppIndex {
     init(ranking: LauncherRankingStore) {
         self.ranking = ranking
         commandEntries = Self.projectedCommandEntries(
-            quicklinksVisible: false, fileSearchVisible: false)
+            quicklinksVisible: false, fileSearchVisible: false, notesVisible: false)
     }
 
     /// Replaces the command slice without rescanning, so Settings edits land at once.
@@ -227,7 +233,8 @@ final class AppIndex {
                         ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
             }
         let commands = Self.projectedCommandEntries(
-            quicklinksVisible: commandsVisible, fileSearchVisible: fileSearchCommandVisible)
+            quicklinksVisible: commandsVisible, fileSearchVisible: fileSearchCommandVisible,
+            notesVisible: notesCommandsVisible)
         guard entries != quicklinkEntries || commands != commandEntries else { return }
         quicklinkEntries = entries
         quicklinkCommandsVisible = commandsVisible
@@ -238,9 +245,22 @@ final class AppIndex {
     /// Shows or hides Search Files without disturbing another feature's built-in commands.
     func setFileSearchCommandVisible(_ visible: Bool) {
         let commands = Self.projectedCommandEntries(
-            quicklinksVisible: quicklinkCommandsVisible, fileSearchVisible: visible)
+            quicklinksVisible: quicklinkCommandsVisible, fileSearchVisible: visible,
+            notesVisible: notesCommandsVisible)
         guard commands != commandEntries else { return }
         fileSearchCommandVisible = visible
+        commandEntries = commands
+        publishEntries()
+    }
+
+    /// Shows or hides every Notes entry point without disturbing another feature's commands.
+    func setNotesCommandsVisible(_ visible: Bool) {
+        let commands = Self.projectedCommandEntries(
+            quicklinksVisible: quicklinkCommandsVisible,
+            fileSearchVisible: fileSearchCommandVisible,
+            notesVisible: visible)
+        guard commands != commandEntries else { return }
+        notesCommandsVisible = visible
         commandEntries = commands
         publishEntries()
     }
@@ -367,12 +387,13 @@ final class AppIndex {
     }
 
     private static func projectedCommandEntries(
-        quicklinksVisible: Bool, fileSearchVisible: Bool
+        quicklinksVisible: Bool, fileSearchVisible: Bool, notesVisible: Bool
     ) -> [AppEntry] {
         CommandCatalog.all.filter { entry in
             guard let command = CommandCatalog.command(for: entry) else { return true }
             if command.isQuicklinkCommand { return quicklinksVisible }
             if command == .searchFiles { return fileSearchVisible }
+            if command.isNotesCommand { return notesVisible }
             return true
         }
     }

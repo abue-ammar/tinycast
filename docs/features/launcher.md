@@ -203,6 +203,16 @@ Only the display name is indexed. Activation resolves the stable UUID through th
 to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
 execution semantics.
 
+## Notes commands
+
+`CommandID.showNotes`, `.createNote`, and `.searchNotes` publish the three Notes entry points while the
+feature is enabled. Activation hides the palette without restoring focus and calls the matching
+`NotesCoordinator` action; each `HotKeyAction` reaches that same boundary and rechecks enablement.
+
+`AppIndex` projects the three commands together from `notesEnabled`, independently of File Search and
+Quicklinks. They represent collection actions rather than individual notes, so Notes adds no
+`AppEntry.Kind` or launcher section. See [notes.md](notes.md).
+
 > **Invariant:** `Tests/fuzz-test.swift` compiles the real `Tinycast/Features/Launcher/Model/SearchRelevance.swift`, so
 > that file must stay Foundation-only and pure. There is no copy of the scorer to keep in sync.
 

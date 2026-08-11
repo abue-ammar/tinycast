@@ -22,7 +22,7 @@ feature lives in `Features/Backup/`.
 
 | File | Role |
 | --- | --- |
-| `Model/SettingsBackup.swift` | The `SettingsData` payload and its `Codable` shape |
+| `Model/SettingsBackup.swift` | The settings, fixed/per-item hotkey payloads, and their `Codable` shape |
 | `Model/SettingsBackupCoverage.swift` | The coverage declaration the harness checks |
 | `Model/RaycastFormat.swift` | Detects v1 vs v2 — the only branch between the two |
 | `Model/RaycastV1Decoder.swift` | v1 decrypt and decode |

@@ -32,6 +32,7 @@ struct SettingsBackup: Codable {
         var fileSearchEnabled: Bool?
         var fileSearchScopes: [String]?
         var fileSearchIgnorePatterns: [String]?
+        var notesEnabled: Bool?
         // `snippetsEnabled` is absent: an import must not enable keystroke listening.
         var customCommandsEnabled: Bool?
         var customCommandsShowInLauncher: Bool?
@@ -54,6 +55,9 @@ struct SettingsBackup: Codable {
         var togglePalette: HotKeyBinding?
         var toggleClipboard: HotKeyBinding?
         var toggleEmoji: HotKeyBinding?
+        var showNotes: HotKeyBinding?
+        var createNote: HotKeyBinding?
+        var searchNotes: HotKeyBinding?
         var searchFiles: HotKeyBinding?
         var apps: [String: HotKeyBinding]?
         var panes: [String: HotKeyBinding]?
@@ -100,6 +104,7 @@ extension SettingsBackup {
             fileSearchEnabled: s.fileSearchEnabled,
             fileSearchScopes: s.fileSearchScopes,
             fileSearchIgnorePatterns: s.fileSearchIgnorePatterns,
+            notesEnabled: s.notesEnabled,
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
             snippetsShowInLauncher: s.snippetsShowInLauncher,
@@ -118,6 +123,9 @@ extension SettingsBackup {
         hotkeys.togglePalette = hk.binding(for: .togglePalette)
         hotkeys.toggleClipboard = hk.binding(for: .toggleClipboard)
         hotkeys.toggleEmoji = hk.binding(for: .toggleEmoji)
+        hotkeys.showNotes = hk.binding(for: .showNotes)
+        hotkeys.createNote = hk.binding(for: .createNote)
+        hotkeys.searchNotes = hk.binding(for: .searchNotes)
         hotkeys.searchFiles = hk.binding(for: .searchFiles)
         hotkeys.apps = Dictionary(
             uniqueKeysWithValues: hk.boundBundleIDs.compactMap { id in
@@ -251,6 +259,10 @@ extension SettingsBackup {
             settings.fileSearchIgnorePatterns = patterns
             count += 1
         }
+        if let flag = s.notesEnabled {
+            settings.notesEnabled = flag
+            count += 1
+        }
         if let flag = s.customCommandsEnabled {
             settings.customCommandsEnabled = flag
             count += 1
@@ -316,6 +328,9 @@ extension SettingsBackup {
         if let b = hotkeys.togglePalette { apply(b, .togglePalette) }
         if let b = hotkeys.toggleClipboard { apply(b, .toggleClipboard) }
         if let b = hotkeys.toggleEmoji { apply(b, .toggleEmoji) }
+        if let b = hotkeys.showNotes { apply(b, .showNotes) }
+        if let b = hotkeys.createNote { apply(b, .createNote) }
+        if let b = hotkeys.searchNotes { apply(b, .searchNotes) }
         if let b = hotkeys.searchFiles { apply(b, .searchFiles) }
         for (id, b) in hotkeys.apps ?? [:] { apply(b, .app(bundleID: id)) }
         for (id, b) in hotkeys.panes ?? [:] { apply(b, .settingsPane(bundleID: id)) }

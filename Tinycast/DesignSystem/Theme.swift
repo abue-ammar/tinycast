@@ -27,6 +27,7 @@ enum Theme {
         static let menuPanel: CGFloat = 16
         /// The dialog and HUD surface, so a dialog reads as a sibling of the palette.
         static let dialog: CGFloat = 20
+        static let note: CGFloat = 20
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
@@ -37,6 +38,13 @@ enum Theme {
     enum Size {
         static let panelWidth: CGFloat = 750
         static let panelHeight: CGFloat = 475
+        static let noteWidth: CGFloat = 520
+        static let noteMinimumHeight: CGFloat = 220
+        static let noteMaximumHeight: CGFloat = 640
+        static let noteMaximumScreenFraction: CGFloat = 0.7
+        static let noteCenterLiftFraction: CGFloat = 0.08
+        static let noteHeaderHeight: CGFloat = 44
+        static let noteEditorInset: CGFloat = 16
         /// Fraction of visible height above the palette's top edge; it grows downward.
         static let paletteTopMarginFraction: CGFloat = 0.18
         static let headerHeight: CGFloat = 44
@@ -75,6 +83,8 @@ enum Theme {
         static let compactKeyCap: CGFloat = 15
         static let heroKeyCap: CGFloat = 22
         static let menuButton: CGFloat = 36
+        static let noteHeaderButton: CGFloat = 30
+        static let noteStatus: CGFloat = 16
         /// The uninstall list's leading checkbox / lock glyph.
         static let checkbox: CGFloat = 16
         static let clipboardListWidth: CGFloat = 290
@@ -145,6 +155,7 @@ enum Theme {
         static let menuRow = Font.body
         static let menuShortcut = Font.callout
         static let menuIcon = Font.body
+        static let noteTitle = Font.headline
     }
 
     enum Colors {
@@ -162,6 +173,11 @@ enum Theme {
         static let border = Color.white.opacity(0.20)
         static let textSecondary = Color.white.opacity(0.60)
         static let textTertiary = Color.white.opacity(0.40)
+        static let noteText = Color.white.opacity(0.90)
+        static let noteMarkup = Color.white.opacity(0.45)
+        static let noteCode = Color.white.opacity(0.72)
+        static let noteLink = Color.white.opacity(0.80)
+        static let noteQuote = Color.white.opacity(0.62)
         /// The Settings card: a faint surface whose border doubles as the row divider.
         static let cardFill = Color.white.opacity(0.05)
         static let cardStroke = Color.white.opacity(0.10)

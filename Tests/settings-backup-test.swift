@@ -52,6 +52,7 @@ struct SettingsBackupTest {
         check(
             "user ignore patterns ride the settings backup",
             mirrored["fileSearchIgnorePatterns"] == .fileSearchIgnorePatterns)
+        check("notes enablement rides the settings backup", mirrored["notesEnabled"] == .notesEnabled)
 
         // A reason that only echoes the key name explains nothing, so it fails like a missing one.
         let emptyReasons = excluded.filter { key, reason in
