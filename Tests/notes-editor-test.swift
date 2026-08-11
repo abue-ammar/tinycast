@@ -9,6 +9,7 @@ struct NotesEditorTests {
     static func main() {
         _ = NSApplication.shared
         testProjectedEditingAndUndoIsolation()
+        testCanonicalCopyAndCut()
         testCaretAnchoringAcrossProjectionChanges()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -232,6 +233,50 @@ struct NotesEditorTests {
         check(
             "revealing Markdown keeps the caret anchored in the viewport",
             before.height > 0 && after.height > 0 && abs(before.midY - after.midY) < 1)
+    }
+
+    private static func testCanonicalCopyAndCut() {
+        let source = "# Heading\n\n**bold**"
+        var changes: [String] = []
+        let input = NoteEditorInput(
+            id: NoteID(rawValue: "Copy.md"),
+            source: source,
+            epoch: 1)
+        let view = NoteEditorView(
+            input: input,
+            onSourceChange: { changes.append($0) },
+            onContentHeightChange: { _ in },
+            onReady: { _ in },
+            onOpenLink: { _ in })
+        let coordinator = NoteEditorView.Coordinator(parent: view)
+        let textView = NoteTextView(usingTextLayoutManager: true)
+        textView.editorActions = coordinator
+        textView.editorUndoManager = coordinator.editorUndoManager
+        coordinator.textView = textView
+        coordinator.install(input, resetUndo: false)
+
+        let boldRange = (textView.string as NSString).range(of: "bold")
+        textView.setSelectedRange(boldRange)
+        textView.copy(nil)
+        check(
+            "copying a complete rendered construct includes its Markdown",
+            NSPasteboard.general.string(forType: .string) == "**bold**")
+        textView.setSelectedRange(NSRange(location: boldRange.location + 1, length: 2))
+        textView.copy(nil)
+        check(
+            "copying part of rendered text remains character exact",
+            NSPasteboard.general.string(forType: .string) == "ol")
+
+        textView.selectAll(nil)
+        textView.copy(nil)
+        check(
+            "Select All and Copy return complete literal Markdown",
+            NSPasteboard.general.string(forType: .string) == source)
+        textView.cut(nil)
+        check("Select All and Cut remove the complete source", changes.last == "")
+        check("Select All and Cut leave no hidden prefix behind", textView.string.isEmpty)
+        coordinator.editorUndoManager.undo()
+        check("canonical Cut undoes in one step", changes.last == source)
     }
 
     private static func check(_ message: String, _ condition: @autoclosure () -> Bool) {
