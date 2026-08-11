@@ -9,12 +9,12 @@ contradicts the code is a defect, so fix it in the commit that made it wrong.
 | Document | Covers | Edit it when |
 | --- | --- | --- |
 | [architecture.md](architecture.md) | How the app is wired: the layers, who owns what, the windows, the Observation model, the folder tree | a layer boundary, an owner, or the tree changes |
-| [standards.md](standards.md) | How code here is written: posture, naming, style, concurrency, performance budgets, comments | a convention changes, or a check is added |
+| [standards.md](standards.md) | How code here is written: platform posture, naming, style, concurrency, performance budgets, comments | a convention changes, or a check is added |
 | [testing.md](testing.md) | How to verify a change: the definition of done, the harnesses, purity checks, budgets, the manual sweep | a harness moves, or a budget changes |
-| [development.md](development.md) | The local loop: setup, build, dev channel, editor, format/lint, generated data | the local toolchain changes |
+| [development.md](development.md) | The local loop: supported macOS, setup, build, dev channel, editor, format/lint, generated data | the local toolchain changes |
 | [release.md](release.md) | How a build reaches a user: packaging, CI, releases, the Homebrew tap, the website | the pipeline changes |
 | [signing.md](signing.md) | The self-signed identity and the two CI secrets | the signing setup changes |
-| [ui.md](ui.md) | The design system: tokens, panel chrome, row grammar, glass, dialogs and HUDs | a token or a presentation rule changes |
+| [ui.md](ui.md) | The design system: tokens, panel chrome, row grammar, floating surfaces, dialogs and HUDs | a token or a presentation rule changes |
 
 ## Features
 

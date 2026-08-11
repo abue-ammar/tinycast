@@ -5,11 +5,11 @@ text/image clipboard history, an inline calculator, snippets, quicklinks, window
 picker. SwiftUI + AppKit, running as an accessory with no Dock icon (`LSUIElement`). Zero third-party
 dependencies.
 
-## Posture: latest-only, always
+## Posture: modern-first, always
 
-**Tinycast targets one macOS — the current stable release — and nothing else.** macOS 26+, the Xcode 26
-toolchain, Swift 6 language mode. There is no compatibility floor to defend, no shim layer and no
-deprecation debt, and that is the single largest reason the codebase stays as small as it does.
+**Tinycast targets macOS 15+ with the Xcode 26 toolchain and Swift 6 language mode.** Modern APIs remain
+the default. The deployment floor exists for one narrow visual boundary: floating controls use Liquid
+Glass on macOS 26+ and native material on macOS 15–25. It is not permission to revive older architecture.
 
 Write code as if the platform released yesterday:
 
@@ -20,8 +20,8 @@ Write code as if the platform released yesterday:
   site. A wrapper that preserves an old spelling is the thing this project has spent the most effort
   removing.
 - **A deprecated API is a defect**, not a warning to live with.
-- **No compatibility layers, no legacy workarounds, no older architectural patterns.** Delete rather
-  than deprecate; raising the minimum macOS *deletes* the code that supported the old one.
+- **No compatibility layers beyond explicit availability boundaries.** Delete rather than deprecate;
+  raising the minimum macOS *deletes* the code that supported the old one.
 - **Never introduce backwards compatibility unless explicitly asked for it.** No version flags, no
   migration scaffolding, no "just in case" fallbacks. The two migrations that exist are scheduled for
   deletion; nothing new may depend on them.
@@ -65,7 +65,7 @@ feature's doc, under its own `## Invariants`.
 - **Swift 6 language mode: data-race violations are hard errors.** `@MainActor` is the default,
   cross-actor model types are `Sendable`, and heavy or IO-bound work goes off-main as `nonisolated`
   functions driven by `Task.detached`. Do not add a second actor.
-- **The app is locked to `.darkAqua` globally.** The Liquid Glass material is tuned for a deep dark
+- **The app is locked to `.darkAqua` globally.** The floating surface materials are tuned for a deep dark
   surface; light mode is not a switch, it is a second design.
 - **Tinycast presents its own dialogs — never `NSAlert`, `NSSlider` or a system popover.** A question
   goes through `DialogController`, a report through a HUD via `HUDPresenter`.

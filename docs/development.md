@@ -5,7 +5,7 @@ verifying a change is [testing.md](testing.md).
 
 ## Requirements
 
-- macOS 26 or later (Liquid Glass).
+- macOS 15 or later; floating controls use Liquid Glass on macOS 26+.
 - Xcode 26 — it provides the SwiftUI macro plugin and the SDK.
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen), and for linting:
   `brew install swiftlint`.

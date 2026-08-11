@@ -79,9 +79,9 @@ struct PopoverMenu: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(width: Theme.Size.menuWidth)
-        // Glass carries its own elevation, so a drop shadow on top reads heavy.
-        .glassEffect(
-            .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
+        .frosted(
+            in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous),
+            interactive: false
         )
     }
 }

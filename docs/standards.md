@@ -10,16 +10,16 @@ When this document and the code disagree, the code is probably right and this fi
 
 ## Posture
 
-The rule — latest-only, prefer modern APIs, no compatibility layers, never add backwards compatibility
-unasked — is stated in [`AGENTS.md`](../AGENTS.md#posture-latest-only-always). This section is the
-reasoning and the concrete shape it takes.
+The rule — modern-first, prefer current APIs, and add availability boundaries only deliberately — is
+stated in [`AGENTS.md`](../AGENTS.md#posture-modern-first-always). This section is the reasoning and the
+concrete shape it takes.
 
 The reason it is worth being strict about: a compatibility floor is not a one-time cost. Every shim
 outlives the platform that needed it, gets copied by the next feature that sees it, and turns a
-one-line call into a layer nobody dares delete. Tinycast has no external API, no plugin surface and one
-supported OS, so it has nothing to be compatible *with* — which is the whole reason it stays this
-small. The version-gated code this project has deleted has consistently been larger than the feature it
-was gating.
+one-line call into a layer nobody dares delete. Tinycast has no external API or plugin surface, so
+compatibility code must stay narrow. The one supported platform boundary is visual:
+`View.frosted(in:)` uses Liquid Glass on macOS 26+ and native material on macOS 15–25. Do not copy that
+availability shape into unrelated features without an explicit requirement.
 
 In practice that means Observation and never `ObservableObject` or `@Published`; `async`/`await` and
 never a completion handler or a `DispatchQueue` hop; `SMAppService` and never an `LSSharedFileList`

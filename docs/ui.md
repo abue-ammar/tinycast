@@ -15,8 +15,9 @@ just the OS behind-window blur under a 40% black scrim — there is no gray chro
 surface is white at a fixed alpha ramp. The header and bottom bar **float over the list as fully
 transparent overlays**; there are no hard-edged bars, strips, or dividers. Rows don't clip under the
 bars, they **dissolve**: a scroll-driven gradient mask ghosts them as they pass beneath. Floating
-controls (the action pill, the menu circle, popover menus) are **Liquid Glass**. The whole app is
-locked to dark mode because the glass material is tuned for a deep dark surface.
+controls (the action pill, the menu circle, popover menus) use **Liquid Glass** on macOS 26+ and frosted
+native material on macOS 15–25. The whole app is locked to dark mode because both are tuned for a deep
+dark surface.
 
 Five load-bearing ideas, in priority order:
 
@@ -24,7 +25,7 @@ Five load-bearing ideas, in priority order:
 2. **White-alpha ramp, never grays.** Text and surfaces are `Color.white.opacity(…)` at fixed stops.
 3. **Floating bars, not chrome.** Header/footer are transparent overlays; the list fills the whole panel.
 4. **Edges dissolve, they don't clip.** Scroll-driven mask, no separators between list and bars.
-5. **Glass only on floating controls.** The main surface is never glass; pills/menus/circles are.
+5. **Frost only on floating controls.** The main surface is never frosted; pills/menus/circles are.
 
 ---
 
@@ -43,7 +44,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **Resolve every glyph through `SymbolImage`, not `Image(systemName:)`.** Some catalog symbols are bundled assets in `Assets.xcassets` (`toggleBluetooth`), and `Image(systemName:)` silently renders nothing for those.
 - **↵ runs the primary action, Escape cancels, and Cancel always renders leading** (the left button), matching macOS convention. A button never prints its key cap; hovering it shows a `Tooltip` instead, styled like the palette's own keycap chips.
 - **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose trailing glyph *is* its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it — and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
-- **Glass is for controls; content takes the panel recipe.** `glassEffect` needs a backdrop to lens, so it only works *inside* a window that already has a `VisualEffectView` — the action capsule, the menu circle, `PopoverMenu`, a dialog's buttons. On a bare borderless panel it falls back to an opaque backing and shows as a dark edge. Both HUDs therefore use `black panelDimming` → `VisualEffectView()` → `clipShape`, exactly like a dialog.
+- **Frost is for controls; content takes the panel recipe.** `frosted(in:)` needs a backdrop, so it only works *inside* a window that already has a `VisualEffectView` — the action capsule, the menu circle, `PopoverMenu`, a dialog's buttons. On a bare borderless panel the macOS 26 glass branch falls back to an opaque backing and shows as a dark edge. Both HUDs therefore use `black panelDimming` → `VisualEffectView()` → `clipShape`, exactly like a dialog.
 
 ---
 
@@ -172,15 +173,15 @@ leading gap. Headers are non-selectable display rows, so selection (keyed by id)
 
 ---
 
-## Liquid Glass
+## Floating surfaces
 
 Source: `Theme.frosted(in:)`, `DesignSystem/PopoverMenu.swift`.
 
-Glass is **only** for floating controls, never the main surface.
+Glass or frosted material is **only** for floating controls, never the main surface.
 
-- `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with a whitish frost tint (`glassFrost`) so the glass reads brighter than clear. Used on the action-group capsule, the menu circle, `PopoverMenu` and a dialog's buttons — always _inside_ a window that already has a `VisualEffectView` behind it. Neither HUD uses it: on a panel of its own, glass has no backdrop to lens and falls back to an opaque backing that reads as a dark edge, so both take the panel recipe instead (see "Dialogs & HUD"). Tune the frost amount via the `glassFrost` token, not per call site.
+- `View.frosted(in:)` is the only OS boundary. On macOS 26+ it applies regular Liquid Glass, optionally interactive, with the `glassFrost` tint. On macOS 15–25 it applies `.ultraThinMaterial`, the same frost tint and a subtle border. Used on the action-group capsule, the menu circle, `PopoverMenu`, the shortcut recorder and dialog buttons — always _inside_ a window that already has a `VisualEffectView` behind it. Neither HUD uses it: on a panel of its own, glass has no backdrop to lens and falls back to an opaque backing that reads as a dark edge, so both take the panel recipe instead (see "Dialogs & HUD"). Tune the frost amount via the `glassFrost` token, not per call site.
 - **Menus are in-window overlays, not system popovers.** `.contextMenu`/`NSMenu` stall clicks for seconds inside a `LazyVStack` and spill outside the panel. Use `PopoverMenu` anchored to a bottom corner via `.overlay`, inset `menuInset` (8pt) so its own corner isn't clipped by the panel's.
-- **`PopoverMenu`** uses `glassEffect(.regular, in: RoundedRectangle(menuPanel 16))` with **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native.
+- **`PopoverMenu`** uses the noninteractive `frosted(in:)` surface in `RoundedRectangle(menuPanel 16)` with **no hand-tuned shadow**.
 - `PopoverMenuRow`: leading glyph, label, trailing shortcut glyph, `menuHover` fill on hover, `menuRow 10` corner. Menus animate in with `.opacity + .scale(0.96)` from the anchored corner, `easeOut 0.14`.
 - The glyph is a `PopoverMenuIcon`: `.symbol` (SF Symbol, `hierarchical`, secondary — or **red** when `isDestructive`) or `.file` (a real app icon via `IconCache`, used by the paste rows to show the paste target). `PopoverMenuItem` keeps a `systemImage:` convenience init, so symbol rows read exactly as before.
 - **Both glyph kinds share one square `menuIcon` (20) slot**, which is what makes symbol and app-icon rows read as the same size and pins a single row height. 20 is deliberately larger than the artwork looks: an `IconCache` icon paints only ~85% of its canvas (13pt visible at a 16pt slot), while a `.body` SF Symbol renders 17–18pt tall — at 20 the icon lands on 17pt and the two match. Measure before changing it.
@@ -221,8 +222,8 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   since importing a file destroys nothing — and running a shell command the user wrote themselves is
   `.neutral` + `.standard` rather than a red alarm.
 - **Surface.** A dialog reuses the palette's recipe `black panelDimming` → `VisualEffectView()` →
-  `clipShape(RoundedRectangle(dialog 20))`, in that order at `dialogWidth 420`. Glass is reserved for
-  the buttons, matching the "glass only on floating controls" rule. The **volume HUD takes the same
+  `clipShape(RoundedRectangle(dialog 20))`, in that order at `dialogWidth 420`. Frost is reserved for
+  the buttons, matching the "frost only on floating controls" rule. The **volume HUD takes the same
   recipe**, and so does the **message pill**. That is the line: glass needs a backdrop to lens, so it
   only works _inside_ a window that already has a `VisualEffectView` behind it — the action capsule,
   the menu circle, `PopoverMenu`, a dialog's buttons. On a bare borderless panel of its own it falls
@@ -370,9 +371,9 @@ shortcut"), live held modifiers, and conflict (rejected caps + owner, orange).
 - **`shortcutPopover.width` is load-bearing.** The callout centres on the recorder only while it
   fits either side of it; wider than that and the clamp kicks in and skews the caret.
   `Tests/callout-test.swift` pins this.
-- **One glass shape.** `CalloutShape` (`HotKeys/UI/`) draws body and caret as a single path so `glassEffect`
-  lenses them together. The caret is two straight edges meeting at an arc — a rounded-tip triangle,
-  not a dome. Stock `.regular` glass, no hand-tuned shadow, as in `PopoverMenu`.
+- **One surface shape.** `CalloutShape` (`HotKeys/UI/`) draws body and caret as a single path so the
+  selected material renders them together. The caret is two straight edges meeting at an arc — a
+  rounded-tip triangle, not a dome. Keep it unshadowed, as in `PopoverMenu`.
 - **Placement is pure.** `CalloutPlacement` (`HotKeys/UI/`) picks above-vs-below, clamps, and walks the caret;
   the harness compiles it against the real `Theme` so a retuned token can't outdate the assertions.
 - **`KeyCapChip.Scale`** is `compact` / `standard` / `hero` — three tokenised sizes, no stray frames.

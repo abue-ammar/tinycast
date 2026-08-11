@@ -214,6 +214,7 @@ struct ClipboardTests {
         sqlite(
             url,
             """
+            PRAGMA trusted_schema=ON;
             CREATE TABLE items(
               id TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, text TEXT, image_path TEXT,
               created_at REAL NOT NULL, source_app TEXT

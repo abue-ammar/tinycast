@@ -2,7 +2,7 @@ name: Tinycast
 options:
   bundleIdPrefix: com.tinycast
   deploymentTarget:
-    macOS: "26.0"
+    macOS: "15.0"
   createIntermediateGroups: true
   groupSortPosition: top
 
@@ -49,3 +49,4 @@ targets:
         Debug:
           PRODUCT_NAME: Tinycast Dev
           PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+          "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
