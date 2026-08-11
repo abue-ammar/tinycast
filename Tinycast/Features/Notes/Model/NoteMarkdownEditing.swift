@@ -125,18 +125,57 @@ enum NoteMarkdownEditing {
         var lines = original.components(separatedBy: .newlines)
         if hasTrailingNewline, lines.last?.isEmpty == true { lines.removeLast() }
         let allRequested = command != .normal && lines.allSatisfy { hasPrefix(for: command, line: $0) }
+        var prefixChanges: [PrefixChange] = []
+        var originalLineLocation = 0
         let transformed = lines.enumerated().map { index, line in
             let stripped = stripOutermostPrefix(from: line)
-            if command == .normal || allRequested { return stripped.content }
-            let prefix = prefix(for: command, index: index)
-            return stripped.indentation + prefix + stripped.content
+            let indentationLength = (stripped.indentation as NSString).length
+            let contentLength = (stripped.content as NSString).length
+            let oldPrefixLength = (line as NSString).length - indentationLength - contentLength
+            let newPrefix = command == .normal || allRequested
+                ? "" : prefix(for: command, index: index)
+            let newPrefixLength = (newPrefix as NSString).length
+            prefixChanges.append(
+                PrefixChange(
+                    range: NSRange(
+                        location: originalLineLocation + indentationLength,
+                        length: oldPrefixLength),
+                    replacementLength: newPrefixLength))
+            originalLineLocation += (line as NSString).length + 1
+            return stripped.indentation + newPrefix + stripped.content
         }
         var replacement = transformed.joined(separator: "\n")
         if hasTrailingNewline { replacement += "\n" }
+        let relativeStart = selection.location - lineRange.location
+        let relativeEnd = NSMaxRange(selection) - lineRange.location
+        let mappedStart = map(relativeStart, through: prefixChanges)
+        let mappedEnd = map(relativeEnd, through: prefixChanges)
         return NoteMarkdownEditPlan(
             range: lineRange,
             replacement: replacement,
-            selection: NSRange(location: lineRange.location, length: (replacement as NSString).length))
+            selection: NSRange(
+                location: lineRange.location + mappedStart,
+                length: max(0, mappedEnd - mappedStart)))
+    }
+
+    private struct PrefixChange {
+        let range: NSRange
+        let replacementLength: Int
+    }
+
+    private static func map(_ location: Int, through changes: [PrefixChange]) -> Int {
+        var delta = 0
+        for change in changes {
+            guard location >= change.range.location else { break }
+            if location <= NSMaxRange(change.range) {
+                let offset = change.range.length == 0
+                    ? change.replacementLength
+                    : min(location - change.range.location, change.replacementLength)
+                return change.range.location + delta + offset
+            }
+            delta += change.replacementLength - change.range.length
+        }
+        return location + delta
     }
 
     private static func fencedCode(source: NSString, selection: NSRange) -> NoteMarkdownEditPlan {

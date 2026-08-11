@@ -222,6 +222,24 @@ struct NotesTests {
             "mixed block formatting normalizes instead of double-prefixing",
             mixed?.replacement == "- [ ] first\n- [ ] second\n")
 
+        let headingAtCaret = NoteMarkdownEditing.plan(
+            .heading1,
+            source: "Heading",
+            selection: NSRange(location: 3, length: 0))
+        check("heading formatting preserves a caret", headingAtCaret?.selection == NSRange(location: 5, length: 0))
+        let normalAtCaret = NoteMarkdownEditing.plan(
+            .normal,
+            source: "# Heading",
+            selection: NSRange(location: 5, length: 0))
+        check("normal formatting preserves a caret", normalAtCaret?.selection == NSRange(location: 3, length: 0))
+        let selectedHeading = NoteMarkdownEditing.plan(
+            .heading2,
+            source: "Heading",
+            selection: NSRange(location: 0, length: 7))
+        check(
+            "block formatting preserves selected content instead of selecting its prefix",
+            selectedHeading?.selection == NSRange(location: 3, length: 7))
+
         let directory = URL(fileURLWithPath: "/tmp/notes", isDirectory: true)
         check(
             "relative links resolve against the note directory",
