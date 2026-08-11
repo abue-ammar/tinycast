@@ -9,6 +9,7 @@ struct NotesEditorTests {
     static func main() {
         _ = NSApplication.shared
         testProjectedEditingAndUndoIsolation()
+        testCaretAnchoringAcrossProjectionChanges()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -131,6 +132,56 @@ struct NotesEditorTests {
         check(
             "bold text inside a heading keeps its bold trait",
             headingFont?.fontDescriptor.symbolicTraits.contains(.bold) == true)
+    }
+
+    private static func testCaretAnchoringAcrossProjectionChanges() {
+        let destination = String(repeating: "segment/", count: 80)
+        let source = (0..<30).map { "Line \($0)" }.joined(separator: "\n")
+            + "\n[label](https://example.com/\(destination)) trailing\n"
+            + (31..<60).map { "Line \($0)" }.joined(separator: "\n")
+        let input = NoteEditorInput(
+            id: NoteID(rawValue: "Anchoring.md"),
+            source: source,
+            epoch: 1)
+        let view = NoteEditorView(
+            input: input,
+            onSourceChange: { _ in },
+            onContentHeightChange: { _ in },
+            onReady: { _ in },
+            onOpenLink: { _ in })
+        let coordinator = NoteEditorView.Coordinator(parent: view)
+        let textView = NoteTextView(usingTextLayoutManager: true)
+        textView.editorActions = coordinator
+        textView.editorUndoManager = coordinator.editorUndoManager
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.setFrameSize(NSSize(width: 320, height: 1))
+        let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 320, height: 140))
+        scrollView.documentView = textView
+        let window = NSWindow(
+            contentRect: scrollView.frame,
+            styleMask: .borderless,
+            backing: .buffered,
+            defer: false)
+        window.contentView = scrollView
+        coordinator.textView = textView
+        coordinator.install(input, resetUndo: false)
+        coordinator.reportHeight()
+        window.makeFirstResponder(textView)
+
+        let labelRange = (textView.string as NSString).range(of: "label")
+        let caret = NSRange(location: NSMaxRange(labelRange), length: 0)
+        textView.setSelectedRange(caret)
+        textView.scrollRangeToVisible(caret)
+        let before = textView.firstRect(forCharacterRange: caret, actualRange: nil)
+        coordinator.textViewDidChangeSelection(
+            Notification(name: NSTextView.didChangeSelectionNotification, object: textView))
+        let after = textView.firstRect(
+            forCharacterRange: textView.selectedRange(),
+            actualRange: nil)
+        check(
+            "revealing Markdown keeps the caret anchored in the viewport",
+            before.height > 0 && after.height > 0 && abs(before.midY - after.midY) < 1)
     }
 
     private static func check(_ message: String, _ condition: @autoclosure () -> Bool) {

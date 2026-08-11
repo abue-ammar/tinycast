@@ -349,6 +349,7 @@ struct NoteEditorView: NSViewRepresentable {
 
         private func applyProjection(patch: DisplayPatch? = nil) {
             guard let textView else { return }
+            let caretScreenY = visibleCaretScreenY(in: textView)
             isApplyingProjection = true
             let edit = patch.map { (range: $0.range, replacement: $0.replacement) }
                 ?? displayDifference(from: textView.string, to: projection.string)
@@ -364,6 +365,11 @@ struct NoteEditorView: NSViewRepresentable {
             let displaySelection = projection.displayRange(forSourceRange: sourceSelection)
             textView.setSelectedRange(displaySelection)
             isApplyingProjection = false
+            let contentHeight = NoteEditorView.measuredHeight(of: textView)
+            if textView.frame.height != contentHeight {
+                textView.setFrameSize(NSSize(width: textView.frame.width, height: contentHeight))
+            }
+            restoreVisibleCaret(caretScreenY, selection: displaySelection, in: textView)
             textView.taskOverlays.update(
                 projection.tasks,
                 epoch: input.epoch,
@@ -371,6 +377,40 @@ struct NoteEditorView: NSViewRepresentable {
                 onToggle: { [weak self] range, generation in
                     self?.toggleTask(sourceRange: range, generation: generation)
                 })
+        }
+
+        private func visibleCaretScreenY(in textView: NoteTextView) -> CGFloat? {
+            guard textView.window?.firstResponder === textView,
+                sourceSelection.length == 0
+            else { return nil }
+            let caret = NSRange(location: NSMaxRange(textView.selectedRange()), length: 0)
+            let rect = textView.firstRect(forCharacterRange: caret, actualRange: nil)
+            return rect.height > 0 ? rect.midY : nil
+        }
+
+        private func restoreVisibleCaret(
+            _ previousScreenY: CGFloat?,
+            selection: NSRange,
+            in textView: NoteTextView
+        ) {
+            guard let previousScreenY, let scrollView = textView.enclosingScrollView else { return }
+            if let layoutManager = textView.textLayoutManager,
+                let contentManager = layoutManager.textContentManager
+            {
+                layoutManager.ensureLayout(for: contentManager.documentRange)
+            }
+            scrollView.layoutSubtreeIfNeeded()
+            textView.scrollRangeToVisible(selection)
+            let caret = NSRange(location: NSMaxRange(selection), length: 0)
+            let rect = textView.firstRect(forCharacterRange: caret, actualRange: nil)
+            guard rect.height > 0 else { return }
+            let clipView = scrollView.contentView
+            let maximumY = max(0, textView.bounds.height - clipView.bounds.height)
+            let adjustedY = min(
+                maximumY,
+                max(0, clipView.bounds.origin.y + previousScreenY - rect.midY))
+            clipView.scroll(to: NSPoint(x: clipView.bounds.origin.x, y: adjustedY))
+            scrollView.reflectScrolledClipView(clipView)
         }
 
         private func displayDifference(from old: String, to new: String)
