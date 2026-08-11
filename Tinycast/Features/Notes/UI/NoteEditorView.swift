@@ -170,7 +170,8 @@ struct NoteEditorView: NSViewRepresentable {
         }
 
         func noteTextViewCopy(_ textView: NoteTextView) {
-            let range = projection.sourceRange(forDisplayRange: textView.selectedRange())
+            let range = projection.sourceRange(
+                forCopyingDisplayRange: textView.selectedRange())
             guard range.length > 0, NSMaxRange(range) <= (source as NSString).length else { return }
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
@@ -178,7 +179,8 @@ struct NoteEditorView: NSViewRepresentable {
         }
 
         func noteTextViewCut(_ textView: NoteTextView) {
-            let range = projection.sourceRange(forDisplayRange: textView.selectedRange())
+            let range = projection.sourceRange(
+                forCopyingDisplayRange: textView.selectedRange())
             guard range.length > 0 else { return }
             noteTextViewCopy(textView)
             applySourceEdit(

@@ -53,12 +53,18 @@ struct NoteDisplayProjection: Sendable, Equatable {
         let destination: String
     }
 
+    struct CopyAnchor: Sendable, Equatable {
+        let sourceRange: NSRange
+        let displayRange: NSRange
+    }
+
     let sourceLength: Int
     let string: String
     let segments: [Segment]
     let styles: [StyleSpan]
     let tasks: [TaskAnchor]
     let links: [LinkAnchor]
+    let copyAnchors: [CopyAnchor]
     let activeRange: NSRange?
 
     static func build(
@@ -132,6 +138,7 @@ struct NoteDisplayProjection: Sendable, Equatable {
             styles: [],
             tasks: [],
             links: [],
+            copyAnchors: [],
             activeRange: active?.range)
         projection = projection.addingMetadata(source: text, presentation: presentation, active: active)
         return projection
@@ -193,6 +200,22 @@ struct NoteDisplayProjection: Sendable, Equatable {
         if range.length == 0 { return NSRange(location: start, length: 0) }
         let end = sourceLocation(forDisplayLocation: NSMaxRange(range), affinity: .upstream)
         return NSRange(location: min(start, end), length: abs(end - start))
+    }
+
+    func sourceRange(forCopyingDisplayRange range: NSRange) -> NSRange {
+        let displayLength = (string as NSString).length
+        guard range.length > 0 else { return sourceRange(forDisplayRange: range) }
+        if range.location == 0, NSMaxRange(range) == displayLength {
+            return NSRange(location: 0, length: sourceLength)
+        }
+        var result = sourceRange(forDisplayRange: range)
+        for anchor in copyAnchors
+        where range.location <= anchor.displayRange.location
+            && NSMaxRange(range) >= NSMaxRange(anchor.displayRange)
+        {
+            result = NSUnionRange(result, anchor.sourceRange)
+        }
+        return result
     }
 
     private struct Transform {
@@ -296,6 +319,7 @@ struct NoteDisplayProjection: Sendable, Equatable {
         var styles: [StyleSpan] = []
         var tasks: [TaskAnchor] = []
         var links: [LinkAnchor] = []
+        var copyAnchors: [CopyAnchor] = []
         for construct in presentation.constructs {
             let style = style(for: construct.kind)
             let contentDisplayRange = displayRange(forSourceRange: construct.contentRange)
@@ -325,6 +349,12 @@ struct NoteDisplayProjection: Sendable, Equatable {
             default:
                 break
             }
+            if active?.range != construct.range, contentDisplayRange.length > 0 {
+                copyAnchors.append(
+                    CopyAnchor(
+                        sourceRange: construct.range,
+                        displayRange: contentDisplayRange))
+            }
         }
         return NoteDisplayProjection(
             sourceLength: sourceLength,
@@ -333,6 +363,7 @@ struct NoteDisplayProjection: Sendable, Equatable {
             styles: styles,
             tasks: tasks,
             links: links,
+            copyAnchors: copyAnchors,
             activeRange: activeRange)
     }
 

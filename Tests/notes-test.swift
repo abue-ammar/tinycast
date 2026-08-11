@@ -180,6 +180,23 @@ struct NotesTests {
             "display selection maps back to literal source",
             projection.sourceRange(forDisplayRange: NSRange(location: 0, length: 7))
                 == NSRange(location: 2, length: 7))
+        check(
+            "copying a complete projection includes every hidden marker",
+            projection.sourceRange(
+                forCopyingDisplayRange: NSRange(
+                    location: 0,
+                    length: (projection.string as NSString).length))
+                == NSRange(location: 0, length: (source as NSString).length))
+        let doneDisplayRange = (projection.string as NSString).range(of: "done")
+        let doneSourceRange = (source as NSString).range(of: "**done**")
+        check(
+            "copying a whole rendered construct includes its delimiters",
+            projection.sourceRange(forCopyingDisplayRange: doneDisplayRange) == doneSourceRange)
+        let partialDoneRange = NSRange(location: doneDisplayRange.location + 1, length: 2)
+        check(
+            "copying part of a rendered construct remains character exact",
+            (source as NSString).substring(
+                with: projection.sourceRange(forCopyingDisplayRange: partialDoneRange)) == "on")
 
         let linkLocation = (source as NSString).range(of: "link").location
         let active = NoteDisplayProjection.build(
