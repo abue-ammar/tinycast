@@ -257,6 +257,39 @@ struct NotesTests {
             "block formatting preserves selected content instead of selecting its prefix",
             selectedHeading?.selection == NSRange(location: 3, length: 7))
 
+        let continuedBullet = NoteMarkdownEditing.planListEdit(
+            .newline,
+            source: "- item",
+            selection: NSRange(location: 6, length: 0))
+        check("Return continues a bullet", continuedBullet?.replacement == "\n- ")
+        check("continued bullets place the caret after their marker", continuedBullet?.selection.location == 9)
+        let continuedTask = NoteMarkdownEditing.planListEdit(
+            .newline,
+            source: "- [x] done",
+            selection: NSRange(location: 10, length: 0))
+        check("Return continues a task unchecked", continuedTask?.replacement == "\n- [ ] ")
+        let exitedList = NoteMarkdownEditing.planListEdit(
+            .newline,
+            source: "- ",
+            selection: NSRange(location: 2, length: 0))
+        check("Return exits an empty list item", exitedList?.replacement == "")
+        check("Return removes the empty list marker", exitedList?.range == NSRange(location: 0, length: 2))
+        let removedPrefix = NoteMarkdownEditing.planListEdit(
+            .backspace,
+            source: "- item",
+            selection: NSRange(location: 2, length: 0))
+        check("Backspace at list content removes its marker", removedPrefix?.replacement == "")
+        let indented = NoteMarkdownEditing.planListEdit(
+            .indent,
+            source: "- item\n",
+            selection: NSRange(location: 4, length: 0))
+        check("Tab nests a list item", indented?.replacement == "    - item\n")
+        let outdented = NoteMarkdownEditing.planListEdit(
+            .outdent,
+            source: "    - item\n",
+            selection: NSRange(location: 8, length: 0))
+        check("Shift-Tab outdents a list item", outdented?.replacement == "- item\n")
+
         let directory = URL(fileURLWithPath: "/tmp/notes", isDirectory: true)
         check(
             "relative links resolve against the note directory",

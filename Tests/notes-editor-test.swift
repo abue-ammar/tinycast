@@ -132,6 +132,20 @@ struct NotesEditorTests {
         check(
             "bold text inside a heading keeps its bold trait",
             headingFont?.fontDescriptor.symbolicTraits.contains(.bold) == true)
+
+        let listInput = NoteEditorInput(
+            id: NoteID(rawValue: "List.md"),
+            source: "- item",
+            epoch: 5)
+        coordinator.install(listInput, resetUndo: true)
+        window.makeFirstResponder(textView)
+        textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
+        coordinator.textViewDidChangeSelection(
+            Notification(name: NSTextView.didChangeSelectionNotification, object: textView))
+        textView.insertNewline(nil)
+        check("native Return continues a canonical Markdown list", changes.last == "- item\n- ")
+        coordinator.editorUndoManager.undo()
+        check("list continuation undoes in one step", changes.last == "- item")
     }
 
     private static func testCaretAnchoringAcrossProjectionChanges() {

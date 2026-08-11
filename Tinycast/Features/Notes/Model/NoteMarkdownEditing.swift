@@ -24,6 +24,13 @@ struct NoteMarkdownEditPlan: Sendable, Equatable {
     let selection: NSRange
 }
 
+enum NoteListEditingAction: Sendable {
+    case newline
+    case backspace
+    case indent
+    case outdent
+}
+
 enum NoteMarkdownEditing {
     static func plan(
         _ command: NoteMarkdownCommand,
@@ -95,9 +102,177 @@ enum NoteMarkdownEditing {
         return commands
     }
 
+    static func planListEdit(
+        _ action: NoteListEditingAction,
+        source: String,
+        selection: NSRange
+    ) -> NoteMarkdownEditPlan? {
+        let text = source as NSString
+        guard selection.location != NSNotFound,
+            selection.location >= 0,
+            NSMaxRange(selection) <= text.length
+        else { return nil }
+        switch action {
+        case .newline:
+            return continueList(in: text, selection: selection)
+        case .backspace:
+            return removeListPrefix(in: text, selection: selection)
+        case .indent:
+            return changeListIndent(in: text, selection: selection, outdent: false)
+        case .outdent:
+            return changeListIndent(in: text, selection: selection, outdent: true)
+        }
+    }
+
     private struct InlineContext {
         let selection: NSRange
         let removingWrapper: String?
+    }
+
+    private struct ListLine {
+        let lineRange: NSRange
+        let indentationRange: NSRange
+        let prefixRange: NSRange
+        let continuation: String
+        let contentRange: NSRange
+    }
+
+    private static func continueList(
+        in source: NSString,
+        selection: NSRange
+    ) -> NoteMarkdownEditPlan? {
+        guard selection.length == 0,
+            let line = listLine(in: source, at: selection.location),
+            selection.location >= line.contentRange.location
+        else { return nil }
+        let content = source.substring(with: line.contentRange)
+        if content.trimmingCharacters(in: .whitespaces).isEmpty {
+            return NoteMarkdownEditPlan(
+                range: line.prefixRange,
+                replacement: "",
+                selection: NSRange(location: line.prefixRange.location, length: 0))
+        }
+        let indentation = source.substring(with: line.indentationRange)
+        let insertion = "\n" + indentation + line.continuation
+        return NoteMarkdownEditPlan(
+            range: selection,
+            replacement: insertion,
+            selection: NSRange(
+                location: selection.location + (insertion as NSString).length,
+                length: 0))
+    }
+
+    private static func removeListPrefix(
+        in source: NSString,
+        selection: NSRange
+    ) -> NoteMarkdownEditPlan? {
+        guard selection.length == 0,
+            let line = listLine(in: source, at: selection.location),
+            selection.location == line.contentRange.location
+        else { return nil }
+        return NoteMarkdownEditPlan(
+            range: line.prefixRange,
+            replacement: "",
+            selection: NSRange(location: line.prefixRange.location, length: 0))
+    }
+
+    private static func changeListIndent(
+        in source: NSString,
+        selection: NSRange,
+        outdent: Bool
+    ) -> NoteMarkdownEditPlan? {
+        let lineRange = source.coveringLineRange(for: selection)
+        let original = source.substring(with: lineRange) as NSString
+        var changes: [PrefixChange] = []
+        var location = 0
+        while location < original.length {
+            let line = original.lineRange(for: NSRange(location: location, length: 0))
+            guard let list = listLine(in: original, at: line.location) else { return nil }
+            let indentation = original.substring(with: list.indentationRange)
+            let editRange: NSRange
+            let replacementLength: Int
+            if outdent {
+                if indentation.hasPrefix("\t") {
+                    editRange = NSRange(location: line.location, length: 1)
+                } else {
+                    let spaces = indentation.prefix(4).prefix { $0 == " " }.count
+                    guard spaces > 0 else { return nil }
+                    editRange = NSRange(location: line.location, length: spaces)
+                }
+                replacementLength = 0
+            } else {
+                editRange = NSRange(location: line.location, length: 0)
+                replacementLength = 4
+            }
+            changes.append(PrefixChange(range: editRange, replacementLength: replacementLength))
+            location = NSMaxRange(line)
+        }
+        var replacement = original as String
+        for change in changes.reversed() {
+            replacement = (replacement as NSString).replacingCharacters(
+                in: change.range,
+                with: outdent ? "" : "    ")
+        }
+        let relativeStart = selection.location - lineRange.location
+        let relativeEnd = NSMaxRange(selection) - lineRange.location
+        let mappedStart = map(relativeStart, through: changes)
+        let mappedEnd = map(relativeEnd, through: changes)
+        return NoteMarkdownEditPlan(
+            range: lineRange,
+            replacement: replacement,
+            selection: NSRange(
+                location: lineRange.location + mappedStart,
+                length: max(0, mappedEnd - mappedStart)))
+    }
+
+    private static func listLine(in source: NSString, at location: Int) -> ListLine? {
+        guard source.length > 0 else { return nil }
+        let probe = min(location, source.length - 1)
+        let lineRange = source.lineRange(for: NSRange(location: probe, length: 0))
+        var contentEnd = NSMaxRange(lineRange)
+        while contentEnd > lineRange.location, isNewline(source.character(at: contentEnd - 1)) {
+            contentEnd -= 1
+        }
+        var markerLocation = lineRange.location
+        while markerLocation < contentEnd {
+            let character = source.character(at: markerLocation)
+            guard character == 0x20 || character == 0x09 else { break }
+            markerLocation += 1
+        }
+        let indentationRange = NSRange(
+            location: lineRange.location,
+            length: markerLocation - lineRange.location)
+        let body = source.substring(
+            with: NSRange(location: markerLocation, length: contentEnd - markerLocation))
+        let prefix: String
+        let continuation: String
+        if body.hasPrefix("- [ ] ") || body.hasPrefix("- [x] ") || body.hasPrefix("- [X] ") {
+            prefix = String(body.prefix(6))
+            continuation = "- [ ] "
+        } else if body.hasPrefix("- ") || body.hasPrefix("* ") || body.hasPrefix("+ ") {
+            prefix = String(body.prefix(2))
+            continuation = prefix
+        } else if let orderedLength = orderedPrefixLength(in: body) {
+            prefix = String(body.prefix(orderedLength))
+            let number = Int(body.prefix { $0.isNumber }) ?? 0
+            continuation = "\(number + 1). "
+        } else {
+            return nil
+        }
+        let prefixLength = (prefix as NSString).length
+        let prefixRange = NSRange(location: markerLocation, length: prefixLength)
+        return ListLine(
+            lineRange: lineRange,
+            indentationRange: indentationRange,
+            prefixRange: prefixRange,
+            continuation: continuation,
+            contentRange: NSRange(
+                location: NSMaxRange(prefixRange),
+                length: contentEnd - NSMaxRange(prefixRange)))
+    }
+
+    private static func isNewline(_ character: unichar) -> Bool {
+        character == 0x0A || character == 0x0D || character == 0x2028 || character == 0x2029
     }
 
     private static func inline(

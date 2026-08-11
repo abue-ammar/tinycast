@@ -216,6 +216,25 @@ struct NoteEditorView: NSViewRepresentable {
                 presentation: presentation)
         }
 
+        func noteTextView(
+            _ textView: NoteTextView,
+            performListEdit action: NoteListEditingAction
+        ) -> Bool {
+            guard !isComposing,
+                let plan = NoteMarkdownEditing.planListEdit(
+                    action,
+                    source: source,
+                    selection: sourceSelection)
+            else { return false }
+            revealedSelectionLocation = nil
+            applySourceEdit(
+                range: plan.range,
+                replacement: plan.replacement,
+                selection: plan.selection,
+                actionName: "Edit List")
+            return true
+        }
+
         func noteTextView(_ textView: NoteTextView, openLinkAt displayLocation: Int) -> Bool {
             guard let link = projection.links.first(where: {
                 NSLocationInRange(displayLocation, $0.displayRange)

@@ -5,6 +5,10 @@ protocol NoteTextViewActions: AnyObject {
     func noteTextViewCopy(_ textView: NoteTextView)
     func noteTextViewCut(_ textView: NoteTextView)
     func noteTextView(_ textView: NoteTextView, perform command: NoteMarkdownCommand)
+    func noteTextView(
+        _ textView: NoteTextView,
+        performListEdit action: NoteListEditingAction
+    ) -> Bool
     func noteTextViewFormattingState(_ textView: NoteTextView) -> Set<NoteMarkdownCommand>
     func noteTextView(_ textView: NoteTextView, openLinkAt displayLocation: Int) -> Bool
     func noteTextViewFocusChanged(_ textView: NoteTextView, isFocused: Bool)
@@ -56,6 +60,26 @@ final class NoteTextView: NSTextView {
         guard let command else { return super.performKeyEquivalent(with: event) }
         editorActions?.noteTextView(self, perform: command)
         return true
+    }
+
+    override func insertNewline(_ sender: Any?) {
+        guard editorActions?.noteTextView(self, performListEdit: .newline) != true else { return }
+        super.insertNewline(sender)
+    }
+
+    override func deleteBackward(_ sender: Any?) {
+        guard editorActions?.noteTextView(self, performListEdit: .backspace) != true else { return }
+        super.deleteBackward(sender)
+    }
+
+    override func insertTab(_ sender: Any?) {
+        guard editorActions?.noteTextView(self, performListEdit: .indent) != true else { return }
+        super.insertTab(sender)
+    }
+
+    override func insertBacktab(_ sender: Any?) {
+        guard editorActions?.noteTextView(self, performListEdit: .outdent) != true else { return }
+        super.insertBacktab(sender)
     }
 
     override func mouseDown(with event: NSEvent) {

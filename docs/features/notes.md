@@ -112,6 +112,10 @@ H1–H3, bold, italic, strikethrough, inline code, links, quotes, bullets, numbe
 and horizontal rules. Command-B, Command-I, Command-K, Shift-Command-X, and Shift-Command-7/8/9 use the
 same source-edit planner. Escape closes formatting, then the switcher, then the window.
 
+Return continues bullets, numbered items, and tasks, with new tasks unchecked. Return on an empty item
+or Backspace at its content boundary removes the list marker; Tab and Shift-Tab nest and outdent list
+lines. Each interaction is one canonical source transaction and one undo step.
+
 Inactive tasks use pooled native checkbox controls positioned from TextKit segments. Each activation
 revalidates the current editor epoch and literal marker before toggling. Command-click resolves supported
 web, mail, and file destinations in the pure model, then `NoteLinkLauncher` performs the `NSWorkspace`

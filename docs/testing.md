@@ -298,6 +298,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   links show labels, task checkboxes toggle, and images remain literal source
 - The Format button, its keyboard navigation, every formatting action, and Command-B/I/K plus
   Shift-Command-X/7/8/9 update literal source and undo in one step
+- Return continues bullets, numbers, and tasks; an empty item exits, and Tab/Shift-Tab nest and outdent
 - Edit one note, switch to a shorter note, then Undo and Redo: the new note remains intact and the app
   does not terminate; repeat after a clean external reload
 - Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, and Command-click links keep
