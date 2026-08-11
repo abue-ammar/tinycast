@@ -4,33 +4,19 @@ struct NotesView: View {
     @Environment(NotesCoordinator.self) private var notes
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 0) {
-                header
-                    .frame(height: Theme.Size.noteHeaderHeight)
-                if notes.isSwitcherPresented {
-                    NoteSwitcherView()
-                } else {
-                    NoteEditorView(
-                        input: notes.editorInput,
-                        onSourceChange: notes.updateSource,
-                        onContentHeightChange: notes.updateEditorHeight,
-                        onReady: notes.editorReady,
-                        onOpenLink: notes.openLink)
-                }
-            }
-            if notes.isFormattingPresented {
-                NoteFormattingMenu(
-                    selectedCommands: notes.activeFormattingCommands,
-                    onSelect: notes.applyFormatting)
-                    .onGeometryChange(for: CGRect.self) { proxy in
-                        proxy.frame(in: .named("notes-window"))
-                    } action: { frame in
-                        notes.updateFormattingFrame(frame)
-                    }
-                    .padding(.top, Theme.Size.noteHeaderHeight - Theme.Spacing.sm)
-                    .padding(.trailing, Theme.Spacing.xl)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topTrailing)))
+        VStack(spacing: 0) {
+            header
+                .frame(height: Theme.Size.noteHeaderHeight)
+                .zIndex(notes.isFormattingPresented ? 1 : 0)
+            if notes.isSwitcherPresented {
+                NoteSwitcherView()
+            } else {
+                NoteEditorView(
+                    input: notes.editorInput,
+                    onSourceChange: notes.updateSource,
+                    onContentHeightChange: notes.updateEditorHeight,
+                    onReady: notes.editorReady,
+                    onOpenLink: notes.openLink)
             }
         }
         .coordinateSpace(name: "notes-window")
@@ -64,10 +50,7 @@ struct NotesView: View {
                     onBegan: {},
                     onEnded: notes.dragEnded)
             statusView
-            headerButton(
-                title: "Format Note",
-                symbol: "textformat",
-                action: notes.toggleFormatting)
+            formatButton
             headerButton(
                 title: "Create Note",
                 symbol: "plus",
@@ -82,6 +65,30 @@ struct NotesView: View {
                 action: notes.hide)
         }
         .padding(.horizontal, Theme.Spacing.xl)
+    }
+
+    private var formatButton: some View {
+        headerButton(
+            title: "Format Note",
+            symbol: "textformat",
+            action: notes.toggleFormatting)
+            .overlay(alignment: .topTrailing) {
+                if notes.isFormattingPresented {
+                    NoteFormattingMenu(
+                        selectedCommands: notes.activeFormattingCommands,
+                        onSelect: notes.applyFormatting)
+                        .fixedSize()
+                        .offset(y: Theme.Size.noteHeaderButton + Theme.Spacing.xs)
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: .named("notes-window"))
+                        } action: { frame in
+                            notes.updateFormattingFrame(frame)
+                        }
+                        .transition(
+                            .opacity.combined(
+                                with: .scale(scale: 0.96, anchor: .topTrailing)))
+                }
+            }
     }
 
     @ViewBuilder

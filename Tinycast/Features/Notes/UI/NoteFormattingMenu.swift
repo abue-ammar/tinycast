@@ -30,14 +30,9 @@ struct NoteFormattingMenu: View {
             ])
         }
         .padding(Theme.Spacing.md)
-        .background(Color.black.opacity(0.22))
-        .background(VisualEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .stroke(Theme.Colors.separator, lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
+        .glassEffect(
+            .regular,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous))
         .onAppear {
             Task { @MainActor in
                 await Task.yield()
@@ -59,13 +54,15 @@ struct NoteFormattingMenu: View {
                 } label: {
                     Group {
                         if let symbol = item.symbol {
-                            Image(systemName: symbol)
+                            SymbolImage(name: symbol, size: Theme.Size.noteStatus)
                         } else {
                             Text(item.label)
                                 .font(.caption.weight(.semibold))
                         }
                     }
-                    .frame(width: 27, height: 25)
+                    .frame(
+                        width: Theme.Size.noteHeaderButton,
+                        height: Theme.Size.noteHeaderButton)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

@@ -146,6 +146,42 @@ struct NotesEditorTests {
         check("native Return continues a canonical Markdown list", changes.last == "- item\n- ")
         coordinator.editorUndoManager.undo()
         check("list continuation undoes in one step", changes.last == "- item")
+
+        let blockInput = NoteEditorInput(
+            id: NoteID(rawValue: "Blocks.md"),
+            source: "> Quote\n- item\n```\ncode\n```\n---\n#### Four\n##### Five\n###### Six",
+            epoch: 6)
+        window.makeFirstResponder(nil)
+        coordinator.install(blockInput, resetUndo: true)
+        let blockText = textView.string as NSString
+        let quoteStyle = textView.textStorage?.attribute(
+            .paragraphStyle,
+            at: blockText.range(of: "Quote").location,
+            effectiveRange: nil) as? NSParagraphStyle
+        check("blockquotes carry a leading-rule text block", quoteStyle?.textBlocks.isEmpty == false)
+        let listStyle = textView.textStorage?.attribute(
+            .paragraphStyle,
+            at: blockText.range(of: "item").location,
+            effectiveRange: nil) as? NSParagraphStyle
+        check("list wrapping uses a hanging indent", (listStyle?.headIndent ?? 0) > 0)
+        let codeStyle = textView.textStorage?.attribute(
+            .paragraphStyle,
+            at: blockText.range(of: "code").location,
+            effectiveRange: nil) as? NSParagraphStyle
+        check(
+            "fenced code carries a block surface",
+            codeStyle?.textBlocks.first?.backgroundColor != nil)
+        let headingFonts = ["Four", "Five", "Six"].compactMap { value in
+            textView.textStorage?.attribute(
+                .font,
+                at: blockText.range(of: value).location,
+                effectiveRange: nil) as? NSFont
+        }
+        check(
+            "H4 through H6 keep a descending hierarchy",
+            headingFonts.count == 3
+                && headingFonts[0].pointSize > headingFonts[1].pointSize
+                && headingFonts[1].pointSize > headingFonts[2].pointSize)
     }
 
     private static func testCaretAnchoringAcrossProjectionChanges() {

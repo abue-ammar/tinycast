@@ -247,7 +247,7 @@ struct NoteDisplayProjection: Sendable, Equatable {
                         Transform(range: marker, replacement: checked ? "☑" : "☐", priority: 30))
                 }
             case .horizontalRule:
-                result.append(Transform(range: construct.range, replacement: "────────", priority: 50))
+                result.append(Transform(range: construct.range, replacement: "\u{200B}", priority: 50))
             default:
                 result.append(contentsOf: construct.markerRanges.map {
                     Transform(range: $0, replacement: "", priority: 10)

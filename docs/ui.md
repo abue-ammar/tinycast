@@ -157,9 +157,9 @@ order the panel out. Show Notes only shows or focuses; focus loss leaves the pan
 
 The editor is one native TextKit 2 surface backed by a literal-source/display projection. Inactive
 Markdown markers occupy no layout width; entering a construct reveals its source without moving the
-panel's top edge. The `textformat` header control opens a three-row in-window formatting surface rather
-than an `NSMenu` or system popover. It overlays the editor, restores editor focus after a command, and
-closes before the same outside click continues to its original target.
+panel's top edge. The `textformat` header control anchors a three-row glass formatting surface directly
+beneath itself rather than using an `NSMenu` or system popover. It overlays the editor, restores editor
+focus after a command, and closes before the same outside click continues to its original target.
 
 The switcher occupies the editor region without changing the frame. Its plain search field and
 keyboard-navigable rows use the shared selection/hover ramp; rename and Trash remain row actions rather

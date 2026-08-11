@@ -325,6 +325,13 @@ struct NotesTests {
         check("intraword underscores stay literal", !grammarKinds.contains(.emphasis))
         check("horizontal rules win over list parsing", grammarKinds.contains(.horizontalRule))
         check("a list marker followed by content remains a list", grammarKinds.contains(.unorderedList))
+        let ruleProjection = NoteDisplayProjection.build(
+            source: "---\n",
+            presentation: NoteMarkdownParser.parse("---\n"),
+            activeSourceLocation: nil)
+        check(
+            "horizontal rules use one decoration anchor instead of text glyphs",
+            ruleProjection.string == "\u{200B}\n")
 
         let nestedSource = "# Heading with **bold _and italic_**\n"
         let nestedPresentation = NoteMarkdownParser.parse(nestedSource)

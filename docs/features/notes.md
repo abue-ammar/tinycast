@@ -101,6 +101,10 @@ turns inactive constructs into rendered-width text: markers are elided, links sh
 markers become bullets, and task markers reserve one checkbox anchor. Moving the caret into a construct
 restores its complete literal source. Images remain styled source and never load local or remote data.
 
+Headings retain six distinct levels and block spacing. Quotes use an inset leading rule, wrapped list
+content uses a hanging indent, fenced code uses a padded surface, and horizontal rules draw as full-width
+decorations rather than repeated text glyphs.
+
 `NoteEditorView` owns canonical source separately from `NSTextView.string`. Every display selection and
 edit maps through ordered identity, elision, and replacement segments before one canonical transaction
 updates the store. Copy and Cut use source ranges. The editor epoch changes on note switches and clean
