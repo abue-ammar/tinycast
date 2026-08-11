@@ -292,6 +292,21 @@ struct NotesTests {
         check("intraword underscores stay literal", !grammarKinds.contains(.emphasis))
         check("horizontal rules win over list parsing", grammarKinds.contains(.horizontalRule))
         check("a list marker followed by content remains a list", grammarKinds.contains(.unorderedList))
+
+        let nestedSource = "# Heading with **bold _and italic_**\n"
+        let nestedPresentation = NoteMarkdownParser.parse(nestedSource)
+        check(
+            "nested inline formatting retains its outer construct",
+            nestedPresentation.constructs.contains { $0.kind == .strong })
+        check(
+            "nested inline formatting retains its inner construct",
+            nestedPresentation.constructs.contains { $0.kind == .emphasis })
+        check(
+            "nested inline markers collapse without stray syntax",
+            NoteDisplayProjection.build(
+                source: nestedSource,
+                presentation: nestedPresentation,
+                activeSourceLocation: nil).string == "Heading with bold and italic\n")
     }
 
     private static func testWindowLayout() {

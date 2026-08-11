@@ -53,6 +53,11 @@ enum NoteMarkdownParser {
         let language: String?
     }
 
+    private struct OccupiedRange {
+        let range: NSRange
+        let nestedRange: NSRange?
+    }
+
     static func parse(_ source: String) -> NoteMarkdownPresentation {
         let text = source as NSString
         guard text.length > 0 else {
@@ -230,38 +235,46 @@ enum NoteMarkdownParser {
         text: NSString,
         into constructs: inout [NoteMarkdownPresentation.Construct]
     ) {
-        var occupied: [NSRange] = []
+        var occupied: [OccupiedRange] = []
+        let constructStart = constructs.count
         appendLinks(in: range, text: text, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "`", kind: .inlineCode, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: false, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "***", kind: .strongEmphasis, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: true, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "___", kind: .strongEmphasis, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: true, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "**", kind: .strong, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: true, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "__", kind: .strong, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: true, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "~~", kind: .strikethrough, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: true, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "*", kind: .emphasis, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: true, occupied: &occupied, into: &constructs)
         appendPaired(
             token: "_", kind: .emphasis, in: range, text: text,
-            occupied: &occupied, into: &constructs)
+            allowsNested: true, occupied: &occupied, into: &constructs)
+        let links = constructs[constructStart...].filter {
+            if case .link = $0.kind { return true }
+            return false
+        }
+        for link in links where link.contentRange.length > 0 {
+            scanInline(link.contentRange, text: text, into: &constructs)
+        }
     }
 
     private static func appendLinks(
         in range: NSRange,
         text: NSString,
-        occupied: inout [NSRange],
+        occupied: inout [OccupiedRange],
         into constructs: inout [NoteMarkdownPresentation.Construct]
     ) {
         var index = range.location
@@ -301,7 +314,7 @@ enum NoteMarkdownParser {
                             NSRange(location: index, length: 1),
                             NSRange(location: labelClose, length: destinationClose - labelClose + 1)
                         ]))
-            occupied.append(constructRange)
+            occupied.append(OccupiedRange(range: constructRange, nestedRange: nil))
             index = destinationClose + 1
         }
     }
@@ -311,7 +324,8 @@ enum NoteMarkdownParser {
         kind: NoteMarkdownPresentation.Construct.Kind,
         in range: NSRange,
         text: NSString,
-        occupied: inout [NSRange],
+        allowsNested: Bool,
+        occupied: inout [OccupiedRange],
         into constructs: inout [NoteMarkdownPresentation.Construct]
     ) {
         let tokenLength = (token as NSString).length
@@ -319,7 +333,7 @@ enum NoteMarkdownParser {
         let end = NSMaxRange(range)
         while index + tokenLength <= end {
             guard matches(token, at: index, text: text), !isEscaped(index, text: text),
-                !occupied.contains(where: { NSLocationInRange(index, $0) })
+                markerIsAvailable(at: index, length: tokenLength, occupied: occupied)
             else {
                 index += 1
                 continue
@@ -331,7 +345,7 @@ enum NoteMarkdownParser {
             var closing = index + tokenLength
             while closing + tokenLength <= end {
                 if matches(token, at: closing, text: text), !isEscaped(closing, text: text),
-                    !occupied.contains(where: { NSLocationInRange(closing, $0) })
+                    markerIsAvailable(at: closing, length: tokenLength, occupied: occupied)
                 {
                     break
                 }
@@ -344,7 +358,15 @@ enum NoteMarkdownParser {
             let constructRange = NSRange(
                 location: index,
                 length: closing + tokenLength - index)
-            guard !occupied.contains(where: { NSIntersectionRange($0, constructRange).length > 0 }) else {
+            let contentRange = NSRange(
+                location: index + tokenLength,
+                length: closing - index - tokenLength)
+            guard occupied.allSatisfy({ existing in
+                nestedRangesAreValid(
+                    candidate: constructRange,
+                    content: contentRange,
+                    existing: existing)
+            }) else {
                 index += tokenLength
                 continue
             }
@@ -352,16 +374,44 @@ enum NoteMarkdownParser {
                 .init(
                     kind: kind,
                     range: constructRange,
-                    contentRange: NSRange(
-                        location: index + tokenLength,
-                        length: closing - index - tokenLength),
+                    contentRange: contentRange,
                     markerRanges: [
                         NSRange(location: index, length: tokenLength),
                         NSRange(location: closing, length: tokenLength)
                     ]))
-            occupied.append(constructRange)
+            occupied.append(
+                OccupiedRange(
+                    range: constructRange,
+                    nestedRange: allowsNested ? contentRange : nil))
             index = closing + tokenLength
         }
+    }
+
+    private static func markerIsAvailable(
+        at location: Int,
+        length: Int,
+        occupied: [OccupiedRange]
+    ) -> Bool {
+        let marker = NSRange(location: location, length: length)
+        return occupied.allSatisfy { existing in
+            NSIntersectionRange(marker, existing.range).length == 0
+                || existing.nestedRange.map { contains($0, marker) } == true
+        }
+    }
+
+    private static func nestedRangesAreValid(
+        candidate: NSRange,
+        content: NSRange,
+        existing: OccupiedRange
+    ) -> Bool {
+        guard NSIntersectionRange(candidate, existing.range).length > 0 else { return true }
+        if contains(content, existing.range) { return true }
+        if let nestedRange = existing.nestedRange, contains(nestedRange, candidate) { return true }
+        return false
+    }
+
+    private static func contains(_ outer: NSRange, _ inner: NSRange) -> Bool {
+        outer.location <= inner.location && NSMaxRange(outer) >= NSMaxRange(inner)
     }
 
     private static func lines(in text: NSString) -> [Line] {

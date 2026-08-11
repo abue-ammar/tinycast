@@ -489,14 +489,15 @@ struct NoteEditorView: NSViewRepresentable {
         for span in projection.styles {
             let intersection = NSIntersectionRange(span.range, range)
             guard intersection.length > 0, NSMaxRange(intersection) <= storage.length else { continue }
-            storage.addAttributes(attributes(for: span.style), range: intersection)
+            apply(span.style, to: storage, range: intersection)
         }
     }
 
-    private static func attributes(
-        for style: NoteDisplayProjection.Style
-    ) -> [NSAttributedString.Key: Any] {
-        let body = NSFont.preferredFont(forTextStyle: .body)
+    private static func apply(
+        _ style: NoteDisplayProjection.Style,
+        to storage: NSTextStorage,
+        range: NSRange
+    ) {
         switch style {
         case .heading(let level):
             let textStyle: NSFont.TextStyle = switch level {
@@ -505,33 +506,72 @@ struct NoteEditorView: NSViewRepresentable {
             case 3: .title3
             default: .headline
             }
-            return [.font: NSFont.preferredFont(forTextStyle: textStyle)]
+            storage.addAttribute(
+                .font,
+                value: NSFont.preferredFont(forTextStyle: textStyle),
+                range: range)
         case .strong:
-            return [.font: NSFontManager.shared.convert(body, toHaveTrait: .boldFontMask)]
+            applyFontTrait(.boldFontMask, to: storage, range: range)
         case .emphasis:
-            return [.font: NSFontManager.shared.convert(body, toHaveTrait: .italicFontMask)]
+            applyFontTrait(.italicFontMask, to: storage, range: range)
         case .strongEmphasis:
-            let bold = NSFontManager.shared.convert(body, toHaveTrait: .boldFontMask)
-            return [.font: NSFontManager.shared.convert(bold, toHaveTrait: .italicFontMask)]
+            applyFontTrait([.boldFontMask, .italicFontMask], to: storage, range: range)
         case .strikethrough:
-            return [.strikethroughStyle: NSUnderlineStyle.single.rawValue]
+            storage.addAttribute(
+                .strikethroughStyle,
+                value: NSUnderlineStyle.single.rawValue,
+                range: range)
         case .inlineCode, .codeBlock:
-            return [
-                .font: NSFont.monospacedSystemFont(ofSize: body.pointSize, weight: .regular),
-                .foregroundColor: NSColor(Theme.Colors.noteCode)
-            ]
+            applyMonospacedFont(to: storage, range: range)
+            storage.addAttribute(
+                .foregroundColor,
+                value: NSColor(Theme.Colors.noteCode),
+                range: range)
         case .link:
-            return [
-                .foregroundColor: NSColor(Theme.Colors.noteLink),
-                .underlineStyle: NSUnderlineStyle.single.rawValue
-            ]
+            storage.addAttributes(
+                [
+                    .foregroundColor: NSColor(Theme.Colors.noteLink),
+                    .underlineStyle: NSUnderlineStyle.single.rawValue
+                ],
+                range: range)
         case .image, .listMarker, .taskMarker, .horizontalRule, .markup:
-            return [.foregroundColor: NSColor(Theme.Colors.noteMarkup)]
+            storage.addAttribute(
+                .foregroundColor,
+                value: NSColor(Theme.Colors.noteMarkup),
+                range: range)
         case .blockquote:
-            return [
-                .font: NSFontManager.shared.convert(body, toHaveTrait: .italicFontMask),
-                .foregroundColor: NSColor(Theme.Colors.noteQuote)
-            ]
+            applyFontTrait(.italicFontMask, to: storage, range: range)
+            storage.addAttribute(
+                .foregroundColor,
+                value: NSColor(Theme.Colors.noteQuote),
+                range: range)
+        }
+    }
+
+    private static func applyFontTrait(
+        _ trait: NSFontTraitMask,
+        to storage: NSTextStorage,
+        range: NSRange
+    ) {
+        storage.enumerateAttribute(.font, in: range) { value, effectiveRange, _ in
+            let font = value as? NSFont ?? NSFont.preferredFont(forTextStyle: .body)
+            storage.addAttribute(
+                .font,
+                value: NSFontManager.shared.convert(font, toHaveTrait: trait),
+                range: effectiveRange)
+        }
+    }
+
+    private static func applyMonospacedFont(
+        to storage: NSTextStorage,
+        range: NSRange
+    ) {
+        storage.enumerateAttribute(.font, in: range) { value, effectiveRange, _ in
+            let font = value as? NSFont ?? NSFont.preferredFont(forTextStyle: .body)
+            storage.addAttribute(
+                .font,
+                value: NSFont.monospacedSystemFont(ofSize: font.pointSize, weight: .regular),
+                range: effectiveRange)
         }
     }
 

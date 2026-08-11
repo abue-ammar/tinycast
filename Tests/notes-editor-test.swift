@@ -113,6 +113,24 @@ struct NotesEditorTests {
         check(
             "link insertion selects the destination placeholder",
             (textView.string as NSString).substring(with: textView.selectedRange()) == "url")
+
+        let headingInput = NoteEditorInput(
+            id: NoteID(rawValue: "Heading.md"),
+            source: "# **Bold** heading",
+            epoch: 4)
+        window.makeFirstResponder(nil)
+        coordinator.install(headingInput, resetUndo: true)
+        let boldLocation = (textView.string as NSString).range(of: "Bold").location
+        let headingFont = textView.textStorage?.attribute(
+            .font,
+            at: boldLocation,
+            effectiveRange: nil) as? NSFont
+        check(
+            "bold text inside a heading keeps the heading size",
+            headingFont?.pointSize == NSFont.preferredFont(forTextStyle: .title1).pointSize)
+        check(
+            "bold text inside a heading keeps its bold trait",
+            headingFont?.fontDescriptor.symbolicTraits.contains(.bold) == true)
     }
 
     private static func check(_ message: String, _ condition: @autoclosure () -> Bool) {
