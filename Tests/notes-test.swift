@@ -214,6 +214,23 @@ struct NotesTests {
         check("bold wraps the canonical selection", bold?.replacement == "**hello**")
         check("bold preserves the selected content", bold?.selection == NSRange(location: 2, length: 5))
 
+        let renderedBold = "**bold**"
+        let renderedBoldPresentation = NoteMarkdownParser.parse(renderedBold)
+        let unbold = NoteMarkdownEditing.plan(
+            .bold,
+            source: renderedBold,
+            selection: NSRange(location: 2, length: 4),
+            presentation: renderedBoldPresentation)
+        check(
+            "bold removes formatting from a rendered selection",
+            unbold?.range == NSRange(location: 0, length: 8))
+        check("bold is a true toggle in live preview", unbold?.replacement == "bold")
+        check(
+            "the current inline format is reported to the menu",
+            NoteMarkdownEditing.activeCommands(
+                selection: NSRange(location: 2, length: 4),
+                presentation: renderedBoldPresentation).contains(.bold))
+
         let mixed = NoteMarkdownEditing.plan(
             .taskList,
             source: "- first\n2. second\n",

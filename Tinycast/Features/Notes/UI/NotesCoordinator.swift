@@ -38,6 +38,7 @@ final class NotesCoordinator {
             windowController.setFormattingPresented(isFormattingPresented)
         }
     }
+    private(set) var activeFormattingCommands: Set<NoteMarkdownCommand> = [.normal]
     private(set) var switcherSelection: NoteID?
     private(set) var switcherFocusRevision = 0
 
@@ -241,6 +242,9 @@ final class NotesCoordinator {
 
     func toggleFormatting() {
         guard settings.notesEnabled, store.hasLoadedDocument, !isSwitcherPresented else { return }
+        if !isFormattingPresented {
+            activeFormattingCommands = windowController.formattingState()
+        }
         isFormattingPresented.toggle()
     }
 

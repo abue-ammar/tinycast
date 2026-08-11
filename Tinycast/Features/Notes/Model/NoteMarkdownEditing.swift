@@ -1,6 +1,6 @@
 import Foundation
 
-enum NoteMarkdownCommand: String, CaseIterable, Sendable {
+enum NoteMarkdownCommand: String, CaseIterable, Sendable, Hashable {
     case normal
     case heading1
     case heading2
@@ -28,7 +28,8 @@ enum NoteMarkdownEditing {
     static func plan(
         _ command: NoteMarkdownCommand,
         source: String,
-        selection: NSRange
+        selection: NSRange,
+        presentation: NoteMarkdownPresentation? = nil
     ) -> NoteMarkdownEditPlan? {
         let text = source as NSString
         guard selection.location != NSNotFound, selection.location >= 0,
@@ -36,13 +37,29 @@ enum NoteMarkdownEditing {
         else { return nil }
         switch command {
         case .bold:
-            return inline(wrapper: "**", source: text, selection: selection)
+            return inline(
+                wrapper: "**",
+                source: text,
+                context: inlineContext(
+                    command, source: text, selection: selection, presentation: presentation))
         case .italic:
-            return inline(wrapper: "_", source: text, selection: selection)
+            return inline(
+                wrapper: "_",
+                source: text,
+                context: inlineContext(
+                    command, source: text, selection: selection, presentation: presentation))
         case .strikethrough:
-            return inline(wrapper: "~~", source: text, selection: selection)
+            return inline(
+                wrapper: "~~",
+                source: text,
+                context: inlineContext(
+                    command, source: text, selection: selection, presentation: presentation))
         case .inlineCode:
-            return inline(wrapper: "`", source: text, selection: selection)
+            return inline(
+                wrapper: "`",
+                source: text,
+                context: inlineContext(
+                    command, source: text, selection: selection, presentation: presentation))
         case .link:
             return link(source: text, selection: selection)
         case .normal, .heading1, .heading2, .heading3, .blockquote,
@@ -55,11 +72,40 @@ enum NoteMarkdownEditing {
         }
     }
 
+    static func activeCommands(
+        selection: NSRange,
+        presentation: NoteMarkdownPresentation
+    ) -> Set<NoteMarkdownCommand> {
+        let constructs = presentation.constructs.filter { construct in
+            if selection.length == 0 {
+                return selection.location >= construct.range.location
+                    && selection.location <= NSMaxRange(construct.range)
+            }
+            return NSIntersectionRange(selection, construct.contentRange).length > 0
+        }
+        var commands = Set(constructs.compactMap { command(for: $0.kind) })
+        if constructs.contains(where: { $0.kind == .strongEmphasis }) {
+            commands.formUnion([.bold, .italic])
+        }
+        let blockCommands: Set<NoteMarkdownCommand> = [
+            .heading1, .heading2, .heading3, .blockquote, .unorderedList,
+            .orderedList, .taskList, .codeBlock
+        ]
+        if commands.isDisjoint(with: blockCommands) { commands.insert(.normal) }
+        return commands
+    }
+
+    private struct InlineContext {
+        let selection: NSRange
+        let removingWrapper: String?
+    }
+
     private static func inline(
         wrapper: String,
         source: NSString,
-        selection: NSRange
+        context: InlineContext
     ) -> NoteMarkdownEditPlan {
+        let selection = context.selection
         let wrapperLength = (wrapper as NSString).length
         if selection.length == 0 {
             let replacement = wrapper + wrapper
@@ -70,12 +116,14 @@ enum NoteMarkdownEditing {
         }
 
         let selected = source.substring(with: selection)
-        if selected.hasPrefix(wrapper), selected.hasSuffix(wrapper),
-            (selected as NSString).length >= wrapperLength * 2
+        let removingWrapper = context.removingWrapper ?? wrapper
+        let removingLength = (removingWrapper as NSString).length
+        if selected.hasPrefix(removingWrapper), selected.hasSuffix(removingWrapper),
+            (selected as NSString).length >= removingLength * 2
         {
             let innerRange = NSRange(
-                location: wrapperLength,
-                length: (selected as NSString).length - wrapperLength * 2)
+                location: removingLength,
+                length: (selected as NSString).length - removingLength * 2)
             let replacement = (selected as NSString).substring(with: innerRange)
             return NoteMarkdownEditPlan(
                 range: selection,
@@ -97,6 +145,70 @@ enum NoteMarkdownEditing {
             selection: NSRange(
                 location: selection.location + leadingLength + wrapperLength,
                 length: innerLength))
+    }
+
+    private static func inlineContext(
+        _ command: NoteMarkdownCommand,
+        source: NSString,
+        selection: NSRange,
+        presentation: NoteMarkdownPresentation?
+    ) -> InlineContext {
+        guard selection.length > 0,
+            let construct = presentation?.constructs.first(where: {
+                $0.contentRange == selection && matches(command, kind: $0.kind)
+            }),
+            let marker = construct.markerRanges.first
+        else { return InlineContext(selection: selection, removingWrapper: nil) }
+        let literalMarker = source.substring(with: marker)
+        let wrapper: String
+        if case .strongEmphasis = construct.kind {
+            let length = command == .bold ? 2 : 1
+            wrapper = (literalMarker as NSString).substring(
+                with: NSRange(location: 0, length: min(length, marker.length)))
+        } else {
+            wrapper = literalMarker
+        }
+        return InlineContext(selection: construct.range, removingWrapper: wrapper)
+    }
+
+    private static func matches(
+        _ command: NoteMarkdownCommand,
+        kind: NoteMarkdownPresentation.Construct.Kind
+    ) -> Bool {
+        switch (command, kind) {
+        case (.bold, .strong), (.bold, .strongEmphasis),
+            (.italic, .emphasis), (.italic, .strongEmphasis),
+            (.strikethrough, .strikethrough), (.inlineCode, .inlineCode):
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func command(
+        for kind: NoteMarkdownPresentation.Construct.Kind
+    ) -> NoteMarkdownCommand? {
+        switch kind {
+        case .heading(let level):
+            return switch level {
+            case 1: .heading1
+            case 2: .heading2
+            case 3: .heading3
+            default: nil
+            }
+        case .strong: return .bold
+        case .emphasis: return .italic
+        case .strongEmphasis: return nil
+        case .strikethrough: return .strikethrough
+        case .inlineCode: return .inlineCode
+        case .link: return .link
+        case .blockquote: return .blockquote
+        case .unorderedList: return .unorderedList
+        case .orderedList: return .orderedList
+        case .task: return .taskList
+        case .codeBlock: return .codeBlock
+        case .image, .horizontalRule: return nil
+        }
     }
 
     private static func link(source: NSString, selection: NSRange) -> NoteMarkdownEditPlan {

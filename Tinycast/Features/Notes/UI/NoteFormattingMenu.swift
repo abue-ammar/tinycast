@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NoteFormattingMenu: View {
+    let selectedCommands: Set<NoteMarkdownCommand>
     let onSelect: (NoteMarkdownCommand) -> Void
     @FocusState private var focused: NoteMarkdownCommand?
 
@@ -40,7 +41,9 @@ struct NoteFormattingMenu: View {
         .onAppear {
             Task { @MainActor in
                 await Task.yield()
-                focused = .normal
+                focused = NoteMarkdownCommand.allCases.first {
+                    $0 != .normal && selectedCommands.contains($0)
+                } ?? .normal
             }
         }
         .onMoveCommand(perform: moveFocus)
@@ -68,11 +71,21 @@ struct NoteFormattingMenu: View {
                 .buttonStyle(.plain)
                 .background(
                     RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                        .fill(focused == item.command ? Theme.Colors.selection : .clear)
+                        .fill(
+                            selectedCommands.contains(item.command)
+                                ? Theme.Colors.selection : .clear)
                 )
+                .overlay {
+                    RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                        .stroke(
+                            focused == item.command ? Theme.Colors.border : .clear,
+                            lineWidth: 1)
+                }
                 .focused($focused, equals: item.command)
                 .help(item.label)
                 .accessibilityLabel(item.label)
+                .accessibilityAddTraits(
+                    selectedCommands.contains(item.command) ? .isSelected : [])
             }
         }
     }

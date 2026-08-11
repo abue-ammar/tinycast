@@ -197,7 +197,10 @@ struct NoteEditorView: NSViewRepresentable {
         func noteTextView(_ textView: NoteTextView, perform command: NoteMarkdownCommand) {
             guard !isComposing,
                 let plan = NoteMarkdownEditing.plan(
-                    command, source: source, selection: sourceSelection)
+                    command,
+                    source: source,
+                    selection: sourceSelection,
+                    presentation: presentation)
             else { return }
             revealedSelectionLocation = command == .link ? plan.selection.location : nil
             applySourceEdit(
@@ -205,6 +208,12 @@ struct NoteEditorView: NSViewRepresentable {
                 replacement: plan.replacement,
                 selection: plan.selection,
                 actionName: "Format")
+        }
+
+        func noteTextViewFormattingState(_ textView: NoteTextView) -> Set<NoteMarkdownCommand> {
+            NoteMarkdownEditing.activeCommands(
+                selection: sourceSelection,
+                presentation: presentation)
         }
 
         func noteTextView(_ textView: NoteTextView, openLinkAt displayLocation: Int) -> Bool {

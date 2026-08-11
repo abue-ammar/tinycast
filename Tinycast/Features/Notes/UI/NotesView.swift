@@ -20,7 +20,9 @@ struct NotesView: View {
                 }
             }
             if notes.isFormattingPresented {
-                NoteFormattingMenu(onSelect: notes.applyFormatting)
+                NoteFormattingMenu(
+                    selectedCommands: notes.activeFormattingCommands,
+                    onSelect: notes.applyFormatting)
                     .onGeometryChange(for: CGRect.self) { proxy in
                         proxy.frame(in: .named("notes-window"))
                     } action: { frame in

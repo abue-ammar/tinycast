@@ -71,6 +71,11 @@ final class NotesWindowController: NSObject {
         focusEditor()
     }
 
+    func formattingState() -> Set<NoteMarkdownCommand> {
+        guard let editor else { return [.normal] }
+        return editor.editorActions?.noteTextViewFormattingState(editor) ?? [.normal]
+    }
+
     func updateFormattingFrame(_ frame: CGRect) {
         formattingFrame = frame
     }

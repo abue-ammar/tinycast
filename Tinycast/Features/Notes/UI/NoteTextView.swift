@@ -5,6 +5,7 @@ protocol NoteTextViewActions: AnyObject {
     func noteTextViewCopy(_ textView: NoteTextView)
     func noteTextViewCut(_ textView: NoteTextView)
     func noteTextView(_ textView: NoteTextView, perform command: NoteMarkdownCommand)
+    func noteTextViewFormattingState(_ textView: NoteTextView) -> Set<NoteMarkdownCommand>
     func noteTextView(_ textView: NoteTextView, openLinkAt displayLocation: Int) -> Bool
     func noteTextViewFocusChanged(_ textView: NoteTextView, isFocused: Bool)
     func noteTextViewWillBeginComposition(_ textView: NoteTextView)
