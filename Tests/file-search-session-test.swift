@@ -4,12 +4,26 @@ actor FileSearchProbe {
     private var active = 0
     private var calls: [String] = []
     private var maximumActive = 0
+    private let pausedQuery: String?
+    private var pauseEnabled: Bool
+    private var pausedContinuation: CheckedContinuation<Void, Never>?
+
+    init(pausing query: String? = nil) {
+        pausedQuery = query
+        pauseEnabled = query != nil
+    }
 
     func search(query: String, policy: FileSearchPolicy) async -> [FileSearchResult] {
         active += 1
         calls.append(query)
         maximumActive = max(maximumActive, active)
-        try? await Task.sleep(for: .milliseconds(80))
+        if pauseEnabled, query == pausedQuery {
+            await withCheckedContinuation { continuation in
+                pausedContinuation = continuation
+            }
+        } else {
+            try? await Task.sleep(for: .milliseconds(80))
+        }
         active -= 1
         return [
             FileSearchResult(
@@ -20,6 +34,24 @@ actor FileSearchProbe {
 
     func snapshot() -> (calls: [String], maximumActive: Int) {
         (calls, maximumActive)
+    }
+
+    func waitUntilPaused() async -> Bool {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        while pausedContinuation == nil, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        guard pausedContinuation != nil else {
+            pauseEnabled = false
+            return false
+        }
+        return true
+    }
+
+    func resumePausedSearch() {
+        pauseEnabled = false
+        pausedContinuation?.resume()
+        pausedContinuation = nil
     }
 }
 
@@ -51,7 +83,6 @@ struct FileSearchSessionTests {
         let probe = FileSearchProbe()
         let session = makeSession(probe: probe, debounce: .milliseconds(30))
         session.search("annual")
-        try? await Task.sleep(for: .milliseconds(10))
         session.search("annual report")
         await waitUntil { session.state == .ready }
 
@@ -61,11 +92,14 @@ struct FileSearchSessionTests {
     }
 
     static func serializesRunningQueries() async {
-        let probe = FileSearchProbe()
+        let probe = FileSearchProbe(pausing: "first")
         let session = makeSession(probe: probe, debounce: .milliseconds(10))
         session.search("first")
-        try? await Task.sleep(for: .milliseconds(25))
+        let firstStarted = await probe.waitUntilPaused()
+        expect(firstStarted, "the first query starts")
+        guard firstStarted else { return }
         session.search("second")
+        await probe.resumePausedSearch()
         await waitUntil { session.state == .ready && session.results.first?.name == "second" }
 
         let snapshot = await probe.snapshot()
