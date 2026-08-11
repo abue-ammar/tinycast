@@ -75,6 +75,7 @@ struct NoteEditorView: NSViewRepresentable {
         private var isComposing = false
         private var compositionDisplay = ""
         private var compositionProjection: NoteDisplayProjection?
+        private var revealedSelectionLocation: Int?
 
         private struct DisplayPatch {
             let range: NSRange
@@ -99,6 +100,7 @@ struct NoteEditorView: NSViewRepresentable {
             sourceSelection = NSRange(
                 location: min(sourceSelection.location, (source as NSString).length),
                 length: 0)
+            revealedSelectionLocation = nil
             projection = Signposts.interval("NoteEditor.project") {
                 NoteDisplayProjection.build(
                     source: source,
@@ -127,6 +129,7 @@ struct NoteEditorView: NSViewRepresentable {
         ) -> Bool {
             guard !isApplyingProjection else { return true }
             guard !isComposing else { return true }
+            revealedSelectionLocation = nil
             let sourceRange = projection.sourceRange(forDisplayRange: affectedCharRange)
             let replacement = replacementString ?? ""
             let selection = NSRange(
@@ -142,6 +145,7 @@ struct NoteEditorView: NSViewRepresentable {
 
         func textViewDidChangeSelection(_ notification: Notification) {
             guard !isApplyingProjection, !isComposing, let textView else { return }
+            revealedSelectionLocation = nil
             sourceSelection = projection.sourceRange(forDisplayRange: textView.selectedRange())
             let activeLocation = sourceSelection.length == 0 ? sourceSelection.location : nil
             let next = Signposts.interval("NoteEditor.project") {
@@ -195,6 +199,7 @@ struct NoteEditorView: NSViewRepresentable {
                 let plan = NoteMarkdownEditing.plan(
                     command, source: source, selection: sourceSelection)
             else { return }
+            revealedSelectionLocation = command == .link ? plan.selection.location : nil
             applySourceEdit(
                 range: plan.range,
                 replacement: plan.replacement,
@@ -213,8 +218,11 @@ struct NoteEditorView: NSViewRepresentable {
 
         func noteTextViewFocusChanged(_ textView: NoteTextView, isFocused: Bool) {
             guard !isComposing else { return }
-            let activeLocation = isFocused && sourceSelection.length == 0
-                ? sourceSelection.location : nil
+            if !isFocused { revealedSelectionLocation = nil }
+            let activeLocation = isFocused
+                ? revealedSelectionLocation
+                    ?? (sourceSelection.length == 0 ? sourceSelection.location : nil)
+                : nil
             projection = Signposts.interval("NoteEditor.project") {
                 NoteDisplayProjection.build(
                     source: source,
@@ -310,8 +318,9 @@ struct NoteEditorView: NSViewRepresentable {
                 let projection = NoteDisplayProjection.build(
                     source: source,
                     presentation: presentation,
-                    activeSourceLocation: textView?.window?.firstResponder === textView
-                        && sourceSelection.length == 0 ? sourceSelection.location : nil)
+                    activeSourceLocation: revealedSelectionLocation
+                        ?? (textView?.window?.firstResponder === textView
+                            && sourceSelection.length == 0 ? sourceSelection.location : nil))
                 return (presentation, projection)
             }
             presentation = result.0

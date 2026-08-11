@@ -102,6 +102,17 @@ struct NotesEditorTests {
         coordinator.noteTextViewWillBeginComposition(textView)
         coordinator.noteTextViewDidEndComposition(textView)
         check("cancelled marked text emits no source change", changes.count == beforeCancellation)
+
+        window.makeFirstResponder(textView)
+        textView.setSelectedRange(
+            NSRange(location: (textView.string as NSString).length, length: 0))
+        coordinator.textViewDidChangeSelection(
+            Notification(name: NSTextView.didChangeSelectionNotification, object: textView))
+        coordinator.noteTextView(textView, perform: .link)
+        check("link insertion reveals its editable literal source", textView.string.hasSuffix("[text](url)"))
+        check(
+            "link insertion selects the destination placeholder",
+            (textView.string as NSString).substring(with: textView.selectedRange()) == "url")
     }
 
     private static func check(_ message: String, _ condition: @autoclosure () -> Bool) {
