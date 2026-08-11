@@ -145,7 +145,7 @@ Run the mapped Notes editor benchmark separately as well. It performs ten warmup
 edits against a deterministic 250,000-character Markdown note:
 
 ```sh
-swiftc -swift-version 6 Tinycast/Platform/Signposts.swift Tinycast/DesignSystem/Theme.swift \
+swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift Tinycast/DesignSystem/Theme.swift \
     Tinycast/Features/Notes/Model/NoteDocument.swift \
     Tinycast/Features/Notes/Model/NoteMarkdownParser.swift \
     Tinycast/Features/Notes/Model/NoteDisplayProjection.swift \

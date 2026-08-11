@@ -384,9 +384,11 @@ struct NoteEditorView: NSViewRepresentable {
             let displaySelection = projection.displayRange(forSourceRange: sourceSelection)
             textView.setSelectedRange(displaySelection)
             isApplyingProjection = false
-            let contentHeight = NoteEditorView.measuredHeight(of: textView)
-            if textView.frame.height != contentHeight {
-                textView.setFrameSize(NSSize(width: textView.frame.width, height: contentHeight))
+            if caretScreenY != nil {
+                let contentHeight = NoteEditorView.measuredHeight(of: textView)
+                if textView.frame.height != contentHeight {
+                    textView.setFrameSize(NSSize(width: textView.frame.width, height: contentHeight))
+                }
             }
             restoreVisibleCaret(caretScreenY, selection: displaySelection, in: textView)
             textView.taskOverlays.update(
