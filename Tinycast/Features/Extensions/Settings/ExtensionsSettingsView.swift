@@ -138,7 +138,7 @@ private struct ExtensionSettingsRow: View {
                     resolved: installed.iconPath.map {
                         ExtensionImage.Resolved(source: .file($0))
                     },
-                    size: Theme.Size.settingsRowIcon + 6)
+                    size: Theme.Size.settingsRowIcon)
             } trailing: {
                 Button(isExpanded ? "Hide" : "Configure", action: onToggle)
                 Button("Remove", action: onUninstall)

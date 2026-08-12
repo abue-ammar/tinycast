@@ -112,13 +112,17 @@ enum IconCache {
 
     /// An icon read straight from an image file — an extension ships a PNG, which `NSWorkspace` would
     /// otherwise answer with the generic document icon.
+    ///
+    /// Fitted like a file icon rather than merely downsampled: an extension's PNG paints edge to edge,
+    /// where a macOS app icon leaves a margin inside its canvas. Drawn at the same size the extension
+    /// would read a size larger than every app beside it in the same list.
     static func imageIcon(atPath path: String) -> NSImage {
         let key = imageKey(path)
         if let cached = cache.object(forKey: key) { return cached }
         guard let source = NSImage(contentsOfFile: path) else {
             return symbolIcon(named: "puzzlepiece.extension")
         }
-        let (icon, cost) = downsampled(source)
+        let (icon, cost) = fittedToArtwork(source)
         cache.setObject(icon, forKey: key, cost: cost)
         return icon
     }
@@ -219,14 +223,17 @@ enum IconCache {
     private static func fittedKey(_ path: String) -> NSString { ("fit:" + path) as NSString }
 
     private static func fittedIcon(forFile path: String) -> Decoded {
-        let source = NSWorkspace.shared.icon(forFile: path)
-        // Solving `side * extent == displayPixel * artworkExtent` leaves an app icon as-is.
+        let (icon, cost) = fittedToArtwork(NSWorkspace.shared.icon(forFile: path))
+        return Decoded(image: icon, cost: cost)
+    }
+
+    /// Scales `source` so it paints the same share of the canvas an app icon does, leaving an app
+    /// icon as-is. Solving `side * extent == displayPixel * artworkExtent`.
+    private static func fittedToArtwork(_ source: NSImage) -> (NSImage, Int) {
         let extent = paintedExtent(source) ?? artworkExtent
         let side = displayPixel * artworkExtent / extent
         let inset = (displayPixel - side) / 2
-        let (icon, cost) = rasterized(
-            source, into: NSRect(x: inset, y: inset, width: side, height: side))
-        return Decoded(image: icon, cost: cost)
+        return rasterized(source, into: NSRect(x: inset, y: inset, width: side, height: side))
     }
 
     /// The artwork's larger dimension, measured at 2×: a 1× grid over-reads the extent.
