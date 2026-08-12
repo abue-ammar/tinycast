@@ -10,14 +10,21 @@ struct ExtensionAdvancedSection: View {
     private var settings: AppSettings { core.settings }
 
     var body: some View {
-        // `Section(isExpanded:)` rather than a `DisclosureGroup`: it is the collapsible a macOS
-        // settings form actually uses, and its whole header row toggles rather than the chevron alone.
-        Section(isExpanded: $expanded) {
-            registryList
-            Divider()
-            packageManagerRow
-        } header: {
-            Text("Advanced")
+        Section {
+            DisclosureGroup(isExpanded: $expanded) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    packageManagerRow
+                    Divider()
+                    registryList
+                }
+                .padding(.top, Theme.Spacing.sm)
+            } label: {
+                // A `DisclosureGroup` only toggles from its chevron; the label is the rest of the row.
+                Text("Advanced")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                    .onTapGesture { expanded.toggle() }
+            }
         }
         .sheet(isPresented: $addingRegistry) {
             RegistryEditor(

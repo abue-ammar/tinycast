@@ -48,13 +48,16 @@ struct ExtensionsSettingsView: View {
                 }
                 CompatibilityNotice()
                 if !pending.isEmpty { newInRaycast }
-                filterSection
                 library
                 ExtensionAdvancedSection()
             }
             .settingsEnabled(settings.extensionsEnabled)
         }
         .formStyle(.grouped)
+        // A SwiftUI text field on macOS keeps first responder until something else claims it, so
+        // without this there is no way out of a preference field but tabbing through the rest.
+        .onExitCommand { NSApp.keyWindow?.makeFirstResponder(nil) }
+        .onSubmit { NSApp.keyWindow?.makeFirstResponder(nil) }
         .onChange(of: settings.extensionsShowInLauncher) {
             core.extensionCoordinator.applyExtensionsLauncherPresence()
         }
@@ -118,27 +121,15 @@ struct ExtensionsSettingsView: View {
 
     // MARK: - The library
 
-    /// The filter sits in a section of its own on purpose. Sharing one with the results means every
-    /// keystroke rebuilds the rows beside the field, and SwiftUI takes first responder with them —
-    /// the same hazard the palette's search field is pinned in place to avoid.
-    @ViewBuilder
-    private var filterSection: some View {
-        if core.extensions.installed.count > 3 {
-            Section {
-                SettingsFilterField(prompt: "Filter extensions…", query: $filter)
-            }
-        }
-    }
-
     @ViewBuilder
     private var library: some View {
         Section {
             if core.extensions.installed.isEmpty {
                 emptyLibrary
-            } else if matching.isEmpty {
-                Text("No extension matches \u{201C}\(filter)\u{201D}.")
-                    .foregroundStyle(.secondary)
             } else {
+                if core.extensions.installed.count > 3 {
+                    SettingsFilterField(prompt: "Filter extensions…", query: $filter)
+                }
                 ForEach(matching) { entry in
                     ExtensionSettingsRow(
                         installed: entry,
@@ -147,6 +138,10 @@ struct ExtensionsSettingsView: View {
                             expanded = expanded == entry.manifest.name ? nil : entry.manifest.name
                         },
                         onUninstall: { core.extensionCoordinator.confirmUninstall(entry) })
+                }
+                if matching.isEmpty {
+                    Text("No extension matches \u{201C}\(filter)\u{201D}.")
+                        .foregroundStyle(.secondary)
                 }
             }
         } header: {
@@ -235,38 +230,57 @@ struct ExtensionsSettingsView: View {
 
 /// What Raycast's API does and doesn't reach here. Above the library rather than below it: the honest
 /// answer to "will my extension work" belongs before the thing that installs one.
-///
-/// A `Section(isExpanded:)` rather than a `DisclosureGroup`: it is the collapsible a macOS settings
-/// form actually uses, and its whole header row is the target rather than the chevron alone.
 private struct CompatibilityNotice: View {
     @State private var expanded = false
 
     var body: some View {
-        Section(isExpanded: $expanded) {
-            detail(
-                "Works", symbol: "checkmark.circle", tint: .green,
-                text:
-                    "Commands that show a list, a detail view, a form or a grid, and ones that just "
-                    + "run. Preferences, arguments, per-extension storage, the clipboard, toasts and "
-                    + "HUDs, and most of the Node APIs an extension reaches for.")
-            detail(
-                "Doesn't, yet", symbol: "xmark.circle", tint: .orange,
-                text:
-                    "Signing in through Raycast's OAuth redirect, menu-bar commands, and Raycast's "
-                    + "own AI, browser and window-management services. An extension that needs one "
-                    + "says so when you run it rather than failing quietly.")
-        } header: {
-            Text("Compatibility")
+        Section {
+            DisclosureGroup(isExpanded: $expanded) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    detail(
+                        "Works", symbol: "checkmark.circle", tint: .green,
+                        text:
+                            "Commands that show a list, a detail view, a form or a grid, and ones "
+                            + "that just run. Preferences, arguments, per-extension storage, the "
+                            + "clipboard, toasts and HUDs, and most of the Node APIs an extension "
+                            + "reaches for.")
+                    detail(
+                        "Doesn't, yet", symbol: "xmark.circle", tint: .orange,
+                        text:
+                            "Signing in through Raycast's OAuth redirect, menu-bar commands, and "
+                            + "Raycast's own AI, browser and window-management services. An "
+                            + "extension that needs one says so when you run it rather than "
+                            + "failing quietly.")
+                }
+                .padding(.top, Theme.Spacing.xs)
+            } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                        Text("Some extensions won't work")
+                        Text(
+                            "Tinycast runs Raycast's extension API on its own runtime, and a few "
+                                + "corners of it are Raycast's alone."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "info.circle")
+                }
+                // A `DisclosureGroup` only toggles from its chevron; the label is the rest of the row.
+                .contentShape(.rect)
+                .onTapGesture { expanded.toggle() }
+            }
         }
     }
 
     private func detail(_ title: String, symbol: String, tint: Color, text: String) -> some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.lg) {
+        HStack(alignment: .top, spacing: Theme.Spacing.md) {
             Image(systemName: symbol)
                 .foregroundStyle(tint)
                 .frame(width: Theme.Size.settingsRowIcon)
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(title)
+                Text(title).font(.callout.weight(.medium))
                 Text(text)
                     .font(.caption)
                     .foregroundStyle(.secondary)

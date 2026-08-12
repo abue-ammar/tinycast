@@ -74,6 +74,9 @@ struct FeatureSwitchSection: View {
 struct SettingsFilterField: View {
     let prompt: String
     @Binding var query: String
+    /// The field is plain-styled and so has no bezel of its own: without this, only the glyphs
+    /// themselves are a target, and clicking the rest of the row does nothing.
+    @FocusState private var focused: Bool
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
@@ -81,6 +84,7 @@ struct SettingsFilterField: View {
                 .foregroundStyle(.secondary)
             TextField(prompt, text: $query)
                 .textFieldStyle(.plain)
+                .focused($focused)
             if !query.isEmpty {
                 Button {
                     query = ""
@@ -92,5 +96,7 @@ struct SettingsFilterField: View {
                 .accessibilityLabel("Clear search")
             }
         }
+        .contentShape(.rect)
+        .onTapGesture { focused = true }
     }
 }
