@@ -92,6 +92,10 @@ final class ExtensionCoordinator {
     /// palette hides before the dialog: it is a floating panel, and a sheet behind it is unreachable.
     func confirmUninstall(_ app: AppEntry) {
         guard let (owner, _) = extensions.resolve(app) else { return }
+        confirmUninstall(owner)
+    }
+
+    func confirmUninstall(_ owner: InstalledExtension) {
         paletteCoordinator.hidePalette(restoreFocus: false)
         NSApp.activate(ignoringOtherApps: true)
         Task {

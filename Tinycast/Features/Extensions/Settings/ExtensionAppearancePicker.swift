@@ -1,65 +1,14 @@
 import SwiftUI
 
-/// The "make it look native" control in Settings › Extensions: shows what an extension currently draws
-/// in the launcher, and opens a picker to replace it with a curated SF Symbol on a tinted tile.
-struct ExtensionAppearanceRow: View {
-    let installed: InstalledExtension
-    @Environment(AppCore.self) private var core
-    @State private var picking = false
-
-    /// Read from the store, not the manager: picking publishes from there, so the preview and the
-    /// open popover both observe *it*.
-    private var appearance: ExtensionAppearance? {
-        core.extensions.appearances.appearance(for: installed.manifest.name)
-    }
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
-            preview
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
-                Text("Launcher icon").font(.body)
-                Text(
-                    appearance == nil
-                        ? "Using the icon this extension ships."
-                        : "Replaced with a Tinycast icon."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: Theme.Spacing.xl)
-            if appearance != nil {
-                Button("Use Original") {
-                    core.extensions.setAppearance(nil, for: installed.manifest.name)
-                }
-            }
-            Button("Choose…") { picking = true }
-                .popover(isPresented: $picking, arrowEdge: .bottom) {
-                    ExtensionAppearancePicker(
-                        current: appearance ?? .fallback,
-                        onPick: { core.extensions.setAppearance($0, for: installed.manifest.name) })
-                }
-        }
-    }
-
-    /// Exactly what the launcher row will draw — the shipped image, or the chosen tile.
-    @ViewBuilder
-    private var preview: some View {
-        if let appearance {
-            SymbolTile(symbol: appearance.symbol, tint: appearance.tint, side: 26)
-        } else {
-            ExtensionIconView(
-                resolved: installed.iconPath.map { ExtensionImage.Resolved(source: .file($0)) },
-                size: 26)
-        }
-    }
-}
-
 /// Colour swatches, a category menu and a searchable grid over every symbol the system ships. Changes
 /// apply immediately — the launcher is the real preview, so an OK/Cancel dance over two properties
 /// isn't worth it.
-private struct ExtensionAppearancePicker: View {
+struct ExtensionAppearancePicker: View {
     let current: ExtensionAppearance
+    /// Whether the extension is currently re-skinned, which is the only time resetting means anything.
+    let isCustom: Bool
     let onPick: (ExtensionAppearance) -> Void
+    let onReset: () -> Void
 
     /// Starts on the curated set and swaps in the system catalog once it's parsed (~700 KB of plists,
     /// so it loads off the main actor rather than stalling the popover's first frame).
@@ -134,9 +83,15 @@ private struct ExtensionAppearancePicker: View {
                 .frame(width: 396, height: 240)
             }
 
-            Text(footnote(results.count))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack {
+                Text(footnote(results.count))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Use Original Icon", action: onReset)
+                    .disabled(!isCustom)
+                    .help("Go back to the icon the extension ships.")
+            }
         }
         .padding(Theme.Spacing.xl)
         .task {
@@ -153,7 +108,7 @@ private struct ExtensionAppearancePicker: View {
 }
 
 /// The launcher's icon tile, drawn in SwiftUI so the picker previews exactly what `IconCache` renders.
-private struct SymbolTile: View {
+struct SymbolTile: View {
     let symbol: String
     let tint: ExtensionTint
     let side: CGFloat

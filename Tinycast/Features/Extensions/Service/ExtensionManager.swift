@@ -171,6 +171,34 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         await refresh()
     }
 
+    /// What a locally installed Raycast has built, paired with whether we already have it. Scanned
+    /// off the main actor: it reads a manifest per directory, and a full Raycast install is dozens.
+    func raycastImportCandidates() async -> [RaycastImportCandidate] {
+        let candidates = await Task.detached(priority: .userInitiated) {
+            ExtensionCatalog.importableFromRaycast()
+        }.value
+        let have = Set(installed.map(\.manifest.name))
+        return candidates.map {
+            RaycastImportCandidate(installed: $0, isInstalled: have.contains($0.manifest.name))
+        }
+    }
+
+    /// Copies every extension Raycast has built, refreshing once at the end rather than per install.
+    /// Returns what failed, so the pane can say which rather than just that something did.
+    @discardableResult
+    func importAllFromRaycast(_ candidates: [InstalledExtension]) async -> [String] {
+        var failed: [String] = []
+        for candidate in candidates {
+            do {
+                _ = try ExtensionCatalog.install(from: candidate.directory)
+            } catch {
+                failed.append(candidate.title)
+            }
+        }
+        await refresh()
+        return failed
+    }
+
     /// Removing an extension takes everything keyed to it with it: its files, its stored
     /// preferences and cache, its chosen icon, and — through `onDidUninstall` — the shortcuts bound
     /// to its commands, which no index prunes on its own.

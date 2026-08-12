@@ -1,12 +1,23 @@
 import SwiftUI
 
-/// Manage installed Raycast extensions: what's installed, each one's commands and preferences, and the
-/// two ways in — import from a locally installed Raycast, or add a prebuilt folder.
+/// Settings › Extensions: the master switch, what Raycast's API does and doesn't reach here, and one
+/// expandable row per installed extension — its preferences, its commands and their shortcuts.
 struct ExtensionsSettingsView: View {
     @Environment(AppCore.self) private var core
-    @State private var selected: String?
+    @State private var expanded: String?
     @State private var importCandidates: ImportCandidates?
+    @State private var filter = ""
     @State private var error: String?
+
+    private var matching: [InstalledExtension] {
+        guard !filter.isEmpty else { return core.extensions.installed }
+        return core.extensions.installed.filter { entry in
+            entry.title.localizedCaseInsensitiveContains(filter)
+                || entry.manifest.commands.contains {
+                    $0.title.localizedCaseInsensitiveContains(filter)
+                }
+        }
+    }
 
     var body: some View {
         @Bindable var settings = core.settings
@@ -24,61 +35,16 @@ struct ExtensionsSettingsView: View {
                     set: { core.extensionCoordinator.setExtensionsEnabled($0) }),
                 showsInLauncher: $settings.extensionsShowInLauncher)
 
-            if let error {
-                Section {
-                    Label(error, systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-            }
-
             Group {
-                Section {
-                    SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
-                        Image(systemName: "arrow.down.doc")
-                    } trailing: {
-                        Button("Choose…") {
-                            importCandidates = ImportCandidates(
-                                extensions: ExtensionCatalog.importableFromRaycast())
-                        }
-                        .disabled(!raycastAvailable)
+                if let error {
+                    Section {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .font(.callout)
+                            .foregroundStyle(.orange)
                     }
-                    SettingsRow(
-                        title: "Add Extension Folder…",
-                        subtitle: "Pick a folder containing package.json and the built <command>.js files."
-                    ) {
-                        Image(systemName: "folder.badge.plus")
-                    } trailing: {
-                        Button("Choose…", action: addFolder)
-                    }
-                } header: {
-                    Text("Add")
                 }
-
-                Section {
-                    if core.extensions.installed.isEmpty {
-                        Text("Everything you add shows up in the launcher under “Extensions”.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(core.extensions.installed) { installed in
-                            ExtensionSettingsRow(
-                                installed: installed,
-                                isExpanded: selected == installed.manifest.name,
-                                onToggle: {
-                                    selected =
-                                        selected == installed.manifest.name
-                                        ? nil : installed.manifest.name
-                                },
-                                onUninstall: {
-                                    Task { await core.extensions.uninstall(installed) }
-                                })
-                        }
-                    }
-                } header: {
-                    Text(
-                        core.extensions.installed.isEmpty
-                            ? "Installed" : "Installed (\(core.extensions.installed.count))")
-                }
+                CompatibilityNotice()
+                library
             }
             .settingsEnabled(settings.extensionsEnabled)
         }
@@ -91,27 +57,94 @@ struct ExtensionsSettingsView: View {
         // arrived as an empty list.
         .sheet(item: $importCandidates) { candidates in
             ExtensionImportSheet(
-                candidates: candidates.extensions,
+                candidates: candidates.entries,
                 onImport: { chosen in
                     importCandidates = nil
-                    Task { await install(chosen.map(\.directory)) }
+                    Task { await importAll(chosen) }
                 },
                 onCancel: { importCandidates = nil })
         }
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectExtension)) { note in
-            if let name = note.object as? String { selected = name }
+            if let name = note.object as? String { expanded = name }
         }
         .task { await core.extensions.refresh() }
+    }
+
+    // MARK: - The library
+
+    @ViewBuilder
+    private var library: some View {
+        Section {
+            if core.extensions.installed.isEmpty {
+                emptyLibrary
+            } else {
+                if core.extensions.installed.count > 6 {
+                    SettingsFilterField(prompt: "Filter extensions…", query: $filter)
+                }
+                ForEach(matching) { entry in
+                    ExtensionSettingsRow(
+                        installed: entry,
+                        isExpanded: expanded == entry.manifest.name,
+                        onToggle: {
+                            expanded = expanded == entry.manifest.name ? nil : entry.manifest.name
+                        },
+                        onUninstall: { core.extensionCoordinator.confirmUninstall(entry) })
+                }
+                if matching.isEmpty {
+                    Text("No extension matches “\(filter)”.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            HStack {
+                Text(
+                    core.extensions.installed.isEmpty
+                        ? "Installed" : "Installed (\(core.extensions.installed.count))")
+                Spacer()
+                installMenu
+            }
+        }
+    }
+
+    private var emptyLibrary: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text("Nothing installed yet.")
+            Text(
+                raycastAvailable
+                    ? "Import what Raycast has already built, or add a folder you built yourself."
+                    : "Add a folder holding package.json and the built <command>.js files."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var installMenu: some View {
+        Menu("Install New") {
+            Button("Import from Raycast…", action: openImport)
+                .disabled(!raycastAvailable)
+            Button("Add Folder…", action: addFolder)
+        }
+        .menuStyle(.button)
+        .fixedSize()
+        .help(
+            raycastAvailable
+                ? "Copy what Raycast has already built, or add a folder you built yourself."
+                : "No Raycast install found at ~/.config/raycast/extensions.")
     }
 
     private var raycastAvailable: Bool {
         FileManager.default.fileExists(atPath: ExtensionCatalog.raycastExtensionsDirectory().path)
     }
 
-    private var importSubtitle: String {
-        raycastAvailable
-            ? "Copies the bundles Raycast already built — no Node or npm needed."
-            : "No Raycast install found at ~/.config/raycast/extensions."
+    // MARK: - Adding
+
+    private func openImport() {
+        Task {
+            importCandidates = ImportCandidates(
+                entries: await core.extensions.raycastImportCandidates())
+        }
     }
 
     private func addFolder() {
@@ -121,22 +154,87 @@ struct ExtensionsSettingsView: View {
         panel.allowsMultipleSelection = true
         panel.prompt = "Add"
         guard panel.runModal() == .OK else { return }
-        Task { await install(panel.urls) }
+        Task {
+            error = nil
+            for url in panel.urls {
+                do {
+                    try await core.extensions.install(from: url)
+                } catch {
+                    self.error = error.localizedDescription
+                }
+            }
+        }
     }
 
-    private func install(_ urls: [URL]) async {
+    private func importAll(_ chosen: [InstalledExtension]) async {
         error = nil
-        for url in urls {
-            do {
-                try await core.extensions.install(from: url)
-            } catch {
-                self.error = error.localizedDescription
+        let failed = await core.extensions.importAllFromRaycast(chosen)
+        guard !failed.isEmpty else { return }
+        error = "Couldn't import \(failed.joined(separator: ", "))."
+    }
+}
+
+/// What Raycast's API does and doesn't reach here. Above the library rather than below it: the honest
+/// answer to "will my extension work" belongs before the thing that installs one.
+private struct CompatibilityNotice: View {
+    @State private var expanded = false
+
+    var body: some View {
+        Section {
+            DisclosureGroup(isExpanded: $expanded) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    detail(
+                        "Works", symbol: "checkmark.circle", tint: .green,
+                        text:
+                            "Commands that show a list, a detail view, a form or a grid, and ones "
+                            + "that just run. Preferences, arguments, per-extension storage, the "
+                            + "clipboard, toasts and HUDs, and most of the Node APIs an extension "
+                            + "reaches for.")
+                    detail(
+                        "Doesn't, yet", symbol: "xmark.circle", tint: .orange,
+                        text:
+                            "Signing in through Raycast's OAuth redirect, menu-bar commands, and "
+                            + "Raycast's own AI, browser and window-management services. An "
+                            + "extension that needs one says so when you run it rather than "
+                            + "failing quietly.")
+                }
+                .padding(.top, Theme.Spacing.xs)
+            } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                        Text("Some extensions won't work")
+                        Text(
+                            "Tinycast runs Raycast's extension API on its own runtime, and a few "
+                                + "corners of it are Raycast's alone."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "info.circle")
+                }
+            }
+        }
+    }
+
+    private func detail(_ title: String, symbol: String, tint: Color, text: String) -> some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+            Image(systemName: symbol)
+                .foregroundStyle(tint)
+                .frame(width: Theme.Size.settingsRowIcon)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(title).font(.callout.weight(.medium))
+                Text(text)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 }
 
-/// One installed extension: a summary row that expands into its commands and preferences.
+/// One installed extension: a summary row that expands into its preferences, its commands and their
+/// shortcuts, and the button that removes it.
 private struct ExtensionSettingsRow: View {
     let installed: InstalledExtension
     let isExpanded: Bool
@@ -145,59 +243,41 @@ private struct ExtensionSettingsRow: View {
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
-            SettingsRow(title: installed.title, subtitle: commandSummary) {
-                ExtensionIconView(
-                    resolved: installed.iconPath.map {
-                        ExtensionImage.Resolved(source: .file($0))
-                    },
-                    size: Theme.Size.settingsRowIcon)
+            SettingsRow(title: installed.title, subtitle: summary) {
+                ExtensionIconButton(installed: installed)
             } trailing: {
-                Button(isExpanded ? "Hide" : "Configure", action: onToggle)
-                Button("Remove", action: onUninstall)
+                Image(systemName: "chevron.down")
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
+            // The whole row toggles, so the chevron is an affordance rather than the only target.
+            .contentShape(.rect)
+            .onTapGesture(perform: onToggle)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(
+                isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    ExtensionAppearanceRow(installed: installed)
                     if !installed.manifest.preferences.isEmpty {
-                        preferenceGroup(
-                            title: "Extension preferences",
-                            schemas: installed.manifest.preferences)
-                    }
-                    ForEach(installed.manifest.commands) { command in
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                            HStack(spacing: Theme.Spacing.sm) {
-                                Text(command.title).font(.body)
-                                Text(command.mode.rawValue)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                if !command.mode.isSupported {
-                                    Text("not supported")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                }
-                                Spacer(minLength: Theme.Spacing.lg)
-                                // Per command, not per extension: a shortcut has to land on one
-                                // thing to run, and an extension is a set of commands.
-                                if command.mode.isSupported {
-                                    ShortcutRecorder(
-                                        action: .extensionCommand(
-                                            entryID: ExtensionCommandRef(
-                                                extensionName: installed.manifest.name,
-                                                commandName: command.name
-                                            ).entryID))
-                                }
-                            }
-                            if !command.description.isEmpty {
-                                Text(command.description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            if !command.preferences.isEmpty {
-                                preferenceGroup(title: nil, schemas: command.preferences)
+                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                            ForEach(installed.manifest.preferences, id: \.name) { schema in
+                                ExtensionPreferenceField(
+                                    extensionName: installed.manifest.name, schema: schema)
                             }
                         }
+                    }
+                    ForEach(installed.manifest.commands) { command in
+                        CommandSettings(installed: installed, command: command)
+                    }
+                    Divider()
+                    HStack {
+                        Text(installed.manifest.author)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Uninstall…", role: .destructive, action: onUninstall)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -205,24 +285,108 @@ private struct ExtensionSettingsRow: View {
         }
     }
 
-    private var commandSummary: String {
+    private var summary: String {
         let count = installed.manifest.commands.count
-        let author = installed.manifest.author
         let commands = "\(count) command\(count == 1 ? "" : "s")"
+        let author = installed.manifest.author
         return author.isEmpty ? commands : "\(commands) · \(author)"
     }
+}
 
-    @ViewBuilder
-    private func preferenceGroup(title: String?, schemas: [ExtensionPreferenceSchema]) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            if let title {
-                Text(title).font(Theme.Typography.sectionHeader).foregroundStyle(.secondary)
+/// One command inside an expanded extension: what it is, its shortcut, and its own preferences.
+private struct CommandSettings: View {
+    let installed: InstalledExtension
+    let command: ExtensionCommand
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            HStack(spacing: Theme.Spacing.sm) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                    Text(command.title).font(.body)
+                    if !command.description.isEmpty {
+                        Text(command.description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: Theme.Spacing.lg)
+                if command.mode.isSupported {
+                    // Per command, not per extension: a shortcut has to land on one thing to run,
+                    // and an extension is a set of commands.
+                    ShortcutRecorder(
+                        action: .extensionCommand(
+                            entryID: ExtensionCommandRef(
+                                extensionName: installed.manifest.name, commandName: command.name
+                            ).entryID))
+                } else {
+                    Text("Menu bar command")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .help(command.mode.unsupportedReason ?? "")
+                }
             }
-            ForEach(schemas, id: \.name) { schema in
-                ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
+            if !command.preferences.isEmpty {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    ForEach(command.preferences, id: \.name) { schema in
+                        ExtensionPreferenceField(
+                            extensionName: installed.manifest.name, schema: schema)
+                    }
+                }
             }
         }
-        .padding(.leading, Theme.Spacing.md)
+    }
+}
+
+/// The extension's launcher icon, with the badge that re-skins it. The icon *is* the button: it is
+/// what the change applies to, so it is what you press to change it.
+private struct ExtensionIconButton: View {
+    let installed: InstalledExtension
+    @Environment(AppCore.self) private var core
+    @State private var picking = false
+
+    /// Read from the store, not the manager: picking publishes from there, so the preview and the
+    /// open popover both observe *it*.
+    private var appearance: ExtensionAppearance? {
+        core.extensions.appearances.appearance(for: installed.manifest.name)
+    }
+
+    var body: some View {
+        Button {
+            picking = true
+        } label: {
+            preview
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 11))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(Color.white, Color.accentColor)
+                        .offset(x: 3, y: 3)
+                }
+        }
+        .buttonStyle(.plain)
+        .help("Change the launcher icon")
+        .accessibilityLabel("Change the launcher icon for \(installed.title)")
+        .popover(isPresented: $picking, arrowEdge: .bottom) {
+            ExtensionAppearancePicker(
+                current: appearance ?? .fallback,
+                isCustom: appearance != nil,
+                onPick: { core.extensions.setAppearance($0, for: installed.manifest.name) },
+                onReset: { core.extensions.setAppearance(nil, for: installed.manifest.name) })
+        }
+    }
+
+    /// Exactly what the launcher row will draw — the shipped image, or the chosen tile.
+    @ViewBuilder
+    private var preview: some View {
+        if let appearance {
+            SymbolTile(
+                symbol: appearance.symbol, tint: appearance.tint, side: Theme.Size.settingsRowIcon)
+        } else {
+            ExtensionIconView(
+                resolved: installed.iconPath.map { ExtensionImage.Resolved(source: .file($0)) },
+                size: Theme.Size.settingsRowIcon)
+        }
     }
 }
 
@@ -242,7 +406,7 @@ private struct ExtensionPreferenceField: View {
             Text(schema.displayTitle)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .frame(width: 150, alignment: .trailing)
+                .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
             control
             if schema.required {
                 Text("required").font(.caption).foregroundStyle(.orange)
@@ -259,7 +423,8 @@ private struct ExtensionPreferenceField: View {
             Toggle(schema.label ?? "", isOn: $flag)
                 .toggleStyle(.checkbox)
                 .onChange(of: flag) { _, value in
-                    storage.setPreference(extension: extensionName, key: schema.name, value: .bool(value))
+                    storage.setPreference(
+                        extension: extensionName, key: schema.name, value: .bool(value))
                 }
         case .dropdown:
             Picker("", selection: $text) {
@@ -289,7 +454,9 @@ private struct ExtensionPreferenceField: View {
     }
 
     private func load() {
-        let value = storage.preference(extension: extensionName, key: schema.name) ?? schema.effectiveDefault
+        let value =
+            storage.preference(extension: extensionName, key: schema.name)
+            ?? schema.effectiveDefault
         text = value.stringValue
         flag = value.boolValue
     }
@@ -312,30 +479,38 @@ private struct ExtensionPreferenceField: View {
     }
 }
 
+/// One candidate from a local Raycast install, and whether we already have it.
+struct RaycastImportCandidate: Identifiable {
+    let installed: InstalledExtension
+    let isInstalled: Bool
+
+    var id: String { installed.id }
+}
+
 /// One scan of the local Raycast install, carried as the import sheet's presentation item.
 private struct ImportCandidates: Identifiable {
     let id = UUID()
-    let extensions: [InstalledExtension]
+    let entries: [RaycastImportCandidate]
 }
 
-/// Picker over the extensions a locally installed Raycast has already built.
+/// Picker over the extensions a locally installed Raycast has already built. Everything not already
+/// here starts selected, so the common case — "import what Raycast just added" — is one press.
 private struct ExtensionImportSheet: View {
-    let candidates: [InstalledExtension]
+    let candidates: [RaycastImportCandidate]
     let onImport: ([InstalledExtension]) -> Void
     let onCancel: () -> Void
     @State private var chosen: Set<String> = []
+    @State private var seeded = false
+
+    private var fresh: [RaycastImportCandidate] { candidates.filter { !$0.isInstalled } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text("Import from Raycast").font(.title2.weight(.bold))
-                Text(
-                    candidates.isEmpty
-                        ? "No built extensions found in ~/.config/raycast/extensions."
-                        : "Pick the extensions to copy into Tinycast."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             ScrollView {
@@ -347,12 +522,12 @@ private struct ExtensionImportSheet: View {
                             Toggle("", isOn: binding(for: candidate))
                                 .labelsHidden()
                             ExtensionIconView(
-                                resolved: candidate.iconPath.map {
+                                resolved: candidate.installed.iconPath.map {
                                     ExtensionImage.Resolved(source: .file($0))
-                                }, size: 20)
+                                }, size: Theme.Size.settingsRowIcon)
                             VStack(alignment: .leading, spacing: 0) {
-                                Text(candidate.title).font(.body)
-                                Text("\(candidate.manifest.commands.count) commands")
+                                Text(candidate.installed.title).font(.body)
+                                Text(detail(for: candidate))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -372,14 +547,15 @@ private struct ExtensionImportSheet: View {
                 Button(chosen.count == candidates.count ? "Deselect All" : "Select All") {
                     chosen =
                         chosen.count == candidates.count
-                        ? [] : Set(candidates.map(\.manifest.name))
+                        ? [] : Set(candidates.map(\.installed.manifest.name))
                 }
                 .disabled(candidates.isEmpty)
                 Spacer()
                 Button("Cancel", action: onCancel)
                     .keyboardShortcut(.cancelAction)
-                Button("Import \(chosen.count > 0 ? "(\(chosen.count))" : "")") {
-                    onImport(candidates.filter { chosen.contains($0.manifest.name) })
+                Button("Import \(chosen.isEmpty ? "" : "(\(chosen.count))")") {
+                    onImport(
+                        candidates.map(\.installed).filter { chosen.contains($0.manifest.name) })
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(chosen.isEmpty)
@@ -387,16 +563,39 @@ private struct ExtensionImportSheet: View {
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: Theme.Size.editorSheetWidth)
+        .onAppear {
+            // Once: re-seeding on every render would fight the user's own deselection.
+            guard !seeded else { return }
+            seeded = true
+            chosen = Set(fresh.map(\.installed.manifest.name))
+        }
     }
 
-    private func binding(for candidate: InstalledExtension) -> Binding<Bool> {
+    private var subtitle: String {
+        guard !candidates.isEmpty else {
+            return "No built extensions found in ~/.config/raycast/extensions."
+        }
+        guard !fresh.isEmpty else {
+            return "Everything Raycast has built is already here. Re-import one to update it."
+        }
+        let noun = fresh.count == 1 ? "one" : "\(fresh.count)"
+        return "\(noun) not here yet, already selected. Re-importing an existing one updates it."
+    }
+
+    private func detail(for candidate: RaycastImportCandidate) -> String {
+        let count = candidate.installed.manifest.commands.count
+        let commands = "\(count) command\(count == 1 ? "" : "s")"
+        return candidate.isInstalled ? "\(commands) · already installed" : commands
+    }
+
+    private func binding(for candidate: RaycastImportCandidate) -> Binding<Bool> {
         Binding(
-            get: { chosen.contains(candidate.manifest.name) },
+            get: { chosen.contains(candidate.installed.manifest.name) },
             set: { isOn in
                 if isOn {
-                    chosen.insert(candidate.manifest.name)
+                    chosen.insert(candidate.installed.manifest.name)
                 } else {
-                    chosen.remove(candidate.manifest.name)
+                    chosen.remove(candidate.installed.manifest.name)
                 }
             })
     }
