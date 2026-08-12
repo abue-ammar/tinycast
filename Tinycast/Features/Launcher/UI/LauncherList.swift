@@ -57,7 +57,7 @@ struct LauncherList: View {
         }
         // Publication order, so rows match the flat index.
         let kinds: [AppEntry.Kind] = [
-            .application, .systemSettings, .quicklink, .snippet,
+            .application, .systemSettings, .extensionCommand, .quicklink, .snippet,
             .systemAction, .windowCommand, .customCommand, .command
         ]
         for kind in kinds {
@@ -65,6 +65,12 @@ struct LauncherList: View {
             rows.append(.header(kind.descriptor.sectionTitle))
             rows.append(contentsOf: group.map(Row.app))
         }
+        // A kind missing from `kinds` doesn't just hide its rows — every row after it in the flat
+        // index would then activate its neighbour. Cheap to assert, silent and confusing to debug.
+        assert(
+            grouped.keys.allSatisfy(kinds.contains),
+            "kind missing from the launcher's section order: "
+                + grouped.keys.filter { !kinds.contains($0) }.map(\.rawValue).joined(separator: ", "))
         return rows
     }
 
