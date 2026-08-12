@@ -22,6 +22,19 @@ struct NoteMarkdownEditPlan: Sendable, Equatable {
     let range: NSRange
     let replacement: String
     let selection: NSRange
+    let changesSource: Bool
+
+    init(
+        range: NSRange,
+        replacement: String,
+        selection: NSRange,
+        changesSource: Bool = true
+    ) {
+        self.range = range
+        self.replacement = replacement
+        self.selection = selection
+        self.changesSource = changesSource
+    }
 }
 
 enum NoteListEditingAction: Sendable {
@@ -68,12 +81,12 @@ enum NoteMarkdownEditing {
                 context: inlineContext(
                     command, source: text, selection: selection, presentation: presentation))
         case .link:
-            return link(source: text, selection: selection)
+            return link(source: text, selection: selection, presentation: presentation)
         case .normal, .heading1, .heading2, .heading3, .blockquote,
             .unorderedList, .orderedList, .taskList:
             return block(command, source: text, selection: selection)
         case .codeBlock:
-            return fencedCode(source: text, selection: selection)
+            return fencedCode(source: text, selection: selection, presentation: presentation)
         case .horizontalRule:
             return horizontalRule(source: text, selection: selection)
         }
@@ -127,6 +140,8 @@ enum NoteMarkdownEditing {
     private struct InlineContext {
         let selection: NSRange
         let removingWrapper: String?
+        let construct: NoteMarkdownPresentation.Construct?
+        let hasUnsafeNestedSelection: Bool
     }
 
     private struct ListLine {
@@ -275,12 +290,35 @@ enum NoteMarkdownEditing {
         character == 0x0A || character == 0x0D || character == 0x2028 || character == 0x2029
     }
 
+    private static func contains(_ outer: NSRange, _ inner: NSRange) -> Bool {
+        outer.location <= inner.location && NSMaxRange(outer) >= NSMaxRange(inner)
+    }
+
     private static func inline(
         wrapper: String,
         source: NSString,
         context: InlineContext
     ) -> NoteMarkdownEditPlan {
         let selection = context.selection
+        if let construct = context.construct, let removingWrapper = context.removingWrapper {
+            if selection.length == 0
+                || selection == construct.range
+                || selection == construct.contentRange
+                || construct.kind == .strongEmphasis
+                || context.hasUnsafeNestedSelection
+            {
+                return unwrapInline(
+                    construct,
+                    wrapper: removingWrapper,
+                    source: source,
+                    selection: selection)
+            }
+            return splitInline(
+                construct,
+                wrapper: removingWrapper,
+                source: source,
+                selection: selection)
+        }
         let wrapperLength = (wrapper as NSString).length
         if selection.length == 0 {
             let replacement = wrapper + wrapper
@@ -328,12 +366,26 @@ enum NoteMarkdownEditing {
         selection: NSRange,
         presentation: NoteMarkdownPresentation?
     ) -> InlineContext {
-        guard selection.length > 0,
-            let construct = presentation?.constructs.first(where: {
-                $0.contentRange == selection && matches(command, kind: $0.kind)
-            }),
+        guard let presentation,
+            let construct = presentation.constructs
+                .filter({ construct in
+                    guard matches(command, kind: construct.kind) else { return false }
+                    if selection.length == 0 {
+                        return selection.location >= construct.contentRange.location
+                            && selection.location <= NSMaxRange(construct.contentRange)
+                    }
+                    return contains(construct.contentRange, selection)
+                        || selection == construct.range
+                })
+                .min(by: { $0.range.length < $1.range.length }),
             let marker = construct.markerRanges.first
-        else { return InlineContext(selection: selection, removingWrapper: nil) }
+        else {
+            return InlineContext(
+                selection: selection,
+                removingWrapper: nil,
+                construct: nil,
+                hasUnsafeNestedSelection: false)
+        }
         let literalMarker = source.substring(with: marker)
         let wrapper: String
         if case .strongEmphasis = construct.kind {
@@ -343,7 +395,71 @@ enum NoteMarkdownEditing {
         } else {
             wrapper = literalMarker
         }
-        return InlineContext(selection: construct.range, removingWrapper: wrapper)
+        let unsafeNestedSelection = selection.length > 0
+            && presentation.constructs.contains { nested in
+                nested.range != construct.range
+                    && NSIntersectionRange(selection, nested.range).length > 0
+                    && !contains(selection, nested.range)
+            }
+        return InlineContext(
+            selection: selection,
+            removingWrapper: wrapper,
+            construct: construct,
+            hasUnsafeNestedSelection: unsafeNestedSelection)
+    }
+
+    private static func unwrapInline(
+        _ construct: NoteMarkdownPresentation.Construct,
+        wrapper: String,
+        source: NSString,
+        selection: NSRange
+    ) -> NoteMarkdownEditPlan {
+        let wrapperLength = (wrapper as NSString).length
+        let literal = source.substring(with: construct.range) as NSString
+        let replacement = literal.substring(
+            with: NSRange(
+                location: wrapperLength,
+                length: max(0, literal.length - wrapperLength * 2)))
+        let mappedSelection: NSRange
+        if selection == construct.range || selection == construct.contentRange {
+            mappedSelection = NSRange(
+                location: construct.range.location,
+                length: (replacement as NSString).length)
+        } else {
+            let location = max(
+                construct.range.location,
+                selection.location - wrapperLength)
+            mappedSelection = NSRange(location: location, length: selection.length)
+        }
+        return NoteMarkdownEditPlan(
+            range: construct.range,
+            replacement: replacement,
+            selection: mappedSelection)
+    }
+
+    private static func splitInline(
+        _ construct: NoteMarkdownPresentation.Construct,
+        wrapper: String,
+        source: NSString,
+        selection: NSRange
+    ) -> NoteMarkdownEditPlan {
+        let beforeRange = NSRange(
+            location: construct.contentRange.location,
+            length: selection.location - construct.contentRange.location)
+        let afterRange = NSRange(
+            location: NSMaxRange(selection),
+            length: NSMaxRange(construct.contentRange) - NSMaxRange(selection))
+        let before = source.substring(with: beforeRange)
+        let selected = source.substring(with: selection)
+        let after = source.substring(with: afterRange)
+        var replacement = before.isEmpty ? "" : wrapper + before + wrapper
+        let selectionLocation = construct.range.location + (replacement as NSString).length
+        replacement += selected
+        if !after.isEmpty { replacement += wrapper + after + wrapper }
+        return NoteMarkdownEditPlan(
+            range: construct.range,
+            replacement: replacement,
+            selection: NSRange(location: selectionLocation, length: selection.length))
     }
 
     private static func matches(
@@ -386,7 +502,29 @@ enum NoteMarkdownEditing {
         }
     }
 
-    private static func link(source: NSString, selection: NSRange) -> NoteMarkdownEditPlan {
+    private static func link(
+        source: NSString,
+        selection: NSRange,
+        presentation: NoteMarkdownPresentation?
+    ) -> NoteMarkdownEditPlan {
+        if let construct = presentation?.constructs.first(where: { construct in
+            guard case .link = construct.kind else { return false }
+            if selection.length == 0 {
+                return selection.location >= construct.range.location
+                    && selection.location <= NSMaxRange(construct.range)
+            }
+            return contains(construct.range, selection) || contains(selection, construct.range)
+        }) {
+            let destinationStart = NSMaxRange(construct.contentRange) + 2
+            let destinationRange = NSRange(
+                location: destinationStart,
+                length: max(0, NSMaxRange(construct.range) - destinationStart - 1))
+            return NoteMarkdownEditPlan(
+                range: NSRange(location: destinationRange.location, length: 0),
+                replacement: "",
+                selection: destinationRange,
+                changesSource: false)
+        }
         if selection.length == 0 {
             return NoteMarkdownEditPlan(
                 range: selection,
@@ -465,17 +603,38 @@ enum NoteMarkdownEditing {
         return location + delta
     }
 
-    private static func fencedCode(source: NSString, selection: NSRange) -> NoteMarkdownEditPlan {
+    private static func fencedCode(
+        source: NSString,
+        selection: NSRange,
+        presentation: NoteMarkdownPresentation?
+    ) -> NoteMarkdownEditPlan {
+        if let construct = presentation?.constructs.first(where: { construct in
+            guard case .codeBlock = construct.kind else { return false }
+            if selection.length == 0 {
+                return selection.location >= construct.range.location
+                    && selection.location <= NSMaxRange(construct.range)
+            }
+            return contains(construct.range, selection) || contains(selection, construct.range)
+        }) {
+            let replacement = source.substring(with: construct.contentRange)
+            let mappedSelection: NSRange
+            if selection.length == 0 {
+                mappedSelection = NSRange(
+                    location: construct.range.location
+                        + max(0, selection.location - construct.contentRange.location),
+                    length: 0)
+            } else {
+                mappedSelection = NSRange(
+                    location: construct.range.location,
+                    length: (replacement as NSString).length)
+            }
+            return NoteMarkdownEditPlan(
+                range: construct.range,
+                replacement: replacement,
+                selection: mappedSelection)
+        }
         let lineRange = source.coveringLineRange(for: selection)
         let selected = source.substring(with: lineRange)
-        if selected.hasPrefix("```\n"), selected.hasSuffix("```\n") {
-            let value = (selected as NSString).substring(
-                with: NSRange(location: 4, length: (selected as NSString).length - 8))
-            return NoteMarkdownEditPlan(
-                range: lineRange,
-                replacement: value,
-                selection: NSRange(location: lineRange.location, length: (value as NSString).length))
-        }
         let suffix = selected.hasSuffix("\n") ? "```\n" : "\n```"
         let replacement = "```\n" + selected + suffix
         return NoteMarkdownEditPlan(

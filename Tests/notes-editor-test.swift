@@ -183,6 +183,23 @@ struct NotesEditorTests {
             headingFonts.count == 3
                 && headingFonts[0].pointSize > headingFonts[1].pointSize
                 && headingFonts[1].pointSize > headingFonts[2].pointSize)
+
+        let existingLinkInput = NoteEditorInput(
+            id: NoteID(rawValue: "Existing Link.md"),
+            source: "[label](https://old.test)",
+            epoch: 7)
+        coordinator.install(existingLinkInput, resetUndo: true)
+        let labelRange = (textView.string as NSString).range(of: "label")
+        textView.setSelectedRange(labelRange)
+        coordinator.textViewDidChangeSelection(
+            Notification(name: NSTextView.didChangeSelectionNotification, object: textView))
+        let changeCount = changes.count
+        coordinator.noteTextView(textView, perform: .link)
+        check("editing an existing link does not rewrite its source", changes.count == changeCount)
+        check(
+            "editing an existing link reveals and selects its destination",
+            (textView.string as NSString).substring(with: textView.selectedRange())
+                == "https://old.test")
     }
 
     private static func testCaretAnchoringAcrossProjectionChanges() {

@@ -225,6 +225,47 @@ struct NotesTests {
             "bold removes formatting from a rendered selection",
             unbold?.range == NSRange(location: 0, length: 8))
         check("bold is a true toggle in live preview", unbold?.replacement == "bold")
+        let caretUnbold = NoteMarkdownEditing.plan(
+            .bold,
+            source: renderedBold,
+            selection: NSRange(location: 4, length: 0),
+            presentation: renderedBoldPresentation)
+        check("Bold at a bold caret removes the format", caretUnbold?.replacement == "bold")
+        check("caret unformatting preserves its logical offset", caretUnbold?.selection.location == 2)
+        let partiallyBold = "**two words**"
+        let partialUnbold = NoteMarkdownEditing.plan(
+            .bold,
+            source: partiallyBold,
+            selection: (partiallyBold as NSString).range(of: "words"),
+            presentation: NoteMarkdownParser.parse(partiallyBold))
+        check("Bold removes formatting from only the selected suffix", partialUnbold?.replacement == "**two **words")
+        let nestedBold = "**_text_**"
+        let nestedUnbold = NoteMarkdownEditing.plan(
+            .bold,
+            source: nestedBold,
+            selection: NSRange(location: 0, length: (nestedBold as NSString).length),
+            presentation: NoteMarkdownParser.parse(nestedBold))
+        check("removing bold preserves nested italic source", nestedUnbold?.replacement == "_text_")
+
+        let existingLink = "[label](https://old.test)"
+        let existingLinkPlan = NoteMarkdownEditing.plan(
+            .link,
+            source: existingLink,
+            selection: (existingLink as NSString).range(of: "label"),
+            presentation: NoteMarkdownParser.parse(existingLink))
+        check("Link edits an existing destination without nesting", existingLinkPlan?.changesSource == false)
+        check(
+            "Link selects the existing destination",
+            (existingLink as NSString).substring(
+                with: existingLinkPlan?.selection ?? NSRange()) == "https://old.test")
+
+        let fenced = "```\ncode\n```\n"
+        let unfenced = NoteMarkdownEditing.plan(
+            .codeBlock,
+            source: fenced,
+            selection: NSRange(location: 6, length: 0),
+            presentation: NoteMarkdownParser.parse(fenced))
+        check("Code Block at a fenced caret removes the fences", unfenced?.replacement == "code\n")
         check(
             "the current inline format is reported to the menu",
             NoteMarkdownEditing.activeCommands(

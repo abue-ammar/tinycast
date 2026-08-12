@@ -196,14 +196,22 @@ struct NoteEditorView: NSViewRepresentable {
         }
 
         func noteTextView(_ textView: NoteTextView, perform command: NoteMarkdownCommand) {
+            let formattingSelection = sourceSelection.length == 0
+                ? sourceSelection
+                : projection.sourceRange(
+                    forCopyingDisplayRange: textView.selectedRange())
             guard !isComposing,
                 let plan = NoteMarkdownEditing.plan(
                     command,
                     source: source,
-                    selection: sourceSelection,
+                    selection: formattingSelection,
                     presentation: presentation)
             else { return }
             revealedSelectionLocation = command == .link ? plan.selection.location : nil
+            guard plan.changesSource else {
+                selectSourceRange(plan.selection, reveal: true)
+                return
+            }
             applySourceEdit(
                 range: plan.range,
                 replacement: plan.replacement,
@@ -364,6 +372,22 @@ struct NoteEditorView: NSViewRepresentable {
                     editedRange: range,
                     replacement: replacement))
             parent.onSourceChange(source)
+            reportHeight()
+        }
+
+        private func selectSourceRange(_ range: NSRange, reveal: Bool) {
+            let length = (source as NSString).length
+            sourceSelection = NSRange(
+                location: min(max(0, range.location), length),
+                length: min(range.length, max(0, length - range.location)))
+            revealedSelectionLocation = reveal ? sourceSelection.location : nil
+            projection = Signposts.interval("NoteEditor.project") {
+                NoteDisplayProjection.build(
+                    source: source,
+                    presentation: presentation,
+                    activeSourceLocation: revealedSelectionLocation)
+            }
+            applyProjection()
             reportHeight()
         }
 
