@@ -218,6 +218,10 @@ struct NoteDisplayProjection: Sendable, Equatable {
         return result
     }
 
+    func sourceRange(forReplacingDisplayRange range: NSRange) -> NSRange {
+        sourceRange(forCopyingDisplayRange: range)
+    }
+
     private struct Transform {
         let range: NSRange
         let replacement: String

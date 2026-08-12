@@ -277,6 +277,36 @@ struct NotesEditorTests {
         check("Select All and Cut leave no hidden prefix behind", textView.string.isEmpty)
         coordinator.editorUndoManager.undo()
         check("canonical Cut undoes in one step", changes.last == source)
+
+        coordinator.install(input, resetUndo: true)
+        let renderedBoldRange = (textView.string as NSString).range(of: "bold")
+        _ = coordinator.textView(
+            textView,
+            shouldChangeTextIn: renderedBoldRange,
+            replacementString: "plain")
+        check(
+            "typing over a complete rendered construct removes hidden delimiters",
+            changes.last == "# Heading\n\nplain")
+
+        coordinator.install(input, resetUndo: true)
+        _ = coordinator.textView(
+            textView,
+            shouldChangeTextIn: NSRange(location: renderedBoldRange.location + 1, length: 2),
+            replacementString: "")
+        check(
+            "deleting part of rendered formatting preserves its delimiters",
+            changes.last == "# Heading\n\n**bd**")
+
+        coordinator.install(input, resetUndo: true)
+        _ = coordinator.textView(
+            textView,
+            shouldChangeTextIn: NSRange(
+                location: 0,
+                length: (textView.string as NSString).length),
+            replacementString: "Replacement")
+        check(
+            "typing over Select All replaces every hidden marker",
+            changes.last == "Replacement")
     }
 
     private static func check(_ message: String, _ condition: @autoclosure () -> Bool) {

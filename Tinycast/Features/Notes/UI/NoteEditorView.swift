@@ -130,7 +130,8 @@ struct NoteEditorView: NSViewRepresentable {
             guard !isApplyingProjection else { return true }
             guard !isComposing else { return true }
             revealedSelectionLocation = nil
-            let sourceRange = projection.sourceRange(forDisplayRange: affectedCharRange)
+            let sourceRange = projection.sourceRange(
+                forReplacingDisplayRange: affectedCharRange)
             let replacement = replacementString ?? ""
             let selection = NSRange(
                 location: sourceRange.location + (replacement as NSString).length,
