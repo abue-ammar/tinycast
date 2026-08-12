@@ -5,7 +5,8 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 
 - [How it works](#how-it-works) · [The JS runtime](#the-js-runtime) ·
   [The Swift host](#the-swift-host) · [Rendering](#rendering)
-- [Installing extensions](#installing-extensions) · [What's supported](#whats-supported) ·
+- [Turning it on](#turning-it-on) · [Installing extensions](#installing-extensions) ·
+  [Registries](#registries) · [Shortcuts](#shortcuts) · [What's supported](#whats-supported) ·
   [What isn't](#what-isnt-supported-yet) · [Working on the runtime](#working-on-the-runtime)
 
 ## Invariants
@@ -23,6 +24,10 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
   committed — never edit it by hand; change `Scripts/raycast-runtime/src/` and rebuild.
 - **`ExtensionScreen` is the only place extension row order is decided**, so the flat palette selection
   keeps matching the visible rows — the same invariant every other palette screen holds.
+- **Off means off.** `extensionsEnabled` is opt-in, and `ExtensionManager.setEnabled(false)` stops the
+  running command, discards the JS context, empties the installed set and clears the launcher rows;
+  `refresh()` returns early while it is off, so nothing is scanned and nothing is held. Enabling is also
+  consent to run third-party code, so it confirms first and never rides a settings backup.
 - **`SymbolCatalog` reads a system bundle, not API.** The list comes from `CoreGlyphs.bundle` at
   runtime; every read stays optional and falls back to `SymbolCatalog.suggested`, and Apple's restricted
   marks are never offered.
@@ -171,6 +176,16 @@ screens hold (see [palette.md](palette.md)).
 Escape and a bare backspace pop the extension's own navigation stack first, and only leave the command
 once it's at its root. Pushed screens stay mounted, so popping back restores their state.
 
+## Turning it on
+
+Extensions are **off until asked for**, and the switch is a real one rather than a filter: while it is
+off no directory is scanned, no launcher row is published and no JavaScript context exists. Turning it
+on confirms first — it is consent to run third-party code, and a running command holds a JavaScript
+engine in memory until you leave it, which is the one standing cost this app has.
+
+`Show in launcher` is separate, and independent: it decides whether the commands reach launcher search
+at all, without unloading anything.
+
 ## Installing extensions
 
 Extensions live in `~/Library/Application Support/<bundle id>/extensions/<name>/`, keyed by bundle id
@@ -178,18 +193,60 @@ like everything else, so a Debug build never shares installs with a release chan
 `package.json`, `assets/` and one `<command>.js` per command — byte-for-byte the layout Raycast's own
 build produces.
 
-Settings → Extensions offers two routes:
+Settings → Extensions offers three routes, under **Install New**:
 
-1. **Import from Raycast** — copies the already-built bundles out of `~/.config/raycast/extensions`.
-   Nothing is compiled, so no Node, npm or network is involved.
-2. **Add Extension Folder…** — pick any directory with a manifest and built command files, e.g. an
-   extension you just ran `ray build` in.
+1. **Search Registries…** — searches every enabled registry and installs from any of them. See below.
+2. **Import from Raycast** — copies the already-built bundles out of `~/.config/raycast/extensions`.
+   Nothing is compiled, so no Node, npm or network is involved. The pane also scans that directory
+   whenever it opens, and says so when Raycast has something Tinycast doesn't — installing in Raycast
+   otherwise leaves no trace here.
+3. **Add Folder…** — pick any directory with a manifest and built command files, e.g. an extension you
+   just ran `ray build` in.
 
 Only `package.json`, the built commands and `assets/` are copied — never `node_modules` or the
 multi-megabyte `.js.map` Raycast writes beside each bundle.
 
-Tinycast does **not** bundle extensions itself. That is the deliberate boundary: bundling needs a
-JavaScript toolchain and a dependency installer, which would dwarf the app.
+## Registries
+
+A registry is a place extensions are searched for and fetched from. Two kinds, because the two sources
+hand back different things:
+
+| | Raycast Store | A GitHub repository |
+| --- | --- | --- |
+| What it serves | The bundle Raycast already built | Source |
+| Installing needs | Nothing | Node, and a package manager |
+| How it's found | `raycast.com/frontend_api/extensions/search`, the endpoint the store's own site uses — unofficial, hence the fallback | The Git trees API, then a `package.json` read per candidate |
+
+Both ship enabled, and anyone can add their own GitHub registry — a repository laid out like
+`raycast/extensions`, one folder per extension.
+
+**Only the extension's own folder is ever fetched.** `raycast/extensions` is gigabytes; cloning it to
+install one extension would be absurd.
+
+**Listings come from the Git trees API, not the contents API.** Contents caps a directory at 1000
+entries and says nothing about having done so, and `raycast/extensions` holds over three thousand —
+under contents, everything alphabetically past the cap was simply unfindable.
+
+Installing from a source registry runs `<package manager> install --ignore-scripts` and then the
+extension's own `build` script, which is `ray build`. Lifecycle scripts are skipped on purpose: the
+build script is the contract, a `postinstall` is code nobody asked to run. The package manager is
+`Automatic` by default, which takes the first of pnpm, Bun, Yarn and npm that is installed — a GUI app
+inherits none of a login shell's `PATH`, so `ExtensionPackageManager.searchPaths` is where they are
+looked for, version managers included.
+
+Neither the registry list nor the package manager rides a settings backup: one names a tool the
+machine an import lands on may not have, the other is a source of code that will be run.
+
+## Shortcuts
+
+A global shortcut binds to a **command**, not to an extension — a shortcut has to land on one thing to
+run, and an extension is a set of commands. `HotKeyAction.extensionCommand` is keyed by the launcher
+entry id (`extension:<extension>/<command>`).
+
+Its index is not pruned at launch the way the UUID-keyed ones are: the installed set is scanned
+asynchronously and only while extensions are on, so at launch "not installed yet" and "gone" look
+identical, and pruning there would quietly drop a working binding. Uninstalling clears its own instead,
+along with the extension's stored preferences and its chosen icon.
 
 ## What's supported
 
