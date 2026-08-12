@@ -299,6 +299,14 @@ struct NotesTests {
         check(
             "mixed block formatting normalizes instead of double-prefixing",
             mixed?.replacement == "- [ ] first\n- [ ] second\n")
+        let mixedTerminators = "first\r\nsecond\nthird\r"
+        let preservedTerminators = NoteMarkdownEditing.plan(
+            .blockquote,
+            source: mixedTerminators,
+            selection: NSRange(location: 0, length: (mixedTerminators as NSString).length))
+        check(
+            "block formatting preserves each line terminator",
+            preservedTerminators?.replacement == "> first\r\n> second\n> third\r")
 
         let headingAtCaret = NoteMarkdownEditing.plan(
             .heading1,

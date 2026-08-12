@@ -634,31 +634,28 @@ enum NoteMarkdownEditing {
     ) -> NoteMarkdownEditPlan {
         let lineRange = source.coveringLineRange(for: selection)
         let original = source.substring(with: lineRange)
-        let hasTrailingNewline = original.hasSuffix("\n") || original.hasSuffix("\r")
-        var lines = original.components(separatedBy: .newlines)
-        if hasTrailingNewline, lines.last?.isEmpty == true { lines.removeLast() }
-        let allRequested = command != .normal && lines.allSatisfy { hasPrefix(for: command, line: $0) }
+        let lines = blockLines(in: original as NSString)
+        let allRequested = command != .normal
+            && lines.allSatisfy { hasPrefix(for: command, line: $0.content) }
         var prefixChanges: [PrefixChange] = []
-        var originalLineLocation = 0
         let transformed = lines.enumerated().map { index, line in
-            let stripped = stripOutermostPrefix(from: line)
+            let stripped = stripOutermostPrefix(from: line.content)
             let indentationLength = (stripped.indentation as NSString).length
             let contentLength = (stripped.content as NSString).length
-            let oldPrefixLength = (line as NSString).length - indentationLength - contentLength
+            let oldPrefixLength = (line.content as NSString).length
+                - indentationLength - contentLength
             let newPrefix = command == .normal || allRequested
                 ? "" : prefix(for: command, index: index)
             let newPrefixLength = (newPrefix as NSString).length
             prefixChanges.append(
                 PrefixChange(
                     range: NSRange(
-                        location: originalLineLocation + indentationLength,
+                        location: line.location + indentationLength,
                         length: oldPrefixLength),
                     replacementLength: newPrefixLength))
-            originalLineLocation += (line as NSString).length + 1
-            return stripped.indentation + newPrefix + stripped.content
+            return stripped.indentation + newPrefix + stripped.content + line.terminator
         }
-        var replacement = transformed.joined(separator: "\n")
-        if hasTrailingNewline { replacement += "\n" }
+        let replacement = transformed.joined()
         let relativeStart = selection.location - lineRange.location
         let relativeEnd = NSMaxRange(selection) - lineRange.location
         let mappedStart = map(relativeStart, through: prefixChanges)
@@ -669,6 +666,37 @@ enum NoteMarkdownEditing {
             selection: NSRange(
                 location: lineRange.location + mappedStart,
                 length: max(0, mappedEnd - mappedStart)))
+    }
+
+    private struct BlockLine {
+        let content: String
+        let terminator: String
+        let location: Int
+    }
+
+    private static func blockLines(in source: NSString) -> [BlockLine] {
+        guard source.length > 0 else {
+            return [BlockLine(content: "", terminator: "", location: 0)]
+        }
+        var lines: [BlockLine] = []
+        var location = 0
+        while location < source.length {
+            var start = 0
+            var end = 0
+            var contentsEnd = 0
+            source.getLineStart(
+                &start, end: &end, contentsEnd: &contentsEnd,
+                for: NSRange(location: location, length: 0))
+            lines.append(
+                BlockLine(
+                    content: source.substring(
+                        with: NSRange(location: start, length: contentsEnd - start)),
+                    terminator: source.substring(
+                        with: NSRange(location: contentsEnd, length: end - contentsEnd)),
+                    location: start))
+            location = end
+        }
+        return lines
     }
 
     private struct PrefixChange {
