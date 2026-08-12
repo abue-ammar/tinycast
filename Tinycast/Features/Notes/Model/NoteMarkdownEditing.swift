@@ -162,6 +162,14 @@ enum NoteMarkdownEditing {
         else { return nil }
         let content = source.substring(with: line.contentRange)
         if content.trimmingCharacters(in: .whitespaces).isEmpty {
+            if let indentation = outdentRange(for: line, in: source) {
+                return NoteMarkdownEditPlan(
+                    range: indentation,
+                    replacement: "",
+                    selection: NSRange(
+                        location: line.contentRange.location - indentation.length,
+                        length: 0))
+            }
             return NoteMarkdownEditPlan(
                 range: line.prefixRange,
                 replacement: "",
@@ -185,6 +193,14 @@ enum NoteMarkdownEditing {
             let line = listLine(in: source, at: selection.location),
             selection.location == line.contentRange.location
         else { return nil }
+        if let indentation = outdentRange(for: line, in: source) {
+            return NoteMarkdownEditPlan(
+                range: indentation,
+                replacement: "",
+                selection: NSRange(
+                    location: selection.location - indentation.length,
+                    length: 0))
+        }
         return NoteMarkdownEditPlan(
             range: line.prefixRange,
             replacement: "",
@@ -238,6 +254,16 @@ enum NoteMarkdownEditing {
             selection: NSRange(
                 location: lineRange.location + mappedStart,
                 length: max(0, mappedEnd - mappedStart)))
+    }
+
+    private static func outdentRange(for line: ListLine, in source: NSString) -> NSRange? {
+        guard line.indentationRange.length > 0 else { return nil }
+        let indentation = source.substring(with: line.indentationRange)
+        let length = indentation.hasPrefix("\t")
+            ? 1
+            : indentation.prefix(4).prefix { $0 == " " }.count
+        guard length > 0 else { return nil }
+        return NSRange(location: line.indentationRange.location, length: length)
     }
 
     private static func listLine(in source: NSString, at location: Int) -> ListLine? {

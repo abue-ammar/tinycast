@@ -341,6 +341,23 @@ struct NotesTests {
             source: "    - item\n",
             selection: NSRange(location: 8, length: 0))
         check("Shift-Tab outdents a list item", outdented?.replacement == "- item\n")
+        let nestedEmptyReturn = NoteMarkdownEditing.planListEdit(
+            .newline,
+            source: "    - ",
+            selection: NSRange(location: 6, length: 0))
+        check("Return outdents an empty nested item", nestedEmptyReturn?.range == NSRange(location: 0, length: 4))
+        check("an empty nested item keeps its list marker", nestedEmptyReturn?.selection.location == 2)
+        let nestedBackspace = NoteMarkdownEditing.planListEdit(
+            .backspace,
+            source: "    - item",
+            selection: NSRange(location: 6, length: 0))
+        check("Backspace outdents a nested item", nestedBackspace?.range == NSRange(location: 0, length: 4))
+        check("nested Backspace keeps the list marker", nestedBackspace?.selection.location == 2)
+        let mixedIndent = NoteMarkdownEditing.planListEdit(
+            .indent,
+            source: "- item\nplain",
+            selection: NSRange(location: 0, length: 12))
+        check("mixed list and prose selections are not partially indented", mixedIndent == nil)
 
         let directory = URL(fileURLWithPath: "/tmp/notes", isDirectory: true)
         check(

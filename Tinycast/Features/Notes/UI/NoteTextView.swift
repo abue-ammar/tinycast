@@ -74,12 +74,20 @@ final class NoteTextView: NSTextView {
 
     override func insertTab(_ sender: Any?) {
         guard editorActions?.noteTextView(self, performListEdit: .indent) != true else { return }
+        guard !hasMultilineSelection else { return }
         super.insertTab(sender)
     }
 
     override func insertBacktab(_ sender: Any?) {
         guard editorActions?.noteTextView(self, performListEdit: .outdent) != true else { return }
+        guard !hasMultilineSelection else { return }
         super.insertBacktab(sender)
+    }
+
+    private var hasMultilineSelection: Bool {
+        let range = selectedRange()
+        guard range.length > 0, NSMaxRange(range) <= (string as NSString).length else { return false }
+        return (string as NSString).substring(with: range).contains(where: \.isNewline)
     }
 
     override func mouseDown(with event: NSEvent) {

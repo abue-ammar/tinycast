@@ -148,6 +148,20 @@ struct NotesEditorTests {
         coordinator.editorUndoManager.undo()
         check("list continuation undoes in one step", changes.last == "- item")
 
+        let mixedListInput = NoteEditorInput(
+            id: NoteID(rawValue: "Mixed List.md"),
+            source: "- item\nplain",
+            epoch: 6)
+        coordinator.install(mixedListInput, resetUndo: true)
+        textView.setSelectedRange(NSRange(location: 0, length: (textView.string as NSString).length))
+        coordinator.textViewDidChangeSelection(
+            Notification(name: NSTextView.didChangeSelectionNotification, object: textView))
+        let mixedListChangeCount = changes.count
+        let mixedListDisplay = textView.string
+        textView.insertTab(nil)
+        check("Tab leaves a mixed list and prose selection intact", changes.count == mixedListChangeCount)
+        check("Tab does not replace a mixed multiline selection", textView.string == mixedListDisplay)
+
         let blockInput = NoteEditorInput(
             id: NoteID(rawValue: "Blocks.md"),
             source: "> Quote\n- item\n```\ncode\n```\n---\n#### Four\n##### Five\n###### Six",
