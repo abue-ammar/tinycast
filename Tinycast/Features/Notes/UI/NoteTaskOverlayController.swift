@@ -55,7 +55,8 @@ final class NoteTaskOverlayController: NSObject {
                 y: frame.midY - 8,
                 width: max(16, frame.width + 2),
                 height: 16)
-            button.target = CallbackTarget.install(on: button) {
+            button.target = CallbackTarget.install(on: button) { [weak self] in
+                guard let self else { return }
                 onToggle(task.sourceRange, self.epoch)
             }
             button.action = #selector(CallbackTarget.invoke)

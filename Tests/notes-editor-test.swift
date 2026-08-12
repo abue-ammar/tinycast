@@ -11,6 +11,7 @@ struct NotesEditorTests {
         testProjectedEditingAndUndoIsolation()
         testCanonicalCopyAndCut()
         testCaretAnchoringAcrossProjectionChanges()
+        testTaskOverlayLifetime()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -386,6 +387,27 @@ struct NotesEditorTests {
         check(
             "typing over Select All replaces every hidden marker",
             changes.last == "Replacement")
+    }
+
+    private static func testTaskOverlayLifetime() {
+        weak var releasedOverlay: NoteTaskOverlayController?
+        autoreleasepool {
+            let source = "- [ ] Task"
+            let projection = NoteDisplayProjection.build(
+                source: source,
+                presentation: NoteMarkdownParser.parse(source),
+                activeSourceLocation: nil)
+            let textView = NoteTextView(usingTextLayoutManager: true)
+            textView.setFrameSize(NSSize(width: 520, height: 220))
+            textView.string = projection.string
+            let overlay = NoteTaskOverlayController()
+            overlay.update(projection.tasks, epoch: 1, in: textView) { _, _ in }
+            releasedOverlay = overlay
+            check(
+                "a rendered task installs a native checkbox",
+                textView.subviews.contains(where: { $0 is NSButton }))
+        }
+        check("task checkbox callbacks release their editor overlay", releasedOverlay == nil)
     }
 
     private static func check(_ message: String, _ condition: @autoclosure () -> Bool) {
