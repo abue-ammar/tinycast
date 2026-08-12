@@ -2,7 +2,15 @@ import Darwin
 import Foundation
 
 @MainActor
-final class NoteFileMonitor {
+protocol NoteFileMonitoring: AnyObject {
+    var onChange: (() -> Void)? { get set }
+
+    func start(directory: URL, fileURL: URL)
+    func stop()
+}
+
+@MainActor
+final class NoteFileMonitor: NoteFileMonitoring {
     var onChange: (() -> Void)?
 
     private var directorySource: DispatchSourceFileSystemObject?

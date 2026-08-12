@@ -491,8 +491,10 @@ struct NotesTests {
                     at: url, to: trash.appendingPathComponent(url.lastPathComponent))
             })
         let selection = SelectionBox()
+        let monitor = NoteFileMonitorProbe()
         let store = NotesStore(
             repository: repository,
+            monitor: monitor,
             loadSelection: { selection.id },
             saveSelection: { selection.id = $0 })
         let started = await store.create()
@@ -529,10 +531,12 @@ struct NotesTests {
 
         let activeURL = repository.fileURL(for: firstID)
         try Data("external clean".utf8).write(to: activeURL, options: .atomic)
+        monitor.sendChange()
         await waitUntil { store.source == "external clean" }
         check("a clean external edit reloads", store.source == "external clean")
 
         try Data([0xFF]).write(to: activeURL, options: .atomic)
+        monitor.sendChange()
         await waitUntil {
             if case .failed = store.state { return true }
             return false
@@ -544,6 +548,7 @@ struct NotesTests {
 
         store.updateSource("local draft")
         try Data("external dirty".utf8).write(to: activeURL, options: .atomic)
+        monitor.sendChange()
         await waitUntil {
             if case .conflict = store.state { return true }
             return false
@@ -567,6 +572,7 @@ struct NotesTests {
         try FileManager.default.moveItem(
             at: activeURL,
             to: repository.fileURL(for: NoteID(rawValue: "Externally Renamed.md")))
+        monitor.sendChange()
         await waitUntil {
             if case .conflict = store.state { return true }
             return false
@@ -594,6 +600,7 @@ struct NotesTests {
         for summary in try repository.list() {
             try FileManager.default.removeItem(at: repository.fileURL(for: summary.id))
         }
+        monitor.sendChange()
         await waitUntil {
             if case .conflict = store.state { return true }
             return false
@@ -628,7 +635,8 @@ struct NotesTests {
         let root = temporaryRoot("mutation-flush")
         defer { try? FileManager.default.removeItem(at: root) }
         let repository = NotesRepository(applicationSupportDirectory: root)
-        let store = NotesStore(repository: repository)
+        let monitor = NoteFileMonitorProbe()
+        let store = NotesStore(repository: repository, monitor: monitor)
 
         _ = await store.create()
         let renameTarget = try require(store.activeID)
@@ -640,6 +648,7 @@ struct NotesTests {
         store.updateSource("local draft")
         try Data("external edit".utf8).write(
             to: repository.fileURL(for: activeID), options: .atomic)
+        monitor.sendChange()
         await waitUntil {
             if case .conflict = store.state { return true }
             return false
@@ -695,6 +704,26 @@ struct NotesTests {
 
 private final class SelectionBox: @unchecked Sendable {
     var id: NoteID?
+}
+
+@MainActor
+private final class NoteFileMonitorProbe: NoteFileMonitoring {
+    var onChange: (() -> Void)?
+    private var isRunning = false
+
+    func start(directory: URL, fileURL: URL) {
+        isRunning = true
+    }
+
+    func stop() {
+        isRunning = false
+    }
+
+    func sendChange() {
+        guard isRunning else { return }
+        isRunning = false
+        onChange?()
+    }
 }
 
 private enum TestFailure: Error {

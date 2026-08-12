@@ -40,7 +40,7 @@ final class NotesStore {
     var onIssue: ((Issue) -> Void)?
 
     private let repository: NotesRepository
-    private let monitor: NoteFileMonitor
+    private let monitor: any NoteFileMonitoring
     private let now: @Sendable () -> Date
     private let calendar: @Sendable () -> Calendar
     private let loadSelection: @Sendable () -> NoteID?
@@ -60,7 +60,7 @@ final class NotesStore {
 
     init(
         repository: NotesRepository,
-        monitor: NoteFileMonitor = NoteFileMonitor(),
+        monitor: any NoteFileMonitoring = NoteFileMonitor(),
         now: @escaping @Sendable () -> Date = { Date.now },
         calendar: @escaping @Sendable () -> Calendar = { Calendar.current },
         loadSelection: @escaping @Sendable () -> NoteID? = { nil },
