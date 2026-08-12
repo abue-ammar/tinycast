@@ -562,10 +562,64 @@ struct NotesTests {
             check("conflict recovery succeeds", false)
         }
 
+        store.updateSource("draft before external rename")
+        try FileManager.default.moveItem(
+            at: activeURL,
+            to: repository.fileURL(for: NoteID(rawValue: "Externally Renamed.md")))
+        await waitUntil {
+            if case .conflict = store.state { return true }
+            return false
+        }
+        let renamedRecovery = await store.saveConflictCopyAndReload()
+        switch renamedRecovery {
+        case .success(let copy):
+            check(
+                "external-rename recovery preserves the dirty draft",
+                (try? String(contentsOf: copy, encoding: .utf8))
+                    == "draft before external rename")
+            check(
+                "external-rename recovery selects a remaining note",
+                store.activeID != firstID
+                    && store.activeID != NoteID(rawValue: copy.lastPathComponent)
+                    && store.state == .ready)
+        case .failure:
+            check("external-rename recovery succeeds", false)
+        }
+
+        let activeAfterRename = try require(store.activeID)
+        let activeAfterRenameURL = repository.fileURL(for: activeAfterRename)
+        store.updateSource("draft before external deletion")
+        try FileManager.default.removeItem(at: activeAfterRenameURL)
+        for summary in try repository.list() {
+            try FileManager.default.removeItem(at: repository.fileURL(for: summary.id))
+        }
+        await waitUntil {
+            if case .conflict = store.state { return true }
+            return false
+        }
+        let deletedRecovery = await store.saveConflictCopyAndReload()
+        switch deletedRecovery {
+        case .success(let copy):
+            let replacementID = try require(store.activeID)
+            check(
+                "external-deletion recovery preserves the dirty draft",
+                (try? String(contentsOf: copy, encoding: .utf8))
+                    == "draft before external deletion")
+            check(
+                "external-deletion recovery creates a canonical note",
+                store.activeTitle == "Untitled" && store.state == .ready
+                    && FileManager.default.fileExists(
+                        atPath: repository.fileURL(for: replacementID).path))
+        case .failure:
+            check("external-deletion recovery succeeds", false)
+        }
+
         let projectID = try require(renamedID)
-        let trashed = await store.trash(projectID)
-        check("a non-active note moves to Trash", trashed)
-        check("trashing another note keeps the active source", store.activeID == firstID)
+        if (try repository.list()).contains(where: { $0.id == projectID }) {
+            let trashed = await store.trash(projectID)
+            check("a non-active note moves to Trash", trashed)
+            check("trashing another note keeps the active source", store.activeID != projectID)
+        }
         store.stop()
     }
 

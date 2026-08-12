@@ -337,9 +337,19 @@ final class NotesStore {
             do {
                 let copy = try repository.saveConflictCopy(
                     id: activeID, source: draft, now: now, calendar: calendar)
-                let document = try repository.load(activeID)
+                var summaries = try repository.list()
+                let copyID = NoteID(rawValue: copy.lastPathComponent)
+                let document: NoteDocument
+                if summaries.contains(where: { $0.id == activeID }) {
+                    document = try repository.load(activeID)
+                } else if let first = summaries.first(where: { $0.id != copyID }) {
+                    document = try repository.load(first.id)
+                } else {
+                    document = try repository.create()
+                    summaries = try repository.list()
+                }
                 return Result<(URL, NoteDocument, [NoteSummary]), NotesRepository.Failure>.success(
-                    (copy, document, try repository.list()))
+                    (copy, document, summaries))
             } catch let failure as NotesRepository.Failure {
                 return .failure(failure)
             } catch {
