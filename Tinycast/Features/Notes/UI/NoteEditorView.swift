@@ -311,7 +311,6 @@ struct NoteEditorView: NSViewRepresentable {
                 replacement: marker == "[ ]" ? "x" : " ",
                 selection: NSRange(location: NSMaxRange(sourceRange), length: 0),
                 actionName: "Toggle Task")
-            textView?.window?.makeFirstResponder(textView)
         }
 
         private func applySourceEdit(

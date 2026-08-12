@@ -200,6 +200,19 @@ struct NotesEditorTests {
             "editing an existing link reveals and selects its destination",
             (textView.string as NSString).substring(with: textView.selectedRange())
                 == "https://old.test")
+
+        let taskInput = NoteEditorInput(
+            id: NoteID(rawValue: "Task.md"),
+            source: "- [ ] Task",
+            epoch: 8)
+        coordinator.install(taskInput, resetUndo: true)
+        let checkbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+        window.contentView?.addSubview(checkbox)
+        window.makeFirstResponder(checkbox)
+        coordinator.toggleTask(sourceRange: NSRange(location: 2, length: 3), generation: 8)
+        check("clicking a task emits its checked Markdown", changes.last == "- [x] Task")
+        check("clicking a task keeps the rendered marker", !textView.string.contains("[x]"))
+        check("clicking a task does not pull focus into the editor", window.firstResponder === checkbox)
     }
 
     private static func testCaretAnchoringAcrossProjectionChanges() {
