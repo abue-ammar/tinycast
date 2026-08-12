@@ -129,31 +129,43 @@ struct ExtensionsSettingsView: View {
 
     // MARK: - The library
 
-    /// Each extension emits its summary row and, while open, its settings as further rows of the same
-    /// section — so every control is a real form row with the label column and styling that carries.
+    /// Filter row, then the list as a single form row holding its own stack — the shape
+    /// `LauncherItemsSection` uses, so a long list reads as a list rather than as a run of settings.
+    /// Separation inside the content layer comes from separators and a standard fill, not from
+    /// glass: Liquid Glass belongs to the layer above the content, not inside it.
     private var library: some View {
         Section {
             if core.extensions.installed.isEmpty {
                 Text("Install one to see it here.")
                     .foregroundStyle(.secondary)
-            } else if core.extensions.installed.count > 3 {
-                SettingsFilterField(prompt: "Filter extensions…", query: $filter)
-            }
-            if !matching.isEmpty || filter.isEmpty {
-                ForEach(matching) { installed in
-                    ExtensionRows(
-                        installed: installed,
-                        isExpanded: expanded == installed.manifest.name,
-                        onToggle: {
-                            expanded =
-                                expanded == installed.manifest.name
-                                ? nil : installed.manifest.name
-                        },
-                        onUninstall: { core.extensionCoordinator.confirmUninstall(installed) })
-                }
             } else {
-                Text("No extension matches \u{201C}\(filter)\u{201D}.")
-                    .foregroundStyle(.secondary)
+                if core.extensions.installed.count > 3 {
+                    SettingsFilterField(prompt: "Filter extensions…", query: $filter)
+                }
+                if matching.isEmpty {
+                    Text("No extension matches \u{201C}\(filter)\u{201D}.")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    // One row holding a lazy stack: a `Form` realizes every row it is handed.
+                    LazyVStack(spacing: 0) {
+                        ForEach(matching) { installed in
+                            if installed.id != matching.first?.id { Divider() }
+                            ExtensionDisclosure(
+                                installed: installed,
+                                isExpanded: expanded == installed.manifest.name,
+                                onToggle: {
+                                    expanded =
+                                        expanded == installed.manifest.name
+                                        ? nil : installed.manifest.name
+                                },
+                                onUninstall: {
+                                    core.extensionCoordinator.confirmUninstall(installed)
+                                })
+                        }
+                    }
+                    .padding(.vertical, -Self.rowPadding)
+                }
             }
         } header: {
             HStack {
@@ -179,6 +191,9 @@ struct ExtensionsSettingsView: View {
             }
         }
     }
+
+    /// A grouped `Form` row's own vertical padding, which the stack above has to give back.
+    private static let rowPadding: CGFloat = 15
 
     private var matching: [InstalledExtension] {
         guard !filter.isEmpty else { return core.extensions.installed }
@@ -239,48 +254,28 @@ struct ExtensionsSettingsView: View {
     }
 }
 
-/// One extension's rows: the summary, and — while open — its icon, preferences and commands. They are
-/// siblings rather than a nested layout, so each is a form row that gets the system's label column,
-/// control styling, hover and focus.
-private struct ExtensionRows: View {
+/// One extension in the list: a summary row, and — while open — its settings on a card inset beneath
+/// it. The card is what separates "this extension's settings" from the rows of the list around it;
+/// Apple's guidance is to build that structure in the content layer out of standard materials and
+/// separators rather than glass, which belongs to the layer floating above content.
+private struct ExtensionDisclosure: View {
     let installed: InstalledExtension
     let isExpanded: Bool
     let onToggle: () -> Void
     let onUninstall: () -> Void
 
+    /// A grouped `Form` row's own vertical padding, restored around the summary.
+    private static let rowPadding: CGFloat = 15
+
     var body: some View {
-        summary
-        if isExpanded {
-            ExtensionIconRow(installed: installed)
-            if !installed.manifest.preferences.isEmpty {
-                groupHeading("Preferences")
-                ForEach(installed.manifest.preferences, id: \.name) { schema in
-                    ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
-                }
-            }
-            groupHeading(
-                installed.manifest.commands.count == 1
-                    ? "Command" : "\(installed.manifest.commands.count) Commands")
-            ForEach(installed.manifest.commands) { command in
-                CommandRow(installed: installed, command: command)
-            }
-            LabeledContent {
-                Button("Uninstall…", role: .destructive, action: onUninstall)
-            } label: {
-                Text("Remove this extension")
-                Text("Deletes it along with its preferences, its cache and its shortcuts.")
+        VStack(alignment: .leading, spacing: 0) {
+            summary
+                .padding(.vertical, Self.rowPadding)
+            if isExpanded {
+                settings
+                    .padding(.bottom, Theme.Spacing.lg)
             }
         }
-    }
-
-    /// Preferences and commands are different kinds of thing, and a flat run of rows says they are
-    /// the same one. A `Form` section has no sub-sections, so the heading is a row of its own.
-    private func groupHeading(_ title: String) -> some View {
-        Text(title)
-            .font(Theme.Typography.sectionHeader)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .listRowSeparator(.hidden)
     }
 
     private var summary: some View {
@@ -302,6 +297,62 @@ private struct ExtensionRows: View {
             isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
     }
 
+    private var settings: some View {
+        // A `Form` in the columns style inside the card: the controls keep the aligned label column
+        // and system styling they would lose in a hand-built stack, without the grouped chrome that
+        // would fight the card around them.
+        Form {
+            ExtensionIconRow(installed: installed)
+
+            if !installed.manifest.preferences.isEmpty {
+                group("Preferences") {
+                    ForEach(installed.manifest.preferences, id: \.name) { schema in
+                        ExtensionPreferenceField(
+                            extensionName: installed.manifest.name, schema: schema)
+                    }
+                }
+            }
+
+            group(installed.manifest.commands.count == 1 ? "Command" : "Commands") {
+                ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
+                    index, command in
+                    if index > 0 { Divider() }
+                    CommandRow(installed: installed, command: command)
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button("Uninstall…", role: .destructive, action: onUninstall)
+            }
+        }
+        .formStyle(.columns)
+        .padding(Theme.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(Theme.Colors.cardFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+        )
+        // Inset from the row's leading edge so the card reads as belonging to the row above it.
+        .padding(.leading, Theme.Size.rowIcon)
+    }
+
+    /// A titled run inside the card, so preferences and commands don't read as one flat column.
+    private func group<Content: View>(
+        _ title: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text(title)
+                .font(Theme.Typography.sectionHeader)
+                .foregroundStyle(.secondary)
+            content()
+        }
+    }
+
     private var subtitle: String {
         let count = installed.manifest.commands.count
         let commands = "\(count) command\(count == 1 ? "" : "s")"
@@ -316,26 +367,36 @@ private struct CommandRow: View {
     let command: ExtensionCommand
 
     var body: some View {
-        LabeledContent {
-            if command.mode.isSupported {
-                // Per command, not per extension: a shortcut has to land on one thing to run, and an
-                // extension is a set of commands.
-                ShortcutRecorder(
-                    action: .extensionCommand(
-                        entryID: ExtensionCommandRef(
-                            extensionName: installed.manifest.name, commandName: command.name
-                        ).entryID))
-            } else {
-                Text("Menu bar command")
-                    .foregroundStyle(.orange)
-                    .help(command.mode.unsupportedReason ?? "")
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack(alignment: .top, spacing: Theme.Spacing.lg) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                    Text(command.title)
+                    if !command.description.isEmpty {
+                        Text(command.description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: Theme.Spacing.lg)
+                if command.mode.isSupported {
+                    // Per command, not per extension: a shortcut has to land on one thing to run,
+                    // and an extension is a set of commands.
+                    ShortcutRecorder(
+                        action: .extensionCommand(
+                            entryID: ExtensionCommandRef(
+                                extensionName: installed.manifest.name, commandName: command.name
+                            ).entryID))
+                } else {
+                    Text("Menu bar command")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .help(command.mode.unsupportedReason ?? "")
+                }
             }
-        } label: {
-            Text(command.title)
-            if !command.description.isEmpty { Text(command.description) }
-        }
-        ForEach(command.preferences, id: \.name) { schema in
-            ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
+            ForEach(command.preferences, id: \.name) { schema in
+                ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
+            }
         }
     }
 }
