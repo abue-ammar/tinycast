@@ -29,7 +29,7 @@ struct NotesView: View {
 
     private var header: some View {
         HStack(spacing: Theme.Spacing.md) {
-            SymbolImage(name: "note.text", size: Theme.Size.noteStatus)
+            SymbolImage(name: "text.page", size: Theme.Size.noteStatus)
                 .foregroundStyle(Color.primary)
                 .frame(width: Theme.Size.headerIconSlot)
             Button(action: notes.openSwitcher) {
@@ -49,8 +49,12 @@ struct NotesView: View {
                     true,
                     onBegan: {},
                     onEnded: notes.dragEnded)
-            statusView
-            formatButton
+            if !notes.isSwitcherPresented || status.showsInSwitcher {
+                statusView
+            }
+            if !notes.isSwitcherPresented {
+                formatButton
+            }
             headerButton(
                 title: "Create Note",
                 symbol: "plus",
@@ -64,7 +68,8 @@ struct NotesView: View {
                 symbol: "xmark",
                 action: notes.hide)
         }
-        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.leading, Theme.Spacing.xl)
+        .padding(.trailing, Theme.Spacing.md)
     }
 
     private var formatButton: some View {
@@ -141,7 +146,8 @@ struct NotesView: View {
             return NoteStatus(
                 symbol: "checkmark.circle",
                 label: "Saved",
-                color: Theme.Colors.textSecondary)
+                color: Theme.Colors.textSecondary,
+                showsInSwitcher: false)
         case .saving:
             return NoteStatus(
                 symbol: "arrow.triangle.2.circlepath",
@@ -168,4 +174,5 @@ private struct NoteStatus {
     let label: String
     let color: Color
     var actionable = false
+    var showsInSwitcher = true
 }

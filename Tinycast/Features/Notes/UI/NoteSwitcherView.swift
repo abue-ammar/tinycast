@@ -56,7 +56,9 @@ struct NoteSwitcherView: View {
     private var results: some View {
         if notes.visibleNotes.isEmpty {
             VStack(spacing: Theme.Spacing.md) {
-                Image(systemName: notes.isSearching ? "clock" : "note.text")
+                SymbolImage(
+                    name: notes.isSearching ? "clock" : "text.page",
+                    size: Theme.Size.noteStatus)
                     .foregroundStyle(Theme.Colors.textSecondary)
                 Text(notes.isSearching ? "Searching notes…" : "No notes found")
                     .foregroundStyle(Theme.Colors.textSecondary)
@@ -69,7 +71,6 @@ struct NoteSwitcherView: View {
                         ForEach(notes.visibleNotes) { summary in
                             NoteSwitcherRow(
                                 summary: summary,
-                                excerpt: notes.searchExcerpt(for: summary.id),
                                 selected: notes.switcherSelection == summary.id,
                                 editing: editingID == summary.id,
                                 titleDraft: $titleDraft,
@@ -118,7 +119,6 @@ struct NoteSwitcherView: View {
 
 private struct NoteSwitcherRow: View {
     let summary: NoteSummary
-    let excerpt: String?
     let selected: Bool
     let editing: Bool
     @Binding var titleDraft: String
@@ -130,27 +130,27 @@ private struct NoteSwitcherRow: View {
     @State private var hovered = false
     @FocusState private var titleFocused: Bool
 
+    private var fill: Color {
+        if selected { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
+
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
-            Image(systemName: "note.text")
+            SymbolImage(name: "text.page", size: Theme.Size.noteStatus)
                 .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: Theme.Size.rowIcon)
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                if editing {
-                    TextField("Note title", text: $titleDraft)
-                        .textFieldStyle(.plain)
-                        .focused($titleFocused)
-                        .onSubmit(onCommitRename)
-                        .onExitCommand(perform: onCancelRename)
-                } else {
-                    Text(summary.title)
-                        .font(Theme.Typography.rowTitle)
-                        .lineLimit(1)
-                    Text(excerpt ?? summary.modifiedAt.formatted(.relative(presentation: .numeric)))
-                        .font(Theme.Typography.rowTrailing)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .lineLimit(1)
-                }
+                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            if editing {
+                TextField("Note title", text: $titleDraft)
+                    .textFieldStyle(.plain)
+                    .focused($titleFocused)
+                    .onSubmit(onCommitRename)
+                    .onExitCommand(perform: onCancelRename)
+            } else {
+                Text(summary.title)
+                    .font(Theme.Typography.rowTitle)
+                    .lineLimit(1)
             }
             Spacer(minLength: Theme.Spacing.md)
             if !editing, selected || hovered {
@@ -163,7 +163,7 @@ private struct NoteSwitcherRow: View {
         .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(selected ? Theme.Colors.selection : hovered ? Theme.Colors.rowHover : .clear)
+                .fill(fill)
         )
         .contentShape(Rectangle())
         .onTapGesture {

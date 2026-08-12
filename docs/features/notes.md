@@ -86,8 +86,9 @@ panel's top edge or changes its saved size.
 
 An empty switcher query lists metadata-only summaries by recency. A nonempty query is split on
 whitespace, debounced for 120 milliseconds, and searches titles and literal bodies in a cancellable
-detached worker. Fuzzy title hits rank above body-only hits; results carry short body excerpts and are
-capped at 200. A generation check prevents a superseded search from publishing.
+detached worker. Fuzzy title hits rank above body-only hits; results use the same compact title rows as
+the other Tinycast lists and are capped at 200. A generation check prevents a superseded search from
+publishing.
 
 Return opens the selected note. Inline rename coordinates the file move. Command-Delete or the row
 action confirms through `DialogController`, then moves the file through `FileManager.trashItem` after a

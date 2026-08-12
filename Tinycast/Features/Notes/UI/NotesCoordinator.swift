@@ -82,10 +82,6 @@ final class NotesCoordinator {
             ? store.summaries : store.searchResults.map(\.summary)
     }
 
-    func searchExcerpt(for id: NoteID) -> String? {
-        store.searchResults.first(where: { $0.id == id })?.excerpt
-    }
-
     func applyEnabled() {
         enablementGeneration &+= 1
         let generation = enablementGeneration
@@ -370,14 +366,14 @@ final class NotesCoordinator {
                 let retry = await reportFailure(
                     "Couldn't Open Note",
                     failure.localizedDescription,
-                    "note.text",
+                    "text.page",
                     "Retry")
                 if retry { _ = await store.reload() }
             case .save(let failure):
                 let retry = await reportFailure(
                     "Couldn't Save Note",
                     failure.localizedDescription,
-                    "note.text",
+                    "text.page",
                     "Retry")
                 if retry { store.retry() }
             case .conflict(let failure):
@@ -391,7 +387,7 @@ final class NotesCoordinator {
                 _ = await reportFailure(
                     "Couldn't Update Note",
                     failure.localizedDescription,
-                    "note.text",
+                    "text.page",
                     nil)
             }
             issueTask = nil
