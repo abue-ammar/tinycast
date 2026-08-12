@@ -71,6 +71,33 @@ final class ExtensionCoordinator {
         extensions.setShowsInLauncher(settings.extensionsShowInLauncher)
     }
 
+    // MARK: - Managing one extension from the launcher
+
+    /// Opens Settings on the extension a launcher row belongs to.
+    func showExtensionSettings(for app: AppEntry) {
+        guard let (owner, _) = extensions.resolve(app) else { return }
+        showExtensionSettings(for: owner)
+    }
+
+    /// Uninstalling deletes files and the extension's stored preferences, so it asks first. The
+    /// palette hides before the dialog: it is a floating panel, and a sheet behind it is unreachable.
+    func confirmUninstall(_ app: AppEntry) {
+        guard let (owner, _) = extensions.resolve(app) else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        NSApp.activate(ignoringOtherApps: true)
+        Task {
+            guard
+                await core.confirm(
+                    title: "Uninstall \(owner.title)?",
+                    message:
+                        "Removes the extension and everything it stored — its preferences, its cache "
+                        + "and its own files. Its commands leave the launcher.",
+                    symbol: "trash", confirmTitle: "Uninstall")
+            else { return }
+            await extensions.uninstall(owner)
+        }
+    }
+
     /// A view command takes over the palette; a no-view command closes it and runs headless.
     func runExtensionCommand(_ app: AppEntry, arguments: [String: String] = [:]) {
         guard let (owner, command) = extensions.resolve(app) else { return }
