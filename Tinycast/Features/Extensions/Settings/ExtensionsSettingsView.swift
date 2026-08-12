@@ -8,6 +8,8 @@ struct ExtensionsSettingsView: View {
     @State private var importCandidates: ImportCandidates?
     @State private var filter = ""
     @State private var error: String?
+    /// Extensions Raycast has built that aren't here yet, refreshed whenever the pane appears.
+    @State private var pending: [RaycastImportCandidate] = []
 
     private var matching: [InstalledExtension] {
         guard !filter.isEmpty else { return core.extensions.installed }
@@ -44,6 +46,7 @@ struct ExtensionsSettingsView: View {
                     }
                 }
                 CompatibilityNotice()
+                if !pending.isEmpty { newInRaycast }
                 library
             }
             .settingsEnabled(settings.extensionsEnabled)
@@ -67,7 +70,44 @@ struct ExtensionsSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectExtension)) { note in
             if let name = note.object as? String { expanded = name }
         }
-        .task { await core.extensions.refresh() }
+        .task {
+            await core.extensions.refresh()
+            await findPending()
+        }
+    }
+
+    /// Raycast installs into its own directory, and nothing tells us when it does. Rather than leave
+    /// that to be discovered, the pane looks every time it opens and says what it found.
+    @ViewBuilder
+    private var newInRaycast: some View {
+        Section {
+            SettingsRow(title: pendingTitle, subtitle: pendingSubtitle) {
+                Image(systemName: "arrow.down.circle")
+                    .foregroundStyle(.tint)
+            } trailing: {
+                Button("Review…", action: openImport)
+                Button("Import All") { Task { await importAll(pending.map(\.installed)) } }
+            }
+        }
+    }
+
+    private var pendingTitle: String {
+        pending.count == 1
+            ? "1 extension in Raycast isn't here yet"
+            : "\(pending.count) extensions in Raycast aren't here yet"
+    }
+
+    private var pendingSubtitle: String {
+        pending.prefix(3).map(\.installed.title).joined(separator: ", ")
+            + (pending.count > 3 ? " and \(pending.count - 3) more" : "")
+    }
+
+    private func findPending() async {
+        guard core.settings.extensionsEnabled, raycastAvailable else {
+            pending = []
+            return
+        }
+        pending = await core.extensions.raycastImportCandidates().filter { !$0.isInstalled }
     }
 
     // MARK: - The library
@@ -169,6 +209,7 @@ struct ExtensionsSettingsView: View {
     private func importAll(_ chosen: [InstalledExtension]) async {
         error = nil
         let failed = await core.extensions.importAllFromRaycast(chosen)
+        await findPending()
         guard !failed.isEmpty else { return }
         error = "Couldn't import \(failed.joined(separator: ", "))."
     }
