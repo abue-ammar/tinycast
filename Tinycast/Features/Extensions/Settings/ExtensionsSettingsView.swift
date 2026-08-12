@@ -299,31 +299,38 @@ private struct ExtensionDisclosure: View {
             isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
     }
 
-    /// One `Grid` for the whole card, not one per group: separate grids size their columns
-    /// separately, so a short label in one run would leave its control floating in the middle of the
-    /// row while a long label in the next pushed its own control to the edge.
+    /// The settings continue on the list's own surface rather than on a card of their own: a card
+    /// inside the section's card is a box in a box, and the indent and the run titles already say
+    /// where this extension's settings begin and end.
     ///
-    /// Not a nested `Form` either — a form inside a form row takes the width it wants rather than the
-    /// width it is given, and runs a row's label and its description together into one string.
+    /// One `Grid` for all of them, not one per run — separate grids size their columns separately,
+    /// so a short label in one run would strand its control mid-row while a long label in the next
+    /// pushed its own to the edge. Not a nested `Form` either: a form inside a form row takes the
+    /// width it wants rather than the width it is given, and welds a row's label to its description.
     private var settings: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             Grid(
                 alignment: .leading, horizontalSpacing: Theme.Spacing.lg,
-                verticalSpacing: Theme.Spacing.lg
+                verticalSpacing: Theme.Spacing.md
             ) {
                 heading("Appearance")
                 ExtensionIconRow(installed: installed)
 
                 if !installed.manifest.preferences.isEmpty {
                     heading("Preferences")
-                    ForEach(installed.manifest.preferences, id: \.name) { schema in
+                    ForEach(
+                        Array(installed.manifest.preferences.enumerated()), id: \.element.name
+                    ) { index, schema in
+                        if index > 0 { rule }
                         ExtensionPreferenceRow(
                             extensionName: installed.manifest.name, schema: schema)
                     }
                 }
 
                 heading(installed.manifest.commands.count == 1 ? "Command" : "Commands")
-                ForEach(installed.manifest.commands) { command in
+                ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
+                    index, command in
+                    if index > 0 { rule }
                     CommandRows(installed: installed, command: command)
                 }
             }
@@ -332,27 +339,31 @@ private struct ExtensionDisclosure: View {
                 Button("Uninstall…", role: .destructive, action: onUninstall)
             }
         }
-        .padding(Theme.Spacing.lg)
+        // Indented under the row's icon, so the settings read as belonging to the row above them.
+        .padding(.leading, Theme.Size.rowIcon + Theme.Spacing.lg)
+        .padding(.bottom, Theme.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(Theme.Colors.cardFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-        )
     }
 
-    /// A run's title, spanning both columns so it starts at the card's leading edge.
+    /// A run's title, spanning both columns. A step below the pane's own section headers — those
+    /// live outside a card and set the page's structure, these sit inside one and only group rows —
+    /// but through size and colour, not case: nothing else in this app sets a heading in capitals.
     private func heading(_ title: String) -> some View {
         GridRow {
             Text(title)
-                .font(Theme.Typography.sectionHeader)
-                .foregroundStyle(.secondary)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.tertiary)
                 .gridCellColumns(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, Theme.Spacing.xs)
+                .padding(.top, Theme.Spacing.sm)
+        }
+    }
+
+    /// The hairline every other multi-row group in the app puts between its rows.
+    private var rule: some View {
+        GridRow {
+            Divider()
+                .gridCellColumns(2)
         }
     }
 
@@ -367,8 +378,13 @@ private struct ExtensionDisclosure: View {
 /// One row of a settings card: what it is on the left, the control on the right, columns aligned by
 /// the enclosing `Grid`.
 private struct SettingsCardRow<Control: View>: View {
+    /// Wide enough for a path field, and the trailing edge every control in the column shares.
+    static var controlWidth: CGFloat { 200 }
+
     let title: String
     var detail: String?
+    /// Leading inset for a row that belongs to the row above it, rather than to the run.
+    var indent: CGFloat = 0
     @ViewBuilder var control: Control
 
     var body: some View {
@@ -382,9 +398,14 @@ private struct SettingsCardRow<Control: View>: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .padding(.leading, indent)
             .frame(maxWidth: .infinity, alignment: .leading)
             .gridColumnAlignment(.leading)
+            // One width for every control, whatever its natural size: a toggle, a pop-up and a text
+            // field are all different widths, and left to themselves they end on three different
+            // edges down the column.
             control
+                .frame(width: SettingsCardRow.controlWidth, alignment: .trailing)
                 .gridColumnAlignment(.trailing)
         }
     }
@@ -412,8 +433,11 @@ private struct CommandRows: View {
                     .help(command.mode.unsupportedReason ?? "")
             }
         }
+        // Indented under the command they belong to: at the same inset the association would rest
+        // on reading order alone.
         ForEach(command.preferences, id: \.name) { schema in
             ExtensionPreferenceRow(extensionName: installed.manifest.name, schema: schema)
+
         }
     }
 }
@@ -470,18 +494,15 @@ private struct ExtensionIconRow: View {
 private struct ExtensionPreferenceRow: View {
     let extensionName: String
     let schema: ExtensionPreferenceSchema
+    var indent: CGFloat = 0
     @Environment(AppCore.self) private var core
     @State private var text: String = ""
     @State private var flag: Bool = false
 
-    /// Wide enough for a path, and fixed: left to itself a text field takes whatever width is going,
-    /// which is how one ends up invisible or pushing the row past the card.
-    private static let controlWidth: CGFloat = 190
-
     private var storage: ExtensionStorage { core.extensions.storage }
 
     var body: some View {
-        SettingsCardRow(title: schema.displayTitle, detail: detail) {
+        SettingsCardRow(title: schema.displayTitle, detail: detail, indent: indent) {
             control
         }
         .onAppear(perform: load)
@@ -510,14 +531,12 @@ private struct ExtensionPreferenceRow: View {
                 }
             }
             .labelsHidden()
-            .frame(maxWidth: Self.controlWidth)
             .onChange(of: text) { _, value in save(value) }
         case .password:
             SecureField("", text: $text, prompt: schema.placeholder.map(Text.init))
                 .textFieldStyle(.roundedBorder)
                 .labelsHidden()
                 .pointerStyle(.horizontalText)
-                .frame(width: Self.controlWidth)
                 .onChange(of: text) { _, value in save(value) }
         case .file, .directory, .appPicker:
             HStack(spacing: Theme.Spacing.sm) {
@@ -532,7 +551,6 @@ private struct ExtensionPreferenceRow: View {
                 .textFieldStyle(.roundedBorder)
                 .labelsHidden()
                 .pointerStyle(.horizontalText)
-                .frame(width: Self.controlWidth)
                 .onChange(of: text) { _, value in save(value) }
         }
     }
