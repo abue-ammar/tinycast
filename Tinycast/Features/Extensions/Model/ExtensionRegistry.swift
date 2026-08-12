@@ -46,11 +46,12 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
         kind: .raycastStore, name: "Raycast Store")
 
     /// The fallback for when the store's endpoint changes or goes away: the same extensions, from the
-    /// repository they are published from.
+    /// repository they are published from. Off by default — it serves source, so installing from it
+    /// needs Node and a package manager, and the store already covers the same catalogue.
     static let officialGitHub = ExtensionRegistry(
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
         kind: .github, name: "raycast/extensions", owner: "raycast", repository: "extensions",
-        path: "extensions", ref: "main")
+        path: "extensions", ref: "main", isEnabled: false)
 
     static let defaults: [ExtensionRegistry] = [.store, .officialGitHub]
 
@@ -59,8 +60,8 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
 
     var subtitle: String {
         switch kind {
-        case .raycastStore: return "Prebuilt — installs without Node or a package manager."
-        case .github: return "\(owner)/\(repository)/\(path) at \(ref) — built on install."
+        case .raycastStore: return "Prebuilt. Installs without Node or a package manager."
+        case .github: return "\(owner)/\(repository) at \(ref). Source, built when you install it."
         }
     }
 

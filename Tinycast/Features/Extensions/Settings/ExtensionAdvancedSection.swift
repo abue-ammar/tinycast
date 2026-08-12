@@ -10,15 +10,14 @@ struct ExtensionAdvancedSection: View {
     private var settings: AppSettings { core.settings }
 
     var body: some View {
-        Section {
-            DisclosureGroup("Advanced", isExpanded: $expanded) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    packageManagerRow
-                    Divider()
-                    registryList
-                }
-                .padding(.top, Theme.Spacing.sm)
-            }
+        // `Section(isExpanded:)` rather than a `DisclosureGroup`: it is the collapsible a macOS
+        // settings form actually uses, and its whole header row toggles rather than the chevron alone.
+        Section(isExpanded: $expanded) {
+            registryList
+            Divider()
+            packageManagerRow
+        } header: {
+            Text("Advanced")
         }
         .sheet(isPresented: $addingRegistry) {
             RegistryEditor(
@@ -31,20 +30,37 @@ struct ExtensionAdvancedSection: View {
 
     // MARK: - Package manager
 
+    /// Only ever used by a source registry, which is off by default — so it says what it is for
+    /// rather than sitting there as an unexplained dropdown.
     private var packageManagerRow: some View {
         @Bindable var settings = core.settings
-        return SettingsRow(
-            title: "Package manager", subtitle: packageManagerSubtitle
-        ) {
-            Image(systemName: "shippingbox")
-        } trailing: {
-            Picker("", selection: $settings.extensionPackageManager) {
-                ForEach(ExtensionPackageManager.allCases) { manager in
-                    Text(manager.title).tag(manager)
+        return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Building")
+                .font(Theme.Typography.sectionHeader)
+                .foregroundStyle(.secondary)
+            Text(
+                "A registry that serves source has to be built before it can run. That means "
+                    + "installing its dependencies, which is what this picks the tool for. The Raycast "
+                    + "Store serves extensions already built and never needs it."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            SettingsRow(
+                title: "Package manager", subtitle: packageManagerSubtitle
+            ) {
+                Image(systemName: "shippingbox")
+                    .foregroundStyle(.secondary)
+            } trailing: {
+                Picker("", selection: $settings.extensionPackageManager) {
+                    ForEach(ExtensionPackageManager.allCases) { manager in
+                        Text(manager.title).tag(manager)
+                    }
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .fixedSize()
             }
-            .labelsHidden()
-            .fixedSize()
         }
     }
 
@@ -52,12 +68,12 @@ struct ExtensionAdvancedSection: View {
         let chosen = settings.extensionPackageManager
         guard let resolved = chosen.resolve() else {
             return chosen == .automatic
-                ? "None found. Only registries that serve source need one."
-                : "\(chosen.title) isn't installed. Only registries that serve source need one."
+                ? "None found on this Mac. Install pnpm, npm, Yarn or Bun to use a source registry."
+                : "\(chosen.title) isn't installed on this Mac."
         }
         return chosen == .automatic
-            ? "Using \(resolved.manager.title), at \(resolved.url.path)."
-            : "At \(resolved.url.path)."
+            ? "Found \(resolved.manager.title) at \(resolved.url.path)."
+            : "Found at \(resolved.url.path)."
     }
 
     // MARK: - Registries
@@ -71,8 +87,7 @@ struct ExtensionAdvancedSection: View {
             }
             ForEach(settings.extensionRegistries) { registry in
                 SettingsRow(title: registry.name, subtitle: registry.subtitle) {
-                    Image(systemName: registry.kind == .raycastStore ? "bag" : "shippingbox.circle")
-                        .foregroundStyle(.secondary)
+                    registryIcon(registry)
                 } trailing: {
                     Toggle("", isOn: binding(for: registry))
                         .labelsHidden()
@@ -94,6 +109,25 @@ struct ExtensionAdvancedSection: View {
             )
             .font(.caption)
             .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func registryIcon(_ registry: ExtensionRegistry) -> some View {
+        switch registry.kind {
+        case .raycastStore:
+            Image(systemName: "bag")
+                .foregroundStyle(.secondary)
+                .frame(width: Theme.Size.settingsRowIcon)
+        case .github:
+            // The same mark the About window uses, rendered as a template so it reads as an icon
+            // rather than as artwork.
+            Image("BrandGitHub")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.secondary)
+                .frame(width: Theme.Size.settingsRowIcon, height: Theme.Size.settingsRowIcon)
         }
     }
 

@@ -65,6 +65,10 @@ struct ExtensionStoreTests {
         check("both defaults ship", ExtensionRegistry.defaults.count == 2)
         check("the store comes first", ExtensionRegistry.defaults.first?.kind == .raycastStore)
         check("both are built in", ExtensionRegistry.defaults.allSatisfy(\.isBuiltIn))
+        // Only the store is searched out of the box: it is the one that needs no toolchain.
+        check("the store is on by default", ExtensionRegistry.store.isEnabled)
+        check("the source registry is not", !ExtensionRegistry.officialGitHub.isEnabled)
+        check("an added registry starts on", ExtensionRegistry.parse("me/repo")?.isEnabled == true)
         check("an added one is not", ExtensionRegistry.parse("me/repo")?.isBuiltIn == false)
         // Persisted by id, so a stable id is what keeps a stored copy recognisable as built-in.
         check(

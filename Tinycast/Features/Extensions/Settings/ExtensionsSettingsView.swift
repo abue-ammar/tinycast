@@ -48,6 +48,7 @@ struct ExtensionsSettingsView: View {
                 }
                 CompatibilityNotice()
                 if !pending.isEmpty { newInRaycast }
+                filterSection
                 library
                 ExtensionAdvancedSection()
             }
@@ -117,15 +118,27 @@ struct ExtensionsSettingsView: View {
 
     // MARK: - The library
 
+    /// The filter sits in a section of its own on purpose. Sharing one with the results means every
+    /// keystroke rebuilds the rows beside the field, and SwiftUI takes first responder with them —
+    /// the same hazard the palette's search field is pinned in place to avoid.
+    @ViewBuilder
+    private var filterSection: some View {
+        if core.extensions.installed.count > 3 {
+            Section {
+                SettingsFilterField(prompt: "Filter extensions…", query: $filter)
+            }
+        }
+    }
+
     @ViewBuilder
     private var library: some View {
         Section {
             if core.extensions.installed.isEmpty {
                 emptyLibrary
+            } else if matching.isEmpty {
+                Text("No extension matches \u{201C}\(filter)\u{201D}.")
+                    .foregroundStyle(.secondary)
             } else {
-                if core.extensions.installed.count > 6 {
-                    SettingsFilterField(prompt: "Filter extensions…", query: $filter)
-                }
                 ForEach(matching) { entry in
                     ExtensionSettingsRow(
                         installed: entry,
@@ -135,10 +148,6 @@ struct ExtensionsSettingsView: View {
                         },
                         onUninstall: { core.extensionCoordinator.confirmUninstall(entry) })
                 }
-                if matching.isEmpty {
-                    Text("No extension matches “\(filter)”.")
-                        .foregroundStyle(.secondary)
-                }
             }
         } header: {
             HStack {
@@ -146,7 +155,7 @@ struct ExtensionsSettingsView: View {
                     core.extensions.installed.isEmpty
                         ? "Installed" : "Installed (\(core.extensions.installed.count))")
                 Spacer()
-                installMenu
+                addMenu
             }
         }
     }
@@ -166,19 +175,21 @@ struct ExtensionsSettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var installMenu: some View {
-        Menu("Install New") {
-            Button("Search Registries…") { browsingStore = true }
-            Button("Import from Raycast…", action: openImport)
+    private var addMenu: some View {
+        Menu {
+            Button("Browse Extensions\u{2026}") { browsingStore = true }
+            Divider()
+            Button("Import from Raycast\u{2026}", action: openImport)
                 .disabled(!raycastAvailable)
-            Button("Add Folder…", action: addFolder)
+            Button("Add from Folder\u{2026}", action: addFolder)
+        } label: {
+            Label("Add Extension", systemImage: "plus")
         }
         .menuStyle(.button)
+        .buttonStyle(.borderless)
+        .labelStyle(.iconOnly)
         .fixedSize()
-        .help(
-            raycastAvailable
-                ? "Copy what Raycast has already built, or add a folder you built yourself."
-                : "No Raycast install found at ~/.config/raycast/extensions.")
+        .help("Add an extension")
     }
 
     private var raycastAvailable: Bool {
@@ -224,54 +235,38 @@ struct ExtensionsSettingsView: View {
 
 /// What Raycast's API does and doesn't reach here. Above the library rather than below it: the honest
 /// answer to "will my extension work" belongs before the thing that installs one.
+///
+/// A `Section(isExpanded:)` rather than a `DisclosureGroup`: it is the collapsible a macOS settings
+/// form actually uses, and its whole header row is the target rather than the chevron alone.
 private struct CompatibilityNotice: View {
     @State private var expanded = false
 
     var body: some View {
-        Section {
-            DisclosureGroup(isExpanded: $expanded) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    detail(
-                        "Works", symbol: "checkmark.circle", tint: .green,
-                        text:
-                            "Commands that show a list, a detail view, a form or a grid, and ones "
-                            + "that just run. Preferences, arguments, per-extension storage, the "
-                            + "clipboard, toasts and HUDs, and most of the Node APIs an extension "
-                            + "reaches for.")
-                    detail(
-                        "Doesn't, yet", symbol: "xmark.circle", tint: .orange,
-                        text:
-                            "Signing in through Raycast's OAuth redirect, menu-bar commands, and "
-                            + "Raycast's own AI, browser and window-management services. An "
-                            + "extension that needs one says so when you run it rather than "
-                            + "failing quietly.")
-                }
-                .padding(.top, Theme.Spacing.xs)
-            } label: {
-                Label {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                        Text("Some extensions won't work")
-                        Text(
-                            "Tinycast runs Raycast's extension API on its own runtime, and a few "
-                                + "corners of it are Raycast's alone."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "info.circle")
-                }
-            }
+        Section(isExpanded: $expanded) {
+            detail(
+                "Works", symbol: "checkmark.circle", tint: .green,
+                text:
+                    "Commands that show a list, a detail view, a form or a grid, and ones that just "
+                    + "run. Preferences, arguments, per-extension storage, the clipboard, toasts and "
+                    + "HUDs, and most of the Node APIs an extension reaches for.")
+            detail(
+                "Doesn't, yet", symbol: "xmark.circle", tint: .orange,
+                text:
+                    "Signing in through Raycast's OAuth redirect, menu-bar commands, and Raycast's "
+                    + "own AI, browser and window-management services. An extension that needs one "
+                    + "says so when you run it rather than failing quietly.")
+        } header: {
+            Text("Compatibility")
         }
     }
 
     private func detail(_ title: String, symbol: String, tint: Color, text: String) -> some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+        HStack(alignment: .top, spacing: Theme.Spacing.lg) {
             Image(systemName: symbol)
                 .foregroundStyle(tint)
                 .frame(width: Theme.Size.settingsRowIcon)
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(title).font(.callout.weight(.medium))
+                Text(title)
                 Text(text)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -290,7 +285,7 @@ private struct ExtensionSettingsRow: View {
     let onUninstall: () -> Void
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.lg) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             SettingsRow(title: installed.title, subtitle: summary) {
                 ExtensionIconButton(installed: installed)
             } trailing: {
@@ -306,30 +301,50 @@ private struct ExtensionSettingsRow: View {
             .accessibilityLabel(
                 isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
 
-            if isExpanded {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    if !installed.manifest.preferences.isEmpty {
-                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                            ForEach(installed.manifest.preferences, id: \.name) { schema in
-                                ExtensionPreferenceField(
-                                    extensionName: installed.manifest.name, schema: schema)
-                            }
-                        }
-                    }
-                    ForEach(installed.manifest.commands) { command in
-                        CommandSettings(installed: installed, command: command)
-                    }
-                    Divider()
-                    HStack {
-                        Text(installed.manifest.author)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Uninstall…", role: .destructive, action: onUninstall)
+            if isExpanded { expandedBody }
+        }
+    }
+
+    /// Grouped and ruled: preferences, then one block per command, then what removes the extension.
+    /// Flat, these ran together into one undifferentiated column of controls.
+    private var expandedBody: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            if !installed.manifest.preferences.isEmpty {
+                group("Preferences") {
+                    ForEach(installed.manifest.preferences, id: \.name) { schema in
+                        ExtensionPreferenceField(
+                            extensionName: installed.manifest.name, schema: schema)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            group("Commands") {
+                ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
+                    index, command in
+                    if index > 0 { Divider() }
+                    CommandSettings(installed: installed, command: command)
+                }
+            }
+            Divider()
+            HStack {
+                Text(installed.manifest.author)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Uninstall\u{2026}", role: .destructive, action: onUninstall)
+            }
+        }
+        .padding(.leading, Theme.Size.settingsRowIcon + Theme.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func group<Content: View>(
+        _ title: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text(title)
+                .font(Theme.Typography.sectionHeader)
+                .foregroundStyle(.secondary)
+            content()
         }
     }
 
@@ -337,7 +352,7 @@ private struct ExtensionSettingsRow: View {
         let count = installed.manifest.commands.count
         let commands = "\(count) command\(count == 1 ? "" : "s")"
         let author = installed.manifest.author
-        return author.isEmpty ? commands : "\(commands) · \(author)"
+        return author.isEmpty ? commands : "\(commands) \u{00B7} \(author)"
     }
 }
 
@@ -347,10 +362,10 @@ private struct CommandSettings: View {
     let command: ExtensionCommand
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            HStack(spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                    Text(command.title).font(.body)
+                    Text(command.title)
                     if !command.description.isEmpty {
                         Text(command.description)
                             .font(.caption)
@@ -381,6 +396,7 @@ private struct CommandSettings: View {
                             extensionName: installed.manifest.name, schema: schema)
                     }
                 }
+                .padding(.leading, Theme.Spacing.md)
             }
         }
     }
@@ -389,6 +405,10 @@ private struct CommandSettings: View {
 /// The extension's launcher icon, with the badge that re-skins it. The icon *is* the button: it is
 /// what the change applies to, so it is what you press to change it.
 private struct ExtensionIconButton: View {
+    /// Icon artwork is fitted to the share of its canvas an app icon paints, so the box has to be a
+    /// little larger than a symbol's to land the ink at the same size as the rows around it.
+    static let side = Theme.Size.rowIcon
+
     let installed: InstalledExtension
     @Environment(AppCore.self) private var core
     @State private var picking = false
@@ -428,12 +448,11 @@ private struct ExtensionIconButton: View {
     @ViewBuilder
     private var preview: some View {
         if let appearance {
-            SymbolTile(
-                symbol: appearance.symbol, tint: appearance.tint, side: Theme.Size.settingsRowIcon)
+            SymbolTile(symbol: appearance.symbol, tint: appearance.tint, side: Self.side)
         } else {
             ExtensionIconView(
                 resolved: installed.iconPath.map { ExtensionImage.Resolved(source: .file($0)) },
-                size: Theme.Size.settingsRowIcon)
+                size: Self.side)
         }
     }
 }
@@ -481,10 +500,12 @@ private struct ExtensionPreferenceField: View {
                 }
             }
             .labelsHidden()
+            .pickerStyle(.menu)
             .frame(maxWidth: 220, alignment: .leading)
             .onChange(of: text) { _, value in save(value) }
         case .password:
             SecureField(schema.placeholder ?? "", text: $text)
+                .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 260)
                 .onChange(of: text) { _, value in save(value) }
         case .file, .directory, .appPicker:
@@ -496,6 +517,7 @@ private struct ExtensionPreferenceField: View {
             }
         case .textfield:
             TextField(schema.placeholder ?? "", text: $text)
+                .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 260)
                 .onChange(of: text) { _, value in save(value) }
         }
@@ -572,7 +594,7 @@ private struct ExtensionImportSheet: View {
                             ExtensionIconView(
                                 resolved: candidate.installed.iconPath.map {
                                     ExtensionImage.Resolved(source: .file($0))
-                                }, size: Theme.Size.settingsRowIcon)
+                                }, size: Theme.Size.rowIcon)
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(candidate.installed.title).font(.body)
                                 Text(detail(for: candidate))
