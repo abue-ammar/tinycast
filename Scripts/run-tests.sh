@@ -115,7 +115,7 @@ run snippets-test          Tinycast/Platform/NotificationToken.swift \
                            Tinycast/Features/Snippets/Service/*.swift
 run raycast-test           Tinycast/Features/Backup/Model/RaycastFormat.swift \
                            Tinycast/Features/Backup/Model/RaycastV1Decoder.swift \
-                           Tinycast/Features/Backup/Service/Gunzip.swift \
+                           Tinycast/Platform/Compression/Zlib.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift
 run settings-backup-test   Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/Backup/Model/SettingsBackupCoverage.swift

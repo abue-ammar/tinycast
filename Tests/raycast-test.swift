@@ -396,16 +396,16 @@ enum RaycastTests {
         expect(snippets?.snippets.last?.keyword == nil, "a blank keyword becomes nil")
     }
 
-    // MARK: - Gunzip
+    // MARK: - Zlib
 
     static func gunzipSlices() {
         // `decompress` indexes a zero-based copy, so a slice starting elsewhere must not be re-indexed.
         var prefixed = Data(repeating: 0xa5, count: 32)
         prefixed.append(gzippedJSON)
         expect(
-            (try? Gunzip.decompress(prefixed.dropFirst(32))) == plainJSON,
+            (try? Zlib.gunzip(prefixed.dropFirst(32))) == plainJSON,
             "a non-zero-index gzip slice decompresses instead of trapping")
-        expect((try? Gunzip.decompress(gzippedJSON)) == plainJSON, "a zero-based gzip still works")
-        expect((try? Gunzip.decompress(Data(repeating: 0x00, count: 32))) == nil, "non-gzip throws")
+        expect((try? Zlib.gunzip(gzippedJSON)) == plainJSON, "a zero-based gzip still works")
+        expect((try? Zlib.gunzip(Data(repeating: 0x00, count: 32))) == nil, "non-gzip throws")
     }
 }
