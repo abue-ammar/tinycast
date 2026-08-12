@@ -1,16 +1,45 @@
 import SwiftUI
 
-/// Settings › Extensions: where extensions are searched for, and what builds the ones that arrive as
-/// source. Plain sections rather than a collapsible — there are four rows, and hiding them behind a
-/// disclosure only adds a thing to click.
+/// Settings › Extensions › Advanced: where extensions are searched for, and what builds the ones that
+/// arrive as source. Both are right by default, so both stay folded away until someone wants them.
 struct ExtensionRegistriesSection: View {
     @Environment(AppCore.self) private var core
+    @State private var expanded = false
     @State private var addingRegistry = false
 
     private var settings: AppSettings { core.settings }
 
     var body: some View {
         Section {
+            DisclosureGroup(isExpanded: $expanded) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                    registries
+                    Divider()
+                    building
+                }
+                .padding(.top, Theme.Spacing.md)
+            } label: {
+                // A `DisclosureGroup` only toggles from its chevron; the label is the rest of the row.
+                Text("Advanced")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                    .onTapGesture { expanded.toggle() }
+            }
+        }
+        .sheet(isPresented: $addingRegistry) {
+            RegistryEditorSheet(
+                onAdd: { registry in
+                    settings.extensionRegistries.append(registry)
+                    addingRegistry = false
+                }, onCancel: { addingRegistry = false })
+        }
+    }
+
+    // MARK: - Registries
+
+    private var registries: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            heading("Registries")
             ForEach(settings.extensionRegistries) { registry in
                 SettingsRow(title: registry.name, subtitle: registry.subtitle) {
                     registryIcon(registry)
@@ -31,34 +60,28 @@ struct ExtensionRegistriesSection: View {
                     }
                 }
             }
-            Button("Add Registry…") { addingRegistry = true }
-        } header: {
-            Text("Registries")
-        } footer: {
-            Text(
+            HStack {
+                Button("Add Registry…") { addingRegistry = true }
+                Spacer()
+            }
+            note(
                 "A registry is a source of code you will run. Add one only if you trust who "
-                    + "publishes it."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+                    + "publishes it.")
         }
-        .sheet(isPresented: $addingRegistry) {
-            RegistryEditorSheet(
-                onAdd: { registry in
-                    settings.extensionRegistries.append(registry)
-                    addingRegistry = false
-                }, onCancel: { addingRegistry = false })
-        }
-
-        buildingSection
     }
 
+    // MARK: - Building
+
     /// Only a source registry needs a package manager, and the one that ships is off by default — so
-    /// the section says what it is for rather than sitting there as an unexplained dropdown.
-    private var buildingSection: some View {
+    /// this says what it is for rather than sitting there as an unexplained dropdown.
+    private var building: some View {
         @Bindable var settings = core.settings
-        return Section {
-            LabeledContent {
+        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            heading("Building")
+            SettingsRow(title: "Package manager", subtitle: packageManagerDetail) {
+                Image(systemName: "shippingbox")
+                    .foregroundStyle(.secondary)
+            } trailing: {
                 Picker("", selection: $settings.extensionPackageManager) {
                     ForEach(ExtensionPackageManager.allCases) { manager in
                         Text(manager.title).tag(manager)
@@ -66,20 +89,11 @@ struct ExtensionRegistriesSection: View {
                 }
                 .labelsHidden()
                 .fixedSize()
-            } label: {
-                Text("Package manager")
-                Text(packageManagerDetail)
             }
-        } header: {
-            Text("Building")
-        } footer: {
-            Text(
-                "Extensions from a GitHub registry arrive as source, and are built when you install "
-                    + "them — which starts by installing their dependencies. The Raycast Store serves "
-                    + "extensions already built and never needs this."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            note(
+                "Extensions from a GitHub registry arrive as source and are built when you install "
+                    + "them, starting with their dependencies. The Raycast Store serves extensions "
+                    + "already built and never needs this.")
         }
     }
 
@@ -93,6 +107,21 @@ struct ExtensionRegistriesSection: View {
         return chosen == .automatic
             ? "Found \(resolved.manager.title) at \(resolved.url.path)."
             : "Found at \(resolved.url.path)."
+    }
+
+    // MARK: - Pieces
+
+    private func heading(_ title: String) -> some View {
+        Text(title)
+            .font(Theme.Typography.sectionHeader)
+            .foregroundStyle(.secondary)
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder
@@ -151,13 +180,13 @@ private struct RegistryEditorSheet: View {
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Repository").font(.callout.weight(.medium))
-                TextField("owner/repo, or a link to the folder", text: $url)
+                TextField("", text: $url, prompt: Text("owner/repo, or a link to the folder"))
                     .textFieldStyle(.roundedBorder)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Name").font(.callout.weight(.medium))
-                TextField(parsed?.name ?? "Optional", text: $name)
+                TextField("", text: $name, prompt: Text(parsed?.name ?? "Optional"))
                     .textFieldStyle(.roundedBorder)
             }
 
