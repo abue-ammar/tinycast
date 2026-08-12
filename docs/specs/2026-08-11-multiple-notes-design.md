@@ -90,7 +90,9 @@ The model consists of:
   source.
 - `NoteDocument`, carrying the ID, literal source, byte revision, and modification date.
 - `NoteSearchResult`, carrying a summary, rank, and a short excerpt around the first body match.
-- `NotesRepository`, carrying the injected Notes directory and all coordinated filesystem operations.
+
+`NotesRepository` is the effectful service carrying the injected Notes directory and all coordinated
+filesystem operations.
 
 Display titles are filenames without `.md`. Creating a note starts with `Untitled.md`; collisions use
 `Untitled 2.md`, `Untitled 3.md`, and so on. Renaming trims surrounding whitespace and newlines, removes
@@ -111,9 +113,9 @@ filename without restoring the corresponding note files would be meaningless.
 ## Repository operations and file safety
 
 `NotesRepository` exposes list, create, load, save, rename, trash, and conflict-copy operations. Its
-directory and clock are injected, its model remains Foundation-only, and every blocking operation is
-driven from a utility-priority detached task. It validates every resolved URL as an immediate child of
-the injected directory before reading or mutating it.
+directory and clock are injected, and every blocking operation is driven from a utility-priority
+detached task. It validates every resolved URL as an immediate child of the injected directory before
+reading or mutating it.
 
 Saving retains the first slice's contract: coordinate access, compare the expected byte revision at
 the last responsible moment, then atomically replace. Rename first flushes the active source, then

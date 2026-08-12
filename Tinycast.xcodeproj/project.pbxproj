@@ -118,6 +118,7 @@
 		71AA40FC4B8C57FFDE5F8DFC /* SystemAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE72CE02F853ACE956627347 /* SystemAction.swift */; };
 		74ACDD85B9F03C36E9258695 /* SettingsSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7AA1305D43303E055DEE1E9 /* SettingsSplitViewController.swift */; };
 		74BE9E8319C8302EF525E6B2 /* QuicklinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 685FB7FD7E4E5BE6606440D0 /* QuicklinkStore.swift */; };
+		75AED41394E66D6E9CBDA7EA /* NotesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F84B7743B803F55C41D5C4A /* NotesRepository.swift */; };
 		7833FD6E0A6036954FE285CE /* FrequentEmojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D35CA0655717E1798AFDA7B /* FrequentEmojiStore.swift */; };
 		7BDB7CF7F1352015F6AC96C3 /* SnippetsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375734577C888260A8023181 /* SnippetsStore.swift */; };
 		7CC503824FDF49F788C85BB3 /* SettingsBackupCoverage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5FFE395B9164BDC77B3470 /* SettingsBackupCoverage.swift */; };
@@ -194,7 +195,6 @@
 		C215695FE671BC591DC99C2B /* DialogPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB241B179A08518424F7C1B /* DialogPanel.swift */; };
 		C4B9E9B3E965BFDFD31EDC3D /* LauncherCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 858E08BB313EC330C2D5E50C /* LauncherCoordinator.swift */; };
 		C5F60D8681235B95DAA3314F /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418DA899A1546F3B4AC44777 /* GeneralSettingsView.swift */; };
-		C6339E5D2E44C740BDE04D2F /* NotesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 956B05EF03209B6A8F8E0B87 /* NotesRepository.swift */; };
 		C6FBF3B96694E9050BB9FE35 /* NoteDisplayProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 179E1D0D617B280F001D19CA /* NoteDisplayProjection.swift */; };
 		CA6BA9C381351D0B2CADFB9D /* IconCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5CBCCE63360E4590CF5884A /* IconCache.swift */; };
 		CAE4C44A9D2EC4AC51FD3150 /* UninstallTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EBAD0766FF9BFC6A4396474 /* UninstallTarget.swift */; };
@@ -375,6 +375,7 @@
 		7E7DAF3FFEE6CAB656B0FA8A /* UninstallRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallRules.swift; sourceTree = "<group>"; };
 		7EBAD0766FF9BFC6A4396474 /* UninstallTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallTarget.swift; sourceTree = "<group>"; };
 		7F64F4362989516482853CDB /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		7F84B7743B803F55C41D5C4A /* NotesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesRepository.swift; sourceTree = "<group>"; };
 		802BD2F4CC057228F2528217 /* PalettePlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalettePlacement.swift; sourceTree = "<group>"; };
 		83C54F3A609CD1C2CDF304FB /* DoubleTapDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleTapDetector.swift; sourceTree = "<group>"; };
 		83CD7B0E866AEF486F9EC5E9 /* QuicklinkCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkCoordinator.swift; sourceTree = "<group>"; };
@@ -400,7 +401,6 @@
 		92B4495E56754B05B5F3551D /* CalcPercent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcPercent.swift; sourceTree = "<group>"; };
 		94507F8F095D3EBD1A9B3007 /* DialogController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogController.swift; sourceTree = "<group>"; };
 		951E746BA1AD25D167A1775F /* SystemSettingsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsSettingsView.swift; sourceTree = "<group>"; };
-		956B05EF03209B6A8F8E0B87 /* NotesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesRepository.swift; sourceTree = "<group>"; };
 		95BFA41B0D7F369A8CF1E013 /* HyperKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKey.swift; sourceTree = "<group>"; };
 		95E3AA9E226F39DBB232501F /* RaycastImportV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportV2.swift; sourceTree = "<group>"; };
 		976A1F05AD82DB8A04B3C3F9 /* MessageHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHUDView.swift; sourceTree = "<group>"; };
@@ -674,7 +674,6 @@
 				E53B9481E7AF078575634387 /* NoteMarkdownEditing.swift */,
 				0C3F123266ED0DA4BC9616B9 /* NoteMarkdownParser.swift */,
 				6D594CB90475093D58A2AB1E /* NoteSearch.swift */,
-				956B05EF03209B6A8F8E0B87 /* NotesRepository.swift */,
 				A09528C8D92B1F3524DEE9D3 /* NoteWindowLayout.swift */,
 			);
 			path = Model;
@@ -1243,6 +1242,7 @@
 			children = (
 				E7BBE5D84D3914059887FAEF /* NoteFileMonitor.swift */,
 				07F7926056603E4A6B979237 /* NoteLinkLauncher.swift */,
+				7F84B7743B803F55C41D5C4A /* NotesRepository.swift */,
 				FC2B77DA46386E7E459406E4 /* NotesStore.swift */,
 			);
 			path = Service;
@@ -1578,7 +1578,7 @@
 				88F2FF3D7B46A4829AB8C0AB /* NoteWindowLayout.swift in Sources */,
 				D07F272D0E095B6000D53716 /* NotesCoordinator.swift in Sources */,
 				F71FC7195AC8D6626BEE8931 /* NotesPanel.swift in Sources */,
-				C6339E5D2E44C740BDE04D2F /* NotesRepository.swift in Sources */,
+				75AED41394E66D6E9CBDA7EA /* NotesRepository.swift in Sources */,
 				6293B6B6B50E09CA75B74654 /* NotesSettingsView.swift in Sources */,
 				7FDE88F4E065FF80DCB92445 /* NotesStore.swift in Sources */,
 				E8AD3FBDA8B150790643A2F5 /* NotesView.swift in Sources */,

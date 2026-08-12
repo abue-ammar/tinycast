@@ -29,8 +29,8 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ AppIndex · SpotlightNames · FileSearchService · SettingsPaneScanner ·      │
 │ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │
 │ SystemActionRunner · QuicklinkLauncher · SnippetTextInjector ·             │
-│ SnippetKeywordListener · CurrencyRateStore · Paster · HotKeyCenter ·       │
-│ HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor                        │
+│ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
+│ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor         │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐

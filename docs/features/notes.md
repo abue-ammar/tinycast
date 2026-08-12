@@ -47,8 +47,8 @@ and appears through ordinary enumeration; there is no migration branch. The acti
 is local UI state in UserDefaults and does not ride settings backups.
 
 `NotesRepository` owns list, create, load, save, rename, Trash, conflict-copy, and search reads. Every
-URL is validated as an immediate child of the injected directory. Model code stays Foundation-only;
-blocking filesystem work is driven from detached tasks by `NotesStore`.
+URL is validated as an immediate child of the injected directory. It lives in `Service/` because it
+performs filesystem effects; `NotesStore` drives its blocking work from detached tasks.
 
 ## Ownership and enablement
 
