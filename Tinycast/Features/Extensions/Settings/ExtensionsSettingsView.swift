@@ -10,6 +10,7 @@ struct ExtensionsSettingsView: View {
     @State private var error: String?
     /// Extensions Raycast has built that aren't here yet, refreshed whenever the pane appears.
     @State private var pending: [RaycastImportCandidate] = []
+    @State private var browsingStore = false
 
     private var matching: [InstalledExtension] {
         guard !filter.isEmpty else { return core.extensions.installed }
@@ -48,6 +49,7 @@ struct ExtensionsSettingsView: View {
                 CompatibilityNotice()
                 if !pending.isEmpty { newInRaycast }
                 library
+                ExtensionAdvancedSection()
             }
             .settingsEnabled(settings.extensionsEnabled)
         }
@@ -58,6 +60,9 @@ struct ExtensionsSettingsView: View {
         // Presented by item, not by a bare flag: with `isPresented` SwiftUI builds the sheet from the
         // body snapshot that precedes the button's state write, so the freshly scanned candidates
         // arrived as an empty list.
+        .sheet(isPresented: $browsingStore) {
+            ExtensionStoreSheet(onClose: { browsingStore = false })
+        }
         .sheet(item: $importCandidates) { candidates in
             ExtensionImportSheet(
                 candidates: candidates.entries,
@@ -151,8 +156,9 @@ struct ExtensionsSettingsView: View {
             Text("Nothing installed yet.")
             Text(
                 raycastAvailable
-                    ? "Import what Raycast has already built, or add a folder you built yourself."
-                    : "Add a folder holding package.json and the built <command>.js files."
+                    ? "Search the registries, import what Raycast has already built, or add a "
+                        + "folder you built yourself."
+                    : "Search the registries, or add a folder you built yourself."
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -162,6 +168,7 @@ struct ExtensionsSettingsView: View {
 
     private var installMenu: some View {
         Menu("Install New") {
+            Button("Search Registries…") { browsingStore = true }
             Button("Import from Raycast…", action: openImport)
                 .disabled(!raycastAvailable)
             Button("Add Folder…", action: addFolder)
