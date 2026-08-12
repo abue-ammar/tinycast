@@ -180,7 +180,9 @@ struct ExtensionsSettingsView: View {
                         .disabled(!raycastAvailable)
                     Button("Add from Folder…", action: addFolder)
                 }
-                .menuStyle(.button)
+                // Borderless, not `.button`: a bordered menu in a section header draws its label and
+                // its chevron as two separate pills.
+                .menuStyle(.borderlessButton)
                 .fixedSize()
             }
         } footer: {
@@ -297,36 +299,39 @@ private struct ExtensionDisclosure: View {
             isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
     }
 
+    /// One `Grid` for the whole card, not one per group: separate grids size their columns
+    /// separately, so a short label in one run would leave its control floating in the middle of the
+    /// row while a long label in the next pushed its own control to the edge.
+    ///
+    /// Not a nested `Form` either — a form inside a form row takes the width it wants rather than the
+    /// width it is given, and runs a row's label and its description together into one string.
     private var settings: some View {
-        // A `Form` in the columns style inside the card: the controls keep the aligned label column
-        // and system styling they would lose in a hand-built stack, without the grouped chrome that
-        // would fight the card around them.
-        Form {
-            ExtensionIconRow(installed: installed)
+        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            Grid(
+                alignment: .leading, horizontalSpacing: Theme.Spacing.lg,
+                verticalSpacing: Theme.Spacing.lg
+            ) {
+                heading("Appearance")
+                ExtensionIconRow(installed: installed)
 
-            if !installed.manifest.preferences.isEmpty {
-                group("Preferences") {
+                if !installed.manifest.preferences.isEmpty {
+                    heading("Preferences")
                     ForEach(installed.manifest.preferences, id: \.name) { schema in
-                        ExtensionPreferenceField(
+                        ExtensionPreferenceRow(
                             extensionName: installed.manifest.name, schema: schema)
                     }
                 }
-            }
 
-            group(installed.manifest.commands.count == 1 ? "Command" : "Commands") {
-                ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
-                    index, command in
-                    if index > 0 { Divider() }
-                    CommandRow(installed: installed, command: command)
+                heading(installed.manifest.commands.count == 1 ? "Command" : "Commands")
+                ForEach(installed.manifest.commands) { command in
+                    CommandRows(installed: installed, command: command)
                 }
             }
-
             HStack {
                 Spacer()
                 Button("Uninstall…", role: .destructive, action: onUninstall)
             }
         }
-        .formStyle(.columns)
         .padding(Theme.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
@@ -337,19 +342,17 @@ private struct ExtensionDisclosure: View {
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
         )
-        // Inset from the row's leading edge so the card reads as belonging to the row above it.
-        .padding(.leading, Theme.Size.rowIcon)
     }
 
-    /// A titled run inside the card, so preferences and commands don't read as one flat column.
-    private func group<Content: View>(
-        _ title: String, @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+    /// A run's title, spanning both columns so it starts at the card's leading edge.
+    private func heading(_ title: String) -> some View {
+        GridRow {
             Text(title)
                 .font(Theme.Typography.sectionHeader)
                 .foregroundStyle(.secondary)
-            content()
+                .gridCellColumns(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, Theme.Spacing.xs)
         }
     }
 
@@ -361,42 +364,56 @@ private struct ExtensionDisclosure: View {
     }
 }
 
-/// One command: its shortcut, and any preferences it declares of its own.
-private struct CommandRow: View {
+/// One row of a settings card: what it is on the left, the control on the right, columns aligned by
+/// the enclosing `Grid`.
+private struct SettingsCardRow<Control: View>: View {
+    let title: String
+    var detail: String?
+    @ViewBuilder var control: Control
+
+    var body: some View {
+        GridRow(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(title)
+                if let detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .gridColumnAlignment(.leading)
+            control
+                .gridColumnAlignment(.trailing)
+        }
+    }
+}
+
+/// One command: its shortcut, then any preferences it declares of its own.
+private struct CommandRows: View {
     let installed: InstalledExtension
     let command: ExtensionCommand
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack(alignment: .top, spacing: Theme.Spacing.lg) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                    Text(command.title)
-                    if !command.description.isEmpty {
-                        Text(command.description)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                Spacer(minLength: Theme.Spacing.lg)
-                if command.mode.isSupported {
-                    // Per command, not per extension: a shortcut has to land on one thing to run,
-                    // and an extension is a set of commands.
-                    ShortcutRecorder(
-                        action: .extensionCommand(
-                            entryID: ExtensionCommandRef(
-                                extensionName: installed.manifest.name, commandName: command.name
-                            ).entryID))
-                } else {
-                    Text("Menu bar command")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .help(command.mode.unsupportedReason ?? "")
-                }
+        SettingsCardRow(title: command.title, detail: command.description) {
+            if command.mode.isSupported {
+                // Per command, not per extension: a shortcut has to land on one thing to run, and an
+                // extension is a set of commands.
+                ShortcutRecorder(
+                    action: .extensionCommand(
+                        entryID: ExtensionCommandRef(
+                            extensionName: installed.manifest.name, commandName: command.name
+                        ).entryID))
+            } else {
+                Text("Menu bar command")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .help(command.mode.unsupportedReason ?? "")
             }
-            ForEach(command.preferences, id: \.name) { schema in
-                ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
-            }
+        }
+        ForEach(command.preferences, id: \.name) { schema in
+            ExtensionPreferenceRow(extensionName: installed.manifest.name, schema: schema)
         }
     }
 }
@@ -414,7 +431,11 @@ private struct ExtensionIconRow: View {
     }
 
     var body: some View {
-        LabeledContent {
+        SettingsCardRow(
+            title: "Launcher icon",
+            detail: appearance == nil
+                ? "The icon this extension ships." : "Replaced with a Tinycast icon."
+        ) {
             HStack(spacing: Theme.Spacing.md) {
                 preview
                 Button("Change…") { picking = true }
@@ -428,12 +449,6 @@ private struct ExtensionIconRow: View {
                             })
                     }
             }
-        } label: {
-            Text("Launcher icon")
-            Text(
-                appearance == nil
-                    ? "Using the icon this extension ships."
-                    : "Replaced with a Tinycast icon.")
         }
     }
 
@@ -452,31 +467,30 @@ private struct ExtensionIconRow: View {
 
 /// One preference control, backed by `ExtensionStorage` so a command reads it through
 /// `getPreferenceValues()`.
-private struct ExtensionPreferenceField: View {
+private struct ExtensionPreferenceRow: View {
     let extensionName: String
     let schema: ExtensionPreferenceSchema
     @Environment(AppCore.self) private var core
     @State private var text: String = ""
     @State private var flag: Bool = false
 
-    /// Wide enough for a path, and fixed: left to itself a text field in a form row collapses to
-    /// nothing next to a long label, which is how one ends up invisible but still clickable.
-    private static let controlWidth: CGFloat = 200
+    /// Wide enough for a path, and fixed: left to itself a text field takes whatever width is going,
+    /// which is how one ends up invisible or pushing the row past the card.
+    private static let controlWidth: CGFloat = 190
 
     private var storage: ExtensionStorage { core.extensions.storage }
 
     var body: some View {
-        LabeledContent {
+        SettingsCardRow(title: schema.displayTitle, detail: detail) {
             control
-        } label: {
-            Text(schema.displayTitle)
-            if let description = schema.description, !description.isEmpty {
-                Text(schema.required ? description + " Required." : description)
-            } else if schema.required {
-                Text("Required.")
-            }
         }
         .onAppear(perform: load)
+    }
+
+    private var detail: String? {
+        let description = schema.description ?? ""
+        guard schema.required else { return description }
+        return description.isEmpty ? "Required." : description + " Required."
     }
 
     @ViewBuilder
@@ -496,10 +510,10 @@ private struct ExtensionPreferenceField: View {
                 }
             }
             .labelsHidden()
-            .fixedSize()
+            .frame(maxWidth: Self.controlWidth)
             .onChange(of: text) { _, value in save(value) }
         case .password:
-            SecureField(schema.placeholder ?? "", text: $text)
+            SecureField("", text: $text, prompt: schema.placeholder.map(Text.init))
                 .textFieldStyle(.roundedBorder)
                 .labelsHidden()
                 .pointerStyle(.horizontalText)
