@@ -37,6 +37,10 @@ struct ExtensionsSettingsView: View {
             .settingsEnabled(settings.extensionsEnabled)
         }
         .formStyle(.grouped)
+        .releasesFocusOnOutsideClick()
+        // Escape and Return are the keyboard way out of the same field.
+        .onExitCommand { NSApp.keyWindow?.makeFirstResponder(nil) }
+        .onSubmit { NSApp.keyWindow?.makeFirstResponder(nil) }
         .onChange(of: settings.extensionsShowInLauncher) {
             core.extensionCoordinator.applyExtensionsLauncherPresence()
         }
@@ -436,6 +440,8 @@ private struct ExtensionPreferenceField: View {
         case .password:
             SecureField(schema.placeholder ?? "", text: $text)
                 .textFieldStyle(.roundedBorder)
+                .labelsHidden()
+                .pointerStyle(.horizontalText)
                 .frame(width: Self.controlWidth)
                 .onChange(of: text) { _, value in save(value) }
         case .file, .directory, .appPicker:
@@ -447,8 +453,10 @@ private struct ExtensionPreferenceField: View {
                 Button("Choose…", action: choosePath)
             }
         case .textfield:
-            TextField(schema.placeholder ?? "", text: $text)
+            TextField("", text: $text, prompt: schema.placeholder.map(Text.init))
                 .textFieldStyle(.roundedBorder)
+                .labelsHidden()
+                .pointerStyle(.horizontalText)
                 .frame(width: Self.controlWidth)
                 .onChange(of: text) { _, value in save(value) }
         }

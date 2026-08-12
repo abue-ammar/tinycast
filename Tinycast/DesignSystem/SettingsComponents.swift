@@ -83,11 +83,14 @@ struct SettingsFilterField: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
             // `prompt:`, not the title argument: inside a `Form` a text field's title is rendered as
-            // its label in the left-hand column, which turns the placeholder into a heading and
-            // leaves the field itself an unmarked strip on the right.
+            // its label in the left-hand column, which turns the placeholder into a heading. And
+            // `labelsHidden`, or the form reserves that column for the empty title anyway and the
+            // field starts halfway across the row, nowhere near the magnifying glass.
             TextField("", text: $query, prompt: Text(prompt))
                 .textFieldStyle(.plain)
+                .labelsHidden()
                 .focused($focused)
+                .pointerStyle(.horizontalText)
             if !query.isEmpty {
                 Button {
                     query = ""

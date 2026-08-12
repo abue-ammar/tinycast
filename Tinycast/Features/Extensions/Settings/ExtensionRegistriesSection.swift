@@ -182,12 +182,14 @@ private struct RegistryEditorSheet: View {
                 Text("Repository").font(.callout.weight(.medium))
                 TextField("", text: $url, prompt: Text("owner/repo, or a link to the folder"))
                     .textFieldStyle(.roundedBorder)
+                    .pointerStyle(.horizontalText)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Name").font(.callout.weight(.medium))
                 TextField("", text: $name, prompt: Text(parsed?.name ?? "Optional"))
                     .textFieldStyle(.roundedBorder)
+                    .pointerStyle(.horizontalText)
             }
 
             if let parsed {
