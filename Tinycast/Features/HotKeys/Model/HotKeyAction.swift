@@ -12,6 +12,9 @@ enum HotKeyAction: Hashable, Sendable {
     case systemAction(id: SystemAction.ID)
     case windowCommand(id: WindowCommand.ID)
     case quicklink(id: UUID)
+    /// Keyed by `AppEntry.id` (`extension:<extension>/<command>`), which is what survives a
+    /// reinstall — an extension carries no id of its own beyond its name.
+    case extensionCommand(entryID: String)
 
     /// The UserDefaults key, and the `HotKeyCenter` registration id: one per action.
     var defaultsKey: String {
@@ -26,6 +29,7 @@ enum HotKeyAction: Hashable, Sendable {
         case .systemAction(let id): "hotkey.systemAction." + id.rawValue
         case .windowCommand(let id): "hotkey.windowCommand." + id.rawValue
         case .quicklink(let id): "hotkey.quicklink." + id.uuidString.lowercased()
+        case .extensionCommand(let entryID): "hotkey.extensionCommand." + entryID
         }
     }
 }

@@ -57,6 +57,8 @@ enum LegacyHotKeyRecords {
         case .windowCommand(let id): "KeyboardShortcuts_windowCommandHotkey." + id.rawValue
         case .quicklink(let id):
             "KeyboardShortcuts_quicklinkHotkey." + id.uuidString.lowercased()
+        // Newer than the package it adopts records from, so there is nothing to adopt.
+        case .extensionCommand: nil
         }
     }
 }

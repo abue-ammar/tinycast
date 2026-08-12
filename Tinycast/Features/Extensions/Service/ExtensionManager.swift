@@ -44,6 +44,10 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     @ObservationIgnored private weak var appIndex: AppIndex?
     @ObservationIgnored private weak var coordinator: ExtensionCoordinator?
 
+    /// Called with the entry ids an uninstall just invalidated, so another feature can drop what it
+    /// keyed to them. Set once, in `AppCore.start`.
+    @ObservationIgnored var onDidUninstall: (([String]) -> Void)?
+
     @ObservationIgnored private var sessionID: String?
     @ObservationIgnored private var nextToastID = 1
 
@@ -98,6 +102,17 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         installed.first { $0.manifest.name == name }
     }
 
+    /// The launcher row for one command, built from the installed set rather than read back out of
+    /// `AppIndex` — a global shortcut can fire before the launcher has ever been opened, and while
+    /// `showsInLauncher` is off there is no row to read.
+    func launcherEntry(forEntryID entryID: String) -> AppEntry? {
+        guard let reference = ExtensionCommandRef(entryID: entryID),
+            let owner = extensionNamed(reference.extensionName),
+            let command = owner.command(named: reference.commandName)
+        else { return nil }
+        return entry(for: command, in: owner)
+    }
+
     /// Surface every runnable command as a launcher row. Menu-bar commands are listed too — activating
     /// one explains why it can't run, which beats silently hiding it.
     private func publishLauncherEntries() {
@@ -105,27 +120,29 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             appIndex?.setExtensionCommands([])
             return
         }
-        let entries = installed.flatMap { installedExtension -> [AppEntry] in
-            let iconPath = installedExtension.iconPath
-            // A chosen appearance replaces the shipped icon for every command of the extension.
-            let appearance = appearances.appearance(for: installedExtension.manifest.name)
-            return installedExtension.manifest.commands.compactMap { command -> AppEntry? in
-                let reference = ExtensionCommandRef(
-                    extensionName: installedExtension.manifest.name, commandName: command.name)
-                return AppEntry(
-                    id: reference.entryID,
-                    name: command.title,
-                    url: installedExtension.directory,
-                    bundleID: nil,
-                    kind: .extensionCommand,
-                    imageIconPath: appearance == nil
-                        ? (commandIconPath(command, in: installedExtension) ?? iconPath) : nil,
-                    kindLabelOverride: installedExtension.title,
-                    appearance: appearance)
-            }
-        }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        let entries =
+            installed
+            .flatMap { owner in owner.manifest.commands.map { entry(for: $0, in: owner) } }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         appIndex?.setExtensionCommands(entries)
+    }
+
+    /// One command as a launcher row. A chosen appearance replaces the shipped icon for every
+    /// command of the extension.
+    private func entry(for command: ExtensionCommand, in owner: InstalledExtension) -> AppEntry {
+        let appearance = appearances.appearance(for: owner.manifest.name)
+        let reference = ExtensionCommandRef(
+            extensionName: owner.manifest.name, commandName: command.name)
+        return AppEntry(
+            id: reference.entryID,
+            name: command.title,
+            url: owner.directory,
+            bundleID: nil,
+            kind: .extensionCommand,
+            imageIconPath: appearance == nil
+                ? (commandIconPath(command, in: owner) ?? owner.iconPath) : nil,
+            kindLabelOverride: owner.title,
+            appearance: appearance)
     }
 
     /// Settings picked (or cleared) an icon: persist it and re-publish, so the launcher rows change
@@ -154,10 +171,20 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         await refresh()
     }
 
+    /// Removing an extension takes everything keyed to it with it: its files, its stored
+    /// preferences and cache, its chosen icon, and — through `onDidUninstall` — the shortcuts bound
+    /// to its commands, which no index prunes on its own.
     func uninstall(_ installedExtension: InstalledExtension) async {
         if running?.extensionName == installedExtension.manifest.name { await stop() }
+        let entryIDs = installedExtension.manifest.commands.map {
+            ExtensionCommandRef(
+                extensionName: installedExtension.manifest.name, commandName: $0.name
+            ).entryID
+        }
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
+        appearances.set(nil, for: installedExtension.manifest.name)
+        onDidUninstall?(entryIDs)
         await refresh()
     }
 

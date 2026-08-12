@@ -176,6 +176,17 @@ private struct ExtensionSettingsRow: View {
                                         .font(.caption)
                                         .foregroundStyle(.orange)
                                 }
+                                Spacer(minLength: Theme.Spacing.lg)
+                                // Per command, not per extension: a shortcut has to land on one
+                                // thing to run, and an extension is a set of commands.
+                                if command.mode.isSupported {
+                                    ShortcutRecorder(
+                                        action: .extensionCommand(
+                                            entryID: ExtensionCommandRef(
+                                                extensionName: installed.manifest.name,
+                                                commandName: command.name
+                                            ).entryID))
+                                }
                             }
                             if !command.description.isEmpty {
                                 Text(command.description)

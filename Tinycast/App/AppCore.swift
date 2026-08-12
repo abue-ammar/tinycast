@@ -170,6 +170,14 @@ final class AppCore {
             hotKeys.onOpenQuicklink = { [weak self] id in
                 self?.quicklinkCoordinator.openQuicklink(id: id)
             }
+            hotKeys.onRunExtensionCommand = { [weak self] entryID in
+                self?.extensionCoordinator.runExtensionCommand(entryID: entryID)
+            }
+            extensions.onDidUninstall = { [weak self] entryIDs in
+                for entryID in entryIDs {
+                    self?.hotKeys.setBinding(nil, for: .extensionCommand(entryID: entryID))
+                }
+            }
             hotKeys.displayName = { [weak self] action in self?.hotKeyDisplayName(for: action) }
             KeyShortcut.displayedHyperChord = { [settings] in
                 guard settings.hyperKey != .none else { return nil }
@@ -224,6 +232,8 @@ final class AppCore {
             return customCommands.command(id: id)?.name
         case .quicklink(let id):
             return quicklinks.quicklink(id: id)?.name
+        case .extensionCommand(let entryID):
+            return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
         case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
             .windowCommand:
             return nil

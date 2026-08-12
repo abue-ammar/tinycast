@@ -71,6 +71,15 @@ final class ExtensionCoordinator {
         extensions.setShowsInLauncher(settings.extensionsShowInLauncher)
     }
 
+    /// A global shortcut fired for one command. The launcher may never have been opened, so the
+    /// entry is resolved from the installed set rather than from `AppIndex`.
+    func runExtensionCommand(entryID: String) {
+        guard settings.extensionsEnabled,
+            let entry = extensions.launcherEntry(forEntryID: entryID)
+        else { return }
+        runExtensionCommand(entry)
+    }
+
     // MARK: - Managing one extension from the launcher
 
     /// Opens Settings on the extension a launcher row belongs to.
