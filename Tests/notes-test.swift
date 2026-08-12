@@ -10,6 +10,7 @@ struct NotesTests {
         testMarkdownEditorModel()
         testWindowLayout()
         try await testStoreCollectionAndExternalEdits()
+        try await testCollectionMutationsRequireCleanDraft()
 
         print(failures == 0 ? "Notes tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -620,6 +621,41 @@ struct NotesTests {
             check("a non-active note moves to Trash", trashed)
             check("trashing another note keeps the active source", store.activeID != projectID)
         }
+        store.stop()
+    }
+
+    private static func testCollectionMutationsRequireCleanDraft() async throws {
+        let root = temporaryRoot("mutation-flush")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = NotesRepository(applicationSupportDirectory: root)
+        let store = NotesStore(repository: repository)
+
+        _ = await store.create()
+        let renameTarget = try require(store.activeID)
+        _ = await store.create()
+        let trashTarget = try require(store.activeID)
+        _ = await store.create()
+        let activeID = try require(store.activeID)
+
+        store.updateSource("local draft")
+        try Data("external edit".utf8).write(
+            to: repository.fileURL(for: activeID), options: .atomic)
+        await waitUntil {
+            if case .conflict = store.state { return true }
+            return false
+        }
+
+        let renamed = await store.rename(renameTarget, to: "Must Not Rename")
+        check("renaming another note stops at an active conflict", renamed == nil)
+        check(
+            "a blocked rename leaves its target in place",
+            FileManager.default.fileExists(atPath: repository.fileURL(for: renameTarget).path))
+
+        let trashed = await store.trash(trashTarget)
+        check("trashing another note stops at an active conflict", !trashed)
+        check(
+            "a blocked Trash leaves its target in place",
+            FileManager.default.fileExists(atPath: repository.fileURL(for: trashTarget).path))
         store.stop()
     }
 

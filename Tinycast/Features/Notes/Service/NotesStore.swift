@@ -189,7 +189,7 @@ final class NotesStore {
 
     @discardableResult
     func rename(_ id: NoteID, to title: String) async -> NoteID? {
-        if id == activeID, !(await flush()) { return nil }
+        guard await flush() else { return nil }
         let repository = repository
         let activeID = activeID
         let activeRevision = revision
@@ -229,7 +229,7 @@ final class NotesStore {
 
     @discardableResult
     func trash(_ id: NoteID) async -> Bool {
-        if id == activeID, !(await flush()) { return false }
+        guard await flush() else { return false }
         let repository = repository
         let activeID = activeID
         let activeRevision = revision
