@@ -31,6 +31,46 @@ final class ExtensionCoordinator {
         self.core = core
     }
 
+    // MARK: - Feature presence
+
+    /// Applies both switches as they stand — on launch, and after a backup import moves them.
+    func applyEnabled() {
+        extensions.setShowsInLauncher(settings.extensionsShowInLauncher)
+        Task { await extensions.setEnabled(settings.extensionsEnabled) }
+    }
+
+    /// Enabling is also consent to run third-party JavaScript, and the one feature here with a
+    /// standing memory cost, so it asks before it starts rather than explaining afterwards.
+    func setExtensionsEnabled(_ enabled: Bool) {
+        guard enabled != settings.extensionsEnabled else { return }
+        guard enabled else {
+            settings.extensionsEnabled = false
+            Task { await extensions.setEnabled(false) }
+            return
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        Task {
+            guard
+                await core.confirm(
+                    title: "Enable extensions?",
+                    message:
+                        "Extensions are third-party JavaScript, run on this Mac. A running command "
+                        + "holds a JavaScript engine in memory until you leave it — expect Tinycast "
+                        + "to use noticeably more RAM while one is open.",
+                    symbol: "puzzlepiece.extension", confirmTitle: "Enable", tone: .neutral,
+                    confirmRole: .standard)
+            else { return }
+
+            settings.extensionsEnabled = true
+            await extensions.setEnabled(true)
+        }
+    }
+
+    func applyExtensionsLauncherPresence() {
+        extensions.setShowsInLauncher(settings.extensionsShowInLauncher)
+    }
+
     /// A view command takes over the palette; a no-view command closes it and runs headless.
     func runExtensionCommand(_ app: AppEntry, arguments: [String: String] = [:]) {
         guard let (owner, command) = extensions.resolve(app) else { return }

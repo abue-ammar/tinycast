@@ -132,6 +132,7 @@ final class AppCore {
 
             appIndex.start(settings: settings)
             extensions.start(appIndex: appIndex, coordinator: extensionCoordinator)
+            extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
             customCommands.onChange = { [weak self] _ in

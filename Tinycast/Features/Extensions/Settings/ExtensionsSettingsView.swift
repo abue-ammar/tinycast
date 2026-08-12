@@ -9,71 +9,83 @@ struct ExtensionsSettingsView: View {
     @State private var error: String?
 
     var body: some View {
-        Form {
-            Section {
-                Text(
-                    "Tinycast runs Raycast extensions. Import prebuilt ones from an installed "
-                        + "Raycast, or add a folder you've built with `ray build`."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                if let error {
+        @Bindable var settings = core.settings
+        return Form {
+            FeatureSwitchSection(
+                header: "Extensions",
+                enableTitle: "Enable extensions",
+                enableSubtitle:
+                    "Run Raycast extensions natively. A running command holds a JavaScript engine "
+                    + "in memory until you leave it.",
+                launcherSubtitle: "List every extension's commands in launcher search.",
+                // Enabling is also consent to run third-party code, so it uses the confirming setter.
+                isEnabled: Binding(
+                    get: { settings.extensionsEnabled },
+                    set: { core.extensionCoordinator.setExtensionsEnabled($0) }),
+                showsInLauncher: $settings.extensionsShowInLauncher)
+
+            if let error {
+                Section {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
-            } header: {
-                Text("Extensions")
             }
 
-            Section {
-                SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
-                    Image(systemName: "arrow.down.doc")
-                } trailing: {
-                    Button("Choose…") {
-                        importCandidates = ImportCandidates(
-                            extensions: ExtensionCatalog.importableFromRaycast())
+            Group {
+                Section {
+                    SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
+                        Image(systemName: "arrow.down.doc")
+                    } trailing: {
+                        Button("Choose…") {
+                            importCandidates = ImportCandidates(
+                                extensions: ExtensionCatalog.importableFromRaycast())
+                        }
+                        .disabled(!raycastAvailable)
                     }
-                    .disabled(!raycastAvailable)
+                    SettingsRow(
+                        title: "Add Extension Folder…",
+                        subtitle: "Pick a folder containing package.json and the built <command>.js files."
+                    ) {
+                        Image(systemName: "folder.badge.plus")
+                    } trailing: {
+                        Button("Choose…", action: addFolder)
+                    }
+                } header: {
+                    Text("Add")
                 }
-                SettingsRow(
-                    title: "Add Extension Folder…",
-                    subtitle: "Pick a folder containing package.json and the built <command>.js files."
-                ) {
-                    Image(systemName: "folder.badge.plus")
-                } trailing: {
-                    Button("Choose…", action: addFolder)
-                }
-            } header: {
-                Text("Add")
-            }
 
-            Section {
-                if core.extensions.installed.isEmpty {
-                    Text("Everything you add shows up in the launcher under “Extensions”.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(core.extensions.installed) { installed in
-                        ExtensionSettingsRow(
-                            installed: installed,
-                            isExpanded: selected == installed.manifest.name,
-                            onToggle: {
-                                selected =
-                                    selected == installed.manifest.name
-                                    ? nil : installed.manifest.name
-                            },
-                            onUninstall: {
-                                Task { await core.extensions.uninstall(installed) }
-                            })
+                Section {
+                    if core.extensions.installed.isEmpty {
+                        Text("Everything you add shows up in the launcher under “Extensions”.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(core.extensions.installed) { installed in
+                            ExtensionSettingsRow(
+                                installed: installed,
+                                isExpanded: selected == installed.manifest.name,
+                                onToggle: {
+                                    selected =
+                                        selected == installed.manifest.name
+                                        ? nil : installed.manifest.name
+                                },
+                                onUninstall: {
+                                    Task { await core.extensions.uninstall(installed) }
+                                })
+                        }
                     }
+                } header: {
+                    Text(
+                        core.extensions.installed.isEmpty
+                            ? "Installed" : "Installed (\(core.extensions.installed.count))")
                 }
-            } header: {
-                Text(
-                    core.extensions.installed.isEmpty
-                        ? "Installed" : "Installed (\(core.extensions.installed.count))")
             }
+            .settingsEnabled(settings.extensionsEnabled)
         }
         .formStyle(.grouped)
+        .onChange(of: settings.extensionsShowInLauncher) {
+            core.extensionCoordinator.applyExtensionsLauncherPresence()
+        }
         // Presented by item, not by a bare flag: with `isPresented` SwiftUI builds the sheet from the
         // body snapshot that precedes the button's state write, so the freshly scanned candidates
         // arrived as an empty list.

@@ -149,6 +149,18 @@ final class AppSettings {
         didSet { defaults.set(snippetsShowInLauncher, forKey: Key.snippetsShowInLauncher.rawValue) }
     }
 
+    /// Also consent to run third-party JavaScript, and the one feature with a standing memory cost,
+    /// so it confirms first, defaults off and never rides a backup.
+    var extensionsEnabled: Bool {
+        didSet { defaults.set(extensionsEnabled, forKey: Key.extensionsEnabled.rawValue) }
+    }
+
+    var extensionsShowInLauncher: Bool {
+        didSet {
+            defaults.set(extensionsShowInLauncher, forKey: Key.extensionsShowInLauncher.rawValue)
+        }
+    }
+
     /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
     var windowManagementEnabled: Bool {
         didSet {
@@ -265,6 +277,11 @@ final class AppSettings {
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.snippetsShowInLauncher.rawValue)
+        // Opt-in, unlike its siblings: until it is asked for, nothing about extensions is loaded.
+        extensionsEnabled = defaults.bool(forKey: Key.extensionsEnabled.rawValue)
+        extensionsShowInLauncher =
+            defaults.object(forKey: Key.extensionsShowInLauncher.rawValue) == nil
+            || defaults.bool(forKey: Key.extensionsShowInLauncher.rawValue)
         windowManagementEnabled = defaults.bool(forKey: Key.windowManagementEnabled.rawValue)
         windowManagementShowInLauncher =
             defaults.object(forKey: Key.windowManagementShowInLauncher.rawValue) == nil

@@ -29,6 +29,12 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Depth of the extension's own navigation stack; >1 means Escape should pop rather than close.
     private(set) var navigationDepth = 1
 
+    /// The master switch. Off means nothing is scanned, nothing is published and no context exists —
+    /// the feature costs what an unused stored property costs. `ExtensionCoordinator` sets it.
+    private(set) var isEnabled = false
+    /// Whether the commands reach the launcher at all; independent of `isEnabled`.
+    private(set) var showsInLauncher = true
+
     let storage: ExtensionStorage
     /// Per-extension icon overrides, owned here alongside `storage` for the same reason: both are
     /// extension-scoped state the launcher and Settings read through this manager.
@@ -48,16 +54,40 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         bridge.context = self
     }
 
+    /// Wires the collaborators only. The coordinator applies the switches straight after, which is
+    /// what decides whether anything is scanned at all.
     func start(appIndex: AppIndex, coordinator: ExtensionCoordinator) {
         self.appIndex = appIndex
         self.coordinator = coordinator
         runtime.setDelegate(self)
-        Task { await refresh() }
+    }
+
+    // MARK: - The switches
+
+    /// Turning off tears everything down: the running command, the JS context and the launcher rows.
+    /// Turning on re-scans. Both are idempotent, so applying settings on launch is the same call.
+    func setEnabled(_ enabled: Bool) async {
+        guard enabled != isEnabled else { return }
+        isEnabled = enabled
+        guard enabled else {
+            await stop()
+            installed = []
+            appIndex?.setExtensionCommands([])
+            return
+        }
+        await refresh()
+    }
+
+    func setShowsInLauncher(_ shows: Bool) {
+        guard shows != showsInLauncher else { return }
+        showsInLauncher = shows
+        publishLauncherEntries()
     }
 
     // MARK: - Installed set
 
     func refresh() async {
+        guard isEnabled else { return }
         let found = await Task.detached(priority: .utility) { ExtensionCatalog.scan() }.value
         guard found != installed else { return }
         installed = found
@@ -71,6 +101,10 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Surface every runnable command as a launcher row. Menu-bar commands are listed too — activating
     /// one explains why it can't run, which beats silently hiding it.
     private func publishLauncherEntries() {
+        guard isEnabled, showsInLauncher else {
+            appIndex?.setExtensionCommands([])
+            return
+        }
         let entries = installed.flatMap { installedExtension -> [AppEntry] in
             let iconPath = installedExtension.iconPath
             // A chosen appearance replaces the shipped icon for every command of the extension.
