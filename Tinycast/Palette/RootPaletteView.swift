@@ -16,8 +16,12 @@ struct RootPaletteView: View {
     @Environment(UninstallSession.self) private var uninstall
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
+    @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
     @FocusState private var searchFocused: Bool
+    /// Focus inside the inline argument fields, kept apart from the search field's own — the palette's
+    /// focus model hangs off one always-attached `TextField`. See docs/features/palette.md.
+    @FocusState private var argumentFocused: String?
     @State private var showActions = false
     @State private var showAppMenu = false
     /// Sampled once by `openActions`, so the Quit row can't appear while the menu is up.
@@ -63,7 +67,19 @@ struct RootPaletteView: View {
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
                 openActions: openActions)
+        case .extensionCommand:
+            return ExtensionCommandScreen(
+                screen: extensionScreen, extensions: extensions, core: core, vm: vm,
+                openActions: openActions)
         }
+    }
+
+    /// The running command's rendered screen, flattened. `.empty` until the first commit lands.
+    private var extensionScreen: ExtensionScreen {
+        guard vm.mode == .extensionCommand, case .rendered(let tree) = extensions.state else {
+            return .empty
+        }
+        return ExtensionScreen(tree: tree, query: vm.query)
     }
 
     /// Selection clamped into the results: one source for highlight, preview and activation.
@@ -131,6 +147,7 @@ struct RootPaletteView: View {
         }
         // The panel has no title bar, so this thin top margin is the only place left to grab it.
         .overlay(alignment: .top) { topDragStrip }
+        .modifier(ExtensionToastOverlay(extensions: extensions, showing: vm.mode == .extensionCommand))
         // In-window overlays, so a menu stays clipped inside the panel.
         .overlay {
             if showAppMenu || showActions {
@@ -175,6 +192,10 @@ struct RootPaletteView: View {
             vm.selection = 0
             scroll = ScrollIntent(kind: .top)
             if vm.mode == .fileSearch { fileSearch.search(vm.query) }
+            // A command that took over the search text filters its own list.
+            if vm.mode == .extensionCommand, let handler = extensionScreen.searchTextHandler {
+                extensions.dispatch(handler: handler, arguments: [vm.query])
+            }
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
@@ -183,6 +204,10 @@ struct RootPaletteView: View {
             // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
             if vm.mode != .uninstall { uninstall.cancel() }
             if vm.mode != .fileSearch { fileSearch.cancel() }
+            // Leaving the screen any other way than Escape still ends the command's session.
+            if vm.mode != .extensionCommand, extensions.running != nil {
+                Task { await extensions.stop() }
+            }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
             if vm.mode != .quicklinkArguments { core.quicklinkCoordinator.cancelQuicklinkArguments() }
         }
@@ -277,14 +302,22 @@ struct RootPaletteView: View {
                 closeMenus()
                 return .handled
             }
+            // An extension pops its own navigation stack before the command is left.
+            if vm.mode == .extensionCommand {
+                core.extensionCoordinator.exitExtensionScreen()
+                return .handled
+            }
             core.paletteCoordinator.hidePalette()
             return .handled
         }
         .onKeyPress(.tab) {
-            if menuOpen { return .handled }
-            toggleMode()
+            if !menuOpen { advanceTabFocus() }
             return .handled
         }
+        .modifier(
+            ExtensionShortcutKeys(
+                screen: menuOpen ? nil : screen as? ExtensionCommandScreen, selection: sel)
+        )
         // ⌘K toggles the actions panel for the current selection.
         .onKeyPress(keys: ["k"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
@@ -395,7 +428,20 @@ struct RootPaletteView: View {
                     .frame(width: Theme.Size.headerIconSlot)
             }
             headerGutter(width: Theme.Spacing.md)
-            searchField
+            // One structural position, always: putting the field inside a branch tears down its
+            // field editor when the branch flips, which drops first responder mid-navigation.
+            // The width shrinks to the typed text so argument fields sit right after it, as in Raycast.
+            searchField.frame(width: selectedCommandArguments.map(searchFieldWidth))
+            if let arguments = selectedCommandArguments {
+                CommandArgumentsRow(
+                    arguments: arguments,
+                    icon: (screen as? LauncherScreen)?.argumentIconPath(
+                        at: selection(count: screen.rows.count)),
+                    value: argumentBinding,
+                    focused: $argumentFocused,
+                    onSubmit: activateSelection)
+                Spacer(minLength: 0)
+            }
             // Compact pins favorites beside the field; expanded shows them as rows.
             if isCollapsed, settings.showFavoritesInCompactMode,
                 let launcher = screen as? LauncherScreen
@@ -418,9 +464,53 @@ struct RootPaletteView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Arguments the selected launcher row declares. Only the launcher shows them — inside a running
+    /// command the search bar belongs to the extension.
+    private var selectedCommandArguments: [ExtensionCommandArgument]? {
+        guard vm.mode == .launcher, !isCollapsed, let launcher = screen as? LauncherScreen
+        else { return nil }
+        return launcher.commandArguments(at: selection(count: launcher.rows.count))
+    }
+
+    private func argumentBinding(_ name: String) -> Binding<String> {
+        let key = PaletteState.argumentKey(selectedEntryID ?? "", name)
+        return Binding(
+            get: { vm.commandArguments[key] ?? "" },
+            set: { vm.commandArguments[key] = $0 })
+    }
+
+    private var selectedEntryID: String? {
+        guard let launcher = screen as? LauncherScreen else { return nil }
+        let rows = launcher.rows
+        let index = selection(count: rows.count)
+        guard rows.indices.contains(index), case .entry(let app) = rows[index] else { return nil }
+        return app.id
+    }
+
+    /// Width the search field shrinks to when argument fields are beside it: the typed text's own
+    /// width, floored so the caret always has room and capped so the fields can't be pushed off-screen.
+    private func searchFieldWidth(for arguments: [ExtensionCommandArgument]) -> CGFloat {
+        let font = Theme.Typography.searchFieldNSFont
+        let typed = (vm.query as NSString).size(withAttributes: [.font: font]).width
+        let strip = CommandArgumentsRow.totalWidth(
+            for: arguments,
+            hasIcon: (screen as? LauncherScreen)?
+                .argumentIconPath(at: selection(count: screen.rows.count)) != nil)
+        let chrome = Theme.Size.headerIconSlot + Theme.Spacing.md * 4
+        // +3pt so the caret sits after the last glyph rather than on top of it.
+        return min(max(typed + 3, 18), max(Theme.Size.panelWidth - strip - chrome, 60))
+    }
+
     /// In the argument form the field is that argument's input, so it names the argument.
     private var searchPrompt: String {
-        vm.mode == .quicklinkArguments ? quicklinkArguments.prompt : vm.mode.placeholder
+        // The field is only wide enough for the caret while argument fields are beside it.
+        if selectedCommandArguments != nil { return "" }
+        if vm.mode == .quicklinkArguments { return quicklinkArguments.prompt }
+        // Inside a running command the search bar belongs to the extension.
+        if vm.mode == .extensionCommand, let placeholder = extensionScreen.searchPlaceholder {
+            return placeholder
+        }
+        return vm.mode.placeholder
     }
 
     /// The one search field — past its text it's a drag handle, matching Spotlight.
@@ -455,7 +545,9 @@ struct RootPaletteView: View {
                 }
             }
             // The panel resolves the pointer against this rather than hit-testing for the field.
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .global)
+            } action: {
                 vm.searchFieldFrame = $0
             }
     }
@@ -551,6 +643,11 @@ struct RootPaletteView: View {
 
     /// ↑/↓: the screen's own move where it has one, else a linear step through the rows.
     private func moveVertically(_ delta: Int) {
+        // Moving off a command takes its argument fields with it, so hand focus back first.
+        if argumentFocused != nil {
+            argumentFocused = nil
+            searchFocused = true
+        }
         let screen = screen
         guard let next = screen.move(delta, axis: .vertical, from: selection(in: screen)) else {
             move(delta, in: screen)
@@ -589,16 +686,44 @@ struct RootPaletteView: View {
         vm.mode = vm.mode == .launcher ? .clipboard : .launcher
     }
 
+    /// Tab walks the inline argument fields first — search field → each argument → back — and only
+    /// toggles the mode when the selection declares none.
+    private func advanceTabFocus() {
+        guard let arguments = selectedCommandArguments else { return toggleMode() }
+        argumentFocused = CommandArgumentsRow.next(after: argumentFocused, in: arguments)
+        searchFocused = argumentFocused == nil
+    }
+
     /// Back out to a fresh root search, the same reset `prepare` does on show.
     private func exitToLauncher() {
+        if vm.mode == .extensionCommand {
+            core.extensionCoordinator.exitExtensionScreen()
+            return
+        }
         vm.prepare(mode: .launcher)
     }
 
     private func activateSelection() {
         // Nothing is visibly selected when collapsed, so launch via ⌘1–⌘5 or typing.
         guard !isCollapsed else { return }
+        // A required argument left blank blocks the launch; focus the first one instead.
+        if let blank = firstBlankRequiredArgument {
+            argumentFocused = blank
+            searchFocused = false
+            return
+        }
         let screen = screen
         screen.activate(at: selection(in: screen))
+    }
+
+    private var firstBlankRequiredArgument: String? {
+        guard let arguments = selectedCommandArguments, let entryID = selectedEntryID else {
+            return nil
+        }
+        return arguments.first {
+            $0.required
+                && (vm.commandArguments[PaletteState.argumentKey(entryID, $0.name)] ?? "").isEmpty
+        }?.name
     }
 }
 
@@ -741,5 +866,38 @@ private struct CompactFavoriteButton<Content: View>: View {
         }
         .buttonStyle(.plain)
         .help(help)
+    }
+}
+
+/// An extension action can declare its own shortcut, matched against the running command's panel
+/// before the palette's own bindings see the keystroke. Its own modifier for the same reason as
+/// `ExtensionToastOverlay`.
+private struct ExtensionShortcutKeys: ViewModifier {
+    let screen: ExtensionCommandScreen?
+    let selection: Int
+
+    func body(content: Content) -> some View {
+        content.onKeyPress(phases: .down) { press in
+            guard let screen, !press.modifiers.isEmpty else { return .ignored }
+            return screen.dispatchShortcut(
+                key: press.key, modifiers: press.modifiers, at: selection) ? .handled : .ignored
+        }
+    }
+}
+
+/// Toasts a running view command raised, stacked above the footer. Its own modifier only to keep
+/// `RootPaletteView.body` inside what the type checker will solve.
+private struct ExtensionToastOverlay: ViewModifier {
+    let extensions: ExtensionManager
+    let showing: Bool
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottom) {
+            if showing, !extensions.toasts.isEmpty {
+                ExtensionFeedbackOverlay(
+                    toasts: extensions.toasts,
+                    onToastAction: { extensions.runToastAction(token: $0) })
+            }
+        }
     }
 }

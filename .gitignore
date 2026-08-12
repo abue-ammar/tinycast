@@ -50,6 +50,9 @@ Carthage/Build/
 # Tuist (if ever added)
 Tuist/.build/
 
+# Extension runtime toolchain (Scripts/raycast-runtime)
+node_modules/
+
 # Temporary files
 *.swp
 *.tmp

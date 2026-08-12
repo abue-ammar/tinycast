@@ -119,6 +119,19 @@ run raycast-test           Tinycast/Features/Backup/Model/RaycastFormat.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift
 run settings-backup-test   Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/Backup/Model/SettingsBackupCoverage.swift
+E=Tinycast/Features/Extensions
+run symbols-test           $E/Service/SymbolCatalog.swift
+run ext-test               -parse-as-library \
+                           $E/Model/ExtensionBootConfig.swift \
+                           $E/Model/ExtensionManifest.swift \
+                           $E/Model/RenderNode.swift \
+                           $E/Service/ExtensionCatalog.swift \
+                           $E/Service/ExtensionFetcher.swift \
+                           $E/Service/ExtensionNodeShims.swift \
+                           $E/Service/ExtensionRuntime.swift \
+                           $E/UI/ExtensionScreen.swift \
+                           $L/SearchRelevance.swift \
+                           Tinycast/Platform/Compression/Zlib.swift
 run settings-history-test  Tinycast/Features/Settings/SettingsTab.swift \
                            Tinycast/Features/Settings/SettingsHistory.swift
 

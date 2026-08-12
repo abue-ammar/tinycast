@@ -32,6 +32,7 @@ final class AppCore {
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let quicklinkArguments = QuicklinkArgumentSession()
+    let extensions: ExtensionManager
 
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
@@ -62,6 +63,9 @@ final class AppCore {
         session: uninstall, palette: palette, paletteCoordinator: paletteCoordinator,
         appIndex: appIndex, runningApps: runningApps, hotKeys: hotKeys, favorites: favorites,
         visibility: visibility, ranking: launcherRanking, core: self)
+    @ObservationIgnored private(set) lazy var extensionCoordinator = ExtensionCoordinator(
+        extensions: extensions, palette: palette, paletteCoordinator: paletteCoordinator,
+        settingsCoordinator: settingsCoordinator, settings: settings, core: self)
     @ObservationIgnored private(set) lazy var windowCommandCoordinator = WindowCommandCoordinator(
         settings: settings, paletteCoordinator: paletteCoordinator, windowMover: windowMover)
     @ObservationIgnored private(set) lazy var customCommandCoordinator = CustomCommandCoordinator(
@@ -78,7 +82,8 @@ final class AppCore {
         systemActionCoordinator: systemActionCoordinator,
         quicklinkCoordinator: quicklinkCoordinator,
         windowCommandCoordinator: windowCommandCoordinator,
-        snippetExpansion: snippetExpansion, fileSearchCoordinator: fileSearchCoordinator, core: self)
+        snippetExpansion: snippetExpansion, fileSearchCoordinator: fileSearchCoordinator,
+        extensionCoordinator: extensionCoordinator, core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, palette: palette, windowController: windowController,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -105,6 +110,7 @@ final class AppCore {
         appIndex = AppIndex(ranking: launcherRanking)
         let clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
         self.clipboardManager = clipboardManager
+        extensions = ExtensionManager(clipboardStore: clipboardStore)
         snippetsStore = SnippetsStore()
         snippetTextInjector = SnippetTextInjector(
             clipboardManager: clipboardManager,
@@ -125,6 +131,7 @@ final class AppCore {
             clipboardManager.start()
 
             appIndex.start(settings: settings)
+            extensions.start(appIndex: appIndex, coordinator: extensionCoordinator)
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
             customCommands.onChange = { [weak self] _ in

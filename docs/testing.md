@@ -65,6 +65,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `quicklink-test` | all four files in `Quicklinks/Model/` |
 | `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
 | `raycast-test` | `Backup/Model/RaycastFormat.swift`, `RaycastV1Decoder.swift`, `Platform/Compression/Zlib.swift` |
+| `symbols-test` | `Extensions/Service/SymbolCatalog.swift`, against this machine's CoreGlyphs |
+| `ext-test` | the extension runtime end to end — boots a real bundle in JavaScriptCore and renders it |
 | `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
 
 A harness that passed before a change passes after it. There is no "I'll fix it next commit" and no

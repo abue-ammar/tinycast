@@ -91,6 +91,8 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
+        /// Label column of an extension's `Form`, so every field's input starts on one line.
+        static let formLabelWidth: CGFloat = 110
         /// The multi-line box inside those modals; it scrolls rather than grows the sheet.
         static let editorTextHeight: CGFloat = 120
         /// The argument prompt's field column, kept under the alert's natural width.

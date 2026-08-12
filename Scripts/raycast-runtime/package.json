@@ -1,0 +1,16 @@
+{
+  "name": "tinycast-raycast-runtime",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Builds Tinycast's embedded Raycast-extension JS runtime (React + reconciler + @raycast/api shim) into a single file consumed by JavaScriptCore.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@raycast/api": "^1.104.23",
+    "esbuild": "^0.25.0",
+    "react": "^19.2.0",
+    "react-reconciler": "^0.33.0"
+  }
+}

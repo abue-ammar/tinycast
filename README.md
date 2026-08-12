@@ -21,6 +21,9 @@ A tiny, fully native macOS launcher — the essentials, without the bloat.
 Around **3 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
 CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there's nothing to it.
 
+It also **runs Raycast extensions** — the real ones, rendered as native SwiftUI. No Node.js, no
+browser: JavaScriptCore ships with macOS, so that costs no extra binary size.
+
 ## Features
 
 - **App launcher** — fuzzy-search and launch anything, pin favorites, see what's running, quit an app
@@ -32,6 +35,7 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
   and optional keyword expansion.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
+- **Raycast extensions** — run the ones you already have natively, rendered as SwiftUI.
 
 ## Install
 

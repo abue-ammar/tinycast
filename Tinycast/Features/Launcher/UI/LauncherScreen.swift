@@ -70,6 +70,27 @@ struct LauncherScreen: PaletteScreen {
         rows.indices.contains(selection) ? rows[selection] : nil
     }
 
+    /// Arguments the selected row declares, or nil when it declares none — what the header uses to
+    /// decide whether to show the inline fields.
+    func commandArguments(at selection: Int) -> [ExtensionCommandArgument]? {
+        core.extensionCoordinator.commandArguments(for: entry(at: selection))
+    }
+
+    /// The typed values for one row, stripped of blanks — what gets handed to the command.
+    private func argumentValues(for entry: AppEntry) -> [String: String] {
+        var values: [String: String] = [:]
+        for argument in core.extensionCoordinator.commandArguments(for: entry) ?? [] {
+            let typed = vm.commandArguments[PaletteState.argumentKey(entry.id, argument.name)] ?? ""
+            if !typed.isEmpty { values[argument.name] = typed }
+        }
+        return values
+    }
+
+    /// The selected row's own icon file, drawn as the argument strip's leading chip.
+    func argumentIconPath(at selection: Int) -> String? {
+        entry(at: selection)?.imageIconPath
+    }
+
     private func entry(at selection: Int) -> AppEntry? {
         guard case .entry(let app) = row(at: selection) else { return nil }
         return app
@@ -107,7 +128,9 @@ struct LauncherScreen: PaletteScreen {
         switch row(at: selection) {
         // Error cards no-op — copyCalculatorResult only acts on value payloads.
         case .calc(let result): core.calculatorCoordinator.copyCalculatorResult(result)
-        case .entry(let app): core.launcherCoordinator.launch(app, searchQuery: vm.query)
+        case .entry(let app):
+            core.launcherCoordinator.launch(
+                app, searchQuery: vm.query, arguments: argumentValues(for: app))
         case nil: break
         }
     }

@@ -59,9 +59,11 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
+| `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
 
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab cycles launcher ↔
-clipboard and nothing else**; the rest are reached by a command or a global hotkey, and Uninstall only
+clipboard and nothing else** unless the selected row declares arguments, in which case it walks those
+fields first (see below); the rest are reached by a command or a global hotkey, and Uninstall only
 from a launcher app's Actions menu, scoped to that app.
 
 The argument screen is the one mode where the search field is not a search field: it _is_ the current
@@ -69,6 +71,23 @@ argument's input, so its placeholder names that argument and ↵ submits rather 
 Its own state lives on `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on
 `UninstallSession`, and leaving the mode cancels the pending open. A bare backspace steps back an
 argument before it falls through to the usual exit-to-launcher.
+
+### Inline command arguments
+
+An extension command can declare arguments, and they are typed **in the header, beside the search
+field** — not on a screen of their own. That costs the header its one simple rule, so it holds two
+invariants:
+
+- The search field sits at **one structural position, always**. It is never moved inside an `if`:
+  flipping the branch tears down its field editor, which drops first responder mid-navigation. Only
+  its *width* changes — it shrinks to the width of the typed text so the argument chips sit right
+  after it, as they do in Raycast.
+- Argument focus is its own `@FocusState`, `argumentFocused`, keyed by argument name. Moving the
+  selection hands focus back to the search field first, because the row that owned those fields is
+  about to stop being selected. ↵ on a blank required argument focuses it instead of launching.
+
+The typed values live on `PaletteState.commandArguments`, keyed by
+`PaletteState.argumentKey(entryID, name)`, and are cleared with the rest of the screen.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
 match the visible row order**, including the inline calculator card at index 0 when present (see

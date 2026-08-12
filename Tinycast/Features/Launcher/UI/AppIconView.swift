@@ -7,10 +7,26 @@ struct AppIconView: View {
 
     init(app: AppEntry) {
         self.app = app
-        _image = State(
-            initialValue: app.isSymbolIcon
-                ? IconCache.cachedSymbol(named: app.symbolIconName)
-                : IconCache.cached(forFile: app.url.path))
+        _image = State(initialValue: Self.cached(app))
+    }
+
+    /// Cache-only, so a warm icon paints on the same frame. An extension command is the one entry
+    /// whose icon is neither its file's nor a plain symbol: a chosen appearance tints the tile, and
+    /// otherwise it draws whatever image the extension ships.
+    private static func cached(_ app: AppEntry) -> NSImage? {
+        if app.isSymbolIcon {
+            return IconCache.cachedSymbol(named: app.symbolIconName, tint: app.symbolTint)
+        }
+        if let path = app.imageIconPath { return IconCache.cachedImage(atPath: path) }
+        return IconCache.cached(forFile: app.url.path)
+    }
+
+    private static func load(_ app: AppEntry) async -> NSImage? {
+        if app.isSymbolIcon {
+            return await IconCache.loadSymbolAsync(named: app.symbolIconName, tint: app.symbolTint)
+        }
+        if let path = app.imageIconPath { return await IconCache.loadImageAsync(atPath: path) }
+        return await IconCache.loadAsync(forFile: app.url.path)
     }
 
     var body: some View {
@@ -22,12 +38,13 @@ struct AppIconView: View {
                     .fill(Color.white.opacity(0.06))
             }
         }
-        .task(id: app.id) {
-            guard image == nil else { return }
-            image =
-                app.isSymbolIcon
-                ? await IconCache.loadSymbolAsync(named: app.symbolIconName)
-                : await IconCache.loadAsync(forFile: app.url.path)
+        // Keyed on the icon, not the entry: re-skinning an extension leaves `id` untouched.
+        .task(id: app.iconKey) {
+            if let warm = Self.cached(app) {
+                image = warm
+                return
+            }
+            image = await Self.load(app)
         }
     }
 }

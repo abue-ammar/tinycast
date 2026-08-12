@@ -17,6 +17,9 @@ final class PaletteState {
     var forceExpanded = false
     /// The paste target, mirrored on every show; `prepare` resets the screen, not this.
     var pasteTarget: PasteTarget?
+    /// Values typed into the inline argument fields an extension command declares, keyed by
+    /// `argumentKey`. Cleared with the rest of the screen.
+    var commandArguments: [String: String] = [:]
     /// True only once the pointer has moved of its own accord; untracked, so it never re-renders.
     @ObservationIgnored private(set) var hoverHighlightArmed = false
     /// Bumped when the highlight drops, so a lit row clears even though the pointer never left it.
@@ -35,11 +38,17 @@ final class PaletteState {
         self.mode = mode
         query = ""
         selection = 0
+        commandArguments = [:]
         forceExpanded = false
         dropHoverHighlight()
         menuOpen = false
         focusToken = UUID()
         resetToken = UUID()
+    }
+
+    /// U+0001 can't appear in an entry id or an argument name, so the halves stay unambiguous.
+    nonisolated static func argumentKey(_ entryID: String, _ name: String) -> String {
+        entryID + "\u{1}" + name
     }
 
     /// The pointer moved, which re-lights the highlight once it has cleared the arming slop.

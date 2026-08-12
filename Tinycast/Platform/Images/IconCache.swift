@@ -14,6 +14,13 @@ struct IconCacheGeneration {
     }
 }
 
+/// A symbol tile's fill and the cache key that names it, so `IconCache` needn't know the feature
+/// type that chose the colour.
+struct SymbolTint: Equatable, Sendable {
+    let key: String
+    let color: NSColor
+}
+
 /// App icons by path, downsampled and byte-bounded, so rows don't re-hit `NSWorkspace`.
 enum IconCache {
     /// `NSCache` is thread-safe but not `Sendable`, so assert the guarantee once here.
@@ -38,9 +45,17 @@ enum IconCache {
 
     /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
     static func cached(forFile path: String) -> NSImage? { cache.object(forKey: path as NSString) }
-    static func cachedSymbol(named name: String) -> NSImage? {
-        cache.object(forKey: ("symbol:" + name) as NSString)
+    static func cachedSymbol(named name: String, tint: SymbolTint? = nil) -> NSImage? {
+        cache.object(forKey: symbolKey(name, tint))
     }
+    static func cachedImage(atPath path: String) -> NSImage? {
+        cache.object(forKey: imageKey(path))
+    }
+
+    private static func symbolKey(_ name: String, _ tint: SymbolTint?) -> NSString {
+        "symbol:\(tint?.key ?? "plain"):\(name)" as NSString
+    }
+    private static func imageKey(_ path: String) -> NSString { ("image:" + path) as NSString }
 
     /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
     private struct Decoded: @unchecked Sendable {
@@ -61,11 +76,51 @@ enum IconCache {
             return Decoded(image: icon(forFile: path))
         }.value.image
     }
-    static func loadSymbolAsync(named name: String) async -> NSImage? {
-        if let cached = cachedSymbol(named: name) { return cached }
+    static func loadSymbolAsync(named name: String, tint: SymbolTint? = nil) async -> NSImage? {
+        if let cached = cachedSymbol(named: name, tint: tint) { return cached }
         return await Task.detached(priority: .userInitiated) {
-            Decoded(image: symbolIcon(named: name))
+            Decoded(image: symbolIcon(named: name, tint: tint))
         }.value.image
+    }
+
+    static func loadImageAsync(atPath path: String) async -> NSImage? {
+        if let cached = cachedImage(atPath: path) { return cached }
+        return await Task.detached(priority: .userInitiated) {
+            Decoded(image: imageIcon(atPath: path))
+        }.value.image
+    }
+
+    /// An extension list row or Detail markdown can reference a remote image; fetch once, then serve
+    /// from the same cache as every other row icon. A failure caches nothing, so a transient error
+    /// retries on the next render. `downsample` is off for markdown images, drawn far larger than a row.
+    static func loadRemoteAsync(_ url: URL, downsample: Bool = true) async -> NSImage? {
+        let key = ("image:\(downsample ? "" : "full:")" + url.absoluteString) as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        let decoded = await Task.detached(priority: .userInitiated) {
+            Decoded(image: NSImage(data: data))
+        }.value
+        guard let source = decoded.image else { return nil }
+        guard downsample else {
+            cache.setObject(source, forKey: key, cost: Int(source.size.width * source.size.height * 4))
+            return source
+        }
+        let (icon, cost) = downsampled(source)
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
+    }
+
+    /// An icon read straight from an image file — an extension ships a PNG, which `NSWorkspace` would
+    /// otherwise answer with the generic document icon.
+    static func imageIcon(atPath path: String) -> NSImage {
+        let key = imageKey(path)
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let source = NSImage(contentsOfFile: path) else {
+            return symbolIcon(named: "puzzlepiece.extension")
+        }
+        let (icon, cost) = downsampled(source)
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
     }
 
     static func icon(forFile path: String) -> NSImage {
@@ -76,19 +131,22 @@ enum IconCache {
         return icon
     }
 
-    /// Command icons: a symbol on a tile, in the same shape as a real app icon.
-    static func symbolIcon(named name: String) -> NSImage {
-        let key = "symbol:" + name as NSString
+    /// Command icons: a symbol on a tile, in the same shape as a real app icon. A tint fills the tile
+    /// with that colour and brightens the glyph to white — the same treatment as the Settings sidebar,
+    /// so a re-skinned extension reads as part of the app.
+    static func symbolIcon(named name: String, tint: SymbolTint? = nil) -> NSImage {
+        let key = symbolKey(name, tint)
         if let cached = cache.object(forKey: key) { return cached }
 
         let side = displayPixel
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { _ in
             // Tile inset mirrors the margin macOS app icons carry inside their canvas.
             let tile = NSRect(x: 0, y: 0, width: side, height: side).insetBy(dx: 4, dy: 4)
-            NSColor.white.withAlphaComponent(0.09).setFill()
+            (tint?.color ?? NSColor.white.withAlphaComponent(0.09)).setFill()
             NSBezierPath(roundedRect: tile, xRadius: 9, yRadius: 9).fill()
 
-            guard let symbol = glyph(named: name, tint: .white.withAlphaComponent(0.85))
+            let ink = tint == nil ? NSColor.white.withAlphaComponent(0.85) : NSColor.white
+            guard let symbol = glyph(named: name, tint: ink)
             else { return true }
             let size = symbol.size
             symbol.draw(
