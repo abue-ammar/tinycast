@@ -1,12 +1,10 @@
 import SwiftUI
 
-/// Settings › Extensions: the master switch, what Raycast's API does and doesn't reach here, and one
-/// row per installed extension. Configuring one opens a sheet, the way a custom command or a snippet
-/// does — an extension carries preferences, several commands and their shortcuts, which is more than
-/// a settings row can hold.
+/// Settings › Extensions: the master switch, then one row per installed extension that expands in
+/// place into its icon, its preferences and its commands.
 struct ExtensionsSettingsView: View {
     @Environment(AppCore.self) private var core
-    @State private var editor: EditorTarget?
+    @State private var expanded: String?
     @State private var importCandidates: ImportCandidates?
     @State private var browsingStore = false
     @State private var error: String?
@@ -41,9 +39,6 @@ struct ExtensionsSettingsView: View {
         .onChange(of: settings.extensionsShowInLauncher) {
             core.extensionCoordinator.applyExtensionsLauncherPresence()
         }
-        .sheet(item: $editor) { target in
-            ExtensionEditorSheet(installed: target.installed)
-        }
         // Presented by item, not by a bare flag: with `isPresented` SwiftUI builds the sheet from the
         // body snapshot that precedes the button's state write, so the freshly scanned candidates
         // arrived as an empty list.
@@ -60,10 +55,7 @@ struct ExtensionsSettingsView: View {
             ExtensionStoreSheet(onClose: { browsingStore = false })
         }
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectExtension)) { note in
-            guard let name = note.object as? String,
-                let installed = core.extensions.extensionNamed(name)
-            else { return }
-            editor = EditorTarget(installed: installed)
+            if let name = note.object as? String { expanded = name }
         }
         .task {
             await core.extensions.refresh()
@@ -132,38 +124,46 @@ struct ExtensionsSettingsView: View {
 
     // MARK: - The library
 
+    /// Each extension emits its summary row and, while open, its settings as further rows of the same
+    /// section — so every control is a real form row with the label column and styling that carries.
     private var library: some View {
         Section {
             if core.extensions.installed.isEmpty {
-                Text("Browse for one, or import what Raycast has already built.")
+                Text("Install one to see it here.")
                     .foregroundStyle(.secondary)
-            } else {
-                ForEach(core.extensions.installed) { installed in
-                    ExtensionSettingsRow(
-                        installed: installed,
-                        onConfigure: { editor = EditorTarget(installed: installed) },
-                        onUninstall: { core.extensionCoordinator.confirmUninstall(installed) })
-                }
             }
-            Button("Browse Extensions…") { browsingStore = true }
-            Button("Import from Raycast…", action: openImport)
-                .disabled(!raycastAvailable)
-            Button("Add from Folder…", action: addFolder)
+            ForEach(core.extensions.installed) { installed in
+                ExtensionRows(
+                    installed: installed,
+                    isExpanded: expanded == installed.manifest.name,
+                    onToggle: {
+                        expanded =
+                            expanded == installed.manifest.name
+                            ? nil : installed.manifest.name
+                    },
+                    onUninstall: { core.extensionCoordinator.confirmUninstall(installed) })
+            }
         } header: {
-            Text(
-                core.extensions.installed.isEmpty
-                    ? "Installed" : "Installed (\(core.extensions.installed.count))")
+            HStack {
+                Text(
+                    core.extensions.installed.isEmpty
+                        ? "Installed" : "Installed (\(core.extensions.installed.count))")
+                Spacer()
+                Menu("Install…") {
+                    Button("Browse Extensions…") { browsingStore = true }
+                    Divider()
+                    Button("Import from Raycast…", action: openImport)
+                        .disabled(!raycastAvailable)
+                    Button("Add from Folder…", action: addFolder)
+                }
+                .menuStyle(.button)
+                .fixedSize()
+            }
         } footer: {
             if let error {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(.orange)
-            } else {
-                Text(
-                    "Configure an extension to set its preferences and give its commands shortcuts."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
         }
     }
@@ -217,37 +217,54 @@ struct ExtensionsSettingsView: View {
     }
 }
 
-/// One installed extension, shaped like every other editable row in Settings: icon, name, what it
-/// holds, then configure and remove.
-private struct ExtensionSettingsRow: View {
+/// One extension's rows: the summary, and — while open — its icon, preferences and commands. They are
+/// siblings rather than a nested layout, so each is a form row that gets the system's label column,
+/// control styling, hover and focus.
+private struct ExtensionRows: View {
     let installed: InstalledExtension
-    let onConfigure: () -> Void
+    let isExpanded: Bool
+    let onToggle: () -> Void
     let onUninstall: () -> Void
 
     var body: some View {
-        SettingsRow(title: installed.title, subtitle: summary) {
+        summary
+        if isExpanded {
+            ExtensionIconRow(installed: installed)
+            ForEach(installed.manifest.preferences, id: \.name) { schema in
+                ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
+            }
+            ForEach(installed.manifest.commands) { command in
+                CommandRow(installed: installed, command: command)
+            }
+            LabeledContent {
+                Button("Uninstall…", role: .destructive, action: onUninstall)
+            } label: {
+                Text("Remove this extension")
+                Text("Deletes it along with its preferences, its cache and its shortcuts.")
+            }
+        }
+    }
+
+    private var summary: some View {
+        SettingsRow(title: installed.title, subtitle: subtitle) {
             ExtensionIconView(
                 resolved: installed.iconPath.map { ExtensionImage.Resolved(source: .file($0)) },
                 size: Theme.Size.rowIcon)
         } trailing: {
-            Button(action: onConfigure) {
-                Image(systemName: "pencil")
-            }
-            .buttonStyle(.plain)
-            .help("Configure Extension")
-            .accessibilityLabel("Configure \(installed.title)")
-
-            Button(action: onUninstall) {
-                Image(systemName: "trash")
-                    .foregroundStyle(.red)
-            }
-            .buttonStyle(.plain)
-            .help("Uninstall Extension")
-            .accessibilityLabel("Uninstall \(installed.title)")
+            Image(systemName: "chevron.down")
+                .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
+        // The whole row toggles: a `DisclosureGroup` would only respond to its chevron.
+        .contentShape(.rect)
+        .onTapGesture(perform: onToggle)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(
+            isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
     }
 
-    private var summary: String {
+    private var subtitle: String {
         let count = installed.manifest.commands.count
         let commands = "\(count) command\(count == 1 ? "" : "s")"
         let author = installed.manifest.author
@@ -255,10 +272,178 @@ private struct ExtensionSettingsRow: View {
     }
 }
 
-/// The extension the editor sheet is open on.
-private struct EditorTarget: Identifiable {
-    let id = UUID()
+/// One command: its shortcut, and any preferences it declares of its own.
+private struct CommandRow: View {
     let installed: InstalledExtension
+    let command: ExtensionCommand
+
+    var body: some View {
+        LabeledContent {
+            if command.mode.isSupported {
+                // Per command, not per extension: a shortcut has to land on one thing to run, and an
+                // extension is a set of commands.
+                ShortcutRecorder(
+                    action: .extensionCommand(
+                        entryID: ExtensionCommandRef(
+                            extensionName: installed.manifest.name, commandName: command.name
+                        ).entryID))
+            } else {
+                Text("Menu bar command")
+                    .foregroundStyle(.orange)
+                    .help(command.mode.unsupportedReason ?? "")
+            }
+        } label: {
+            Text(command.title)
+            if !command.description.isEmpty { Text(command.description) }
+        }
+        ForEach(command.preferences, id: \.name) { schema in
+            ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
+        }
+    }
+}
+
+/// The launcher icon, and the picker that replaces it.
+private struct ExtensionIconRow: View {
+    let installed: InstalledExtension
+    @Environment(AppCore.self) private var core
+    @State private var picking = false
+
+    /// Read from the store, not the manager: picking publishes from there, so the preview and the
+    /// open popover both observe *it*.
+    private var appearance: ExtensionAppearance? {
+        core.extensions.appearances.appearance(for: installed.manifest.name)
+    }
+
+    var body: some View {
+        LabeledContent {
+            HStack(spacing: Theme.Spacing.md) {
+                preview
+                Button("Change…") { picking = true }
+                    .popover(isPresented: $picking, arrowEdge: .bottom) {
+                        ExtensionAppearancePicker(
+                            current: appearance ?? .fallback,
+                            isCustom: appearance != nil,
+                            onPick: { core.extensions.setAppearance($0, for: installed.manifest.name) },
+                            onReset: {
+                                core.extensions.setAppearance(nil, for: installed.manifest.name)
+                            })
+                    }
+            }
+        } label: {
+            Text("Launcher icon")
+            Text(
+                appearance == nil
+                    ? "Using the icon this extension ships."
+                    : "Replaced with a Tinycast icon.")
+        }
+    }
+
+    /// Exactly what the launcher row will draw — the shipped image, or the chosen tile.
+    @ViewBuilder
+    private var preview: some View {
+        if let appearance {
+            SymbolTile(symbol: appearance.symbol, tint: appearance.tint, side: Theme.Size.rowIcon)
+        } else {
+            ExtensionIconView(
+                resolved: installed.iconPath.map { ExtensionImage.Resolved(source: .file($0)) },
+                size: Theme.Size.rowIcon)
+        }
+    }
+}
+
+/// One preference control, backed by `ExtensionStorage` so a command reads it through
+/// `getPreferenceValues()`.
+private struct ExtensionPreferenceField: View {
+    let extensionName: String
+    let schema: ExtensionPreferenceSchema
+    @Environment(AppCore.self) private var core
+    @State private var text: String = ""
+    @State private var flag: Bool = false
+
+    /// Wide enough for a path, and fixed: left to itself a text field in a form row collapses to
+    /// nothing next to a long label, which is how one ends up invisible but still clickable.
+    private static let controlWidth: CGFloat = 200
+
+    private var storage: ExtensionStorage { core.extensions.storage }
+
+    var body: some View {
+        LabeledContent {
+            control
+        } label: {
+            Text(schema.displayTitle)
+            if let description = schema.description, !description.isEmpty {
+                Text(schema.required ? description + " Required." : description)
+            } else if schema.required {
+                Text("Required.")
+            }
+        }
+        .onAppear(perform: load)
+    }
+
+    @ViewBuilder
+    private var control: some View {
+        switch schema.kind {
+        case .checkbox:
+            Toggle(schema.label ?? "", isOn: $flag)
+                .labelsHidden()
+                .onChange(of: flag) { _, value in
+                    storage.setPreference(
+                        extension: extensionName, key: schema.name, value: .bool(value))
+                }
+        case .dropdown:
+            Picker("", selection: $text) {
+                ForEach(schema.options, id: \.value) { option in
+                    Text(option.title).tag(option.value)
+                }
+            }
+            .labelsHidden()
+            .fixedSize()
+            .onChange(of: text) { _, value in save(value) }
+        case .password:
+            SecureField(schema.placeholder ?? "", text: $text)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: Self.controlWidth)
+                .onChange(of: text) { _, value in save(value) }
+        case .file, .directory, .appPicker:
+            HStack(spacing: Theme.Spacing.sm) {
+                Text(text.isEmpty ? "Not set" : (text as NSString).lastPathComponent)
+                    .foregroundStyle(text.isEmpty ? .secondary : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Button("Choose…", action: choosePath)
+            }
+        case .textfield:
+            TextField(schema.placeholder ?? "", text: $text)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: Self.controlWidth)
+                .onChange(of: text) { _, value in save(value) }
+        }
+    }
+
+    private func load() {
+        let value =
+            storage.preference(extension: extensionName, key: schema.name)
+            ?? schema.effectiveDefault
+        text = value.stringValue
+        flag = value.boolValue
+    }
+
+    private func save(_ value: String) {
+        storage.setPreference(extension: extensionName, key: schema.name, value: .string(value))
+    }
+
+    private func choosePath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = schema.kind != .directory
+        panel.canChooseDirectories = schema.kind == .directory
+        if schema.kind == .appPicker {
+            panel.directoryURL = URL(fileURLWithPath: "/Applications")
+            panel.allowedContentTypes = [.application]
+        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        text = url.path
+        save(url.path)
+    }
 }
 
 /// One candidate from a local Raycast install, and whether we already have it.
