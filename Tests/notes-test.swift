@@ -270,7 +270,27 @@ struct NotesTests {
             "the current inline format is reported to the menu",
             NoteMarkdownEditing.activeCommands(
                 selection: NSRange(location: 2, length: 4),
+                source: renderedBold,
                 presentation: renderedBoldPresentation).contains(.bold))
+        let mixedInlineSource = "**bold** plain"
+        let mixedInlineState = NoteMarkdownEditing.activeCommands(
+            selection: NSRange(location: 2, length: 12),
+            source: mixedInlineSource,
+            presentation: NoteMarkdownParser.parse(mixedInlineSource))
+        check("partially bold selections do not report Bold as active", !mixedInlineState.contains(.bold))
+        let adjacentBoldSource = "**one** **two**"
+        let adjacentBoldState = NoteMarkdownEditing.activeCommands(
+            selection: NSRange(location: 0, length: (adjacentBoldSource as NSString).length),
+            source: adjacentBoldSource,
+            presentation: NoteMarkdownParser.parse(adjacentBoldSource))
+        check("fully bold selections report Bold as active", adjacentBoldState.contains(.bold))
+        let mixedBlocksSource = "# Heading\nPlain"
+        let mixedBlockState = NoteMarkdownEditing.activeCommands(
+            selection: NSRange(location: 0, length: (mixedBlocksSource as NSString).length),
+            source: mixedBlocksSource,
+            presentation: NoteMarkdownParser.parse(mixedBlocksSource))
+        check("mixed block selections do not report a heading", !mixedBlockState.contains(.heading1))
+        check("mixed block selections do not report Normal", !mixedBlockState.contains(.normal))
 
         let mixed = NoteMarkdownEditing.plan(
             .taskList,

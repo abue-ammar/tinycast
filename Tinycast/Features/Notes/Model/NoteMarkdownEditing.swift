@@ -94,25 +94,87 @@ enum NoteMarkdownEditing {
 
     static func activeCommands(
         selection: NSRange,
+        source: String,
         presentation: NoteMarkdownPresentation
     ) -> Set<NoteMarkdownCommand> {
-        let constructs = presentation.constructs.filter { construct in
-            if selection.length == 0 {
-                return selection.location >= construct.range.location
+        let text = source as NSString
+        guard selection.location != NSNotFound, selection.location >= 0,
+            NSMaxRange(selection) <= text.length
+        else { return [.normal] }
+        if selection.length == 0 {
+            let constructs = presentation.constructs.filter { construct in
+                selection.location >= construct.range.location
                     && selection.location <= NSMaxRange(construct.range)
             }
-            return NSIntersectionRange(selection, construct.contentRange).length > 0
+            var commands = Set(constructs.compactMap { command(for: $0.kind) })
+            if constructs.contains(where: { $0.kind == .strongEmphasis }) {
+                commands.formUnion([.bold, .italic])
+            }
+            if commands.isDisjoint(with: blockCommands) { commands.insert(.normal) }
+            return commands
         }
-        var commands = Set(constructs.compactMap { command(for: $0.kind) })
-        if constructs.contains(where: { $0.kind == .strongEmphasis }) {
-            commands.formUnion([.bold, .italic])
+
+        let candidates = Set(presentation.constructs.compactMap { command(for: $0.kind) })
+            .union(
+                presentation.constructs.contains(where: { $0.kind == .strongEmphasis })
+                    ? [.bold, .italic] : [])
+        var commands = Set(candidates.filter { command in
+            selectionIsFullyFormatted(
+                selection,
+                as: command,
+                source: text,
+                presentation: presentation)
+        })
+        if commands.isDisjoint(with: blockCommands),
+            !selectionIntersectsBlock(selection, presentation: presentation)
+        {
+            commands.insert(.normal)
         }
-        let blockCommands: Set<NoteMarkdownCommand> = [
-            .heading1, .heading2, .heading3, .blockquote, .unorderedList,
-            .orderedList, .taskList, .codeBlock
-        ]
-        if commands.isDisjoint(with: blockCommands) { commands.insert(.normal) }
         return commands
+    }
+
+    private static let blockCommands: Set<NoteMarkdownCommand> = [
+        .heading1, .heading2, .heading3, .blockquote, .unorderedList,
+        .orderedList, .taskList, .codeBlock
+    ]
+
+    private static func selectionIsFullyFormatted(
+        _ selection: NSRange,
+        as command: NoteMarkdownCommand,
+        source: NSString,
+        presentation: NoteMarkdownPresentation
+    ) -> Bool {
+        let coverage = presentation.constructs.compactMap { construct -> NSRange? in
+            if command == .bold, construct.kind == .strongEmphasis { return construct.contentRange }
+            if command == .italic, construct.kind == .strongEmphasis { return construct.contentRange }
+            return Self.command(for: construct.kind) == command ? construct.contentRange : nil
+        }
+        guard !coverage.isEmpty else { return false }
+        let markers = presentation.constructs.flatMap(\.markerRanges)
+        var foundContent = false
+        for location in selection.location..<NSMaxRange(selection) {
+            let character = source.character(at: location)
+            if CharacterSet.whitespacesAndNewlines.contains(Unicode.Scalar(character)!)
+                || markers.contains(where: { NSLocationInRange(location, $0) })
+            {
+                continue
+            }
+            foundContent = true
+            if !coverage.contains(where: { NSLocationInRange(location, $0) }) { return false }
+        }
+        return foundContent
+    }
+
+    private static func selectionIntersectsBlock(
+        _ selection: NSRange,
+        presentation: NoteMarkdownPresentation
+    ) -> Bool {
+        presentation.constructs.contains { construct in
+            guard let command = command(for: construct.kind), blockCommands.contains(command) else {
+                return false
+            }
+            return NSIntersectionRange(selection, construct.range).length > 0
+        }
     }
 
     static func planListEdit(

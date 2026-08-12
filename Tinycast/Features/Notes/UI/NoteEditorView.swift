@@ -222,6 +222,7 @@ struct NoteEditorView: NSViewRepresentable {
         func noteTextViewFormattingState(_ textView: NoteTextView) -> Set<NoteMarkdownCommand> {
             NoteMarkdownEditing.activeCommands(
                 selection: sourceSelection,
+                source: source,
                 presentation: presentation)
         }
 
