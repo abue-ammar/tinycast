@@ -183,6 +183,17 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
     }
 
+    /// Installs from a registry: fetches, builds when the registry serves source, and adds the
+    /// result. Progress is reported per step — the source path can take minutes.
+    func install(
+        listing: ExtensionListing, packageManager: ExtensionPackageManager,
+        onProgress: @Sendable @escaping (ExtensionInstaller.Progress) -> Void
+    ) async throws {
+        let installer = ExtensionInstaller(packageManager: packageManager)
+        try await installer.install(listing, onProgress: onProgress)
+        await refresh()
+    }
+
     /// Copies every extension Raycast has built, refreshing once at the end rather than per install.
     /// Returns what failed, so the pane can say which rather than just that something did.
     @discardableResult

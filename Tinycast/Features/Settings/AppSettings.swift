@@ -161,6 +161,23 @@ final class AppSettings {
         }
     }
 
+    /// Only a source registry needs one — the store serves extensions already built.
+    var extensionPackageManager: ExtensionPackageManager {
+        didSet {
+            defaults.set(
+                extensionPackageManager.rawValue, forKey: Key.extensionPackageManager.rawValue)
+        }
+    }
+
+    /// Where extensions are searched for. Seeded with the store and the official repository; a user
+    /// can add their own, which is the point of it being a list rather than a flag.
+    var extensionRegistries: [ExtensionRegistry] {
+        didSet {
+            guard let data = try? JSONEncoder().encode(extensionRegistries) else { return }
+            defaults.set(data, forKey: Key.extensionRegistries.rawValue)
+        }
+    }
+
     /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
     var windowManagementEnabled: Bool {
         didSet {
@@ -282,6 +299,13 @@ final class AppSettings {
         extensionsShowInLauncher =
             defaults.object(forKey: Key.extensionsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.extensionsShowInLauncher.rawValue)
+        extensionPackageManager =
+            defaults.string(forKey: Key.extensionPackageManager.rawValue)
+            .flatMap(ExtensionPackageManager.init(rawValue:)) ?? .automatic
+        extensionRegistries =
+            defaults.data(forKey: Key.extensionRegistries.rawValue)
+            .flatMap { try? JSONDecoder().decode([ExtensionRegistry].self, from: $0) }
+            ?? ExtensionRegistry.defaults
         windowManagementEnabled = defaults.bool(forKey: Key.windowManagementEnabled.rawValue)
         windowManagementShowInLauncher =
             defaults.object(forKey: Key.windowManagementShowInLauncher.rawValue) == nil

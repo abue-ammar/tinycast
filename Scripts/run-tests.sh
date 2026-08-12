@@ -121,6 +121,9 @@ run settings-backup-test   Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/Backup/Model/SettingsBackupCoverage.swift
 E=Tinycast/Features/Extensions
 run symbols-test           $E/Service/SymbolCatalog.swift
+run ext-store-test         $E/Model/ExtensionRegistry.swift \
+                           $E/Model/ExtensionPackageManager.swift \
+                           $E/Model/ExtensionStoreResponse.swift
 run ext-test               -parse-as-library \
                            $E/Model/ExtensionBootConfig.swift \
                            $E/Model/ExtensionManifest.swift \
