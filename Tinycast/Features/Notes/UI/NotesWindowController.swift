@@ -81,10 +81,14 @@ final class NotesWindowController: NSObject {
     }
 
     func setFormattingPresented(_ presented: Bool) {
+        editor?.keepsProjectionOnFocusLoss = presented
         if !presented {
             if let formattingMonitor { NSEvent.removeMonitor(formattingMonitor) }
             formattingMonitor = nil
             formattingFrame = nil
+            if let editor, panel?.firstResponder !== editor {
+                editor.editorActions?.noteTextViewFocusChanged(editor, isFocused: false)
+            }
             return
         }
         guard formattingMonitor == nil else { return }

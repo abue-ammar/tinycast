@@ -258,8 +258,8 @@ final class NotesCoordinator {
 
     func applyFormatting(_ command: NoteMarkdownCommand) {
         guard isFormattingPresented else { return }
-        isFormattingPresented = false
         windowController.perform(command)
+        isFormattingPresented = false
     }
 
     func updateSource(_ source: String) {

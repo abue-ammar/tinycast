@@ -20,6 +20,7 @@ protocol NoteTextViewActions: AnyObject {
 final class NoteTextView: NSTextView {
     weak var editorActions: NoteTextViewActions?
     var editorUndoManager: UndoManager?
+    var keepsProjectionOnFocusLoss = false
     let taskOverlays = NoteTaskOverlayController()
 
     override var undoManager: UndoManager? { editorUndoManager }
@@ -32,7 +33,9 @@ final class NoteTextView: NSTextView {
 
     override func resignFirstResponder() -> Bool {
         let resigned = super.resignFirstResponder()
-        if resigned { editorActions?.noteTextViewFocusChanged(self, isFocused: false) }
+        if resigned, !keepsProjectionOnFocusLoss {
+            editorActions?.noteTextViewFocusChanged(self, isFocused: false)
+        }
         return resigned
     }
 

@@ -246,6 +246,22 @@ struct NotesEditorTests {
             "projecting a reverse selection preserves its active edge",
             textView.selectedRange().location == reverseSelection.location - 1
                 && textView.selectedRange().length == reverseSelection.length + 1)
+
+        let menuInput = NoteEditorInput(
+            id: NoteID(rawValue: "Formatting Menu.md"),
+            source: "**bold**",
+            epoch: 10)
+        coordinator.install(menuInput, resetUndo: true)
+        window.makeFirstResponder(textView)
+        textView.setSelectedRange(NSRange(location: 4, length: 0))
+        coordinator.textViewDidChangeSelection(
+            Notification(name: NSTextView.didChangeSelectionNotification, object: textView))
+        textView.keepsProjectionOnFocusLoss = true
+        window.makeFirstResponder(checkbox)
+        check("opening the formatting menu keeps active Markdown stable", textView.string == "**bold**")
+        textView.keepsProjectionOnFocusLoss = false
+        coordinator.noteTextViewFocusChanged(textView, isFocused: false)
+        check("dismissing the formatting menu collapses inactive Markdown", textView.string == "bold")
     }
 
     private static func testCaretAnchoringAcrossProjectionChanges() {
