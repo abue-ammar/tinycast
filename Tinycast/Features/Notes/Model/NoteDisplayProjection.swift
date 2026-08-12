@@ -327,7 +327,13 @@ struct NoteDisplayProjection: Sendable, Equatable {
         for construct in presentation.constructs {
             let style = style(for: construct.kind)
             let contentDisplayRange = displayRange(forSourceRange: construct.contentRange)
-            if contentDisplayRange.length > 0 {
+            let activeHorizontalRule: Bool
+            if case .horizontalRule = construct.kind {
+                activeHorizontalRule = active?.range == construct.range
+            } else {
+                activeHorizontalRule = false
+            }
+            if contentDisplayRange.length > 0, !activeHorizontalRule {
                 styles.append(StyleSpan(style: style, range: contentDisplayRange))
             }
             switch construct.kind {

@@ -257,6 +257,17 @@ struct NotesTests {
             "block formatting preserves selected content instead of selecting its prefix",
             selectedHeading?.selection == NSRange(location: 3, length: 7))
 
+        let insertedRule = NoteMarkdownEditing.plan(
+            .horizontalRule,
+            source: "important text",
+            selection: NSRange(location: 5, length: 0))
+        check("horizontal rules preserve the current paragraph", insertedRule?.range.length == 0)
+        check("horizontal rules insert after a paragraph", insertedRule?.replacement == "\n---\n")
+        let ruleResult = ("important text" as NSString).replacingCharacters(
+            in: insertedRule?.range ?? NSRange(),
+            with: insertedRule?.replacement ?? "")
+        check("horizontal-rule insertion loses no text", ruleResult == "important text\n---\n")
+
         let continuedBullet = NoteMarkdownEditing.planListEdit(
             .newline,
             source: "- item",
@@ -332,6 +343,14 @@ struct NotesTests {
         check(
             "horizontal rules use one decoration anchor instead of text glyphs",
             ruleProjection.string == "\u{200B}\n")
+        let activeRuleProjection = NoteDisplayProjection.build(
+            source: "---\n",
+            presentation: NoteMarkdownParser.parse("---\n"),
+            activeSourceLocation: 1)
+        check("active horizontal rules reveal literal source", activeRuleProjection.string == "---\n")
+        check(
+            "active horizontal-rule source remains visible",
+            !activeRuleProjection.styles.contains { $0.style == .horizontalRule })
 
         let nestedSource = "# Heading with **bold _and italic_**\n"
         let nestedPresentation = NoteMarkdownParser.parse(nestedSource)

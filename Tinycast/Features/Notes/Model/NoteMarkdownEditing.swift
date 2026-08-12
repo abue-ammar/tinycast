@@ -486,11 +486,21 @@ enum NoteMarkdownEditing {
 
     private static func horizontalRule(source: NSString, selection: NSRange) -> NoteMarkdownEditPlan {
         let lineRange = source.coveringLineRange(for: selection)
-        let replacement = "---\n"
+        let line = source.substring(with: lineRange)
+        if line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return NoteMarkdownEditPlan(
+                range: lineRange,
+                replacement: "---\n",
+                selection: NSRange(location: lineRange.location + 4, length: 0))
+        }
+        let replacement = line.hasSuffix("\n") || line.hasSuffix("\r")
+            ? "---\n" : "\n---\n"
         return NoteMarkdownEditPlan(
-            range: lineRange,
+            range: NSRange(location: NSMaxRange(lineRange), length: 0),
             replacement: replacement,
-            selection: NSRange(location: lineRange.location + 4, length: 0))
+            selection: NSRange(
+                location: NSMaxRange(lineRange) + (replacement as NSString).length,
+                length: 0))
     }
 
     private static func prefix(for command: NoteMarkdownCommand, index: Int) -> String {
