@@ -5,6 +5,7 @@ import SwiftUI
 struct ExtensionsSettingsView: View {
     @Environment(AppCore.self) private var core
     @State private var expanded: String?
+    @State private var filter = ""
     @State private var importCandidates: ImportCandidates?
     @State private var browsingStore = false
     @State private var error: String?
@@ -131,17 +132,24 @@ struct ExtensionsSettingsView: View {
             if core.extensions.installed.isEmpty {
                 Text("Install one to see it here.")
                     .foregroundStyle(.secondary)
+            } else if core.extensions.installed.count > 3 {
+                SettingsFilterField(prompt: "Filter extensions…", query: $filter)
             }
-            ForEach(core.extensions.installed) { installed in
-                ExtensionRows(
-                    installed: installed,
-                    isExpanded: expanded == installed.manifest.name,
-                    onToggle: {
-                        expanded =
-                            expanded == installed.manifest.name
-                            ? nil : installed.manifest.name
-                    },
-                    onUninstall: { core.extensionCoordinator.confirmUninstall(installed) })
+            if !matching.isEmpty || filter.isEmpty {
+                ForEach(matching) { installed in
+                    ExtensionRows(
+                        installed: installed,
+                        isExpanded: expanded == installed.manifest.name,
+                        onToggle: {
+                            expanded =
+                                expanded == installed.manifest.name
+                                ? nil : installed.manifest.name
+                        },
+                        onUninstall: { core.extensionCoordinator.confirmUninstall(installed) })
+                }
+            } else {
+                Text("No extension matches \u{201C}\(filter)\u{201D}.")
+                    .foregroundStyle(.secondary)
             }
         } header: {
             HStack {
@@ -165,6 +173,16 @@ struct ExtensionsSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
+        }
+    }
+
+    private var matching: [InstalledExtension] {
+        guard !filter.isEmpty else { return core.extensions.installed }
+        return core.extensions.installed.filter { entry in
+            entry.title.localizedCaseInsensitiveContains(filter)
+                || entry.manifest.commands.contains {
+                    $0.title.localizedCaseInsensitiveContains(filter)
+                }
         }
     }
 
@@ -230,9 +248,15 @@ private struct ExtensionRows: View {
         summary
         if isExpanded {
             ExtensionIconRow(installed: installed)
-            ForEach(installed.manifest.preferences, id: \.name) { schema in
-                ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
+            if !installed.manifest.preferences.isEmpty {
+                groupHeading("Preferences")
+                ForEach(installed.manifest.preferences, id: \.name) { schema in
+                    ExtensionPreferenceField(extensionName: installed.manifest.name, schema: schema)
+                }
             }
+            groupHeading(
+                installed.manifest.commands.count == 1
+                    ? "Command" : "\(installed.manifest.commands.count) Commands")
             ForEach(installed.manifest.commands) { command in
                 CommandRow(installed: installed, command: command)
             }
@@ -243,6 +267,16 @@ private struct ExtensionRows: View {
                 Text("Deletes it along with its preferences, its cache and its shortcuts.")
             }
         }
+    }
+
+    /// Preferences and commands are different kinds of thing, and a flat run of rows says they are
+    /// the same one. A `Form` section has no sub-sections, so the heading is a row of its own.
+    private func groupHeading(_ title: String) -> some View {
+        Text(title)
+            .font(Theme.Typography.sectionHeader)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .listRowSeparator(.hidden)
     }
 
     private var summary: some View {

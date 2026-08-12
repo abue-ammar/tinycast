@@ -82,7 +82,10 @@ struct SettingsFilterField: View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField(prompt, text: $query)
+            // `prompt:`, not the title argument: inside a `Form` a text field's title is rendered as
+            // its label in the left-hand column, which turns the placeholder into a heading and
+            // leaves the field itself an unmarked strip on the right.
+            TextField("", text: $query, prompt: Text(prompt))
                 .textFieldStyle(.plain)
                 .focused($focused)
             if !query.isEmpty {
