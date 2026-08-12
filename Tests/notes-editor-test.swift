@@ -227,6 +227,25 @@ struct NotesEditorTests {
         check("clicking a task emits its checked Markdown", changes.last == "- [x] Task")
         check("clicking a task keeps the rendered marker", !textView.string.contains("[x]"))
         check("clicking a task does not pull focus into the editor", window.firstResponder === checkbox)
+
+        let reverseInput = NoteEditorInput(
+            id: NoteID(rawValue: "Reverse Selection.md"),
+            source: "**bold** plain",
+            epoch: 9)
+        coordinator.install(reverseInput, resetUndo: true)
+        window.makeFirstResponder(textView)
+        let reverseCaret = (textView.string as NSString).range(of: " plain").location
+        textView.setSelectedRange(NSRange(location: reverseCaret, length: 0))
+        textView.moveLeftAndModifySelection(nil)
+        textView.moveLeftAndModifySelection(nil)
+        let reverseSelection = textView.selectedRange()
+        coordinator.textViewDidChangeSelection(
+            Notification(name: NSTextView.didChangeSelectionNotification, object: textView))
+        textView.moveLeftAndModifySelection(nil)
+        check(
+            "projecting a reverse selection preserves its active edge",
+            textView.selectedRange().location == reverseSelection.location - 1
+                && textView.selectedRange().length == reverseSelection.length + 1)
     }
 
     private static func testCaretAnchoringAcrossProjectionChanges() {

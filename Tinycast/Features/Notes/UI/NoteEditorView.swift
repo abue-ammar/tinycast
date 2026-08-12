@@ -148,12 +148,12 @@ struct NoteEditorView: NSViewRepresentable {
             guard !isApplyingProjection, !isComposing, let textView else { return }
             revealedSelectionLocation = nil
             sourceSelection = projection.sourceRange(forDisplayRange: textView.selectedRange())
-            let activeLocation = sourceSelection.length == 0 ? sourceSelection.location : nil
+            guard sourceSelection.length == 0 else { return }
             let next = Signposts.interval("NoteEditor.project") {
                 NoteDisplayProjection.build(
                     source: source,
                     presentation: presentation,
-                    activeSourceLocation: activeLocation)
+                    activeSourceLocation: sourceSelection.location)
             }
             guard next.activeRange != projection.activeRange else { return }
             projection = next
@@ -406,7 +406,9 @@ struct NoteEditorView: NSViewRepresentable {
                     location: edit.range.location,
                     length: (edit.replacement as NSString).length))
             let displaySelection = projection.displayRange(forSourceRange: sourceSelection)
-            textView.setSelectedRange(displaySelection)
+            if textView.selectedRange() != displaySelection {
+                textView.setSelectedRange(displaySelection)
+            }
             isApplyingProjection = false
             if caretScreenY != nil {
                 let contentHeight = NoteEditorView.measuredHeight(of: textView)
