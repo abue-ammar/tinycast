@@ -82,8 +82,9 @@ struct ExtensionStoreSheet: View {
                 }
                 .hideNativeScrollers()
             }
-            // The app's own scroll edge: a row half-cut against the footer reads as a bug without it.
-            .edgeDissolve()
+            // Bottom only: nothing sits over the top of this list, and fading it there would dim
+            // the first result into looking unavailable.
+            .edgeDissolve(edges: .bottom)
             .thinScrollbar()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

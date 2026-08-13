@@ -82,6 +82,7 @@ struct ExtensionAppearancePicker: View {
                     }
                     .padding(.horizontal, 2)
                 }
+                .edgeDissolve(edges: .bottom)
                 .frame(width: 396, height: 240)
             }
 
