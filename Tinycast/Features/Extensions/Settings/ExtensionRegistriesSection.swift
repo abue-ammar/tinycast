@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Settings › Extensions › Advanced: where extensions are searched for, and what builds the ones that
-/// arrive as source. Both are right by default, so both stay folded away until someone wants them.
+/// The rows inside Settings › Extensions › Install that say where extensions are searched for, and
+/// what builds the ones that arrive as source. A disclosure rather than its own section: the defaults
+/// are right for almost everyone, and it belongs beside the thing it configures.
 struct ExtensionRegistriesSection: View {
     @Environment(AppCore.self) private var core
     @State private var expanded = false
@@ -10,21 +11,24 @@ struct ExtensionRegistriesSection: View {
     private var settings: AppSettings { core.settings }
 
     var body: some View {
-        Section {
-            DisclosureGroup(isExpanded: $expanded) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                    registries
-                    Divider()
-                    building
-                }
-                .padding(.top, Theme.Spacing.md)
-            } label: {
-                // A `DisclosureGroup` only toggles from its chevron; the label is the rest of the row.
-                Text("Advanced")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(.rect)
-                    .onTapGesture { expanded.toggle() }
+        DisclosureGroup(isExpanded: $expanded) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                registries
+                Divider()
+                building
             }
+            .padding(.top, Theme.Spacing.md)
+        } label: {
+            // A `DisclosureGroup` only toggles from its chevron; the label is the rest of the row.
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text("Where to search")
+                Text(searchSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+            .onTapGesture { expanded.toggle() }
         }
         .sheet(isPresented: $addingRegistry) {
             RegistryEditorSheet(
@@ -35,11 +39,18 @@ struct ExtensionRegistriesSection: View {
         }
     }
 
+    /// Says what searching will actually cover, so the row is worth opening or safely ignoring.
+    private var searchSummary: String {
+        let on = settings.extensionRegistries.filter(\.isEnabled)
+        guard !on.isEmpty else { return "No registries enabled — searching will find nothing." }
+        return on.map(\.name).joined(separator: ", ")
+    }
+
     // MARK: - Registries
 
     private var registries: some View {
+        // No heading: the disclosure this sits inside is already called "Where to search".
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            heading("Registries")
             ForEach(settings.extensionRegistries) { registry in
                 SettingsRow(title: registry.name, subtitle: registry.subtitle) {
                     registryIcon(registry)

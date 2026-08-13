@@ -20,13 +20,25 @@ struct ExtensionStoreSheet: View {
 
     private var registries: [ExtensionRegistry] { core.settings.extensionRegistries }
 
+    /// Which registries this will actually cover, by name — the sheet can't reach the pane's registry
+    /// settings, so at least it says what they are.
+    private var searchingSummary: String {
+        let on = registries.filter(\.isEnabled)
+        guard !on.isEmpty else {
+            return "No registries are enabled. Turn one on under Install → Where to search."
+        }
+        let names = on.map(\.name).joined(separator: ", ")
+        return "Searching \(names). Store extensions install as they are; a repository is built first."
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             header
+            // The same borderless field the panes use, rather than a bordered capsule of its own.
             SettingsFilterField(prompt: "Search extensions…", query: $query)
-                .padding(Theme.Spacing.sm)
-                .background(Theme.Colors.controlSurface, in: .rect(cornerRadius: Theme.Radius.row))
             content
+            // The list scrolls right up to the footer without it, cutting the last row mid-sentence.
+            Divider()
             footer
         }
         .padding(Theme.Spacing.xxl)
@@ -37,21 +49,18 @@ struct ExtensionStoreSheet: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text("Install Extension").font(.title2.weight(.bold))
-            Text(
-                "Searching \(registries.filter(\.isEnabled).count) "
-                    + "\(registries.filter(\.isEnabled).count == 1 ? "registry" : "registries"). "
-                    + "Store extensions install as-is; ones from a repository are built first."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            // Named for the row that opens it, and it names the registries rather than counting them.
+            Text("Search Extensions").font(.title2.weight(.bold))
+            Text(searchingSummary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
     @ViewBuilder
     private var content: some View {
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
-            placeholder("Type to search.")
+            emptyState
         } else if searching && results.isEmpty {
             VStack(spacing: Theme.Spacing.md) {
                 ProgressView()
@@ -73,9 +82,28 @@ struct ExtensionStoreSheet: View {
                 }
                 .hideNativeScrollers()
             }
+            // The app's own scroll edge: a row half-cut against the footer reads as a bug without it.
+            .edgeDissolve()
             .thinScrollbar()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    /// Not a bare line of text in a tall empty sheet: says what to do and what it will search.
+    private var emptyState: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(.tertiary)
+            Text("Search for an extension")
+                .font(.headline)
+            Text(
+                "By name, or by what it does — \u{201C}colour\u{201D}, \u{201C}github\u{201D}, \u{201C}window\u{201D}."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func placeholder(_ text: String) -> some View {
@@ -216,6 +244,7 @@ private struct StoreRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
+                        .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(listing.subtitle)

@@ -32,7 +32,7 @@ struct ExtensionsSettingsView: View {
                 compatibility
                 if !pending.isEmpty { newInRaycast }
                 library
-                ExtensionRegistriesSection()
+                install
             }
             .settingsEnabled(settings.extensionsEnabled)
         }
@@ -109,9 +109,8 @@ struct ExtensionsSettingsView: View {
                 Image(systemName: "arrow.down.circle")
                     .foregroundStyle(.secondary)
             } trailing: {
-                // One button carries the row, as everywhere else; reviewing first is the quieter path.
-                Button("Review…", action: openImport)
-                    .buttonStyle(.link)
+                // One action, like every other row in the app. Picking which to import is the Install
+                // section's "Import…" below — a second route from here only split the same verb in two.
                 Button("Import All") { Task { await importAll(pending.map(\.installed)) } }
             }
         }
@@ -169,25 +168,9 @@ struct ExtensionsSettingsView: View {
                 }
             }
         } header: {
-            HStack {
-                Text(
-                    core.extensions.installed.isEmpty
-                        ? "Installed" : "Installed (\(core.extensions.installed.count))")
-                Spacer()
-                Menu("Install…") {
-                    Button("Browse Extensions…") { browsingStore = true }
-                    Divider()
-                    Button("Import from Raycast…", action: openImport)
-                        .disabled(!raycastAvailable)
-                    Button("Add from Folder…", action: addFolder)
-                }
-                // A real pull-down, sized like the other small controls in the pane rather than
-                // reading as a text link in the header.
-                .menuStyle(.button)
-                .controlSize(.small)
-                .menuIndicator(.visible)
-                .fixedSize()
-            }
+            Text(
+                core.extensions.installed.isEmpty
+                    ? "Installed" : "Installed (\(core.extensions.installed.count))")
         } footer: {
             if let error {
                 Label(error, systemImage: "exclamationmark.triangle")
@@ -208,6 +191,47 @@ struct ExtensionsSettingsView: View {
                     $0.title.localizedCaseInsensitiveContains(filter)
                 }
         }
+    }
+
+    /// The three ways an extension gets here, as rows rather than as a menu: each one behaves
+    /// differently enough — a search, a copy, a folder — to deserve saying so, and a menu hid that.
+    private var install: some View {
+        Section {
+            SettingsRow(
+                title: "Search extensions",
+                subtitle: "Find and install from the registries below."
+            ) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+            } trailing: {
+                Button("Search…") { browsingStore = true }
+            }
+            SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
+                Image(systemName: "arrow.down.doc")
+                    .foregroundStyle(.secondary)
+            } trailing: {
+                Button("Import…", action: openImport)
+                    .disabled(!raycastAvailable)
+            }
+            SettingsRow(
+                title: "Add from folder",
+                subtitle: "A folder holding package.json and the built command files."
+            ) {
+                Image(systemName: "folder")
+                    .foregroundStyle(.secondary)
+            } trailing: {
+                Button("Choose…", action: addFolder)
+            }
+            ExtensionRegistriesSection()
+        } header: {
+            Text("Install")
+        }
+    }
+
+    private var importSubtitle: String {
+        raycastAvailable
+            ? "Copy what Raycast has already built. No Node or package manager needed."
+            : "No Raycast install found at ~/.config/raycast/extensions."
     }
 
     private var raycastAvailable: Bool {
@@ -621,8 +645,18 @@ private struct ExtensionImportSheet: View {
     let onCancel: () -> Void
     @State private var chosen: Set<String> = []
     @State private var seeded = false
+    @State private var filter = ""
 
     private var fresh: [RaycastImportCandidate] { candidates.filter { !$0.isInstalled } }
+
+    /// Thirty-odd rows is past the point where scanning beats filtering — the same field the pane
+    /// puts above its own list.
+    private var matching: [RaycastImportCandidate] {
+        guard !filter.isEmpty else { return candidates }
+        return candidates.filter {
+            $0.installed.title.localizedCaseInsensitiveContains(filter)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
@@ -633,9 +667,13 @@ private struct ExtensionImportSheet: View {
                     .foregroundStyle(.secondary)
             }
 
+            if candidates.count > 6 {
+                SettingsFilterField(prompt: "Filter…", query: $filter)
+            }
+
             ScrollView {
                 VStack(spacing: 0) {
-                    ForEach(candidates) { candidate in
+                    ForEach(matching) { candidate in
                         // The checkbox sits outside the Toggle's label: an AppKit checkbox aligns to
                         // its label's first baseline, which reads off-centre next to a two-line row.
                         HStack(spacing: Theme.Spacing.md) {
@@ -660,14 +698,14 @@ private struct ExtensionImportSheet: View {
                 }
                 .hideNativeScrollers()
             }
+            .edgeDissolve()
             .thinScrollbar()
             .frame(minHeight: 220)
 
             HStack {
-                Button(chosen.count == candidates.count ? "Deselect All" : "Select All") {
-                    chosen =
-                        chosen.count == candidates.count
-                        ? [] : Set(candidates.map(\.installed.manifest.name))
+                // Reads against what is actually selected, so it is never a button that does nothing.
+                Button(allChosen ? "Deselect All" : "Select All") {
+                    chosen = allChosen ? [] : Set(candidates.map(\.installed.manifest.name))
                 }
                 .disabled(candidates.isEmpty)
                 Spacer()
@@ -691,21 +729,24 @@ private struct ExtensionImportSheet: View {
         }
     }
 
+    private var allChosen: Bool { chosen.count == candidates.count }
+
     private var subtitle: String {
         guard !candidates.isEmpty else {
             return "No built extensions found in ~/.config/raycast/extensions."
         }
         guard !fresh.isEmpty else {
-            return "Everything Raycast has built is already here. Re-import one to update it."
+            return "Everything Raycast has built is already here. Import one again to update it."
         }
-        let noun = fresh.count == 1 ? "One" : "\(fresh.count)"
-        return "\(noun) not here yet, already selected. Re-importing an existing one updates it."
+        let count = fresh.count == 1 ? "one" : "\(fresh.count)"
+        return "The \(count) you don't have yet \(fresh.count == 1 ? "is" : "are") already ticked. "
+            + "Ticking one you have updates it."
     }
 
     private func detail(for candidate: RaycastImportCandidate) -> String {
         let count = candidate.installed.manifest.commands.count
         let commands = "\(count) command\(count == 1 ? "" : "s")"
-        return candidate.isInstalled ? "\(commands) · already installed" : commands
+        return candidate.isInstalled ? "\(commands) · installed — tick to update" : commands
     }
 
     private func binding(for candidate: RaycastImportCandidate) -> Binding<Bool> {

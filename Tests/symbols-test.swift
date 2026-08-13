@@ -21,11 +21,21 @@ struct SymbolTests {
             catalog.symbols.count > SymbolCatalog.suggested.count * 10)
         check("no duplicates", Set(catalog.symbols).count == catalog.symbols.count)
 
-        // Everything offered has to actually render, or the picker shows an empty tile.
-        let unrenderable = catalog.symbols.prefix(400).filter {
-            NSImage(systemSymbolName: $0, accessibilityDescription: nil) == nil
-        }
+        // Everything offered has to actually render, or the picker shows an empty tile. The app's
+        // own marks are asset-catalog images rather than system symbols — they are exactly the ones
+        // the system cannot draw, which is why they ship — so they're checked separately below.
+        let unrenderable = catalog.symbols.prefix(400)
+            .filter { !SymbolCatalog.isBundled($0) }
+            .filter { NSImage(systemSymbolName: $0, accessibilityDescription: nil) == nil }
         check("the first 400 all render", unrenderable.isEmpty, "got \(unrenderable.prefix(5))")
+
+        // A bundled mark must not collide with a system symbol name, or the asset would shadow it.
+        let colliding = SymbolCatalog.bundledGlyphs.filter {
+            NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil
+        }
+        check(
+            "bundled marks name nothing the system already has", colliding.isEmpty,
+            "got \(colliding)")
 
         // Apple's reserved marks must not be on offer.
         for reserved in ["icloud", "applelogo", "airplayvideo"] where catalog.symbols.contains(reserved) {
@@ -39,7 +49,20 @@ struct SymbolTests {
 
         // Categories: the two synthetic ones plus real subjects, each non-empty.
         check("suggested is first", catalog.categories.first == .suggested)
-        check("all symbols is second", catalog.categories.dropFirst().first == .all)
+        // The app's own marks come next: they are the ones the system catalogue does not have.
+        check("the bundled marks are second", catalog.categories.dropFirst().first == .bundled)
+        check("all symbols is third", catalog.categories.dropFirst(2).first == .all)
+        check(
+            "every bundled mark is offered",
+            SymbolCatalog.bundledGlyphs.allSatisfy(catalog.symbols.contains))
+        check(
+            "and they lead the suggested set",
+            Array(SymbolCatalog.suggested.prefix(SymbolCatalog.bundledGlyphs.count))
+                == SymbolCatalog.bundledGlyphs)
+        // The system has no bluetooth glyph at all, which is why the app ships one.
+        check(
+            "bluetooth is reachable",
+            catalog.search("bluetooth", in: .all).contains("bluetooth"))
         check("subject categories exist", catalog.categories.count > 10)
         let empty = catalog.categories.filter { catalog.symbols(in: $0).isEmpty }
         check("no empty category", empty.isEmpty, "got \(empty.map(\.title))")

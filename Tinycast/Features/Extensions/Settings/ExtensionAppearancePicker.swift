@@ -57,7 +57,9 @@ struct ExtensionAppearancePicker: View {
                 Text("No symbols match \u{201C}\(query)\u{201D}.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    .frame(width: 396, height: 240)
+                    // A whole number of rows: a half-height row clipped against the footer reads as a
+                    // rendering bug rather than as "there is more below".
+                    .frame(width: 396, height: 234)
             } else {
                 ScrollView {
                     LazyVGrid(columns: icons, spacing: 4) {
@@ -113,14 +115,28 @@ struct SymbolTile: View {
     let tint: ExtensionTint
     let side: CGFloat
 
+    /// The app ships a few marks the system has no symbol for; they draw as templates, so they tint
+    /// exactly as a symbol does.
+    @ViewBuilder
+    private var glyph: some View {
+        if SymbolCatalog.isBundled(symbol) {
+            Image(symbol)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: side * 0.5, height: side * 0.5)
+                .foregroundStyle(.white)
+        } else {
+            Image(systemName: symbol)
+                .font(.system(size: side * 0.46, weight: .medium))
+                .foregroundStyle(.white)
+        }
+    }
+
     var body: some View {
         RoundedRectangle(cornerRadius: side * 0.23, style: .continuous)
             .fill(tint.color)
             .frame(width: side, height: side)
-            .overlay(
-                Image(systemName: symbol)
-                    .font(.system(size: side * 0.46, weight: .medium))
-                    .foregroundStyle(.white)
-            )
+            .overlay(glyph)
     }
 }

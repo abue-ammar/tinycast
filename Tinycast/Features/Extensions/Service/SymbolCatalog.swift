@@ -8,6 +8,7 @@ struct SymbolCategory: Identifiable, Hashable, Sendable {
 
     static let suggested = SymbolCategory(id: "tinycast.suggested", title: "Suggested")
     static let all = SymbolCategory(id: "tinycast.all", title: "All Symbols")
+    static let bundled = SymbolCategory(id: "tinycast.bundled", title: "Tinycast")
 }
 
 /// Every SF Symbol this macOS ships, read from the system at runtime rather than bundled: the list then
@@ -24,45 +25,64 @@ struct SymbolCatalog: Sendable {
     private let byCategory: [String: [String]]
     private let searchTerms: [String: [String]]
 
+    /// Marks the app ships itself, for the ones SF Symbols simply doesn't have. There is no bluetooth
+    /// symbol in the system catalogue at all — not restricted, absent — and an extension that toggles
+    /// bluetooth has an obvious icon that the picker could not offer. `IconCache.glyph` already falls
+    /// back to a named asset, so these render everywhere a symbol does.
+    static let bundledGlyphs = ["bluetooth", "BrandGitHub", "BrandDiscord", "BrandX"]
+
+    static func isBundled(_ symbol: String) -> Bool { bundledGlyphs.contains(symbol) }
+
+    /// Search terms for the app's own marks, since they carry none of CoreGlyphs' metadata.
+    private nonisolated static let bundledTerms: [String: [String]] = [
+        "bluetooth": ["bluetooth", "wireless", "pair", "device"],
+        "BrandGitHub": ["github", "git", "repository", "code", "brand"],
+        "BrandDiscord": ["discord", "chat", "community", "brand"],
+        "BrandX": ["x", "twitter", "social", "brand"]
+    ]
+
     /// What the picker opens on — a short, hand-picked set, because scrolling eight thousand icons is
     /// not a way to choose one.
-    static let suggested = [
-        // Status & power
-        "bolt.fill", "cup.and.saucer.fill", "moon.fill", "sun.max.fill", "power", "battery.100",
-        "eye.fill", "bell.fill", "sparkles", "wand.and.stars",
-        // Time
-        "calendar", "clock.fill", "timer", "hourglass", "alarm.fill",
-        // Text & documents
-        "doc.text.fill", "text.alignleft", "checklist", "list.bullet", "note.text",
-        "folder.fill", "tray.full.fill", "archivebox.fill", "book.fill", "bookmark.fill",
-        // Communication
-        "envelope.fill", "message.fill", "paperplane.fill", "phone.fill", "video.fill",
-        "person.2.fill", "bubble.left.and.bubble.right.fill",
-        // Media
-        "music.note", "speaker.wave.2.fill", "headphones", "photo.fill", "camera.fill",
-        "play.fill", "pause.fill", "paintbrush.fill", "theatermasks.fill",
-        // Developer
-        "terminal.fill", "chevron.left.forwardslash.chevron.right", "hammer.fill",
-        "wrench.and.screwdriver.fill", "ant.fill", "cpu", "memorychip", "externaldrive.fill",
-        "server.rack", "shippingbox.fill",
-        // System & network
-        "gearshape.fill", "slider.horizontal.3", "network", "globe", "link", "wifi",
-        "display", "keyboard", "cursorarrow.rays", "square.grid.2x2.fill",
-        // Security & money
-        "lock.fill", "key.fill", "shield.fill", "creditcard.fill", "cart.fill", "banknote.fill",
-        // Data
-        "chart.bar.fill", "chart.pie.fill", "function", "number", "brain",
-        // Places & things
-        "star.fill", "heart.fill", "flag.fill", "tag.fill", "map.fill", "location.fill",
-        "airplane", "car.fill", "leaf.fill", "flame.fill", "drop.fill", "snowflake",
-        "cloud.fill", "gift.fill", "trash.fill", "arrow.triangle.2.circlepath"
-    ]
+    static let suggested =
+        bundledGlyphs + [
+            // Status & power
+            "bolt.fill", "cup.and.saucer.fill", "moon.fill", "sun.max.fill", "power", "battery.100",
+            "eye.fill", "bell.fill", "sparkles", "wand.and.stars",
+            // Time
+            "calendar", "clock.fill", "timer", "hourglass", "alarm.fill",
+            // Text & documents
+            "doc.text.fill", "text.alignleft", "checklist", "list.bullet", "note.text",
+            "folder.fill", "tray.full.fill", "archivebox.fill", "book.fill", "bookmark.fill",
+            // Communication
+            "envelope.fill", "message.fill", "paperplane.fill", "phone.fill", "video.fill",
+            "person.2.fill", "bubble.left.and.bubble.right.fill",
+            // Media
+            "music.note", "speaker.wave.2.fill", "headphones", "photo.fill", "camera.fill",
+            "play.fill", "pause.fill", "paintbrush.fill", "theatermasks.fill",
+            // Developer
+            "terminal.fill", "chevron.left.forwardslash.chevron.right", "hammer.fill",
+            "wrench.and.screwdriver.fill", "ant.fill", "cpu", "memorychip", "externaldrive.fill",
+            "server.rack", "shippingbox.fill",
+            // System & network
+            "gearshape.fill", "slider.horizontal.3", "network", "globe", "link", "wifi",
+            "display", "keyboard", "cursorarrow.rays", "square.grid.2x2.fill",
+            // Security & money
+            "lock.fill", "key.fill", "shield.fill", "creditcard.fill", "cart.fill", "banknote.fill",
+            // Data
+            "chart.bar.fill", "chart.pie.fill", "function", "number", "brain",
+            // Places & things
+            "star.fill", "heart.fill", "flag.fill", "tag.fill", "map.fill", "location.fill",
+            "airplane", "car.fill", "leaf.fill", "flame.fill", "drop.fill", "snowflake",
+            "cloud.fill", "gift.fill", "trash.fill", "arrow.triangle.2.circlepath"
+        ]
 
     /// The catalog with nothing but the curated set — what a missing or restructured CoreGlyphs falls
     /// back to, and what the picker shows until the real load finishes.
     static let fallback = SymbolCatalog(
-        symbols: suggested.filter { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil },
-        categories: [.suggested],
+        symbols: suggested.filter {
+            isBundled($0) || NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil
+        },
+        categories: [.suggested, .bundled],
         byCategory: [:],
         searchTerms: [:])
 
@@ -90,8 +110,10 @@ struct SymbolCatalog: Sendable {
         let categoriesBySymbol = plist("symbol_categories.plist", as: [String: [String]].self) ?? [:]
         let search = plist("symbol_search.plist", as: [String: [String]].self) ?? [:]
 
-        let symbols = order.filter { !restricted.contains($0) && !isLocaleVariant($0) }
-        guard !symbols.isEmpty else { return fallback }
+        let systemSymbols = order.filter { !restricted.contains($0) && !isLocaleVariant($0) }
+        guard !systemSymbols.isEmpty else { return fallback }
+        // The app's own marks lead, so what the system lacks is the first thing offered.
+        let symbols = bundledGlyphs + systemSymbols
 
         var byCategory: [String: [String]] = [:]
         for symbol in symbols {
@@ -108,14 +130,15 @@ struct SymbolCatalog: Sendable {
 
         return SymbolCatalog(
             symbols: symbols,
-            categories: [.suggested, .all] + ordered,
+            categories: [.suggested, .bundled, .all] + ordered,
             byCategory: byCategory,
-            searchTerms: search)
+            searchTerms: search.merging(bundledTerms) { system, _ in system })
     }
 
     func symbols(in category: SymbolCategory) -> [String] {
         switch category.id {
         case SymbolCategory.suggested.id: return Self.suggested
+        case SymbolCategory.bundled.id: return Self.bundledGlyphs
         case SymbolCategory.all.id: return symbols
         default: return byCategory[category.id] ?? []
         }
