@@ -12,6 +12,9 @@ struct ExtensionsSettingsView: View {
     @State private var error: String?
     /// Extensions Raycast has built that aren't here yet, refreshed whenever the pane appears.
     @State private var pending: [RaycastImportCandidate] = []
+    /// What a bulk import is doing, so a thirty-item batch reports rather than going quiet.
+    @State private var importProgress: (done: Int, total: Int)?
+    @State private var importSummary: String?
 
     var body: some View {
         @Bindable var settings = core.settings
@@ -184,10 +187,14 @@ struct ExtensionsSettingsView: View {
                 Image(systemName: "arrow.down.doc")
                     .foregroundStyle(pending.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
             } trailing: {
-                Button("Import…", action: openImport)
-                    .disabled(!raycastAvailable)
-                if !pending.isEmpty {
-                    Button("Import All") { Task { await importAll(pending.map(\.installed)) } }
+                if importProgress != nil {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Import…", action: openImport)
+                        .disabled(!raycastAvailable)
+                    if !pending.isEmpty {
+                        Button("Import All") { Task { await importAll(pending.map(\.installed)) } }
+                    }
                 }
             }
             SettingsRow(
@@ -219,13 +226,20 @@ struct ExtensionsSettingsView: View {
     }
 
     private var importSubtitle: String {
+        if let importProgress {
+            return "Importing \(importProgress.done) of \(importProgress.total)…"
+        }
+        if let importSummary { return importSummary }
         guard raycastAvailable else {
             return "No Raycast install found at ~/.config/raycast/extensions."
         }
         guard !pending.isEmpty else {
             return "Copy what Raycast has already built. No Node or package manager needed."
         }
-        let names = pending.prefix(3).map(\.installed.title).joined(separator: ", ")
+        let names = pending.map(\.installed.title)
+            .sorted { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
+            .prefix(3)
+            .joined(separator: ", ")
         let more = pending.count > 3 ? " and \(pending.count - 3) more" : ""
         return "\(pending.count) not here yet — \(names)\(more)."
     }
@@ -264,10 +278,20 @@ struct ExtensionsSettingsView: View {
 
     private func importAll(_ chosen: [InstalledExtension]) async {
         error = nil
-        let failed = await core.extensions.importAllFromRaycast(chosen)
+        importSummary = nil
+        importProgress = (0, chosen.count)
+        let failed = await core.extensions.importAllFromRaycast(chosen) { done in
+            importProgress = (done, chosen.count)
+        }
+        importProgress = nil
         await findPending()
-        guard !failed.isEmpty else { return }
-        error = "Couldn't import \(failed.joined(separator: ", "))."
+        let imported = chosen.count - failed.count
+        if failed.isEmpty {
+            importSummary = "Imported \(imported) extension\(imported == 1 ? "" : "s")."
+        } else {
+            importSummary = "Imported \(imported); \(failed.count) failed."
+            error = "Couldn't import \(failed.joined(separator: ", "))."
+        }
     }
 
     private func findPending() async {
@@ -336,8 +360,10 @@ private struct ExtensionDisclosure: View {
                 alignment: .leading, horizontalSpacing: Theme.Spacing.lg,
                 verticalSpacing: Theme.Spacing.md
             ) {
-                // No heading: one row doesn't need a group, and the fewer heading species inside
-                // the card, the less it competes with the pane's own section headers.
+                // No heading: these two are one idea — how this extension shows up in the launcher —
+                // and the fewer heading species inside the card, the less it competes with the
+                // pane's own section headers. First, so a 19-command extension doesn't bury them.
+                ExtensionLauncherRow(installed: installed)
                 ExtensionIconRow(installed: installed)
 
                 if !installed.manifest.preferences.isEmpty {
@@ -798,5 +824,13 @@ private struct ExtensionImportSheet: View {
                     chosen.remove(candidate.installed.manifest.name)
                 }
             })
+    }
+}
+
+extension String {
+    /// Sorts on the first letter that is one: a name like "(Basic) Bookmarks" otherwise leads every
+    /// list on the strength of its bracket.
+    fileprivate var sortKey: String {
+        String(drop { !$0.isLetter && !$0.isNumber })
     }
 }

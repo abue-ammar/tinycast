@@ -50,7 +50,7 @@ struct ExtensionAppearancePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            LazyVGrid(columns: swatches, spacing: Metrics.gap) {
+            LazyVGrid(columns: swatches, alignment: .leading, spacing: Metrics.gap) {
                 ForEach(ExtensionTint.allCases) { tint in
                     Button {
                         onPick(ExtensionAppearance(symbol: current.symbol, tint: tint))
@@ -93,7 +93,9 @@ struct ExtensionAppearancePicker: View {
                     .frame(width: Metrics.contentWidth, height: Metrics.gridHeight)
             } else {
                 ScrollView {
-                    LazyVGrid(columns: icons, spacing: Metrics.gap) {
+                    // Leading-aligned: a `LazyVGrid` of fixed columns centres itself in any spare
+                    // width, which is what pushed the grid off the margin everything else shares.
+                    LazyVGrid(columns: icons, alignment: .leading, spacing: Metrics.gap) {
                         ForEach(results, id: \.self) { symbol in
                             Button {
                                 onPick(ExtensionAppearance(symbol: symbol, tint: current.tint))
@@ -111,6 +113,7 @@ struct ExtensionAppearancePicker: View {
                             .help(symbol)
                         }
                     }
+                    .frame(width: Metrics.contentWidth, alignment: .leading)
                 }
                 .edgeDissolve(edges: .bottom)
                 .frame(width: 396, height: 240)

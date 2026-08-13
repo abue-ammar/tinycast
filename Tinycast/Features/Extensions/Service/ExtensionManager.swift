@@ -197,14 +197,17 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Copies every extension Raycast has built, refreshing once at the end rather than per install.
     /// Returns what failed, so the pane can say which rather than just that something did.
     @discardableResult
-    func importAllFromRaycast(_ candidates: [InstalledExtension]) async -> [String] {
+    func importAllFromRaycast(
+        _ candidates: [InstalledExtension], onProgress: (Int) -> Void = { _ in }
+    ) async -> [String] {
         var failed: [String] = []
-        for candidate in candidates {
+        for (index, candidate) in candidates.enumerated() {
             do {
                 _ = try ExtensionCatalog.install(from: candidate.directory)
             } catch {
                 failed.append(candidate.title)
             }
+            onProgress(index + 1)
         }
         await refresh()
         return failed
