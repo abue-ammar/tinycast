@@ -22,9 +22,13 @@ struct ExtensionRegistriesSection: View {
             // A `DisclosureGroup` only toggles from its chevron; the label is the rest of the row.
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text("Where to search")
-                Text(searchSummary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                // Only while closed: with the registry rows open right beneath it, the summary is
+                // the same information twice within a few points.
+                if !expanded {
+                    Text(searchSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(.rect)
