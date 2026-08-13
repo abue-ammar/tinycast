@@ -3,6 +3,10 @@ import SwiftUI
 /// Deliberately not a focusable control. See docs/features/hotkeys.md#recorder.
 struct ShortcutRecorder: View {
     let action: HotKeyAction
+    /// Drops the empty well when nothing is bound, for a recorder that repeats once per row: a
+    /// column of identical filled pills reads louder than the commands it belongs to. The well comes
+    /// back on hover, while recording, and whenever there is a shortcut to show.
+    var isQuiet = false
 
     @Environment(HotKeyManager.self) private var hotKeys
     /// Observed so a bound double-tap surfaces its warning the moment the grant changes.
@@ -11,15 +15,25 @@ struct ShortcutRecorder: View {
 
     private var isRecording: Bool { hotKeys.recordingAction == action }
 
+    /// A quiet recorder sits back until it is pointed at, so a column of them doesn't shout.
+    private var unsetInk: Color {
+        if isRecording { return Theme.Colors.textSecondary }
+        return isQuiet && !hovered ? Theme.Colors.textTertiary : Theme.Colors.textSecondary
+    }
+
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+        // The width is kept either way, so a column of recorders stays aligned as they light up.
+        let showsWell = !isQuiet || isRecording || hovered || hotKeys.binding(for: action) != nil
         content
             .padding(.horizontal, Theme.Spacing.sm)
             .frame(width: Theme.Size.shortcutRecorder, height: 24)
-            .background(shape.fill(Theme.Colors.cardFill))
+            .background(shape.fill(Theme.Colors.cardFill).opacity(showsWell ? 1 : 0))
             .overlay(
                 shape.strokeBorder(
-                    isRecording ? Color.accentColor : Theme.Colors.cardStroke, lineWidth: 1)
+                    isRecording ? Color.accentColor : Theme.Colors.cardStroke, lineWidth: 1
+                )
+                .opacity(showsWell ? 1 : 0)
             )
             // An over-long binding truncates rather than resizing the field.
             .clipShape(shape)
@@ -42,7 +56,7 @@ struct ShortcutRecorder: View {
         } else {
             Text(isRecording ? "Listening…" : "Record")
                 .font(Theme.Typography.keyCap)
-                .foregroundStyle(isRecording ? Theme.Colors.textSecondary : .secondary)
+                .foregroundStyle(unsetInk)
         }
     }
 

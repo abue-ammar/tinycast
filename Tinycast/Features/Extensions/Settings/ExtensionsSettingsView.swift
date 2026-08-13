@@ -91,12 +91,9 @@ struct ExtensionsSettingsView: View {
         } header: {
             Text("Compatibility")
         } footer: {
-            Text(
-                "Tinycast runs Raycast's extension API on its own runtime, so a few corners of it "
-                    + "are Raycast's alone. An extension that needs one says so when you run it."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            Text("An extension that needs something missing says so when you run it.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -107,10 +104,14 @@ struct ExtensionsSettingsView: View {
     private var newInRaycast: some View {
         Section {
             SettingsRow(title: pendingTitle, subtitle: pendingSubtitle) {
+                // Grey like the glyphs above it: accent colour in this app belongs to controls, and a
+                // saturated icon here made the banner the loudest thing in the pane.
                 Image(systemName: "arrow.down.circle")
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(.secondary)
             } trailing: {
+                // One button carries the row, as everywhere else; reviewing first is the quieter path.
                 Button("Review…", action: openImport)
+                    .buttonStyle(.link)
                 Button("Import All") { Task { await importAll(pending.map(\.installed)) } }
             }
         }
@@ -180,9 +181,11 @@ struct ExtensionsSettingsView: View {
                         .disabled(!raycastAvailable)
                     Button("Add from Folder…", action: addFolder)
                 }
-                // Borderless, not `.button`: a bordered menu in a section header draws its label and
-                // its chevron as two separate pills.
-                .menuStyle(.borderlessButton)
+                // A real pull-down, sized like the other small controls in the pane rather than
+                // reading as a text link in the header.
+                .menuStyle(.button)
+                .controlSize(.small)
+                .menuIndicator(.visible)
                 .fixedSize()
             }
         } footer: {
@@ -313,7 +316,8 @@ private struct ExtensionDisclosure: View {
                 alignment: .leading, horizontalSpacing: Theme.Spacing.lg,
                 verticalSpacing: Theme.Spacing.md
             ) {
-                heading("Appearance")
+                // No heading: one row doesn't need a group, and the fewer heading species inside
+                // the card, the less it competes with the pane's own section headers.
                 ExtensionIconRow(installed: installed)
 
                 if !installed.manifest.preferences.isEmpty {
@@ -355,7 +359,8 @@ private struct ExtensionDisclosure: View {
                 .foregroundStyle(.tertiary)
                 .gridCellColumns(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, Theme.Spacing.sm)
+                // Groups separate by whitespace rather than by another heading weight.
+                .padding(.top, Theme.Spacing.lg)
         }
     }
 
@@ -385,12 +390,24 @@ private struct SettingsCardRow<Control: View>: View {
     var detail: String?
     /// Leading inset for a row that belongs to the row above it, rather than to the run.
     var indent: CGFloat = 0
+    /// A short fact about the row, beside its name rather than in the control column.
+    var badge: String?
     @ViewBuilder var control: Control
 
     var body: some View {
         GridRow(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(title)
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(title)
+                    if let badge {
+                        Text(badge)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, Theme.Spacing.xs)
+                            .padding(.vertical, 1)
+                            .background(Theme.Colors.controlSurface, in: .capsule)
+                    }
+                }
                 if let detail, !detail.isEmpty {
                     Text(detail)
                         .font(.caption)
@@ -416,28 +433,28 @@ private struct CommandRows: View {
     let installed: InstalledExtension
     let command: ExtensionCommand
 
+    /// A command this runtime can't run is a fact about the command, so it sits beside its name as a
+    /// quiet badge. In orange in the control column it was the only warning colour in the app.
+    private var badge: String? { command.mode.isSupported ? nil : "Menu Bar" }
+
     var body: some View {
-        SettingsCardRow(title: command.title, detail: command.description) {
+        SettingsCardRow(title: command.title, detail: command.description, badge: badge) {
             if command.mode.isSupported {
                 // Per command, not per extension: a shortcut has to land on one thing to run, and an
-                // extension is a set of commands.
+                // extension is a set of commands. Quiet, because there is one of these per command.
                 ShortcutRecorder(
                     action: .extensionCommand(
                         entryID: ExtensionCommandRef(
                             extensionName: installed.manifest.name, commandName: command.name
-                        ).entryID))
-            } else {
-                Text("Menu bar command")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .help(command.mode.unsupportedReason ?? "")
+                        ).entryID),
+                    isQuiet: true)
             }
         }
         // Indented under the command they belong to: at the same inset the association would rest
         // on reading order alone.
         ForEach(command.preferences, id: \.name) { schema in
-            ExtensionPreferenceRow(extensionName: installed.manifest.name, schema: schema)
-
+            ExtensionPreferenceRow(
+                extensionName: installed.manifest.name, schema: schema, indent: Theme.Spacing.lg)
         }
     }
 }
