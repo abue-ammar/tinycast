@@ -17,6 +17,7 @@ struct ExtensionStoreSheet: View {
     @State private var failures: [String: String] = [:]
     @State private var installed: Set<String> = []
     @State private var searchTask: Task<Void, Never>?
+    @State private var editingRegistries = false
 
     private var registries: [ExtensionRegistry] { core.settings.extensionRegistries }
 
@@ -44,13 +45,23 @@ struct ExtensionStoreSheet: View {
         .padding(Theme.Spacing.xxl)
         .frame(width: 620, height: 560)
         .onChange(of: query) { _, value in scheduleSearch(value) }
+        // Re-run against whatever the registries now are, so the results match the header again.
+        .onChange(of: core.settings.extensionRegistries) { _, _ in scheduleSearch(query) }
+        .sheet(isPresented: $editingRegistries) {
+            ExtensionRegistriesSheet(onClose: { editingRegistries = false })
+        }
         .onDisappear { searchTask?.cancel() }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             // Named for the row that opens it, and it names the registries rather than counting them.
-            Text("Search Extensions").font(.title2.weight(.bold))
+            HStack(alignment: .firstTextBaseline) {
+                Text("Search Extensions").font(.title2.weight(.bold))
+                Spacer()
+                // Changing what is searched belongs in the flow, not back out in the pane.
+                Button("Registries…") { editingRegistries = true }
+            }
             Text(searchingSummary)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -59,7 +70,10 @@ struct ExtensionStoreSheet: View {
 
     @ViewBuilder
     private var content: some View {
-        if query.trimmingCharacters(in: .whitespaces).isEmpty {
+        if registries.filter(\.isEnabled).isEmpty {
+            // Otherwise this is a search field that can only ever find nothing.
+            noRegistriesState
+        } else if query.trimmingCharacters(in: .whitespaces).isEmpty {
             emptyState
         } else if searching && results.isEmpty {
             VStack(spacing: Theme.Spacing.md) {
@@ -103,6 +117,23 @@ struct ExtensionStoreSheet: View {
             )
             .font(.caption)
             .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Nothing is searchable, so the only useful thing here is the way to fix that.
+    private var noRegistriesState: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "tray")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(.tertiary)
+            Text("No registries enabled")
+                .font(.headline)
+            Text("Turn one on and this will have somewhere to look.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Registries…") { editingRegistries = true }
+                .padding(.top, Theme.Spacing.xs)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

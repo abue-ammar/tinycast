@@ -8,6 +8,7 @@ struct ExtensionsSettingsView: View {
     @State private var filter = ""
     @State private var importCandidates: ImportCandidates?
     @State private var browsingStore = false
+    @State private var editingRegistries = false
     @State private var error: String?
     /// Extensions Raycast has built that aren't here yet, refreshed whenever the pane appears.
     @State private var pending: [RaycastImportCandidate] = []
@@ -30,9 +31,8 @@ struct ExtensionsSettingsView: View {
 
             Group {
                 compatibility
-                if !pending.isEmpty { newInRaycast }
-                library
                 install
+                library
             }
             .settingsEnabled(settings.extensionsEnabled)
         }
@@ -58,6 +58,9 @@ struct ExtensionsSettingsView: View {
         }
         .sheet(isPresented: $browsingStore) {
             ExtensionStoreSheet(onClose: { browsingStore = false })
+        }
+        .sheet(isPresented: $editingRegistries) {
+            ExtensionRegistriesSheet(onClose: { editingRegistries = false })
         }
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectExtension)) { note in
             if let name = note.object as? String { expanded = name }
@@ -97,36 +100,6 @@ struct ExtensionsSettingsView: View {
         }
     }
 
-    // MARK: - What Raycast has that we don't
-
-    /// Raycast installs into its own directory, and nothing tells us when it does. Rather than leave
-    /// that to be discovered, the pane looks every time it opens and says what it found.
-    private var newInRaycast: some View {
-        Section {
-            SettingsRow(title: pendingTitle, subtitle: pendingSubtitle) {
-                // Grey like the glyphs above it: accent colour in this app belongs to controls, and a
-                // saturated icon here made the banner the loudest thing in the pane.
-                Image(systemName: "arrow.down.circle")
-                    .foregroundStyle(.secondary)
-            } trailing: {
-                // One action, like every other row in the app. Picking which to import is the Install
-                // section's "Import…" below — a second route from here only split the same verb in two.
-                Button("Import All") { Task { await importAll(pending.map(\.installed)) } }
-            }
-        }
-    }
-
-    private var pendingTitle: String {
-        pending.count == 1
-            ? "1 extension in Raycast isn't here yet"
-            : "\(pending.count) extensions in Raycast aren't here yet"
-    }
-
-    private var pendingSubtitle: String {
-        pending.prefix(3).map(\.installed.title).joined(separator: ", ")
-            + (pending.count > 3 ? " and \(pending.count - 3) more" : "")
-    }
-
     // MARK: - The library
 
     /// Filter row, then the list as a single form row holding its own stack — the shape
@@ -136,7 +109,7 @@ struct ExtensionsSettingsView: View {
     private var library: some View {
         Section {
             if core.extensions.installed.isEmpty {
-                Text("Install one to see it here.")
+                Text("Nothing installed yet — search for one under Install, below.")
                     .foregroundStyle(.secondary)
             } else {
                 if core.extensions.installed.count > 3 {
@@ -197,21 +170,25 @@ struct ExtensionsSettingsView: View {
     /// differently enough — a search, a copy, a folder — to deserve saying so, and a menu hid that.
     private var install: some View {
         Section {
-            SettingsRow(
-                title: "Search extensions",
-                subtitle: "Find and install from the registries below."
-            ) {
+            SettingsRow(title: "Search extensions", subtitle: searchSubtitle) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
             } trailing: {
+                // Beside search, because this is the setting that decides what search can find.
+                Button("Registries…") { editingRegistries = true }
                 Button("Search…") { browsingStore = true }
             }
+            // What Raycast has that we don't is a state of this row, not a card floating at the top
+            // of the pane: it is the same job, and it was the one path split across two places.
             SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
                 Image(systemName: "arrow.down.doc")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(pending.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
             } trailing: {
                 Button("Import…", action: openImport)
                     .disabled(!raycastAvailable)
+                if !pending.isEmpty {
+                    Button("Import All") { Task { await importAll(pending.map(\.installed)) } }
+                }
             }
             SettingsRow(
                 title: "Add from folder",
@@ -222,16 +199,35 @@ struct ExtensionsSettingsView: View {
             } trailing: {
                 Button("Choose…", action: addFolder)
             }
-            ExtensionRegistriesSection()
         } header: {
             Text("Install")
+        } footer: {
+            if let error {
+                // Under the buttons that caused it: it used to sit beneath the list, far above.
+                Label(error, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 
+    /// Names what searching will cover, so the row says what the Registries button is for.
+    private var searchSubtitle: String {
+        let on = core.settings.extensionRegistries.filter(\.isEnabled)
+        guard !on.isEmpty else { return "No registries enabled — searching would find nothing." }
+        return "Searching \(on.map(\.name).joined(separator: ", "))."
+    }
+
     private var importSubtitle: String {
-        raycastAvailable
-            ? "Copy what Raycast has already built. No Node or package manager needed."
-            : "No Raycast install found at ~/.config/raycast/extensions."
+        guard raycastAvailable else {
+            return "No Raycast install found at ~/.config/raycast/extensions."
+        }
+        guard !pending.isEmpty else {
+            return "Copy what Raycast has already built. No Node or package manager needed."
+        }
+        let names = pending.prefix(3).map(\.installed.title).joined(separator: ", ")
+        let more = pending.count > 3 ? " and \(pending.count - 3) more" : ""
+        return "\(pending.count) not here yet — \(names)\(more)."
     }
 
     private var raycastAvailable: Bool {
@@ -480,6 +476,49 @@ private struct CommandRows: View {
         ForEach(command.preferences, id: \.name) { schema in
             ExtensionPreferenceRow(
                 extensionName: installed.manifest.name, schema: schema, indent: Theme.Spacing.lg)
+        }
+    }
+}
+
+/// Whether this one extension's commands reach the launcher. Importing everything Raycast has can
+/// add hundreds of commands at once, and the global switch is too blunt to answer that: this hides
+/// one extension's without touching the rest.
+private struct ExtensionLauncherRow: View {
+    let installed: InstalledExtension
+    @Environment(AppCore.self) private var core
+
+    private var entryIDs: [String] {
+        installed.manifest.commands.map {
+            ExtensionCommandRef(extensionName: installed.manifest.name, commandName: $0.name)
+                .entryID
+        }
+    }
+
+    private var isVisible: Bool {
+        entryIDs.contains { !core.visibility.hiddenItemKeys.contains($0) }
+    }
+
+    var body: some View {
+        SettingsCardRow(
+            title: "Show in launcher",
+            detail: isVisible
+                ? "Its commands appear in launcher search."
+                : "Hidden from launcher search; shortcuts still work."
+        ) {
+            // An explicit closure, not `set: setVisible`: handing the compiler an actor-isolated
+            // method as a plain setter crashes IRGen building the reabstraction thunk.
+            Toggle("", isOn: Binding(get: { isVisible }, set: { setVisible($0) }))
+                .labelsHidden()
+        }
+    }
+
+    private func setVisible(_ visible: Bool) {
+        for entryID in entryIDs {
+            core.visibility.setItemVisible(
+                visible,
+                for: AppEntry(
+                    id: entryID, name: "", url: installed.directory, bundleID: nil,
+                    kind: .extensionCommand))
         }
     }
 }

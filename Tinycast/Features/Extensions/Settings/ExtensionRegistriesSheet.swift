@@ -1,39 +1,88 @@
 import SwiftUI
 
-/// The rows inside Settings › Extensions › Install that say where extensions are searched for, and
-/// what builds the ones that arrive as source. A disclosure rather than its own section: the defaults
-/// are right for almost everyone, and it belongs beside the thing it configures.
-struct ExtensionRegistriesSection: View {
+/// Where searching looks, and what builds what it finds.
+///
+/// A sheet reached from search — from the Install row's "Registries…" and from inside the search
+/// sheet itself — rather than a row of its own in the pane. A registry is not a fourth way to install
+/// something; it is the setting that decides what searching can find, and it belongs where that
+/// question is asked.
+struct ExtensionRegistriesSheet: View {
+    let onClose: () -> Void
+
     @Environment(AppCore.self) private var core
-    @State private var expanded = false
     @State private var addingRegistry = false
 
     private var settings: AppSettings { core.settings }
 
     var body: some View {
-        DisclosureGroup(isExpanded: $expanded) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                registries
-                Divider()
-                building
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Registries").font(.title2.weight(.bold))
+                Text("Where Tinycast looks when you search for an extension to install.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .padding(.top, Theme.Spacing.md)
-        } label: {
-            // A `DisclosureGroup` only toggles from its chevron; the label is the rest of the row.
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text("Where to search")
-                // Only while closed: with the registry rows open right beneath it, the summary is
-                // the same information twice within a few points.
-                if !expanded {
-                    Text(searchSummary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            .padding(.horizontal, Theme.Spacing.xxl)
+            .padding(.top, Theme.Spacing.xxl)
+
+            Form {
+                // Two sections, because the two kinds are not variants of one thing: the store is a
+                // fixed, prebuilt source you can only switch on or off, and a GitHub registry is
+                // something you add, that serves source, and that has to be built to run.
+                Section {
+                    ForEach(storeRegistries) { registry in
+                        registryRow(registry)
+                    }
+                } header: {
+                    Text("Raycast Store")
+                } footer: {
+                    Text(
+                        "Prebuilt extensions, through the endpoint the store's own site searches. "
+                            + "Not an official API, so a GitHub registry is the fallback if it changes."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
+
+                Section {
+                    if gitHubRegistries.isEmpty {
+                        Text("None yet.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(gitHubRegistries) { registry in
+                            registryRow(registry)
+                        }
+                    }
+                    Button("Add Registry…") { addingRegistry = true }
+                    // This section's business and nothing else's: only a GitHub registry serves
+                    // source, and only source has to be built.
+                    if !gitHubRegistries.isEmpty {
+                        buildingRow
+                    }
+                } header: {
+                    Text("GitHub Registries")
+                } footer: {
+                    Text(
+                        "A repository with one folder per extension, laid out like "
+                            + "raycast/extensions. These serve source, so installing one builds it "
+                            + "here — dependencies first, with the package manager above. Add a "
+                            + "registry only if you trust who publishes it."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect)
-            .onTapGesture { expanded.toggle() }
+            .formStyle(.grouped)
+
+            HStack {
+                Spacer()
+                Button("Done", action: onClose)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(Theme.Spacing.xxl)
         }
+        .frame(width: Theme.Size.editorSheetWidth, height: 560)
         .sheet(isPresented: $addingRegistry) {
             RegistryEditorSheet(
                 onAdd: { registry in
@@ -43,72 +92,48 @@ struct ExtensionRegistriesSection: View {
         }
     }
 
-    /// Says what searching will actually cover, so the row is worth opening or safely ignoring.
-    private var searchSummary: String {
-        let on = settings.extensionRegistries.filter(\.isEnabled)
-        guard !on.isEmpty else { return "No registries enabled — searching will find nothing." }
-        return on.map(\.name).joined(separator: ", ")
+    private var storeRegistries: [ExtensionRegistry] {
+        settings.extensionRegistries.filter { $0.kind == .raycastStore }
     }
 
-    // MARK: - Registries
+    private var gitHubRegistries: [ExtensionRegistry] {
+        settings.extensionRegistries.filter { $0.kind == .github }
+    }
 
-    private var registries: some View {
-        // No heading: the disclosure this sits inside is already called "Where to search".
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            ForEach(settings.extensionRegistries) { registry in
-                SettingsRow(title: registry.name, subtitle: registry.subtitle) {
-                    registryIcon(registry)
-                } trailing: {
-                    Toggle("", isOn: binding(for: registry))
-                        .labelsHidden()
-                        .help(registry.isEnabled ? "Searched" : "Not searched")
-                    if !registry.isBuiltIn {
-                        Button {
-                            settings.extensionRegistries.removeAll { $0.id == registry.id }
-                        } label: {
-                            Image(systemName: "trash")
-                                .foregroundStyle(.red)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Remove Registry")
-                        .accessibilityLabel("Remove \(registry.name)")
-                    }
+    private func registryRow(_ registry: ExtensionRegistry) -> some View {
+        SettingsRow(title: registry.name, subtitle: registry.subtitle) {
+            registryIcon(registry)
+        } trailing: {
+            Toggle("", isOn: binding(for: registry))
+                .labelsHidden()
+                .help(registry.isEnabled ? "Searched" : "Not searched")
+            if !registry.isBuiltIn {
+                Button {
+                    settings.extensionRegistries.removeAll { $0.id == registry.id }
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundStyle(.red)
                 }
+                .buttonStyle(.plain)
+                .help("Remove Registry")
+                .accessibilityLabel("Remove \(registry.name)")
             }
-            HStack {
-                Button("Add Registry…") { addingRegistry = true }
-                Spacer()
-            }
-            note(
-                "A registry is a source of code you will run. Add one only if you trust who "
-                    + "publishes it.")
         }
     }
 
-    // MARK: - Building
-
-    /// Only a source registry needs a package manager, and the one that ships is off by default — so
-    /// this says what it is for rather than sitting there as an unexplained dropdown.
-    private var building: some View {
+    private var buildingRow: some View {
         @Bindable var settings = core.settings
-        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            heading("Building")
-            SettingsRow(title: "Package manager", subtitle: packageManagerDetail) {
-                Image(systemName: "shippingbox")
-                    .foregroundStyle(.secondary)
-            } trailing: {
-                Picker("", selection: $settings.extensionPackageManager) {
-                    ForEach(ExtensionPackageManager.allCases) { manager in
-                        Text(manager.title).tag(manager)
-                    }
+        return SettingsRow(title: "Package manager", subtitle: packageManagerDetail) {
+            Image(systemName: "shippingbox")
+                .foregroundStyle(.secondary)
+        } trailing: {
+            Picker("", selection: $settings.extensionPackageManager) {
+                ForEach(ExtensionPackageManager.allCases) { manager in
+                    Text(manager.title).tag(manager)
                 }
-                .labelsHidden()
-                .fixedSize()
             }
-            note(
-                "Extensions from a GitHub registry arrive as source and are built when you install "
-                    + "them, starting with their dependencies. The Raycast Store serves extensions "
-                    + "already built and never needs this.")
+            .labelsHidden()
+            .fixedSize()
         }
     }
 
@@ -122,21 +147,6 @@ struct ExtensionRegistriesSection: View {
         return chosen == .automatic
             ? "Found \(resolved.manager.title) at \(resolved.url.path)."
             : "Found at \(resolved.url.path)."
-    }
-
-    // MARK: - Pieces
-
-    private func heading(_ title: String) -> some View {
-        Text(title)
-            .font(Theme.Typography.sectionHeader)
-            .foregroundStyle(.secondary)
-    }
-
-    private func note(_ text: String) -> some View {
-        Text(text)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder
@@ -172,7 +182,7 @@ struct ExtensionRegistriesSection: View {
 }
 
 /// Adds a GitHub registry from a URL, which is what someone has when they want one.
-private struct RegistryEditorSheet: View {
+struct RegistryEditorSheet: View {
     let onAdd: (ExtensionRegistry) -> Void
     let onCancel: () -> Void
 

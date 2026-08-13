@@ -58,10 +58,11 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
     /// Neither built-in can be edited or deleted; a registry someone added themselves can.
     var isBuiltIn: Bool { id == Self.store.id || id == Self.officialGitHub.id }
 
+    /// Said under a heading that already names the kind, so it carries what differs between rows.
     var subtitle: String {
         switch kind {
-        case .raycastStore: return "Prebuilt. Installs without Node or a package manager."
-        case .github: return "\(owner)/\(repository) at \(ref). Source, built when you install it."
+        case .raycastStore: return "Installs without Node or a package manager."
+        case .github: return "\(owner)/\(repository) at \(ref)"
         }
     }
 

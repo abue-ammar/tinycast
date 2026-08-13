@@ -16,19 +16,48 @@ struct ExtensionAppearancePicker: View {
     @State private var category = SymbolCategory.suggested
     @State private var query = ""
 
-    private let swatches = Array(repeating: GridItem(.fixed(22), spacing: 8), count: 9)
-    private let icons = Array(repeating: GridItem(.fixed(34), spacing: 4), count: 10)
+    /// One column system, derived from the symbol grid, so every row in the popover shares its
+    /// edges. Left to themselves the search field, the category menu, the footer and the swatch
+    /// block each found a different margin, which is what reads as "not quite aligned".
+    private enum Metrics {
+        static let tile: CGFloat = 30
+        static let columns = 10
+        static let gap: CGFloat = 8
+        static let inset: CGFloat = Theme.Spacing.xl
+        static let swatchesPerRow = 9
+        static let swatch: CGFloat = 20
+        /// Whole rows on show, plus half a tile of the next as a deliberate scroll hint.
+        static let visibleRows = 6
+
+        static var contentWidth: CGFloat {
+            CGFloat(columns) * tile + CGFloat(columns - 1) * gap
+        }
+        static var popoverWidth: CGFloat { contentWidth + inset * 2 }
+        static var gridHeight: CGFloat {
+            CGFloat(visibleRows) * (tile + gap) - gap + tile / 2
+        }
+        /// Spread across the same width, so the first and last swatch sit on the grid's edges.
+        static var swatchGap: CGFloat {
+            (contentWidth - CGFloat(swatchesPerRow) * swatch) / CGFloat(swatchesPerRow - 1)
+        }
+    }
+
+    private let swatches = Array(
+        repeating: GridItem(.fixed(Metrics.swatch), spacing: Metrics.swatchGap),
+        count: Metrics.swatchesPerRow)
+    private let icons = Array(
+        repeating: GridItem(.fixed(Metrics.tile), spacing: Metrics.gap), count: Metrics.columns)
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            LazyVGrid(columns: swatches, spacing: 8) {
+            LazyVGrid(columns: swatches, spacing: Metrics.gap) {
                 ForEach(ExtensionTint.allCases) { tint in
                     Button {
                         onPick(ExtensionAppearance(symbol: current.symbol, tint: tint))
                     } label: {
                         Circle()
                             .fill(tint.color.gradient)
-                            .frame(width: 20, height: 20)
+                            .frame(width: Metrics.swatch, height: Metrics.swatch)
                             .overlay(
                                 Circle().strokeBorder(
                                     .white.opacity(tint == current.tint ? 0.9 : 0), lineWidth: 2)
@@ -41,8 +70,10 @@ struct ExtensionAppearancePicker: View {
 
             HStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search symbols…", text: $query)
+                TextField("", text: $query, prompt: Text("Search symbols…"))
                     .textFieldStyle(.plain)
+                    .labelsHidden()
+                    .pointerStyle(.horizontalText)
                 Picker("", selection: $category) {
                     ForEach(catalog.categories) { item in
                         Text(item.title).tag(item)
@@ -59,15 +90,15 @@ struct ExtensionAppearancePicker: View {
                     .foregroundStyle(.secondary)
                     // A whole number of rows: a half-height row clipped against the footer reads as a
                     // rendering bug rather than as "there is more below".
-                    .frame(width: 396, height: 234)
+                    .frame(width: Metrics.contentWidth, height: Metrics.gridHeight)
             } else {
                 ScrollView {
-                    LazyVGrid(columns: icons, spacing: 4) {
+                    LazyVGrid(columns: icons, spacing: Metrics.gap) {
                         ForEach(results, id: \.self) { symbol in
                             Button {
                                 onPick(ExtensionAppearance(symbol: symbol, tint: current.tint))
                             } label: {
-                                SymbolTile(symbol: symbol, tint: current.tint, side: 30)
+                                SymbolTile(symbol: symbol, tint: current.tint, side: Metrics.tile)
                                     .opacity(symbol == current.symbol ? 1 : 0.55)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -80,7 +111,6 @@ struct ExtensionAppearancePicker: View {
                             .help(symbol)
                         }
                     }
-                    .padding(.horizontal, 2)
                 }
                 .edgeDissolve(edges: .bottom)
                 .frame(width: 396, height: 240)
@@ -96,7 +126,8 @@ struct ExtensionAppearancePicker: View {
                     .help("Go back to the icon the extension ships.")
             }
         }
-        .padding(Theme.Spacing.xl)
+        .padding(Metrics.inset)
+        .frame(width: Metrics.popoverWidth)
         .task {
             // Only the fallback has a single category; once the real catalog is in, don't re-read it.
             guard catalog.categories.count == 1 else { return }
