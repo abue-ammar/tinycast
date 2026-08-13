@@ -321,6 +321,7 @@ private struct ExtensionDisclosure: View {
                 ExtensionIconRow(installed: installed)
 
                 if !installed.manifest.preferences.isEmpty {
+                    rule
                     heading("Preferences")
                     ForEach(
                         Array(installed.manifest.preferences.enumerated()), id: \.element.name
@@ -331,6 +332,7 @@ private struct ExtensionDisclosure: View {
                     }
                 }
 
+                rule
                 heading(installed.manifest.commands.count == 1 ? "Command" : "Commands")
                 ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
                     index, command in
@@ -359,8 +361,7 @@ private struct ExtensionDisclosure: View {
                 .foregroundStyle(.tertiary)
                 .gridCellColumns(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // Groups separate by whitespace rather than by another heading weight.
-                .padding(.top, Theme.Spacing.lg)
+                .padding(.top, Theme.Spacing.xs)
         }
     }
 
