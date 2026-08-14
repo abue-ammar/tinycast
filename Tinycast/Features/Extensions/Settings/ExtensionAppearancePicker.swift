@@ -115,7 +115,7 @@ struct ExtensionAppearancePicker: View {
                     }
                     .frame(width: Metrics.contentWidth, alignment: .leading)
                 }
-                .edgeDissolve(edges: .bottom)
+                .overflowFade()
                 .frame(width: 396, height: 240)
             }
 

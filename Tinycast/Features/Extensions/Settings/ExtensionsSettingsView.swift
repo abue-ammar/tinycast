@@ -763,7 +763,7 @@ private struct ExtensionImportSheet: View {
                 }
                 .hideNativeScrollers()
             }
-            .edgeDissolve(edges: .bottom)
+            .overflowFade()
             .thinScrollbar()
             .frame(minHeight: 220)
 

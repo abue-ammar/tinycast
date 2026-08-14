@@ -138,6 +138,24 @@ the `ScrollView`, **before `.thinScrollbar()`** (so the scrollbar overlay stays 
 - Only masks when the list is scrollable; the edge stop stays transparent so rubber-band bounces still dissolve. A list that fits gets no mask.
 - The mask spans the scroll view's **full** frame (`.ignoresSafeArea()`) — otherwise the bars' safe-area insets shift the gradient onto at-rest rows.
 
+**Palette only.** Every one of its call sites is a palette screen, and the bands above are measured
+against the palette's bars. A Settings list underlaps nothing, so it uses `.overflowFade()` instead.
+
+---
+
+## The overflow fade
+
+Source: `DesignSystem/Scrolling/OverflowFade.swift`.
+
+The Settings window's counterpart, and deliberately a separate type — sharing one modifier would tie a
+list with no bars to geometry that only means something under them. Attach with `.overflowFade()` on
+the `ScrollView`, before `.thinScrollbar()`, same as the edge dissolve.
+
+- **Bottom only.** Nothing sits over the top of a Settings list; fading its first row reads as "this one can't be chosen", which in a list of checkboxes is a lie.
+- Fade band: a flat **24px**, borrowed from no bar because there is no bar.
+- **No alpha floor.** The fade is purely an affordance for content past the edge, so it eases in with how much is hidden and clears completely once the list rests at the bottom.
+- No `.ignoresSafeArea()`: a Settings list carries no bar insets to correct for.
+
 ---
 
 ## Rows, selection, hover

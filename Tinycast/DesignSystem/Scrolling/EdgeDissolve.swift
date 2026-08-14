@@ -2,10 +2,6 @@ import SwiftUI
 
 /// Scroll-driven edge dissolve for a scroll view underlapping the palette's floating bars, a port of Raycast's scroll-area mask (see `docs/ui.md` → The edge dissolve).
 struct EdgeDissolveMask: ViewModifier {
-    /// Which edges dissolve. The palette's lists underlap a bar at both ends, so both fade there. A
-    /// sheet's list has nothing above it: fading its top edge dims the first row, which in a list of
-    /// checkboxes reads as "this one can't be chosen".
-    var edges: Edge.Set = [.top, .bottom]
     /// Band lengths: the bar's occupied height plus Raycast's overshoot into the list (32px below the header, 28px above the footer).
     var topFade: CGFloat = Theme.Size.headerHeight + Theme.Size.headerPadding + 32
     var bottomFade: CGFloat = Theme.Size.bottomBarHeight + 28
@@ -54,37 +50,23 @@ struct EdgeDissolveMask: ViewModifier {
 
     private func stops(height: CGFloat) -> [Gradient.Stop] {
         guard canScroll, height > 0 else { return [.init(color: .black, location: 0)] }
-        let fadesTop = edges.contains(.top)
-        let fadesBottom = edges.contains(.bottom)
         // Midpoint alpha eases from 1 toward the floor as a full band of content scrolls past (Raycast: opacity = 1 − (1 − min) · clamp(scrollDistance / fadeHeight, 0, 1)).
         let topAlpha = 1 - (1 - Self.topMinAlpha) * min(topDistance / topFade, 1)
         let bottomAlpha = 1 - (1 - Self.bottomMinAlpha) * min(bottomDistance / bottomFade, 1)
-        var stops: [Gradient.Stop] = []
-        if fadesTop {
-            stops += [
-                .init(color: .black.opacity(0), location: 0),
-                .init(color: .black.opacity(topAlpha), location: topFade / 2 / height),
-                .init(color: .black, location: topFade / height)
-            ]
-        } else {
-            stops.append(.init(color: .black, location: 0))
-        }
-        if fadesBottom {
-            stops += [
-                .init(color: .black, location: 1 - bottomFade / height),
-                .init(color: .black.opacity(bottomAlpha), location: 1 - bottomFade / 2 / height),
-                .init(color: .black.opacity(0), location: 1)
-            ]
-        } else {
-            stops.append(.init(color: .black, location: 1))
-        }
-        return stops
+        return [
+            .init(color: .black.opacity(0), location: 0),
+            .init(color: .black.opacity(topAlpha), location: topFade / 2 / height),
+            .init(color: .black, location: topFade / height),
+            .init(color: .black, location: 1 - bottomFade / height),
+            .init(color: .black.opacity(bottomAlpha), location: 1 - bottomFade / 2 / height),
+            .init(color: .black.opacity(0), location: 1)
+        ]
     }
 }
 
 extension View {
     /// Attach to a `ScrollView` that underlaps the palette's floating bars (before `thinScrollbar`, so the scrollbar overlay stays unmasked).
-    func edgeDissolve(edges: Edge.Set = [.top, .bottom]) -> some View {
-        modifier(EdgeDissolveMask(edges: edges))
+    func edgeDissolve() -> some View {
+        modifier(EdgeDissolveMask())
     }
 }

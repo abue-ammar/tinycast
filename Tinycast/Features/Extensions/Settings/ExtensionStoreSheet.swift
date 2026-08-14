@@ -96,9 +96,7 @@ struct ExtensionStoreSheet: View {
                 }
                 .hideNativeScrollers()
             }
-            // Bottom only: nothing sits over the top of this list, and fading it there would dim
-            // the first result into looking unavailable.
-            .edgeDissolve(edges: .bottom)
+            .overflowFade()
             .thinScrollbar()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
