@@ -74,6 +74,15 @@ feature's doc, under its own `## Invariants`.
   reference — copy it rather than inventing a second shape. A flag that grants a capability is never
   carried by a backup: `snippetsEnabled` is excluded from settings backups so an import cannot grant
   keystroke listening.
+- **Extensions stay inside `Features/Extensions/`.** Every view, row, menu, geometry and sizing
+  constant an extension needs is written and owned there — never added to `DesignSystem/`, never bolted
+  onto `Theme`, and never shared with another feature. An extension renders untrusted third-party code
+  whose shape we do not control, so it must never be able to force a change on a launcher surface.
+  **Duplicating a view or a piece of layout maths to keep it here is the correct trade**, and the one
+  place the no-duplication rule yields. What *is* shared: `Theme`'s base tokens (spacing, radius,
+  colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
+  "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
+  precisely because the palette's own menu and the emoji grid must stay free to change without them.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from

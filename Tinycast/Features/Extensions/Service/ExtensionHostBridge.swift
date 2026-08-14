@@ -154,6 +154,13 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         switch method {
         case "copy", "paste":
             let content = arguments.first?.objectValue ?? [:]
+            // A file goes on the pasteboard as a file, so it pastes as the picture it is. Writing its
+            // path as text is what made "Copy GIF" yield `/var/folders/…/x.gif` in every editor.
+            if let path = content["file"]?.stringValue, !path.isEmpty {
+                writeFileToPasteboard(path)
+                if method == "paste" { Paster.postCommandV() }
+                return nil
+            }
             guard let text = clipboardText(from: content) else { return nil }
             if method == "copy" {
                 Paster.copyString(text)
@@ -181,9 +188,19 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     }
 
     /// Raycast's `Clipboard.Content` is `{text}`, `{file}` or `{html}`; Tinycast writes plain text.
+    /// The file itself, plus its picture where it has one. Both, because apps disagree on what they
+    /// accept: Finder and Mail take the file URL, a text editor or chat box takes the image data.
+    private func writeFileToPasteboard(_ path: String) {
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        var items: [NSPasteboardWriting] = [url as NSURL]
+        if let image = NSImage(contentsOf: url) { items.append(image) }
+        pasteboard.writeObjects(items)
+    }
+
     private func clipboardText(from content: [String: RenderValue]) -> String? {
         if let text = content["text"]?.stringValue { return text }
-        if let file = content["file"]?.stringValue { return file }
         if let html = content["html"]?.stringValue { return html }
         return nil
     }

@@ -51,6 +51,19 @@ enum ExtensionIconCache {
         }.value.image
     }
 
+    /// The file as shipped, never rasterized: fitting flattens a GIF to its first frame, and a tile
+    /// that is meant to play needs every one of them.
+    static func loadOriginalAsync(atPath path: String) async -> NSImage? {
+        let key = originalKey(path)
+        if let cached = cache.object(forKey: key) { return cached }
+        let decoded = await Task.detached(priority: .userInitiated) {
+            Decoded(image: NSImage(contentsOfFile: path))
+        }.value
+        guard let image = decoded.image else { return nil }
+        cache.setObject(image, forKey: key, cost: Int(image.size.width * image.size.height * 4))
+        return image
+    }
+
     // MARK: - Fetched by the extension
 
     /// A list row or Detail markdown can name a remote image; fetch once, then serve from the same
@@ -94,6 +107,7 @@ enum ExtensionIconCache {
     }
 
     private static func fileKey(_ path: String) -> NSString { ("file:" + path) as NSString }
+    private static func originalKey(_ path: String) -> NSString { ("raw:" + path) as NSString }
     private static func remoteKey(_ url: URL, asIcon: Bool) -> NSString {
         ((asIcon ? "remote:" : "full:") + url.absoluteString) as NSString
     }

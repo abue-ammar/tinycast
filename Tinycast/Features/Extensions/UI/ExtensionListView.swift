@@ -290,7 +290,7 @@ private struct ExtensionGridCell: View {
 
     var body: some View {
         VStack(spacing: Theme.Spacing.xs) {
-            ExtensionIconView(resolved: resolved, size: 56)
+            ExtensionIconView(resolved: resolved, size: 56, animates: true)
                 .frame(maxWidth: .infinity)
                 .padding(Theme.Spacing.sm)
                 .background(

@@ -22,6 +22,19 @@ struct ExtensionCommandScreen: PaletteScreen {
     /// Selectable rows only: a section header is drawn but never landed on.
     var rows: [RenderNode] { screen.items }
 
+    /// A Grid needs both axes: ↑/↓ move a whole row, ←/→ move one cell. Without this the palette's
+    /// linear step applies, and ↓ walked sideways through the grid one tile at a time.
+    func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? {
+        guard case .grid(let columns) = screen.kind, columns > 0, !rows.isEmpty else { return nil }
+        switch axis {
+        case .vertical:
+            let geometry = ExtensionGridGeometry(counts: screen.sectionCounts, columns: columns)
+            return delta > 0 ? geometry.down(from: selection) : geometry.up(from: selection)
+        case .horizontal:
+            return min(max(selection + delta, 0), rows.count - 1)
+        }
+    }
+
     /// The panel's first `Action`, exactly as in Raycast.
     private func primaryAction(at selection: Int) -> ExtensionAction? {
         ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).first

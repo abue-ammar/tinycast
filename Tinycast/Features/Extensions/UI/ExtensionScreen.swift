@@ -50,6 +50,23 @@ struct ExtensionScreen: Equatable {
     /// An `EmptyView` to show when there are no rows.
     let emptyView: RenderNode?
 
+    /// Selectable rows per section, in order — what grid navigation needs to keep a column while
+    /// crossing a heading. One entry when the screen has no sections at all.
+    var sectionCounts: [Int] {
+        var counts: [Int] = []
+        for row in rows {
+            switch row {
+            case .header:
+                counts.append(0)
+            case .item:
+                if counts.isEmpty { counts.append(0) }
+                counts[counts.count - 1] += 1
+            }
+        }
+        // An empty section is drawn but holds nothing to land on, so it isn't a row of the grid.
+        return counts.filter { $0 > 0 }
+    }
+
     static let empty = ExtensionScreen(
         kind: .unsupported(""), root: nil, rows: [], items: [], fields: [], isLoading: false,
         navigationTitle: nil, searchPlaceholder: nil, filtersLocally: false, searchTextHandler: nil,

@@ -376,11 +376,15 @@ private struct ExtensionMarkdownImage: View {
     var body: some View {
         Group {
             if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity, maxHeight: 220)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous))
+                Group {
+                    if image.isAnimated {
+                        AnimatedImageView(image: image)
+                    } else {
+                        Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: 220)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous))
             } else {
                 RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
                     .fill(Color.white.opacity(0.05))

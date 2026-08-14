@@ -182,10 +182,18 @@ struct RootPaletteView: View {
         }
         .overlay(alignment: .bottomTrailing) {
             if openMenu == .actions, let content = actionsContent {
-                PopoverMenu(
-                    header: content.header, items: content.items, selection: $menuSelection,
-                    onActivate: activateMenuItem
-                )
+                Group {
+                    // An extension declares its own panel, which runs long enough to need scrolling.
+                    if vm.mode == .extensionCommand {
+                        ExtensionActionsPanel(
+                            header: content.header, items: content.items, selection: $menuSelection,
+                            onActivate: activateMenuItem)
+                    } else {
+                        PopoverMenu(
+                            header: content.header, items: content.items, selection: $menuSelection,
+                            onActivate: activateMenuItem)
+                    }
+                }
                 .padding(Self.menuInset)
                 .transition(Self.menuTransition(.bottomTrailing))
             }
@@ -903,38 +911,5 @@ private struct CompactFavoriteButton<Content: View>: View {
         }
         .buttonStyle(.plain)
         .help(help)
-    }
-}
-
-/// An extension action can declare its own shortcut, matched against the running command's panel
-/// before the palette's own bindings see the keystroke. Its own modifier for the same reason as
-/// `ExtensionToastOverlay`.
-private struct ExtensionShortcutKeys: ViewModifier {
-    let screen: ExtensionCommandScreen?
-    let selection: Int
-
-    func body(content: Content) -> some View {
-        content.onKeyPress(phases: .down) { press in
-            guard let screen, !press.modifiers.isEmpty else { return .ignored }
-            return screen.dispatchShortcut(
-                key: press.key, modifiers: press.modifiers, at: selection) ? .handled : .ignored
-        }
-    }
-}
-
-/// Toasts a running view command raised, stacked above the footer. Its own modifier only to keep
-/// `RootPaletteView.body` inside what the type checker will solve.
-private struct ExtensionToastOverlay: ViewModifier {
-    let extensions: ExtensionManager
-    let showing: Bool
-
-    func body(content: Content) -> some View {
-        content.overlay(alignment: .bottom) {
-            if showing, !extensions.toasts.isEmpty {
-                ExtensionFeedbackOverlay(
-                    toasts: extensions.toasts,
-                    onToastAction: { extensions.runToastAction(token: $0) })
-            }
-        }
     }
 }

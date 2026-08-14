@@ -292,6 +292,8 @@ enum ExtensionImage {
 struct ExtensionIconView: View {
     let resolved: ExtensionImage.Resolved?
     var size: CGFloat = Theme.Size.rowIcon
+    /// Opt-in, and off for row icons: a playing GIF at 24pt is noise, and a list is hundreds of rows.
+    var animates = false
     @State private var loaded: NSImage?
 
     var body: some View {
@@ -316,7 +318,12 @@ struct ExtensionIconView: View {
                 .frame(width: size, height: size)
         case .file, .remote:
             if let loaded {
-                Image(nsImage: loaded).resizable().aspectRatio(contentMode: .fit)
+                // Only a multi-frame image pays for `NSImageView`; a still stays on SwiftUI's path.
+                if animates, loaded.isAnimated {
+                    AnimatedImageView(image: loaded)
+                } else {
+                    Image(nsImage: loaded).resizable().aspectRatio(contentMode: .fit)
+                }
             } else {
                 placeholder
             }
@@ -344,12 +351,16 @@ struct ExtensionIconView: View {
         }
     }
 
+    /// An animating tile takes the image as shipped; the fitted path would hand back one frame.
     private func load() async {
         switch resolved?.source {
         case .file(let path):
-            loaded = await ExtensionIconCache.loadAsync(atPath: path)
+            loaded =
+                animates
+                ? await ExtensionIconCache.loadOriginalAsync(atPath: path)
+                : await ExtensionIconCache.loadAsync(atPath: path)
         case .remote(let url):
-            loaded = await ExtensionIconCache.loadRemoteAsync(url)
+            loaded = await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
         default:
             loaded = nil
         }
