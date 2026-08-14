@@ -216,6 +216,19 @@ final class ExtensionCoordinator {
     func showHUD(_ message: String) {
         core.showMessage(message)
     }
+
+    /// `confirmAlert` from an extension. The dialog outranks the palette's level, so a view command
+    /// keeps its screen behind the question.
+    func confirmExtensionAlert(_ alert: ExtensionAlert) async -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+        return await core.confirm(
+            title: alert.title, message: alert.message,
+            symbol: alert.isDestructive ? "exclamationmark.triangle" : "questionmark.circle",
+            confirmTitle: alert.primaryTitle,
+            tone: alert.isDestructive ? .danger : .neutral,
+            confirmRole: alert.isDestructive ? .destructive : .standard,
+            dismissTitle: alert.dismissTitle)
+    }
 }
 
 extension Notification.Name {

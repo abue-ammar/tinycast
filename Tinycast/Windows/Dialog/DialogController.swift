@@ -9,13 +9,13 @@ final class DialogController: NSObject, NSWindowDelegate {
 
     func confirm(
         title: String, message: String?, symbol: String, tone: DialogTone, confirmTitle: String,
-        confirmRole: DialogAction.Role
+        confirmRole: DialogAction.Role, dismissTitle: String = "Cancel"
     ) async -> Bool {
         let request = DialogRequest(
             title: title, message: message, symbol: symbol, tone: tone,
             actions: [
                 DialogAction(title: confirmTitle, role: confirmRole),
-                DialogAction(title: "Cancel", role: .cancel)
+                DialogAction(title: dismissTitle, role: .cancel)
             ],
             defaultIndex: 0, cancelIndex: 1)
         return await present(request) == 0

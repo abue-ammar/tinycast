@@ -160,8 +160,9 @@ screens hold (see [palette.md](palette.md)).
   `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
 - **ActionPanel** — flattened (sections and submenus included) into the palette's ⌘K menu. The first
   action is the primary ↵ action; an action's own `shortcut` is matched against modified keystrokes.
-- **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, `confirmAlert` is an
-  `NSAlert`.
+- **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, and `confirmAlert`
+  goes through `DialogController` like every other question the app asks. Its dialog sits at
+  `.modalPanel`, above the palette's `.floating`, so a view command keeps its screen behind it.
 - **Command arguments** — a command declaring `arguments` shows inline fields sized to their
   placeholders, right after the typed text, exactly as Raycast does. Tab walks search field → each
   argument → back; ↵ from any of them runs the command with the values as `props.arguments`; a blank

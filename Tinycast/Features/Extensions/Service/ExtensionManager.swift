@@ -469,13 +469,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool {
-        let panel = NSAlert()
-        panel.messageText = alert.title
-        if let message = alert.message { panel.informativeText = message }
-        panel.alertStyle = alert.isDestructive ? .warning : .informational
-        panel.addButton(withTitle: alert.primaryTitle)
-        panel.addButton(withTitle: alert.dismissTitle)
-        return panel.runModal() == .alertFirstButtonReturn
+        await coordinator?.confirmExtensionAlert(alert) ?? false
     }
 
     func openWithPicker(path: String) async {

@@ -313,12 +313,13 @@ final class AppCore {
 
     /// `tone` styles the glyph, `confirmRole` the button; separate on purpose.
     func confirm(
-        title: String, message: String, symbol: String, confirmTitle: String,
-        tone: DialogTone = .danger, confirmRole: DialogAction.Role = .destructive
+        title: String, message: String?, symbol: String, confirmTitle: String,
+        tone: DialogTone = .danger, confirmRole: DialogAction.Role = .destructive,
+        dismissTitle: String = "Cancel"
     ) async -> Bool {
         await dialogs.confirm(
             title: title, message: message, symbol: symbol, tone: tone, confirmTitle: confirmTitle,
-            confirmRole: confirmRole)
+            confirmRole: confirmRole, dismissTitle: dismissTitle)
     }
 
     /// A failure with one usable second option; `true` when the user takes it.
