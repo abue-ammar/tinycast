@@ -459,16 +459,24 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         return text
     }
 
+    /// Joined on a linefeed, which Finder forbids in a name; the comma AppleScript defaults to would
+    /// cut any path that contains one into two paths that exist nowhere.
     private func finderSelection() throws -> [[String: String]] {
         let script = """
-            tell application "Finder" to return POSIX path of (get selection as alias list)
+            set AppleScript's text item delimiters to linefeed
+            tell application "Finder" to set chosen to (get selection as alias list)
+            set paths to {}
+            repeat with one in chosen
+                set end of paths to POSIX path of one
+            end repeat
+            return paths as text
             """
         guard let apple = NSAppleScript(source: script) else { return [] }
         var error: NSDictionary?
         let result = apple.executeAndReturnError(&error)
         guard error == nil else { return [] }
         return result.stringValue?
-            .split(separator: ",")
-            .map { ["path": $0.trimmingCharacters(in: .whitespaces)] } ?? []
+            .split(separator: "\n")
+            .map { ["path": String($0)] } ?? []
     }
 }
