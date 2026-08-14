@@ -217,6 +217,13 @@ function abortError() {
   return error;
 }
 
+// `AbortSignal.timeout` aborts with TimeoutError, not AbortError — callers branch on the name.
+function timeoutError() {
+  const error = new Error("The operation timed out.");
+  error.name = "TimeoutError";
+  return error;
+}
+
 function encodeBody(body) {
   if (body === undefined || body === null) return null;
   if (typeof body === "string") return bytesToBase64(utf8Encode(body));
@@ -252,6 +259,29 @@ if (!g.AbortController) {
     }
     throwIfAborted() {
       if (this.aborted) throw this.reason ?? abortError();
+    }
+    // The statics, not just the instance shape: a signal missing them still reads as supported at
+    // the type level, so an extension calls `AbortSignal.timeout` and gets "is not a function".
+    static abort(reason) {
+      const signal = new AbortSignalShim();
+      signal._fire(reason);
+      return signal;
+    }
+    static timeout(ms) {
+      const signal = new AbortSignalShim();
+      setTimeout(() => signal._fire(timeoutError()), ms);
+      return signal;
+    }
+    static any(signals) {
+      const merged = new AbortSignalShim();
+      for (const source of signals) {
+        if (source?.aborted) {
+          merged._fire(source.reason);
+          break;
+        }
+        source?.addEventListener("abort", () => merged._fire(source.reason));
+      }
+      return merged;
     }
     _fire(reason) {
       if (this.aborted) return;

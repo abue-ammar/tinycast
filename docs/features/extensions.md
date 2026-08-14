@@ -308,6 +308,7 @@ extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtim
 | **`menu-bar` commands** | The launcher lists them and explains why they don't open. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **WebSocket** | No polyfill yet; `URLSessionWebSocketTask` could back one. |
+| **Aborting a `fetch` already in flight** | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |
 | **Streaming `child_process.spawn`** | `spawn` runs the child to completion and emits its output as one chunk (async-iterable, which is what `get-stream`/`execa` consume). True duplex streaming would need a bidirectional channel across the bridge. Extensions built on `execa`'s deeper stream API can still fail. |
 | **`http` / `https` / `net` / `tls`** | Resolve but throw on use. `fetch` is the supported path; `axios`'s Node adapter is not. |
 | **`stream`** | Only `PassThrough` and `pipeline` are real — enough for `@raycast/utils`' `useExec`, which pipes a child's stdout through them. The rest of the module still throws. |

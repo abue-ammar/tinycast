@@ -473,12 +473,18 @@ struct ExtensionTests {
                 return () => clearTimeout(timer);
               }, []);
               const digest = crypto.createHash("sha256").update("abc").digest("hex").slice(0, 8);
+              // AbortSignal's statics, not just its instance shape: an extension reaching for
+              // `AbortSignal.timeout` used to get "is not a function" at runtime.
+              const abortable = [
+                typeof AbortSignal.timeout, typeof AbortSignal.abort, typeof AbortSignal.any,
+                String(AbortSignal.timeout(5e3).aborted), AbortSignal.abort().reason.name,
+              ].join(",");
               return h(List, { navigationTitle: "Synthetic", isLoading: false },
                 h(List.Item, {
                   title: "count=" + count,
                   subtitle: path.join("/a/b", "../c"),
                   icon: Icon.Circle,
-                  accessories: [{ text: digest }],
+                  accessories: [{ text: digest }, { text: abortable }],
                   actions: h(ActionPanel, null,
                     h(Action, { title: "Bump", onAction: () => setCount((v) => v + 10) }))
                 }));
@@ -511,6 +517,11 @@ struct ExtensionTests {
                 == "ba7816bf",
             String(describing: screen.items.first?.array("accessories").first))
         check("toast reached the host", host.toasts == ["hello"], host.toasts.joined(separator: ","))
+        check(
+            "AbortSignal carries its statics",
+            ExtensionAccessoriesView_labelForTest(screen.items.first?.array("accessories").last)
+                == "function,function,function,false,AbortError",
+            String(describing: screen.items.first?.array("accessories").last))
 
         // Dispatch the row's action and confirm the re-render.
         let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: 0))
