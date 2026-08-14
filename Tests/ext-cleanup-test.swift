@@ -146,7 +146,21 @@ struct ExtensionCleanupTests {
             "a workspace the installer would make is one the sweep finds")
     }
 
+    /// Raycast Beta v2 keeps its extensions under `raycast-x`. Checking only `raycast` is why an
+    /// install of the Beta reported that no Raycast was present at all.
+    static func bothRaycastChannelsAreSearched() {
+        let roots = ExtensionCatalog.raycastExtensionRoots().map(\.path)
+        expect(roots.count == 2, "both channels are searched: \(roots.count)")
+        expect(
+            roots.contains { $0.hasSuffix("/.config/raycast/extensions") },
+            "the stable channel is searched")
+        expect(
+            roots.contains { $0.hasSuffix("/.config/raycast-x/extensions") },
+            "the beta channel is searched")
+    }
+
     static func main() {
+        bothRaycastChannelsAreSearched()
         sweepTakesOnlyOurWorkspaces()
         cleanTakesOnlyOrphans()
         scopedNamesMatchTheirDirectories()

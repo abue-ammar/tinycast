@@ -124,11 +124,28 @@ struct ExtensionInstaller: Sendable {
         }
 
         onProgress(.building)
-        let build = try await run(
-            resolved.url, arguments: resolved.manager.buildArguments, in: source, node: node)
+        let build = try await runBuild(at: source, resolved: resolved, node: node)
         guard build.status == 0 else {
             throw ExtensionStoreError.buildFailed(build.trimmedOutput)
         }
+    }
+
+    /// `ray` directly, never the manifest's `build` script. That script is `ray build`, whose default
+    /// environment is `dev` — which *installs into the local Raycast* and emits nothing here, so the
+    /// install failed with "no built command bundles" after a build that reported success.
+    /// `-e dist -o` puts one `<command>.js` beside the manifest, which is what gets copied.
+    private func runBuild(
+        at source: URL, resolved: (manager: ExtensionPackageManager, url: URL), node: URL
+    ) async throws -> CommandResult {
+        let ray = source.appendingPathComponent("node_modules/.bin/ray")
+        guard FileManager.default.isExecutableFile(atPath: ray.path) else {
+            // An extension that builds some other way still gets its own script.
+            return try await run(
+                resolved.url, arguments: resolved.manager.buildArguments, in: source, node: node)
+        }
+        return try await run(
+            ray, arguments: ["build", "-e", "dist", "-o", source.path, "--non-interactive"],
+            in: source, node: node)
     }
 
     /// `ray build` writes the bundles beside the manifest, so what to install is the source directory

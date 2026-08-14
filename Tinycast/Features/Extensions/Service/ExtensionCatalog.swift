@@ -94,10 +94,23 @@ enum ExtensionCatalog {
         return base.appendingPathComponent(bundleID, isDirectory: true)
     }
 
-    /// Where a locally installed Raycast keeps its built extension bundles.
-    static func raycastExtensionsDirectory() -> URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/raycast/extensions", isDirectory: true)
+    /// Every root a locally installed Raycast keeps built bundles in. `raycast-x` is Raycast Beta v2;
+    /// both can exist, and a stable install leaves an empty `raycast` behind after switching.
+    static func raycastExtensionRoots() -> [URL] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return ["raycast", "raycast-x"].map {
+            home.appendingPathComponent(".config/\($0)/extensions", isDirectory: true)
+        }
+    }
+
+    /// The root worth importing from — the first that actually holds something, so an empty directory
+    /// left by the other channel never reads as "Raycast isn't installed".
+    static func raycastExtensionsDirectory() -> URL? {
+        raycastExtensionRoots().first { root in
+            let entries = try? FileManager.default.contentsOfDirectory(
+                at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+            return !(entries ?? []).isEmpty
+        }
     }
 
     /// Scan the install directory. Unreadable or half-written directories are skipped rather than
@@ -197,10 +210,10 @@ enum ExtensionCatalog {
     /// install by UUID, so the manifest is the only way to know what a directory holds.
     nonisolated static func importableFromRaycast() -> [InstalledExtension] {
         let fm = FileManager.default
-        let entries =
+        let entries = raycastExtensionRoots().flatMap { root in
             (try? fm.contentsOfDirectory(
-                at: raycastExtensionsDirectory(), includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles])) ?? []
+                at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        }
         return
             entries
             .compactMap { directory -> InstalledExtension? in
@@ -212,6 +225,13 @@ enum ExtensionCatalog {
                     })
                 else { return nil }
                 return InstalledExtension(manifest: manifest, directory: directory)
+            }
+            // Both channels can hold the same extension; the earlier root wins, so it is offered once.
+            .reduce(into: [InstalledExtension]()) { unique, candidate in
+                guard !unique.contains(where: { $0.manifest.name == candidate.manifest.name }) else {
+                    return
+                }
+                unique.append(candidate)
             }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }

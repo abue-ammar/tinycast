@@ -197,10 +197,12 @@ build produces.
 Settings → Extensions offers three routes, under **Install New**:
 
 1. **Search Registries…** — searches every enabled registry and installs from any of them. See below.
-2. **Import from Raycast** — copies the already-built bundles out of `~/.config/raycast/extensions`.
-   Nothing is compiled, so no Node, npm or network is involved. The pane also scans that directory
-   whenever it opens, and says so when Raycast has something Tinycast doesn't — installing in Raycast
-   otherwise leaves no trace here.
+2. **Import from Raycast** — copies the already-built bundles out of a local Raycast. Nothing is
+   compiled, so no Node, npm or network is involved. The pane also scans whenever it opens, and says
+   so when Raycast has something Tinycast doesn't — installing in Raycast otherwise leaves no trace
+   here. **Both channels are searched**: `~/.config/raycast` and `~/.config/raycast-x`, the latter
+   being Raycast Beta v2. Checking only the first reported "no Raycast install" to every Beta user,
+   whose stable directory is present but empty. The same extension in both is offered once.
 3. **Add Folder…** — pick any directory with a manifest and built command files, e.g. an extension you
    just ran `ray build` in.
 
@@ -228,8 +230,14 @@ install one extension would be absurd.
 entries and says nothing about having done so, and `raycast/extensions` holds over three thousand —
 under contents, everything alphabetically past the cap was simply unfindable.
 
-Installing from a source registry runs `<package manager> install --ignore-scripts` and then the
-extension's own `build` script, which is `ray build`. Lifecycle scripts are skipped on purpose: the
+Installing from a source registry runs `<package manager> install --ignore-scripts`, then
+**`node_modules/.bin/ray build -e dist -o <dir>` directly — never the manifest's `build` script.**
+That script is `ray build`, whose default environment is `dev`, and dev mode *installs into the local
+Raycast* rather than emitting anything. The build reported success and exited 0 while writing nothing
+beside the manifest, so every source install failed afterwards with "no built command bundles", and
+each attempt quietly added the extension to the user's own Raycast. `-e dist` also type-checks, so an
+extension that does not compile now fails at the build rather than at the copy. An extension without
+`ray` falls back to its own build script. Lifecycle scripts are skipped on purpose: the
 build script is the contract, a `postinstall` is code nobody asked to run. The package manager is
 `Automatic` by default, which takes the first of pnpm, Bun, Yarn and npm that is installed — a GUI app
 inherits none of a login shell's `PATH`, so `ExtensionPackageManager.searchPaths` is where they are

@@ -275,7 +275,7 @@ struct ExtensionsSettingsView: View {
         }
         if let importSummary { return importSummary }
         guard raycastAvailable else {
-            return "No Raycast install found at ~/.config/raycast/extensions."
+            return "No Raycast install found in ~/.config — checked raycast and raycast-x."
         }
         guard !pending.isEmpty else {
             return "Copy what Raycast has already built. No Node or package manager needed."
@@ -289,7 +289,7 @@ struct ExtensionsSettingsView: View {
     }
 
     private var raycastAvailable: Bool {
-        FileManager.default.fileExists(atPath: ExtensionCatalog.raycastExtensionsDirectory().path)
+        ExtensionCatalog.raycastExtensionsDirectory() != nil
     }
 
     // MARK: - Adding
