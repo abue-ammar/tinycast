@@ -8,7 +8,7 @@ import AppKit
 /// shouts, and the correction is optical rather than a bug fix. Keeping it here means `IconCache`
 /// stays the app-and-symbol layer and knows nothing about extensions.
 enum ExtensionIconCache {
-    /// Below `IconCache.artworkExtent` on purpose — see this type's note. Change it only against a
+    /// Below `IconCache.appIconExtent` on purpose — see this type's note. Change it only against a
     /// rendered strip of real icons; the number means nothing on its own.
     static let extent: CGFloat = 0.76
 
@@ -30,25 +30,24 @@ enum ExtensionIconCache {
     // MARK: - Shipped with the extension
 
     /// Cache-only, so a warm row paints on the same frame.
-    static func cached(atPath path: String) -> NSImage? { cache.object(forKey: fileKey(path)) }
+    static func cached(atPath path: String) -> NSImage? {
+        IconCache.cachedArtwork(atPath: path, extent: extent)
+    }
 
     /// Read straight from the file: `NSWorkspace` would answer a PNG with the generic document icon.
+    /// Drawing is `Platform`'s; the only thing decided here is `extent`.
     static func icon(atPath path: String) -> NSImage {
-        let key = fileKey(path)
-        if let cached = cache.object(forKey: key) { return cached }
-        guard let source = NSImage(contentsOfFile: path) else {
+        guard FileManager.default.fileExists(atPath: path) else {
             return IconCache.symbolIcon(named: "puzzlepiece.extension")
         }
-        let (icon, cost) = fitted(source)
-        cache.setObject(icon, forKey: key, cost: cost)
-        return icon
+        return IconCache.artwork(atPath: path, extent: extent)
     }
 
     static func loadAsync(atPath path: String) async -> NSImage? {
-        if let cached = cached(atPath: path) { return cached }
-        return await Task.detached(priority: .userInitiated) {
-            Decoded(image: icon(atPath: path))
-        }.value.image
+        guard FileManager.default.fileExists(atPath: path) else {
+            return IconCache.symbolIcon(named: "puzzlepiece.extension")
+        }
+        return await IconCache.loadArtworkAsync(atPath: path, extent: extent)
     }
 
     /// The file as shipped, never rasterized: fitting flattens a GIF to its first frame, and a tile
@@ -81,7 +80,7 @@ enum ExtensionIconCache {
             cache.setObject(source, forKey: key, cost: Int(source.size.width * source.size.height * 4))
             return source
         }
-        let (icon, cost) = fitted(source)
+        let (icon, cost) = IconCache.fitted(source, to: extent)
         cache.setObject(icon, forKey: key, cost: cost)
         return icon
     }
@@ -94,19 +93,6 @@ enum ExtensionIconCache {
         return URLSession(configuration: config)
     }()
 
-    // MARK: - Sizing
-
-    /// Scales `source` so it paints `extent` of the canvas. An unmeasurable source is assumed to be
-    /// shaped like an app icon, which is the only guess that leaves it near the right size.
-    private static func fitted(_ source: NSImage) -> (NSImage, Int) {
-        let painted = IconCache.paintedExtent(source) ?? IconCache.artworkExtent
-        let side = IconCache.displayPixel * extent / painted
-        let inset = (IconCache.displayPixel - side) / 2
-        return IconCache.rasterized(
-            source, into: NSRect(x: inset, y: inset, width: side, height: side))
-    }
-
-    private static func fileKey(_ path: String) -> NSString { ("file:" + path) as NSString }
     private static func originalKey(_ path: String) -> NSString { ("raw:" + path) as NSString }
     private static func remoteKey(_ url: URL, asIcon: Bool) -> NSString {
         ((asIcon ? "remote:" : "full:") + url.absoluteString) as NSString

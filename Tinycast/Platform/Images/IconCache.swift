@@ -27,7 +27,7 @@ enum IconCache {
     private final class Cache: NSCache<NSString, NSImage>, @unchecked Sendable {}
 
     // Plenty for the ≤24pt draw, and a scrolled `LazyVStack` pins every row's icon.
-    static let displayPixel: CGFloat = 48
+    private static let displayPixel: CGFloat = 48
 
     private static let cache: Cache = {
         let cache = Cache()
@@ -136,8 +136,48 @@ enum IconCache {
         }
     }
 
-    /// The share of its canvas an app icon paints; folders and documents differ, so scale.
-    static let artworkExtent: CGFloat = 0.83
+    /// The share of its canvas a macOS app icon paints — the reference every other artwork is sized
+    /// against, and the assumption made for a source too opaque to measure.
+    static let appIconExtent: CGFloat = 0.83
+
+    /// Scales `source` so it paints `extent` of the canvas, and hands back its byte cost.
+    ///
+    /// The caller chooses the number; this only knows how to measure and rasterize. That split is
+    /// what lets a feature size its own artwork without `Platform` learning why.
+    static func fitted(_ source: NSImage, to extent: CGFloat) -> (NSImage, Int) {
+        let painted = paintedExtent(source) ?? appIconExtent
+        let side = displayPixel * extent / painted
+        let inset = (displayPixel - side) / 2
+        return rasterized(source, into: NSRect(x: inset, y: inset, width: side, height: side))
+    }
+
+    /// An image file drawn at a chosen extent. Keyed by both, so two features asking for different
+    /// sizes of one file never serve each other's.
+    static func artwork(atPath path: String, extent: CGFloat) -> NSImage {
+        let key = artworkKey(path, extent)
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let source = NSImage(contentsOfFile: path) else {
+            return symbolIcon(named: "questionmark.square.dashed")
+        }
+        let (icon, cost) = fitted(source, to: extent)
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
+    }
+
+    static func cachedArtwork(atPath path: String, extent: CGFloat) -> NSImage? {
+        cache.object(forKey: artworkKey(path, extent))
+    }
+
+    static func loadArtworkAsync(atPath path: String, extent: CGFloat) async -> NSImage? {
+        if let cached = cachedArtwork(atPath: path, extent: extent) { return cached }
+        return await Task.detached(priority: .userInitiated) {
+            Decoded(image: artwork(atPath: path, extent: extent))
+        }.value.image
+    }
+
+    private static func artworkKey(_ path: String, _ extent: CGFloat) -> NSString {
+        "artwork:\(extent):\(path)" as NSString
+    }
 
     /// Cache-only lookup for `loadFittedAsync`.
     static func cachedFitted(forFile path: String) -> NSImage? {
@@ -182,14 +222,11 @@ enum IconCache {
     /// Scales `source` so it paints the same share of the canvas an app icon does, leaving an app
     /// icon as-is. Solving `side * extent == displayPixel * artworkExtent`.
     private static func fittedToArtwork(_ source: NSImage) -> (NSImage, Int) {
-        let extent = paintedExtent(source) ?? artworkExtent
-        let side = displayPixel * artworkExtent / extent
-        let inset = (displayPixel - side) / 2
-        return rasterized(source, into: NSRect(x: inset, y: inset, width: side, height: side))
+        fitted(source, to: appIconExtent)
     }
 
     /// The artwork's larger dimension, measured at 2×: a 1× grid over-reads the extent.
-    static func paintedExtent(_ source: NSImage) -> CGFloat? {
+    private static func paintedExtent(_ source: NSImage) -> CGFloat? {
         let pixels = Int(displayPixel * 2)
         guard
             let rep = NSBitmapImageRep(
@@ -229,7 +266,7 @@ enum IconCache {
     }
 
     /// Draws `source` into `frame` on a `displayPixel`-square canvas.
-    static func rasterized(_ source: NSImage, into frame: NSRect) -> (NSImage, Int) {
+    private static func rasterized(_ source: NSImage, into frame: NSRect) -> (NSImage, Int) {
         // Fixed 2×, `NSScreen.main` being main-thread-only, so a detached decode works.
         let pixels = Int(displayPixel * 2)
         let fallbackCost = Int(displayPixel * displayPixel * 4)

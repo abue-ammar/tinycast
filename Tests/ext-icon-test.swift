@@ -29,8 +29,8 @@ struct ExtensionIconTests {
 
         expect(abs(full - margin) <= 0.03, "padding can't change the drawn size: \(full) vs \(margin)")
         expect(
-            full < IconCache.artworkExtent - 0.03,
-            "artwork draws below an app icon's \(IconCache.artworkExtent): \(full)")
+            full < IconCache.appIconExtent - 0.03,
+            "artwork draws below an app icon's \(IconCache.appIconExtent): \(full)")
     }
 
     /// A missing file still answers, so a row never renders an empty slot.
