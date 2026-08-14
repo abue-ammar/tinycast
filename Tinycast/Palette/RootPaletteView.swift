@@ -457,15 +457,9 @@ struct RootPaletteView: View {
             // One structural position, always: putting the field inside a branch tears down its
             // field editor when the branch flips, which drops first responder mid-navigation.
             // The width shrinks to the typed text so argument fields sit right after it, as in Raycast.
-            searchField.frame(width: selectedCommandArguments.map(searchFieldWidth))
-            if let arguments = selectedCommandArguments {
-                CommandArgumentsRow(
-                    arguments: arguments,
-                    icon: (screen as? LauncherScreen)?.argumentIcon(
-                        at: selection(count: screen.rows.count)),
-                    value: argumentBinding,
-                    focused: $argumentFocused,
-                    onSubmit: activateSelection)
+            searchField.frame(width: headerAccessory.map(searchFieldWidth))
+            if let accessory = headerAccessory {
+                accessory.view
                 Spacer(minLength: 0)
             }
             // Keyed off the mode, which is what says which screen is up; the field just flexes narrower.
@@ -497,47 +491,29 @@ struct RootPaletteView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Arguments the selected launcher row declares. Only the launcher shows them — inside a running
-    /// command the search bar belongs to the extension.
-    private var selectedCommandArguments: [ExtensionCommandArgument]? {
-        guard vm.mode == .launcher, !isCollapsed, let launcher = screen as? LauncherScreen
-        else { return nil }
-        return launcher.commandArguments(at: selection(count: launcher.rows.count))
+    /// Controls the selected row wants beside the search field. Only the expanded launcher offers
+    /// them — inside a sub-screen the search bar belongs to that screen.
+    private var headerAccessory: PaletteHeaderAccessory? {
+        guard vm.mode == .launcher, !isCollapsed else { return nil }
+        let screen = screen
+        return screen.headerAccessory(at: selection(in: screen), focus: $argumentFocused)
     }
 
-    private func argumentBinding(_ name: String) -> Binding<String> {
-        let key = PaletteState.argumentKey(selectedEntryID ?? "", name)
-        return Binding(
-            get: { vm.commandArguments[key] ?? "" },
-            set: { vm.commandArguments[key] = $0 })
-    }
-
-    private var selectedEntryID: String? {
-        guard let launcher = screen as? LauncherScreen else { return nil }
-        let rows = launcher.rows
-        let index = selection(count: rows.count)
-        guard rows.indices.contains(index), case .entry(let app) = rows[index] else { return nil }
-        return app.id
-    }
-
-    /// Width the search field shrinks to when argument fields are beside it: the typed text's own
-    /// width, floored so the caret always has room and capped so the fields can't be pushed off-screen.
-    private func searchFieldWidth(for arguments: [ExtensionCommandArgument]) -> CGFloat {
+    /// Width the search field shrinks to when an accessory sits beside it: the typed text's own
+    /// width, floored so the caret always has room and capped so the strip can't be pushed off-screen.
+    private func searchFieldWidth(for accessory: PaletteHeaderAccessory) -> CGFloat {
         let font = Theme.Typography.searchFieldNSFont
         let typed = (vm.query as NSString).size(withAttributes: [.font: font]).width
-        let strip = CommandArgumentsRow.totalWidth(
-            for: arguments,
-            hasIcon: (screen as? LauncherScreen)?
-                .argumentIcon(at: selection(count: screen.rows.count)) != nil)
         let chrome = Theme.Size.headerIconSlot + Theme.Spacing.md * 4
         // +3pt so the caret sits after the last glyph rather than on top of it.
-        return min(max(typed + 3, 18), max(Theme.Size.panelWidth - strip - chrome, 60))
+        return min(
+            max(typed + 3, 18), max(Theme.Size.panelWidth - accessory.width - chrome, 60))
     }
 
     /// In the argument form the field is that argument's input, so it names the argument.
     private var searchPrompt: String {
         // The field is only wide enough for the caret while argument fields are beside it.
-        if selectedCommandArguments != nil { return "" }
+        if headerAccessory != nil { return "" }
         if vm.mode == .quicklinkArguments { return quicklinkArguments.prompt }
         // Inside a running command the search bar belongs to the extension.
         if vm.mode == .extensionCommand, let placeholder = extensionScreen.searchPlaceholder {
@@ -746,8 +722,8 @@ struct RootPaletteView: View {
     /// Tab walks the inline argument fields first — search field → each argument → back — and only
     /// toggles the mode when the selection declares none.
     private func advanceTabFocus() {
-        guard let arguments = selectedCommandArguments else { return toggleMode() }
-        argumentFocused = CommandArgumentsRow.next(after: argumentFocused, in: arguments)
+        guard let accessory = headerAccessory else { return toggleMode() }
+        argumentFocused = accessory.fieldAfter(argumentFocused)
         searchFocused = argumentFocused == nil
     }
 
@@ -763,9 +739,9 @@ struct RootPaletteView: View {
     private func activateSelection() {
         // Nothing is visibly selected when collapsed, so launch via ⌘1–⌘5 or typing.
         guard !isCollapsed else { return }
-        // A required argument left blank blocks the launch; focus the first one instead.
-        if let blank = firstBlankRequiredArgument {
-            argumentFocused = blank
+        // An unfilled field blocks the launch; focus it instead of acting on a half-typed row.
+        if let incomplete = headerAccessory?.firstIncompleteField {
+            argumentFocused = incomplete
             searchFocused = false
             return
         }
@@ -773,15 +749,6 @@ struct RootPaletteView: View {
         screen.activate(at: selection(in: screen))
     }
 
-    private var firstBlankRequiredArgument: String? {
-        guard let arguments = selectedCommandArguments, let entryID = selectedEntryID else {
-            return nil
-        }
-        return arguments.first {
-            $0.required
-                && (vm.commandArguments[PaletteState.argumentKey(entryID, $0.name)] ?? "").isEmpty
-        }?.name
-    }
 }
 
 /// The palette's in-window menus. One optional of these is the whole "only one is open" invariant.

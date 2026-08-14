@@ -70,10 +70,23 @@ struct LauncherScreen: PaletteScreen {
         rows.indices.contains(selection) ? rows[selection] : nil
     }
 
-    /// Arguments the selected row declares, or nil when it declares none — what the header uses to
-    /// decide whether to show the inline fields.
-    func commandArguments(at selection: Int) -> [ExtensionCommandArgument]? {
-        core.extensionCoordinator.commandArguments(for: entry(at: selection))
+    /// A launcher row may want controls beside the search field; what they are is the owning feature's
+    /// business, so this only forwards the selection and hands back whatever it builds.
+    func headerAccessory(
+        at selection: Int, focus: FocusState<String?>.Binding
+    )
+        -> PaletteHeaderAccessory?
+    {
+        guard let entry = entry(at: selection) else { return nil }
+        return ExtensionArgumentsAccessory.make(
+            entry: entry, coordinator: core.extensionCoordinator,
+            values: { name in headerFieldBinding(entry: entry, name: name) },
+            focus: focus, onSubmit: { activate(at: selection) })
+    }
+
+    private func headerFieldBinding(entry: AppEntry, name: String) -> Binding<String> {
+        let key = PaletteState.argumentKey(entry.id, name)
+        return Binding(get: { vm.commandArguments[key] ?? "" }, set: { vm.commandArguments[key] = $0 })
     }
 
     /// The typed values for one row, stripped of blanks — what gets handed to the command.
@@ -84,11 +97,6 @@ struct LauncherScreen: PaletteScreen {
             if !typed.isEmpty { values[argument.name] = typed }
         }
         return values
-    }
-
-    /// The selected row's own glyph, drawn as the argument strip's leading chip.
-    func argumentIcon(at selection: Int) -> EntryIcon? {
-        entry(at: selection)?.iconSource
     }
 
     private func entry(at selection: Int) -> AppEntry? {
