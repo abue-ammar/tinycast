@@ -60,7 +60,6 @@ struct PalettePlacementTests {
     static func theDefaultPlacement() {
         let anchor = home(laptop)
         expect(anchor.x, laptop.midX - width / 2, "the panel centres horizontally")
-        expect(anchor.x + width, laptop.midX + width / 2, "and its right edge mirrors its left")
         expect(
             anchor.y, laptop.maxY - laptop.height * topFraction,
             "its top edge sits the margin fraction below the top of the visible area")

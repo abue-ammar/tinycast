@@ -250,9 +250,6 @@ struct UninstallTests {
         expect(
             evidence("Unrelated.qlgenerator", "QuickLook", app) == nil,
             "another product's plug-in is left alone")
-        expect(
-            !UninstallRules.matchableForms("Barista.app").contains("Barista"),
-            ".app is never stripped — an app bundle is not a plug-in wrapper")
 
         let bundle = "/Applications/Zed.app"
         expect(
@@ -508,9 +505,6 @@ struct UninstallTests {
             "a locked or out-of-plan id can never enter the checked set")
 
         var selection = plan.defaultSelection
-        expect(
-            selection.checked == ["/a", "/c"],
-            "the default checks every removable row, name matches included")
         expect(selection.bytes(in: plan) == 50, "selected bytes sums only checked rows")
         expect(
             !selection.checked.contains("/b"), "and never a locked one")

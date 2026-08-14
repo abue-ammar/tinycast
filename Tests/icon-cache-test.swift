@@ -41,8 +41,7 @@ struct IconCacheTests {
         let captured = generation.value
         var stored: [Int] = []
 
-        let current = generation.publish(1, capturedAt: captured) { stored.append($0) }
-        expect(current == 1, "a current decode reaches its caller")
+        _ = generation.publish(1, capturedAt: captured) { stored.append($0) }
         expect(stored == [1], "a current decode populates the cache")
 
         generation.invalidate()

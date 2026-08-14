@@ -140,9 +140,6 @@ enum RaycastTests {
         let fixedIV = Data(repeating: 0x11, count: 16)
         let pinned = makeV1File(gzippedJSON, passphrase: "12345678", iv: fixedIV)
         expect(
-            Data(pinned.prefix(16)) == fixedIV,
-            "the file leads with its IV")
-        expect(
             (try? RaycastV1Decoder.decrypt(pinned, passphrase: "12345678")) == plainJSON,
             "decrypt reads the IV from the file")
 

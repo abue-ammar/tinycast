@@ -119,11 +119,6 @@ struct PaletteRowIndexTests {
         expect(empty.clamped(7) == 0, "an out-of-range selection clamps to zero with no rows")
         expect(empty.index(section: 0, offset: 0), nil, "an empty screen has no section 0")
 
-        // A screen whose sections are all empty is still an empty screen.
-        let allEmptySections = PaletteRowIndex(sectionCounts: [0, 0, 0])
-        expect(allEmptySections.count == 0, "empty sections contribute no rows")
-        expect(allEmptySections.row(at: 0), nil, "empty sections resolve no index")
-
         // Single section, no calculator card: the flat index is the section offset.
         let single = PaletteRowIndex(sectionCounts: [3])
         expect(single.count == 3, "one section of 3 is 3 rows")

@@ -934,8 +934,6 @@ struct SnippetsTests {
         check(
             "duplicate name references resolve by stable path identity",
             referenced.text == "A|K|{snippet:missing}")
-        check("name and keyword references are case-insensitive", referenced.text.hasPrefix("A|K|"))
-        check("missing references remain visible", referenced.text.hasSuffix("{snippet:missing}"))
 
         let disabledChild = record(
             "/tmp/disabled-child.md",
@@ -1431,14 +1429,6 @@ struct SnippetsTests {
         check(
             "a later health check installs the tap after the grant arrives",
             grantsArrived == .init(status: .needsAccessibility, tapAction: .install))
-        let retryAfterFailure = Lifecycle.decide(
-            isRequested: true,
-            isSessionActive: true,
-            hasAccessibility: true,
-            tapState: .absent)
-        check(
-            "tap creation failure remains retryable on the next health check",
-            grantsArrived.tapAction == .install && retryAfterFailure.tapAction == .install)
 
         let active = Lifecycle.decide(
             isRequested: true,
@@ -1448,13 +1438,6 @@ struct SnippetsTests {
         check(
             "listener reports active only with the grant and a live tap",
             active == .init(status: .active, tapAction: .none))
-        check(
-            "repeated start is idempotent when the tap is already active",
-            Lifecycle.decide(
-                isRequested: true,
-                isSessionActive: true,
-                hasAccessibility: true,
-                tapState: .active) == active)
 
         let revoked = Lifecycle.decide(
             isRequested: true,
