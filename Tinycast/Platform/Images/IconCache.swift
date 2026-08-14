@@ -90,13 +90,21 @@ enum IconCache {
         }.value.image
     }
 
+    /// Cacheless, never `URLSession.shared`: an extension names these URLs, so the in-memory cache
+    /// above stays the only copy and nothing it asks for is written to a shared on-disk cache.
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        return URLSession(configuration: config)
+    }()
+
     /// An extension list row or Detail markdown can reference a remote image; fetch once, then serve
     /// from the same cache as every other row icon. A failure caches nothing, so a transient error
     /// retries on the next render. `downsample` is off for markdown images, drawn far larger than a row.
     static func loadRemoteAsync(_ url: URL, downsample: Bool = true) async -> NSImage? {
         let key = ("image:\(downsample ? "" : "full:")" + url.absoluteString) as NSString
         if let cached = cache.object(forKey: key) { return cached }
-        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        guard let (data, _) = try? await session.data(from: url) else { return nil }
         let decoded = await Task.detached(priority: .userInitiated) {
             Decoded(image: NSImage(data: data))
         }.value

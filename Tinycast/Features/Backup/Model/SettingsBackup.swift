@@ -287,6 +287,7 @@ extension SettingsBackup {
         }
         if let flag = s.extensionsShowInLauncher {
             settings.extensionsShowInLauncher = flag
+            count += 1
         }
         if let flag = s.quicklinksShowInLauncher {
             settings.quicklinksShowInLauncher = flag

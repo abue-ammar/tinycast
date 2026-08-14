@@ -11,9 +11,16 @@ struct ExtensionStoreClient: Sendable {
     /// manifest per candidate.
     private static let githubCandidateLimit = 12
 
+    /// Cacheless, never `URLSession.shared`, so a registry search leaves no second copy on disk.
+    private static let defaultSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        return URLSession(configuration: config)
+    }()
+
     private let session: URLSession
 
-    init(session: URLSession = .shared) {
+    init(session: URLSession = ExtensionStoreClient.defaultSession) {
         self.session = session
     }
 
