@@ -102,7 +102,8 @@ final class ClipboardStore {
     var maxAge: TimeInterval = ClipboardRetention.threeMonths.maxAge
 
     /// One-entry memo so repeated renders reuse the FTS result; cleared when `items` changes.
-    @ObservationIgnored private var searchCache: (query: String, result: [ClipboardItem])?
+    @ObservationIgnored private var searchCache:
+        (query: String, filter: ClipboardFilter, result: [ClipboardItem])?
     /// Same memo for the empty query, so the pinned split runs once per mutation.
     @ObservationIgnored private var orderedCache: [ClipboardItem]?
 
@@ -279,20 +280,28 @@ final class ClipboardStore {
         return URL(fileURLWithPath: path)
     }
 
-    /// Display order for `query`: pinned entries first, each block newest-first.
-    func search(_ query: String) -> [ClipboardItem] {
+    /// Display order for `query` under `filter`: pinned entries first, each block newest-first.
+    func search(_ query: String, filter: ClipboardFilter) -> [ClipboardItem] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return orderedItems }
-        if let searchCache, searchCache.query == q { return searchCache.result }
-        // Pins are matched in memory: all resident, and the LIMIT would otherwise drop one.
-        let result = pinnedItems.filter { $0.matches(q) } + runSearch(q).filter { !$0.isPinned }
-        searchCache = (q, result)
+        // The filter joins the key: `rows` rebuilds per render, so a query-only memo goes stale.
+        if let searchCache, searchCache.query == q, searchCache.filter == filter {
+            return searchCache.result
+        }
+        // Filtering after the split leaves a matching pin in the Pinned section, in pin order.
+        let result = filter.apply(to: unfiltered(q))
+        searchCache = (q, filter, result)
         return result
     }
 
-    /// Row index of `item` for `query`, so the palette can follow a row that moved.
-    func rowIndex(of item: ClipboardItem, in query: String) -> Int? {
-        search(query).firstIndex { $0.id == item.id }
+    /// Row index of `item` as currently listed, so the palette can follow a row that moved.
+    func rowIndex(of item: ClipboardItem, in query: String, filter: ClipboardFilter) -> Int? {
+        search(query, filter: filter).firstIndex { $0.id == item.id }
+    }
+
+    private func unfiltered(_ q: String) -> [ClipboardItem] {
+        guard !q.isEmpty else { return orderedItems }
+        // Pins are matched in memory: all resident, and the LIMIT would otherwise drop one.
+        return pinnedItems.filter { $0.matches(q) } + runSearch(q).filter { !$0.isPinned }
     }
 
     private func runSearch(_ q: String) -> [ClipboardItem] {

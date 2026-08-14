@@ -7,12 +7,17 @@ final class PaletteState {
     var mode: PaletteMode = .launcher
     var query: String = ""
     var selection: Int = 0
+    /// The clipboard screen's type filter, reset with the rest of the screen state on each summon.
+    var clipboardFilter: ClipboardFilter = .all
     /// Changes every time the palette is shown so the search field can re-focus.
     var focusToken = UUID()
     /// Bumped only by `prepare`, so lists snap to the top even when nothing else changed.
     var resetToken = UUID()
     /// Bumped when an action reorders the list, so the highlight scrolls back into view.
     var followToken = UUID()
+    /// Bumped when the panel intercepts ⌘.. AppKit binds that chord to `cancelOperation:`, so the
+    /// field editor eats it before `onKeyPress`; the screen still owns which row it pins.
+    private(set) var pinChordToken = UUID()
     /// Set by the compact bar's overflow to expand without a query; cleared by `prepare`.
     var forceExpanded = false
     /// The paste target, mirrored on every show; `prepare` resets the screen, not this.
@@ -39,6 +44,7 @@ final class PaletteState {
         query = ""
         selection = 0
         commandArguments = [:]
+        clipboardFilter = .all
         forceExpanded = false
         dropHoverHighlight()
         menuOpen = false
@@ -49,6 +55,10 @@ final class PaletteState {
     /// U+0001 can't appear in an entry id or an argument name, so the halves stay unambiguous.
     nonisolated static func argumentKey(_ entryID: String, _ name: String) -> String {
         entryID + "\u{1}" + name
+    }
+
+    func notePinChord() {
+        pinChordToken = UUID()
     }
 
     /// The pointer moved, which re-lights the highlight once it has cleared the arming slop.

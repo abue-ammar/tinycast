@@ -32,7 +32,7 @@ struct LauncherScreen: PaletteScreen {
 
         let results = appIndex.orderedResults(
             query: vm.query, visibility: visibility, favorites: favorites)
-        let calc = CalcMemo.evaluate(vm.query, currency: currencyRates.source)
+        let calc = CalcMemo.evaluate(vm.query, rates: currencyRates.rates)
         let entries = results.map(Row.entry)
         self.results = results
         self.calc = calc

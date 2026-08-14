@@ -59,9 +59,9 @@ The rule is checkable, which is the point: **a file under `Model/` may not impor
 because the harnesses compile the shipped sources rather than a copy. A harness that stops compiling is
 the signal that a decision leaked into the effect layer, or an effect into the decision layer.
 
-The boundary is drawn so the *safe* state is the default. `CalcEngine.evaluate`'s `currency:` parameter
-defaults to `.off`, so forgetting to pass a consented source disables the feature rather than enabling
-it. Confirmation gates live in the coordinator, never in the runner — which is why `ShellCommandRunner`
+The boundary keeps effects out of decisions: `CalcEngine.evaluate` is handed a finished
+`CurrencyRates?` rather than reaching for one, which is what keeps it Foundation-only and testable.
+Confirmation gates live in the coordinator, never in the runner — which is why `ShellCommandRunner`
 and `SystemActionRunner` stay harness-compilable while the "are you sure?" step still cannot be bypassed.
 
 Two things sit deliberately outside a feature folder: `Features/PaletteRowIndex.swift`, because the

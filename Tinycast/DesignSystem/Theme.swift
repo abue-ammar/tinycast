@@ -54,6 +54,8 @@ enum Theme {
         static let dropGuideDash: CGFloat = 4
         static let dropGuideWidth: CGFloat = 2
         static let bottomBarHeight: CGFloat = 52
+        /// A `BarButton`'s hover capsule, shared by the footer group and the header's filter.
+        static let barButtonHeight: CGFloat = 28
         static let rowIcon: CGFloat = 24
         static let keyCap: CGFloat = 18
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
@@ -80,6 +82,8 @@ enum Theme {
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
+        /// The clipboard type filter's menu; `menuWidth` is far too wide for five short rows.
+        static let clipboardFilterMenuWidth: CGFloat = 200
         /// A menu row's glyph slot, sized so symbol and app-icon rows read the same.
         static let menuIcon: CGFloat = 20
         /// Opening size and the resize floor; tall enough that the sidebar's rows never scroll.
@@ -144,6 +148,8 @@ enum Theme {
         static let compactKeyCap = Font.caption2
         static let heroKeyCap = Font.body
         static let bar = Font.callout.weight(.medium)
+        /// A dropdown control's trailing chevron, deliberately smaller than the label it follows.
+        static let disclosure = Font.caption.weight(.semibold)
         static let menuRow = Font.body
         static let menuShortcut = Font.callout
         static let menuIcon = Font.body

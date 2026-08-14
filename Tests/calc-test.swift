@@ -485,7 +485,7 @@ struct CalcTests {
             "1 eur to usd", "Exchange rates unavailable — check your connection.")
         expectNil("10 usd to nonsense")
         expectNil("usd")  // a lone code is still an app search
-        expectNil("btc")  // crypto isn't in the table — Frankfurter is central-bank fiat only
+        expectNil("btc")  // …and a lone ticker no more than a lone code
         // The table is generated from the feed's own currency list, so codes nobody hand-typed still
         // resolve — reaching "no rate" (not "no card") is what proves recognition.
         expectError("5 usd to zmw", "No exchange rate for ZMW.")
@@ -493,8 +493,11 @@ struct CalcTests {
         check(
             "CurrencyData sizes", expected: "true",
             got:
-                "\(CurrencyData.all.count >= 120 && CurrencyData.signs.count >= 20 && CurrencyData.aliases.count >= 100)"
+                "\(CurrencyData.all.count >= 150 && CurrencyData.signs.count >= 20 && CurrencyData.aliases.count >= 100)"
         )
+        // Retired codes are filtered out, so a currency nobody spends can't shadow a live one
+        expectNil("1 hrk to usd")
+        expectNil("1 kuna to usd")
         // Badges come from CLDR's label, which is shorter than the registry name where it matters
         expectBadges("1 chf to usd", source: "Swiss Franc", target: "US Dollar")
         expectBadges("1 aed to usd", source: "UAE Dirham", target: "US Dollar")
@@ -552,8 +555,6 @@ struct CalcTests {
         expectDisplay("$5(2)", "10.00 USD")
         expectDisplay("5(2)$", "10.00 USD")
         expectDisplay("$5(2) to eur", "9.20 EUR")
-        expectNilWithoutConsent("$5(2)")
-        expectNilWithoutConsent("5(2)$")
         expectError("$10 + 5kg", "Cannot add Currency and Weight.")
         expectErrorWithoutRates(
             "$10 + $5", "Exchange rates unavailable — check your connection.")
@@ -562,33 +563,70 @@ struct CalcTests {
         expectErrorWithoutRates(
             "10$", "Exchange rates unavailable — check your connection.")
 
-        // Consent gate: without it the currency path doesn't exist. Not an error card explaining a
-        // feature the user never enabled — no card at all, so the query falls through to app search.
-        expectNilWithoutConsent("1 euro to dollars")
-        expectNilWithoutConsent("100 dollars to yen")
-        expectNilWithoutConsent("50 GBP in euros")
-        expectNilWithoutConsent("eur to usd")
-        expectNilWithoutConsent("€20 to GBP")
-        expectNilWithoutConsent("2*50 usd to cad")
-        expectNilWithoutConsent("1 zloty to eur")
-        expectNilWithoutConsent("10$")
-        expectNilWithoutConsent("$10 + $5")
-        expectNilWithoutConsent("$10 + €5")
-        expectNilWithoutConsent("$100 * 3%")
-        expectNilWithoutConsent("$10 +")
-        expectNilWithoutConsent("($10 + $5) to eur")
-        expectNilWithoutConsent("$10 + 5kg")
-        // Even the friendly category error stays silent — it would leak that currency exists.
-        expectNilWithoutConsent("10 usd to kg")
-        expectNilWithoutConsent("10 kg to usd")
-        // Everything that isn't currency is untouched by the gate.
-        expectDisplayWithoutConsent("10 pounds to kilograms", "4.5359237 kg")
-        expectDisplayWithoutConsent("10 pounds", "4.5359237 kg")
-        expectDisplayWithoutConsent("1 cup to ml", "236.5882365 mL")
-        expectDisplayWithoutConsent("10km to mi", "6.213711922 mi")
-        expectDisplayWithoutConsent("2+2", "4")
-        expectDisplayWithoutConsent("255 to hex", "0xFF")
-        expectDisplayWithoutConsent("20% off 500", "400")
+        // Crypto — priced by the same table, so a coin converts against fiat with no special case
+        expectDisplay("1 btc to usd", "60,000.00 USD")
+        expectDisplay("1 bitcoin to usd", "60,000.00 USD")
+        expectDisplay("0.5 sol to eur", "46.00 EUR")
+        expectDisplay("2 eth to gbp", "3,160.00 GBP")
+        expectBadges("1 eth to usd", source: "Ethereum", target: "US Dollar")
+        // Sub-cent widening covers a coin the same way it covers IDR
+        expectDisplay("1 usd to btc", "0.00001667 BTC")
+        expectCopy("1 usd to btc", "0.00001667 BTC")
+        // A symbol the feed omits behaves exactly like an unquoted fiat code
+        expectError("1 shib to usd", "No exchange rate for SHIB.")
+        // Tickers are recognized rather than swallowed by the unit table
+        expectError("1 dash to usd", "No exchange rate for DASH.")
+        expectError("1 neo to usd", "No exchange rate for NEO.")
+        // A ticker outranks a generated noun, and only that noun: `soles` still reaches PEN
+        expectBadges("1 sol to usd", source: "Solana", target: "US Dollar")
+        expectError("1 soles to usd", "No exchange rate for PEN.")
+        check(
+            "crypto is absent from the generated fiat table", expected: "true",
+            got: "\(CurrencyData.all.allSatisfy { !CalcCurrency.cryptoCodes.contains($0.code) })")
+
+        // A bare amount answers in the Mac's region currency, which is injected, never read
+        expectDisplay("1 usd", "83.50 INR", region: "INR")
+        expectExpression("1 usd", "1 USD", region: "INR")
+        expectBadges("1 usd", source: "US Dollar", target: "Indian Rupee", region: "INR")
+        expectDisplay("10$", "835.00 INR", region: "INR")
+        expectDisplay("1 btc", "5,010,000.00 INR", region: "INR")
+        expectCopy("1 usd", "83.50 INR", region: "INR")
+        // Nothing to say: the region names the currency written, one nobody quotes, or none at all
+        expectDisplay("1 usd", "1.00 USD", region: "USD")
+        expectDisplay("1 usd", "1.00 USD", region: "NPR")
+        expectDisplay("1 usd", "1.00 USD", region: "ZZZ")
+        expectDisplay("1 usd", "1.00 USD")
+        // An operator, a target or a half-typed expression all keep the currency written
+        expectDisplay("$10 + €5", "14.20 EUR", region: "INR")
+        expectDisplay("$10 +", "10.00 USD", region: "INR")
+        expectBadges("$10 +", source: "Expression", target: "US Dollar", region: "INR")
+        expectDisplay("1 usd to eur", "0.92 EUR", region: "INR")
+        expectDisplay("10 pounds", "4.5359237 kg", region: "INR")
+        expectNil("usd", region: "INR")
+        expectNil("btc", region: "INR")
+
+        // The feed decoding, exercised the way the store hands it over
+        expectSnapshot(
+            "fiat only", fiat: fiatJSON, crypto: nil,
+            expected: "USD=1 EUR=0.9 BTC=nil complete=false")
+        expectSnapshot(
+            "both feeds", fiat: fiatJSON, crypto: cryptoJSON,
+            expected: "USD=1 EUR=0.9 BTC=5e-05 complete=true")
+        // A coin payload quoted against another base is ignored rather than folded in wrongly
+        expectSnapshot(
+            "mismatched base", fiat: fiatJSON,
+            crypto: Data(#"{"success":true,"target":"EUR","rates":{"BTC":20000}}"#.utf8),
+            expected: "USD=1 EUR=0.9 BTC=nil complete=false")
+        expectSnapshotThrows("no quotes", fiat: Data(#"{"success":true,"source":"USD","quotes":{}}"#.utf8))
+        // A cached snapshot that prices no coin predates them, whatever its `fetchedAt` claims
+        let coinless = CurrencyRates(base: "USD", rates: ["EUR": 0.9], fetchedAt: clock.now)
+        check(
+            "a coin-less snapshot is rejected on load", expected: "false",
+            got: "\(CurrencyFeed.pricesCoins(coinless))")
+        check("the fixture prices coins", expected: "true", got: "\(CurrencyFeed.pricesCoins(fx))")
+        expectSnapshotThrows(
+            "feed reported failure",
+            fiat: Data(#"{"success":false,"source":"USD","quotes":{"USDEUR":0.9}}"#.utf8))
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -612,15 +650,22 @@ struct CalcTests {
 
     // MARK: - Fixed exchange rates so currency answers are deterministic
 
-    /// NPR, ZMW and AFN are deliberately absent: the table recognizes them (they're in the generated
-    /// list), so a query for one must reach "no exchange rate" rather than falling through to no card.
+    /// NPR, ZMW, AFN and SHIB are deliberately absent: the table recognizes them, so a query for one
+    /// must reach "no exchange rate" rather than no card. Coins are inverted, as the store stores them.
     static let fx = CurrencyRates(
         base: "USD",
         rates: [
             "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
-            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725
+            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725,
+            "BTC": 1.0 / 60_000, "ETH": 1.0 / 2_000, "SOL": 1.0 / 100, "DOGE": 10
         ],
         fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))
+
+    /// A pair whose base isn't the source and a nonsense rate, both of which must be dropped.
+    static let fiatJSON = Data(
+        #"{"success":true,"source":"USD","quotes":{"USDEUR":0.9,"EURGBP":0.8,"USDBAD":-1}}"#.utf8)
+    /// Quoted the other way round — 1 BTC costs 20,000 USD, so the table stores 0.00005.
+    static let cryptoJSON = Data(#"{"success":true,"target":"USD","rates":{"BTC":20000}}"#.utf8)
 
     // MARK: - Helpers
 
@@ -653,35 +698,50 @@ struct CalcTests {
         }
     }
 
-    static func expectBadges(_ query: String, source: String, target: String) {
-        guard let result = CalcEngine.evaluate(query, currency: .on(fx)) else {
-            fail(query, expected: "\(source) → \(target)", got: "nil")
-            return
-        }
-        check(query + " [source badge]", expected: source, got: result.sourceBadge ?? "nil")
-        check(query + " [target badge]", expected: target, got: result.targetBadge ?? "nil")
+    /// The Mac's region currency, injected rather than read, so the suite ignores the host's region.
+    static func label(_ query: String, _ region: String?) -> String {
+        region.map { "\(query) [region \($0)]" } ?? query
     }
 
-    static func expectDisplay(_ query: String, _ expected: String) {
-        guard case .value(let display, _)? = CalcEngine.evaluate(query, currency: .on(fx))?.payload
-        else {
-            fail(query, expected: expected, got: "nil / error")
+    static func expectBadges(
+        _ query: String, source: String, target: String, region: String? = nil
+    ) {
+        guard let result = CalcEngine.evaluate(query, rates: fx, region: region) else {
+            fail(label(query, region), expected: "\(source) → \(target)", got: "nil")
             return
         }
-        check(query, expected: expected, got: display)
+        check(
+            label(query, region) + " [source badge]", expected: source,
+            got: result.sourceBadge ?? "nil")
+        check(
+            label(query, region) + " [target badge]", expected: target,
+            got: result.targetBadge ?? "nil")
     }
 
-    static func expectCopy(_ query: String, _ expected: String) {
-        guard case .value(_, let copy)? = CalcEngine.evaluate(query, currency: .on(fx))?.payload
+    static func expectDisplay(_ query: String, _ expected: String, region: String? = nil) {
+        guard
+            case .value(let display, _)? = CalcEngine.evaluate(
+                query, rates: fx, region: region)?.payload
         else {
-            fail(query, expected: expected, got: "nil / error")
+            fail(label(query, region), expected: expected, got: "nil / error")
             return
         }
-        check(query, expected: expected, got: copy)
+        check(label(query, region), expected: expected, got: display)
+    }
+
+    static func expectCopy(_ query: String, _ expected: String, region: String? = nil) {
+        guard
+            case .value(_, let copy)? = CalcEngine.evaluate(
+                query, rates: fx, region: region)?.payload
+        else {
+            fail(label(query, region), expected: expected, got: "nil / error")
+            return
+        }
+        check(label(query, region), expected: expected, got: copy)
     }
 
     static func expectError(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, currency: .on(fx))?.payload
+        guard case .error(let message)? = CalcEngine.evaluate(query, rates: fx)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -689,9 +749,9 @@ struct CalcTests {
         check(query, expected: expected, got: message)
     }
 
-    /// Consented, but no snapshot has landed yet — first run, or still offline.
+    /// No snapshot has landed yet — first run, or still offline.
     static func expectErrorWithoutRates(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, currency: .on(nil))?.payload
+        guard case .error(let message)? = CalcEngine.evaluate(query, rates: nil)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -699,39 +759,39 @@ struct CalcTests {
         check(query, expected: expected, got: message)
     }
 
-    /// No consent: the currency path must not engage. Checks the explicit `.off` source and the
-    /// default argument, since a caller that forgets to pass one must still get the feature off.
-    static func expectNilWithoutConsent(_ query: String) {
-        if let result = CalcEngine.evaluate(query, currency: .off) {
-            fail(query, expected: "nil (consent withheld)", got: "\(result.payload)")
-        } else if let result = CalcEngine.evaluate(query) {
-            fail(query, expected: "nil (default source)", got: "\(result.payload)")
+    static func expectExpression(_ query: String, _ expected: String, region: String? = nil) {
+        guard let result = CalcEngine.evaluate(query, rates: fx, region: region) else {
+            fail(label(query, region), expected: expected, got: "nil")
+            return
+        }
+        check(label(query, region), expected: expected, got: result.expression)
+    }
+
+    /// `CurrencyFeed` is handed the two payloads exactly as the store receives them.
+    static func expectSnapshot(_ name: String, fiat: Data, crypto: Data?, expected: String) {
+        guard let result = try? CurrencyFeed.snapshot(fiat: fiat, crypto: crypto, now: clock.now)
+        else {
+            fail(name, expected: expected, got: "threw")
+            return
+        }
+        let show = { (code: String) in result.rates.rates[code].map(CalcFormatter.copyText) ?? "nil" }
+        check(
+            name, expected: expected,
+            got: "USD=\(show("USD")) EUR=\(show("EUR")) BTC=\(show("BTC")) "
+                + "complete=\(result.complete)")
+    }
+
+    static func expectSnapshotThrows(_ name: String, fiat: Data) {
+        if let result = try? CurrencyFeed.snapshot(fiat: fiat, crypto: nil, now: clock.now) {
+            fail(name, expected: "throws", got: "\(result.rates.rates.count) rates")
         } else {
             passes += 1
         }
     }
 
-    /// A non-currency answer that must survive with the feature switched off.
-    static func expectDisplayWithoutConsent(_ query: String, _ expected: String) {
-        guard case .value(let display, _)? = CalcEngine.evaluate(query, currency: .off)?.payload
-        else {
-            fail(query, expected: expected, got: "nil / error")
-            return
-        }
-        check(query, expected: expected, got: display)
-    }
-
-    static func expectExpression(_ query: String, _ expected: String) {
-        guard let result = CalcEngine.evaluate(query, currency: .on(fx)) else {
-            fail(query, expected: expected, got: "nil")
-            return
-        }
-        check(query, expected: expected, got: result.expression)
-    }
-
-    static func expectNil(_ query: String) {
-        if let result = CalcEngine.evaluate(query, currency: .on(fx)) {
-            fail(query, expected: "nil", got: "\(result.payload)")
+    static func expectNil(_ query: String, region: String? = nil) {
+        if let result = CalcEngine.evaluate(query, rates: fx, region: region) {
+            fail(label(query, region), expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1
         }

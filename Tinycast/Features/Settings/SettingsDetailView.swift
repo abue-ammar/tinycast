@@ -22,7 +22,6 @@ struct SettingsDetailView: View {
             case .extensions: ExtensionsSettingsView()
             case .permissions: PermissionsSettingsView()
             case .backup: BackupSettingsView()
-            case .miscellaneous: MiscellaneousSettingsView()
             case .about: AboutView()
             }
         }

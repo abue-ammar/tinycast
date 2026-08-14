@@ -136,7 +136,7 @@ feature. The Search Quicklinks screen gives pins their own section, like the cli
 `PaletteMode.quicklinks` is a sub-screen reached from the `Search Quicklinks` command. Like
 Calculator History it stays out of the Tab cycle and exits via the back chevron or a bare backspace.
 Its ⌘K menu carries Open (`↵`), Open With Default App (`⌘↵`, only when a handler is saved), Edit,
-Duplicate, Pin/Unpin (`⌘P`), Hide/Show in Root Search, Show in Finder (`⌘F`, only for a resolved
+Duplicate, Pin/Unpin (`⌘.`), Hide/Show in Root Search, Show in Finder (`⌘F`, only for a resolved
 path), and Delete (`⌘⌫`).
 
 Choosing an _arbitrary_ app belongs to the editor, which has a picker; `PopoverMenu` is a flat list

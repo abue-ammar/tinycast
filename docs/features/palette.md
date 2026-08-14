@@ -214,9 +214,19 @@ The policy runs after `super.sendEvent`, so it has the last word, and it writes 
 actually differs. It must stay **symmetric**: an earlier version left the field alone and only forced
 the arrow outside it, and AppKit's own alternation over the field came straight back.
 
+## One menu at a time
+
+`RootPaletteView` holds a single `OpenMenu?` rather than a flag per menu, so "at most one is open" is
+structural instead of a pair of `onChange` handlers pushing each other closed. Three cases today —
+the ⌘K Actions menu (`.bottomTrailing`), the app menu (`.bottomLeading`) and the clipboard type
+filter (`.topTrailing`, hung under its header button). `menuContent` resolves the open case to one
+`PopoverMenuContent`, which is what lets ↑/↓, plain ↵, Esc and the click-away catcher serve every
+menu without knowing which is up. Every open path goes through `open(_:highlighting:)` and states
+where the highlight starts: the first row, except the type filter, which opens on the active filter.
+
 ## Menu-open input freeze
 
-While a footer popover menu (⌘K Actions / app menu) is open the search field reads as inert but
+While a popover menu (⌘K Actions / app menu / clipboard type filter) is open the search field reads as inert but
 **never resigns first responder** — resigning makes the `NSTextField` swap between its field-editor
 and cell rendering, shifting the text / placeholder a point or two, so focus stays put. Input is
 frozen instead:
@@ -224,10 +234,26 @@ frozen instead:
 - `RootPaletteView` mirrors the open state into `PaletteState.menuOpen`, whose `didSet` fires
   `onMenuOpenChanged`.
 - `PalettePanel.sendEvent` then swallows text-editing keystrokes while `menuOpen` (letting ⌘/⌃ chords
-  and menu-nav keys through to SwiftUI `onKeyPress`), which is how ⌘P and ⌃X still reach their rows.
+  and menu-nav keys through to SwiftUI `onKeyPress`), which is how ⌘. and ⌃X still reach their rows.
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
   force-casts its field editor to a private subclass, so vending a custom one crashes — only the
   existing one can be tuned.
+
+## Chords `onKeyPress` never sees
+
+Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and all of them are handled in
+`PalettePanel.sendEvent` before `super` hands the event to the responder chain:
+
+- **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
+- **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
+- **Chords AppKit has already bound to a selector.** `⌘.` is the one that bites: AppKit binds it to
+  `cancelOperation:` alongside Escape, so `interpretKeyEvents` hands it to the field editor and
+  `onKeyPress(keys: ["."])` never fires. Pin (⌘.) therefore arrives through `onCommandShortcut`,
+  which bumps `PaletteState.pinChordToken`; `RootPaletteView` observes that and resolves the row
+  through the current screen, so **which** row gets pinned still comes from `screen.rows` alone.
+
+Adding a chord that "does nothing" is almost always one of these three — check `sendEvent` before
+assuming the handler is wrong.
 
 ## Emacs navigation chords
 

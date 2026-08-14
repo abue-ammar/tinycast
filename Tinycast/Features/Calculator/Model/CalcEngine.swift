@@ -32,14 +32,17 @@ struct CalcResult: Equatable, Sendable {
 
 /// Raw query to answer, or nil when it isn't calculator input. See docs/features/calculator.md.
 enum CalcEngine {
-    /// Live clock. `currency` defaults to `.off`, so forgetting to pass one disables the feature.
-    static func evaluate(_ raw: String, currency: CurrencySource = .off) -> CalcResult? {
-        evaluate(raw, now: Date(), calendar: .current, currency: currency)
+    /// Live clock. `rates` is nil until a snapshot lands, which the currency paths report as such.
+    static func evaluate(
+        _ raw: String, rates: CurrencyRates? = nil, region: String? = nil
+    ) -> CalcResult? {
+        evaluate(raw, now: Date(), calendar: .current, rates: rates, region: region)
     }
 
-    /// `now`/`calendar` are injected so the date/time paths are deterministic under the harness.
+    /// `now`/`calendar`/`region` are injected so every path is deterministic under the harness.
     static func evaluate(
-        _ raw: String, now: Date, calendar: Calendar, currency: CurrencySource = .off
+        _ raw: String, now: Date, calendar: Calendar, rates: CurrencyRates? = nil,
+        region: String? = nil
     ) -> CalcResult? {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, query.count <= 256 else { return nil }
@@ -50,7 +53,7 @@ enum CalcEngine {
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
 
         if let partial = partialResult(
-            tokens, query: query, now: now, calendar: calendar, currency: currency)
+            tokens, query: query, now: now, calendar: calendar, rates: rates, region: region)
         {
             return partial
         }
@@ -99,12 +102,12 @@ enum CalcEngine {
         }
 
         // Typed arithmetic first, so aliases such as `pounds` keep winning in multi-term exprs.
-        if let quantity = CalcQuantity.evaluate(tokens, query: query, currency: currency) {
+        if let quantity = CalcQuantity.evaluate(tokens, query: query, rates: rates, region: region) {
             return quantity
         }
 
-        // After units, so `10 pounds to kg` stays weight. nil outright without consent.
-        if let conversion = CalcCurrency.parseConversion(tokens, source: currency) {
+        // After units, so `10 pounds to kg` stays weight.
+        if let conversion = CalcCurrency.parseConversion(tokens, rates: rates) {
             switch conversion {
             case .value(let input, let from, let to, let output):
                 let amount = CalcFormatter.currency(output)
@@ -170,7 +173,7 @@ enum CalcEngine {
     /// A trailing operator keeps the last complete prefix on the card while the user still types.
     private static func partialResult(
         _ tokens: [CalcToken], query: String, now: Date, calendar: Calendar,
-        currency: CurrencySource
+        rates: CurrencyRates?, region: String?
     ) -> CalcResult? {
         guard let trailing = tokens.last, let operatorText = partialOperatorText(trailing) else {
             return nil
@@ -179,7 +182,7 @@ enum CalcEngine {
         guard !prefixTokens.isEmpty else { return nil }
 
         if let quantity = CalcQuantity.evaluate(
-            prefixTokens, query: tokenQuery(prefixTokens), currency: currency,
+            prefixTokens, query: tokenQuery(prefixTokens), rates: rates, region: region,
             preserveStandaloneUnit: true)
         {
             return replacingExpression(
@@ -188,7 +191,7 @@ enum CalcEngine {
 
         // A conversion's echo drops its target, so echo the typed text; the badges name both.
         if let complete = evaluate(
-            tokenQuery(prefixTokens), now: now, calendar: calendar, currency: currency)
+            tokenQuery(prefixTokens), now: now, calendar: calendar, rates: rates, region: region)
         {
             return replacingExpression(complete, with: prettyExpression(query))
         }

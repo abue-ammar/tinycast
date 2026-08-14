@@ -69,12 +69,11 @@ feature's doc, under its own `## Invariants`.
   surface; light mode is not a switch, it is a second design.
 - **Tinycast presents its own dialogs — never `NSAlert`, `NSSlider` or a system popover.** A question
   goes through `DialogController`, a report through a HUD via `HUDPresenter`.
-- **Consent is structural, not a checkbox.** Every networked feature ships off behind a dialog naming
-  the provider, the cadence and what leaves the machine; the owning store re-checks consent on both
-  sides of every `await` and fetches on a private `.ephemeral`, `urlCache = nil` session. Consent flags
-  live on that store, **never** in `AppSettings`, and `snippetsEnabled` is excluded from settings
-  backups so an import cannot grant keystroke listening. `CurrencyRateStore` is the reference — copy it
-  rather than inventing a second shape.
+- **A networked feature fetches on a private `.ephemeral`, `urlCache = nil` session**, never
+  `URLSession.shared`, so its own cache file stays the only copy on disk. `CurrencyRateStore` is the
+  reference — copy it rather than inventing a second shape. A flag that grants a capability is never
+  carried by a backup: `snippetsEnabled` is excluded from settings backups so an import cannot grant
+  keystroke listening.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from
