@@ -232,16 +232,10 @@ final class ExtensionNodeShims: @unchecked Sendable {
             throw ShimError.failed("Could not run '\(command)': \(error.localizedDescription)", "ENOENT")
         }
 
-        // Drain before waiting: a child that fills a 64 KB pipe buffer would otherwise block forever.
-        let outData = stdout.fileHandleForReading.readDataToEndOfFile()
-        let errData = stderr.fileHandleForReading.readDataToEndOfFile()
-
-        if let timeout = (spec["timeout"] as? NSNumber)?.doubleValue, timeout > 0 {
-            let deadline = Date().addingTimeInterval(timeout / 1000)
-            while task.isRunning && Date() < deadline { usleep(2000) }
-            if task.isRunning { task.terminate() }
-        }
-        task.waitUntilExit()
+        // This runs on the JS queue, so a child that never exits would freeze the whole runtime.
+        let (outData, errData) = ExtensionAsyncProcess.drain(
+            task, stdout: stdout, stderr: stderr,
+            timeout: (spec["timeout"] as? NSNumber)?.doubleValue)
 
         return [
             "stdout": outData.base64EncodedString(),

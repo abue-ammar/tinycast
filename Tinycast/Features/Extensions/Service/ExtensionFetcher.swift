@@ -171,16 +171,7 @@ enum ExtensionAsyncProcess {
         if detached {
             return ["stdout": "", "stderr": "", "status": 0, "signal": NSNull()]
         }
-        // Drain before waiting: a child that fills the 64 KB pipe buffer would otherwise never exit.
-        let outData = stdout.fileHandleForReading.readDataToEndOfFile()
-        let errData = stderr.fileHandleForReading.readDataToEndOfFile()
-
-        if let timeout, timeout > 0 {
-            let deadline = Date().addingTimeInterval(timeout / 1000)
-            while task.isRunning && Date() < deadline { usleep(2000) }
-            if task.isRunning { task.terminate() }
-        }
-        task.waitUntilExit()
+        let (outData, errData) = drain(task, stdout: stdout, stderr: stderr, timeout: timeout)
 
         return [
             "stdout": outData.base64EncodedString(),
@@ -188,5 +179,31 @@ enum ExtensionAsyncProcess {
             "status": Int(task.terminationStatus),
             "signal": task.terminationReason == .uncaughtSignal ? "SIGTERM" : NSNull()
         ]
+    }
+
+    /// Reads a started child to completion. A child that fills the 64 KB pipe buffer blocks before it
+    /// can exit, so the drain has to come first — which leaves the deadline nothing to be but a watchdog.
+    static func drain(
+        _ task: Process, stdout: Pipe, stderr: Pipe, timeout: Double?
+    ) -> (Data, Data) {
+        var watchdog: DispatchSourceTimer?
+        if let timeout, timeout > 0 { watchdog = terminationWatchdog(task, after: timeout / 1000) }
+        let outData = stdout.fileHandleForReading.readDataToEndOfFile()
+        let errData = stderr.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
+        watchdog?.cancel()
+        return (outData, errData)
+    }
+
+    /// Signals the pid rather than the `Process`, which a `@Sendable` timer handler cannot capture.
+    private static func terminationWatchdog(
+        _ task: Process, after seconds: Double
+    ) -> DispatchSourceTimer {
+        let pid = task.processIdentifier
+        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+        timer.schedule(deadline: .now() + seconds)
+        timer.setEventHandler { kill(pid, SIGTERM) }
+        timer.resume()
+        return timer
     }
 }
