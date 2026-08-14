@@ -1,14 +1,9 @@
 import Foundation
 
-/// Reclaims what extensions leave behind: a build workspace a crash stranded, and the storage of an
-/// extension that is no longer installed.
-///
-/// The workspace name lives here rather than in `ExtensionInstaller`, so the code that creates one
-/// and the code that sweeps for one can never disagree about what it is called.
+/// Reclaims a stranded build workspace and the storage of an extension no longer installed.
+/// It names the workspace too, so creating one and sweeping for one can't disagree.
 enum ExtensionCleanup {
-    /// Injected rather than read from `ExtensionCatalog`, which resolves through
-    /// `Bundle.main.bundleIdentifier` — nil in a harness, where it would fall back to the real
-    /// install's directories and delete them.
+    /// Injected, never read from `Bundle.main`: a harness would otherwise delete the real install.
     struct Roots: Sendable {
         var temp: URL
         var support: URL
@@ -44,8 +39,7 @@ enum ExtensionCleanup {
         return report
     }
 
-    /// Removes every stray, reporting what actually went. A failure to delete one is skipped rather
-    /// than counted, so the total never claims space it did not free.
+    /// A failed delete is skipped, not counted, so the total never claims space it didn't free.
     @discardableResult
     nonisolated static func clean(installed: Set<String>, in roots: Roots) -> Report {
         var report = Report()
@@ -58,8 +52,7 @@ enum ExtensionCleanup {
         return report
     }
 
-    /// Launch-time sweep. A `defer` clears a workspace on every exit an install can take; a crash
-    /// mid-build is the one it cannot, and that is what this collects.
+    /// A `defer` clears a workspace on every exit an install takes; this collects what a crash left.
     nonisolated static func sweepWorkspaces(in temp: URL) {
         for url in staleWorkspaces(in: temp) {
             try? FileManager.default.removeItem(at: url)
@@ -75,8 +68,7 @@ enum ExtensionCleanup {
 
     private static let workspacePrefix = "tinycast-install-"
 
-    /// Everything the two callers agree is removable. Narrow by construction: only these three roots
-    /// are read, and inside them only entries that name themselves ours or name nothing installed.
+    /// Narrow by construction: three roots, and inside them only what names itself ours or nothing.
     private nonisolated static func strays(installed: Set<String>, in roots: Roots) -> [URL] {
         let safe = Set(installed.map(ExtensionCatalog.safeName))
         let orphanedSupport = contents(of: roots.support).filter {
@@ -97,8 +89,7 @@ enum ExtensionCleanup {
             at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
     }
 
-    /// Bytes on disk, walking a directory. An unreadable entry contributes nothing rather than
-    /// failing the whole scan — the number is for a subtitle, not an invoice.
+    /// An unreadable entry contributes nothing: the number is for a subtitle, not an invoice.
     private nonisolated static func size(of url: URL) -> Int64 {
         let keys: [URLResourceKey] = [.isRegularFileKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
         func bytes(_ item: URL) -> Int64 {

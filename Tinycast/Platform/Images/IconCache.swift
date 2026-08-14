@@ -14,19 +14,14 @@ struct IconCacheGeneration {
     }
 }
 
-/// A symbol tile's fill and the cache key that names it, so `IconCache` needn't know the feature
-/// type that chose the colour.
+/// A tile's fill and the key naming it, so `IconCache` needn't know who chose the colour.
 struct SymbolTint: Hashable, Sendable {
     let key: String
     let color: NSColor
 }
 
-/// What a row draws in its leading slot.
-///
-/// A feature whose glyph isn't derivable from its entry's kind sets one of these rather than adding a
-/// branch to `AppEntry` — which is how the launcher's model ended up naming a feature it draws for.
-/// `artwork` carries its own extent because the size is the *caller's* decision; see
-/// `IconCache.appIconExtent` for the reference every extent is judged against.
+/// What a row draws. A feature sets one rather than adding a branch to `AppEntry`, and `artwork`
+/// carries its extent because the size is the caller's decision, judged against `appIconExtent`.
 enum EntryIcon: Hashable, Sendable {
     case file
     case symbol(String)
@@ -100,9 +95,7 @@ enum IconCache {
         return icon
     }
 
-    /// Command icons: a symbol on a tile, in the same shape as a real app icon. A tint fills the tile
-    /// with that colour and brightens the glyph to white — the same treatment as the Settings sidebar,
-    /// so a re-skinned extension reads as part of the app.
+    /// A symbol on an app-icon-shaped tile; a tint fills it and brightens the glyph to white.
     static func symbolIcon(named name: String, tint: SymbolTint? = nil) -> NSImage {
         let key = symbolKey(name, tint)
         if let cached = cache.object(forKey: key) { return cached }
@@ -149,14 +142,10 @@ enum IconCache {
         }
     }
 
-    /// The share of its canvas a macOS app icon paints — the reference every other artwork is sized
-    /// against, and the assumption made for a source too opaque to measure.
+    /// What an app icon paints: the reference for every other artwork, and the guess when unmeasurable.
     static let appIconExtent: CGFloat = 0.83
 
-    /// Scales `source` so it paints `extent` of the canvas, and hands back its byte cost.
-    ///
-    /// The caller chooses the number; this only knows how to measure and rasterize. That split is
-    /// what lets a feature size its own artwork without `Platform` learning why.
+    /// The caller chooses the extent; this only measures and rasterizes, so `Platform` learns no why.
     static func fitted(_ source: NSImage, to extent: CGFloat) -> (NSImage, Int) {
         let painted = paintedExtent(source) ?? appIconExtent
         let side = displayPixel * extent / painted
@@ -164,8 +153,7 @@ enum IconCache {
         return rasterized(source, into: NSRect(x: inset, y: inset, width: side, height: side))
     }
 
-    /// An image file drawn at a chosen extent. Keyed by both, so two features asking for different
-    /// sizes of one file never serve each other's.
+    /// Keyed by path and extent, so two features wanting different sizes never serve each other's.
     static func artwork(atPath path: String, extent: CGFloat) -> NSImage {
         let key = artworkKey(path, extent)
         if let cached = cache.object(forKey: key) { return cached }
@@ -263,8 +251,7 @@ enum IconCache {
         return Decoded(image: icon, cost: cost)
     }
 
-    /// Scales `source` so it paints the same share of the canvas an app icon does, leaving an app
-    /// icon as-is. Solving `side * extent == displayPixel * artworkExtent`.
+    /// Paints the share an app icon does, leaving a real app icon untouched.
     private static func fittedToArtwork(_ source: NSImage) -> (NSImage, Int) {
         fitted(source, to: appIconExtent)
     }

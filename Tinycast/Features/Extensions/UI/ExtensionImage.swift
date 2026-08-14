@@ -16,8 +16,7 @@ enum ExtensionImage {
         var isCircular = false
     }
 
-    /// Resolve an `ImageLike` prop: a plain string (icon enum value, file name or emoji), or an object
-    /// `{source, tintColor, mask, fallback}` whose `source` may itself be `{light, dark}`.
+    /// An `ImageLike`: a string, or `{source, tintColor, mask, fallback}` with a themed `source`.
     static func resolve(_ value: RenderValue?, assetsPath: String?) -> Resolved? {
         guard let value else { return nil }
         switch value {
@@ -25,9 +24,7 @@ enum ExtensionImage {
             guard let source = source(from: text, assetsPath: assetsPath) else { return nil }
             return Resolved(source: source)
         case .object(let fields):
-            // `{ value, tooltip }` is Raycast's icon-with-tooltip form: the real `ImageLike` is one
-            // level down. Only unwrap when it looks like one, so a themed `{ value: {light, dark} }`
-            // still falls through to the flat path below.
+            // Raycast's icon-with-tooltip form; unwrap only when it looks like one, not when themed.
             if let wrapped = fields["value"]?.objectValue,
                 wrapped["source"] != nil || wrapped["value"] != nil
             {
@@ -122,8 +119,7 @@ enum ExtensionImage {
         return Color(red: red, green: green, blue: blue, opacity: alpha)
     }
 
-    /// `Icon.Number00`…`Icon.Number99` are digits, and SF only enumerates 0…50 — draw them as a glyph
-    /// so all hundred look alike.
+    /// SF only enumerates 0…50, so draw all hundred as glyphs and they look alike.
     private static func numberGlyph(forIcon icon: String) -> String? {
         guard icon.hasPrefix("number-") else { return nil }
         let digits = icon.dropFirst("number-".count).dropLast(3)
@@ -131,13 +127,11 @@ enum ExtensionImage {
         return String(value)
     }
 
-    /// Raycast icon → SF Symbol. Only the icons that carry meaning in a list get a hand-picked mapping;
-    /// the rest fall back to a generic shape, which reads better than an empty slot.
+    /// Only icons carrying meaning are hand-mapped; a generic shape beats an empty slot.
     private static func symbolName(forIcon icon: String) -> String? {
         let name = String(icon.dropLast(3))
         if let mapped = symbolMap[name] { return mapped }
-        // Many Raycast names are already close to an SF Symbol; try the obvious transforms before
-        // settling for the fallback.
+        // Many names are already close to a symbol; try the obvious transforms before the fallback.
         let candidates = [name, name.replacingOccurrences(of: "-", with: ".")]
         for candidate in candidates
         where NSImage(systemSymbolName: candidate, accessibilityDescription: nil) != nil {
@@ -203,8 +197,7 @@ enum ExtensionImage {
         "window": "macwindow", "wrench-screwdriver": "wrench.and.screwdriver", "xmark": "xmark",
         "xmark-circle": "xmark.circle", "xmark-circle-filled": "xmark.circle.fill",
         "xmark-top-right-square": "xmark.square",
-        // Names with no plausible SF Symbol transform. Every value here was checked against
-        // `NSImage(systemSymbolName:)` — an unknown name draws the placeholder tile instead.
+        // No plausible transform; every value was checked, since an unknown name draws a placeholder.
         "airplane-filled": "airplane", "airplane-landing": "airplane.arrival",
         "airplane-takeoff": "airplane.departure",
         "alarm-ringing": "bell.and.waves.left.and.right.fill", "align-centre": "text.aligncenter",
@@ -286,9 +279,7 @@ enum ExtensionImage {
     ]
 }
 
-/// Draws a resolved extension icon at the palette's row-icon size. Remote images load once and are
-/// cached by `IconCache`; a missing or unresolvable icon renders the same faint tile a warming app row
-/// uses, so rows never jump.
+/// A resolved icon at row size; an unresolvable one draws the faint tile, so rows never jump.
 struct ExtensionIconView: View {
     let resolved: ExtensionImage.Resolved?
     var size: CGFloat = Theme.Size.rowIcon

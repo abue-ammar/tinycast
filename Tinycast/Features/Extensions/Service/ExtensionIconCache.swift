@@ -1,15 +1,8 @@
 import AppKit
 
-/// An extension's own artwork, cached and sized for a palette row.
-///
-/// Split from `IconCache` because the *size* is a different decision, not a different pipeline. An
-/// extension ships a flat, fully saturated tile; a macOS icon is a dark squircle whose ground
-/// disappears into the palette, so only its glyph reads. Drawn at equal geometry the extension
-/// shouts, and the correction is optical rather than a bug fix. Keeping it here means `IconCache`
-/// stays the app-and-symbol layer and knows nothing about extensions.
+/// An extension's artwork. See docs/features/extensions.md for why it draws smaller than an app icon.
 enum ExtensionIconCache {
-    /// Below `IconCache.appIconExtent` on purpose — see this type's note. Change it only against a
-    /// rendered strip of real icons; the number means nothing on its own.
+    /// Below `IconCache.appIconExtent` on purpose; change it only against a rendered strip of icons.
     static let extent: CGFloat = 0.76
 
     /// `NSCache` is thread-safe but not `Sendable`, so assert the guarantee once here.
@@ -34,8 +27,7 @@ enum ExtensionIconCache {
         IconCache.cachedArtwork(atPath: path, extent: extent)
     }
 
-    /// Read straight from the file: `NSWorkspace` would answer a PNG with the generic document icon.
-    /// Drawing is `Platform`'s; the only thing decided here is `extent`.
+    /// Read from the file: `NSWorkspace` would answer a PNG with the generic document icon.
     static func icon(atPath path: String) -> NSImage {
         guard FileManager.default.fileExists(atPath: path) else {
             return IconCache.symbolIcon(named: "puzzlepiece.extension")
@@ -50,8 +42,7 @@ enum ExtensionIconCache {
         return await IconCache.loadArtworkAsync(atPath: path, extent: extent)
     }
 
-    /// The file as shipped, never rasterized: fitting flattens a GIF to its first frame, and a tile
-    /// that is meant to play needs every one of them.
+    /// Never rasterized: fitting flattens a GIF to its first frame, and a playing tile needs them all.
     static func loadOriginalAsync(atPath path: String) async -> NSImage? {
         let key = originalKey(path)
         if let cached = cache.object(forKey: key) { return cached }
@@ -65,9 +56,7 @@ enum ExtensionIconCache {
 
     // MARK: - Fetched by the extension
 
-    /// A list row or Detail markdown can name a remote image; fetch once, then serve from the same
-    /// cache. A failure caches nothing, so a transient error retries on the next render. `asIcon` is
-    /// off for markdown images, which are drawn far larger than a row and keep their own size.
+    /// A failure caches nothing, so a transient error retries; `asIcon` is off for markdown images.
     static func loadRemoteAsync(_ url: URL, asIcon: Bool = true) async -> NSImage? {
         let key = remoteKey(url, asIcon: asIcon)
         if let cached = cache.object(forKey: key) { return cached }
@@ -85,8 +74,7 @@ enum ExtensionIconCache {
         return icon
     }
 
-    /// Cacheless, never `URLSession.shared`: an extension names these URLs, so the in-memory cache
-    /// above stays the only copy and nothing it asks for reaches a shared on-disk cache.
+    /// Cacheless, never `URLSession.shared`: an extension names these URLs, so none reach a disk cache.
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.urlCache = nil

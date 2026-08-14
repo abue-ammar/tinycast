@@ -1,7 +1,6 @@
 import AppKit
 
-/// One browsable group of symbols. `id` is the CoreGlyphs category key, except for the two synthetic
-/// ones the picker opens on.
+/// One group of symbols; `id` is the CoreGlyphs key, but for the two synthetic ones.
 struct SymbolCategory: Identifiable, Hashable, Sendable {
     let id: String
     let title: String
@@ -11,13 +10,8 @@ struct SymbolCategory: Identifiable, Hashable, Sendable {
     static let bundled = SymbolCategory(id: "tinycast.bundled", title: "Tinycast")
 }
 
-/// Every SF Symbol this macOS ships, read from the system at runtime rather than bundled: the list then
-/// matches the OS exactly, with no data file to regenerate each release.
-///
-/// The source is `CoreGlyphs.bundle`, which carries the symbol order, each symbol's categories, and the
-/// extra search terms the SF Symbols app searches on ("coffee" → `cup.and.saucer`). It's a system
-/// resource, not API, so every read is optional and the curated list stands in if the layout ever
-/// changes.
+/// Read from `CoreGlyphs.bundle` at runtime, so the list matches the OS. A system resource, not API:
+/// every read is optional and the curated list stands in if its layout ever changes.
 struct SymbolCatalog: Sendable {
     let symbols: [String]
     let categories: [SymbolCategory]
@@ -25,10 +19,7 @@ struct SymbolCatalog: Sendable {
     private let byCategory: [String: [String]]
     private let searchTerms: [String: [String]]
 
-    /// Marks the app ships itself, for the ones SF Symbols simply doesn't have. There is no bluetooth
-    /// symbol in the system catalogue at all — not restricted, absent — and an extension that toggles
-    /// bluetooth has an obvious icon that the picker could not offer. `IconCache.glyph` already falls
-    /// back to a named asset, so these render everywhere a symbol does.
+    /// Marks we ship ourselves: the system has no bluetooth symbol at all, restricted or otherwise.
     static let bundledGlyphs = ["bluetooth", "BrandGitHub", "BrandDiscord", "BrandX"]
 
     static func isBundled(_ symbol: String) -> Bool { bundledGlyphs.contains(symbol) }
@@ -41,8 +32,7 @@ struct SymbolCatalog: Sendable {
         "BrandX": ["x", "twitter", "social", "brand"]
     ]
 
-    /// What the picker opens on — a short, hand-picked set, because scrolling eight thousand icons is
-    /// not a way to choose one.
+    /// What the picker opens on: scrolling eight thousand icons is not a way to choose one.
     static let suggested =
         bundledGlyphs + [
             // Status & power
@@ -76,8 +66,7 @@ struct SymbolCatalog: Sendable {
             "cloud.fill", "gift.fill", "trash.fill", "arrow.triangle.2.circlepath"
         ]
 
-    /// The catalog with nothing but the curated set — what a missing or restructured CoreGlyphs falls
-    /// back to, and what the picker shows until the real load finishes.
+    /// The curated set alone: the fallback, and what the picker shows until the real load lands.
     static let fallback = SymbolCatalog(
         symbols: suggested.filter {
             isBundled($0) || NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil
@@ -103,8 +92,7 @@ struct SymbolCatalog: Sendable {
         guard let order = plist("symbol_order.plist", as: [String].self), !order.isEmpty else {
             return fallback
         }
-        // Apple reserves ~600 symbols for its own products (iCloud, iPhone, AirPlay…) — using one to
-        // label an extension would misuse their marks, so they're not offered.
+        // Apple reserves ~600 for its own products; labelling an extension with one misuses the mark.
         let restricted = Set(
             (plist("symbol_restrictions.strings", as: [String: String].self) ?? [:]).keys)
         let categoriesBySymbol = plist("symbol_categories.plist", as: [String: [String]].self) ?? [:]
@@ -121,8 +109,7 @@ struct SymbolCatalog: Sendable {
                 byCategory[category, default: []].append(symbol)
             }
         }
-        // Present categories in Apple's own order, skipping the ones that describe a rendering mode
-        // (multicolor, variable…) rather than a subject.
+        // Apple's own order, skipping buckets that describe a rendering mode rather than a subject.
         let ordered = (plist("categories.plist", as: [[String: String]].self) ?? [])
             .compactMap { $0["key"] }
             .filter { byCategory[$0]?.isEmpty == false }
@@ -144,8 +131,7 @@ struct SymbolCatalog: Sendable {
         }
     }
 
-    /// Every query word has to hit the name (dots read as spaces) or one of the symbol's own search
-    /// terms, so "coffee" finds `cup.and.saucer` and "arrow up" doesn't drown in every arrow.
+    /// Every word must hit the name or a search term, so "coffee" finds `cup.and.saucer`.
     func search(_ query: String, in category: SymbolCategory) -> [String] {
         let words = query.lowercased().split(whereSeparator: { $0 == " " || $0 == "." })
         guard !words.isEmpty else { return symbols(in: category) }
@@ -160,8 +146,7 @@ struct SymbolCatalog: Sendable {
         }
     }
 
-    /// Locale-specific renderings of a symbol that already exists (`.ar`, `.hi`, `.rtl`…) — a thousand
-    /// near-duplicates that only add noise to a picker.
+    /// Locale renderings of symbols that already exist: a thousand near-duplicates, all noise here.
     private nonisolated static func isLocaleVariant(_ symbol: String) -> Bool {
         let suffixes: Set<String> = [
             "ar", "he", "hi", "ja", "ko", "th", "zh", "my", "km", "mn", "ne", "si", "ta", "te",

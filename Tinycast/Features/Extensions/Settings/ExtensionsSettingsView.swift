@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Settings › Extensions: the master switch, then one row per installed extension that expands in
-/// place into its icon, its preferences and its commands.
+/// Settings › Extensions: the master switch, then a row per extension that expands in place.
 struct ExtensionsSettingsView: View {
     @Environment(AppCore.self) private var core
     @State private var expanded: String?
@@ -41,8 +40,7 @@ struct ExtensionsSettingsView: View {
             }
             .settingsEnabled(settings.extensionsEnabled)
 
-            // Outside the enabled group: leftovers are on disk whether or not extensions are on,
-            // and switching them off is exactly when somebody wants the space back.
+            // Outside the enabled group: leftovers are on disk whether or not extensions are on.
             storage
         }
         .formStyle(.grouped)
@@ -53,9 +51,7 @@ struct ExtensionsSettingsView: View {
         .onChange(of: settings.extensionsShowInLauncher) {
             core.extensionCoordinator.applyExtensionsLauncherPresence()
         }
-        // Presented by item, not by a bare flag: with `isPresented` SwiftUI builds the sheet from the
-        // body snapshot that precedes the button's state write, so the freshly scanned candidates
-        // arrived as an empty list.
+        // By item, not a flag: `isPresented` builds the sheet from a snapshot taken before the write.
         .sheet(item: $importCandidates) { candidates in
             ExtensionImportSheet(
                 candidates: candidates.entries,
@@ -113,10 +109,7 @@ struct ExtensionsSettingsView: View {
 
     // MARK: - The library
 
-    /// Filter row, then the list as a single form row holding its own stack — the shape
-    /// `LauncherItemsSection` uses, so a long list reads as a list rather than as a run of settings.
-    /// Separation inside the content layer comes from separators and a standard fill, not from
-    /// glass: Liquid Glass belongs to the layer above the content, not inside it.
+    /// `LauncherItemsSection`'s shape, so a long list reads as a list rather than a run of settings.
     private var library: some View {
         Section {
             if core.extensions.installed.isEmpty {
@@ -177,8 +170,7 @@ struct ExtensionsSettingsView: View {
         }
     }
 
-    /// The three ways an extension gets here, as rows rather than as a menu: each one behaves
-    /// differently enough — a search, a copy, a folder — to deserve saying so, and a menu hid that.
+    /// Three rows rather than a menu: a search, a copy and a folder behave differently enough to say so.
     private var install: some View {
         Section {
             SettingsRow(title: "Search extensions", subtitle: searchSubtitle) {
@@ -189,8 +181,7 @@ struct ExtensionsSettingsView: View {
                 Button("Registries…") { editingRegistries = true }
                 Button("Search…") { browsingStore = true }
             }
-            // What Raycast has that we don't is a state of this row, not a card floating at the top
-            // of the pane: it is the same job, and it was the one path split across two places.
+            // A state of this row, not a card above the pane: it is the same job as the button beside it.
             SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
                 Image(systemName: "arrow.down.doc")
                     .foregroundStyle(pending.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
@@ -226,7 +217,6 @@ struct ExtensionsSettingsView: View {
         }
     }
 
-    /// Build files an interrupted install stranded, and the storage of extensions that are gone.
     /// An install cleans up after itself, so in normal use this row has nothing to offer.
     private var storage: some View {
         Section {
@@ -347,10 +337,7 @@ struct ExtensionsSettingsView: View {
     }
 }
 
-/// One extension in the list: a summary row, and — while open — its settings on a card inset beneath
-/// it. The card is what separates "this extension's settings" from the rows of the list around it;
-/// Apple's guidance is to build that structure in the content layer out of standard materials and
-/// separators rather than glass, which belongs to the layer floating above content.
+/// A summary row, and while open its settings on an inset card — separators and fill, never glass.
 private struct ExtensionDisclosure: View {
     let installed: InstalledExtension
     let isExpanded: Bool
@@ -390,23 +377,14 @@ private struct ExtensionDisclosure: View {
             isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
     }
 
-    /// The settings continue on the list's own surface rather than on a card of their own: a card
-    /// inside the section's card is a box in a box, and the indent and the run titles already say
-    /// where this extension's settings begin and end.
-    ///
-    /// One `Grid` for all of them, not one per run — separate grids size their columns separately,
-    /// so a short label in one run would strand its control mid-row while a long label in the next
-    /// pushed its own to the edge. Not a nested `Form` either: a form inside a form row takes the
-    /// width it wants rather than the width it is given, and welds a row's label to its description.
+    /// One `Grid` for every run: separate grids size their columns apart, stranding controls mid-row.
     private var settings: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             Grid(
                 alignment: .leading, horizontalSpacing: Theme.Spacing.lg,
                 verticalSpacing: Theme.Spacing.md
             ) {
-                // No heading: these two are one idea — how this extension shows up in the launcher —
-                // and the fewer heading species inside the card, the less it competes with the
-                // pane's own section headers. First, so a 19-command extension doesn't bury them.
+                // No heading: these two are one idea, and first so a 19-command extension can't bury them.
                 ExtensionLauncherRow(installed: installed)
                 ExtensionIconRow(installed: installed)
 
@@ -441,9 +419,7 @@ private struct ExtensionDisclosure: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// A run's title, spanning both columns. A step below the pane's own section headers — those
-    /// live outside a card and set the page's structure, these sit inside one and only group rows —
-    /// but through size and colour, not case: nothing else in this app sets a heading in capitals.
+    /// A step below the pane's section headers, by size and colour: nothing here sets a heading in caps.
     private func heading(_ title: String) -> some View {
         GridRow {
             Text(title)
@@ -471,8 +447,7 @@ private struct ExtensionDisclosure: View {
     }
 }
 
-/// One row of a settings card: what it is on the left, the control on the right, columns aligned by
-/// the enclosing `Grid`.
+/// One card row: the label left, the control right, columns aligned by the enclosing `Grid`.
 private struct SettingsCardRow<Control: View>: View {
     /// Wide enough for a path field, and the trailing edge every control in the column shares.
     static var controlWidth: CGFloat { 200 }
@@ -509,9 +484,7 @@ private struct SettingsCardRow<Control: View>: View {
             .padding(.leading, indent)
             .frame(maxWidth: .infinity, alignment: .leading)
             .gridColumnAlignment(.leading)
-            // One width for every control, whatever its natural size: a toggle, a pop-up and a text
-            // field are all different widths, and left to themselves they end on three different
-            // edges down the column.
+            // One width for every control: left alone a toggle, a pop-up and a field end on three edges.
             control
                 .frame(width: SettingsCardRow.controlWidth, alignment: .trailing)
                 .gridColumnAlignment(.trailing)
@@ -524,15 +497,13 @@ private struct CommandRows: View {
     let installed: InstalledExtension
     let command: ExtensionCommand
 
-    /// A command this runtime can't run is a fact about the command, so it sits beside its name as a
-    /// quiet badge. In orange in the control column it was the only warning colour in the app.
+    /// A fact about the command, so it sits by the name as a badge rather than a warning colour.
     private var badge: String? { command.mode.isSupported ? nil : "Menu Bar" }
 
     var body: some View {
         SettingsCardRow(title: command.title, detail: command.description, badge: badge) {
             if command.mode.isSupported {
-                // Per command, not per extension: a shortcut has to land on one thing to run, and an
-                // extension is a set of commands. Quiet, because there is one of these per command.
+                // Per command, not per extension: a shortcut has to land on one thing to run.
                 ShortcutRecorder(
                     action: .extensionCommand(
                         entryID: ExtensionCommandRef(
@@ -541,8 +512,7 @@ private struct CommandRows: View {
                     isQuiet: true)
             }
         }
-        // Indented under the command they belong to: at the same inset the association would rest
-        // on reading order alone.
+        // Indented under its command: at the same inset the association rests on reading order alone.
         ForEach(command.preferences, id: \.name) { schema in
             ExtensionPreferenceRow(
                 extensionName: installed.manifest.name, schema: schema, indent: Theme.Spacing.lg)
@@ -550,9 +520,7 @@ private struct CommandRows: View {
     }
 }
 
-/// Whether this one extension's commands reach the launcher. Importing everything Raycast has can
-/// add hundreds of commands at once, and the global switch is too blunt to answer that: this hides
-/// one extension's without touching the rest.
+/// Hides one extension's commands: an import can add hundreds, and the global switch is too blunt.
 private struct ExtensionLauncherRow: View {
     let installed: InstalledExtension
     @Environment(AppCore.self) private var core
@@ -575,8 +543,7 @@ private struct ExtensionLauncherRow: View {
                 ? "Its commands appear in launcher search."
                 : "Hidden from launcher search; shortcuts still work."
         ) {
-            // An explicit closure, not `set: setVisible`: handing the compiler an actor-isolated
-            // method as a plain setter crashes IRGen building the reabstraction thunk.
+            // A closure, not `set: setVisible`: an actor-isolated method as a setter crashes IRGen.
             Toggle("", isOn: Binding(get: { isVisible }, set: { setVisible($0) }))
                 .labelsHidden()
         }
@@ -599,8 +566,7 @@ private struct ExtensionIconRow: View {
     @Environment(AppCore.self) private var core
     @State private var picking = false
 
-    /// Read from the store, not the manager: picking publishes from there, so the preview and the
-    /// open popover both observe *it*.
+    /// From the store, not the manager: picking publishes there, so preview and popover both observe it.
     private var appearance: ExtensionAppearance? {
         core.extensions.appearances.appearance(for: installed.manifest.name)
     }
@@ -640,8 +606,7 @@ private struct ExtensionIconRow: View {
     }
 }
 
-/// One preference control, backed by `ExtensionStorage` so a command reads it through
-/// `getPreferenceValues()`.
+/// One preference control, stored so a command reads it through `getPreferenceValues()`.
 private struct ExtensionPreferenceRow: View {
     let extensionName: String
     let schema: ExtensionPreferenceSchema
@@ -746,8 +711,7 @@ private struct ImportCandidates: Identifiable {
     let entries: [RaycastImportCandidate]
 }
 
-/// Picker over the extensions a locally installed Raycast has already built. Everything not already
-/// here starts selected, so the common case — "import what Raycast just added" — is one press.
+/// What a local Raycast has built. Anything not here starts selected, so the common case is one press.
 private struct ExtensionImportSheet: View {
     let candidates: [RaycastImportCandidate]
     let onImport: ([InstalledExtension]) -> Void

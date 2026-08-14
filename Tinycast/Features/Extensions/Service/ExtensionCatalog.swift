@@ -8,8 +8,7 @@ struct InstalledExtension: Sendable, Hashable, Identifiable {
     var id: String { manifest.name }
     var title: String { manifest.title }
 
-    /// The manifest icon resolved to a file — Raycast bundles put assets in `assets/`, but a few
-    /// reference a path relative to the extension root.
+    /// Assets usually live in `assets/`, but a few manifests point at the extension root.
     var iconPath: String? {
         guard let icon = manifest.icon else { return nil }
         let candidates = [
@@ -54,15 +53,9 @@ struct ExtensionCommandRef: Sendable, Hashable {
     }
 }
 
-/// Finds installed extensions on disk and installs new ones.
-///
-/// Tinycast stores extensions the way Raycast does — a directory holding `package.json`, `assets/` and
-/// one prebuilt `<command>.js` per command, with `react` / `@raycast/api` / Node builtins left external.
-/// That is deliberate: it is the format Raycast's own build produces, so an extension already built by
-/// Raycast (or by `ray build`) can be imported as-is and no bundler is needed at runtime.
+/// Finds and installs extensions, stored in Raycast's own layout so a built one imports as-is.
 enum ExtensionCatalog {
-    /// `~/Library/Application Support/<bundle id>/extensions`. Keyed by bundle id, so a Debug build
-    /// never shares installs with a release channel.
+    /// Keyed by bundle id, so a Debug build never shares installs with a release channel.
     static func extensionsDirectory() -> URL {
         supportDirectory().appendingPathComponent("extensions", isDirectory: true)
     }
@@ -80,8 +73,7 @@ enum ExtensionCatalog {
         supportDirectory().appendingPathComponent("extension-support", isDirectory: true)
     }
 
-    /// Extension names are npm-style (`spotify-player`, `@scope/name`); flatten to one path segment.
-    /// Shared, because a second copy that drifts orphans every file the first one wrote.
+    /// npm-style names flattened to one path segment; a second copy that drifts orphans every file.
     static func safeName(_ name: String) -> String {
         name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: "@", with: "")
     }
@@ -94,8 +86,7 @@ enum ExtensionCatalog {
         return base.appendingPathComponent(bundleID, isDirectory: true)
     }
 
-    /// Every root a locally installed Raycast keeps built bundles in. `raycast-x` is Raycast Beta v2;
-    /// both can exist, and a stable install leaves an empty `raycast` behind after switching.
+    /// `raycast-x` is Beta v2; both roots can exist, and switching leaves the other one empty.
     static func raycastExtensionRoots() -> [URL] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         return ["raycast", "raycast-x"].map {
@@ -103,8 +94,7 @@ enum ExtensionCatalog {
         }
     }
 
-    /// The root worth importing from — the first that actually holds something, so an empty directory
-    /// left by the other channel never reads as "Raycast isn't installed".
+    /// The first root holding anything, so the other channel's empty one never reads as "not installed".
     static func raycastExtensionsDirectory() -> URL? {
         raycastExtensionRoots().first { root in
             let entries = try? FileManager.default.contentsOfDirectory(
@@ -113,8 +103,7 @@ enum ExtensionCatalog {
         }
     }
 
-    /// Scan the install directory. Unreadable or half-written directories are skipped rather than
-    /// failing the whole scan.
+    /// An unreadable or half-written directory is skipped rather than failing the whole scan.
     nonisolated static func scan() -> [InstalledExtension] {
         let root = extensionsDirectory()
         let entries =
@@ -156,9 +145,7 @@ enum ExtensionCatalog {
         }
     }
 
-    /// Copy a prebuilt extension directory into the install root. Only the manifest, the built command
-    /// bundles and `assets/` are copied — never `node_modules` or the multi-MB `.js.map` files Raycast
-    /// writes next to each bundle.
+    /// Manifest, built commands and `assets/` only — never `node_modules` or the multi-MB `.js.map`s.
     @discardableResult
     static func install(from source: URL) throws -> InstalledExtension {
         guard let manifest = try? ExtensionManifest.load(directory: source) else {
@@ -199,15 +186,13 @@ enum ExtensionCatalog {
         return InstalledExtension(manifest: installedManifest, directory: destination)
     }
 
-    /// Both paths an extension owns. The scratch directory is the extension's own, so nothing else
-    /// will ever collect it — and the uninstall dialog promises it goes.
+    /// Both paths it owns: nothing else collects the scratch dir, and the dialog promises it goes.
     static func uninstall(_ installed: InstalledExtension) throws {
         try? FileManager.default.removeItem(at: supportPath(for: installed.manifest.name))
         try FileManager.default.removeItem(at: installed.directory)
     }
 
-    /// Extensions available to import from a locally installed Raycast, newest first. Raycast keys each
-    /// install by UUID, so the manifest is the only way to know what a directory holds.
+    /// Raycast keys installs by UUID, so the manifest is the only way to know what a directory holds.
     nonisolated static func importableFromRaycast() -> [InstalledExtension] {
         let fm = FileManager.default
         let entries = raycastExtensionRoots().flatMap { root in

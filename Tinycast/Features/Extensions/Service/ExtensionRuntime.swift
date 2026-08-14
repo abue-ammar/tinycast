@@ -1,8 +1,7 @@
 import Foundation
 import JavaScriptCore
 
-/// The JS→Swift seam for everything that needs the main actor. Answers are JSON strings so nothing
-/// non-`Sendable` crosses back to the JS queue.
+/// The JS→Swift seam. Answers are JSON, so nothing non-`Sendable` crosses back to the JS queue.
 @MainActor
 protocol ExtensionHostAPI: AnyObject, Sendable {
     func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String
@@ -18,18 +17,8 @@ protocol ExtensionRuntimeDelegate: AnyObject {
     func runtime(_ runtime: ExtensionRuntime, log level: String, message: String)
 }
 
-/// Owns the one JavaScriptCore context every extension command runs in.
-///
-/// JavaScriptCore is deliberate: it ships with macOS, so embedding a JS engine costs zero binary size
-/// and no vendored C — the alternative (QuickJS) would add ~1 MB and a build-system detour for an
-/// engine that is slower and no more capable here. Extension bundles are CommonJS with `react` and
-/// `@raycast/api` external, which is exactly what a bare JSContext can host once
-/// `Resources/RaycastRuntime.generated.js` supplies them.
-///
-/// `@unchecked Sendable` is load-bearing and narrow: every `JSContext` / `JSValue` touch happens on
-/// `queue`, a private serial queue, and nothing but plain values crosses in or out. That keeps the
-/// heavy work (extension evaluation, synchronous `fs` / `exec` shims) off the main actor, matching the
-/// house rule in docs/architecture.md.
+/// The one `JSContext` a command runs in. `@unchecked Sendable` is narrow: every touch is on `queue`,
+/// and only plain values cross. Why JavaScriptCore, and why one context, is in docs/features/extensions.md.
 final class ExtensionRuntime: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.tinycast.extensions.js", qos: .userInitiated)
     private var context: JSContext?
@@ -41,8 +30,7 @@ final class ExtensionRuntime: @unchecked Sendable {
     private let hostAPI: ExtensionHostAPI
     private let runtimeOverride: URL?
 
-    /// `runtimeURL` overrides the bundled `RaycastRuntime.generated.js` — only `Tools/ext-test.swift`
-    /// passes it, since a command-line harness has no app bundle to look in.
+    /// `runtimeURL` overrides the bundled runtime; only the harness passes it, having no app bundle.
     init(hostAPI: ExtensionHostAPI, runtimeURL: URL? = nil) {
         self.hostAPI = hostAPI
         self.runtimeOverride = runtimeURL
@@ -69,8 +57,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         }
     }
 
-    /// Evaluate the bundled runtime and hand it the machine-level facts the Node shims need. Idempotent
-    /// — a second call is a no-op, so any command can lazily ensure the engine is up.
+    /// Idempotent, so any command can lazily ensure the engine is up.
     func boot(config: ExtensionBootConfig) async throws {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
@@ -130,8 +117,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         }
     }
 
-    /// Takes an already-encoded payload: `[Any]` arguments aren't Sendable, so callers serialize in
-    /// their own isolation domain and only the JSON string crosses onto the queue.
+    /// Pre-encoded: `[Any]` isn't Sendable, so only the JSON string crosses onto the queue.
     func dispatch(session: String, handler: String, payload: String) async {
         await onQueue { context in
             _ = context.objectForKeyedSubscript("__tinycast")?
@@ -234,8 +220,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         host?.setObject(clearTimer, forKeyedSubscript: "clearTimer" as NSString)
         context.setObject(host, forKeyedSubscript: "__tinycastHost" as NSString)
 
-        // Compiling in the *global* scope is the point: the extension body must not see the runtime's
-        // own locals, and a real source URL keeps its stack traces readable.
+        // Global scope is the point: the extension body must not see the runtime's own locals.
         let compile: @convention(block) (String, String) -> JSValue? = { [weak self] code, filename in
             guard let context = self?.context else { return nil }
             let wrapped = "(function (exports, require, module, __filename, __dirname) {\n\(code)\n})"
@@ -272,8 +257,7 @@ final class ExtensionRuntime: @unchecked Sendable {
 
     private func deliverRender(session: String, json: String) {
         guard let delegate else { return }
-        // Decode on the JS queue: it keeps JSON parsing (the expensive part of a large list) off the
-        // main actor, and only the decoded value tree crosses over.
+        // Decode here: parsing a large list is the expensive part, and it belongs off the main actor.
         guard let tree = RenderTree(json: json) else {
             report(level: "error", message: "Could not decode the render tree for \(session).")
             return
@@ -312,14 +296,8 @@ final class ExtensionRuntime: @unchecked Sendable {
         timers[id] = nil
     }
 
-    /// Drop the whole JavaScript context; the next `boot` builds a fresh one (~7 ms warm).
-    ///
-    /// Reusing one context across commands was subtly wrong. Timers are global, and React's scheduler
-    /// drives every commit through `setTimeout` — so cancelling an extension's leftover timers also
-    /// cancelled the scheduler's, which latches `isMessageLoopRunning` and silently stops *all* later
-    /// sessions from ever committing ("works once, then hangs"). Leaving them alone instead leaks any
-    /// interval an extension forgot to clear. Throwing the context away avoids both, and as a bonus no
-    /// module-level state in an extension bundle can survive into its next run.
+    /// The whole context goes; the next `boot` builds a fresh one (~7 ms warm). Timers are global and
+    /// React's scheduler rides them, so reuse either cancels its commits or leaks an extension's.
     func shutdown() {
         queue.async {
             for timer in self.timers.values { timer.cancel() }

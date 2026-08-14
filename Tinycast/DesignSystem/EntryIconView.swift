@@ -1,9 +1,6 @@
 import SwiftUI
 
 /// Draws an `EntryIcon`, seeded from the cache so a warm glyph paints on the first frame.
-///
-/// Generic by construction: it knows the four ways a row can be drawn and nothing about which feature
-/// asked for which. `AppIconView` adds the launcher's running-dot and sizing on top of this.
 struct EntryIconView: View {
     let source: EntryIcon
     /// Only `.file` needs it, and only the launcher has one to give.

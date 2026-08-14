@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Colour swatches, a category menu and a searchable grid over every symbol the system ships. Changes
-/// apply immediately — the launcher is the real preview, so an OK/Cancel dance over two properties
-/// isn't worth it.
+/// Swatches and a searchable symbol grid. Changes apply at once: the launcher is the real preview.
 struct ExtensionAppearancePicker: View {
     let current: ExtensionAppearance
     /// Whether the extension is currently re-skinned, which is the only time resetting means anything.
@@ -10,15 +8,12 @@ struct ExtensionAppearancePicker: View {
     let onPick: (ExtensionAppearance) -> Void
     let onReset: () -> Void
 
-    /// Starts on the curated set and swaps in the system catalog once it's parsed (~700 KB of plists,
-    /// so it loads off the main actor rather than stalling the popover's first frame).
+    /// The curated set first: ~700 KB of plists would stall the popover's first frame.
     @State private var catalog = SymbolCatalog.fallback
     @State private var category = SymbolCategory.suggested
     @State private var query = ""
 
-    /// One column system, derived from the symbol grid, so every row in the popover shares its
-    /// edges. Left to themselves the search field, the category menu, the footer and the swatch
-    /// block each found a different margin, which is what reads as "not quite aligned".
+    /// One column system from the grid, so every row shares its edges rather than finding its own.
     private enum Metrics {
         static let tile: CGFloat = 30
         static let columns = 10
@@ -88,13 +83,11 @@ struct ExtensionAppearancePicker: View {
                 Text("No symbols match \u{201C}\(query)\u{201D}.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    // A whole number of rows: a half-height row clipped against the footer reads as a
-                    // rendering bug rather than as "there is more below".
+                    // Whole rows: a half one clipped by the footer reads as a rendering bug.
                     .frame(width: Metrics.contentWidth, height: Metrics.gridHeight)
             } else {
                 ScrollView {
-                    // Leading-aligned: a `LazyVGrid` of fixed columns centres itself in any spare
-                    // width, which is what pushed the grid off the margin everything else shares.
+                    // Leading: a fixed-column `LazyVGrid` centres itself in spare width otherwise.
                     LazyVGrid(columns: icons, alignment: .leading, spacing: Metrics.gap) {
                         ForEach(results, id: \.self) { symbol in
                             Button {
@@ -118,8 +111,7 @@ struct ExtensionAppearancePicker: View {
                 }
                 .overflowFade()
                 .thinScrollbar()
-                // The column, never the popover: framed at the outer width this overhung the inset
-                // by half the difference on each side, which is what put the grid outside the margin.
+                // The column's width, never the popover's, or the grid overhangs the shared inset.
                 .frame(width: Metrics.contentWidth, height: Metrics.gridHeight)
             }
 
@@ -154,8 +146,7 @@ struct SymbolTile: View {
     let tint: ExtensionTint
     let side: CGFloat
 
-    /// The app ships a few marks the system has no symbol for; they draw as templates, so they tint
-    /// exactly as a symbol does.
+    /// Marks the system has no symbol for; they draw as templates, so they tint like a symbol.
     @ViewBuilder
     private var glyph: some View {
         if SymbolCatalog.isBundled(symbol) {

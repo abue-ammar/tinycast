@@ -1,10 +1,6 @@
 import Foundation
 
-/// Where extensions are searched for and fetched from.
-///
-/// Two shapes, because the two sources hand back different things. Raycast's store serves the bundle
-/// it already built — the same layout `ExtensionCatalog` installs, so nothing else is needed. A
-/// GitHub registry serves source, which has to have its dependencies installed and be built first.
+/// Where extensions come from: the store serves a built bundle, a GitHub registry serves source.
 struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
     enum Kind: String, Codable, Sendable {
         /// Raycast's own store, through the endpoint its website's search uses.
@@ -21,8 +17,7 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
     var repository: String
     /// The directory the per-extension folders sit in, without leading or trailing slashes.
     var path: String
-    /// A branch, tag or commit. A branch means "whatever is there now", which is what a registry
-    /// someone maintains themselves usually wants.
+    /// A branch, tag or commit; a branch means "whatever is there now".
     var ref: String
     var isEnabled: Bool
 
@@ -45,9 +40,7 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
         kind: .raycastStore, name: "Raycast Store")
 
-    /// The fallback for when the store's endpoint changes or goes away: the same extensions, from the
-    /// repository they are published from. Off by default — it serves source, so installing from it
-    /// needs Node and a package manager, and the store already covers the same catalogue.
+    /// The fallback if the store's endpoint goes. Off by default: it serves source, so it needs Node.
     static let officialGitHub = ExtensionRegistry(
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
         kind: .github, name: "raycast/extensions", owner: "raycast", repository: "extensions",
@@ -66,8 +59,7 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
         }
     }
 
-    /// A GitHub URL someone pasted, resolved to a registry. Accepts the plain repository root and a
-    /// `/tree/<ref>/<path>` deep link, which is what copying from the browser gives.
+    /// A pasted GitHub URL: the repository root, or the `/tree/<ref>/<path>` a browser copies.
     static func parse(_ text: String, name: String? = nil) -> ExtensionRegistry? {
         var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         for prefix in ["https://", "http://", "github.com/", "www.github.com/"] {
@@ -105,8 +97,7 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
 struct ExtensionListing: Identifiable, Hashable, Sendable {
     /// Where the bytes come from, and therefore what installing has to do.
     enum Source: Hashable, Sendable {
-        /// A zip of an already-built extension. Raycast's store signs these, so the URL is short-lived
-        /// and is fetched at install time rather than reused from an old search.
+        /// A built zip; the store signs these, so the URL is fetched at install, never reused.
         case prebuiltZip(URL)
         /// A directory of source in a GitHub repository, at one commit or branch.
         case githubFolder(owner: String, repository: String, path: String, ref: String)

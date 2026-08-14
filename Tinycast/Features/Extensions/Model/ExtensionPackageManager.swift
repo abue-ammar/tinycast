@@ -1,10 +1,6 @@
 import Foundation
 
-/// The package manager used to install an extension's dependencies before building it.
-///
-/// Only a GitHub registry needs one — Raycast's store serves extensions already built. Which one to
-/// use is a real preference: a machine that has pnpm often doesn't want npm's node_modules, and a bun
-/// user wants bun. `automatic` picks the first one installed, in the order below.
+/// Installs an extension's dependencies before a build. Only a source registry needs one.
 enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
     case automatic
     case pnpm
@@ -24,8 +20,7 @@ enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Tried in order by `automatic`: fastest and most disk-frugal first, npm last as the one that is
-    /// always there.
+    /// `automatic`'s order: fastest and most disk-frugal first, npm last as the one always there.
     static let preferenceOrder: [ExtensionPackageManager] = [.pnpm, .bun, .yarn, .npm]
 
     var executableName: String {
@@ -38,9 +33,7 @@ enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Installs dependencies from the manifest. Deliberately not the frozen-lockfile variants: an
-    /// extension's committed lockfile is often out of date with its manifest, and failing the install
-    /// over that helps nobody.
+    /// Not the frozen-lockfile variants: a committed lockfile is often stale, and failing helps nobody.
     var installArguments: [String] {
         switch self {
         case .automatic: return []
@@ -62,8 +55,7 @@ enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Where a package manager is likely to be, for a GUI app that inherits none of a shell's PATH.
-    /// Homebrew (both architectures), Volta, asdf, fnm, nvm's default alias, and the system prefixes.
+    /// Where to look, for a GUI app inheriting none of a shell's PATH: Homebrew, Volta, asdf, fnm, nvm.
     static let searchPaths: [String] = [
         "/opt/homebrew/bin",
         "/usr/local/bin",
@@ -93,8 +85,7 @@ enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
         return nil
     }
 
-    /// Node itself, which `ray build` runs on. A package manager without it can't build anything, and
-    /// bun is the one that doesn't imply it.
+    /// `ray build` runs on Node, and bun is the one manager that doesn't imply it.
     static func nodeURL(in fileManager: FileManager = .default) -> URL? {
         for directory in searchPaths {
             let candidate = URL(fileURLWithPath: directory).appendingPathComponent("node")

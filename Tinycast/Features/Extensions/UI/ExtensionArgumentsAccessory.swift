@@ -1,10 +1,6 @@
 import SwiftUI
 
-/// Builds the inline argument strip a launcher row shows when its command declares arguments.
-///
-/// The palette asks a screen for a `PaletteHeaderAccessory` and renders whatever comes back. Every
-/// part that is extension-shaped — which arguments exist, how wide their fields are, which one is
-/// still empty — is decided here, so the header's layout maths never lived in `RootPaletteView`.
+/// The inline argument strip, as a `PaletteHeaderAccessory` the palette renders without reading.
 @MainActor
 enum ExtensionArgumentsAccessory {
     /// Nil when the row declares no arguments, which is every row but an extension command's.

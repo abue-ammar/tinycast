@@ -1,11 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Flattens one rendered extension screen into the row order the palette draws.
-///
-/// This is the single source of truth for that order, so the flat `selection` index the rest of the
-/// palette relies on maps 1:1 onto visible rows — the same invariant the launcher, clipboard and emoji
-/// screens hold (see docs/palette.md).
+/// The one source of row order, so the palette's flat `selection` maps 1:1 onto visible rows.
 struct ExtensionScreen: Equatable {
     enum Kind: Equatable {
         case list
@@ -50,8 +46,7 @@ struct ExtensionScreen: Equatable {
     /// An `EmptyView` to show when there are no rows.
     let emptyView: RenderNode?
 
-    /// Selectable rows per section, in order — what grid navigation needs to keep a column while
-    /// crossing a heading. One entry when the screen has no sections at all.
+    /// Selectable rows per section: what grid navigation needs to keep a column across a heading.
     var sectionCounts: [Int] {
         var counts: [Int] = []
         for row in rows {
@@ -73,8 +68,7 @@ struct ExtensionScreen: Equatable {
         selectionHandler: nil, searchBarAccessory: nil, showsDetail: false, screenActions: nil,
         emptyView: nil)
 
-    /// Build from the active screen of a render tree, filtering rows by `query` when the extension
-    /// hasn't taken over the search text.
+    /// Filters rows by `query` only when the extension hasn't taken the search text over.
     init(tree: RenderTree, query: String) {
         guard let root = tree.activeRoot else {
             self = .empty

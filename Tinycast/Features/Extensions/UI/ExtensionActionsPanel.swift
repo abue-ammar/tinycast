@@ -1,10 +1,6 @@
 import SwiftUI
 
-/// Sized here rather than in `Theme`: this is the extensions surface, and the palette's own menus
-/// need no cap because they are short by construction.
-///
-/// File-scoped so the row and the height that counts rows read the same numbers. A cap expressed in
-/// points would drift the moment a row's padding changed, and the panel would cut a row in half.
+/// File-scoped so a row and the cap that counts rows read one number, and can't drift into half a row.
 private enum Metrics {
     static let width: CGFloat = 300
     /// The glyph slot plus its breathing room — the tallest thing a row contains.
@@ -15,20 +11,14 @@ private enum Metrics {
     static var maxHeight: CGFloat { visibleRows * (rowHeight + rowSpacing) }
 }
 
-/// The ⌘K panel of a running extension command.
-///
-/// Separate from `PopoverMenu` on purpose. An extension declares its own action panel, and a real one
-/// runs to a dozen rows or more — the GIF search extension ships fourteen — so this scrolls where the
-/// palette's own menus never need to. Keeping it here means the palette's menu can change, or this
-/// one can, without the other having to move.
+/// The ⌘K panel of a running command. Not `PopoverMenu`: an extension's panel is long, so it scrolls.
 struct ExtensionActionsPanel: View {
     var header: String?
     let items: [PopoverMenuItem]
     @Binding var selection: Int
     let onActivate: (Int) -> Void
 
-    /// Set when the pointer moved the highlight, and cleared the moment it is read. A hovered row is
-    /// already visible by definition, so scrolling to it would drag the list out from under the cursor.
+    /// A hovered row is already visible, so scrolling to it would drag the list from under the cursor.
     @State private var hoverSelection: Int?
 
     var body: some View {
@@ -65,16 +55,13 @@ struct ExtensionActionsPanel: View {
                 .frame(maxHeight: Metrics.maxHeight)
                 // Without this a panel shorter than the cap rubber-bands against nothing.
                 .scrollBounceBehavior(.basedOnSize)
-                // No scrollbar at all, like a real macOS menu: the half row the cap leaves showing is
-                // the affordance. `thinScrollbar` is tuned to the palette's floating bars, and the
-                // native scroller draws through the glass corner.
+                // None, like a real menu: `thinScrollbar` wants floating bars, the native one cuts glass.
                 .scrollIndicators(.hidden)
                 .onChange(of: selection) {
                     let movedByPointer = hoverSelection == selection
                     hoverSelection = nil
                     guard !movedByPointer else { return }
-                    // No anchor: scroll the least that reveals the row, so a keyboard step near the
-                    // middle doesn't re-centre the whole list under the reader's eye.
+                    // No anchor: reveal the row, never re-centre the list around it.
                     proxy.scrollTo(selection)
                 }
             }
@@ -88,8 +75,7 @@ struct ExtensionActionsPanel: View {
     }
 }
 
-/// One action row. Its own, not the palette's: that one is file-private, and an extension's row is
-/// free to grow a badge or a submenu chevron without the launcher's menus inheriting it.
+/// Its own row, not the palette's: that one is file-private, and this one may grow its own trimmings.
 private struct ExtensionActionRow: View {
     let item: PopoverMenuItem
     let selected: Bool

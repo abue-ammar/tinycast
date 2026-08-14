@@ -1,8 +1,7 @@
 import AppKit
 import Foundation
 
-/// What the bridge needs from whoever is running the command. Kept as a protocol so the bridge has no
-/// hard dependency on `ExtensionManager` (which owns it).
+/// A protocol, so the bridge has no hard dependency on the `ExtensionManager` that owns it.
 @MainActor
 protocol ExtensionHostContext: AnyObject {
     /// The extension whose command is running — the namespace for storage, cache and preferences.
@@ -154,8 +153,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         switch method {
         case "copy", "paste":
             let content = arguments.first?.objectValue ?? [:]
-            // A file goes on the pasteboard as a file, so it pastes as the picture it is. Writing its
-            // path as text is what made "Copy GIF" yield `/var/folders/…/x.gif` in every editor.
+            // A file goes on the pasteboard as a file, so it pastes as the picture it is.
             if let path = content["file"]?.stringValue, !path.isEmpty {
                 writeFileToPasteboard(path)
                 if method == "paste" { Paster.postCommandV() }
@@ -187,9 +185,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         }
     }
 
-    /// Raycast's `Clipboard.Content` is `{text}`, `{file}` or `{html}`; Tinycast writes plain text.
-    /// The file itself, plus its picture where it has one. Both, because apps disagree on what they
-    /// accept: Finder and Mail take the file URL, a text editor or chat box takes the image data.
+    /// The file and its picture both: Finder takes the URL, a chat box takes the image data.
     private func writeFileToPasteboard(_ path: String) {
         let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
         let pasteboard = NSPasteboard.general
@@ -386,9 +382,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         let url =
             URL(string: target).flatMap { $0.scheme == nil ? nil : $0 }
             ?? URL(fileURLWithPath: (target as NSString).expandingTildeInPath)
-        // Extensions address Raycast by scheme — 1Password's `open("raycast://")` to bring the window
-        // back after a password prompt is the common case. Handing that to the workspace would launch
-        // Raycast; keep it inside Tinycast.
+        // Extensions address Raycast by scheme; handing that to the workspace would launch Raycast.
         if let scheme = url.scheme, scheme == "raycast" || scheme == "raycastinternal" {
             openRaycastURL(url)
             return
@@ -410,9 +404,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             completionHandler: nil)
     }
 
-    /// `raycast://extensions/<author>/<extension>/<command>` runs that command when it is installed;
-    /// every other Raycast URL just brings the palette back, which is what extensions use the bare
-    /// scheme for.
+    /// A command URL runs it when installed; every other Raycast URL just brings the palette back.
     private func openRaycastURL(_ url: URL) {
         let path = url.pathComponents.filter { $0 != "/" }
         if url.host == "extensions", path.count >= 3,
@@ -446,8 +438,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         ]
     }
 
-    /// Raycast reads the selection out of the focused app; Tinycast reuses the Accessibility grant the
-    /// paste path already needs.
+    /// Reuses the Accessibility grant the paste path already needs.
     private func selectedText() throws -> String {
         guard Permissions.ensureAccessibility() else {
             throw ExtensionHostError.unsupported("getSelectedText without the Accessibility permission")

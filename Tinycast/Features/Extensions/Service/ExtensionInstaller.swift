@@ -1,19 +1,8 @@
 import Foundation
 
-/// Turns a listing into an installed extension.
-///
-/// Two paths, because the two registry kinds hand back different things:
-///
-/// - **Prebuilt** (Raycast's store): download a zip, expand it, install it. No toolchain at all.
-/// - **Source** (a GitHub registry): fetch only that extension's folder, install its dependencies
-///   with the chosen package manager, run its `build` script — which is `ray build` — and install
-///   what that produced.
-///
-/// Everything happens in a temporary directory that is removed whichever way this ends, so a failed
-/// install leaves nothing behind and a half-built extension is never visible to the scanner.
+/// Turns a listing into an installed extension, in a workspace removed whichever way this ends.
 struct ExtensionInstaller: Sendable {
-    /// A step worth showing: an install can take minutes on the source path, and silence for that
-    /// long reads as a hang.
+    /// An install can take minutes from source, and silence for that long reads as a hang.
     enum Progress: Sendable, Equatable {
         case downloading
         case installingDependencies(manager: String)
@@ -30,8 +19,7 @@ struct ExtensionInstaller: Sendable {
         }
     }
 
-    /// Long enough for a cold dependency install on a slow connection, short enough that a wedged
-    /// child process doesn't hang the pane forever.
+    /// Long enough for a cold install on a slow line, short enough that a wedged child can't hang.
     private static let commandTimeout: TimeInterval = 300
 
     let client: ExtensionStoreClient
@@ -42,8 +30,7 @@ struct ExtensionInstaller: Sendable {
         self.packageManager = packageManager
     }
 
-    /// Installs, and copies into place before the workspace goes: the prepared directory only
-    /// exists inside it, so handing the path back to a caller would hand back a deleted one.
+    /// Copies into place before the workspace goes, which is why it hands back the install, not a path.
     @discardableResult
     func install(
         _ listing: ExtensionListing, onProgress: @Sendable @escaping (Progress) -> Void
@@ -89,8 +76,7 @@ struct ExtensionInstaller: Sendable {
         return try locateManifestRoot(in: expanded)
     }
 
-    /// The store's zip wraps the extension in a directory named after it; a folder built locally may
-    /// not. Accept either rather than depending on which.
+    /// The store's zip wraps the extension in a directory; a local build may not. Accept either.
     private func locateManifestRoot(in directory: URL) throws -> URL {
         let fileManager = FileManager.default
         if fileManager.fileExists(atPath: directory.appendingPathComponent("package.json").path) {
@@ -139,9 +125,7 @@ struct ExtensionInstaller: Sendable {
             return try validated(source)
         }
 
-        // `ray` directly, never the manifest's `build` script: that script is `ray build`, whose
-        // default environment is `dev`, and dev installs into the local Raycast rather than emitting.
-        // `-o` must not be the source — ray clears its output directory, which took `assets/` with it.
+        // `ray` directly, `-e dist`, `-o` never the source: dev installs into Raycast, and `-o` clears.
         let build = try await run(
             ray, arguments: ["build", "-e", "dist", "-o", output.path, "--non-interactive"],
             in: source, node: node)
@@ -184,8 +168,7 @@ struct ExtensionInstaller: Sendable {
 
         var environment = ProcessInfo.processInfo.environment
         var searchPath = ExtensionPackageManager.searchPaths
-        // Node's own directory first: `ray build` is spawned by the package manager, which finds it
-        // on PATH, and a Node installed through a version manager is nowhere near the defaults.
+        // Node first: the package manager spawns `ray` off PATH, and a version manager hides Node.
         if let node { searchPath.insert(node.deletingLastPathComponent().path, at: 0) }
         environment["PATH"] = searchPath.joined(separator: ":")
         // Keeps npm from writing progress bars into the output we surface on failure.

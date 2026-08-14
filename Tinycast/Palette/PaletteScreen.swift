@@ -23,8 +23,7 @@ enum PaletteAxis {
     func pasteKeepingWindowOpen(at selection: Int) -> Bool
     /// The selection an arrow key lands on, or nil to leave the key to the palette's own default.
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int?
-    /// Controls the selected row wants beside the search field, or nil for the usual full-width
-    /// field. `focus` is lent, not stored: the palette owns the header's focus either way.
+    /// Controls the row wants beside the search field. `focus` is lent: the palette owns it either way.
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
     )
@@ -43,12 +42,7 @@ extension PaletteScreen {
     { nil }
 }
 
-/// Controls a screen puts beside the search field, described in terms the palette can act on without
-/// knowing what they are.
-///
-/// The palette shrinks its field by `width`, walks `fieldNames` on Tab, and refuses ↵ while
-/// `firstIncompleteField` is set — focusing that field instead. Everything about what the controls
-/// *mean* stays in the feature that built them.
+/// Controls beside the search field, in terms the palette can act on without knowing what they are.
 struct PaletteHeaderAccessory {
     /// How much room the strip needs, so the search field can give it up.
     let width: CGFloat
@@ -58,8 +52,7 @@ struct PaletteHeaderAccessory {
     let firstIncompleteField: String?
     let view: AnyView
 
-    /// Tab order: the field after `current`, or nil once it has walked past the last one and focus
-    /// belongs back in the search field.
+    /// Tab order: the next field, or nil once focus belongs back in the search field.
     func fieldAfter(_ current: String?) -> String? {
         guard let current, let index = fieldNames.firstIndex(of: current) else {
             return fieldNames.first

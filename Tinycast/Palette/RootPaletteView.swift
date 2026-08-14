@@ -19,8 +19,7 @@ struct RootPaletteView: View {
     @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
     @FocusState private var searchFocused: Bool
-    /// Focus inside the inline argument fields, kept apart from the search field's own — the palette's
-    /// focus model hangs off one always-attached `TextField`. See docs/features/palette.md.
+    /// Kept apart from the search field's own focus. See docs/features/palette.md.
     @FocusState private var argumentFocused: String?
     /// Which in-window menu is open; at most one, so the state cannot disagree with itself.
     @State private var openMenu: OpenMenu?
@@ -397,8 +396,7 @@ struct RootPaletteView: View {
             if menuOpen { closeMenus() }
             return .handled
         }
-        // ⌘P toggles the clipboard's type filter; never gated on the rows, since an
-        // over-narrow filter empties them and this is the way back out.
+        // Never gated on the rows: an over-narrow filter empties them, and this is the way back out.
         .onKeyPress(keys: ["p"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             guard !isCollapsed, vm.mode == .clipboard else { return .ignored }

@@ -1,14 +1,8 @@
 import Foundation
 
-/// Searches the configured registries and fetches what an install needs.
-///
-/// The store is tried first and, being unofficial, is allowed to fail: a GitHub registry answers the
-/// same question from the repository the same extensions are published from. Results from every
-/// enabled registry are merged, the store's winning where both have the same extension, because its
-/// copy is prebuilt.
+/// Searches every enabled registry and merges the results, the store's winning because it is prebuilt.
 struct ExtensionStoreClient: Sendable {
-    /// Kept small: a search issues one request per registry, and a GitHub registry then reads a
-    /// manifest per candidate.
+    /// Kept small: a GitHub registry reads one manifest per candidate.
     private static let githubCandidateLimit = 12
 
     /// Cacheless, never `URLSession.shared`, so a registry search leaves no second copy on disk.
@@ -26,8 +20,7 @@ struct ExtensionStoreClient: Sendable {
 
     // MARK: - Search
 
-    /// One registry's results, with the error rather than a throw, so one failing registry doesn't
-    /// take the others' results with it.
+    /// The error rather than a throw, so one failing registry can't take the others' results.
     struct RegistryResult: Sendable {
         let registry: ExtensionRegistry
         let listings: [ExtensionListing]
@@ -76,9 +69,7 @@ struct ExtensionStoreClient: Sendable {
         return try ExtensionStoreResponse.parseStore(data, registry: registry)
     }
 
-    /// A registry repository has one directory per extension and no search of its own, so matching
-    /// happens here: the directory listing is fetched once, ranked with the launcher's own matcher,
-    /// and only the best few have their manifests read.
+    /// A registry has no search, so the listing is ranked here and only the best few are read.
     private func searchGitHub(
         _ query: String, registry: ExtensionRegistry
     ) async throws
@@ -130,12 +121,7 @@ struct ExtensionStoreClient: Sendable {
             data, folder: folder, registry: registry)
     }
 
-    /// The registry's directory names, read through the Git trees API rather than the contents API:
-    /// contents caps a directory at 1000 entries and says nothing about it, and `raycast/extensions`
-    /// is three times that — everything alphabetically past the cap would simply not be findable.
-    ///
-    /// Two requests, one per path segment plus the root, and cached for the session: a registry's
-    /// folder list changes on the order of days, and anonymous GitHub allows sixty requests an hour.
+    /// Trees, not contents: contents caps a directory at 1000 silently, and this repo is three times that.
     private func folderNames(in registry: ExtensionRegistry) async throws -> [String] {
         if let cached = await FolderCache.shared.names(for: registry.id) { return cached }
 
@@ -166,9 +152,7 @@ struct ExtensionStoreClient: Sendable {
 
     // MARK: - Fetching
 
-    /// Every file under one folder of a GitHub repository, walked breadth-first. Only this folder is
-    /// ever fetched — a registry repository is gigabytes, and cloning one to install a single
-    /// extension would be absurd.
+    /// One folder, walked breadth-first: a registry repository is gigabytes, and cloning it is absurd.
     func downloadFolder(
         owner: String, repository: String, path: String, ref: String, to destination: URL
     ) async throws {
@@ -223,9 +207,7 @@ struct ExtensionStoreClient: Sendable {
     }
 }
 
-/// Directory listings for the session. A registry repository's folder list is thousands of entries
-/// and changes on the order of days; re-fetching it per keystroke would spend the anonymous GitHub
-/// rate limit in a few searches.
+/// Listings for the session: re-fetching per keystroke spends GitHub's anonymous limit in a few searches.
 private actor FolderCache {
     static let shared = FolderCache()
 

@@ -1,10 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Draws an `NSImage` and plays it if it has more than one frame.
-///
-/// `Image(nsImage:)` renders a single frame and never advances, so an animated GIF reads as a still.
-/// `NSImageView` owns the frame timer, which is the one piece SwiftUI has no equivalent for.
+/// Plays a multi-frame `NSImage`. `NSImageView` owns the frame timer; SwiftUI has no equivalent.
 struct AnimatedImageView: NSViewRepresentable {
     let image: NSImage
 

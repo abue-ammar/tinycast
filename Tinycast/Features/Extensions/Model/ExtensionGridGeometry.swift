@@ -1,7 +1,4 @@
 /// Flat-index navigation over a `Grid`'s sections, so ↑/↓ move a whole row and keep their column.
-///
-/// Extensions own this rather than share the launcher's: an extension decides its own column count
-/// per screen, at runtime, and nothing outside this feature should have to move when that changes.
 struct ExtensionGridGeometry {
     /// Selectable cells per section, in visible order. An empty section is never included.
     let counts: [Int]

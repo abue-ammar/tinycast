@@ -1,10 +1,6 @@
 import AppKit
 
-/// Owns how a Raycast extension command meets the palette: launching one, leaving it, and the host
-/// callbacks (`closeMainWindow`, `popToRoot`, `showHUD`…) the running command can make.
-///
-/// `ExtensionManager` owns the runtime and the installed set; everything that shows, hides or
-/// re-points a surface goes through here, so no other type reaches into the palette on its behalf.
+/// How a command meets the palette: launching, leaving, and the host callbacks it can make.
 @MainActor
 final class ExtensionCoordinator {
     private let extensions: ExtensionManager
@@ -39,8 +35,7 @@ final class ExtensionCoordinator {
         Task { await extensions.setEnabled(settings.extensionsEnabled) }
     }
 
-    /// Enabling is also consent to run third-party JavaScript, and the one feature here with a
-    /// standing memory cost, so it asks before it starts rather than explaining afterwards.
+    /// Also consent to run third-party JavaScript, so it asks before it starts.
     func setExtensionsEnabled(_ enabled: Bool) {
         guard enabled != settings.extensionsEnabled else { return }
         guard enabled else {
@@ -71,8 +66,7 @@ final class ExtensionCoordinator {
         extensions.setShowsInLauncher(settings.extensionsShowInLauncher)
     }
 
-    /// A global shortcut fired for one command. The launcher may never have been opened, so the
-    /// entry is resolved from the installed set rather than from `AppIndex`.
+    /// Resolved from the installed set: the launcher may never have been opened.
     func runExtensionCommand(entryID: String) {
         guard settings.extensionsEnabled,
             let entry = extensions.launcherEntry(forEntryID: entryID)
@@ -88,8 +82,7 @@ final class ExtensionCoordinator {
         showExtensionSettings(for: owner)
     }
 
-    /// Uninstalling deletes files and the extension's stored preferences, so it asks first. The
-    /// palette hides before the dialog: it is a floating panel, and a sheet behind it is unreachable.
+    /// The palette hides before the dialog: it floats, and a sheet behind it is unreachable.
     func confirmUninstall(_ app: AppEntry) {
         guard let (owner, _) = extensions.resolve(app) else { return }
         confirmUninstall(owner)
@@ -111,8 +104,7 @@ final class ExtensionCoordinator {
         }
     }
 
-    /// Reclaims strays. Destructive — an orphaned support directory is an extension's own files —
-    /// so it asks first, and reports through the same pill every other outcome uses.
+    /// Destructive: an orphaned support directory is an extension's own files, so it asks first.
     func confirmCleanup(_ report: ExtensionCleanup.Report) async {
         guard !report.isEmpty else { return }
         let size = ExtensionCleanup.formatted(bytes: report.bytes)
@@ -135,8 +127,7 @@ final class ExtensionCoordinator {
                 ? "Nothing to clean up" : "Reclaimed \(ExtensionCleanup.formatted(bytes: freed.bytes))")
     }
 
-    /// What no index prunes on its own. Every other entry-removing path clears the same four stores;
-    /// left behind, they key a shortcut, a favorite or a rank to a command that no longer exists.
+    /// What no index prunes: left behind, these key a shortcut or a rank to a vanished command.
     func removeExtensionReferences(entryIDs: [String]) {
         for entryID in entryIDs {
             let action = HotKeyAction.extensionCommand(entryID: entryID)
@@ -157,15 +148,13 @@ final class ExtensionCoordinator {
             palette.prepare(mode: .extensionCommand)
             Task { await extensions.run(owner, command: command, arguments: arguments) }
         case .noView, .menuBar:
-            // A no-view command's own `showHUD` / `showToast` is the feedback; the palette gets out of
-            // the way exactly as Raycast does. An unsupported mode surfaces its reason as a HUD.
+            // A no-view command's own HUD is the feedback, so the palette gets out of the way.
             paletteCoordinator.hidePalette(restoreFocus: false)
             Task { await extensions.run(owner, command: command, arguments: arguments) }
         }
     }
 
-    /// The arguments a selected launcher row declares, or nil when it isn't an extension command with
-    /// any — what the header uses to decide whether to show the inline argument fields.
+    /// The arguments a row declares, or nil — what decides whether the header shows inline fields.
     func commandArguments(for entry: AppEntry?) -> [ExtensionCommandArgument]? {
         guard let entry, entry.kind == .extensionCommand,
             let (_, command) = extensions.resolve(entry), !command.arguments.isEmpty
