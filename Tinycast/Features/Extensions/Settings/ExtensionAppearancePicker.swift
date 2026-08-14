@@ -114,9 +114,13 @@ struct ExtensionAppearancePicker: View {
                         }
                     }
                     .frame(width: Metrics.contentWidth, alignment: .leading)
+                    .hideNativeScrollers()
                 }
                 .overflowFade()
-                .frame(width: 396, height: 240)
+                .thinScrollbar()
+                // The column, never the popover: framed at the outer width this overhung the inset
+                // by half the difference on each side, which is what put the grid outside the margin.
+                .frame(width: Metrics.contentWidth, height: Metrics.gridHeight)
             }
 
             HStack {
