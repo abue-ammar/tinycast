@@ -62,8 +62,9 @@ struct ExtensionInstaller: Sendable {
             let source = workspace.appendingPathComponent("source", isDirectory: true)
             try await client.downloadFolder(
                 owner: owner, repository: repository, path: path, ref: ref, to: source)
-            try await build(at: source, onProgress: onProgress)
-            prepared = try stage(source)
+            prepared = try await build(
+                at: source, into: workspace.appendingPathComponent("build", isDirectory: true),
+                onProgress: onProgress)
         }
         onProgress(.installing)
         return try ExtensionCatalog.install(from: prepared)
@@ -108,7 +109,10 @@ struct ExtensionInstaller: Sendable {
 
     // MARK: - Source
 
-    private func build(at source: URL, onProgress: @Sendable @escaping (Progress) -> Void) async throws {
+    /// Returns the directory to install from: `output` when `ray` produced it, else `source`.
+    private func build(
+        at source: URL, into output: URL, onProgress: @Sendable @escaping (Progress) -> Void
+    ) async throws -> URL {
         guard let resolved = packageManager.resolve() else {
             throw ExtensionStoreError.noPackageManager
         }
@@ -124,37 +128,35 @@ struct ExtensionInstaller: Sendable {
         }
 
         onProgress(.building)
-        let build = try await runBuild(at: source, resolved: resolved, node: node)
+        let ray = source.appendingPathComponent("node_modules/.bin/ray")
+        guard FileManager.default.isExecutableFile(atPath: ray.path) else {
+            // Not a Raycast build. Its own script is the only contract there is, and it emits in place.
+            let build = try await run(
+                resolved.url, arguments: resolved.manager.buildArguments, in: source, node: node)
+            guard build.status == 0 else {
+                throw ExtensionStoreError.buildFailed(build.trimmedOutput)
+            }
+            return try validated(source)
+        }
+
+        // `ray` directly, never the manifest's `build` script: that script is `ray build`, whose
+        // default environment is `dev`, and dev installs into the local Raycast rather than emitting.
+        // `-o` must not be the source — ray clears its output directory, which took `assets/` with it.
+        let build = try await run(
+            ray, arguments: ["build", "-e", "dist", "-o", output.path, "--non-interactive"],
+            in: source, node: node)
         guard build.status == 0 else {
             throw ExtensionStoreError.buildFailed(build.trimmedOutput)
         }
+        return try validated(output)
     }
 
-    /// `ray` directly, never the manifest's `build` script. That script is `ray build`, whose default
-    /// environment is `dev` — which *installs into the local Raycast* and emits nothing here, so the
-    /// install failed with "no built command bundles" after a build that reported success.
-    /// `-e dist -o` puts one `<command>.js` beside the manifest, which is what gets copied.
-    private func runBuild(
-        at source: URL, resolved: (manager: ExtensionPackageManager, url: URL), node: URL
-    ) async throws -> CommandResult {
-        let ray = source.appendingPathComponent("node_modules/.bin/ray")
-        guard FileManager.default.isExecutableFile(atPath: ray.path) else {
-            // An extension that builds some other way still gets its own script.
-            return try await run(
-                resolved.url, arguments: resolved.manager.buildArguments, in: source, node: node)
-        }
-        return try await run(
-            ray, arguments: ["build", "-e", "dist", "-o", source.path, "--non-interactive"],
-            in: source, node: node)
-    }
-
-    /// `ray build` writes the bundles beside the manifest, so what to install is the source directory
-    /// itself — minus `node_modules`, which `ExtensionCatalog.install` already declines to copy.
-    private func stage(_ source: URL) throws -> URL {
+    private func validated(_ directory: URL) throws -> URL {
         guard
-            FileManager.default.fileExists(atPath: source.appendingPathComponent("package.json").path)
+            FileManager.default.fileExists(
+                atPath: directory.appendingPathComponent("package.json").path)
         else { throw ExtensionStoreError.notAnExtension }
-        return source
+        return directory
     }
 
     // MARK: - Running a child process

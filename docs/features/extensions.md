@@ -231,13 +231,21 @@ entries and says nothing about having done so, and `raycast/extensions` holds ov
 under contents, everything alphabetically past the cap was simply unfindable.
 
 Installing from a source registry runs `<package manager> install --ignore-scripts`, then
-**`node_modules/.bin/ray build -e dist -o <dir>` directly — never the manifest's `build` script.**
-That script is `ray build`, whose default environment is `dev`, and dev mode *installs into the local
-Raycast* rather than emitting anything. The build reported success and exited 0 while writing nothing
-beside the manifest, so every source install failed afterwards with "no built command bundles", and
-each attempt quietly added the extension to the user's own Raycast. `-e dist` also type-checks, so an
-extension that does not compile now fails at the build rather than at the copy. An extension without
-`ray` falls back to its own build script. Lifecycle scripts are skipped on purpose: the
+**`node_modules/.bin/ray build -e dist -o <build dir>` directly — never the manifest's `build`
+script.** That script is `ray build`, whose default environment is `dev`, and dev mode *installs into
+the local Raycast* rather than emitting anything. The build reported success and exited 0 while
+writing nothing beside the manifest, so every source install failed afterwards with "no built command
+bundles", and each attempt quietly added the extension to the user's own Raycast.
+
+**`-o` points at a sibling `build/` directory, never at the source.** `ray` clears its output
+directory first, so aiming it at the source deleted `assets/` before the install could copy it — the
+extension arrived with no icon. Building into its own directory leaves the source intact and yields
+exactly the layout `ExtensionCatalog.install` expects: `package.json`, one `<command>.js` each, and
+`assets/`. What it installs from is that directory, not the source.
+
+`-e dist` also type-checks, so an extension that does not compile now fails at the build rather than
+at the copy. An extension without `ray` falls back to its own build script and installs from the
+source, which is the only contract such an extension offers. Lifecycle scripts are skipped on purpose: the
 build script is the contract, a `postinstall` is code nobody asked to run. The package manager is
 `Automatic` by default, which takes the first of pnpm, Bun, Yarn and npm that is installed — a GUI app
 inherits none of a login shell's `PATH`, so `ExtensionPackageManager.searchPaths` is where they are
