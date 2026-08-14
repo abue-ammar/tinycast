@@ -111,6 +111,19 @@ final class ExtensionCoordinator {
         }
     }
 
+    /// What no index prunes on its own. Every other entry-removing path clears the same four stores;
+    /// left behind, they key a shortcut, a favorite or a rank to a command that no longer exists.
+    func removeExtensionReferences(entryIDs: [String]) {
+        for entryID in entryIDs {
+            let action = HotKeyAction.extensionCommand(entryID: entryID)
+            if core.hotKeys.recordingAction == action { core.hotKeys.recordingAction = nil }
+            core.hotKeys.setBinding(nil, for: action)
+            core.launcherRanking.reset(itemKey: entryID)
+        }
+        core.favorites.remove(keys: Set(entryIDs))
+        core.visibility.removeItemKeys(Set(entryIDs))
+    }
+
     /// A view command takes over the palette; a no-view command closes it and runs headless.
     func runExtensionCommand(_ app: AppEntry, arguments: [String: String] = [:]) {
         guard let (owner, command) = extensions.resolve(app) else { return }

@@ -174,9 +174,7 @@ final class AppCore {
                 self?.extensionCoordinator.runExtensionCommand(entryID: entryID)
             }
             extensions.onDidUninstall = { [weak self] entryIDs in
-                for entryID in entryIDs {
-                    self?.hotKeys.setBinding(nil, for: .extensionCommand(entryID: entryID))
-                }
+                self?.extensionCoordinator.removeExtensionReferences(entryIDs: entryIDs)
             }
             hotKeys.displayName = { [weak self] action in self?.hotKeyDisplayName(for: action) }
             KeyShortcut.displayedHyperChord = { [settings] in

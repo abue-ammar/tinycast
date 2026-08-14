@@ -48,8 +48,7 @@ struct ExtensionInstaller: Sendable {
     func install(
         _ listing: ExtensionListing, onProgress: @Sendable @escaping (Progress) -> Void
     ) async throws -> InstalledExtension {
-        let workspace = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tinycast-install-\(UUID().uuidString)", isDirectory: true)
+        let workspace = ExtensionCleanup.workspace(in: FileManager.default.temporaryDirectory)
         try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: workspace) }
 

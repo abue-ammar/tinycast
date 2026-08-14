@@ -73,10 +73,17 @@ enum ExtensionCatalog {
 
     /// Per-extension `environment.supportPath` — an extension's own scratch directory.
     static func supportPath(for name: String) -> URL {
-        let safe = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: "@", with: "")
-        return supportDirectory()
-            .appendingPathComponent("extension-support", isDirectory: true)
-            .appendingPathComponent(safe, isDirectory: true)
+        supportRoot().appendingPathComponent(safeName(name), isDirectory: true)
+    }
+
+    static func supportRoot() -> URL {
+        supportDirectory().appendingPathComponent("extension-support", isDirectory: true)
+    }
+
+    /// Extension names are npm-style (`spotify-player`, `@scope/name`); flatten to one path segment.
+    /// Shared, because a second copy that drifts orphans every file the first one wrote.
+    static func safeName(_ name: String) -> String {
+        name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: "@", with: "")
     }
 
     private static func supportDirectory() -> URL {
@@ -179,7 +186,10 @@ enum ExtensionCatalog {
         return InstalledExtension(manifest: installedManifest, directory: destination)
     }
 
+    /// Both paths an extension owns. The scratch directory is the extension's own, so nothing else
+    /// will ever collect it — and the uninstall dialog promises it goes.
     static func uninstall(_ installed: InstalledExtension) throws {
+        try? FileManager.default.removeItem(at: supportPath(for: installed.manifest.name))
         try FileManager.default.removeItem(at: installed.directory)
     }
 

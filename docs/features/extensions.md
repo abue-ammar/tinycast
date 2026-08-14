@@ -113,6 +113,7 @@ Two host-call flavours:
 | `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus the async `exec` and the shared PATH resolver |
 | `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
 | `Service/ExtensionCatalog.swift` | discovery on disk, install, uninstall, import-from-Raycast |
+| `Service/ExtensionCleanup.swift` | the build workspace's name, the launch sweep, and reclaiming orphans |
 | `Service/ExtensionManager.swift` | the single owner: installed set, the one running session, launcher entries |
 | `Model/ExtensionManifest.swift` | `package.json` → commands, preferences, arguments |
 | `Model/RenderNode.swift` | the decoded render tree (`RenderTree` / `RenderNode` / `RenderValue`) |
@@ -337,6 +338,39 @@ harnesses read the same three variables.
 Two JavaScriptCore differences that have already bitten and are worth remembering: `Error.stack`
 contains frames only (V8 repeats the message, so the headline has to be prepended by hand), and
 `MessageChannel` is absent, so React's scheduler falls back to `setTimeout`.
+
+## Where things are stored, and what uninstall removes
+
+Everything is under `~/Library/Application Support/<bundle id>/`, keyed by bundle id so a Debug run
+never shares with an installed copy.
+
+| What | Where | Gone on uninstall |
+| --- | --- | --- |
+| The extension | `extensions/<name>/` | yes |
+| `LocalStorage`, `Cache`, preferences | `extension-data/<safe name>.json` | yes |
+| `environment.supportPath` | `extension-support/<safe name>/` | yes |
+| Icon override | `UserDefaults` → `extensionAppearances` | yes |
+| Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |
+| Favorites, hidden items | `UserDefaults` → `favoriteApps`, `hiddenItemKeys` | yes |
+| Launch ranking | `Caches/<bundle id>/launcher-ranking.json` | yes |
+
+`ExtensionCatalog.safeName` maps an npm-style name onto one path segment, and is the **only** copy of
+that mapping — a second one that drifts orphans every file the first one wrote.
+
+The last three rows are pruned by `ExtensionCoordinator.removeExtensionReferences`, reached through
+`ExtensionManager.onDidUninstall`. An extension's `preferenceKey` is its entry id, because it has no
+bundle id, so `extension:<name>/<command>` is what those stores are keyed by. `CustomCommandCoordinator`
+and `QuicklinkCoordinator` prune the same stores the same way; extensions are not a special case.
+
+**Builds happen in `$TMPDIR/tinycast-install-<UUID>/`**, named by `ExtensionCleanup.workspace` so the
+sweep below cannot disagree about what a workspace is called. A `defer` removes it on every exit an
+install can take. A crash mid-build is the one it cannot cover, so `ExtensionManager.start` sweeps
+strays once at launch — deliberately not gated on `extensionsEnabled`, because a stranded
+`node_modules` is ours either way.
+
+`$TMPDIR` is kept on purpose over a directory of our own: it is the same APFS volume, equally excluded
+from Time Machine, and `com.apple.tmp_cleaner` reclaims it as a second backstop. `~/Library/Caches`
+has no such daemon, so a leak there would be permanent.
 
 ## Making one look native
 

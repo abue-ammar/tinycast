@@ -64,6 +64,10 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         self.appIndex = appIndex
         self.coordinator = coordinator
         runtime.setDelegate(self)
+        // Not gated on `isEnabled`: a workspace a crash stranded is ours either way, and whoever
+        // just turned extensions off is the one who wants the disk back.
+        let temp = FileManager.default.temporaryDirectory
+        Task.detached(priority: .utility) { ExtensionCleanup.sweepWorkspaces(in: temp) }
     }
 
     // MARK: - The switches

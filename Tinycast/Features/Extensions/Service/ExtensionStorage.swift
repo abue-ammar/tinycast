@@ -195,8 +195,6 @@ final class ExtensionStorage {
     }
 
     private func fileURL(for name: String) -> URL {
-        // Extension names are npm-style (`spotify-player`, `@scope/name`); flatten to one path segment.
-        let safe = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: "@", with: "")
-        return directory.appendingPathComponent("\(safe).json")
+        directory.appendingPathComponent("\(ExtensionCatalog.safeName(name)).json")
     }
 }
