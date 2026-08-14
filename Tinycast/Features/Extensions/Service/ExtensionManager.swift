@@ -143,10 +143,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             url: owner.directory,
             bundleID: nil,
             kind: .extensionCommand,
-            imageIconPath: appearance == nil
-                ? (commandIconPath(command, in: owner) ?? owner.iconPath) : nil,
-            kindLabelOverride: owner.title,
-            appearance: appearance)
+            iconOverride: icon(for: command, in: owner, appearance: appearance),
+            labelOverride: owner.title)
     }
 
     /// Settings picked (or cleared) an icon: persist it and re-publish, so the launcher rows change
@@ -160,6 +158,21 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     func replaceAppearances(_ overrides: [String: ExtensionAppearance]) {
         appearances.replace(overrides)
         publishLauncherEntries()
+    }
+
+    /// A chosen appearance always wins; otherwise the artwork the extension ships, at the extent this
+    /// feature decides. The launcher is handed the answer, never the reasoning.
+    private func icon(
+        for command: ExtensionCommand, in owner: InstalledExtension,
+        appearance: ExtensionAppearance?
+    ) -> EntryIcon {
+        if let appearance {
+            return .tintedSymbol(name: appearance.symbol, tint: appearance.tint.symbolTint)
+        }
+        guard let path = commandIconPath(command, in: owner) ?? owner.iconPath else {
+            return .symbol("puzzlepiece.extension")
+        }
+        return .artwork(path: path, extent: ExtensionIconCache.extent)
     }
 
     private func commandIconPath(_ command: ExtensionCommand, in owner: InstalledExtension) -> String? {

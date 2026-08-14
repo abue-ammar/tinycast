@@ -86,9 +86,9 @@ struct LauncherScreen: PaletteScreen {
         return values
     }
 
-    /// The selected row's own icon file, drawn as the argument strip's leading chip.
-    func argumentIconPath(at selection: Int) -> String? {
-        entry(at: selection)?.imageIconPath
+    /// The selected row's own glyph, drawn as the argument strip's leading chip.
+    func argumentIcon(at selection: Int) -> EntryIcon? {
+        entry(at: selection)?.iconSource
     }
 
     private func entry(at selection: Int) -> AppEntry? {

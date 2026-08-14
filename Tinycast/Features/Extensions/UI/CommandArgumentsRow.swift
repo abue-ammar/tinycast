@@ -8,8 +8,8 @@ import SwiftUI
 /// hands focus back and forth rather than replacing it.
 struct CommandArgumentsRow: View {
     let arguments: [ExtensionCommandArgument]
-    /// The selected command's icon, drawn as a leading chip so the fields read as belonging to it.
-    let icon: String?
+    /// The selected command's glyph, drawn as a leading chip so the fields read as belonging to it.
+    let icon: EntryIcon?
     /// Binding factory keyed by argument name — the values live in the palette view's state.
     let value: (String) -> Binding<String>
     @FocusState.Binding var focused: String?
@@ -19,8 +19,7 @@ struct CommandArgumentsRow: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
             if let icon {
-                ExtensionIconView(
-                    resolved: ExtensionImage.Resolved(source: .file(icon)), size: Self.height)
+                EntryIconView(source: icon).frame(width: Self.height, height: Self.height)
             }
             ForEach(arguments, id: \.name) { argument in
                 ArgumentField(

@@ -10,23 +10,14 @@ struct AppIconView: View {
         _image = State(initialValue: Self.cached(app))
     }
 
-    /// Cache-only, so a warm icon paints on the same frame. An extension command is the one entry
-    /// whose icon is neither its file's nor a plain symbol: a chosen appearance tints the tile, and
-    /// otherwise it draws whatever image the extension ships.
+    /// Cache-only, so a warm icon paints on the same frame. Which of the four kinds of glyph an entry
+    /// wants is `iconSource`'s answer, not this view's.
     private static func cached(_ app: AppEntry) -> NSImage? {
-        if app.isSymbolIcon {
-            return IconCache.cachedSymbol(named: app.symbolIconName, tint: app.symbolTint)
-        }
-        if let path = app.imageIconPath { return ExtensionIconCache.cached(atPath: path) }
-        return IconCache.cached(forFile: app.url.path)
+        IconCache.cached(app.iconSource, fileURL: app.url)
     }
 
     private static func load(_ app: AppEntry) async -> NSImage? {
-        if app.isSymbolIcon {
-            return await IconCache.loadSymbolAsync(named: app.symbolIconName, tint: app.symbolTint)
-        }
-        if let path = app.imageIconPath { return await ExtensionIconCache.loadAsync(atPath: path) }
-        return await IconCache.loadAsync(forFile: app.url.path)
+        await IconCache.loadAsync(app.iconSource, fileURL: app.url)
     }
 
     var body: some View {

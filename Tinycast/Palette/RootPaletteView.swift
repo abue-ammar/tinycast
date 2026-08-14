@@ -461,7 +461,7 @@ struct RootPaletteView: View {
             if let arguments = selectedCommandArguments {
                 CommandArgumentsRow(
                     arguments: arguments,
-                    icon: (screen as? LauncherScreen)?.argumentIconPath(
+                    icon: (screen as? LauncherScreen)?.argumentIcon(
                         at: selection(count: screen.rows.count)),
                     value: argumentBinding,
                     focused: $argumentFocused,
@@ -528,7 +528,7 @@ struct RootPaletteView: View {
         let strip = CommandArgumentsRow.totalWidth(
             for: arguments,
             hasIcon: (screen as? LauncherScreen)?
-                .argumentIconPath(at: selection(count: screen.rows.count)) != nil)
+                .argumentIcon(at: selection(count: screen.rows.count)) != nil)
         let chrome = Theme.Size.headerIconSlot + Theme.Spacing.md * 4
         // +3pt so the caret sits after the last glyph rather than on top of it.
         return min(max(typed + 3, 18), max(Theme.Size.panelWidth - strip - chrome, 60))

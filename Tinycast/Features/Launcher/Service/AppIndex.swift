@@ -77,12 +77,10 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var alternateNames: [String] = []
     /// `CFBundleExecutable`, matched literally as a last resort. Applications only.
     var executableName: String?
-    /// An image file to draw instead of a symbol tile — an extension ships its own icon. Nil elsewhere.
-    var imageIconPath: String?
-    /// The owning extension's title, which reads better than the flat "Extension" label.
-    var kindLabelOverride: String?
-    /// A user-chosen symbol and tint that replaces whatever the extension ships. Nil elsewhere.
-    var appearance: ExtensionAppearance?
+    /// Set by the feature that produced the entry when its glyph isn't derivable from `kind`.
+    var iconOverride: EntryIcon?
+    /// A per-entry label where the kind's own reads too flat — an extension's title, say.
+    var labelOverride: String?
 
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
@@ -93,7 +91,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             bundleID: bundleID, executableName: executableName)
     }
 
-    var kindLabel: String { kindLabelOverride ?? kind.descriptor.label }
+    var kindLabel: String { labelOverride ?? kind.descriptor.label }
 
     /// The hotkey action for this entry, or nil for built-ins and unaddressable bundles.
     var hotKeyAction: HotKeyAction? {
@@ -121,22 +119,17 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// Synthetic entries have no file to reveal; a destination is its record's own action.
     var canRevealInFinder: Bool { kind.descriptor.canRevealInFinder }
 
-    /// Synthetic entries draw an SF Symbol tile; everything else uses its file icon. An extension
-    /// command is the one kind decided per entry — it draws whatever icon it ships, unless the user
-    /// chose an appearance, which always wins.
-    var isSymbolIcon: Bool {
-        guard kind == .extensionCommand else { return kind.descriptor.isSymbolIcon }
-        return appearance != nil || imageIconPath == nil
+    /// What this row draws, and the only thing any icon path needs to ask.
+    var iconSource: EntryIcon { iconOverride ?? defaultIcon }
+
+    /// Derived from the kind alone: synthetic entries get a symbol tile, everything else its file.
+    private var defaultIcon: EntryIcon {
+        guard kind.descriptor.isSymbolIcon else { return .file }
+        return .symbol(symbolName ?? kindSymbol)
     }
 
-    /// The tint filling the symbol tile, for the one kind that can be re-skinned.
-    var symbolTint: SymbolTint? { appearance?.tint.symbolTint }
-
-    var symbolIconName: String {
-        if let appearance { return appearance.symbol }
-        if let symbolName { return symbolName }
+    private var kindSymbol: String {
         switch kind {
-        case .extensionCommand: return "puzzlepiece.extension"
         case .quicklink: return Quicklink.sfSymbol
         case .snippet: return "text.quote"
         case .customCommand: return CustomCommand.sfSymbol
@@ -144,21 +137,14 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol ?? "questionmark"
-        case .application, .systemSettings: return "questionmark"
+        case .application, .systemSettings, .extensionCommand: return "questionmark"
         }
     }
 
-    var icon: NSImage {
-        if isSymbolIcon { return IconCache.symbolIcon(named: symbolIconName, tint: symbolTint) }
-        // An extension ships a PNG, which `NSWorkspace` would answer with the generic document icon.
-        if let imageIconPath { return ExtensionIconCache.icon(atPath: imageIconPath) }
-        return IconCache.icon(forFile: url.path)
-    }
+    var icon: NSImage { IconCache.icon(for: iconSource, fileURL: url) }
 
-    /// Icon identity for a row's async load: a re-skin has to redraw even though `id` is unchanged.
-    var iconKey: String {
-        "\(id)|\(appearance?.symbol ?? "")|\(appearance?.tint.rawValue ?? "")"
-    }
+    /// Icon identity for a row's async load: re-skinning changes the glyph while `id` stays put.
+    var iconKey: String { "\(id)|\(iconSource)" }
 }
 
 @MainActor

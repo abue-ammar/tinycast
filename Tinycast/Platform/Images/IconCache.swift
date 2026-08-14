@@ -16,9 +16,22 @@ struct IconCacheGeneration {
 
 /// A symbol tile's fill and the cache key that names it, so `IconCache` needn't know the feature
 /// type that chose the colour.
-struct SymbolTint: Equatable, Sendable {
+struct SymbolTint: Hashable, Sendable {
     let key: String
     let color: NSColor
+}
+
+/// What a row draws in its leading slot.
+///
+/// A feature whose glyph isn't derivable from its entry's kind sets one of these rather than adding a
+/// branch to `AppEntry` — which is how the launcher's model ended up naming a feature it draws for.
+/// `artwork` carries its own extent because the size is the *caller's* decision; see
+/// `IconCache.appIconExtent` for the reference every extent is judged against.
+enum EntryIcon: Hashable, Sendable {
+    case file
+    case symbol(String)
+    case tintedSymbol(name: String, tint: SymbolTint)
+    case artwork(path: String, extent: CGFloat)
 }
 
 /// App icons by path, downsampled and byte-bounded, so rows don't re-hit `NSWorkspace`.
@@ -177,6 +190,37 @@ enum IconCache {
 
     private static func artworkKey(_ path: String, _ extent: CGFloat) -> NSString {
         "artwork:\(extent):\(path)" as NSString
+    }
+
+    // MARK: - Drawing an `EntryIcon`
+
+    /// One switch, so a row never has to know which of these paths its entry wants.
+    static func icon(for source: EntryIcon, fileURL: URL) -> NSImage {
+        switch source {
+        case .file: return icon(forFile: fileURL.path)
+        case .symbol(let name): return symbolIcon(named: name)
+        case .tintedSymbol(let name, let tint): return symbolIcon(named: name, tint: tint)
+        case .artwork(let path, let extent): return artwork(atPath: path, extent: extent)
+        }
+    }
+
+    static func cached(_ source: EntryIcon, fileURL: URL) -> NSImage? {
+        switch source {
+        case .file: return cached(forFile: fileURL.path)
+        case .symbol(let name): return cachedSymbol(named: name)
+        case .tintedSymbol(let name, let tint): return cachedSymbol(named: name, tint: tint)
+        case .artwork(let path, let extent): return cachedArtwork(atPath: path, extent: extent)
+        }
+    }
+
+    static func loadAsync(_ source: EntryIcon, fileURL: URL) async -> NSImage? {
+        switch source {
+        case .file: return await loadAsync(forFile: fileURL.path)
+        case .symbol(let name): return await loadSymbolAsync(named: name)
+        case .tintedSymbol(let name, let tint): return await loadSymbolAsync(named: name, tint: tint)
+        case .artwork(let path, let extent):
+            return await loadArtworkAsync(atPath: path, extent: extent)
+        }
     }
 
     /// Cache-only lookup for `loadFittedAsync`.
