@@ -80,7 +80,6 @@ final class ExtensionRuntime: @unchecked Sendable {
         else { throw RuntimeError.runtimeResourceMissing }
 
         guard let context = JSContext() else { throw RuntimeError.bootFailed("no JSContext") }
-        self.context = context
 
         var thrown: String?
         context.exceptionHandler = { _, exception in
@@ -89,6 +88,8 @@ final class ExtensionRuntime: @unchecked Sendable {
         installHost(in: context)
         context.evaluateScript(source, withSourceURL: url)
         if let thrown { throw RuntimeError.bootFailed(thrown) }
+        // Stored only once it is known good: a half-built one would make every later boot a no-op.
+        self.context = context
 
         // From here on an exception is a bug in a command, not in the runtime: report it and keep going.
         context.exceptionHandler = { [weak self] _, exception in
