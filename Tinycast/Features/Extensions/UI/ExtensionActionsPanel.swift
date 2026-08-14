@@ -1,5 +1,20 @@
 import SwiftUI
 
+/// Sized here rather than in `Theme`: this is the extensions surface, and the palette's own menus
+/// need no cap because they are short by construction.
+///
+/// File-scoped so the row and the height that counts rows read the same numbers. A cap expressed in
+/// points would drift the moment a row's padding changed, and the panel would cut a row in half.
+private enum Metrics {
+    static let width: CGFloat = 300
+    /// The glyph slot plus its breathing room — the tallest thing a row contains.
+    static let rowHeight: CGFloat = Theme.Size.menuIcon + Theme.Spacing.md * 2
+    static let rowSpacing: CGFloat = 1
+    /// Six rows and half of the seventh, so a long panel reads as scrollable rather than clipped.
+    static let visibleRows: CGFloat = 6.5
+    static var maxHeight: CGFloat { visibleRows * (rowHeight + rowSpacing) }
+}
+
 /// The ⌘K panel of a running extension command.
 ///
 /// Separate from `PopoverMenu` on purpose. An extension declares its own action panel, and a real one
@@ -12,14 +27,9 @@ struct ExtensionActionsPanel: View {
     @Binding var selection: Int
     let onActivate: (Int) -> Void
 
-    /// Sized here rather than in `Theme`: this is the extensions surface, and the palette's own menus
-    /// have no cap because they are short by construction.
-    private enum Metrics {
-        static let width: CGFloat = 300
-        /// The panel less both bars, so a long panel is bounded by the window rather than clipped by it.
-        static let maxHeight: CGFloat =
-            Theme.Size.panelHeight - Theme.Size.headerHeight - Theme.Size.bottomBarHeight
-    }
+    /// Set when the pointer moved the highlight, and cleared the moment it is read. A hovered row is
+    /// already visible by definition, so scrolling to it would drag the list out from under the cursor.
+    @State private var hoverSelection: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -36,25 +46,37 @@ struct ExtensionActionsPanel: View {
             // The header stays put while rows move under it, so what the panel belongs to stays read.
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: Metrics.rowSpacing) {
                         // Index-as-id is stable: a panel's rows never reorder while it is open.
                         ForEach(items.indices, id: \.self) { index in
                             ExtensionActionRow(
                                 item: items[index],
                                 selected: index == selection,
-                                onHover: { selection = index },
+                                onHover: {
+                                    hoverSelection = index
+                                    selection = index
+                                },
                                 onActivate: { onActivate(index) }
                             )
                             .id(index)
                         }
                     }
-                    .hideNativeScrollers()
                 }
                 .frame(maxHeight: Metrics.maxHeight)
                 // Without this a panel shorter than the cap rubber-bands against nothing.
                 .scrollBounceBehavior(.basedOnSize)
-                .thinScrollbar()
-                .onChange(of: selection) { proxy.scrollTo(selection, anchor: .center) }
+                // No scrollbar at all, like a real macOS menu: the half row the cap leaves showing is
+                // the affordance. `thinScrollbar` is tuned to the palette's floating bars, and the
+                // native scroller draws through the glass corner.
+                .scrollIndicators(.hidden)
+                .onChange(of: selection) {
+                    let movedByPointer = hoverSelection == selection
+                    hoverSelection = nil
+                    guard !movedByPointer else { return }
+                    // No anchor: scroll the least that reveals the row, so a keyboard step near the
+                    // middle doesn't re-centre the whole list under the reader's eye.
+                    proxy.scrollTo(selection)
+                }
             }
         }
         .padding(Theme.Spacing.sm)
@@ -93,8 +115,8 @@ private struct ExtensionActionRow: View {
                 }
             }
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, Theme.Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // Fixed, not padded: the cap above counts rows, so a row has to be one known height.
+            .frame(maxWidth: .infinity, minHeight: Metrics.rowHeight, alignment: .leading)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
