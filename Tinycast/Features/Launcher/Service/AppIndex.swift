@@ -151,7 +151,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var icon: NSImage {
         if isSymbolIcon { return IconCache.symbolIcon(named: symbolIconName, tint: symbolTint) }
         // An extension ships a PNG, which `NSWorkspace` would answer with the generic document icon.
-        if let imageIconPath { return IconCache.imageIcon(atPath: imageIconPath) }
+        if let imageIconPath { return ExtensionIconCache.icon(atPath: imageIconPath) }
         return IconCache.icon(forFile: url.path)
     }
 

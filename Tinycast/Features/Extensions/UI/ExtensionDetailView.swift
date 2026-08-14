@@ -387,6 +387,6 @@ private struct ExtensionMarkdownImage: View {
                     .frame(height: 120)
             }
         }
-        .task(id: url) { image = await IconCache.loadRemoteAsync(url, downsample: false) }
+        .task(id: url) { image = await ExtensionIconCache.loadRemoteAsync(url, asIcon: false) }
     }
 }

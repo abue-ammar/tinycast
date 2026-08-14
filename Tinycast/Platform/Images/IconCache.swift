@@ -27,7 +27,7 @@ enum IconCache {
     private final class Cache: NSCache<NSString, NSImage>, @unchecked Sendable {}
 
     // Plenty for the ≤24pt draw, and a scrolled `LazyVStack` pins every row's icon.
-    private static let displayPixel: CGFloat = 48
+    static let displayPixel: CGFloat = 48
 
     private static let cache: Cache = {
         let cache = Cache()
@@ -48,14 +48,10 @@ enum IconCache {
     static func cachedSymbol(named name: String, tint: SymbolTint? = nil) -> NSImage? {
         cache.object(forKey: symbolKey(name, tint))
     }
-    static func cachedImage(atPath path: String) -> NSImage? {
-        cache.object(forKey: imageKey(path))
-    }
 
     private static func symbolKey(_ name: String, _ tint: SymbolTint?) -> NSString {
         "symbol:\(tint?.key ?? "plain"):\(name)" as NSString
     }
-    private static func imageKey(_ path: String) -> NSString { ("image:" + path) as NSString }
 
     /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
     private struct Decoded: @unchecked Sendable {
@@ -81,58 +77,6 @@ enum IconCache {
         return await Task.detached(priority: .userInitiated) {
             Decoded(image: symbolIcon(named: name, tint: tint))
         }.value.image
-    }
-
-    static func loadImageAsync(atPath path: String) async -> NSImage? {
-        if let cached = cachedImage(atPath: path) { return cached }
-        return await Task.detached(priority: .userInitiated) {
-            Decoded(image: imageIcon(atPath: path))
-        }.value.image
-    }
-
-    /// Cacheless, never `URLSession.shared`: an extension names these URLs, so the in-memory cache
-    /// above stays the only copy and nothing it asks for is written to a shared on-disk cache.
-    private static let session: URLSession = {
-        let config = URLSessionConfiguration.ephemeral
-        config.urlCache = nil
-        return URLSession(configuration: config)
-    }()
-
-    /// An extension list row or Detail markdown can reference a remote image; fetch once, then serve
-    /// from the same cache as every other row icon. A failure caches nothing, so a transient error
-    /// retries on the next render. `downsample` is off for markdown images, drawn far larger than a row.
-    static func loadRemoteAsync(_ url: URL, downsample: Bool = true) async -> NSImage? {
-        let key = ("image:\(downsample ? "" : "full:")" + url.absoluteString) as NSString
-        if let cached = cache.object(forKey: key) { return cached }
-        guard let (data, _) = try? await session.data(from: url) else { return nil }
-        let decoded = await Task.detached(priority: .userInitiated) {
-            Decoded(image: NSImage(data: data))
-        }.value
-        guard let source = decoded.image else { return nil }
-        guard downsample else {
-            cache.setObject(source, forKey: key, cost: Int(source.size.width * source.size.height * 4))
-            return source
-        }
-        let (icon, cost) = downsampled(source)
-        cache.setObject(icon, forKey: key, cost: cost)
-        return icon
-    }
-
-    /// An icon read straight from an image file — an extension ships a PNG, which `NSWorkspace` would
-    /// otherwise answer with the generic document icon.
-    ///
-    /// Fitted like a file icon rather than merely downsampled: an extension's PNG paints edge to edge,
-    /// where a macOS app icon leaves a margin inside its canvas. Drawn at the same size the extension
-    /// would read a size larger than every app beside it in the same list.
-    static func imageIcon(atPath path: String) -> NSImage {
-        let key = imageKey(path)
-        if let cached = cache.object(forKey: key) { return cached }
-        guard let source = NSImage(contentsOfFile: path) else {
-            return symbolIcon(named: "puzzlepiece.extension")
-        }
-        let (icon, cost) = fittedToArtwork(source)
-        cache.setObject(icon, forKey: key, cost: cost)
-        return icon
     }
 
     static func icon(forFile path: String) -> NSImage {
@@ -193,7 +137,7 @@ enum IconCache {
     }
 
     /// The share of its canvas an app icon paints; folders and documents differ, so scale.
-    private static let artworkExtent: CGFloat = 0.83
+    static let artworkExtent: CGFloat = 0.83
 
     /// Cache-only lookup for `loadFittedAsync`.
     static func cachedFitted(forFile path: String) -> NSImage? {
@@ -245,7 +189,7 @@ enum IconCache {
     }
 
     /// The artwork's larger dimension, measured at 2×: a 1× grid over-reads the extent.
-    private static func paintedExtent(_ source: NSImage) -> CGFloat? {
+    static func paintedExtent(_ source: NSImage) -> CGFloat? {
         let pixels = Int(displayPixel * 2)
         guard
             let rep = NSBitmapImageRep(
@@ -285,7 +229,7 @@ enum IconCache {
     }
 
     /// Draws `source` into `frame` on a `displayPixel`-square canvas.
-    private static func rasterized(_ source: NSImage, into frame: NSRect) -> (NSImage, Int) {
+    static func rasterized(_ source: NSImage, into frame: NSRect) -> (NSImage, Int) {
         // Fixed 2×, `NSScreen.main` being main-thread-only, so a detached decode works.
         let pixels = Int(displayPixel * 2)
         let fallbackCost = Int(displayPixel * displayPixel * 4)

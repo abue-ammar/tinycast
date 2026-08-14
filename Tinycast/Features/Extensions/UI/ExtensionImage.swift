@@ -347,9 +347,9 @@ struct ExtensionIconView: View {
     private func load() async {
         switch resolved?.source {
         case .file(let path):
-            loaded = await IconCache.loadImageAsync(atPath: path)
+            loaded = await ExtensionIconCache.loadAsync(atPath: path)
         case .remote(let url):
-            loaded = await IconCache.loadRemoteAsync(url)
+            loaded = await ExtensionIconCache.loadRemoteAsync(url)
         default:
             loaded = nil
         }

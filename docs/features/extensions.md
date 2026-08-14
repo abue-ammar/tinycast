@@ -344,6 +344,26 @@ An imported extension draws whatever icon it shipped, which rarely matches the r
 **Settings › Extensions › Configure › Launcher icon** replaces it with an SF Symbol on a tinted tile —
 the same tile `IconCache` draws for the built-in commands, so the row reads as part of the app.
 
+### `ExtensionIconCache`, and why extension artwork draws smaller
+
+An extension's own artwork has its own cache — `Service/ExtensionIconCache.swift` — rather than
+living in `IconCache`. That split is the point: `IconCache` stays the app-and-symbol layer and knows
+nothing about extensions. It lends out only the pixel work (`displayPixel`, `artworkExtent`,
+`paintedExtent`, `rasterized`), so there is one definition of how an icon is measured and drawn.
+
+`ExtensionIconCache.extent` fits that artwork to **0.76** of the canvas, where an app icon and a
+symbol tile both sit at `IconCache.artworkExtent` **0.83**. The gap is deliberate and optical, not a
+size correction — measured, all three paths already produce an identical 40pt box.
+
+In dark mode every macOS 26 app icon is a dark squircle with a bright glyph inside it. The ground
+disappears into the palette, so only the glyph reads. A Raycast icon is a flat, fully saturated tile,
+so every pixel of it reads. At equal geometry the extension shouts, and fitting it smaller is what
+makes the two match by eye. Shipped and fetched images take the same target, so an icon doesn't
+change size depending on where it came from.
+
+Change the number only against a rendered strip of real icons; it means nothing on its own.
+`ext-icon-test` guards the invariant: padding in the source cannot change the drawn size.
+
 - `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
   `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance
   Raycast has when a command declares no icon of its own.

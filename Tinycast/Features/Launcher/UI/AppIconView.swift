@@ -17,7 +17,7 @@ struct AppIconView: View {
         if app.isSymbolIcon {
             return IconCache.cachedSymbol(named: app.symbolIconName, tint: app.symbolTint)
         }
-        if let path = app.imageIconPath { return IconCache.cachedImage(atPath: path) }
+        if let path = app.imageIconPath { return ExtensionIconCache.cached(atPath: path) }
         return IconCache.cached(forFile: app.url.path)
     }
 
@@ -25,7 +25,7 @@ struct AppIconView: View {
         if app.isSymbolIcon {
             return await IconCache.loadSymbolAsync(named: app.symbolIconName, tint: app.symbolTint)
         }
-        if let path = app.imageIconPath { return await IconCache.loadImageAsync(atPath: path) }
+        if let path = app.imageIconPath { return await ExtensionIconCache.loadAsync(atPath: path) }
         return await IconCache.loadAsync(forFile: app.url.path)
     }
 
