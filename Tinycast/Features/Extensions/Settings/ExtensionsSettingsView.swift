@@ -15,6 +15,8 @@ struct ExtensionsSettingsView: View {
     /// What a bulk import is doing, so a thirty-item batch reports rather than going quiet.
     @State private var importProgress: (done: Int, total: Int)?
     @State private var importSummary: String?
+    /// What a cleanup would reclaim, rescanned whenever the installed set changes.
+    @State private var reclaimable = ExtensionCleanup.Report()
 
     var body: some View {
         @Bindable var settings = core.settings
@@ -38,6 +40,10 @@ struct ExtensionsSettingsView: View {
                 library
             }
             .settingsEnabled(settings.extensionsEnabled)
+
+            // Outside the enabled group: leftovers are on disk whether or not extensions are on,
+            // and switching them off is exactly when somebody wants the space back.
+            storage
         }
         .formStyle(.grouped)
         .releasesFocusOnOutsideClick()
@@ -68,8 +74,10 @@ struct ExtensionsSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectExtension)) { note in
             if let name = note.object as? String { expanded = name }
         }
+        .onChange(of: core.extensions.installed.count) { Task { await measureReclaimable() } }
         .task {
             await core.extensions.refresh()
+            await measureReclaimable()
             await findPending()
         }
     }
@@ -216,6 +224,42 @@ struct ExtensionsSettingsView: View {
                     .foregroundStyle(.orange)
             }
         }
+    }
+
+    /// Build files an interrupted install stranded, and the storage of extensions that are gone.
+    /// An install cleans up after itself, so in normal use this row has nothing to offer.
+    private var storage: some View {
+        Section {
+            SettingsRow(title: "Leftover files", subtitle: reclaimableSubtitle) {
+                Image(systemName: "internaldrive")
+                    .foregroundStyle(reclaimable.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
+            } trailing: {
+                Button("Clean Up…") {
+                    Task {
+                        await core.extensionCoordinator.confirmCleanup(reclaimable)
+                        await measureReclaimable()
+                    }
+                }
+                .disabled(reclaimable.isEmpty)
+            }
+        } header: {
+            Text("Storage")
+        }
+    }
+
+    private var reclaimableSubtitle: String {
+        guard !reclaimable.isEmpty else { return "Nothing to clean up." }
+        let items = reclaimable.items == 1 ? "1 item" : "\(reclaimable.items) items"
+        return "Reclaims \(ExtensionCleanup.formatted(bytes: reclaimable.bytes)) from \(items)."
+    }
+
+    /// Off-main: measuring walks a `node_modules`, which is tens of thousands of files.
+    private func measureReclaimable() async {
+        let installed = Set(core.extensions.installed.map(\.manifest.name))
+        let roots = ExtensionCleanup.defaultRoots()
+        reclaimable = await Task.detached(priority: .utility) {
+            ExtensionCleanup.reclaimable(installed: installed, in: roots)
+        }.value
     }
 
     /// Names what searching will cover, so the row says what the Registries button is for.

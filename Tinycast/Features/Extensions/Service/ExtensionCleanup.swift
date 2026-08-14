@@ -66,6 +66,11 @@ enum ExtensionCleanup {
         }
     }
 
+    /// Sized the way Finder does, so a number here matches the one in Get Info.
+    nonisolated static func formatted(bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+
     // MARK: - What counts as a stray
 
     private static let workspacePrefix = "tinycast-install-"

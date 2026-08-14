@@ -111,6 +111,30 @@ final class ExtensionCoordinator {
         }
     }
 
+    /// Reclaims strays. Destructive — an orphaned support directory is an extension's own files —
+    /// so it asks first, and reports through the same pill every other outcome uses.
+    func confirmCleanup(_ report: ExtensionCleanup.Report) async {
+        guard !report.isEmpty else { return }
+        let size = ExtensionCleanup.formatted(bytes: report.bytes)
+        guard
+            await core.confirm(
+                title: "Clean up \(size)?",
+                message:
+                    "Removes build files left by an interrupted install, and the storage of "
+                    + "extensions that are no longer installed. Installed extensions are untouched.",
+                symbol: "trash", confirmTitle: "Clean Up")
+        else { return }
+
+        let installed = Set(extensions.installed.map(\.manifest.name))
+        let roots = ExtensionCleanup.defaultRoots()
+        let freed = await Task.detached(priority: .userInitiated) {
+            ExtensionCleanup.clean(installed: installed, in: roots)
+        }.value
+        core.showMessage(
+            freed.isEmpty
+                ? "Nothing to clean up" : "Reclaimed \(ExtensionCleanup.formatted(bytes: freed.bytes))")
+    }
+
     /// What no index prunes on its own. Every other entry-removing path clears the same four stores;
     /// left behind, they key a shortcut, a favorite or a rank to a command that no longer exists.
     func removeExtensionReferences(entryIDs: [String]) {
