@@ -401,11 +401,12 @@ final class NotesCoordinator {
         focusEditor: Bool,
         heightBehavior: NotesWindowController.HeightBehavior = .content
     ) {
-        let editorHeight = NoteEditorView.contentHeight(
-            for: store.source,
-            width: Theme.Size.noteWidth)
         windowController.show(
-            initialEditorHeight: editorHeight,
+            initialEditorHeight: {
+                NoteEditorView.contentHeight(
+                    for: store.source,
+                    width: Theme.Size.noteWidth)
+            },
             focusEditor: focusEditor,
             heightBehavior: heightBehavior)
     }

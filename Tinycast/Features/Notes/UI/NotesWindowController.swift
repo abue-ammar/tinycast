@@ -25,13 +25,13 @@ final class NotesWindowController: NSObject {
     var isVisible: Bool { panel?.isVisible ?? false }
 
     func show(
-        initialEditorHeight: CGFloat,
+        initialEditorHeight: () -> CGFloat,
         focusEditor: Bool,
         heightBehavior: HeightBehavior = .content
     ) {
         let wasVisible = panel?.isVisible == true
         if !wasVisible { captureFocusTarget() }
-        editorHeight = initialEditorHeight
+        if heightBehavior == .content { editorHeight = initialEditorHeight() }
         let panel = ensurePanel()
         position(panel, heightBehavior: heightBehavior)
         panel.contentView?.layoutSubtreeIfNeeded()
