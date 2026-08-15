@@ -25,9 +25,10 @@ struct NoteEditorView: NSViewRepresentable {
         textView.editorUndoManager = context.coordinator.editorUndoManager
         scrollView.documentView = textView
         context.coordinator.textView = textView
+        context.coordinator.observeUsageBounds()
         context.coordinator.install(input, resetUndo: false)
+        context.coordinator.reportHeight()
         onReady(textView)
-        context.coordinator.scheduleHeightReport(for: input)
         return scrollView
     }
 
@@ -56,7 +57,7 @@ struct NoteEditorView: NSViewRepresentable {
         let editorUndoManager = UndoManager()
 
         private var input: NoteEditorInput
-        private var heightReportTask: Task<Void, Never>?
+        private var usageBoundsObservation: NSKeyValueObservation?
         private var isInstalling = false
 
         init(parent: NoteEditorView) {
@@ -84,7 +85,7 @@ struct NoteEditorView: NSViewRepresentable {
             input = next
             guard authoritative else { return }
             install(next, resetUndo: true)
-            scheduleHeightReport(for: next)
+            reportHeight()
         }
 
         func textDidChange(_ notification: Notification) {
@@ -94,32 +95,40 @@ struct NoteEditorView: NSViewRepresentable {
             input = NoteEditorInput(id: input.id, source: source, epoch: input.epoch)
             parent.onSourceChange(source)
             reportHeight()
-            scheduleHeightReport(for: input)
         }
 
         func reportHeight() {
             guard let textView else { return }
-            let height = NoteEditorView.measuredHeight(of: textView)
+            publishHeight(NoteEditorView.measuredHeight(of: textView), in: textView)
+        }
+
+        private func reportUsageBounds() {
+            guard let textView, let layoutManager = textView.textLayoutManager else { return }
+            let height = ceil(
+                layoutManager.usageBoundsForTextContainer.height
+                    + textView.textContainerInset.height * 2)
+            publishHeight(height, in: textView)
+        }
+
+        private func publishHeight(_ height: CGFloat, in textView: NSTextView) {
             if textView.frame.height != height {
                 textView.setFrameSize(NSSize(width: textView.frame.width, height: height))
             }
             parent.onContentHeightChange(input, height)
         }
 
-        func scheduleHeightReport(for expectedInput: NoteEditorInput) {
-            heightReportTask?.cancel()
-            heightReportTask = Task { @MainActor [weak self] in
-                await Task.yield()
-                guard !Task.isCancelled, let self, matchesCurrentDocument(expectedInput) else {
-                    return
-                }
-                textView?.layoutSubtreeIfNeeded()
-                reportHeight()
+        func observeUsageBounds() {
+            guard usageBoundsObservation == nil, let layoutManager = textView?.textLayoutManager else {
+                return
             }
-        }
-
-        func matchesCurrentDocument(_ expectedInput: NoteEditorInput) -> Bool {
-            input.id == expectedInput.id && input.epoch == expectedInput.epoch
+            usageBoundsObservation = layoutManager.observe(
+                \.usageBoundsForTextContainer,
+                options: [.new]
+            ) { [weak self] _, _ in
+                Task { @MainActor [weak self] in
+                    self?.reportUsageBounds()
+                }
+            }
         }
     }
 

@@ -142,10 +142,10 @@ header and editor are ordinary content; only the circular Create, Reveal, and hi
 `NotesWindowController` owns every frame change. TextKit 2 supplies the laid-out editor height, the
 controller adds the header, clamps to the note minimum and screen-aware maximum, and preserves the top
 edge so existing text never jumps upward. Content consumes the editor area inside the 220-point minimum
-before growing the panel, and deletion shrinks it naturally back to that minimum. It keeps a 16-point
-vertical screen margin when possible and clamps fully onto shorter screens. After the cap, the native
-editor scrolls internally. Frame autosaving restores position only; content determines size on every
-show.
+before growing the panel, and observing TextKit's settled usage bounds makes deletion shrink it naturally
+back to that minimum. It keeps a 16-point vertical screen margin when possible and clamps fully onto
+shorter screens. After the cap, the native editor scrolls internally. Frame autosaving restores position
+only; content determines size on every show.
 
 The header keeps a fixed slot for status so Saving, Saved, failure, and conflict symbols cannot move
 the controls. Failure and conflict symbols can be clicked to reopen their recovery report after a

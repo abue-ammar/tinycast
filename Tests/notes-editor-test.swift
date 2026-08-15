@@ -12,7 +12,8 @@ struct NotesEditorTests {
         testUndoIsolation()
         testDocumentScopedHeightReports()
         testContentHeight()
-        testLiveHeightShrinksAfterDeletion()
+        await testUsageBoundsObservation()
+        await testLiveHeightShrinksAfterDeletion()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -108,7 +109,6 @@ struct NotesEditorTests {
             input: first,
             onHeightChange: { reports.append(($0, $1)) })
         reports.removeAll()
-        editor.coordinator.scheduleHeightReport(for: first)
 
         let second = NoteEditorInput(
             id: NoteID(rawValue: "Second.md"),
@@ -118,12 +118,6 @@ struct NotesEditorTests {
             for: second,
             onHeightChange: { reports.append(($0, $1)) })
         editor.coordinator.update(second)
-        check(
-            "a replaced document rejects its delayed height report",
-            !editor.coordinator.matchesCurrentDocument(first))
-        check(
-            "the active document accepts its delayed height report",
-            editor.coordinator.matchesCurrentDocument(second))
         editor.coordinator.reportHeight()
 
         check("stale height reports cannot identify the replacement note", reports.allSatisfy {
@@ -145,7 +139,36 @@ struct NotesEditorTests {
                 == NoteEditorView.contentHeight(for: "123456789", width: 320))
     }
 
-    private static func testLiveHeightShrinksAfterDeletion() {
+    private static func testUsageBoundsObservation() async {
+        let input = NoteEditorInput(
+            id: NoteID(rawValue: "Observed.md"),
+            source: "Short",
+            epoch: 1)
+        var heights: [CGFloat] = []
+        let editor = makeEditor(
+            input: input,
+            onHeightChange: { _, height in heights.append(height) })
+        await Task.yield()
+        let shortHeight = heights.last ?? 0
+        heights.removeAll()
+        editor.textView.delegate = nil
+
+        editor.textView.string = (0..<80).map { "Observed line \($0)" }.joined(separator: "\n")
+        ensureEditorLayout(editor.textView)
+        await waitUntil { heights.contains { $0 > shortHeight } }
+        let expandedHeight = heights.last(where: { $0 > shortHeight }) ?? shortHeight
+        heights.removeAll()
+
+        editor.textView.string = "Short"
+        ensureEditorLayout(editor.textView)
+        await waitUntil { heights.contains { $0 < expandedHeight } }
+
+        check(
+            "settled TextKit usage bounds report deletion shrink independently of edit timing",
+            heights.contains { $0 < expandedHeight })
+    }
+
+    private static func testLiveHeightShrinksAfterDeletion() async {
         let input = NoteEditorInput(
             id: NoteID(rawValue: "Resize.md"),
             source: "Short",
@@ -161,22 +184,37 @@ struct NotesEditorTests {
             (0..<80).map { "Expanded line \($0)" }.joined(separator: "\n"),
             replacementRange: editor.textView.selectedRange())
         let expandedHeight = heights.last ?? 0
+        let reportsBeforeDeletion = heights.count
+        let retainedPrefix = (editor.textView.string as NSString).range(of: "Expanded line 4\n")
+        let deletionStart = NSMaxRange(retainedPrefix)
         editor.textView.setSelectedRange(
-            NSRange(location: (editor.textView.string as NSString).length, length: 0))
-        editor.textView.insertNewline(nil)
-        let addedLineHeight = heights.last ?? expandedHeight
+            NSRange(
+                location: deletionStart,
+                length: (editor.textView.string as NSString).length - deletionStart))
         editor.textView.deleteBackward(nil)
-        check(
-            "removing a newly added line immediately reports a smaller height",
-            heights.last ?? addedLineHeight < addedLineHeight)
 
-        editor.textView.selectAll(nil)
-        editor.textView.deleteBackward(nil)
+        await waitUntil {
+            heights.dropFirst(reportsBeforeDeletion).contains { $0 < expandedHeight }
+        }
 
         check("live editing expands the measured editor height", expandedHeight > 0)
         check(
-            "deleting expanded content immediately reports a smaller height",
-            heights.last ?? expandedHeight < expandedHeight)
+            "deleting rows reports a smaller settled height without another edit",
+            heights.dropFirst(reportsBeforeDeletion).contains { $0 < expandedHeight })
+    }
+
+    private static func ensureEditorLayout(_ textView: NSTextView) {
+        guard let layoutManager = textView.textLayoutManager,
+            let contentManager = layoutManager.textContentManager
+        else { return }
+        layoutManager.ensureLayout(for: contentManager.documentRange)
+    }
+
+    private static func waitUntil(_ condition: () -> Bool) async {
+        for _ in 0..<20 {
+            if condition() { return }
+            await Task.yield()
+        }
     }
 
     private static func makeEditor(
@@ -203,6 +241,7 @@ struct NotesEditorTests {
             defer: false)
         window.contentView = scrollView
         coordinator.textView = textView
+        coordinator.observeUsageBounds()
         coordinator.install(input, resetUndo: false)
         coordinator.reportHeight()
         window.makeFirstResponder(textView)

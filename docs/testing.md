@@ -287,6 +287,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   exact source
 - A new note stays at 220 points while lines fit, then grows and shrinks downward without moving its
   header; it keeps a 16-point vertical screen margin when possible, stops at its cap, then scrolls
+- In an expanded note, repeated Backspace/Delete and deleting a multi-line selection shrink the panel
+  without requiring another insertion
 - Clicking another app leaves the panel visible; Escape, Command-W, and close hide it
 - Dragging the icon, title, or empty header moves the panel in editor and switcher states; clicking the
   title still opens the switcher, action buttons do not drag, and the position survives relaunch
