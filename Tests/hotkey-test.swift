@@ -71,6 +71,7 @@ struct DoubleTapDetectorTests {
     // MARK: - Model
 
     static func modifierGlyphs() {
+        expect(DoubleTapModifier.allCases.count == 4, "exactly four modifiers are eligible")
         expect(
             Set(DoubleTapModifier.allCases.map(\.glyph)) == ["⌃", "⌥", "⇧", "⌘"],
             "the glyphs are the four macOS modifier symbols")

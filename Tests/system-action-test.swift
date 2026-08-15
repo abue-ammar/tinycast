@@ -17,6 +17,7 @@ struct SystemActionTests {
 
     static func main() {
         let actions = SystemActionCatalog.all
+        expect(actions.count == 31, "catalog contains all 31 agreed actions")
         expect(actions.map(\.id) == SystemAction.ID.allCases, "catalog covers every ID once")
         expect(Set(actions.map { $0.name.lowercased() }).count == actions.count, "names are unique")
         expect(actions.allSatisfy { !$0.name.isEmpty }, "names are non-empty")

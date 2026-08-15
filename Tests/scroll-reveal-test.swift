@@ -68,6 +68,7 @@ struct SelectionRevealTests {
         // Measured from the running app: the band ends at 369, and the row that walked into the
         // strip behind the pill reported 369…405 — visible to SwiftUI, hidden to the eye.
         expect(edge(rowTop: 369), .bottom, "the row that lands in the strip is moved into the band")
+        expect(edge(rowTop: 333), nil, "while the row flush above the strip is left alone")
     }
 
     // MARK: - Rows that cannot fit

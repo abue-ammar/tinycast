@@ -505,6 +505,9 @@ struct UninstallTests {
             "a locked or out-of-plan id can never enter the checked set")
 
         var selection = plan.defaultSelection
+        expect(
+            selection.checked == ["/a", "/c"],
+            "the default checks every removable row, name matches included")
         expect(selection.bytes(in: plan) == 50, "selected bytes sums only checked rows")
         expect(
             !selection.checked.contains("/b"), "and never a locked one")
