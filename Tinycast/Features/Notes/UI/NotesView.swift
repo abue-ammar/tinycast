@@ -7,7 +7,6 @@ struct NotesView: View {
         VStack(spacing: 0) {
             header
                 .frame(height: Theme.Size.noteHeaderHeight)
-                .zIndex(notes.isFormattingPresented ? 1 : 0)
             if notes.isSwitcherPresented {
                 NoteSwitcherView()
             } else {
@@ -15,12 +14,9 @@ struct NotesView: View {
                     input: notes.editorInput,
                     onSourceChange: notes.updateSource,
                     onContentHeightChange: notes.updateEditorHeight,
-                    onReady: notes.editorReady,
-                    onOpenLink: notes.openLink)
+                    onReady: notes.editorReady)
             }
         }
-        .coordinateSpace(name: "notes-window")
-        .animation(.easeOut(duration: 0.12), value: notes.isFormattingPresented)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(Theme.Colors.panelDimming))
         .background(VisualEffectView())
@@ -52,9 +48,6 @@ struct NotesView: View {
             if !notes.isSwitcherPresented || status.showsInSwitcher {
                 statusView
             }
-            if !notes.isSwitcherPresented {
-                formatButton
-            }
             headerButton(
                 title: "Create Note",
                 symbol: "plus",
@@ -70,30 +63,6 @@ struct NotesView: View {
         }
         .padding(.leading, Theme.Spacing.xl)
         .padding(.trailing, Theme.Spacing.md)
-    }
-
-    private var formatButton: some View {
-        headerButton(
-            title: "Format Note",
-            symbol: "textformat",
-            action: notes.toggleFormatting)
-            .overlay(alignment: .topTrailing) {
-                if notes.isFormattingPresented {
-                    NoteFormattingMenu(
-                        selectedCommands: notes.activeFormattingCommands,
-                        onSelect: notes.applyFormatting)
-                        .fixedSize()
-                        .offset(y: Theme.Size.noteHeaderButton + Theme.Spacing.xs)
-                        .onGeometryChange(for: CGRect.self) { proxy in
-                            proxy.frame(in: .named("notes-window"))
-                        } action: { frame in
-                            notes.updateFormattingFrame(frame)
-                        }
-                        .transition(
-                            .opacity.combined(
-                                with: .scale(scale: 0.96, anchor: .topTrailing)))
-                }
-            }
     }
 
     @ViewBuilder

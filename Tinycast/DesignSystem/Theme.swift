@@ -41,7 +41,7 @@ enum Theme {
         static let noteWidth: CGFloat = 520
         static let noteMinimumHeight: CGFloat = 220
         static let noteMaximumHeight: CGFloat = 640
-        static let noteMaximumScreenFraction: CGFloat = 0.7
+        static let noteScreenMargin: CGFloat = 16
         static let noteCenterLiftFraction: CGFloat = 0.08
         static let noteHeaderHeight: CGFloat = 44
         static let noteEditorInset: CGFloat = 16
@@ -174,10 +174,6 @@ enum Theme {
         static let textSecondary = Color.white.opacity(0.60)
         static let textTertiary = Color.white.opacity(0.40)
         static let noteText = Color.white.opacity(0.90)
-        static let noteMarkup = Color.white.opacity(0.45)
-        static let noteCode = Color.white.opacity(0.72)
-        static let noteLink = Color.white.opacity(0.80)
-        static let noteQuote = Color.white.opacity(0.62)
         /// The Settings card: a faint surface whose border doubles as the row divider.
         static let cardFill = Color.white.opacity(0.05)
         static let cardStroke = Color.white.opacity(0.10)

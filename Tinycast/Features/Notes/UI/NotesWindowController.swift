@@ -3,6 +3,12 @@ import SwiftUI
 
 @MainActor
 final class NotesWindowController: NSObject {
+    enum HeightBehavior: Equatable {
+        case fitContent
+        case trackContent
+        case preserve
+    }
+
     private static let frameAutosaveName = "Tinycast Floating Note"
 
     private unowned let coordinator: NotesCoordinator
@@ -11,8 +17,8 @@ final class NotesWindowController: NSObject {
     private var previousApp: NSRunningApplication?
     private weak var previousOwnWindow: NSWindow?
     private var editorHeight: CGFloat = 0
-    private var formattingFrame: CGRect?
-    private var formattingMonitor: Any?
+    private var editorGrowthPadding: CGFloat = 0
+    private var hasPositionedPanel = false
 
     init(coordinator: NotesCoordinator) {
         self.coordinator = coordinator
@@ -20,16 +26,23 @@ final class NotesWindowController: NSObject {
 
     var isVisible: Bool { panel?.isVisible ?? false }
 
-    isolated deinit {
-        if let formattingMonitor { NSEvent.removeMonitor(formattingMonitor) }
-    }
-
-    func show(initialEditorHeight: CGFloat, focusEditor: Bool) {
+    func show(
+        initialEditorHeight: CGFloat,
+        focusEditor: Bool,
+        heightBehavior: HeightBehavior = .fitContent
+    ) {
         let wasVisible = panel?.isVisible == true
         if !wasVisible { captureFocusTarget() }
         editorHeight = initialEditorHeight
+        if heightBehavior == .fitContent { editorGrowthPadding = 0 }
         let panel = ensurePanel()
-        position(panel, restoreSavedFrame: panel.frame.origin == .zero)
+        position(panel, heightBehavior: heightBehavior)
+        if heightBehavior == .fitContent {
+            editorGrowthPadding = NoteWindowLayout.editorGrowthPadding(
+                initialEditorContentHeight: initialEditorHeight,
+                initialPanelHeight: panel.frame.height,
+                metrics: Self.metrics)
+        }
         panel.contentView?.layoutSubtreeIfNeeded()
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
@@ -51,7 +64,7 @@ final class NotesWindowController: NSObject {
         guard height.isFinite, height > 0 else { return }
         editorHeight = height
         guard let panel else { return }
-        position(panel, restoreSavedFrame: false)
+        position(panel, heightBehavior: .trackContent)
     }
 
     func editorReady(_ textView: NoteTextView) {
@@ -65,55 +78,10 @@ final class NotesWindowController: NSObject {
         focusEditor(in: panel)
     }
 
-    func perform(_ command: NoteMarkdownCommand) {
-        guard let editor else { return }
-        editor.editorActions?.noteTextView(editor, perform: command)
-        focusEditor()
-    }
-
-    func formattingState() -> Set<NoteMarkdownCommand> {
-        guard let editor else { return [.normal] }
-        return editor.editorActions?.noteTextViewFormattingState(editor) ?? [.normal]
-    }
-
-    func updateFormattingFrame(_ frame: CGRect) {
-        formattingFrame = frame
-    }
-
-    func setFormattingPresented(_ presented: Bool) {
-        editor?.keepsProjectionOnFocusLoss = presented
-        if !presented {
-            if let formattingMonitor { NSEvent.removeMonitor(formattingMonitor) }
-            formattingMonitor = nil
-            formattingFrame = nil
-            if let editor, panel?.firstResponder !== editor {
-                editor.editorActions?.noteTextViewFocusChanged(editor, isFocused: false)
-            }
-            return
-        }
-        guard formattingMonitor == nil else { return }
-        formattingMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self else { return event }
-            let insideMenu: Bool
-            if event.window === panel, let panel, let formattingFrame {
-                let appKitFrame = CGRect(
-                    x: formattingFrame.minX,
-                    y: (panel.contentView?.bounds.height ?? 0) - formattingFrame.maxY,
-                    width: formattingFrame.width,
-                    height: formattingFrame.height)
-                insideMenu = appKitFrame.contains(event.locationInWindow)
-            } else {
-                insideMenu = false
-            }
-            if !insideMenu {
-                Task { @MainActor [weak coordinator] in coordinator?.dismissFormatting() }
-            }
-            return event
-        }
-    }
-
     func saveFrame() {
-        panel?.saveFrame(usingName: Self.frameAutosaveName)
+        guard let panel else { return }
+        position(panel, heightBehavior: .preserve)
+        panel.saveFrame(usingName: Self.frameAutosaveName)
     }
 
     private func ensurePanel() -> NotesPanel {
@@ -126,36 +94,65 @@ final class NotesWindowController: NSObject {
         panel.onEscape = { [weak coordinator] in coordinator?.handleEscape() }
         panel.onCreate = { [weak coordinator] in coordinator?.createNote() }
         panel.onSearch = { [weak coordinator] in coordinator?.searchNotes() }
-        panel.onDelete = { [weak coordinator] in coordinator?.trashSwitcherSelection() }
+        panel.onDelete = { [weak coordinator] in coordinator?.handleDeleteShortcut() ?? false }
         panel.setFrameAutosaveName(Self.frameAutosaveName)
         self.panel = panel
         return panel
     }
 
-    private func position(_ panel: NotesPanel, restoreSavedFrame: Bool) {
-        let restored = restoreSavedFrame && panel.setFrameUsingName(Self.frameAutosaveName)
-        let screen = panel.screen ?? NSScreen.underCursor ?? NSScreen.main
-        guard let visibleFrame = screen?.visibleFrame else { return }
-        let height = NoteWindowLayout.panelHeight(
-            editorContentHeight: editorHeight,
-            visibleScreenHeight: visibleFrame.height,
+    private func position(
+        _ panel: NotesPanel,
+        heightBehavior: HeightBehavior = .fitContent
+    ) {
+        let restored = !hasPositionedPanel && panel.setFrameUsingName(Self.frameAutosaveName)
+        let visibleFrame = panel.screen?.visibleFrame
+            ?? screenContaining(panel.frame)?.visibleFrame
+            ?? NSScreen.underCursor?.visibleFrame
+            ?? NSScreen.main?.visibleFrame
+        guard let visibleFrame else { return }
+        let constrainedVisibleFrame = NoteWindowLayout.constrainedVisibleFrame(
+            visibleFrame,
             metrics: Self.metrics)
-        let frame: CGRect
-        if restored || panel.frame.origin != .zero {
-            frame = NoteWindowLayout.resizedFrame(
+        let height: CGFloat = switch heightBehavior {
+        case .fitContent:
+            NoteWindowLayout.panelHeight(
+                editorContentHeight: editorHeight,
+                visibleScreenHeight: visibleFrame.height,
+                metrics: Self.metrics)
+        case .trackContent:
+            NoteWindowLayout.contentTrackingPanelHeight(
+                editorContentHeight: editorHeight,
+                editorGrowthPadding: editorGrowthPadding,
+                visibleScreenHeight: visibleFrame.height,
+                metrics: Self.metrics)
+        case .preserve:
+            NoteWindowLayout.preservedPanelHeight(
+                panel.frame.height,
+                visibleScreenHeight: visibleFrame.height,
+                metrics: Self.metrics)
+        }
+        let frame = if restored || hasPositionedPanel {
+            NoteWindowLayout.resizedFrame(
                 currentFrame: panel.frame,
                 height: height,
-                visibleFrame: visibleFrame,
+                visibleFrame: constrainedVisibleFrame,
                 width: Theme.Size.noteWidth)
         } else {
-            frame = CGRect(
-                x: visibleFrame.midX - Theme.Size.noteWidth / 2,
-                y: visibleFrame.midY
-                    + visibleFrame.height * Theme.Size.noteCenterLiftFraction - height / 2,
+            NoteWindowLayout.initialFrame(
+                visibleFrame: constrainedVisibleFrame,
+                height: height,
                 width: Theme.Size.noteWidth,
-                height: height)
+                centerLiftFraction: Theme.Size.noteCenterLiftFraction)
         }
-        panel.setFrame(frame, display: panel.isVisible, animate: false)
+        if panel.frame != frame {
+            panel.setFrame(frame, display: panel.isVisible, animate: false)
+        }
+        hasPositionedPanel = true
+    }
+
+    private func screenContaining(_ frame: CGRect) -> NSScreen? {
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        return NSScreen.screens.first { $0.frame.contains(center) }
     }
 
     private func captureFocusTarget() {
@@ -183,9 +180,8 @@ final class NotesWindowController: NSObject {
     }
 
     private static let metrics = NoteWindowLayout.Metrics(
-        width: Theme.Size.noteWidth,
         minimumHeight: Theme.Size.noteMinimumHeight,
         maximumHeight: Theme.Size.noteMaximumHeight,
-        maximumScreenFraction: Theme.Size.noteMaximumScreenFraction,
+        screenMargin: Theme.Size.noteScreenMargin,
         fixedContentHeight: Theme.Size.noteHeaderHeight)
 }

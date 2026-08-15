@@ -1,32 +1,25 @@
 # Notes
 
 Notes is an unlimited local collection of plain Markdown files in one persistent floating editor. One
-window edits one active note at a time; its title opens the searchable switcher, and the collection can
-also be shown, searched, or extended from launcher commands and global shortcuts.
-
-The interaction reference remains Raycast's official [Notes overview](https://www.raycast.com/core-features/notes)
-and [launch article](https://www.raycast.com/blog/raycast-notes), but Tinycast's storage is deliberately
-direct: the files in its Notes folder are the complete library.
+window edits one active note at a time; its title opens the searchable switcher, and launcher commands
+and global shortcuts can show, search, or extend the collection.
 
 ## Invariants
 
 - **One regular, non-hidden `.md` file is one note.** Its filename without the extension is its title;
   the source contains no frontmatter, embedded ID, or title field, and there is no database or sidecar.
-- **There is no note-count limit.** Search presents at most 200 ranked rows, but it examines the whole
-  collection and creation never consults a product limit.
+- **The editor displays literal source.** The string in `NSTextView`, `NotesStore`, search, conflicts,
+  and the file are identical; there is no parser, projection, preview, or hidden syntax.
 - **Only the active note can be dirty.** Switching, creating, renaming, and deleting first flush it, so
   collection navigation cannot abandon an in-memory draft.
 - **A save never overwrites an unseen external edit.** `NotesRepository` coordinates the mutation and
   compares the byte revision immediately before atomic replacement, rename, or Trash.
 - **Search is on demand and unindexed.** An empty switcher query reads metadata only; a nonempty query
   reads bodies sequentially off-main and retains no collection-sized source cache.
-- **The editor never transforms canonical Markdown.** A Foundation-only parser and display projection
-  map between literal UTF-16 source and the collapsed TextKit 2 buffer; only canonical source reaches
-  `NotesStore`, search, conflicts, or disk.
 - **Off means no entry point or Notes work.** The feature is off by default; its shortcuts no-op, its
   commands are absent, and enabling alone does not enumerate or create the Notes directory.
 - **The top edge is the resize anchor.** `NotesWindowController` alone owns the frame while the active
-  document grows downward and scrolls after its screen-aware maximum.
+  document grows or shrinks and scrolls after its screen-aware maximum.
 
 ## Storage and identity
 
@@ -41,10 +34,9 @@ launcher items, hotkeys, favorites, or visibility settings that could retain the
 regular `.md` children are sorted by modification date, then localized title. Subdirectories, hidden
 files, and symbolic links are ignored.
 
-Create uses `Untitled.md`, then `Untitled 2.md`, and so on. The same collision rule applies to rename
-with case- and diacritic-insensitive comparison. The earlier `Floating Note.md` is already a valid note
-and appears through ordinary enumeration; there is no migration branch. The active relative filename
-is local UI state in UserDefaults and does not ride settings backups.
+Create uses `Untitled.md`, then `Untitled 2.md`, and so on. Rename uses the same collision rule with
+case- and diacritic-insensitive comparison. `Floating Note.md` is already a valid note and needs no
+migration. The active filename is local UI state in UserDefaults and does not ride settings backups.
 
 `NotesRepository` owns list, create, load, save, rename, Trash, conflict-copy, and search reads. Every
 URL is validated as an immediate child of the injected directory. It lives in `Service/` because it
@@ -58,98 +50,74 @@ coordinator through `@Environment`; it never receives `AppCore` or mutates the s
 Settings > Notes owns `AppSettings.notesEnabled`, which is false when absent. The pane lists **Show
 Notes**, **Create Note**, and **Search Notes** from `CommandCatalog`, so it can still render them while
 `AppIndex` omits them. Every row shares its `VisibilityStore` checkbox and `HotKeyAction` recorder with
-Settings > Commands. `notesEnabled` is included in settings backups because it grants no permission
-and starts no background work.
+Settings > Commands.
 
-`AppCore` observes the switch and calls `NotesCoordinator.applyEnabled()`. The coordinator projects all
-three commands into `AppIndex` and rechecks the setting on every public invocation. Disabling hides the
-panel, cancels search, flushes the draft, stops monitoring, and removes the commands. A failed flush
-retains the draft for retry and termination preservation without leaving monitoring or debounce work
-running.
+`AppCore` observes enablement and calls `NotesCoordinator.applyEnabled()`. Disabling hides the panel,
+invalidates pending presentation work, cancels search, flushes the draft, stops monitoring, and removes
+the commands. A failed flush retains the draft for retry and termination preservation.
 
-## Commands and window
+## Commands, switcher, and window
 
-- **Show Notes** selects the last active note and shows or focuses the panel. Calling it while visible
-  never hides the panel.
-- **Create Note** creates and selects one unique Untitled note, including when it is the first action
-  in an empty channel.
-- **Search Notes** shows the panel with the switcher open and its search field focused.
+- **Show Notes** selects the last active note and shows or focuses the panel without toggling it closed.
+- **Create Note** creates and selects one unique Untitled note, including from an empty channel.
+- **Search Notes** shows the same panel with its compact in-window switcher focused.
 
-Command-N uses the create path and Command-P opens the switcher. Escape closes the switcher first, then
-hides the panel; Command-W and the header close control hide it directly. Hiding restores the prior
-external application or Tinycast window and flushes without delaying the order-out.
+Command-N creates, Command-P opens or refocuses the switcher, Escape closes the switcher before hiding,
+and Command-W hides directly. Hiding restores the prior external application or Tinycast window and
+flushes without delaying the order-out.
 
-The existing 520-point editor surface remains. Its fixed header contains the note glyph, active-title
-switcher button, drag region, save/conflict state, Format, Create, Reveal, and close controls. The switcher
-replaces only the editor region, scrolls inside the current frame, and therefore never moves the
-panel's top edge or changes its saved size.
+The fixed header contains the note glyph, active-title switcher button, drag region, save/conflict
+state, Create, Reveal, and Hide controls. The switcher replaces only the editor region and never changes
+the frame. An empty query lists metadata by recency; a nonempty query searches titles and literal bodies
+after a 120-millisecond debounce. Results are capped at 200, and generation checks prevent superseded
+search or selection work from publishing.
 
-An empty switcher query lists metadata-only summaries by recency. A nonempty query is split on
-whitespace, debounced for 120 milliseconds, and searches titles and literal bodies in a cancellable
-detached worker. Fuzzy title hits rank above body-only hits; results use the same compact title rows as
-the other Tinycast lists and are capped at 200. A generation check prevents a superseded search from
-publishing.
+Arrow keys and Return do not intercept an inline rename. Command-Delete moves the selected row to Trash
+only while the switcher is not renaming; in the editor and title field it remains a native text command.
+After confirmation, Trash chooses its successor from the current visible ordering. Each row exposes
+VoiceOver actions to activate, rename, and move the actual note title to Trash.
 
-Return opens the selected note. Inline rename coordinates the file move. Command-Delete or the row
-action confirms through `DialogController`, then moves the file through `FileManager.trashItem` after a
-revision check. Deleting the last note creates a fresh Untitled note.
+## Plain editor
 
-## Markdown editor
+`NoteEditorView` is one TextKit 2 `NSTextView` inside an `NSScrollView`. It installs
+`NoteEditorInput.source` directly as `NSTextView.string` with one system font and Tinycast's note color.
+Markdown markers remain visible and receive no syntax highlighting, rendered typography, controls, or
+link behavior.
 
-`NoteMarkdownParser` recognizes headings, emphasis, strikethrough, inline links, blockquotes, lists,
-tasks, horizontal rules, inline code, and fenced code without importing AppKit. `NoteDisplayProjection`
-turns inactive constructs into rendered-width text: markers are elided, links show their label, list
-markers become bullets, and task markers reserve one checkbox anchor. Moving the caret into a construct
-restores its complete literal source. Images remain styled source and never load local or remote data.
+AppKit owns typing, selection, Cut, Copy, Paste, Select All, Find, marked-text input, emoji, combining
+characters, and undo/redo. The only `NoteTextView` customization supplies a document-owned undo manager.
+Changing the note identity or editor epoch replaces the literal string and clears the previous
+document's undo history; ordinary edits keep native undo grouping.
 
-Headings retain six distinct levels and block spacing. Quotes use an inset leading rule, wrapped list
-content uses a hanging indent, fenced code uses a padded surface, and horizontal rules draw as full-width
-decorations rather than repeated text glyphs.
-
-`NoteEditorView` owns canonical source separately from `NSTextView.string`. Every display selection and
-edit maps through ordered identity, elision, and replacement segments before one canonical transaction
-updates the store. Copy and Cut use source ranges. The editor epoch changes on note switches and clean
-external reloads, clearing its custom native undo manager before a new source is installed; ordinary
-view updates preserve undo. Marked-text composition freezes projection until commit.
-
-The `textformat` header control opens a Tinycast-owned in-window formatting overlay. It supports Normal,
-H1–H3, bold, italic, strikethrough, inline code, links, quotes, bullets, numbering, tasks, fenced code,
-and horizontal rules. Command-B, Command-I, Command-K, Shift-Command-X, and Shift-Command-7/8/9 use the
-same source-edit planner. Escape closes formatting, then the switcher, then the window.
-
-Return continues bullets, numbered items, and tasks, with new tasks unchecked. Return on an empty item
-or Backspace at its content boundary removes the list marker; Tab and Shift-Tab nest and outdent list
-lines. Each interaction is one canonical source transaction and one undo step.
-
-Inactive tasks use pooled native checkbox controls positioned from TextKit segments. Each activation
-revalidates the current editor epoch and literal marker before toggling. Command-click resolves supported
-web, mail, and file destinations in the pure model, then `NoteLinkLauncher` performs the `NSWorkspace`
-effect; ordinary clicks only enter source editing.
+The editor reports laid-out content height with the note identity and epoch that produced it. The
+coordinator rejects stale reports, and the window controller skips redundant frame assignments so
+editing near the bottom does not reset the viewport. A new document starts a new fit session; edits can
+grow or shrink the window while preserving its top edge. The panel observes a 16-point vertical screen
+margin when possible, clamps fully onto unusually short screens, and scrolls after its 640-point cap.
 
 ## Autosave and external changes
 
-Editor changes update the main-actor draft immediately and debounce save for 300 milliseconds. Only
-the active source is retained. A successful save refreshes metadata ordering; switching waits for the
-same flush before loading another source.
+Editor changes update the main-actor draft immediately and debounce save for 300 milliseconds. Only the
+active source is retained. A successful save refreshes metadata ordering; switching waits for the same
+flush before loading another source.
 
 `NoteFileMonitor` watches both the directory and active file because atomic saves replace the file.
 Directory events rescan summaries. A clean active-file edit reloads; a dirty revision mismatch pauses
-autosave and offers **Save Copy & Reload**. Conflict copies retain the title, for example
-`Project (Tinycast Conflict 2026-08-11 143012).md`, and are ordinary notes after reconciliation.
+autosave and offers **Save Copy & Reload**. Conflict copies retain the title and become ordinary notes
+after reconciliation.
 
-An external rename is intentionally a removal plus an addition because filenames are identity. If the
-active clean file disappears, the store selects the most recently modified remaining note or creates
-Untitled. A dirty disappearance enters conflict instead. Termination awaits the active save or writes
-the same conflict copy before allowing the app to exit.
+An external rename is a removal plus an addition because filenames are identity. If the active clean
+file disappears, the store selects the most recently modified remaining note or creates Untitled. A
+dirty disappearance enters conflict. Termination awaits the active save or writes the same conflict copy
+before allowing the app to exit.
 
 ## Verification
 
 `Tests/notes-test.swift` compiles the shipped Notes model and service sources with the real fuzzy
-matcher. It covers channel-separated directories, discovery of `Floating Note.md`, unlimited
-enumeration, unique titles, byte revisions, rename and Trash conflicts, search, selection, autosave,
-external reconciliation, recovery, parser/projection source preservation, formatting plans, and
-top-anchored layout. `Tests/notes-editor-test.swift` uses real AppKit text objects to cover collapsed
-layout, one source delivery per transaction, undo/redo, and stale-undo removal across note switches.
+matcher. It covers repository safety, search, selection, autosave, external reconciliation, conflict
+recovery, switcher interaction, cancellation, and top-anchored screen-aware layout.
 
-The Notes manual sweep in `docs/testing.md` covers the panel, Settings projection, shortcuts, keyboard
-navigation, focus restoration, Finder, Trash recovery, large-directory search, and visual states.
+`Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects to cover literal source,
+native Cut/Copy/Paste, Unicode and marked text, undo isolation, document-scoped height reports, and
+content measurement. The Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher,
+focus restoration, Finder, Trash recovery, external changes, sizing, and accessibility.

@@ -32,15 +32,10 @@ final class NotesCoordinator {
     private var pendingPresentation: Presentation?
     private var enablementGeneration = 0
     private(set) var isSwitcherPresented = false
-    private(set) var isFormattingPresented = false {
-        didSet {
-            guard oldValue != isFormattingPresented else { return }
-            windowController.setFormattingPresented(isFormattingPresented)
-        }
-    }
-    private(set) var activeFormattingCommands: Set<NoteMarkdownCommand> = [.normal]
     private(set) var switcherSelection: NoteID?
     private(set) var switcherFocusRevision = 0
+    private var switcherRename = NoteSwitcherRenameState()
+    private var presentationGeneration = NotePresentationGeneration()
 
     init(
         store: NotesStore,
@@ -81,13 +76,20 @@ final class NotesCoordinator {
         store.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? store.summaries : store.searchResults.map(\.summary)
     }
+    var switcherEditingID: NoteID? { switcherRename.id }
+    var isRenamingSwitcherNote: Bool { switcherRename.isActive }
+    var switcherTitleDraftBinding: Binding<String> {
+        Binding(
+            get: { [weak self] in self?.switcherRename.draft ?? "" },
+            set: { [weak self] in self?.switcherRename.updateDraft($0) })
+    }
 
     func applyEnabled() {
         enablementGeneration &+= 1
         let generation = enablementGeneration
         appIndex.setNotesCommandsVisible(settings.notesEnabled)
         guard !settings.notesEnabled else { return }
-        isFormattingPresented = false
+        presentationGeneration.advance()
         pendingPresentation = nil
         loadTask?.cancel()
         loadTask = nil
@@ -116,7 +118,10 @@ final class NotesCoordinator {
 
     func openSwitcher() {
         guard settings.notesEnabled, store.hasLoadedDocument else { return }
-        isFormattingPresented = false
+        if isSwitcherPresented {
+            switcherFocusRevision &+= 1
+            return
+        }
         isSwitcherPresented = true
         switcherSelection = store.activeID ?? store.summaries.first?.id
         switcherFocusRevision &+= 1
@@ -124,6 +129,7 @@ final class NotesCoordinator {
 
     func closeSwitcher(focusEditor: Bool = true) {
         guard isSwitcherPresented || !store.searchQuery.isEmpty else { return }
+        switcherRename.cancel()
         isSwitcherPresented = false
         switcherSelection = nil
         store.cancelSearch()
@@ -131,22 +137,29 @@ final class NotesCoordinator {
     }
 
     func hide() {
+        presentationGeneration.advance()
         pendingPresentation = nil
-        isFormattingPresented = false
         closeSwitcher(focusEditor: false)
         windowController.hide(restoreFocus: true)
         Task { await store.flush() }
     }
 
     func handleEscape() {
-        if isFormattingPresented {
-            isFormattingPresented = false
-            windowController.focusEditor()
-        } else if isSwitcherPresented {
+        if isSwitcherPresented {
             closeSwitcher()
         } else {
             hide()
         }
+    }
+
+    func reconcileSwitcherSelection() {
+        let notes = visibleNotes
+        guard !notes.isEmpty else {
+            switcherSelection = nil
+            return
+        }
+        if let switcherSelection, notes.contains(where: { $0.id == switcherSelection }) { return }
+        switcherSelection = notes.first?.id
     }
 
     func updateSwitcherSelection(_ id: NoteID?) {
@@ -173,24 +186,58 @@ final class NotesCoordinator {
         select(switcherSelection)
     }
 
+    func activateSwitcherNote(_ id: NoteID) {
+        switcherRename.cancel()
+        select(id)
+    }
+
+    func beginSwitcherRename(_ summary: NoteSummary) {
+        switcherRename.begin(id: summary.id, title: summary.title)
+    }
+
+    func commitSwitcherRename() {
+        guard let committed = switcherRename.commit() else { return }
+        rename(committed.id, to: committed.title)
+        switcherFocusRevision &+= 1
+    }
+
+    func cancelSwitcherRename() {
+        guard switcherRename.isActive else { return }
+        switcherRename.cancel()
+        switcherFocusRevision &+= 1
+    }
+
     func select(_ id: NoteID) {
         guard operationTask == nil else { return }
-        isFormattingPresented = false
+        let capturedGeneration = presentationGeneration.current
         operationTask = Task { [weak self] in
             guard let self else { return }
-            let selected = await store.select(id)
+            let previousID = store.activeID
+            let selected = await store.select(id) { [weak self] in
+                guard let self else { return false }
+                return presentationGeneration.permitsCompletion(
+                    capturedGeneration: capturedGeneration,
+                    isVisible: windowController.isVisible)
+            }
             operationTask = nil
             guard selected, settings.notesEnabled, !Task.isCancelled else {
                 if !settings.notesEnabled { store.stop() }
                 return
             }
+            guard presentationGeneration.permitsCompletion(
+                capturedGeneration: capturedGeneration,
+                isVisible: windowController.isVisible)
+            else { return }
             closeSwitcher()
-            showLoadedNote(focusEditor: true)
+            showLoadedNote(
+                focusEditor: true,
+                heightBehavior: previousID == store.activeID ? .preserve : .fitContent)
         }
     }
 
     func rename(_ id: NoteID, to title: String) {
         guard operationTask == nil else { return }
+        let capturedGeneration = presentationGeneration.current
         operationTask = Task { [weak self] in
             guard let self else { return }
             let renamedID = await store.rename(id, to: title)
@@ -200,7 +247,13 @@ final class NotesCoordinator {
                 return
             }
             switcherSelection = renamedID
-            if renamedID == store.activeID { showLoadedNote(focusEditor: false) }
+            if renamedID == store.activeID,
+                presentationGeneration.permitsCompletion(
+                    capturedGeneration: capturedGeneration,
+                    isVisible: windowController.isVisible)
+            {
+                showLoadedNote(focusEditor: false, heightBehavior: .preserve)
+            }
         }
     }
 
@@ -209,25 +262,46 @@ final class NotesCoordinator {
         trash(id)
     }
 
+    func handleDeleteShortcut() -> Bool {
+        guard NoteShortcutPolicy.handlesDelete(
+            switcherPresented: isSwitcherPresented,
+            renameActive: switcherRename.isActive)
+        else { return false }
+        trashSwitcherSelection()
+        return true
+    }
+
     func trash(_ id: NoteID) {
         guard operationTask == nil,
             let title = store.summaries.first(where: { $0.id == id })?.title
         else { return }
+        let capturedGeneration = presentationGeneration.current
         operationTask = Task { [weak self] in
             guard let self else { return }
+            let previousID = store.activeID
             let confirmed = await confirmTrash(title)
             guard confirmed, settings.notesEnabled, !Task.isCancelled else {
                 operationTask = nil
                 return
             }
+            let switcherOrder = visibleNotes.map(\.id)
             let removed = await store.trash(id)
             operationTask = nil
             guard removed, settings.notesEnabled, !Task.isCancelled else {
                 if !settings.notesEnabled { store.stop() }
                 return
             }
-            switcherSelection = store.activeID ?? store.summaries.first?.id
-            showLoadedNote(focusEditor: !isSwitcherPresented)
+            switcherSelection = NoteSwitcherSelection.replacement(
+                afterRemoving: id,
+                from: switcherOrder,
+                fallback: store.activeID ?? store.summaries.first?.id)
+            guard presentationGeneration.permitsCompletion(
+                capturedGeneration: capturedGeneration,
+                isVisible: windowController.isVisible)
+            else { return }
+            showLoadedNote(
+                focusEditor: !isSwitcherPresented,
+                heightBehavior: previousID == store.activeID ? .preserve : .fitContent)
         }
     }
 
@@ -236,51 +310,15 @@ final class NotesCoordinator {
         NSWorkspace.shared.activateFileViewerSelecting([fileURL])
     }
 
-    func toggleFormatting() {
-        guard settings.notesEnabled, store.hasLoadedDocument, !isSwitcherPresented else { return }
-        if !isFormattingPresented {
-            activeFormattingCommands = windowController.formattingState()
-        }
-        isFormattingPresented.toggle()
-    }
-
-    func dismissFormatting() {
-        isFormattingPresented = false
-    }
-
-    func updateFormattingFrame(_ frame: CGRect) {
-        windowController.updateFormattingFrame(frame)
-    }
-
-    func applyFormatting(_ command: NoteMarkdownCommand) {
-        guard isFormattingPresented else { return }
-        windowController.perform(command)
-        isFormattingPresented = false
-    }
-
     func updateSource(_ source: String) {
         store.updateSource(source)
     }
 
-    func openLink(_ raw: String) {
-        guard let directory = store.activeFileURL?.deletingLastPathComponent(),
-            let destination = NoteLinkDestination.resolve(raw, relativeTo: directory)
-        else { return }
-        Task { [weak self] in
-            do {
-                try await NoteLinkLauncher.open(destination)
-            } catch {
-                guard let self else { return }
-                _ = await reportFailure(
-                    "Couldn't Open Link",
-                    error.localizedDescription,
-                    "link",
-                    nil)
-            }
+    func updateEditorHeight(_ input: NoteEditorInput, _ height: CGFloat) {
+        let current = editorInput
+        guard !isSwitcherPresented, input.id == current.id, input.epoch == current.epoch else {
+            return
         }
-    }
-
-    func updateEditorHeight(_ height: CGFloat) {
         windowController.updateEditorHeight(height)
     }
 
@@ -299,7 +337,6 @@ final class NotesCoordinator {
 
     private func request(_ presentation: Presentation) {
         guard settings.notesEnabled else { return }
-        isFormattingPresented = false
         pendingPresentation = presentation
         guard loadTask == nil else { return }
         let generation = enablementGeneration
@@ -313,9 +350,14 @@ final class NotesCoordinator {
                 }
                 loadTask = nil
                 guard created, settings.notesEnabled, !Task.isCancelled else { return }
-                let next = pendingPresentation
+                guard let next = pendingPresentation else { return }
                 pendingPresentation = nil
-                await present(next == .create ? .editor : next ?? .editor)
+                if next == .create {
+                    closeSwitcher()
+                    showLoadedNote(focusEditor: true, heightBehavior: .fitContent)
+                } else {
+                    await present(next)
+                }
                 return
             }
             let loaded = await store.start()
@@ -336,22 +378,36 @@ final class NotesCoordinator {
         switch presentation {
         case .editor:
             closeSwitcher()
-            showLoadedNote(focusEditor: true)
+            showLoadedNote(
+                focusEditor: true,
+                heightBehavior: windowController.isVisible ? .preserve : .fitContent)
         case .create:
-            guard await store.create() else { return }
+            let capturedGeneration = presentationGeneration.current
+            guard await store.create(), settings.notesEnabled, !Task.isCancelled,
+                presentationGeneration.permitsPresentation(
+                    capturedGeneration: capturedGeneration)
+            else { return }
             closeSwitcher()
-            showLoadedNote(focusEditor: true)
+            showLoadedNote(focusEditor: true, heightBehavior: .fitContent)
         case .search:
             openSwitcher()
-            showLoadedNote(focusEditor: false)
+            showLoadedNote(
+                focusEditor: false,
+                heightBehavior: windowController.isVisible ? .preserve : .fitContent)
         }
     }
 
-    private func showLoadedNote(focusEditor: Bool) {
+    private func showLoadedNote(
+        focusEditor: Bool,
+        heightBehavior: NotesWindowController.HeightBehavior = .fitContent
+    ) {
         let editorHeight = NoteEditorView.contentHeight(
             for: store.source,
             width: Theme.Size.noteWidth)
-        windowController.show(initialEditorHeight: editorHeight, focusEditor: focusEditor)
+        windowController.show(
+            initialEditorHeight: editorHeight,
+            focusEditor: focusEditor,
+            heightBehavior: heightBehavior)
     }
 
     private func present(_ issue: NotesStore.Issue) {

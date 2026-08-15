@@ -7,7 +7,7 @@ struct NotesTests {
 
     static func main() async throws {
         try testRepositoryAndSearch()
-        testMarkdownEditorModel()
+        testSwitcherInteraction()
         testWindowLayout()
         try await testStoreCollectionAndExternalEdits()
         try await testCollectionMutationsRequireCleanDraft()
@@ -150,333 +150,137 @@ struct NotesTests {
         check("symlinked Markdown files are absent from enumeration", !(try stable.list()).contains { $0.id == symlinkID })
     }
 
-    private static func testMarkdownEditorModel() {
-        let source = "# Heading\n- [x] **done** and [link](https://example.com)\n"
-        let presentation = NoteMarkdownParser.parse(source)
-        let kinds = presentation.constructs.map(\.kind)
+    private static func testSwitcherInteraction() {
+        let id = NoteID(rawValue: "Project.md")
+        var rename = NoteSwitcherRenameState()
+        check("switcher rename starts inactive", !rename.isActive)
+        rename.begin(id: id, title: "Project")
+        check("switcher rename captures identity and title", rename.id == id && rename.draft == "Project")
+        rename.updateDraft("Project plan")
+        let committed = rename.commit()
+        check(
+            "switcher rename commits once and clears its state",
+            committed?.id == id && committed?.title == "Project plan" && !rename.isActive)
+        check("an inactive rename cannot commit", rename.commit() == nil)
 
-        check("parser recognizes headings", kinds.contains(.heading(level: 1)))
-        check("parser recognizes unordered lists", kinds.contains(.unorderedList))
-        check("parser recognizes checked tasks", kinds.contains(.task(checked: true)))
-        check("parser recognizes strong text", kinds.contains(.strong))
         check(
-            "parser recognizes link destinations",
-            kinds.contains(.link(destination: "https://example.com")))
+            "Command-Delete belongs to a non-renaming switcher",
+            NoteShortcutPolicy.handlesDelete(switcherPresented: true, renameActive: false))
         check(
-            "every construct points inside unchanged source",
-            presentation.constructs.allSatisfy {
-                $0.range.location >= 0 && NSMaxRange($0.range) <= source.utf16.count
-            })
+            "Command-Delete remains native while renaming",
+            !NoteShortcutPolicy.handlesDelete(switcherPresented: true, renameActive: true))
+        check(
+            "Command-Delete remains native in the editor",
+            !NoteShortcutPolicy.handlesDelete(switcherPresented: false, renameActive: false))
 
-        let projection = NoteDisplayProjection.build(
-            source: source,
-            presentation: presentation,
-            activeSourceLocation: nil)
+        var presentation = NotePresentationGeneration()
+        let capturedGeneration = presentation.current
         check(
-            "inactive Markdown occupies rendered width without source gaps",
-            projection.string == "Heading\n• ☑ done and link\n")
-        check("projection exposes one task control anchor", projection.tasks.count == 1)
-        check("projection exposes one command-click link", projection.links.count == 1)
+            "an unchanged visible window accepts an operation completion",
+            presentation.permitsCompletion(
+                capturedGeneration: capturedGeneration,
+                isVisible: true))
+        presentation.advance()
         check(
-            "display selection maps back to literal source",
-            projection.sourceRange(forDisplayRange: NSRange(location: 0, length: 7))
-                == NSRange(location: 2, length: 7))
+            "a newer presentation rejects an old operation completion",
+            !presentation.permitsCompletion(
+                capturedGeneration: capturedGeneration,
+                isVisible: true))
         check(
-            "copying a complete projection includes every hidden marker",
-            projection.sourceRange(
-                forCopyingDisplayRange: NSRange(
-                    location: 0,
-                    length: (projection.string as NSString).length))
-                == NSRange(location: 0, length: (source as NSString).length))
-        let doneDisplayRange = (projection.string as NSString).range(of: "done")
-        let doneSourceRange = (source as NSString).range(of: "**done**")
-        check(
-            "copying a whole rendered construct includes its delimiters",
-            projection.sourceRange(forCopyingDisplayRange: doneDisplayRange) == doneSourceRange)
-        let partialDoneRange = NSRange(location: doneDisplayRange.location + 1, length: 2)
-        check(
-            "copying part of a rendered construct remains character exact",
-            (source as NSString).substring(
-                with: projection.sourceRange(forCopyingDisplayRange: partialDoneRange)) == "on")
+            "a hidden window rejects an operation completion",
+            !presentation.permitsCompletion(
+                capturedGeneration: presentation.current,
+                isVisible: false))
 
-        let linkLocation = (source as NSString).range(of: "link").location
-        let active = NoteDisplayProjection.build(
-            source: source,
-            presentation: presentation,
-            activeSourceLocation: linkLocation)
+        let first = NoteID(rawValue: "First.md")
+        let second = NoteID(rawValue: "Second.md")
+        let third = NoteID(rawValue: "Third.md")
+        let fallback = NoteID(rawValue: "Untitled.md")
         check(
-            "entering a link reveals its complete literal source",
-            active.string.contains("[link](https://example.com)"))
-
-        let bold = NoteMarkdownEditing.plan(
-            .bold,
-            source: "hello",
-            selection: NSRange(location: 0, length: 5))
-        check("bold wraps the canonical selection", bold?.replacement == "**hello**")
-        check("bold preserves the selected content", bold?.selection == NSRange(location: 2, length: 5))
-
-        let renderedBold = "**bold**"
-        let renderedBoldPresentation = NoteMarkdownParser.parse(renderedBold)
-        let unbold = NoteMarkdownEditing.plan(
-            .bold,
-            source: renderedBold,
-            selection: NSRange(location: 2, length: 4),
-            presentation: renderedBoldPresentation)
+            "Trash selects the next switcher row",
+            NoteSwitcherSelection.replacement(
+                afterRemoving: second,
+                from: [first, second, third],
+                fallback: fallback) == third)
         check(
-            "bold removes formatting from a rendered selection",
-            unbold?.range == NSRange(location: 0, length: 8))
-        check("bold is a true toggle in live preview", unbold?.replacement == "bold")
-        let caretUnbold = NoteMarkdownEditing.plan(
-            .bold,
-            source: renderedBold,
-            selection: NSRange(location: 4, length: 0),
-            presentation: renderedBoldPresentation)
-        check("Bold at a bold caret removes the format", caretUnbold?.replacement == "bold")
-        check("caret unformatting preserves its logical offset", caretUnbold?.selection.location == 2)
-        let partiallyBold = "**two words**"
-        let partialUnbold = NoteMarkdownEditing.plan(
-            .bold,
-            source: partiallyBold,
-            selection: (partiallyBold as NSString).range(of: "words"),
-            presentation: NoteMarkdownParser.parse(partiallyBold))
-        check("Bold removes formatting from only the selected suffix", partialUnbold?.replacement == "**two **words")
-        let nestedBold = "**_text_**"
-        let nestedUnbold = NoteMarkdownEditing.plan(
-            .bold,
-            source: nestedBold,
-            selection: NSRange(location: 0, length: (nestedBold as NSString).length),
-            presentation: NoteMarkdownParser.parse(nestedBold))
-        check("removing bold preserves nested italic source", nestedUnbold?.replacement == "_text_")
-
-        let existingLink = "[label](https://old.test)"
-        let existingLinkPlan = NoteMarkdownEditing.plan(
-            .link,
-            source: existingLink,
-            selection: (existingLink as NSString).range(of: "label"),
-            presentation: NoteMarkdownParser.parse(existingLink))
-        check("Link edits an existing destination without nesting", existingLinkPlan?.changesSource == false)
+            "Trash selects the previous row when removing the last one",
+            NoteSwitcherSelection.replacement(
+                afterRemoving: third,
+                from: [first, second, third],
+                fallback: fallback) == second)
         check(
-            "Link selects the existing destination",
-            (existingLink as NSString).substring(
-                with: existingLinkPlan?.selection ?? NSRange()) == "https://old.test")
-
-        let fenced = "```\ncode\n```\n"
-        let unfenced = NoteMarkdownEditing.plan(
-            .codeBlock,
-            source: fenced,
-            selection: NSRange(location: 6, length: 0),
-            presentation: NoteMarkdownParser.parse(fenced))
-        check("Code Block at a fenced caret removes the fences", unfenced?.replacement == "code\n")
-        check(
-            "the current inline format is reported to the menu",
-            NoteMarkdownEditing.activeCommands(
-                selection: NSRange(location: 2, length: 4),
-                source: renderedBold,
-                presentation: renderedBoldPresentation).contains(.bold))
-        let mixedInlineSource = "**bold** plain"
-        let mixedInlineState = NoteMarkdownEditing.activeCommands(
-            selection: NSRange(location: 2, length: 12),
-            source: mixedInlineSource,
-            presentation: NoteMarkdownParser.parse(mixedInlineSource))
-        check("partially bold selections do not report Bold as active", !mixedInlineState.contains(.bold))
-        let adjacentBoldSource = "**one** **two**"
-        let adjacentBoldState = NoteMarkdownEditing.activeCommands(
-            selection: NSRange(location: 0, length: (adjacentBoldSource as NSString).length),
-            source: adjacentBoldSource,
-            presentation: NoteMarkdownParser.parse(adjacentBoldSource))
-        check("fully bold selections report Bold as active", adjacentBoldState.contains(.bold))
-        let mixedBlocksSource = "# Heading\nPlain"
-        let mixedBlockState = NoteMarkdownEditing.activeCommands(
-            selection: NSRange(location: 0, length: (mixedBlocksSource as NSString).length),
-            source: mixedBlocksSource,
-            presentation: NoteMarkdownParser.parse(mixedBlocksSource))
-        check("mixed block selections do not report a heading", !mixedBlockState.contains(.heading1))
-        check("mixed block selections do not report Normal", !mixedBlockState.contains(.normal))
-
-        let mixed = NoteMarkdownEditing.plan(
-            .taskList,
-            source: "- first\n2. second\n",
-            selection: NSRange(location: 0, length: 18))
-        check(
-            "mixed block formatting normalizes instead of double-prefixing",
-            mixed?.replacement == "- [ ] first\n- [ ] second\n")
-        let mixedTerminators = "first\r\nsecond\nthird\r"
-        let preservedTerminators = NoteMarkdownEditing.plan(
-            .blockquote,
-            source: mixedTerminators,
-            selection: NSRange(location: 0, length: (mixedTerminators as NSString).length))
-        check(
-            "block formatting preserves each line terminator",
-            preservedTerminators?.replacement == "> first\r\n> second\n> third\r")
-
-        let headingAtCaret = NoteMarkdownEditing.plan(
-            .heading1,
-            source: "Heading",
-            selection: NSRange(location: 3, length: 0))
-        check("heading formatting preserves a caret", headingAtCaret?.selection == NSRange(location: 5, length: 0))
-        let normalAtCaret = NoteMarkdownEditing.plan(
-            .normal,
-            source: "# Heading",
-            selection: NSRange(location: 5, length: 0))
-        check("normal formatting preserves a caret", normalAtCaret?.selection == NSRange(location: 3, length: 0))
-        let selectedHeading = NoteMarkdownEditing.plan(
-            .heading2,
-            source: "Heading",
-            selection: NSRange(location: 0, length: 7))
-        check(
-            "block formatting preserves selected content instead of selecting its prefix",
-            selectedHeading?.selection == NSRange(location: 3, length: 7))
-
-        let insertedRule = NoteMarkdownEditing.plan(
-            .horizontalRule,
-            source: "important text",
-            selection: NSRange(location: 5, length: 0))
-        check("horizontal rules preserve the current paragraph", insertedRule?.range.length == 0)
-        check("horizontal rules insert after a paragraph", insertedRule?.replacement == "\n---\n")
-        let ruleResult = ("important text" as NSString).replacingCharacters(
-            in: insertedRule?.range ?? NSRange(),
-            with: insertedRule?.replacement ?? "")
-        check("horizontal-rule insertion loses no text", ruleResult == "important text\n---\n")
-
-        let continuedBullet = NoteMarkdownEditing.planListEdit(
-            .newline,
-            source: "- item",
-            selection: NSRange(location: 6, length: 0))
-        check("Return continues a bullet", continuedBullet?.replacement == "\n- ")
-        check("continued bullets place the caret after their marker", continuedBullet?.selection.location == 9)
-        let continuedTask = NoteMarkdownEditing.planListEdit(
-            .newline,
-            source: "- [x] done",
-            selection: NSRange(location: 10, length: 0))
-        check("Return continues a task unchecked", continuedTask?.replacement == "\n- [ ] ")
-        let exitedList = NoteMarkdownEditing.planListEdit(
-            .newline,
-            source: "- ",
-            selection: NSRange(location: 2, length: 0))
-        check("Return exits an empty list item", exitedList?.replacement == "")
-        check("Return removes the empty list marker", exitedList?.range == NSRange(location: 0, length: 2))
-        let removedPrefix = NoteMarkdownEditing.planListEdit(
-            .backspace,
-            source: "- item",
-            selection: NSRange(location: 2, length: 0))
-        check("Backspace at list content removes its marker", removedPrefix?.replacement == "")
-        let indented = NoteMarkdownEditing.planListEdit(
-            .indent,
-            source: "- item\n",
-            selection: NSRange(location: 4, length: 0))
-        check("Tab nests a list item", indented?.replacement == "    - item\n")
-        let outdented = NoteMarkdownEditing.planListEdit(
-            .outdent,
-            source: "    - item\n",
-            selection: NSRange(location: 8, length: 0))
-        check("Shift-Tab outdents a list item", outdented?.replacement == "- item\n")
-        let nestedEmptyReturn = NoteMarkdownEditing.planListEdit(
-            .newline,
-            source: "    - ",
-            selection: NSRange(location: 6, length: 0))
-        check("Return outdents an empty nested item", nestedEmptyReturn?.range == NSRange(location: 0, length: 4))
-        check("an empty nested item keeps its list marker", nestedEmptyReturn?.selection.location == 2)
-        let nestedBackspace = NoteMarkdownEditing.planListEdit(
-            .backspace,
-            source: "    - item",
-            selection: NSRange(location: 6, length: 0))
-        check("Backspace outdents a nested item", nestedBackspace?.range == NSRange(location: 0, length: 4))
-        check("nested Backspace keeps the list marker", nestedBackspace?.selection.location == 2)
-        let mixedIndent = NoteMarkdownEditing.planListEdit(
-            .indent,
-            source: "- item\nplain",
-            selection: NSRange(location: 0, length: 12))
-        check("mixed list and prose selections are not partially indented", mixedIndent == nil)
-
-        let directory = URL(fileURLWithPath: "/tmp/notes", isDirectory: true)
-        check(
-            "relative links resolve against the note directory",
-            NoteLinkDestination.resolve("files/item.txt", relativeTo: directory)?.url.path
-                == "/tmp/notes/files/item.txt")
-        check(
-            "unapproved custom schemes stay inert",
-            NoteLinkDestination.resolve("custom://value", relativeTo: directory) == nil)
-
-        let insertion = NSRange(location: (source as NSString).range(of: "done").location + 2, length: 0)
-        let edited = (source as NSString).replacingCharacters(in: insertion, with: "w")
-        let incrementallyParsed = NoteMarkdownParser.update(
-            previousSource: source,
-            source: edited,
-            presentation: presentation,
-            editedRange: insertion,
-            replacement: "w")
-        check(
-            "incremental parsing converges with a clean parse",
-            incrementallyParsed == NoteMarkdownParser.parse(edited))
-
-        let grammar = NoteMarkdownParser.parse(
-            "word_within_word \\*literal* ***both*** [a [b]](folder/(x).md \"title\")\n"
-                + "````swift\n*raw*\n````\n---\n- item")
-        let grammarKinds = grammar.constructs.map(\.kind)
-        check("triple delimiters produce strong emphasis", grammarKinds.contains(.strongEmphasis))
-        check(
-            "balanced link destinations discard optional titles",
-            grammarKinds.contains(.link(destination: "folder/(x).md")))
-        check(
-            "matching long fences retain their language",
-            grammarKinds.contains(.codeBlock(language: "swift")))
-        check("intraword underscores stay literal", !grammarKinds.contains(.emphasis))
-        check("horizontal rules win over list parsing", grammarKinds.contains(.horizontalRule))
-        check("a list marker followed by content remains a list", grammarKinds.contains(.unorderedList))
-        let ruleProjection = NoteDisplayProjection.build(
-            source: "---\n",
-            presentation: NoteMarkdownParser.parse("---\n"),
-            activeSourceLocation: nil)
-        check(
-            "horizontal rules use one decoration anchor instead of text glyphs",
-            ruleProjection.string == "\u{200B}\n")
-        let activeRuleProjection = NoteDisplayProjection.build(
-            source: "---\n",
-            presentation: NoteMarkdownParser.parse("---\n"),
-            activeSourceLocation: 1)
-        check("active horizontal rules reveal literal source", activeRuleProjection.string == "---\n")
-        check(
-            "active horizontal-rule source remains visible",
-            !activeRuleProjection.styles.contains { $0.style == .horizontalRule })
-
-        let nestedSource = "# Heading with **bold _and italic_**\n"
-        let nestedPresentation = NoteMarkdownParser.parse(nestedSource)
-        check(
-            "nested inline formatting retains its outer construct",
-            nestedPresentation.constructs.contains { $0.kind == .strong })
-        check(
-            "nested inline formatting retains its inner construct",
-            nestedPresentation.constructs.contains { $0.kind == .emphasis })
-        check(
-            "nested inline markers collapse without stray syntax",
-            NoteDisplayProjection.build(
-                source: nestedSource,
-                presentation: nestedPresentation,
-                activeSourceLocation: nil).string == "Heading with bold and italic\n")
+            "Trash uses the post-operation fallback when no row remains",
+            NoteSwitcherSelection.replacement(
+                afterRemoving: first,
+                from: [first],
+                fallback: fallback) == fallback)
     }
 
     private static func testWindowLayout() {
         let metrics = NoteWindowLayout.Metrics(
-            width: 520,
             minimumHeight: 220,
             maximumHeight: 640,
-            maximumScreenFraction: 0.7,
-            fixedContentHeight: 84)
+            screenMargin: 16,
+            fixedContentHeight: 44)
         check(
             "short notes use the minimum height",
             NoteWindowLayout.panelHeight(
                 editorContentHeight: 10, visibleScreenHeight: 900, metrics: metrics) == 220)
         check(
-            "long notes stop at the display fraction",
+            "natural height includes fixed window chrome",
             NoteWindowLayout.panelHeight(
-                editorContentHeight: 900, visibleScreenHeight: 800, metrics: metrics) == 560)
+                editorContentHeight: 300, visibleScreenHeight: 900, metrics: metrics) == 344)
+        let growthPadding = NoteWindowLayout.editorGrowthPadding(
+            initialEditorContentHeight: 32,
+            initialPanelHeight: 220,
+            metrics: metrics)
+        check("minimum-height sessions retain their initial breathing room", growthPadding == 144)
+        check(
+            "a new line grows a minimum-height session immediately",
+            NoteWindowLayout.contentTrackingPanelHeight(
+                editorContentHeight: 48,
+                editorGrowthPadding: growthPadding,
+                visibleScreenHeight: 900,
+                metrics: metrics) == 236)
+        check(
+            "live editing shrinks after content deletion",
+            NoteWindowLayout.contentTrackingPanelHeight(
+                editorContentHeight: 10,
+                visibleScreenHeight: 900,
+                metrics: metrics) == 220)
+        check(
+            "long notes stop at the named maximum",
+            NoteWindowLayout.panelHeight(
+                editorContentHeight: 900, visibleScreenHeight: 900, metrics: metrics) == 640)
+        check(
+            "screen margins constrain shorter displays",
+            NoteWindowLayout.panelHeight(
+                editorContentHeight: 900, visibleScreenHeight: 500, metrics: metrics) == 468)
+        check(
+            "a screen below the normal minimum becomes the effective minimum",
+            NoteWindowLayout.panelHeight(
+                editorContentHeight: 10, visibleScreenHeight: 180, metrics: metrics) == 180)
 
         let current = CGRect(x: 300, y: 300, width: 520, height: 220)
         let visible = CGRect(x: 0, y: 0, width: 1_200, height: 900)
+        let constrained = NoteWindowLayout.constrainedVisibleFrame(visible, metrics: metrics)
+        check("the usable frame keeps the lower screen margin", constrained.minY == 16)
+        check("the usable frame keeps the upper screen margin", constrained.maxY == 884)
         let resized = NoteWindowLayout.resizedFrame(
-            currentFrame: current, height: 400, visibleFrame: visible, width: 520)
+            currentFrame: current, height: 400, visibleFrame: constrained, width: 520)
         check("resizing preserves the top edge", resized.maxY == current.maxY)
         check("resizing grows downward", resized.minY < current.minY)
+
+        let emergencyVisible = CGRect(x: 0, y: 0, width: 1_200, height: 180)
+        let emergency = NoteWindowLayout.initialFrame(
+            visibleFrame: emergencyVisible,
+            height: 500,
+            width: 520,
+            centerLiftFraction: 0.08)
+        check("a very short screen clamps the whole panel", emergency.height == 180)
+        check(
+            "a very short screen keeps the panel reachable",
+            emergency.minY == emergencyVisible.minY && emergency.maxY == emergencyVisible.maxY)
     }
 
     private static func testStoreCollectionAndExternalEdits() async throws {
@@ -524,6 +328,13 @@ struct NotesTests {
         await waitUntil { !store.isSearching }
         check("on-demand search finds body text in another note", store.searchResults.contains { $0.id == firstID })
         store.cancelSearch()
+        let selectionBeforeRejection = selection.id
+        let activeBeforeRejection = store.activeID
+        let rejectedSelection = await store.select(firstID, permitsApply: { false })
+        check(
+            "a superseded selection cannot change or persist the active note",
+            !rejectedSelection && store.activeID == activeBeforeRejection
+                && selection.id == selectionBeforeRejection)
         let selected = await store.select(firstID)
         check(
             "select flushes and changes the active document",

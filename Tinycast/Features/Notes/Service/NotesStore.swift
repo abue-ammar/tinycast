@@ -160,9 +160,13 @@ final class NotesStore {
     }
 
     @discardableResult
-    func select(_ id: NoteID) async -> Bool {
+    func select(
+        _ id: NoteID,
+        permitsApply: @MainActor () -> Bool = { true }
+    ) async -> Bool {
         guard id != activeID else { return true }
         guard await flush() else { return false }
+        guard permitsApply() else { return false }
         cancelSearch()
         let repository = repository
         let result = await Task.detached(priority: .utility) {
@@ -175,6 +179,7 @@ final class NotesStore {
                     .io(fileURL: repository.fileURL(for: id), message: error.localizedDescription))
             }
         }.value
+        guard permitsApply(), !Task.isCancelled else { return false }
         switch result {
         case .success(let document):
             apply(document, summaries: summaries)

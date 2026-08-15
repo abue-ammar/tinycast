@@ -6,7 +6,7 @@ final class NotesPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onCreate: (() -> Void)?
     var onSearch: (() -> Void)?
-    var onDelete: (() -> Void)?
+    var onDelete: (() -> Bool)?
 
     init(content: NSView) {
         super.init(
@@ -36,12 +36,21 @@ final class NotesPanel: NSPanel {
     }
 
     override func sendEvent(_ event: NSEvent) {
-        guard event.type == .keyDown, !event.isARepeat else {
+        guard event.type == .keyDown else {
             super.sendEvent(event)
             return
         }
         if Int(event.keyCode) == kVK_Escape {
+            guard !event.isARepeat else { return }
+            if let fieldEditor = firstResponder as? NSTextView, fieldEditor.isFieldEditor {
+                super.sendEvent(event)
+                return
+            }
             onEscape?()
+            return
+        }
+        guard !event.isARepeat else {
+            super.sendEvent(event)
             return
         }
         if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command {
@@ -50,13 +59,16 @@ final class NotesPanel: NSPanel {
             case "n": onCreate?()
             case "p": onSearch?()
             default:
-                if Int(event.keyCode) == kVK_Delete { onDelete?() } else {
-                    super.sendEvent(event)
-                }
+                if Int(event.keyCode) == kVK_Delete, onDelete?() == true { return }
+                super.sendEvent(event)
             }
             return
         }
         super.sendEvent(event)
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        onEscape?()
     }
 
     override var canBecomeKey: Bool { true }

@@ -120,10 +120,6 @@ run notes-test             Tinycast/Platform/Signposts.swift \
 run notes-editor-test      Tinycast/Platform/Signposts.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/Features/Notes/Model/NoteDocument.swift \
-                           Tinycast/Features/Notes/Model/NoteMarkdownParser.swift \
-                           Tinycast/Features/Notes/Model/NoteDisplayProjection.swift \
-                           Tinycast/Features/Notes/Model/NoteMarkdownEditing.swift \
-                           Tinycast/Features/Notes/UI/NoteTaskOverlayController.swift \
                            Tinycast/Features/Notes/UI/NoteTextView.swift \
                            Tinycast/Features/Notes/UI/NoteEditorView.swift
 run raycast-test           Tinycast/Features/Backup/Model/RaycastFormat.swift \

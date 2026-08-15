@@ -3,8 +3,6 @@ import SwiftUI
 struct NoteSwitcherView: View {
     @Environment(NotesCoordinator.self) private var notes
     @FocusState private var searchFocused: Bool
-    @State private var editingID: NoteID?
-    @State private var titleDraft = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,16 +12,21 @@ struct NoteSwitcherView: View {
         }
         .onAppear(perform: focusSearch)
         .onChange(of: notes.switcherFocusRevision) { _, _ in focusSearch() }
+        .onChange(of: notes.visibleNotes) { _, _ in
+            notes.reconcileSwitcherSelection()
+        }
         .onKeyPress(.downArrow) {
+            guard !notes.isRenamingSwitcherNote else { return .ignored }
             notes.moveSwitcherSelection(by: 1)
             return .handled
         }
         .onKeyPress(.upArrow) {
+            guard !notes.isRenamingSwitcherNote else { return .ignored }
             notes.moveSwitcherSelection(by: -1)
             return .handled
         }
         .onKeyPress(.return) {
-            guard editingID == nil else { return .ignored }
+            guard !notes.isRenamingSwitcherNote else { return .ignored }
             notes.selectSwitcherNote()
             return .handled
         }
@@ -36,6 +39,7 @@ struct NoteSwitcherView: View {
             TextField("Search notes…", text: notes.searchQueryBinding)
                 .textFieldStyle(.plain)
                 .focused($searchFocused)
+                .onExitCommand { notes.closeSwitcher() }
                 .accessibilityLabel("Search Notes")
             if !notes.searchQueryBinding.wrappedValue.isEmpty {
                 Button {
@@ -72,12 +76,15 @@ struct NoteSwitcherView: View {
                             NoteSwitcherRow(
                                 summary: summary,
                                 selected: notes.switcherSelection == summary.id,
-                                editing: editingID == summary.id,
-                                titleDraft: $titleDraft,
-                                onActivate: { notes.select(summary.id) },
-                                onBeginRename: { beginRename(summary) },
-                                onCommitRename: { commitRename(summary.id) },
-                                onCancelRename: cancelRename,
+                                editing: notes.switcherEditingID == summary.id,
+                                titleDraft: notes.switcherTitleDraftBinding,
+                                onActivate: { notes.activateSwitcherNote(summary.id) },
+                                onBeginRename: {
+                                    notes.beginSwitcherRename(summary)
+                                    searchFocused = false
+                                },
+                                onCommitRename: notes.commitSwitcherRename,
+                                onCancelRename: notes.cancelSwitcherRename,
                                 onTrash: { notes.trash(summary.id) })
                                 .id(summary.id)
                         }
@@ -98,23 +105,6 @@ struct NoteSwitcherView: View {
         }
     }
 
-    private func beginRename(_ summary: NoteSummary) {
-        editingID = summary.id
-        titleDraft = summary.title
-        searchFocused = false
-    }
-
-    private func commitRename(_ id: NoteID) {
-        let title = titleDraft
-        editingID = nil
-        notes.rename(id, to: title)
-        focusSearch()
-    }
-
-    private func cancelRename() {
-        editingID = nil
-        focusSearch()
-    }
 }
 
 private struct NoteSwitcherRow: View {
@@ -171,9 +161,21 @@ private struct NoteSwitcherRow: View {
             onActivate()
         }
         .onHover { hovered = $0 }
-        .accessibilityElement(children: editing ? .contain : .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(summary.title)
         .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityAction {
+            guard !editing else { return }
+            onActivate()
+        }
+        .accessibilityAction(named: "Rename \(summary.title)") {
+            guard !editing else { return }
+            onBeginRename()
+        }
+        .accessibilityAction(named: "Move \(summary.title) to Trash") {
+            guard !editing else { return }
+            onTrash()
+        }
         .onChange(of: editing) { _, editing in
             if editing {
                 Task { @MainActor in
@@ -195,6 +197,7 @@ private struct NoteSwitcherRow: View {
         }
         .buttonStyle(.plain)
         .help(title)
+        .accessibilityHidden(true)
         .accessibilityLabel(title)
     }
 }
