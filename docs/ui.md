@@ -141,15 +141,18 @@ header and editor are ordinary content; only the circular Create, Reveal, and hi
 
 `NotesWindowController` owns every frame change. TextKit 2 supplies the laid-out editor height, the
 controller adds the header, clamps to the note minimum and screen-aware maximum, and preserves the top
-edge so existing text never jumps upward. It keeps a 16-point vertical screen margin when possible and
-clamps fully onto shorter screens. After the cap, the native editor scrolls internally. Frame autosaving
-restores position only; content determines size on every show.
+edge so existing text never jumps upward. Content consumes the editor area inside the 220-point minimum
+before growing the panel, and deletion shrinks it naturally back to that minimum. It keeps a 16-point
+vertical screen margin when possible and clamps fully onto shorter screens. After the cap, the native
+editor scrolls internally. Frame autosaving restores position only; content determines size on every
+show.
 
 The header keeps a fixed slot for status so Saving, Saved, failure, and conflict symbols cannot move
 the controls. Failure and conflict symbols can be clicked to reopen their recovery report after a
-dismissal. The title opens the in-window note switcher; the central spacer alone is a
-`WindowDragHandle`. Escape closes the switcher before hiding, while Command-W and the hide control
-order the panel out. Show Notes only shows or focuses; focus loss leaves the panel visible.
+dismissal. A title click opens the in-window note switcher; dragging the title, note icon, or otherwise
+empty header moves the panel after a three-point threshold. Create, Reveal, Hide, and actionable status
+remain click-only controls. Escape closes the switcher before hiding, while Command-W and the hide
+control order the panel out. Show Notes only shows or focuses; focus loss leaves the panel visible.
 
 The editor is one native TextKit 2 surface. Its string is the canonical Markdown source, using one
 system font and the `noteText` color. Markdown markers remain visible and receive no parsing, rendering,

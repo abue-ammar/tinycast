@@ -21,31 +21,6 @@ enum NoteWindowLayout {
             metrics: metrics)
     }
 
-    static func contentTrackingPanelHeight(
-        editorContentHeight: CGFloat,
-        editorGrowthPadding: CGFloat = 0,
-        visibleScreenHeight: CGFloat,
-        metrics: Metrics
-    ) -> CGFloat {
-        let desired = metrics.fixedContentHeight
-            + max(0, editorContentHeight)
-            + max(0, editorGrowthPadding)
-        return clampedPanelHeight(
-            desired,
-            visibleScreenHeight: visibleScreenHeight,
-            metrics: metrics)
-    }
-
-    static func editorGrowthPadding(
-        initialEditorContentHeight: CGFloat,
-        initialPanelHeight: CGFloat,
-        metrics: Metrics
-    ) -> CGFloat {
-        max(
-            0,
-            initialPanelHeight - metrics.fixedContentHeight - max(0, initialEditorContentHeight))
-    }
-
     static func preservedPanelHeight(
         _ currentPanelHeight: CGFloat,
         visibleScreenHeight: CGFloat,

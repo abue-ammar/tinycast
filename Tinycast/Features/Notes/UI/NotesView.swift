@@ -24,45 +24,50 @@ struct NotesView: View {
     }
 
     private var header: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            SymbolImage(name: "text.page", size: Theme.Size.noteStatus)
-                .foregroundStyle(Color.primary)
-                .frame(width: Theme.Size.headerIconSlot)
-            Button(action: notes.openSwitcher) {
-                HStack(spacing: Theme.Spacing.xs) {
-                    Text(notes.activeTitle)
-                        .font(Theme.Typography.noteTitle)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Theme.Colors.textSecondary)
+        ZStack {
+            headerDragRegion(Color.clear)
+            HStack(spacing: Theme.Spacing.md) {
+                headerDragRegion(
+                    SymbolImage(name: "text.page", size: Theme.Size.noteStatus)
+                        .foregroundStyle(Color.primary)
+                        .frame(width: Theme.Size.headerIconSlot))
+                Button(action: notes.openSwitcher) {
+                    HStack(spacing: Theme.Spacing.xs) {
+                        Text(notes.activeTitle)
+                            .font(Theme.Typography.noteTitle)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
                 }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Choose Note")
-            Spacer(minLength: Theme.Spacing.md)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Choose Note")
                 .windowDraggable(
                     true,
+                    onClick: notes.openSwitcher,
                     onBegan: {},
                     onEnded: notes.dragEnded)
-            if !notes.isSwitcherPresented || status.showsInSwitcher {
-                statusView
+                Spacer(minLength: Theme.Spacing.md)
+                if !notes.isSwitcherPresented || status.showsInSwitcher {
+                    statusView
+                }
+                headerButton(
+                    title: "Create Note",
+                    symbol: "plus",
+                    action: notes.createNote)
+                headerButton(
+                    title: "Reveal in Finder",
+                    symbol: "folder",
+                    action: notes.revealInFinder)
+                headerButton(
+                    title: "Hide Notes",
+                    symbol: "xmark",
+                    action: notes.hide)
             }
-            headerButton(
-                title: "Create Note",
-                symbol: "plus",
-                action: notes.createNote)
-            headerButton(
-                title: "Reveal in Finder",
-                symbol: "folder",
-                action: notes.revealInFinder)
-            headerButton(
-                title: "Hide Notes",
-                symbol: "xmark",
-                action: notes.hide)
+            .padding(.leading, Theme.Spacing.xl)
+            .padding(.trailing, Theme.Spacing.md)
         }
-        .padding(.leading, Theme.Spacing.xl)
-        .padding(.trailing, Theme.Spacing.md)
     }
 
     @ViewBuilder
@@ -73,8 +78,15 @@ struct NotesView: View {
             }
             .buttonStyle(.plain)
         } else {
-            statusSymbol
+            headerDragRegion(statusSymbol)
         }
+    }
+
+    private func headerDragRegion<Content: View>(_ content: Content) -> some View {
+        content.windowDraggable(
+            true,
+            onBegan: {},
+            onEnded: notes.dragEnded)
     }
 
     private var statusSymbol: some View {

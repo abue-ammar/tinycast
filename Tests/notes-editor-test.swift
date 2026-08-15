@@ -12,6 +12,7 @@ struct NotesEditorTests {
         testUndoIsolation()
         testDocumentScopedHeightReports()
         testContentHeight()
+        testLiveHeightShrinksAfterDeletion()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -142,6 +143,40 @@ struct NotesEditorTests {
             "Markdown markers receive no rendered height treatment",
             NoteEditorView.contentHeight(for: "**plain**", width: 320)
                 == NoteEditorView.contentHeight(for: "123456789", width: 320))
+    }
+
+    private static func testLiveHeightShrinksAfterDeletion() {
+        let input = NoteEditorInput(
+            id: NoteID(rawValue: "Resize.md"),
+            source: "Short",
+            epoch: 1)
+        var heights: [CGFloat] = []
+        let editor = makeEditor(
+            input: input,
+            onHeightChange: { _, height in heights.append(height) })
+        heights.removeAll()
+
+        editor.textView.selectAll(nil)
+        editor.textView.insertText(
+            (0..<80).map { "Expanded line \($0)" }.joined(separator: "\n"),
+            replacementRange: editor.textView.selectedRange())
+        let expandedHeight = heights.last ?? 0
+        editor.textView.setSelectedRange(
+            NSRange(location: (editor.textView.string as NSString).length, length: 0))
+        editor.textView.insertNewline(nil)
+        let addedLineHeight = heights.last ?? expandedHeight
+        editor.textView.deleteBackward(nil)
+        check(
+            "removing a newly added line immediately reports a smaller height",
+            heights.last ?? addedLineHeight < addedLineHeight)
+
+        editor.textView.selectAll(nil)
+        editor.textView.deleteBackward(nil)
+
+        check("live editing expands the measured editor height", expandedHeight > 0)
+        check(
+            "deleting expanded content immediately reports a smaller height",
+            heights.last ?? expandedHeight < expandedHeight)
     }
 
     private static func makeEditor(

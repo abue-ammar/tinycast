@@ -56,6 +56,7 @@ struct NoteEditorView: NSViewRepresentable {
         let editorUndoManager = UndoManager()
 
         private var input: NoteEditorInput
+        private var heightReportTask: Task<Void, Never>?
         private var isInstalling = false
 
         init(parent: NoteEditorView) {
@@ -93,6 +94,7 @@ struct NoteEditorView: NSViewRepresentable {
             input = NoteEditorInput(id: input.id, source: source, epoch: input.epoch)
             parent.onSourceChange(source)
             reportHeight()
+            scheduleHeightReport(for: input)
         }
 
         func reportHeight() {
@@ -105,9 +107,12 @@ struct NoteEditorView: NSViewRepresentable {
         }
 
         func scheduleHeightReport(for expectedInput: NoteEditorInput) {
-            Task { @MainActor [weak self] in
+            heightReportTask?.cancel()
+            heightReportTask = Task { @MainActor [weak self] in
                 await Task.yield()
-                guard let self, matchesCurrentDocument(expectedInput) else { return }
+                guard !Task.isCancelled, let self, matchesCurrentDocument(expectedInput) else {
+                    return
+                }
                 textView?.layoutSubtreeIfNeeded()
                 reportHeight()
             }

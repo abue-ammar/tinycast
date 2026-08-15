@@ -66,11 +66,12 @@ Command-N creates, Command-P opens or refocuses the switcher, Escape closes the 
 and Command-W hides directly. Hiding restores the prior external application or Tinycast window and
 flushes without delaying the order-out.
 
-The fixed header contains the note glyph, active-title switcher button, drag region, save/conflict
-state, Create, Reveal, and Hide controls. The switcher replaces only the editor region and never changes
-the frame. An empty query lists metadata by recency; a nonempty query searches titles and literal bodies
-after a 120-millisecond debounce. Results are capped at 200, and generation checks prevent superseded
-search or selection work from publishing.
+The fixed header contains the note glyph, active-title switcher button, save/conflict state, Create,
+Reveal, and Hide controls. The icon, title, and empty header surface move the window; a title click still
+opens the switcher, while buttons remain isolated from dragging. The switcher replaces only the editor
+region and never changes the frame. An empty query lists metadata by recency; a nonempty query searches
+titles and literal bodies after a 120-millisecond debounce. Results are capped at 200, and generation
+checks prevent superseded search or selection work from publishing.
 
 Arrow keys and Return do not intercept an inline rename. Command-Delete moves the selected row to Trash
 only while the switcher is not renaming; in the editor and title field it remains a native text command.
@@ -91,9 +92,11 @@ document's undo history; ordinary edits keep native undo grouping.
 
 The editor reports laid-out content height with the note identity and epoch that produced it. The
 coordinator rejects stale reports, and the window controller skips redundant frame assignments so
-editing near the bottom does not reset the viewport. A new document starts a new fit session; edits can
-grow or shrink the window while preserving its top edge. The panel observes a 16-point vertical screen
-margin when possible, clamps fully onto unusually short screens, and scrolls after its 640-point cap.
+editing near the bottom does not reset the viewport. A coalesced post-layout report prevents TextKit's
+pre-deletion geometry from leaving the panel expanded. Content first consumes the editor space inside
+the 220-point minimum, then grows downward while preserving the top edge; deletions shrink naturally
+back to the minimum. The panel observes a 16-point vertical screen margin when possible, clamps fully
+onto unusually short screens, and scrolls after its 640-point cap.
 
 ## Autosave and external changes
 

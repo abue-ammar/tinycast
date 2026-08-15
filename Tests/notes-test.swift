@@ -230,22 +230,28 @@ struct NotesTests {
             "natural height includes fixed window chrome",
             NoteWindowLayout.panelHeight(
                 editorContentHeight: 300, visibleScreenHeight: 900, metrics: metrics) == 344)
-        let growthPadding = NoteWindowLayout.editorGrowthPadding(
-            initialEditorContentHeight: 32,
-            initialPanelHeight: 220,
-            metrics: metrics)
-        check("minimum-height sessions retain their initial breathing room", growthPadding == 144)
         check(
-            "a new line grows a minimum-height session immediately",
-            NoteWindowLayout.contentTrackingPanelHeight(
+            "additional content consumes the minimum-height editor capacity first",
+            NoteWindowLayout.panelHeight(
                 editorContentHeight: 48,
-                editorGrowthPadding: growthPadding,
                 visibleScreenHeight: 900,
-                metrics: metrics) == 236)
+                metrics: metrics) == 220)
         check(
-            "live editing shrinks after content deletion",
-            NoteWindowLayout.contentTrackingPanelHeight(
-                editorContentHeight: 10,
+            "content at the minimum-height boundary does not resize the panel",
+            NoteWindowLayout.panelHeight(
+                editorContentHeight: 176,
+                visibleScreenHeight: 900,
+                metrics: metrics) == 220)
+        check(
+            "content beyond the minimum-height boundary grows only by its overflow",
+            NoteWindowLayout.panelHeight(
+                editorContentHeight: 177,
+                visibleScreenHeight: 900,
+                metrics: metrics) == 221)
+        check(
+            "deleting content shrinks the panel back to its minimum",
+            NoteWindowLayout.panelHeight(
+                editorContentHeight: 48,
                 visibleScreenHeight: 900,
                 metrics: metrics) == 220)
         check(

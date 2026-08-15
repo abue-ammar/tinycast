@@ -1,24 +1,40 @@
 import SwiftUI
 
-/// Starts a window drag on mouse-down — the hosting view otherwise eats the click first.
+/// Tracks explicit window drags; with an action, treats stationary mouse-up as a click.
 struct WindowDragHandle: NSViewRepresentable {
+    private static let clickDragThreshold: CGFloat = 3
+
+    var onClick: (() -> Void)?
     var onBegan: () -> Void
     var onEnded: () -> Void
 
     func makeNSView(context: Context) -> NSView { DragView() }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        (nsView as? DragView)?.bind(onBegan: onBegan, onEnded: onEnded)
+        (nsView as? DragView)?.bind(
+            onClick: onClick,
+            dragThreshold: onClick == nil ? 0 : Self.clickDragThreshold,
+            onBegan: onBegan,
+            onEnded: onEnded)
     }
 }
 
 extension View {
     /// Marks a region as a window-drag handle; an overlay, so it wins the hit-test race.
     func windowDraggable(
-        _ enabled: Bool, onBegan: @escaping () -> Void, onEnded: @escaping () -> Void
+        _ enabled: Bool,
+        onClick: (() -> Void)? = nil,
+        onBegan: @escaping () -> Void,
+        onEnded: @escaping () -> Void
     ) -> some View {
         overlay {
-            if enabled { WindowDragHandle(onBegan: onBegan, onEnded: onEnded) }
+            if enabled {
+                WindowDragHandle(
+                    onClick: onClick,
+                    onBegan: onBegan,
+                    onEnded: onEnded)
+                    .accessibilityHidden(true)
+            }
         }
     }
 }
@@ -43,10 +59,19 @@ struct TextTrailingDragHandle: NSViewRepresentable {
 /// Tracks the drag itself rather than calling `performDrag(with:)`, which hands the gesture to the
 /// window server and returns at once — leaving no way to know when the mouse actually comes up.
 private class DragView: NSView {
+    private var onClick: (() -> Void)?
+    private var dragThreshold: CGFloat = 0
     private var onBegan: (() -> Void)?
     private var onEnded: (() -> Void)?
 
-    func bind(onBegan: @escaping () -> Void, onEnded: @escaping () -> Void) {
+    func bind(
+        onClick: (() -> Void)? = nil,
+        dragThreshold: CGFloat = 0,
+        onBegan: @escaping () -> Void,
+        onEnded: @escaping () -> Void
+    ) {
+        self.onClick = onClick
+        self.dragThreshold = max(0, dragThreshold)
         self.onBegan = onBegan
         self.onEnded = onEnded
     }
@@ -56,7 +81,8 @@ private class DragView: NSView {
         // Deltas off `mouseLocation`, so no view or window coordinate conversion can drift.
         let origin = window.frame.origin
         let start = NSEvent.mouseLocation
-        onBegan?()
+        var isDragging = dragThreshold == 0
+        if isDragging { onBegan?() }
         window.trackEvents(
             matching: [.leftMouseDragged, .leftMouseUp], timeout: NSEvent.foreverDuration,
             mode: .eventTracking
@@ -66,10 +92,20 @@ private class DragView: NSView {
                 return
             }
             let mouse = NSEvent.mouseLocation
+            if !isDragging {
+                let distance = hypot(mouse.x - start.x, mouse.y - start.y)
+                guard distance >= dragThreshold else { return }
+                isDragging = true
+                onBegan?()
+            }
             window.setFrameOrigin(
                 CGPoint(x: origin.x + mouse.x - start.x, y: origin.y + mouse.y - start.y))
         }
-        onEnded?()
+        if isDragging {
+            onEnded?()
+        } else {
+            onClick?()
+        }
     }
 }
 

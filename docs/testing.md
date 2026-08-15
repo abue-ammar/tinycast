@@ -285,10 +285,12 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   does not terminate; repeat after a clean external reload
 - Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, Undo, Redo, and Find preserve
   exact source
-- The panel grows and shrinks downward without moving its header, keeps a 16-point vertical screen
-  margin when possible, stops at its screen-aware cap, then scrolls
+- A new note stays at 220 points while lines fit, then grows and shrinks downward without moving its
+  header; it keeps a 16-point vertical screen margin when possible, stops at its cap, then scrolls
 - Clicking another app leaves the panel visible; Escape, Command-W, and close hide it
-- Hiding restores the previous external app or Tinycast window, and the dragged position survives relaunch
+- Dragging the icon, title, or empty header moves the panel in editor and switcher states; clicking the
+  title still opens the switcher, action buttons do not drag, and the position survives relaunch
+- Hiding restores the previous external app or Tinycast window
 - Reveal opens Finder with the active Markdown file selected
 - A clean external edit reloads; a dirty one keeps the draft and reports a conflict without overwriting
 - Dismissing a save or conflict report keeps the draft; clicking its warning offers recovery again

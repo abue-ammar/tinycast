@@ -4,8 +4,7 @@ import SwiftUI
 @MainActor
 final class NotesWindowController: NSObject {
     enum HeightBehavior: Equatable {
-        case fitContent
-        case trackContent
+        case content
         case preserve
     }
 
@@ -17,7 +16,6 @@ final class NotesWindowController: NSObject {
     private var previousApp: NSRunningApplication?
     private weak var previousOwnWindow: NSWindow?
     private var editorHeight: CGFloat = 0
-    private var editorGrowthPadding: CGFloat = 0
     private var hasPositionedPanel = false
 
     init(coordinator: NotesCoordinator) {
@@ -29,20 +27,13 @@ final class NotesWindowController: NSObject {
     func show(
         initialEditorHeight: CGFloat,
         focusEditor: Bool,
-        heightBehavior: HeightBehavior = .fitContent
+        heightBehavior: HeightBehavior = .content
     ) {
         let wasVisible = panel?.isVisible == true
         if !wasVisible { captureFocusTarget() }
         editorHeight = initialEditorHeight
-        if heightBehavior == .fitContent { editorGrowthPadding = 0 }
         let panel = ensurePanel()
         position(panel, heightBehavior: heightBehavior)
-        if heightBehavior == .fitContent {
-            editorGrowthPadding = NoteWindowLayout.editorGrowthPadding(
-                initialEditorContentHeight: initialEditorHeight,
-                initialPanelHeight: panel.frame.height,
-                metrics: Self.metrics)
-        }
         panel.contentView?.layoutSubtreeIfNeeded()
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
@@ -64,7 +55,7 @@ final class NotesWindowController: NSObject {
         guard height.isFinite, height > 0 else { return }
         editorHeight = height
         guard let panel else { return }
-        position(panel, heightBehavior: .trackContent)
+        position(panel, heightBehavior: .content)
     }
 
     func editorReady(_ textView: NoteTextView) {
@@ -102,7 +93,7 @@ final class NotesWindowController: NSObject {
 
     private func position(
         _ panel: NotesPanel,
-        heightBehavior: HeightBehavior = .fitContent
+        heightBehavior: HeightBehavior = .content
     ) {
         let restored = !hasPositionedPanel && panel.setFrameUsingName(Self.frameAutosaveName)
         let visibleFrame = panel.screen?.visibleFrame
@@ -114,15 +105,9 @@ final class NotesWindowController: NSObject {
             visibleFrame,
             metrics: Self.metrics)
         let height: CGFloat = switch heightBehavior {
-        case .fitContent:
+        case .content:
             NoteWindowLayout.panelHeight(
                 editorContentHeight: editorHeight,
-                visibleScreenHeight: visibleFrame.height,
-                metrics: Self.metrics)
-        case .trackContent:
-            NoteWindowLayout.contentTrackingPanelHeight(
-                editorContentHeight: editorHeight,
-                editorGrowthPadding: editorGrowthPadding,
                 visibleScreenHeight: visibleFrame.height,
                 metrics: Self.metrics)
         case .preserve:

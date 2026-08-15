@@ -231,7 +231,7 @@ final class NotesCoordinator {
             closeSwitcher()
             showLoadedNote(
                 focusEditor: true,
-                heightBehavior: previousID == store.activeID ? .preserve : .fitContent)
+                heightBehavior: previousID == store.activeID ? .preserve : .content)
         }
     }
 
@@ -301,7 +301,7 @@ final class NotesCoordinator {
             else { return }
             showLoadedNote(
                 focusEditor: !isSwitcherPresented,
-                heightBehavior: previousID == store.activeID ? .preserve : .fitContent)
+                heightBehavior: previousID == store.activeID ? .preserve : .content)
         }
     }
 
@@ -354,7 +354,7 @@ final class NotesCoordinator {
                 pendingPresentation = nil
                 if next == .create {
                     closeSwitcher()
-                    showLoadedNote(focusEditor: true, heightBehavior: .fitContent)
+                    showLoadedNote(focusEditor: true, heightBehavior: .content)
                 } else {
                     await present(next)
                 }
@@ -380,7 +380,7 @@ final class NotesCoordinator {
             closeSwitcher()
             showLoadedNote(
                 focusEditor: true,
-                heightBehavior: windowController.isVisible ? .preserve : .fitContent)
+                heightBehavior: windowController.isVisible ? .preserve : .content)
         case .create:
             let capturedGeneration = presentationGeneration.current
             guard await store.create(), settings.notesEnabled, !Task.isCancelled,
@@ -388,18 +388,18 @@ final class NotesCoordinator {
                     capturedGeneration: capturedGeneration)
             else { return }
             closeSwitcher()
-            showLoadedNote(focusEditor: true, heightBehavior: .fitContent)
+            showLoadedNote(focusEditor: true, heightBehavior: .content)
         case .search:
             openSwitcher()
             showLoadedNote(
                 focusEditor: false,
-                heightBehavior: windowController.isVisible ? .preserve : .fitContent)
+                heightBehavior: windowController.isVisible ? .preserve : .content)
         }
     }
 
     private func showLoadedNote(
         focusEditor: Bool,
-        heightBehavior: NotesWindowController.HeightBehavior = .fitContent
+        heightBehavior: NotesWindowController.HeightBehavior = .content
     ) {
         let editorHeight = NoteEditorView.contentHeight(
             for: store.source,
