@@ -12,7 +12,6 @@ struct NotesEditorTests {
         testUndoIsolation()
         testDocumentScopedHeightReports()
         testContentHeight()
-        await testUsageBoundsObservation()
         await testLiveHeightShrinksAfterDeletion()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -128,44 +127,23 @@ struct NotesEditorTests {
 
     private static func testContentHeight() {
         let short = NoteEditorView.contentHeight(for: "Short", width: 320)
+        let trailingLine = NoteEditorView.contentHeight(for: "Short\n", width: 320)
+        let empty = NoteEditorView.contentHeight(for: "", width: 320)
+        let wrapped = NoteEditorView.contentHeight(
+            for: String(repeating: "A long wrapped paragraph. ", count: 80),
+            width: 320)
         let long = NoteEditorView.contentHeight(
             for: (0..<80).map { "Line \($0) with enough literal text to wrap" }
                 .joined(separator: "\n"),
             width: 320)
+        check("an empty editor retains one caret line", empty == short)
+        check("a trailing newline contributes its empty line", trailingLine > short)
+        check("a wrapped paragraph contributes its complete fragment height", wrapped > short)
         check("literal editor height grows with laid-out content", long > short)
         check(
             "Markdown markers receive no rendered height treatment",
             NoteEditorView.contentHeight(for: "**plain**", width: 320)
                 == NoteEditorView.contentHeight(for: "123456789", width: 320))
-    }
-
-    private static func testUsageBoundsObservation() async {
-        let input = NoteEditorInput(
-            id: NoteID(rawValue: "Observed.md"),
-            source: "Short",
-            epoch: 1)
-        var heights: [CGFloat] = []
-        let editor = makeEditor(
-            input: input,
-            onHeightChange: { _, height in heights.append(height) })
-        await Task.yield()
-        let shortHeight = heights.last ?? 0
-        heights.removeAll()
-        editor.textView.delegate = nil
-
-        editor.textView.string = (0..<80).map { "Observed line \($0)" }.joined(separator: "\n")
-        ensureEditorLayout(editor.textView)
-        await waitUntil { heights.contains { $0 > shortHeight } }
-        let expandedHeight = heights.last(where: { $0 > shortHeight }) ?? shortHeight
-        heights.removeAll()
-
-        editor.textView.string = "Short"
-        ensureEditorLayout(editor.textView)
-        await waitUntil { heights.contains { $0 < expandedHeight } }
-
-        check(
-            "settled TextKit usage bounds report deletion shrink independently of edit timing",
-            heights.contains { $0 < expandedHeight })
     }
 
     private static func testLiveHeightShrinksAfterDeletion() async {
@@ -187,6 +165,8 @@ struct NotesEditorTests {
         let reportsBeforeDeletion = heights.count
         let retainedPrefix = (editor.textView.string as NSString).range(of: "Expanded line 4\n")
         let deletionStart = NSMaxRange(retainedPrefix)
+        let retainedSource = (editor.textView.string as NSString).substring(to: deletionStart)
+        let expectedHeight = NoteEditorView.contentHeight(for: retainedSource, width: 320)
         editor.textView.setSelectedRange(
             NSRange(
                 location: deletionStart,
@@ -194,20 +174,13 @@ struct NotesEditorTests {
         editor.textView.deleteBackward(nil)
 
         await waitUntil {
-            heights.dropFirst(reportsBeforeDeletion).contains { $0 < expandedHeight }
+            heights.dropFirst(reportsBeforeDeletion).contains(expectedHeight)
         }
 
         check("live editing expands the measured editor height", expandedHeight > 0)
         check(
-            "deleting rows reports a smaller settled height without another edit",
-            heights.dropFirst(reportsBeforeDeletion).contains { $0 < expandedHeight })
-    }
-
-    private static func ensureEditorLayout(_ textView: NSTextView) {
-        guard let layoutManager = textView.textLayoutManager,
-            let contentManager = layoutManager.textContentManager
-        else { return }
-        layoutManager.ensureLayout(for: contentManager.documentRange)
+            "deleting rows reports the exact clean-layout height without another edit",
+            heights.dropFirst(reportsBeforeDeletion).contains(expectedHeight))
     }
 
     private static func waitUntil(_ condition: () -> Bool) async {
@@ -241,7 +214,6 @@ struct NotesEditorTests {
             defer: false)
         window.contentView = scrollView
         coordinator.textView = textView
-        coordinator.observeUsageBounds()
         coordinator.install(input, resetUndo: false)
         coordinator.reportHeight()
         window.makeFirstResponder(textView)

@@ -92,9 +92,9 @@ document's undo history; ordinary edits keep native undo grouping.
 
 The editor reports laid-out content height with the note identity and epoch that produced it. The
 coordinator rejects stale reports, and the window controller skips redundant frame assignments so
-editing near the bottom does not reset the viewport. The coordinator observes TextKit's settled usage
-bounds so deletion cannot leave pre-change geometry in place. Content first consumes the editor space
-inside the 220-point minimum, then grows downward while preserving the top edge; deletions shrink
+editing near the bottom does not reset the viewport. Height comes from the laid-out fragment extent
+because TextKit's aggregate usage bounds can retain deleted geometry. Content first consumes the editor
+space inside the 220-point minimum, then grows downward while preserving the top edge; deletions shrink
 naturally back to the minimum. The panel observes a 16-point vertical screen margin when possible,
 clamps fully onto unusually short screens, and scrolls after its 640-point cap.
 

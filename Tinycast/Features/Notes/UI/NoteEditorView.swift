@@ -25,7 +25,6 @@ struct NoteEditorView: NSViewRepresentable {
         textView.editorUndoManager = context.coordinator.editorUndoManager
         scrollView.documentView = textView
         context.coordinator.textView = textView
-        context.coordinator.observeUsageBounds()
         context.coordinator.install(input, resetUndo: false)
         context.coordinator.reportHeight()
         onReady(textView)
@@ -57,7 +56,6 @@ struct NoteEditorView: NSViewRepresentable {
         let editorUndoManager = UndoManager()
 
         private var input: NoteEditorInput
-        private var usageBoundsObservation: NSKeyValueObservation?
         private var isInstalling = false
 
         init(parent: NoteEditorView) {
@@ -102,33 +100,11 @@ struct NoteEditorView: NSViewRepresentable {
             publishHeight(NoteEditorView.measuredHeight(of: textView), in: textView)
         }
 
-        private func reportUsageBounds() {
-            guard let textView, let layoutManager = textView.textLayoutManager else { return }
-            let height = ceil(
-                layoutManager.usageBoundsForTextContainer.height
-                    + textView.textContainerInset.height * 2)
-            publishHeight(height, in: textView)
-        }
-
         private func publishHeight(_ height: CGFloat, in textView: NSTextView) {
             if textView.frame.height != height {
                 textView.setFrameSize(NSSize(width: textView.frame.width, height: height))
             }
             parent.onContentHeightChange(input, height)
-        }
-
-        func observeUsageBounds() {
-            guard usageBoundsObservation == nil, let layoutManager = textView?.textLayoutManager else {
-                return
-            }
-            usageBoundsObservation = layoutManager.observe(
-                \.usageBoundsForTextContainer,
-                options: [.new]
-            ) { [weak self] _, _ in
-                Task { @MainActor [weak self] in
-                    self?.reportUsageBounds()
-                }
-            }
         }
     }
 
@@ -186,7 +162,14 @@ struct NoteEditorView: NSViewRepresentable {
             let contentManager = layoutManager.textContentManager
         else { return Theme.Size.noteEditorInset * 2 }
         layoutManager.ensureLayout(for: contentManager.documentRange)
-        return ceil(
-            layoutManager.usageBoundsForTextContainer.height + textView.textContainerInset.height * 2)
+        var extent: CGFloat = 0
+        layoutManager.enumerateTextLayoutFragments(
+            from: contentManager.documentRange.location,
+            options: [.ensuresLayout, .ensuresExtraLineFragment]
+        ) { fragment in
+            extent = max(extent, fragment.layoutFragmentFrame.maxY)
+            return true
+        }
+        return ceil(extent + textView.textContainerInset.height * 2)
     }
 }
