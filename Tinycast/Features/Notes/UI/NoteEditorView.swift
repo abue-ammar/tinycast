@@ -162,14 +162,13 @@ struct NoteEditorView: NSViewRepresentable {
         guard let layoutManager = textView.textLayoutManager,
             let contentManager = layoutManager.textContentManager
         else { return Theme.Size.noteEditorInset * 2 }
-        layoutManager.ensureLayout(for: contentManager.documentRange)
         var extent: CGFloat = 0
         layoutManager.enumerateTextLayoutFragments(
-            from: contentManager.documentRange.location,
-            options: [.ensuresLayout, .ensuresExtraLineFragment]
+            from: contentManager.documentRange.endLocation,
+            options: [.reverse, .ensuresLayout, .ensuresExtraLineFragment]
         ) { fragment in
-            extent = max(extent, fragment.layoutFragmentFrame.maxY)
-            return true
+            extent = fragment.layoutFragmentFrame.maxY
+            return false
         }
         return ceil(extent + textView.textContainerInset.height * 2)
     }

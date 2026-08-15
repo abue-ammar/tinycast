@@ -143,6 +143,17 @@ swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
 Every query runs twice: once on the shipped rules and once with five extra user patterns, so the output
 says what the ignore list itself costs rather than only what Spotlight does.
 
+Measure the Notes per-edit path separately with a 250,000-character plain document:
+
+```sh
+swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
+    Tinycast/DesignSystem/Theme.swift Tinycast/Features/Notes/Model/NoteDocument.swift \
+    Tinycast/Features/Notes/UI/NoteTextView.swift \
+    Tinycast/Features/Notes/UI/NoteEditorView.swift \
+    Tests/notes-editor-performance.swift -o /tmp/notes-editor-performance
+/tmp/notes-editor-performance
+```
+
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the
 instrument then shows an interval that never closes.
@@ -165,6 +176,7 @@ Measured at the end of the 2026 refactor, on `main`. Useful as orders of magnitu
 | `palette-selection-test` | 111,684 assertions — a tripwire: a change in this count means the row-order model moved |
 | `SnippetKeywordPolicy` match | 7 µs/keystroke at 50 keywords, 59 µs at 1,000 — the `lowercased()` is 0.09 µs of it |
 | `ClipboardStore.pinnedItems` | 27–127 µs per uncached search, 1,000-row window — no cache earns its invalidation yet |
+| Notes plain edit, 250k characters | 5.2 ms median, 5.4 ms p95 |
 | `count items of trash` | 5,000 ms against a cold Finder on an *empty* Trash, 110 ms warm — why AppleScript is detached |
 
 Launch time, allocation counts and RSS have never been captured as numbers. The signposts are in place,

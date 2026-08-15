@@ -142,6 +142,15 @@ struct NotesEditorTests {
         check("a trailing newline contributes its empty line", trailingLine > short)
         check("a wrapped paragraph contributes its complete fragment height", wrapped > short)
         check("literal editor height grows with laid-out content", long > short)
+        let longEditor = makeEditor(
+            input: NoteEditorInput(
+                id: NoteID(rawValue: "Fragment Reference.md"),
+                source: String(repeating: "Paragraph long enough to wrap. ", count: 200),
+                epoch: 1))
+        check(
+            "terminal-fragment height matches exhaustive fragment measurement",
+            NoteEditorView.contentHeight(for: longEditor.textView.string, width: 320)
+                == exhaustiveHeight(of: longEditor.textView))
         check(
             "Markdown markers receive no rendered height treatment",
             NoteEditorView.contentHeight(for: "**plain**", width: 320)
@@ -189,13 +198,12 @@ struct NotesEditorTests {
         let reportsBeforeDeletion = heights.count
         let retainedPrefix = (editor.textView.string as NSString).range(of: "Expanded line 4\n")
         let deletionStart = NSMaxRange(retainedPrefix)
-        let retainedSource = (editor.textView.string as NSString).substring(to: deletionStart)
-        let expectedHeight = NoteEditorView.contentHeight(for: retainedSource, width: 320)
         editor.textView.setSelectedRange(
             NSRange(
                 location: deletionStart,
                 length: (editor.textView.string as NSString).length - deletionStart))
         editor.textView.deleteBackward(nil)
+        let expectedHeight = exhaustiveHeight(of: editor.textView)
         let deletionHeights = heights.dropFirst(reportsBeforeDeletion)
 
         check("live editing expands the measured editor height", expandedHeight > 0)
@@ -205,6 +213,22 @@ struct NotesEditorTests {
         check(
             "deleting rows immediately reports the exact clean-layout height",
             deletionHeights.last == expectedHeight)
+    }
+
+    private static func exhaustiveHeight(of textView: NSTextView) -> CGFloat {
+        guard let layoutManager = textView.textLayoutManager,
+            let contentManager = layoutManager.textContentManager
+        else { return Theme.Size.noteEditorInset * 2 }
+        layoutManager.ensureLayout(for: contentManager.documentRange)
+        var extent: CGFloat = 0
+        layoutManager.enumerateTextLayoutFragments(
+            from: contentManager.documentRange.location,
+            options: [.ensuresLayout, .ensuresExtraLineFragment]
+        ) { fragment in
+            extent = max(extent, fragment.layoutFragmentFrame.maxY)
+            return true
+        }
+        return ceil(extent + textView.textContainerInset.height * 2)
     }
 
     private static func makeEditor(

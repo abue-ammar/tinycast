@@ -122,5 +122,6 @@ recovery, switcher interaction, cancellation, and top-anchored screen-aware layo
 
 `Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects to cover literal source,
 native Cut/Copy/Paste, Unicode and marked text, undo isolation, document-scoped height reports, and
-content measurement. The Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher,
-focus restoration, Finder, Trash recovery, external changes, sizing, and accessibility.
+content measurement. `Tests/notes-editor-performance.swift` measures the shipped per-edit path with a
+250,000-character plain note. The Notes manual sweep in `docs/testing.md` covers commands, shortcuts,
+switcher, focus restoration, Finder, Trash recovery, external changes, sizing, and accessibility.
