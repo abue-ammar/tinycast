@@ -14,7 +14,7 @@ struct NotesEditorTests {
         testDocumentScopedHeightReports()
         testContentHeight()
         testHostedEditorUsesPanelWidthForInitialHeight()
-        await testLiveHeightShrinksAfterDeletion()
+        testLiveHeightShrinksAfterDeletion()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -170,7 +170,7 @@ struct NotesEditorTests {
             heights.first == NoteEditorView.contentHeight(for: source, width: Theme.Size.noteWidth))
     }
 
-    private static func testLiveHeightShrinksAfterDeletion() async {
+    private static func testLiveHeightShrinksAfterDeletion() {
         let input = NoteEditorInput(
             id: NoteID(rawValue: "Resize.md"),
             source: "Short",
@@ -196,22 +196,15 @@ struct NotesEditorTests {
                 location: deletionStart,
                 length: (editor.textView.string as NSString).length - deletionStart))
         editor.textView.deleteBackward(nil)
-
-        await waitUntil {
-            heights.dropFirst(reportsBeforeDeletion).contains(expectedHeight)
-        }
+        let deletionHeights = heights.dropFirst(reportsBeforeDeletion)
 
         check("live editing expands the measured editor height", expandedHeight > 0)
         check(
-            "deleting rows reports the exact clean-layout height without another edit",
-            heights.dropFirst(reportsBeforeDeletion).contains(expectedHeight))
-    }
-
-    private static func waitUntil(_ condition: () -> Bool) async {
-        for _ in 0..<20 {
-            if condition() { return }
-            await Task.yield()
-        }
+            "deleting rows publishes one immediate height",
+            deletionHeights.count == 1)
+        check(
+            "deleting rows immediately reports the exact clean-layout height",
+            deletionHeights.last == expectedHeight)
     }
 
     private static func makeEditor(
