@@ -24,6 +24,7 @@ struct NoteEditorView: NSViewRepresentable {
         textView.delegate = context.coordinator
         textView.editorUndoManager = context.coordinator.editorUndoManager
         scrollView.documentView = textView
+        textView.setFrameSize(NSSize(width: Theme.Size.noteWidth, height: 1))
         context.coordinator.textView = textView
         context.coordinator.install(input, resetUndo: false)
         context.coordinator.reportHeight()

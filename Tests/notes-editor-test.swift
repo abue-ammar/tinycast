@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 
 @main
 @MainActor
@@ -12,6 +13,7 @@ struct NotesEditorTests {
         testUndoIsolation()
         testDocumentScopedHeightReports()
         testContentHeight()
+        testHostedEditorUsesPanelWidthForInitialHeight()
         await testLiveHeightShrinksAfterDeletion()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -144,6 +146,28 @@ struct NotesEditorTests {
             "Markdown markers receive no rendered height treatment",
             NoteEditorView.contentHeight(for: "**plain**", width: 320)
                 == NoteEditorView.contentHeight(for: "123456789", width: 320))
+    }
+
+    private static func testHostedEditorUsesPanelWidthForInitialHeight() {
+        let source = String(repeating: "A long wrapped paragraph. ", count: 80)
+        let input = NoteEditorInput(
+            id: NoteID(rawValue: "Hosted.md"),
+            source: source,
+            epoch: 1)
+        var heights: [CGFloat] = []
+        let hostingView = NSHostingView(
+            rootView: NoteEditorView(
+                input: input,
+                onSourceChange: { _ in },
+                onContentHeightChange: { _, height in heights.append(height) },
+                onReady: { _ in }))
+        hostingView.sizingOptions = []
+        hostingView.frame = NSRect(x: 0, y: 0, width: Theme.Size.noteWidth, height: 220)
+        hostingView.layoutSubtreeIfNeeded()
+
+        check(
+            "the hosted editor initially measures wrapped content at the panel width",
+            heights.first == NoteEditorView.contentHeight(for: source, width: Theme.Size.noteWidth))
     }
 
     private static func testLiveHeightShrinksAfterDeletion() async {
