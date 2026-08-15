@@ -93,12 +93,11 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     var kindLabel: String { labelOverride ?? kind.descriptor.label }
 
-    /// The hotkey action for this entry, or nil for built-ins and unaddressable bundles.
+    /// The hotkey action for this entry, or nil when the entry has no addressable action.
     var hotKeyAction: HotKeyAction? {
         switch kind {
         case .command:
-            // Search Files is the one built-in with its own action; the rest open from the launcher.
-            return CommandCatalog.command(for: self) == .searchFiles ? .searchFiles : nil
+            return CommandCatalog.command(for: self)?.hotKeyAction
         case .application:
             return bundleID.map { .app(bundleID: $0) }
         case .systemSettings:

@@ -55,6 +55,7 @@ struct DoubleTapDetectorTests {
 
     static func main() {
         modifierGlyphs()
+        commandActions()
         hyperChord()
         hyperRetargeting()
         firing()
@@ -82,6 +83,27 @@ struct DoubleTapDetectorTests {
             DoubleTapModifier.allCases.map(\.rawValue)
                 == ["control", "option", "shift", "command"],
             "raw values are the persisted spelling and stay in canonical ⌃⌥⇧⌘ order")
+    }
+
+    // MARK: - Built-in command mappings
+
+    static func commandActions() {
+        let answers = CommandID.allCases.compactMap { id in id.hotKeyAction.map { (id, $0) } }
+        expect(
+            answers.count == 2,
+            "exactly the two bindable commands answer — got \(answers.map(\.0.name))")
+        expect(
+            answers.contains {
+                $0.0 == .searchFiles && $0.1 == .searchFiles
+                    && $0.1.defaultsKey == "hotkey.searchFiles"
+            },
+            "Search Files maps to hotkey.searchFiles")
+        expect(
+            answers.contains {
+                $0.0 == .clipboardHistory && $0.1 == .toggleClipboard
+                    && $0.1.defaultsKey == "hotkey.toggleClipboard"
+            },
+            "Clipboard History maps to hotkey.toggleClipboard")
     }
 
     // MARK: - The Hyper chord

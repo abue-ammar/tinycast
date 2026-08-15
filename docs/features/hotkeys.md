@@ -56,12 +56,13 @@ export → import within one build is guaranteed to round-trip.
 `legacyKey` returns nil for an action that postdates the scheme, so nothing new has to invent a
 migration key it never wrote. It is scheduled for deletion.
 
-`hotkey.searchFiles` is the singleton case for a built-in launcher command, alongside
-`hotkey.togglePalette`, `hotkey.toggleClipboard` and `hotkey.toggleEmoji`. It is the only `CommandID`
-with an action of its own, so it is also the only one `AppEntry.hotKeyAction` answers for — which is
-what puts a recorder on its row in both Settings ▸ File Search and Settings ▸ Commands, and a keycap on
-its launcher row. Like a window command, the chord registers regardless and the coordinator re-checks
-the feature switch before it opens anything (see [file-search.md](file-search.md#invocation)).
+`hotkey.searchFiles` and `hotkey.toggleClipboard` are the two built-in launcher commands with an action
+of their own, alongside `hotkey.togglePalette` and `hotkey.toggleEmoji`. They are the only `CommandID`s
+whose `hotKeyAction` is non-nil — which is what puts a recorder on their rows in Settings ▸ Commands,
+and a keycap on their launcher rows. Clipboard History's binding is also reachable from Settings ▸
+Clipboard, so it is one binding from two places, not two settings. Like a window command, the chord
+registers regardless and, for Search Files, the coordinator re-checks the feature switch before it
+opens anything (see [file-search.md](file-search.md#invocation)).
 
 System actions and window commands are the fixed-catalog case: they persist under
 `hotkey.systemAction.<raw-id>` and `hotkey.windowCommand.<raw-id>`
