@@ -15,7 +15,9 @@ struct WindowDragHandle: NSViewRepresentable {
 extension View {
     /// Marks a region as a window-drag handle; an overlay, so it wins the hit-test race.
     func windowDraggable(
-        _ enabled: Bool, onBegan: @escaping () -> Void, onEnded: @escaping () -> Void
+        _ enabled: Bool,
+        onBegan: @escaping () -> Void = {},
+        onEnded: @escaping () -> Void = {}
     ) -> some View {
         overlay {
             if enabled { WindowDragHandle(onBegan: onBegan, onEnded: onEnded) }

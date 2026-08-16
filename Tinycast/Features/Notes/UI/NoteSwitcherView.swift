@@ -112,7 +112,6 @@ struct NoteSwitcherView: View {
             searchFocused = true
         }
     }
-
 }
 
 private struct NoteSwitcherRow: View {
@@ -205,7 +204,7 @@ private struct NoteSwitcherRow: View {
         }
         .buttonStyle(.plain)
         .help(title)
+        // The row publishes both as accessibility actions, so the buttons stay out of the tree.
         .accessibilityHidden(true)
-        .accessibilityLabel(title)
     }
 }

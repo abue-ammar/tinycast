@@ -122,19 +122,14 @@ final class AppCore {
         snippetTextInjector = SnippetTextInjector(
             clipboardManager: clipboardManager,
             settings: settings)
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
-        let applicationSupport = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(bundleID, isDirectory: true)
         let noteSelectionKey = "notesActiveFileName"
         notesStore = NotesStore(
-            repository: NotesRepository(applicationSupportDirectory: applicationSupport),
+            repository: NotesRepository(
+                applicationSupportDirectory: AppPaths.applicationSupport()),
             loadSelection: {
                 UserDefaults.standard.string(forKey: noteSelectionKey).map(NoteID.init(rawValue:))
             },
-            saveSelection: { id in
-                UserDefaults.standard.set(id?.rawValue, forKey: noteSelectionKey)
-            })
+            saveSelection: { UserDefaults.standard.set($0?.rawValue, forKey: noteSelectionKey) })
     }
 
     func start() {

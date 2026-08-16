@@ -1,17 +1,22 @@
 import AppKit
 import Carbon.HIToolbox
 
+/// Both Notes windows. The editor and the switcher differ only in style mask and in the chords
+/// their controller installs, so one non-activating floating panel serves the two of them.
 final class NotesPanel: NSPanel {
     var onEscape: (() -> Void)?
-    var onCreate: (() -> Void)?
-    var onSearch: (() -> Void)?
-    var onOpenFolder: (() -> Void)?
-    var onDelete: (() -> Bool)?
+    /// ⌘⌫ is keyed separately: only its key code survives every keyboard layout.
+    var onDeleteChord: (() -> Bool)?
+    /// The ⌘-letter chords this window claims, by lowercased character.
+    var commandChords: [String: () -> Void] = [:]
 
-    init(content: NSView) {
+    private let acceptsMain: Bool
+
+    init(content: NSView, size: CGSize, styleMask: NSWindow.StyleMask, acceptsMain: Bool) {
+        self.acceptsMain = acceptsMain
         super.init(
-            contentRect: NSRect(origin: .zero, size: Theme.Size.noteWindow),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView, .nonactivatingPanel],
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: styleMask.union([.fullSizeContentView, .nonactivatingPanel]),
             backing: .buffered,
             defer: false
         )
@@ -20,18 +25,12 @@ final class NotesPanel: NSPanel {
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
-        // A title-bar accessory drops AppKit off its centred-title layout, so `NotesView` draws it.
-        titleVisibility = .hidden
-        titlebarAppearsTransparent = true
-        // `.automatic` draws a hairline the moment the editor scrolls under the bar.
-        titlebarSeparatorStyle = .none
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
         animationBehavior = .none
         isReleasedWhenClosed = false
         isRestorable = false
-        contentMinSize = Theme.Size.noteWindow
         contentView = content
     }
 
@@ -41,25 +40,19 @@ final class NotesPanel: NSPanel {
         guard !event.isARepeat,
             event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
         else { return false }
-        switch event.charactersIgnoringModifiers?.lowercased() {
-        case "w": performClose(nil)
-        case "n": onCreate?()
-        case "p": onSearch?()
-        case "o": onOpenFolder?()
-        default:
-            guard Int(event.keyCode) == kVK_Delete else { return false }
-            return onDelete?() == true
-        }
+        if Int(event.keyCode) == kVK_Delete { return onDeleteChord?() == true }
+        guard let key = event.charactersIgnoringModifiers?.lowercased(),
+            let chord = commandChords[key]
+        else { return false }
+        chord()
         return true
     }
 
     override func sendEvent(_ event: NSEvent) {
-        guard event.type == .keyDown, Int(event.keyCode) == kVK_Escape, !event.isARepeat else {
-            super.sendEvent(event)
-            return
-        }
         // The search and rename fields own Escape while they are editing.
-        if let fieldEditor = firstResponder as? NSTextView, fieldEditor.isFieldEditor {
+        guard event.type == .keyDown, Int(event.keyCode) == kVK_Escape, !event.isARepeat,
+            (firstResponder as? NSTextView)?.isFieldEditor != true
+        else {
             super.sendEvent(event)
             return
         }
@@ -71,5 +64,5 @@ final class NotesPanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
+    override var canBecomeMain: Bool { acceptsMain }
 }

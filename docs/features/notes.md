@@ -13,14 +13,16 @@ commands and global shortcuts can show, search, or extend the collection.
 - **Only the active note can be dirty.** Switching, creating, renaming, and deleting first flush it, so
   collection navigation cannot abandon an in-memory draft.
 - **Tinycast is the only writer.** There is no watcher and no revision check: a save replaces the file
-  with what is in the editor.
+  with what is in the editor. Every show re-lists the folder, so a note added outside appears, but the
+  active draft is never re-read from disk.
 - **Search is on demand and unindexed.** An empty switcher query reads metadata only; a nonempty query
   reads bodies sequentially off-main and retains no collection-sized source cache.
 - **Off means no entry point or Notes work.** The feature is off by default; its shortcuts no-op, its
   commands are absent, and enabling alone does not enumerate or create the Notes directory.
 - **The collection may be empty.** Deleting the last note is allowed and creates no replacement; the
   window shows its empty state and Create Note still works from there.
-- **The user owns the window size.** AppKit resizes and autosaves the frame; no code computes it.
+- **The user owns the window size.** AppKit resizes and autosaves the frame; the controller only
+  clamps it to the floor below which the title bar's own parts collide.
 
 ## Storage and identity
 
@@ -35,9 +37,11 @@ launcher items, hotkeys, favorites, or visibility settings that could retain the
 regular `.md` children are sorted by modification date, then localized title. Subdirectories, hidden
 files, and symbolic links are ignored.
 
-Create uses `Untitled.md`, then `Untitled 2.md`, and so on. Rename uses the same collision rule with
-case- and diacritic-insensitive comparison. `Floating Note.md` is already a valid note and needs no
-migration. The active filename is local UI state in UserDefaults and does not ride settings backups.
+Create uses `Untitled.md`, then `Untitled 2.md`, and so on, and rename claims a free name by the same
+rule. Collisions with *another* note are case- and diacritic-insensitive, so `plán` beside `Plan`
+becomes `plán 2.md`. A note never collides with itself: only an exact filename match is a no-op, which
+is what lets a rename change nothing but the case or the accents. The active filename is local UI state
+in UserDefaults and does not ride settings backups.
 
 `NotesRepository` owns list, create, load, save, rename, Trash, and search reads. Every
 URL is validated as an immediate child of the injected directory. It lives in `Service/` because it
@@ -61,20 +65,27 @@ failed flush retains the draft for retry.
 
 - **Show Notes** selects the last active note and shows or focuses the panel without toggling it closed.
 - **Create Note** creates and selects one unique Untitled note, including from an empty channel.
-- **Search Notes** shows the same panel with its compact in-window switcher focused.
+- **Search Notes** shows the same panel with the switcher open and its search field focused.
 
 Command-N creates, Command-P opens or refocuses the switcher, Command-O opens the Notes folder, Escape
 closes the switcher before hiding, and Command-W and the red traffic light both hide directly. Hiding
 restores the prior external application or Tinycast window and flushes without delaying the order-out.
 Command-Q is bound to nothing app-wide, so no chord over Notes can quit Tinycast.
 
-AppKit draws the chrome. The 44-point title bar holds the traffic lights, the centred active title, and
-one frosted capsule of Create, Browse, and Open Folder. The title is drawn, not native, so it centres on
-the window; it is not hit-testable, so dragging it moves the window. The switcher replaces the editor
-surface and never changes the frame; deleting the last note closes it, leaving one empty state on
-screen. An empty query lists metadata by recency; a nonempty query searches
-titles and literal bodies after a 120-millisecond debounce. Results are capped at 200, and generation
-checks prevent superseded search or selection work from publishing.
+Both windows are one `NotesPanel`, a non-activating floating panel that owns the Escape rule and reads
+⌘⌫. They differ only in style mask and in the `commandChords` their controller installs: the note window
+claims ⌘N, ⌘P, ⌘O and ⌘W, and the switcher reads ⌘N plus ⌘W and ⌘P as dismissals.
+
+AppKit draws the note window's chrome. Its 52-point title bar holds the traffic lights, the centred
+active title, and one frosted capsule of Create, Browse, and Open Folder. The title is drawn, not
+native, so it centres on the window; it is not hit-testable, so dragging it moves the window.
+
+The switcher is a borderless child window hung under the capsule's trailing edge, not an in-window
+screen — a note window may be 180pt tall, and the list must not be. It travels with its host, dismisses
+like a popover when it resigns key, and closes outright when the last note goes. An empty query lists
+metadata by recency; a nonempty query searches titles and literal bodies after a 120-millisecond
+debounce. Results are capped at 200, and generation checks prevent superseded search or selection work
+from publishing.
 
 Arrow keys and Return do not intercept an inline rename. Command-Delete moves the selected row to Trash
 only while the switcher is not renaming; in the editor and title field it remains a native text command.
@@ -95,7 +106,7 @@ document's undo history; ordinary edits keep native undo grouping.
 
 An empty note shows a `Start writing…` placeholder aligned to the 16-point text container inset, and a
 footer under the editor reports the character count straight off `NSTextStorage.length`. Both belong to
-the editor surface, so neither appears while the switcher is open or when no note is active.
+the editor surface, so neither appears when no note is active.
 
 ## Autosave
 
@@ -105,15 +116,16 @@ flush before loading another source. Termination awaits that flush before the ap
 vetoes the quit.
 
 **A save overwrites whatever is on disk.** There is no watcher, no revision comparison and no conflict
-state: editing a note in another app while Tinycast has it open loses that edit the next time the
-debounce fires. Open Notes Folder (⌘O) invites exactly that, and this is the accepted trade for a
-feature whose whole job is one local editor.
+state: editing the *active* note in another app while Tinycast has it open loses that edit the next time
+the debounce fires. Open Notes Folder (⌘O) invites exactly that, and this is the accepted trade for a
+feature whose whole job is one local editor. Every other external change is picked up, because showing
+the window re-lists the folder before it presents anything.
 
 ## Verification
 
 `Tests/notes-test.swift` compiles the shipped Notes model and service sources with the real fuzzy
-matcher. It covers repository safety, search, selection, autosave, empty collections, switcher
-interaction, and cancellation.
+matcher. It covers repository safety, unique-name claiming, search, selection, autosave, empty
+collections, switcher interaction, and cancellation.
 
 `Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects to cover literal source,
 native Cut/Copy/Paste, Unicode and marked text, and undo isolation. Window chrome is not automated:

@@ -29,12 +29,6 @@ struct NoteSwitcherRenameState: Sendable, Equatable {
     }
 }
 
-enum NoteShortcutPolicy {
-    static func handlesDelete(switcherPresented: Bool, renameActive: Bool) -> Bool {
-        switcherPresented && !renameActive
-    }
-}
-
 enum NoteSwitcherSelection {
     static func replacement(
         afterRemoving removed: NoteID,

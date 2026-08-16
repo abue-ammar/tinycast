@@ -54,9 +54,13 @@ final class NotesStore {
         searchWorker?.cancel()
     }
 
+    /// Re-lists on every show — ⌘O makes the folder the user's — but never re-reads the live draft.
     func start() async -> Bool {
-        guard !isLoaded else { return true }
-        return await reload(preferredID: loadSelection())
+        guard isLoaded else { return await reload(preferredID: loadSelection()) }
+        let repository = repository
+        let result = await detached({ try repository.list() }, recover: { repository.notesDirectory })
+        if case .success(let summaries) = result { self.summaries = summaries }
+        return true
     }
 
     func reload() async -> Bool {

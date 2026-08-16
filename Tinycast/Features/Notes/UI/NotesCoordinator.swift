@@ -29,7 +29,7 @@ final class NotesCoordinator {
     private(set) var switcherFocusRevision = 0
     private(set) var characterCount = 0
     private var switcherRename = NoteSwitcherRenameState()
-    private var presentationGeneration = NotePresentationGeneration()
+    private var presentationGeneration = 0
 
     init(
         store: NotesStore,
@@ -83,7 +83,7 @@ final class NotesCoordinator {
         let generation = enablementGeneration
         appIndex.setCommandsVisible([.showNotes, .createNote, .searchNotes], settings.notesEnabled)
         guard !settings.notesEnabled else { return }
-        presentationGeneration.advance()
+        presentationGeneration &+= 1
         pendingPresentation = nil
         loadTask?.cancel()
         loadTask = nil
@@ -138,7 +138,7 @@ final class NotesCoordinator {
     }
 
     func hide() {
-        presentationGeneration.advance()
+        presentationGeneration &+= 1
         pendingPresentation = nil
         closeSwitcher(focusEditor: false)
         windowController.hide(restoreFocus: true)
@@ -205,30 +205,23 @@ final class NotesCoordinator {
     }
 
     func select(_ id: NoteID) {
-        runOperation { [weak self] capturedGeneration in
+        runOperation { [weak self] generation in
             guard let self else { return }
             let selected = await store.select(id) { [weak self] in
-                guard let self else { return false }
-                return presentationGeneration.permitsCompletion(
-                    capturedGeneration: capturedGeneration,
-                    isVisible: windowController.isVisible)
+                self?.permitsCompletion(generation) ?? false
             }
             guard selected, settings.notesEnabled, !Task.isCancelled else {
                 if !settings.notesEnabled { store.stop() }
                 return
             }
-            guard
-                presentationGeneration.permitsCompletion(
-                    capturedGeneration: capturedGeneration,
-                    isVisible: windowController.isVisible)
-            else { return }
+            guard permitsCompletion(generation) else { return }
             closeSwitcher()
-            showLoadedNote(focusEditor: true)
+            windowController.show(focusEditor: true)
         }
     }
 
     func rename(_ id: NoteID, to title: String) {
-        runOperation { [weak self] capturedGeneration in
+        runOperation { [weak self] generation in
             guard let self else { return }
             let renamedID = await store.rename(id, to: title)
             guard let renamedID, settings.notesEnabled, !Task.isCancelled else {
@@ -236,12 +229,8 @@ final class NotesCoordinator {
                 return
             }
             switcherSelection = renamedID
-            if renamedID == store.activeID,
-                presentationGeneration.permitsCompletion(
-                    capturedGeneration: capturedGeneration,
-                    isVisible: windowController.isVisible)
-            {
-                showLoadedNote(focusEditor: false)
+            if renamedID == store.activeID, permitsCompletion(generation) {
+                windowController.show(focusEditor: false)
             }
         }
     }
@@ -252,18 +241,14 @@ final class NotesCoordinator {
     }
 
     func handleDeleteShortcut() -> Bool {
-        guard
-            NoteShortcutPolicy.handlesDelete(
-                switcherPresented: isSwitcherPresented,
-                renameActive: switcherRename.isActive)
-        else { return false }
+        guard isSwitcherPresented, !switcherRename.isActive else { return false }
         trashSwitcherSelection()
         return true
     }
 
     func trash(_ id: NoteID) {
         guard let title = store.summaries.first(where: { $0.id == id })?.title else { return }
-        runOperation { [weak self] capturedGeneration in
+        runOperation { [weak self] generation in
             guard let self else { return }
             let confirmed = await core.confirm(
                 title: "Move “\(title)” to Trash?",
@@ -283,12 +268,8 @@ final class NotesCoordinator {
                 fallback: store.activeID ?? store.summaries.first?.id)
             // Nothing left to browse, so the empty state owns the window rather than a bare list.
             if store.summaries.isEmpty { closeSwitcher(focusEditor: false) }
-            guard
-                presentationGeneration.permitsCompletion(
-                    capturedGeneration: capturedGeneration,
-                    isVisible: windowController.isVisible)
-            else { return }
-            showLoadedNote(focusEditor: !isSwitcherPresented)
+            guard permitsCompletion(generation) else { return }
+            windowController.show(focusEditor: !isSwitcherPresented)
         }
     }
 
@@ -320,35 +301,21 @@ final class NotesCoordinator {
         let generation = enablementGeneration
         loadTask = Task { [weak self] in
             guard let self else { return }
-            if presentation == .create {
-                let created = await store.create()
-                guard generation == enablementGeneration else {
-                    if !settings.notesEnabled { store.stop() }
-                    return
-                }
-                loadTask = nil
-                guard created, settings.notesEnabled, !Task.isCancelled else { return }
-                guard let next = pendingPresentation else { return }
-                pendingPresentation = nil
-                if next == .create {
-                    closeSwitcher()
-                    showLoadedNote(focusEditor: true)
-                } else {
-                    await present(next)
-                }
-                return
-            }
-            let loaded = await store.start()
+            // Create is its own load: the collection it would wait for is the one it adds to.
+            let loaded = presentation == .create ? await store.create() : await store.start()
             guard generation == enablementGeneration else {
                 if !settings.notesEnabled { store.stop() }
                 return
             }
             loadTask = nil
-            guard loaded, settings.notesEnabled, !Task.isCancelled,
-                let presentation = pendingPresentation
-            else { return }
+            guard loaded, settings.notesEnabled, !Task.isCancelled else { return }
+            // The note this task just made satisfies a create still pending; never make a second.
+            if presentation == .create, pendingPresentation == .create {
+                pendingPresentation = .editor
+            }
+            guard let next = pendingPresentation else { return }
             pendingPresentation = nil
-            await present(presentation)
+            await present(next)
         }
     }
 
@@ -356,36 +323,35 @@ final class NotesCoordinator {
         switch presentation {
         case .editor:
             closeSwitcher()
-            showLoadedNote(focusEditor: true)
+            windowController.show(focusEditor: true)
         case .create:
-            let capturedGeneration = presentationGeneration.current
+            let generation = presentationGeneration
             guard await store.create(), settings.notesEnabled, !Task.isCancelled,
-                presentationGeneration.permitsPresentation(
-                    capturedGeneration: capturedGeneration)
+                generation == presentationGeneration
             else { return }
             closeSwitcher()
-            showLoadedNote(focusEditor: true)
+            windowController.show(focusEditor: true)
         case .search:
             // The switcher hangs off the note window, so that window has to exist first.
-            showLoadedNote(focusEditor: false)
+            windowController.show(focusEditor: false)
             openSwitcher()
         }
     }
 
-    private func showLoadedNote(focusEditor: Bool) {
-        windowController.show(focusEditor: focusEditor)
+    /// A newer show or hide retires an older operation's right to put what it loaded on screen.
+    private func permitsCompletion(_ generation: Int) -> Bool {
+        windowController.isVisible && generation == presentationGeneration
     }
 
-    /// Runs one collection operation at a time. A newer request cancels and supersedes an in-flight
-    /// one rather than being dropped; generation checks still gate any presentation it completes.
+    /// One collection operation at a time: a newer request cancels and supersedes an in-flight one.
     private func runOperation(_ body: @escaping @MainActor (Int) async -> Void) {
         operationTask?.cancel()
         operationID &+= 1
         let id = operationID
-        let capturedGeneration = presentationGeneration.current
+        let generation = presentationGeneration
         operationTask = Task { [weak self] in
             guard let self else { return }
-            await body(capturedGeneration)
+            await body(generation)
             if self.operationID == id { self.operationTask = nil }
         }
     }

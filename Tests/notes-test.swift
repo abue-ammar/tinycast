@@ -66,6 +66,17 @@ struct NotesTests {
         let renamed = try stable.rename(id: secondUntitled.id, title: "Plan")
         check("rename uses the same unique-title rule", renamed.rawValue == "Plan 3.md")
 
+        let recased = try stable.rename(id: renamed, title: "PLAN 3")
+        check("a rename that changes only case renames the file", recased.rawValue == "PLAN 3.md")
+        let accented = try stable.rename(id: recased, title: "Plán 3")
+        check("a rename that adds only accents renames the file", accented.rawValue == "Plán 3.md")
+        check(
+            "a rename to the identical title is a no-op",
+            try stable.rename(id: accented, title: "Plán 3") == accented)
+        check(
+            "a renamed note leaves no copy under its old name",
+            !(try stable.list()).contains { $0.id.rawValue == "Plan 3.md" })
+
         do {
             _ = try stable.create(title: "../escape")
             check("path-forming titles are rejected", false)
@@ -135,35 +146,6 @@ struct NotesTests {
             "switcher rename commits once and clears its state",
             committed?.id == id && committed?.title == "Project plan" && !rename.isActive)
         check("an inactive rename cannot commit", rename.commit() == nil)
-
-        check(
-            "Command-Delete belongs to a non-renaming switcher",
-            NoteShortcutPolicy.handlesDelete(switcherPresented: true, renameActive: false))
-        check(
-            "Command-Delete remains native while renaming",
-            !NoteShortcutPolicy.handlesDelete(switcherPresented: true, renameActive: true))
-        check(
-            "Command-Delete remains native in the editor",
-            !NoteShortcutPolicy.handlesDelete(switcherPresented: false, renameActive: false))
-
-        var presentation = NotePresentationGeneration()
-        let capturedGeneration = presentation.current
-        check(
-            "an unchanged visible window accepts an operation completion",
-            presentation.permitsCompletion(
-                capturedGeneration: capturedGeneration,
-                isVisible: true))
-        presentation.advance()
-        check(
-            "a newer presentation rejects an old operation completion",
-            !presentation.permitsCompletion(
-                capturedGeneration: capturedGeneration,
-                isVisible: true))
-        check(
-            "a hidden window rejects an operation completion",
-            !presentation.permitsCompletion(
-                capturedGeneration: presentation.current,
-                isVisible: false))
 
         let first = NoteID(rawValue: "First.md")
         let second = NoteID(rawValue: "Second.md")

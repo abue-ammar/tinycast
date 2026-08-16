@@ -90,27 +90,10 @@ struct NotesRepository: Sendable {
 
     func create(title: String = "Untitled") throws(Failure) -> NoteDocument {
         try mappedError(at: notesDirectory) {
-            try ensureDirectory()
-            let base = try validatedTitle(title)
-            let occupied = Set(try list().map { folded($0.id.rawValue) })
-            var suffix = 1
-            while true {
-                let candidate = uniqueCandidate(base: base, suffix: suffix)
-                if occupied.contains(folded(candidate.lastPathComponent)) {
-                    suffix += 1
-                    continue
-                }
-                do {
-                    try writeNewFileAtomically(Data(), to: candidate)
-                    return try load(NoteID(rawValue: candidate.lastPathComponent))
-                } catch {
-                    if FileManager.default.fileExists(atPath: candidate.path) {
-                        suffix += 1
-                        continue
-                    }
-                    throw error
-                }
+            let url = try claimUniqueURL(base: try validatedTitle(title)) {
+                try writeNewFileAtomically(Data(), to: $0)
             }
+            return try load(NoteID(rawValue: url.lastPathComponent))
         }
     }
 
@@ -126,36 +109,19 @@ struct NotesRepository: Sendable {
     }
 
     func rename(id: NoteID, title: String) throws(Failure) -> NoteID {
-        let sourceURL = fileURL(for: id)
-        return try mappedError(at: sourceURL) {
-            let sourceURL = try validatedFileURL(sourceURL)
+        let candidate = fileURL(for: id)
+        return try mappedError(at: candidate) {
+            let sourceURL = try validatedFileURL(candidate)
             let base = try validatedTitle(title)
-            if folded(base + ".md") == folded(id.rawValue) { return id }
-            let occupied = Set(
-                try list().lazy.filter { $0.id != id }.map { folded($0.id.rawValue) })
-            var suffix = 1
-            while true {
-                let destination = uniqueCandidate(base: base, suffix: suffix)
-                if occupied.contains(folded(destination.lastPathComponent))
-                    || FileManager.default.fileExists(atPath: destination.path)
-                {
-                    suffix += 1
-                    continue
-                }
-                do {
-                    try coordinatedWrite(at: sourceURL, options: .forMoving) { coordinatedURL in
-                        try FileManager.default.moveItem(
-                            at: try validatedFileURL(coordinatedURL), to: destination)
-                    }
-                    return NoteID(rawValue: destination.lastPathComponent)
-                } catch {
-                    if FileManager.default.fileExists(atPath: destination.path) {
-                        suffix += 1
-                        continue
-                    }
-                    throw error
+            // Exact, not folded: a change of case or accents alone is a rename the user asked for.
+            guard base + ".md" != id.rawValue else { return id }
+            let destination = try claimUniqueURL(base: base, renaming: id) { destination in
+                try coordinatedWrite(at: sourceURL, options: .forMoving) { coordinatedURL in
+                    try FileManager.default.moveItem(
+                        at: try validatedFileURL(coordinatedURL), to: destination)
                 }
             }
+            return NoteID(rawValue: destination.lastPathComponent)
         }
     }
 
@@ -179,14 +145,11 @@ struct NotesRepository: Sendable {
         for summary in summaries {
             if Task.isCancelled { break }
             let source = try? load(summary.id).source
-            guard let result = NoteSearch.match(query: query, summary: summary, source: source) else {
-                continue
+            if let result = NoteSearch.match(query: query, summary: summary, source: source) {
+                results.append(result)
             }
-            results.append(result)
-            results.sort(by: NoteSearch.precedes)
-            if results.count > limit { results.removeLast() }
         }
-        return results
+        return Array(results.sorted(by: NoteSearch.precedes).prefix(limit))
     }
 
     func fileURL(for id: NoteID) -> URL {
@@ -196,6 +159,37 @@ struct NotesRepository: Sendable {
     private func ensureDirectory() throws {
         try FileManager.default.createDirectory(
             at: notesDirectory, withIntermediateDirectories: true)
+    }
+
+    /// Claims the first free `<base>.md`, `<base> 2.md`, …; a lost race only advances the suffix.
+    private func claimUniqueURL(
+        base: String,
+        renaming id: NoteID? = nil,
+        _ claim: (URL) throws -> Void
+    ) throws -> URL {
+        let occupied = Set(try list().lazy.filter { $0.id != id }.map { folded($0.id.rawValue) })
+        var suffix = 1
+        while true {
+            let candidate = uniqueCandidate(base: base, suffix: suffix)
+            let name = folded(candidate.lastPathComponent)
+            // A case-only rename collides with its own file, which the move then replaces in place.
+            let isSelf = id.map { name == folded($0.rawValue) } ?? false
+            guard !occupied.contains(name),
+                isSelf || !FileManager.default.fileExists(atPath: candidate.path)
+            else {
+                suffix += 1
+                continue
+            }
+            do {
+                try claim(candidate)
+                return candidate
+            } catch {
+                guard !isSelf, FileManager.default.fileExists(atPath: candidate.path) else {
+                    throw error
+                }
+                suffix += 1
+            }
+        }
     }
 
     private func validatedFileURL(_ candidate: URL) throws -> URL {

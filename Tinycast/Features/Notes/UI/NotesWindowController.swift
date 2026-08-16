@@ -3,7 +3,6 @@ import SwiftUI
 
 @MainActor
 final class NotesWindowController: NSObject, NSWindowDelegate {
-    /// Deliberately not the old name: its records hold heights from the content-sized panel.
     private static let frameAutosaveName = "Notes Window"
 
     private unowned let coordinator: NotesCoordinator
@@ -65,8 +64,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         coordinator.hide()
     }
 
-    /// `contentMinSize` alone does not hold: AppKit lets a frame through below it, but it takes
-    /// whatever this returns verbatim.
+    /// `contentMinSize` alone leaks frames below it; AppKit takes whatever this returns verbatim.
     func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
         NSSize(
             width: max(frameSize.width, Theme.Size.noteWindow.width),
@@ -85,16 +83,29 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         let root = NotesView().environment(coordinator)
         let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
-        let panel = NotesPanel(content: hosting)
+        let panel = NotesPanel(
+            content: hosting,
+            size: Theme.Size.noteWindow,
+            styleMask: [.titled, .closable, .resizable],
+            acceptsMain: true)
+        // A title-bar accessory drops AppKit off its centred-title layout, so `NotesView` draws it.
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        // `.automatic` draws a hairline the moment the editor scrolls under the bar.
+        panel.titlebarSeparatorStyle = .none
+        panel.contentMinSize = Theme.Size.noteWindow
         panel.delegate = self
         panel.onEscape = { [weak coordinator] in coordinator?.handleEscape() }
-        panel.onCreate = { [weak coordinator] in coordinator?.createNote() }
-        panel.onSearch = { [weak coordinator] in coordinator?.searchNotes() }
-        panel.onOpenFolder = { [weak coordinator] in coordinator?.openNotesFolder() }
-        panel.onDelete = { [weak coordinator] in coordinator?.handleDeleteShortcut() ?? false }
+        panel.onDeleteChord = { [weak coordinator] in coordinator?.handleDeleteShortcut() ?? false }
+        panel.commandChords = [
+            "n": { [weak coordinator] in coordinator?.createNote() },
+            "p": { [weak coordinator] in coordinator?.searchNotes() },
+            "o": { [weak coordinator] in coordinator?.openNotesFolder() },
+            "w": { [weak panel] in panel?.performClose(nil) }
+        ]
         panel.setFrameAutosaveName(Self.frameAutosaveName)
         if !panel.setFrameUsingName(Self.frameAutosaveName) { panel.center() }
-        // A frame autosaved before the floor was raised would otherwise reopen below it.
+        // An autosaved frame can sit below the floor, so it is clamped on the way back in.
         panel.setContentSize(
             CGSize(
                 width: max(panel.frame.width, Theme.Size.noteWindow.width),

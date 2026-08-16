@@ -1,18 +1,15 @@
 import AppKit
 import SwiftUI
 
-/// Hangs the switcher off the note window's action capsule as a child window, so it tracks every
-/// move of its host and can still be taller than it.
+/// A child window of the note panel, so it tracks its host's every move and can still outgrow it.
 @MainActor
 final class NoteSwitcherWindowController: NSObject, NSWindowDelegate {
     private unowned let coordinator: NotesCoordinator
-    private var panel: NoteSwitcherPanel?
+    private var panel: NotesPanel?
 
     init(coordinator: NotesCoordinator) {
         self.coordinator = coordinator
     }
-
-    var isVisible: Bool { panel?.isVisible ?? false }
 
     func show(under host: NSWindow) {
         let panel = ensurePanel()
@@ -33,8 +30,7 @@ final class NoteSwitcherWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// A popover closes when the pointer goes elsewhere. The guard stops `hide()`'s own order-out
-    /// from re-entering, and focus stays where the click landed rather than snapping to the editor.
+    /// Closes like a popover; focus stays where the click landed rather than snapping to the editor.
     func windowDidResignKey(_ notification: Notification) {
         guard coordinator.isSwitcherPresented else { return }
         coordinator.closeSwitcher(focusEditor: false)
@@ -42,22 +38,32 @@ final class NoteSwitcherWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - Private
 
-    private func ensurePanel() -> NoteSwitcherPanel {
+    private func ensurePanel() -> NotesPanel {
         if let panel { return panel }
         let root = NoteSwitcherView().environment(coordinator)
         let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
-        let panel = NoteSwitcherPanel(content: hosting)
+        let panel = NotesPanel(
+            content: hosting,
+            size: Theme.Size.noteSwitcher,
+            styleMask: .borderless,
+            acceptsMain: false)
         panel.delegate = self
-        panel.onEscape = { [weak coordinator] in coordinator?.closeSwitcher() }
-        panel.onCreate = { [weak coordinator] in coordinator?.createNote() }
-        panel.onDelete = { [weak coordinator] in coordinator?.handleDeleteShortcut() ?? false }
+        let dismiss: () -> Void = { [weak coordinator] in coordinator?.closeSwitcher() }
+        panel.onEscape = dismiss
+        panel.onDeleteChord = { [weak coordinator] in coordinator?.handleDeleteShortcut() ?? false }
+        // The note window is not key while this is up, so its dismissal chords have to work here.
+        panel.commandChords = [
+            "n": { [weak coordinator] in coordinator?.createNote() },
+            "w": dismiss,
+            "p": dismiss
+        ]
         self.panel = panel
         return panel
     }
 
     /// Trailing edges align with the capsule's, so it reads as hanging from the Browse button.
-    private func anchor(_ panel: NoteSwitcherPanel, under host: NSWindow) {
+    private func anchor(_ panel: NotesPanel, under host: NSWindow) {
         let size = Theme.Size.noteSwitcher
         let host = host.frame
         let origin = CGPoint(
