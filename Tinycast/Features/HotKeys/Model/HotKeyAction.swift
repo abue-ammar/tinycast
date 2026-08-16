@@ -38,4 +38,10 @@ enum HotKeyAction: Hashable, Sendable {
         case .extensionCommand(let entryID): "hotkey.extensionCommand." + entryID
         }
     }
+
+    /// The fixed actions every install can bind; the per-item catalogs extend them at launch.
+    static let builtInActions: [HotKeyAction] = [
+        .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
+        .searchFiles
+    ]
 }

@@ -89,9 +89,9 @@ struct DoubleTapDetectorTests {
 
     static func commandActions() {
         let expected: [(CommandID, HotKeyAction, String)] = [
-            (.searchFiles, .searchFiles, "hotkey.searchFiles"),
             (.clipboardHistory, .toggleClipboard, "hotkey.toggleClipboard"),
             (.searchEmoji, .toggleEmoji, "hotkey.toggleEmoji"),
+            (.searchFiles, .searchFiles, "hotkey.searchFiles"),
             (.showNotes, .showNotes, "hotkey.showNotes"),
             (.createNote, .createNote, "hotkey.createNote"),
             (.searchNotes, .searchNotes, "hotkey.searchNotes")
@@ -105,6 +105,10 @@ struct DoubleTapDetectorTests {
                 id.hotKeyAction == action && action.defaultsKey == key,
                 "\(id.name) maps to \(key)")
         }
+        expect(
+            Set(HotKeyAction.builtInActions)
+                .isSuperset(of: Set(CommandID.allCases.compactMap(\.hotKeyAction))),
+            "every bindable command appears among the built-in hotkey actions")
     }
 
     // MARK: - The Hyper chord

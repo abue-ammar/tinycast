@@ -174,10 +174,7 @@ final class HotKeyManager {
     /// Every action that could hold a binding: the search space for conflicts and the map.
     private var candidateActions: [HotKeyAction] {
         if let candidateActionsCache { return candidateActionsCache }
-        var actions: [HotKeyAction] = [
-            .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles
-        ]
+        var actions = HotKeyAction.builtInActions
         actions += boundBundleIDs.map { .app(bundleID: $0) }
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
