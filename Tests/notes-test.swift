@@ -106,11 +106,15 @@ struct NotesTests {
 
         let bodyMatches = stable.search(
             NoteSearch.Query("cafe snow"), summaries: try stable.list(), limit: 10)
-        check("search matches Markdown bodies without transforming source", bodyMatches.contains { $0.id == untitled.id })
+        check(
+            "search matches Markdown bodies without transforming source",
+            bodyMatches.contains { $0.id == untitled.id })
         let titleMatches = stable.search(
             NoteSearch.Query("Plan"), summaries: try stable.list(), limit: 1)
         check("search obeys its presentation limit", titleMatches.count == 1)
-        check("title matches outrank body-only matches", titleMatches.first?.summary.title.hasPrefix("Plan") == true)
+        check(
+            "title matches outrank body-only matches",
+            titleMatches.first?.summary.title.hasPrefix("Plan") == true)
 
         let currentPlan = try stable.load(plan.id)
         try Data("changed before trash".utf8).write(
@@ -147,7 +151,9 @@ struct NotesTests {
                 check("an escaping symlink reports its invalid location", false)
             }
         }
-        check("symlinked Markdown files are absent from enumeration", !(try stable.list()).contains { $0.id == symlinkID })
+        check(
+            "symlinked Markdown files are absent from enumeration",
+            !(try stable.list()).contains { $0.id == symlinkID })
     }
 
     private static func testSwitcherInteraction() {
@@ -328,11 +334,15 @@ struct NotesTests {
         let secondID = try require(store.activeID)
         check("the new note becomes active", secondID != firstID)
         let renamedID = await store.rename(secondID, to: "Project")
-        check("rename updates active identity and title", renamedID == store.activeID && store.activeTitle == "Project")
+        check(
+            "rename updates active identity and title",
+            renamedID == store.activeID && store.activeTitle == "Project")
 
         store.updateSearchQuery("searchable")
         await waitUntil { !store.isSearching }
-        check("on-demand search finds body text in another note", store.searchResults.contains { $0.id == firstID })
+        check(
+            "on-demand search finds body text in another note",
+            store.searchResults.contains { $0.id == firstID })
         store.cancelSearch()
         let selectionBeforeRejection = selection.id
         let activeBeforeRejection = store.activeID
@@ -434,7 +444,8 @@ struct NotesTests {
                 "external-deletion recovery creates a canonical note",
                 store.activeTitle == "Untitled" && store.state == .ready
                     && FileManager.default.fileExists(
-                        atPath: repository.fileURL(for: replacementID).path))
+                        atPath: repository.fileURL(for: replacementID).path)
+            )
         case .failure:
             check("external-deletion recovery succeeds", false)
         }

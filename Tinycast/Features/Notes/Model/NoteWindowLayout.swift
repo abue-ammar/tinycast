@@ -88,7 +88,8 @@ enum NoteWindowLayout {
         let visibleHeight = max(0, visibleScreenHeight)
         let minimum = min(metrics.minimumHeight, visibleHeight)
         let marginsFit = visibleHeight >= metrics.minimumHeight + metrics.screenMargin * 2
-        let availableHeight = marginsFit
+        let availableHeight =
+            marginsFit
             ? max(0, visibleHeight - metrics.screenMargin * 2)
             : visibleHeight
         let maximum = min(metrics.maximumHeight, availableHeight)

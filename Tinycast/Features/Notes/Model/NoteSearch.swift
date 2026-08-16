@@ -62,9 +62,11 @@ enum NoteSearch {
 
     private static func excerpt(in source: String, around range: Range<String.Index>) -> String {
         let radius = 70
-        let lower = source.index(range.lowerBound, offsetBy: -radius, limitedBy: source.startIndex)
+        let lower =
+            source.index(range.lowerBound, offsetBy: -radius, limitedBy: source.startIndex)
             ?? source.startIndex
-        let upper = source.index(range.upperBound, offsetBy: radius, limitedBy: source.endIndex)
+        let upper =
+            source.index(range.upperBound, offsetBy: radius, limitedBy: source.endIndex)
             ?? source.endIndex
         var value = String(source[lower..<upper])
             .replacingOccurrences(of: "\n", with: " ")

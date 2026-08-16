@@ -32,8 +32,9 @@ extension View {
                 WindowDragHandle(
                     onClick: onClick,
                     onBegan: onBegan,
-                    onEnded: onEnded)
-                    .accessibilityHidden(true)
+                    onEnded: onEnded
+                )
+                .accessibilityHidden(true)
             }
         }
     }

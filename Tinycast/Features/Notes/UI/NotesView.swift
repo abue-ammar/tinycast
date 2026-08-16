@@ -105,7 +105,8 @@ struct NotesView: View {
             SymbolImage(name: symbol, size: Theme.Size.noteStatus)
                 .frame(
                     width: Theme.Size.noteHeaderButton,
-                    height: Theme.Size.noteHeaderButton)
+                    height: Theme.Size.noteHeaderButton
+                )
                 .contentShape(Circle())
                 .accessibilityLabel(title)
         }

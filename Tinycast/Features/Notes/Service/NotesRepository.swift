@@ -49,7 +49,7 @@ struct NotesRepository: Sendable {
             try ensureDirectory()
             let keys: Set<URLResourceKey> = [
                 .contentModificationDateKey, .fileSizeKey, .isHiddenKey, .isRegularFileKey,
-                .isSymbolicLinkKey,
+                .isSymbolicLinkKey
             ]
             return try FileManager.default.contentsOfDirectory(
                 at: notesDirectory,

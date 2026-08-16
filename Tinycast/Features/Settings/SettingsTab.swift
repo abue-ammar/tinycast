@@ -69,7 +69,7 @@ enum SettingsSection: CaseIterable, Identifiable {
             return [.applications, .systemSettings, .systemActions, .commands, .quicklinks]
         case .features:
             return [
-                .fileSearch, .notes, .snippets, .windowManagement, .clipboard, .emoji, .extensions,
+                .fileSearch, .notes, .snippets, .windowManagement, .clipboard, .emoji, .extensions
             ]
         case .advanced: return [.backup, .about]
         }

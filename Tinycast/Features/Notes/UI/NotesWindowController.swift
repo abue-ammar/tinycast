@@ -96,7 +96,8 @@ final class NotesWindowController: NSObject {
         heightBehavior: HeightBehavior = .content
     ) {
         let restored = !hasPositionedPanel && panel.setFrameUsingName(Self.frameAutosaveName)
-        let visibleFrame = panel.screen?.visibleFrame
+        let visibleFrame =
+            panel.screen?.visibleFrame
             ?? screenContaining(panel.frame)?.visibleFrame
             ?? NSScreen.underCursor?.visibleFrame
             ?? NSScreen.main?.visibleFrame
@@ -104,31 +105,33 @@ final class NotesWindowController: NSObject {
         let constrainedVisibleFrame = NoteWindowLayout.constrainedVisibleFrame(
             visibleFrame,
             metrics: Self.metrics)
-        let height: CGFloat = switch heightBehavior {
-        case .content:
-            NoteWindowLayout.panelHeight(
-                editorContentHeight: editorHeight,
-                visibleScreenHeight: visibleFrame.height,
-                metrics: Self.metrics)
-        case .preserve:
-            NoteWindowLayout.preservedPanelHeight(
-                panel.frame.height,
-                visibleScreenHeight: visibleFrame.height,
-                metrics: Self.metrics)
-        }
-        let frame = if restored || hasPositionedPanel {
-            NoteWindowLayout.resizedFrame(
-                currentFrame: panel.frame,
-                height: height,
-                visibleFrame: constrainedVisibleFrame,
-                width: Theme.Size.noteWidth)
-        } else {
-            NoteWindowLayout.initialFrame(
-                visibleFrame: constrainedVisibleFrame,
-                height: height,
-                width: Theme.Size.noteWidth,
-                centerLiftFraction: Theme.Size.noteCenterLiftFraction)
-        }
+        let height: CGFloat =
+            switch heightBehavior {
+            case .content:
+                NoteWindowLayout.panelHeight(
+                    editorContentHeight: editorHeight,
+                    visibleScreenHeight: visibleFrame.height,
+                    metrics: Self.metrics)
+            case .preserve:
+                NoteWindowLayout.preservedPanelHeight(
+                    panel.frame.height,
+                    visibleScreenHeight: visibleFrame.height,
+                    metrics: Self.metrics)
+            }
+        let frame =
+            if restored || hasPositionedPanel {
+                NoteWindowLayout.resizedFrame(
+                    currentFrame: panel.frame,
+                    height: height,
+                    visibleFrame: constrainedVisibleFrame,
+                    width: Theme.Size.noteWidth)
+            } else {
+                NoteWindowLayout.initialFrame(
+                    visibleFrame: constrainedVisibleFrame,
+                    height: height,
+                    width: Theme.Size.noteWidth,
+                    centerLiftFraction: Theme.Size.noteCenterLiftFraction)
+            }
         if panel.frame != frame {
             panel.setFrame(frame, display: panel.isVisible, animate: false)
         }

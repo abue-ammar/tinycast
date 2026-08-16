@@ -224,9 +224,10 @@ final class NotesCoordinator {
                 if !settings.notesEnabled { store.stop() }
                 return
             }
-            guard presentationGeneration.permitsCompletion(
-                capturedGeneration: capturedGeneration,
-                isVisible: windowController.isVisible)
+            guard
+                presentationGeneration.permitsCompletion(
+                    capturedGeneration: capturedGeneration,
+                    isVisible: windowController.isVisible)
             else { return }
             closeSwitcher()
             showLoadedNote(
@@ -263,9 +264,10 @@ final class NotesCoordinator {
     }
 
     func handleDeleteShortcut() -> Bool {
-        guard NoteShortcutPolicy.handlesDelete(
-            switcherPresented: isSwitcherPresented,
-            renameActive: switcherRename.isActive)
+        guard
+            NoteShortcutPolicy.handlesDelete(
+                switcherPresented: isSwitcherPresented,
+                renameActive: switcherRename.isActive)
         else { return false }
         trashSwitcherSelection()
         return true
@@ -295,9 +297,10 @@ final class NotesCoordinator {
                 afterRemoving: id,
                 from: switcherOrder,
                 fallback: store.activeID ?? store.summaries.first?.id)
-            guard presentationGeneration.permitsCompletion(
-                capturedGeneration: capturedGeneration,
-                isVisible: windowController.isVisible)
+            guard
+                presentationGeneration.permitsCompletion(
+                    capturedGeneration: capturedGeneration,
+                    isVisible: windowController.isVisible)
             else { return }
             showLoadedNote(
                 focusEditor: !isSwitcherPresented,

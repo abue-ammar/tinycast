@@ -79,7 +79,8 @@ struct NoteEditorView: NSViewRepresentable {
 
         func update(_ next: NoteEditorInput) {
             guard next != input else { return }
-            let authoritative = next.id != input.id || next.epoch != input.epoch
+            let authoritative =
+                next.id != input.id || next.epoch != input.epoch
                 || next.source != textView?.string
             input = next
             guard authoritative else { return }

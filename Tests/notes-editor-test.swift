@@ -121,9 +121,11 @@ struct NotesEditorTests {
         editor.coordinator.update(second)
         editor.coordinator.reportHeight()
 
-        check("stale height reports cannot identify the replacement note", reports.allSatisfy {
-            $0.0.id == second.id && $0.0.epoch == second.epoch
-        })
+        check(
+            "stale height reports cannot identify the replacement note",
+            reports.allSatisfy {
+                $0.0.id == second.id && $0.0.epoch == second.epoch
+            })
         check("the replacement note reports a laid-out height", reports.last?.1 ?? 0 > 0)
     }
 

@@ -32,7 +32,8 @@ struct NotesEditorPerformance {
         var samples: [Double] = []
         for index in 0..<110 {
             let location = (textView.string as NSString).length / 2
-            let range = index.isMultiple(of: 2)
+            let range =
+                index.isMultiple(of: 2)
                 ? NSRange(location: location, length: 0)
                 : NSRange(location: location - 1, length: 1)
             let replacement = index.isMultiple(of: 2) ? "x" : ""

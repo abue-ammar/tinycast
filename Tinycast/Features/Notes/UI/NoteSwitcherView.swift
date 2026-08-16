@@ -62,8 +62,9 @@ struct NoteSwitcherView: View {
             VStack(spacing: Theme.Spacing.md) {
                 SymbolImage(
                     name: notes.isSearching ? "clock" : "text.page",
-                    size: Theme.Size.noteStatus)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    size: Theme.Size.noteStatus
+                )
+                .foregroundStyle(Theme.Colors.textSecondary)
                 Text(notes.isSearching ? "Searching notes…" : "No notes found")
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
@@ -85,8 +86,9 @@ struct NoteSwitcherView: View {
                                 },
                                 onCommitRename: notes.commitSwitcherRename,
                                 onCancelRename: notes.cancelSwitcherRename,
-                                onTrash: { notes.trash(summary.id) })
-                                .id(summary.id)
+                                onTrash: { notes.trash(summary.id) }
+                            )
+                            .id(summary.id)
                         }
                     }
                     .padding(Theme.Spacing.md)
