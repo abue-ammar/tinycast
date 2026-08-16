@@ -92,6 +92,9 @@ struct DoubleTapDetectorTests {
             (.searchFiles, .searchFiles, "hotkey.searchFiles"),
             (.clipboardHistory, .toggleClipboard, "hotkey.toggleClipboard"),
             (.searchEmoji, .toggleEmoji, "hotkey.toggleEmoji"),
+            (.showNotes, .showNotes, "hotkey.showNotes"),
+            (.createNote, .createNote, "hotkey.createNote"),
+            (.searchNotes, .searchNotes, "hotkey.searchNotes"),
         ]
         let answers = CommandID.allCases.compactMap { id in id.hotKeyAction.map { (id, $0) } }
         expect(
