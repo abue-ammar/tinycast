@@ -28,6 +28,7 @@ final class NotesCoordinator {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var issueTask: Task<Void, Never>?
     @ObservationIgnored private var operationTask: Task<Void, Never>?
+    @ObservationIgnored private var operationID = 0
     @ObservationIgnored private var pendingIssue: NotesStore.Issue?
     @ObservationIgnored private var measuredEditorHeight: (id: NoteID?, epoch: Int, height: CGFloat)?
     private var pendingPresentation: Presentation?
@@ -204,9 +205,7 @@ final class NotesCoordinator {
     }
 
     func select(_ id: NoteID) {
-        guard operationTask == nil else { return }
-        let capturedGeneration = presentationGeneration.current
-        operationTask = Task { [weak self] in
+        runOperation { [weak self] capturedGeneration in
             guard let self else { return }
             let previousID = store.activeID
             let selected = await store.select(id) { [weak self] in
@@ -215,7 +214,6 @@ final class NotesCoordinator {
                     capturedGeneration: capturedGeneration,
                     isVisible: windowController.isVisible)
             }
-            operationTask = nil
             guard selected, settings.notesEnabled, !Task.isCancelled else {
                 if !settings.notesEnabled { store.stop() }
                 return
@@ -233,12 +231,9 @@ final class NotesCoordinator {
     }
 
     func rename(_ id: NoteID, to title: String) {
-        guard operationTask == nil else { return }
-        let capturedGeneration = presentationGeneration.current
-        operationTask = Task { [weak self] in
+        runOperation { [weak self] capturedGeneration in
             guard let self else { return }
             let renamedID = await store.rename(id, to: title)
-            operationTask = nil
             guard let renamedID, settings.notesEnabled, !Task.isCancelled else {
                 if !settings.notesEnabled { store.stop() }
                 return
@@ -270,21 +265,14 @@ final class NotesCoordinator {
     }
 
     func trash(_ id: NoteID) {
-        guard operationTask == nil,
-            let title = store.summaries.first(where: { $0.id == id })?.title
-        else { return }
-        let capturedGeneration = presentationGeneration.current
-        operationTask = Task { [weak self] in
+        guard let title = store.summaries.first(where: { $0.id == id })?.title else { return }
+        runOperation { [weak self] capturedGeneration in
             guard let self else { return }
             let previousID = store.activeID
             let confirmed = await confirmTrash(title)
-            guard confirmed, settings.notesEnabled, !Task.isCancelled else {
-                operationTask = nil
-                return
-            }
+            guard confirmed, settings.notesEnabled, !Task.isCancelled else { return }
             let switcherOrder = visibleNotes.map(\.id)
             let removed = await store.trash(id)
-            operationTask = nil
             guard removed, settings.notesEnabled, !Task.isCancelled else {
                 if !settings.notesEnabled { store.stop() }
                 return
@@ -422,6 +410,20 @@ final class NotesCoordinator {
         let height = NoteEditorView.contentHeight(for: input.source, width: Theme.Size.noteWidth)
         measuredEditorHeight = (id: input.id, epoch: input.epoch, height: height)
         return height
+    }
+
+    /// Runs one collection operation at a time. A newer request cancels and supersedes an in-flight
+    /// one rather than being dropped; generation checks still gate any presentation it completes.
+    private func runOperation(_ body: @escaping @MainActor (Int) async -> Void) {
+        operationTask?.cancel()
+        operationID &+= 1
+        let id = operationID
+        let capturedGeneration = presentationGeneration.current
+        operationTask = Task { [weak self] in
+            guard let self else { return }
+            await body(capturedGeneration)
+            if self.operationID == id { self.operationTask = nil }
+        }
     }
 
     private func present(_ issue: NotesStore.Issue) {
