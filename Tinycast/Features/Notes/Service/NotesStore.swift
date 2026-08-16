@@ -195,6 +195,7 @@ final class NotesStore {
     @discardableResult
     func rename(_ id: NoteID, to title: String) async -> NoteID? {
         guard await flush() else { return nil }
+        cancelSearch()
         let repository = repository
         let activeID = activeID
         let activeRevision = revision
