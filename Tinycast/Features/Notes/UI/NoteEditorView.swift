@@ -4,7 +4,7 @@ import SwiftUI
 struct NoteEditorView: NSViewRepresentable {
     let input: NoteEditorInput
     let onSourceChange: (String) -> Void
-    let onContentHeightChange: (NoteEditorInput, CGFloat) -> Void
+    let onCharacterCountChange: (NoteEditorInput, Int) -> Void
     let onReady: (NoteTextView) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -18,16 +18,16 @@ struct NoteEditorView: NSViewRepresentable {
         scrollView.scrollerStyle = .overlay
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        // `NotesView` lays out its own title-bar band, so AppKit must not inset this a second time.
+        scrollView.automaticallyAdjustsContentInsets = false
 
         let textView = NoteTextView(usingTextLayoutManager: true)
         Self.configure(textView)
         textView.delegate = context.coordinator
         textView.editorUndoManager = context.coordinator.editorUndoManager
         scrollView.documentView = textView
-        textView.setFrameSize(NSSize(width: Theme.Size.noteWidth, height: 1))
         context.coordinator.textView = textView
         context.coordinator.install(input, resetUndo: false)
-        context.coordinator.reportHeight()
         onReady(textView)
         return scrollView
     }
@@ -35,19 +35,6 @@ struct NoteEditorView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.update(input)
-    }
-
-    @MainActor
-    static func contentHeight(for source: String, width: CGFloat) -> CGFloat {
-        let textView = NoteTextView(usingTextLayoutManager: true)
-        configure(textView)
-        textView.textContainer?.containerSize = NSSize(
-            width: max(0, width - Theme.Size.noteEditorInset * 2),
-            height: CGFloat.greatestFiniteMagnitude)
-        textView.textContainer?.widthTracksTextView = false
-        textView.setFrameSize(NSSize(width: width, height: 1))
-        install(source, in: textView)
-        return measuredHeight(of: textView)
     }
 
     @MainActor
@@ -75,6 +62,7 @@ struct NoteEditorView: NSViewRepresentable {
             textView.setSelectedRange(NSRange(location: selectionLocation, length: 0))
             isInstalling = false
             if resetUndo { editorUndoManager.removeAllActions() }
+            reportCharacterCount()
         }
 
         func update(_ next: NoteEditorInput) {
@@ -85,7 +73,6 @@ struct NoteEditorView: NSViewRepresentable {
             input = next
             guard authoritative else { return }
             install(next, resetUndo: true)
-            reportHeight()
         }
 
         func textDidChange(_ notification: Notification) {
@@ -94,19 +81,12 @@ struct NoteEditorView: NSViewRepresentable {
             guard source != input.source else { return }
             input = NoteEditorInput(id: input.id, source: source, epoch: input.epoch)
             parent.onSourceChange(source)
-            reportHeight()
+            reportCharacterCount()
         }
 
-        func reportHeight() {
-            guard let textView else { return }
-            publishHeight(NoteEditorView.measuredHeight(of: textView), in: textView)
-        }
-
-        private func publishHeight(_ height: CGFloat, in textView: NSTextView) {
-            if textView.frame.height != height {
-                textView.setFrameSize(NSSize(width: textView.frame.width, height: height))
-            }
-            parent.onContentHeightChange(input, height)
+        /// `NSTextStorage.length` is maintained by TextKit, so the counter costs nothing per edit.
+        private func reportCharacterCount() {
+            parent.onCharacterCountChange(input, textView?.textStorage?.length ?? 0)
         }
     }
 
@@ -123,7 +103,7 @@ struct NoteEditorView: NSViewRepresentable {
             height: CGFloat.greatestFiniteMagnitude)
         textView.textContainerInset = NSSize(
             width: Theme.Size.noteEditorInset,
-            height: Theme.Size.noteEditorInset)
+            height: Theme.Size.noteEditorTopInset)
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.lineFragmentPadding = 0
         textView.font = NSFont.preferredFont(forTextStyle: .body)
@@ -158,19 +138,4 @@ struct NoteEditorView: NSViewRepresentable {
         .font: NSFont.preferredFont(forTextStyle: .body),
         .foregroundColor: NSColor(Theme.Colors.noteText)
     ]
-
-    private static func measuredHeight(of textView: NSTextView) -> CGFloat {
-        guard let layoutManager = textView.textLayoutManager,
-            let contentManager = layoutManager.textContentManager
-        else { return Theme.Size.noteEditorInset * 2 }
-        var extent: CGFloat = 0
-        layoutManager.enumerateTextLayoutFragments(
-            from: contentManager.documentRange.endLocation,
-            options: [.reverse, .ensuresLayout, .ensuresExtraLineFragment]
-        ) { fragment in
-            extent = fragment.layoutFragmentFrame.maxY
-            return false
-        }
-        return ceil(extent + textView.textContainerInset.height * 2)
-    }
 }

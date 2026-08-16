@@ -148,17 +148,6 @@ swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
 Every query runs twice: once on the shipped rules and once with five extra user patterns, so the output
 says what the ignore list itself costs rather than only what Spotlight does.
 
-Measure the Notes per-edit path separately with a 250,000-character plain document:
-
-```sh
-swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
-    Tinycast/DesignSystem/Theme.swift Tinycast/Features/Notes/Model/NoteDocument.swift \
-    Tinycast/Features/Notes/UI/NoteTextView.swift \
-    Tinycast/Features/Notes/UI/NoteEditorView.swift \
-    Tests/notes-editor-performance.swift -o /tmp/notes-editor-performance
-/tmp/notes-editor-performance
-```
-
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the
 instrument then shows an interval that never closes.
@@ -181,7 +170,6 @@ Measured at the end of the 2026 refactor, on `main`. Useful as orders of magnitu
 | `palette-selection-test` | 111,684 assertions — a tripwire: a change in this count means the row-order model moved |
 | `SnippetKeywordPolicy` match | 7 µs/keystroke at 50 keywords, 59 µs at 1,000 — the `lowercased()` is 0.09 µs of it |
 | `ClipboardStore.pinnedItems` | 27–127 µs per uncached search, 1,000-row window — no cache earns its invalidation yet |
-| Notes plain edit, 250k characters | 5.2 ms median, 5.4 ms p95 |
 | `count items of trash` | 5,000 ms against a cold Finder on an *empty* Trash, 110 ms warm — why AppleScript is detached |
 
 Launch time, allocation counts and RSS have never been captured as numbers. The signposts are in place,
@@ -287,8 +275,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   visibility checkboxes and recorders match Settings > Commands
 - Show Notes opens the last active note and focuses an already visible window without hiding it
 - Create Note makes one unique Untitled file, including as the first action in an empty channel
-- The title opens the switcher; Command-P focuses search, arrows move selection, Return opens, and
-  Command-N creates
+- Command-P and the Browse button focus search, arrows move selection, Return opens, and Command-N
+  creates
 - Empty switcher search reads the complete recent list; title and body searches rank correctly and a
   superseded query never publishes
 - Inline rename updates the Markdown filename without changing source; collisions receive a suffix
@@ -299,24 +287,24 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   syntax is ordinary text; there is no preview, formatting menu, or task overlay
 - Return, Tab, Delete, and formatting-looking shortcuts retain native plain-text behavior
 - Edit one note, switch to a shorter note, then Undo and Redo: the new note remains intact and the app
-  does not terminate; repeat after a clean external reload
+  does not terminate
 - Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, Undo, Redo, and Find preserve
   exact source
-- A new note stays at 220 points while lines fit, then grows and shrinks downward without moving its
-  header; it keeps a 16-point vertical screen margin when possible, stops at its cap, then scrolls
-- In an expanded note, repeated Backspace/Delete and deleting a multi-line selection shrink the panel
-  without requiring another insertion
-- Clicking another app leaves the panel visible; Escape, Command-W, and close hide it
-- Dragging the icon, title, or empty header moves the panel in editor and switcher states; clicking the
-  title still opens the switcher, action buttons do not drag, and the position survives relaunch
+- An empty note shows `Start writing…`; the footer count is right after typing, pasting and undoing
+- Traffic lights sit top-left, the title is centred **on the window**, and the capsule is top-right, all
+  on one line; the yellow light is disabled and green zooms
+- Each capsule button shows a hover capsule and a native tooltip, and fires its action
+- Dragging the title bar moves the window and dragging an edge resizes it; both survive relaunch
+- Clicking another app leaves the panel visible; Escape, Command-W, and the red light hide it
+- Command-Q does nothing anywhere; with Settings in front, Command-W closes Settings
 - Hiding restores the previous external app or Tinycast window
-- Reveal opens Finder with the active Markdown file selected
-- A clean external edit reloads; a dirty one keeps the draft and reports a conflict without overwriting
-- Dismissing a save or conflict report keeps the draft; clicking its warning offers recovery again
-- Save Copy & Reload preserves the draft beside the canonical file, then displays the external version
-- Quitting inside the debounce window saves the last edit; an unresolved conflict writes a copy first
-- The fixed header slots do not shift between waiting, saving, saved, failure, and conflict states
-- Over a light desktop, the surface has one continuous clip and no dark edge around its glass controls
+- Open Notes Folder opens Finder with the active Markdown file selected, or the folder with no note
+- Deleting every note closes the browse list and leaves one clean empty state with no character count;
+  Command-N from there creates and selects one note
+- The browse list fades only at its bottom edge and rests opaque once it reaches the end
+- Quitting inside the debounce window saves the last edit
+- Over a light desktop, the corner matches the palette's, the shadow follows it, and no dark edge shows
+  around the glass controls
 
 ### Snippets
 

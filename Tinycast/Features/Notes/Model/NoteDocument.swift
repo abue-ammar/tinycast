@@ -17,22 +17,8 @@ struct NoteSearchResult: Identifiable, Sendable, Equatable {
 }
 
 struct NoteDocument: Sendable, Equatable {
-    struct Revision: Sendable, Equatable {
-        private let fingerprint: String
-
-        init(data: Data) {
-            var hash: UInt64 = 14_695_981_039_346_656_037
-            for byte in data {
-                hash ^= UInt64(byte)
-                hash &*= 1_099_511_628_211
-            }
-            fingerprint = "\(data.count):\(String(hash, radix: 16))"
-        }
-    }
-
     let id: NoteID
     let source: String
-    let revision: Revision
 }
 
 struct NoteEditorInput: Sendable, Equatable {

@@ -2,21 +2,15 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class NotesWindowController: NSObject {
-    enum HeightBehavior: Equatable {
-        case content
-        case preserve
-    }
-
-    private static let frameAutosaveName = "Tinycast Floating Note"
+final class NotesWindowController: NSObject, NSWindowDelegate {
+    /// Deliberately not the old name: its records hold heights from the content-sized panel.
+    private static let frameAutosaveName = "Notes Window"
 
     private unowned let coordinator: NotesCoordinator
     private var panel: NotesPanel?
     private weak var editor: NoteTextView?
     private var previousApp: NSRunningApplication?
     private weak var previousOwnWindow: NSWindow?
-    private var editorHeight: CGFloat = 0
-    private var hasPositionedPanel = false
 
     init(coordinator: NotesCoordinator) {
         self.coordinator = coordinator
@@ -24,19 +18,15 @@ final class NotesWindowController: NSObject {
 
     var isVisible: Bool { panel?.isVisible ?? false }
 
-    func show(
-        initialEditorHeight: () -> CGFloat,
-        focusEditor: Bool,
-        heightBehavior: HeightBehavior = .content
-    ) {
-        let wasVisible = panel?.isVisible == true
-        if !wasVisible { captureFocusTarget() }
-        if heightBehavior == .content { editorHeight = initialEditorHeight() }
+    func show(focusEditor: Bool) {
         let panel = ensurePanel()
-        position(panel, heightBehavior: heightBehavior)
+        if !panel.isVisible { captureFocusTarget() }
         panel.contentView?.layoutSubtreeIfNeeded()
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
+        seatTrafficLights(in: panel)
+        // The corner is clipped in SwiftUI, so the shadow has to be recut from what was drawn.
+        panel.invalidateShadow()
         if focusEditor { self.focusEditor(in: panel) }
     }
 
@@ -51,13 +41,6 @@ final class NotesWindowController: NSObject {
         }
     }
 
-    func updateEditorHeight(_ height: CGFloat) {
-        guard height.isFinite, height > 0 else { return }
-        editorHeight = height
-        guard let panel else { return }
-        position(panel, heightBehavior: .content)
-    }
-
     func editorReady(_ textView: NoteTextView) {
         editor = textView
         guard let panel, panel.isVisible else { return }
@@ -69,11 +52,33 @@ final class NotesWindowController: NSObject {
         focusEditor(in: panel)
     }
 
-    func saveFrame() {
-        guard let panel else { return }
-        position(panel, heightBehavior: .preserve)
-        panel.saveFrame(usingName: Self.frameAutosaveName)
+    /// Only this controller knows the host window, so handing it over stays its job.
+    func presentSwitcher(_ switcher: NoteSwitcherWindowController) {
+        guard let panel, panel.isVisible else { return }
+        switcher.show(under: panel)
     }
+
+    // MARK: - NSWindowDelegate
+
+    /// The red button and ⌘W both arrive here, so closing is one path and never destroys state.
+    func windowWillClose(_ notification: Notification) {
+        coordinator.hide()
+    }
+
+    /// `contentMinSize` alone does not hold: AppKit lets a frame through below it, but it takes
+    /// whatever this returns verbatim.
+    func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+        NSSize(
+            width: max(frameSize.width, Theme.Size.noteWindow.width),
+            height: max(frameSize.height, Theme.Size.noteWindow.height))
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        guard let panel else { return }
+        seatTrafficLights(in: panel)
+    }
+
+    // MARK: - Private
 
     private func ensurePanel() -> NotesPanel {
         if let panel { return panel }
@@ -81,66 +86,53 @@ final class NotesWindowController: NSObject {
         let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
         let panel = NotesPanel(content: hosting)
-        panel.onHide = { [weak coordinator] in coordinator?.hide() }
+        panel.delegate = self
         panel.onEscape = { [weak coordinator] in coordinator?.handleEscape() }
         panel.onCreate = { [weak coordinator] in coordinator?.createNote() }
         panel.onSearch = { [weak coordinator] in coordinator?.searchNotes() }
+        panel.onOpenFolder = { [weak coordinator] in coordinator?.openNotesFolder() }
         panel.onDelete = { [weak coordinator] in coordinator?.handleDeleteShortcut() ?? false }
         panel.setFrameAutosaveName(Self.frameAutosaveName)
+        if !panel.setFrameUsingName(Self.frameAutosaveName) { panel.center() }
+        // A frame autosaved before the floor was raised would otherwise reopen below it.
+        panel.setContentSize(
+            CGSize(
+                width: max(panel.frame.width, Theme.Size.noteWindow.width),
+                height: max(panel.frame.height, Theme.Size.noteWindow.height)))
         self.panel = panel
+        observeTitle()
         return panel
     }
 
-    private func position(
-        _ panel: NotesPanel,
-        heightBehavior: HeightBehavior = .content
-    ) {
-        let restored = !hasPositionedPanel && panel.setFrameUsingName(Self.frameAutosaveName)
-        let visibleFrame =
-            panel.screen?.visibleFrame
-            ?? screenContaining(panel.frame)?.visibleFrame
-            ?? NSScreen.underCursor?.visibleFrame
-            ?? NSScreen.main?.visibleFrame
-        guard let visibleFrame else { return }
-        let constrainedVisibleFrame = NoteWindowLayout.constrainedVisibleFrame(
-            visibleFrame,
-            metrics: Self.metrics)
-        let height: CGFloat =
-            switch heightBehavior {
-            case .content:
-                NoteWindowLayout.panelHeight(
-                    editorContentHeight: editorHeight,
-                    visibleScreenHeight: visibleFrame.height,
-                    metrics: Self.metrics)
-            case .preserve:
-                NoteWindowLayout.preservedPanelHeight(
-                    panel.frame.height,
-                    visibleScreenHeight: visibleFrame.height,
-                    metrics: Self.metrics)
-            }
-        let frame =
-            if restored || hasPositionedPanel {
-                NoteWindowLayout.resizedFrame(
-                    currentFrame: panel.frame,
-                    height: height,
-                    visibleFrame: constrainedVisibleFrame,
-                    width: Theme.Size.noteWidth)
-            } else {
-                NoteWindowLayout.initialFrame(
-                    visibleFrame: constrainedVisibleFrame,
-                    height: height,
-                    width: Theme.Size.noteWidth,
-                    centerLiftFraction: Theme.Size.noteCenterLiftFraction)
-            }
-        if panel.frame != frame {
-            panel.setFrame(frame, display: panel.isVisible, animate: false)
+    /// Idempotent, because AppKit re-seats the lights on a resize and on every title assignment.
+    private func seatTrafficLights(in window: NSWindow) {
+        let buttons = [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton]
+            .compactMap(window.standardWindowButton)
+        guard let leading = buttons.first, let band = leading.superview?.bounds.height else {
+            return
         }
-        hasPositionedPanel = true
+        // Centred in the drawn band, not AppKit's shorter one, and clamped so none is clipped.
+        let size = leading.frame.height
+        let y = max(0, band - size - (Theme.Size.noteTitlebar - size) / 2)
+        let shift = Theme.Size.noteTrafficLightInset - leading.frame.minX
+        guard shift != 0 || leading.frame.origin.y != y else { return }
+        for button in buttons {
+            button.frame.origin.x += shift
+            button.frame.origin.y = y
+        }
     }
 
-    private func screenContaining(_ frame: CGRect) -> NSScreen? {
-        let center = CGPoint(x: frame.midX, y: frame.midY)
-        return NSScreen.screens.first { $0.frame.contains(center) }
+    /// Re-armed after every read, so a rename reaches the title without waiting for the next show.
+    private func observeTitle() {
+        withObservationTracking {
+            panel?.title = coordinator.activeTitle
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.observeTitle()
+                if let panel = self.panel { self.seatTrafficLights(in: panel) }
+            }
+        }
     }
 
     private func captureFocusTarget() {
@@ -166,10 +158,4 @@ final class NotesWindowController: NSObject {
             panel.makeFirstResponder(editor)
         }
     }
-
-    private static let metrics = NoteWindowLayout.Metrics(
-        minimumHeight: Theme.Size.noteMinimumHeight,
-        maximumHeight: Theme.Size.noteMaximumHeight,
-        screenMargin: Theme.Size.noteScreenMargin,
-        fixedContentHeight: Theme.Size.noteHeaderHeight)
 }

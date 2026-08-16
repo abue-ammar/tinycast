@@ -27,7 +27,6 @@ enum Theme {
         static let menuPanel: CGFloat = 16
         /// The dialog and HUD surface, so a dialog reads as a sibling of the palette.
         static let dialog: CGFloat = 20
-        static let note: CGFloat = 20
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
@@ -38,13 +37,21 @@ enum Theme {
     enum Size {
         static let panelWidth: CGFloat = 750
         static let panelHeight: CGFloat = 475
-        static let noteWidth: CGFloat = 520
-        static let noteMinimumHeight: CGFloat = 220
-        static let noteMaximumHeight: CGFloat = 640
-        static let noteScreenMargin: CGFloat = 16
-        static let noteCenterLiftFraction: CGFloat = 0.08
-        static let noteHeaderHeight: CGFloat = 44
+        /// Opening size on a first run and the floor: below it the title bar's own parts collide.
+        static let noteWindow = CGSize(width: 440, height: 180)
         static let noteEditorInset: CGFloat = 16
+        /// Shorter than the horizontal inset, so the first line sits close under the title bar.
+        static let noteEditorTopInset: CGFloat = 6
+        static let noteSearchHeight: CGFloat = 34
+        /// The switcher popover, sized independently of a note window that can be 180pt tall.
+        static let noteSwitcher = CGSize(width: 300, height: 340)
+        static let noteFooterHeight: CGFloat = 28
+        /// Holds the launcher's 36-point action capsule with the same margin its own bar gives it.
+        static let noteTitlebar: CGFloat = 52
+        /// Symmetric, so the title stays centred on the window while clearing lights and capsule.
+        static let noteTitleInset: CGFloat = 120
+        /// Nine points crowds the palette's 26-point corner, so Notes seats its lights further in.
+        static let noteTrafficLightInset: CGFloat = 20
         /// Fraction of visible height above the palette's top edge; it grows downward.
         static let paletteTopMarginFraction: CGFloat = 0.18
         static let headerHeight: CGFloat = 44
@@ -85,8 +92,8 @@ enum Theme {
         static let compactKeyCap: CGFloat = 15
         static let heroKeyCap: CGFloat = 22
         static let menuButton: CGFloat = 36
-        static let noteHeaderButton: CGFloat = 30
-        static let noteStatus: CGFloat = 16
+        static let noteGlyph: CGFloat = 16
+        static let noteEmptyGlyph: CGFloat = 28
         /// The uninstall list's leading checkbox / lock glyph.
         static let checkbox: CGFloat = 16
         static let clipboardListWidth: CGFloat = 290

@@ -4,11 +4,6 @@ struct NotesRepository: Sendable {
     typealias TrashOperation = @Sendable (URL) throws -> Void
 
     enum Failure: Error, LocalizedError, Sendable, Equatable {
-        case conflict(
-            fileURL: URL,
-            expected: NoteDocument.Revision,
-            actual: NoteDocument.Revision?
-        )
         case invalidTitle(String)
         case unreadable(URL)
         case invalidLocation(URL)
@@ -16,8 +11,6 @@ struct NotesRepository: Sendable {
 
         var errorDescription: String? {
             switch self {
-            case .conflict(let fileURL, _, _):
-                return "The note changed on disk before it could be saved. (\(fileURL.lastPathComponent))"
             case .invalidTitle(let title):
                 return "“\(title)” can't be used as a note title."
             case .unreadable(let fileURL):
@@ -73,17 +66,14 @@ struct NotesRepository: Sendable {
         }
     }
 
-    func loadOrCreate(preferredID: NoteID?) throws(Failure) -> ([NoteSummary], NoteDocument) {
-        var summaries = try list()
+    /// A `nil` document is an empty collection, not a failure: creating is always the user's move.
+    func load(preferredID: NoteID?) throws(Failure) -> ([NoteSummary], NoteDocument?) {
+        let summaries = try list()
         if let preferredID, summaries.contains(where: { $0.id == preferredID }) {
             return (summaries, try load(preferredID))
         }
-        if let first = summaries.first {
-            return (summaries, try load(first.id))
-        }
-        let document = try create()
-        summaries = try list()
-        return (summaries, document)
+        guard let first = summaries.first else { return (summaries, nil) }
+        return (summaries, try load(first.id))
     }
 
     func load(_ id: NoteID) throws(Failure) -> NoteDocument {
@@ -94,10 +84,7 @@ struct NotesRepository: Sendable {
             guard let source = String(data: data, encoding: .utf8) else {
                 throw Failure.unreadable(url)
             }
-            return NoteDocument(
-                id: NoteID(rawValue: url.lastPathComponent),
-                source: source,
-                revision: NoteDocument.Revision(data: data))
+            return NoteDocument(id: NoteID(rawValue: url.lastPathComponent), source: source)
         }
     }
 
@@ -127,43 +114,23 @@ struct NotesRepository: Sendable {
         }
     }
 
-    func save(
-        id: NoteID,
-        source: String,
-        expectedRevision: NoteDocument.Revision
-    ) throws(Failure) -> NoteDocument {
+    func save(id: NoteID, source: String) throws(Failure) {
         let candidate = fileURL(for: id)
-        return try mappedError(at: candidate) {
+        try mappedError(at: candidate) {
             let url = try validatedFileURL(candidate)
             let data = Data(source.utf8)
-            return try coordinatedWrite(at: url, options: .forReplacing) { coordinatedURL in
-                let mutationURL = try validatedFileURL(coordinatedURL)
-                let actualRevision = try revisionIfPresent(at: mutationURL)
-                guard actualRevision == expectedRevision else {
-                    throw Failure.conflict(
-                        fileURL: url,
-                        expected: expectedRevision,
-                        actual: actualRevision)
-                }
-                try data.write(to: mutationURL, options: .atomic)
-                return NoteDocument(
-                    id: id,
-                    source: source,
-                    revision: NoteDocument.Revision(data: data))
+            try coordinatedWrite(at: url, options: .forReplacing) { coordinatedURL in
+                try data.write(to: try validatedFileURL(coordinatedURL), options: .atomic)
             }
         }
     }
 
-    func rename(
-        id: NoteID,
-        title: String,
-        expectedRevision: NoteDocument.Revision
-    ) throws(Failure) -> NoteDocument {
+    func rename(id: NoteID, title: String) throws(Failure) -> NoteID {
         let sourceURL = fileURL(for: id)
         return try mappedError(at: sourceURL) {
             let sourceURL = try validatedFileURL(sourceURL)
             let base = try validatedTitle(title)
-            if folded(base + ".md") == folded(id.rawValue) { return try load(id) }
+            if folded(base + ".md") == folded(id.rawValue) { return id }
             let occupied = Set(
                 try list().lazy.filter { $0.id != id }.map { folded($0.id.rawValue) })
             var suffix = 1
@@ -177,17 +144,10 @@ struct NotesRepository: Sendable {
                 }
                 do {
                     try coordinatedWrite(at: sourceURL, options: .forMoving) { coordinatedURL in
-                        let mutationURL = try validatedFileURL(coordinatedURL)
-                        let actualRevision = try revisionIfPresent(at: mutationURL)
-                        guard actualRevision == expectedRevision else {
-                            throw Failure.conflict(
-                                fileURL: sourceURL,
-                                expected: expectedRevision,
-                                actual: actualRevision)
-                        }
-                        try FileManager.default.moveItem(at: mutationURL, to: destination)
+                        try FileManager.default.moveItem(
+                            at: try validatedFileURL(coordinatedURL), to: destination)
                     }
-                    return try load(NoteID(rawValue: destination.lastPathComponent))
+                    return NoteID(rawValue: destination.lastPathComponent)
                 } catch {
                     if FileManager.default.fileExists(atPath: destination.path) {
                         suffix += 1
@@ -199,50 +159,12 @@ struct NotesRepository: Sendable {
         }
     }
 
-    func trash(id: NoteID, expectedRevision: NoteDocument.Revision) throws(Failure) {
+    func trash(id: NoteID) throws(Failure) {
         let candidate = fileURL(for: id)
         try mappedError(at: candidate) {
             let url = try validatedFileURL(candidate)
             try coordinatedWrite(at: url, options: .forDeleting) { coordinatedURL in
-                let mutationURL = try validatedFileURL(coordinatedURL)
-                let actualRevision = try revisionIfPresent(at: mutationURL)
-                guard actualRevision == expectedRevision else {
-                    throw Failure.conflict(
-                        fileURL: url,
-                        expected: expectedRevision,
-                        actual: actualRevision)
-                }
-                try trashOperation(mutationURL)
-            }
-        }
-    }
-
-    func saveConflictCopy(
-        id: NoteID,
-        source: String,
-        now: Date,
-        calendar: Calendar
-    ) throws(Failure) -> URL {
-        try mappedError(at: notesDirectory) {
-            try ensureDirectory()
-            let data = Data(source.utf8)
-            let title = fileURL(for: id).deletingPathExtension().lastPathComponent
-            let timestamp = conflictTimestamp(now: now, calendar: calendar)
-            var suffix = 1
-            while true {
-                let suffixText = suffix == 1 ? "" : " \(suffix)"
-                let candidate = notesDirectory.appendingPathComponent(
-                    "\(title) (Tinycast Conflict \(timestamp)\(suffixText)).md")
-                do {
-                    try writeNewFileAtomically(data, to: candidate)
-                    return candidate
-                } catch {
-                    if FileManager.default.fileExists(atPath: candidate.path) {
-                        suffix += 1
-                        continue
-                    }
-                    throw error
-                }
+                try trashOperation(try validatedFileURL(coordinatedURL))
             }
         }
     }
@@ -302,11 +224,6 @@ struct NotesRepository: Sendable {
         return notesDirectory.appendingPathComponent("\(base)\(suffixText).md")
     }
 
-    private func revisionIfPresent(at fileURL: URL) throws -> NoteDocument.Revision? {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
-        return NoteDocument.Revision(data: try Data(contentsOf: fileURL))
-    }
-
     private func summaryPrecedes(_ lhs: NoteSummary, _ rhs: NoteSummary) -> Bool {
         if lhs.modifiedAt != rhs.modifiedAt { return lhs.modifiedAt > rhs.modifiedAt }
         return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
@@ -316,19 +233,6 @@ struct NotesRepository: Sendable {
         value.folding(
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: Locale(identifier: "en_US_POSIX"))
-    }
-
-    private func conflictTimestamp(now: Date, calendar: Calendar) -> String {
-        let components = calendar.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second], from: now)
-        return String(
-            format: "%04d-%02d-%02d %02d%02d%02d",
-            components.year ?? 0,
-            components.month ?? 0,
-            components.day ?? 0,
-            components.hour ?? 0,
-            components.minute ?? 0,
-            components.second ?? 0)
     }
 
     private func writeNewFileAtomically(_ data: Data, to destination: URL) throws {

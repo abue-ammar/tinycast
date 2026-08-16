@@ -8,7 +8,7 @@ final class DialogController: NSObject, NSWindowDelegate {
     private var continuation: CheckedContinuation<Int, Never>?
 
     func confirm(
-        title: String, message: String?, symbol: String, tone: DialogTone, confirmTitle: String,
+        title: String, message: String?, symbol: String?, tone: DialogTone, confirmTitle: String,
         confirmRole: DialogAction.Role, dismissTitle: String = "Cancel"
     ) async -> Bool {
         let request = DialogRequest(

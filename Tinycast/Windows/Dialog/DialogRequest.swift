@@ -23,7 +23,8 @@ struct DialogRequest {
     let title: String
     var message: String?
     /// The subject's own glyph, resolved through `SymbolImage` so a bundled asset name works too.
-    let symbol: String
+    /// Nil where the title already names the subject and a glyph would only repeat it.
+    let symbol: String?
     var tone: DialogTone = .neutral
     var actions: [DialogAction]
     /// The button ↵ fires, normally the primary action.

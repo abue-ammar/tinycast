@@ -15,17 +15,19 @@ final class NotesCoordinator {
     private let appIndex: AppIndex
     private unowned let core: AppCore
     @ObservationIgnored private lazy var windowController = NotesWindowController(coordinator: self)
+    @ObservationIgnored private lazy var switcherController = NoteSwitcherWindowController(
+        coordinator: self)
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var issueTask: Task<Void, Never>?
     @ObservationIgnored private var operationTask: Task<Void, Never>?
     @ObservationIgnored private var operationID = 0
     @ObservationIgnored private var pendingIssue: NotesStore.Issue?
-    @ObservationIgnored private var measuredEditorHeight: (id: NoteID?, epoch: Int, height: CGFloat)?
     private var pendingPresentation: Presentation?
     private var enablementGeneration = 0
     private(set) var isSwitcherPresented = false
     private(set) var switcherSelection: NoteID?
     private(set) var switcherFocusRevision = 0
+    private(set) var characterCount = 0
     private var switcherRename = NoteSwitcherRenameState()
     private var presentationGeneration = NotePresentationGeneration()
 
@@ -49,14 +51,19 @@ final class NotesCoordinator {
             epoch: store.editorEpoch)
     }
 
+    var hasActiveNote: Bool { store.activeID != nil }
+    var isActiveNoteEmpty: Bool { store.activeID != nil && store.source.isEmpty }
+    /// UTF-16 units, straight off the text storage: the only length TextKit hands back in O(1).
+    var characterCountLabel: String {
+        characterCount == 1 ? "1 character" : "\(characterCount) characters"
+    }
+
     var searchQueryBinding: Binding<String> {
         Binding(
             get: { [weak self] in self?.store.searchQuery ?? "" },
             set: { [weak self] in self?.store.updateSearchQuery($0) })
     }
 
-    var state: NotesStore.State { store.state }
-    var isDirty: Bool { store.isDirty }
     var activeTitle: String { store.activeTitle }
     var isSearching: Bool { store.isSearching }
     var visibleNotes: [NoteSummary] {
@@ -91,17 +98,9 @@ final class NotesCoordinator {
         }
     }
 
-    /// `false` keeps the app open so a conflicted draft survives the quit attempt.
-    func prepareForTermination() async -> Bool {
-        guard await store.preserveConflictForTermination() else {
-            await core.showNotice(
-                title: "Couldn't Preserve Note",
-                message: "Tinycast is staying open so the unsaved note is not lost. Try saving again.",
-                symbol: "exclamationmark.triangle",
-                tone: .danger)
-            return false
-        }
-        return true
+    /// Quit waits on this so the 300 ms autosave debounce cannot swallow the last edit.
+    func prepareForTermination() async {
+        await store.flush()
     }
 
     func show() {
@@ -117,7 +116,7 @@ final class NotesCoordinator {
     }
 
     func openSwitcher() {
-        guard settings.notesEnabled, store.hasLoadedDocument else { return }
+        guard settings.notesEnabled, store.isLoaded else { return }
         if isSwitcherPresented {
             switcherFocusRevision &+= 1
             return
@@ -125,6 +124,7 @@ final class NotesCoordinator {
         isSwitcherPresented = true
         switcherSelection = store.activeID ?? store.summaries.first?.id
         switcherFocusRevision &+= 1
+        windowController.presentSwitcher(switcherController)
     }
 
     func closeSwitcher(focusEditor: Bool = true) {
@@ -133,6 +133,7 @@ final class NotesCoordinator {
         isSwitcherPresented = false
         switcherSelection = nil
         store.cancelSearch()
+        switcherController.hide()
         if focusEditor { windowController.focusEditor() }
     }
 
@@ -206,7 +207,6 @@ final class NotesCoordinator {
     func select(_ id: NoteID) {
         runOperation { [weak self] capturedGeneration in
             guard let self else { return }
-            let previousID = store.activeID
             let selected = await store.select(id) { [weak self] in
                 guard let self else { return false }
                 return presentationGeneration.permitsCompletion(
@@ -223,9 +223,7 @@ final class NotesCoordinator {
                     isVisible: windowController.isVisible)
             else { return }
             closeSwitcher()
-            showLoadedNote(
-                focusEditor: true,
-                heightBehavior: previousID == store.activeID ? .preserve : .content)
+            showLoadedNote(focusEditor: true)
         }
     }
 
@@ -243,7 +241,7 @@ final class NotesCoordinator {
                     capturedGeneration: capturedGeneration,
                     isVisible: windowController.isVisible)
             {
-                showLoadedNote(focusEditor: false, heightBehavior: .preserve)
+                showLoadedNote(focusEditor: false)
             }
         }
     }
@@ -267,11 +265,10 @@ final class NotesCoordinator {
         guard let title = store.summaries.first(where: { $0.id == id })?.title else { return }
         runOperation { [weak self] capturedGeneration in
             guard let self else { return }
-            let previousID = store.activeID
             let confirmed = await core.confirm(
                 title: "Move “\(title)” to Trash?",
                 message: "You can recover it from the Trash in Finder.",
-                symbol: "trash",
+                symbol: nil,
                 confirmTitle: "Move to Trash")
             guard confirmed, settings.notesEnabled, !Task.isCancelled else { return }
             let switcherOrder = visibleNotes.map(\.id)
@@ -284,19 +281,22 @@ final class NotesCoordinator {
                 afterRemoving: id,
                 from: switcherOrder,
                 fallback: store.activeID ?? store.summaries.first?.id)
+            // Nothing left to browse, so the empty state owns the window rather than a bare list.
+            if store.summaries.isEmpty { closeSwitcher(focusEditor: false) }
             guard
                 presentationGeneration.permitsCompletion(
                     capturedGeneration: capturedGeneration,
                     isVisible: windowController.isVisible)
             else { return }
-            showLoadedNote(
-                focusEditor: !isSwitcherPresented,
-                heightBehavior: previousID == store.activeID ? .preserve : .content)
+            showLoadedNote(focusEditor: !isSwitcherPresented)
         }
     }
 
-    func revealInFinder() {
-        guard let fileURL = store.activeFileURL else { return }
+    func openNotesFolder() {
+        guard let fileURL = store.activeFileURL else {
+            NSWorkspace.shared.open(store.notesDirectory)
+            return
+        }
         NSWorkspace.shared.activateFileViewerSelecting([fileURL])
     }
 
@@ -304,26 +304,13 @@ final class NotesCoordinator {
         store.updateSource(source)
     }
 
-    func updateEditorHeight(_ input: NoteEditorInput, _ height: CGFloat) {
-        let current = editorInput
-        guard !isSwitcherPresented, input.id == current.id, input.epoch == current.epoch else {
-            return
-        }
-        measuredEditorHeight = (id: input.id, epoch: input.epoch, height: height)
-        windowController.updateEditorHeight(height)
+    func updateCharacterCount(_ input: NoteEditorInput, _ count: Int) {
+        guard input == editorInput else { return }
+        characterCount = count
     }
 
     func editorReady(_ textView: NoteTextView) {
         windowController.editorReady(textView)
-    }
-
-    func dragEnded() {
-        windowController.saveFrame()
-    }
-
-    func showCurrentIssue() {
-        guard let issue = store.currentIssue else { return }
-        present(issue)
     }
 
     private func request(_ presentation: Presentation) {
@@ -345,7 +332,7 @@ final class NotesCoordinator {
                 pendingPresentation = nil
                 if next == .create {
                     closeSwitcher()
-                    showLoadedNote(focusEditor: true, heightBehavior: .content)
+                    showLoadedNote(focusEditor: true)
                 } else {
                     await present(next)
                 }
@@ -369,9 +356,7 @@ final class NotesCoordinator {
         switch presentation {
         case .editor:
             closeSwitcher()
-            showLoadedNote(
-                focusEditor: true,
-                heightBehavior: windowController.isVisible ? .preserve : .content)
+            showLoadedNote(focusEditor: true)
         case .create:
             let capturedGeneration = presentationGeneration.current
             guard await store.create(), settings.notesEnabled, !Task.isCancelled,
@@ -379,40 +364,16 @@ final class NotesCoordinator {
                     capturedGeneration: capturedGeneration)
             else { return }
             closeSwitcher()
-            showLoadedNote(focusEditor: true, heightBehavior: .content)
+            showLoadedNote(focusEditor: true)
         case .search:
+            // The switcher hangs off the note window, so that window has to exist first.
+            showLoadedNote(focusEditor: false)
             openSwitcher()
-            showLoadedNote(
-                focusEditor: false,
-                heightBehavior: windowController.isVisible ? .preserve : .content)
         }
     }
 
-    private func showLoadedNote(
-        focusEditor: Bool,
-        heightBehavior: NotesWindowController.HeightBehavior = .content
-    ) {
-        windowController.show(
-            initialEditorHeight: { [weak self] in
-                self?.premeasuredEditorHeight() ?? Theme.Size.noteMinimumHeight
-            },
-            focusEditor: focusEditor,
-            heightBehavior: heightBehavior)
-    }
-
-    /// The last laid-out height for the current document, measured on demand once per show. Reusing
-    /// it keeps an unchanged note from paying for a second full layout on every panel show.
-    private func premeasuredEditorHeight() -> CGFloat {
-        let input = editorInput
-        if let measured = measuredEditorHeight,
-            measured.id == input.id,
-            measured.epoch == input.epoch
-        {
-            return measured.height
-        }
-        let height = NoteEditorView.contentHeight(for: input.source, width: Theme.Size.noteWidth)
-        measuredEditorHeight = (id: input.id, epoch: input.epoch, height: height)
-        return height
+    private func showLoadedNote(focusEditor: Bool) {
+        windowController.show(focusEditor: focusEditor)
     }
 
     /// Runs one collection operation at a time. A newer request cancels and supersedes an in-flight
@@ -450,14 +411,7 @@ final class NotesCoordinator {
                     message: failure.localizedDescription,
                     symbol: "text.page",
                     recovery: "Retry")
-                if retry { store.retry() }
-            case .conflict(let failure):
-                let recover = await core.reportFailure(
-                    title: "Note Changed on Disk",
-                    message: failure.localizedDescription,
-                    symbol: "exclamationmark.triangle",
-                    recovery: "Save Copy & Reload")
-                if recover { await recoverConflict() }
+                if retry { await store.retrySave() }
             case .operation(let failure):
                 _ = await core.reportFailure(
                     title: "Couldn't Update Note",
@@ -470,19 +424,6 @@ final class NotesCoordinator {
                 self.pendingIssue = nil
                 present(pendingIssue)
             }
-        }
-    }
-
-    private func recoverConflict() async {
-        switch await store.saveConflictCopyAndReload() {
-        case .success(let fileURL):
-            core.showMessage("Draft Saved as \(fileURL.lastPathComponent)", tone: .success)
-        case .failure(let failure):
-            _ = await core.reportFailure(
-                title: "Couldn't Preserve Note",
-                message: failure.localizedDescription,
-                symbol: "exclamationmark.triangle",
-                recovery: nil)
         }
     }
 }

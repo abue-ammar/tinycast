@@ -133,7 +133,7 @@ final class AppCore {
                 UserDefaults.standard.string(forKey: noteSelectionKey).map(NoteID.init(rawValue:))
             },
             saveSelection: { id in
-                UserDefaults.standard.set(id.rawValue, forKey: noteSelectionKey)
+                UserDefaults.standard.set(id?.rawValue, forKey: noteSelectionKey)
             })
     }
 
@@ -262,7 +262,7 @@ final class AppCore {
         }
     }
 
-    func prepareNotesForTermination() async -> Bool {
+    func flushNotesForTermination() async {
         await notesCoordinator.prepareForTermination()
     }
 
@@ -342,7 +342,7 @@ final class AppCore {
 
     /// `tone` styles the glyph, `confirmRole` the button; separate on purpose.
     func confirm(
-        title: String, message: String?, symbol: String, confirmTitle: String,
+        title: String, message: String?, symbol: String?, confirmTitle: String,
         tone: DialogTone = .danger, confirmRole: DialogAction.Role = .destructive,
         dismissTitle: String = "Cancel"
     ) async -> Bool {

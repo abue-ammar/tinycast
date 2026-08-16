@@ -11,10 +11,7 @@ struct NotesEditorTests {
         _ = NSApplication.shared
         testLiteralEditingAndNativeCommands()
         testUndoIsolation()
-        testDocumentScopedHeightReports()
-        testContentHeight()
-        testHostedEditorUsesPanelWidthForInitialHeight()
-        testLiveHeightShrinksAfterDeletion()
+        testCharacterCountReports()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -100,148 +97,39 @@ struct NotesEditorTests {
         check("a clean external reload clears stale Undo", !editor.coordinator.editorUndoManager.canUndo)
     }
 
-    private static func testDocumentScopedHeightReports() {
-        let first = NoteEditorInput(
-            id: NoteID(rawValue: "First.md"),
-            source: "First",
-            epoch: 1)
-        var reports: [(NoteEditorInput, CGFloat)] = []
-        let editor = makeEditor(
-            input: first,
-            onHeightChange: { reports.append(($0, $1)) })
-        reports.removeAll()
-
-        let second = NoteEditorInput(
-            id: NoteID(rawValue: "Second.md"),
-            source: (0..<40).map { "Line \($0)" }.joined(separator: "\n"),
-            epoch: 2)
-        editor.coordinator.parent = view(
-            for: second,
-            onHeightChange: { reports.append(($0, $1)) })
-        editor.coordinator.update(second)
-        editor.coordinator.reportHeight()
-
-        check(
-            "stale height reports cannot identify the replacement note",
-            reports.allSatisfy {
-                $0.0.id == second.id && $0.0.epoch == second.epoch
-            })
-        check("the replacement note reports a laid-out height", reports.last?.1 ?? 0 > 0)
-    }
-
-    private static func testContentHeight() {
-        let short = NoteEditorView.contentHeight(for: "Short", width: 320)
-        let trailingLine = NoteEditorView.contentHeight(for: "Short\n", width: 320)
-        let empty = NoteEditorView.contentHeight(for: "", width: 320)
-        let wrapped = NoteEditorView.contentHeight(
-            for: String(repeating: "A long wrapped paragraph. ", count: 80),
-            width: 320)
-        let long = NoteEditorView.contentHeight(
-            for: (0..<80).map { "Line \($0) with enough literal text to wrap" }
-                .joined(separator: "\n"),
-            width: 320)
-        check("an empty editor retains one caret line", empty == short)
-        check("a trailing newline contributes its empty line", trailingLine > short)
-        check("a wrapped paragraph contributes its complete fragment height", wrapped > short)
-        check("literal editor height grows with laid-out content", long > short)
-        let longEditor = makeEditor(
-            input: NoteEditorInput(
-                id: NoteID(rawValue: "Fragment Reference.md"),
-                source: String(repeating: "Paragraph long enough to wrap. ", count: 200),
-                epoch: 1))
-        check(
-            "terminal-fragment height matches exhaustive fragment measurement",
-            NoteEditorView.contentHeight(for: longEditor.textView.string, width: 320)
-                == exhaustiveHeight(of: longEditor.textView))
-        check(
-            "Markdown markers receive no rendered height treatment",
-            NoteEditorView.contentHeight(for: "**plain**", width: 320)
-                == NoteEditorView.contentHeight(for: "123456789", width: 320))
-    }
-
-    private static func testHostedEditorUsesPanelWidthForInitialHeight() {
-        let source = String(repeating: "A long wrapped paragraph. ", count: 80)
-        let input = NoteEditorInput(
-            id: NoteID(rawValue: "Hosted.md"),
-            source: source,
-            epoch: 1)
-        var heights: [CGFloat] = []
-        let hostingView = NSHostingView(
-            rootView: NoteEditorView(
-                input: input,
-                onSourceChange: { _ in },
-                onContentHeightChange: { _, height in heights.append(height) },
-                onReady: { _ in }))
-        hostingView.sizingOptions = []
-        hostingView.frame = NSRect(x: 0, y: 0, width: Theme.Size.noteWidth, height: 220)
-        hostingView.layoutSubtreeIfNeeded()
-
-        check(
-            "the hosted editor initially measures wrapped content at the panel width",
-            heights.first == NoteEditorView.contentHeight(for: source, width: Theme.Size.noteWidth))
-    }
-
-    private static func testLiveHeightShrinksAfterDeletion() {
-        let input = NoteEditorInput(
-            id: NoteID(rawValue: "Resize.md"),
-            source: "Short",
-            epoch: 1)
-        var heights: [CGFloat] = []
-        let editor = makeEditor(
-            input: input,
-            onHeightChange: { _, height in heights.append(height) })
-        heights.removeAll()
+    private static func testCharacterCountReports() {
+        let first = NoteEditorInput(id: NoteID(rawValue: "First.md"), source: "First", epoch: 1)
+        var reports: [(NoteEditorInput, Int)] = []
+        let editor = makeEditor(input: first, onCountChange: { reports.append(($0, $1)) })
+        check("installing a note reports its length", reports.last?.1 == 5)
 
         editor.textView.selectAll(nil)
-        editor.textView.insertText(
-            (0..<80).map { "Expanded line \($0)" }.joined(separator: "\n"),
-            replacementRange: editor.textView.selectedRange())
-        let expandedHeight = heights.last ?? 0
-        let reportsBeforeDeletion = heights.count
-        let retainedPrefix = (editor.textView.string as NSString).range(of: "Expanded line 4\n")
-        let deletionStart = NSMaxRange(retainedPrefix)
-        editor.textView.setSelectedRange(
-            NSRange(
-                location: deletionStart,
-                length: (editor.textView.string as NSString).length - deletionStart))
-        editor.textView.deleteBackward(nil)
-        let expectedHeight = exhaustiveHeight(of: editor.textView)
-        let deletionHeights = heights.dropFirst(reportsBeforeDeletion)
+        editor.textView.insertText("Twelve chars", replacementRange: editor.textView.selectedRange())
+        check("typing reports the new length", reports.last?.1 == 12)
 
-        check("live editing expands the measured editor height", expandedHeight > 0)
+        editor.textView.selectAll(nil)
+        editor.textView.insertText("🇬🇧", replacementRange: editor.textView.selectedRange())
         check(
-            "deleting rows publishes one immediate height",
-            deletionHeights.count == 1)
-        check(
-            "deleting rows immediately reports the exact clean-layout height",
-            deletionHeights.last == expectedHeight)
-    }
+            "the count is the text storage's own UTF-16 length",
+            reports.last?.1 == editor.textView.textStorage?.length)
 
-    private static func exhaustiveHeight(of textView: NSTextView) -> CGFloat {
-        guard let layoutManager = textView.textLayoutManager,
-            let contentManager = layoutManager.textContentManager
-        else { return Theme.Size.noteEditorInset * 2 }
-        layoutManager.ensureLayout(for: contentManager.documentRange)
-        var extent: CGFloat = 0
-        layoutManager.enumerateTextLayoutFragments(
-            from: contentManager.documentRange.location,
-            options: [.ensuresLayout, .ensuresExtraLineFragment]
-        ) { fragment in
-            extent = max(extent, fragment.layoutFragmentFrame.maxY)
-            return true
-        }
-        return ceil(extent + textView.textContainerInset.height * 2)
+        let second = NoteEditorInput(id: NoteID(rawValue: "Second.md"), source: "Second", epoch: 2)
+        editor.coordinator.parent = view(for: second, onCountChange: { reports.append(($0, $1)) })
+        editor.coordinator.update(second)
+        check(
+            "a stale count cannot be attributed to the replacement note",
+            reports.last?.0.id == second.id && reports.last?.1 == 6)
     }
 
     private static func makeEditor(
         input: NoteEditorInput,
         onSourceChange: @escaping (String) -> Void = { _ in },
-        onHeightChange: @escaping (NoteEditorInput, CGFloat) -> Void = { _, _ in }
+        onCountChange: @escaping (NoteEditorInput, Int) -> Void = { _, _ in }
     ) -> (coordinator: NoteEditorView.Coordinator, textView: NoteTextView, window: NSWindow) {
         let view = view(
             for: input,
             onSourceChange: onSourceChange,
-            onHeightChange: onHeightChange)
+            onCountChange: onCountChange)
         let coordinator = NoteEditorView.Coordinator(parent: view)
         let textView = NoteTextView(usingTextLayoutManager: true)
         NoteEditorView.configure(textView)
@@ -258,7 +146,6 @@ struct NotesEditorTests {
         window.contentView = scrollView
         coordinator.textView = textView
         coordinator.install(input, resetUndo: false)
-        coordinator.reportHeight()
         window.makeFirstResponder(textView)
         return (coordinator, textView, window)
     }
@@ -266,12 +153,12 @@ struct NotesEditorTests {
     private static func view(
         for input: NoteEditorInput,
         onSourceChange: @escaping (String) -> Void = { _ in },
-        onHeightChange: @escaping (NoteEditorInput, CGFloat) -> Void = { _, _ in }
+        onCountChange: @escaping (NoteEditorInput, Int) -> Void = { _, _ in }
     ) -> NoteEditorView {
         NoteEditorView(
             input: input,
             onSourceChange: onSourceChange,
-            onContentHeightChange: onHeightChange,
+            onCharacterCountChange: onCountChange,
             onReady: { _ in })
     }
 

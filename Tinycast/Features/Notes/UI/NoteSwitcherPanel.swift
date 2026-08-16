@@ -1,51 +1,43 @@
 import AppKit
 import Carbon.HIToolbox
 
-final class NotesPanel: NSPanel {
+/// The switcher's own window, so the list is not bounded by a note window that can be 180pt tall.
+final class NoteSwitcherPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onCreate: (() -> Void)?
-    var onSearch: (() -> Void)?
-    var onOpenFolder: (() -> Void)?
     var onDelete: (() -> Bool)?
 
     init(content: NSView) {
         super.init(
-            contentRect: NSRect(origin: .zero, size: Theme.Size.noteWindow),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView, .nonactivatingPanel],
+            contentRect: NSRect(origin: .zero, size: Theme.Size.noteSwitcher),
+            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         isFloatingPanel = true
         hidesOnDeactivate = false
+        // Above the note window it hangs from, and it travels with it as a child.
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
-        // A title-bar accessory drops AppKit off its centred-title layout, so `NotesView` draws it.
-        titleVisibility = .hidden
-        titlebarAppearsTransparent = true
-        // `.automatic` draws a hairline the moment the editor scrolls under the bar.
-        titlebarSeparatorStyle = .none
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
         animationBehavior = .none
         isReleasedWhenClosed = false
         isRestorable = false
-        contentMinSize = Theme.Size.noteWindow
         contentView = content
     }
 
-    /// The main menu is offered chords first, so this is the fallback for a non-activating panel.
+    /// The note window is not key while this is up, so its chords have to work here too.
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if super.performKeyEquivalent(with: event) { return true }
         guard !event.isARepeat,
             event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
         else { return false }
         switch event.charactersIgnoringModifiers?.lowercased() {
-        case "w": performClose(nil)
         case "n": onCreate?()
-        case "p": onSearch?()
-        case "o": onOpenFolder?()
+        case "w", "p": onEscape?()
         default:
             guard Int(event.keyCode) == kVK_Delete else { return false }
             return onDelete?() == true
@@ -71,5 +63,5 @@ final class NotesPanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
+    override var canBecomeMain: Bool { false }
 }

@@ -68,7 +68,9 @@ section's closing padding). See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `note 20` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+
+Notes has no corner of its own: it clips to `panel`, so the two floating surfaces read as siblings.
 
 `dialog` sits between `menuPanel` and `panel` so a dialog reads as a smaller sibling of the palette, not a second palette.
 
@@ -84,9 +86,9 @@ Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corn
 `settingsSidebar 215` · `settingsRowIcon 20` · `dialogWidth 420` · `dialogIcon 32` · `hudWidth 200` ·
 `hudHeight 100` · `volumeTrackHeight 6` · `volumeKnob 16` · `volumeReadout 38`
 
-Notes adds `noteWidth 520`, `noteMinimumHeight 220`, `noteMaximumHeight 640`,
-`noteScreenMargin 16`, `noteHeaderHeight 44`, `noteEditorInset 16`,
-`noteHeaderButton 30`, and `noteStatus 16`. `noteCenterLiftFraction 0.08` is its initial optical lift.
+Notes adds `noteWindow 520×420` (opening size on a first run only), `noteWindowMinimum 320×220`,
+`noteTitlebar 44`, `noteTitleInset 120`, `noteEditorInset 16`, `noteSearchHeight 34`,
+`noteFooterHeight 28`, `noteGlyph 16`, and `noteEmptyGlyph 28`.
 
 `keyCap` sizes the palette's keycap chips; `recorderKeyCap` (both size and radius) is the intentionally-smaller Settings shortcut-recorder chip.
 
@@ -111,7 +113,7 @@ explicit size (20pt regular). Use `rowTitle` (`.body`), `sectionHeader` (`.subhe
 | `textTertiary`   | white 0.40     | placeholders, trailing kind labels               |
 | `cardFill`       | white 0.05     | settings/calc card fill                          |
 | `cardStroke`     | white 0.10     | settings/calc card border + inset dividers       |
-| `glassFrost`     | white 0.01     | whitish tint layered into the floating glass     |
+| `glassFrost`     | white 0.05     | whitish tint layered into the floating glass     |
 | `noteText`       | white 0.90     | Notes Markdown source                            |
 
 Beyond these, `.secondary`/`.tertiary` foreground styles are fine for SF Symbols (they resolve against
@@ -136,18 +138,25 @@ Source: `Palette/PalettePanel.swift`, `Palette/RootPaletteView.swift`.
 
 Source: `Features/Notes/UI/`.
 
-Notes is a sibling surface, not a palette mode. `NotesPanel` uses the same borderless,
-non-activating, transparent AppKit recipe, but deliberately does not dismiss on resign-key. Its root
-applies `black panelDimming` → `VisualEffectView()` → one continuous `note` corner clip. The fixed
-header and editor are ordinary content; only the circular Create, Reveal, and hide controls use glass.
+Notes is a sibling surface, not a palette mode. `NotesPanel` is a **titled**, resizable,
+non-activating panel — AppKit draws the traffic lights, the drag and the resize — but it keeps the
+palette's transparent recipe and deliberately does not dismiss on resign-key. `NotesView`'s root
+applies `black panelDimming` → `VisualEffectView()` → one continuous **`panel`** corner clip, so
+Notes and the palette round identically. The clip is larger than the theme frame's own corner, so it
+is what shows; `invalidateShadow()` on every show recuts the shadow to match.
 
-`NotesWindowController` owns every frame change. TextKit 2 supplies the laid-out editor height, the
-controller adds the header, clamps to the note minimum and screen-aware maximum, and preserves the top
-edge so existing text never jumps upward. Content consumes the editor area inside the 220-point minimum
-before growing the panel. The editor measures laid-out fragment extent rather than TextKit's aggregate
-usage bounds, so deletion shrinks it naturally back to that minimum. It keeps a 16-point vertical screen
-margin when possible and clamps fully onto shorter screens. After the cap, the native editor scrolls
-internally. Frame autosaving restores position only; content determines size on every show.
+The title bar is a 44-point band, and both halves of it are deliberate. `titleVisibility` is
+`.hidden` and `NotesView` draws the title itself, centred on the **window**: a titlebar accessory
+drops `NSThemeFrame` off its centred-title layout, so the native title would sit beside the traffic
+lights. The drawn title is not hit-testable, so clicks fall through to the real title bar and drag
+the window. The three actions cannot do that, so they live in an `NSTitlebarAccessoryViewController`
+at `.trailing` — `NoteTitlebarActions`, the launcher's footer capsule (`BarButton` in a
+`frosted(in: Capsule())`) with glyphs in place of pills. Its 44-point height is what sizes the band.
+
+`NotesWindowController` no longer computes frames: the user owns the size, and AppKit autosaves both
+position and size under `"Notes Window"`. The window shows exactly one surface at a time — editor,
+switcher, or the "No Notes" empty state — and the character count is part of the editor surface, so
+it never appears without a note.
 
 The header keeps a fixed slot for status so Saving, Saved, failure, and conflict symbols cannot move
 the controls. Failure and conflict symbols can be clicked to reopen their recovery report after a
@@ -185,7 +194,8 @@ the `ScrollView`, **before `.thinScrollbar()`** (so the scrollbar overlay stays 
 - The mask spans the scroll view's **full** frame (`.ignoresSafeArea()`) — otherwise the bars' safe-area insets shift the gradient onto at-rest rows.
 
 **Palette only.** Every one of its call sites is a palette screen, and the bands above are measured
-against the palette's bars. A Settings list underlaps nothing, so it uses `.overflowFade()` instead.
+against the palette's bars. A Settings list underlaps nothing, so it uses `.overflowFade()` instead —
+and so does the Notes switcher, whose search row is a sibling in a `VStack`, not a floating bar.
 
 ---
 
@@ -193,11 +203,12 @@ against the palette's bars. A Settings list underlaps nothing, so it uses `.over
 
 Source: `DesignSystem/Scrolling/OverflowFade.swift`.
 
-The Settings window's counterpart, and deliberately a separate type — sharing one modifier would tie a
-list with no bars to geometry that only means something under them. Attach with `.overflowFade()` on
-the `ScrollView`, before `.thinScrollbar()`, same as the edge dissolve.
+The counterpart for any list with no bars over it — the Settings lists and the Notes switcher — and
+deliberately a separate type: sharing one modifier would tie such a list to geometry that only means
+something under a bar. Attach with `.overflowFade()` on the `ScrollView`, before `.thinScrollbar()`,
+same as the edge dissolve.
 
-- **Bottom only.** Nothing sits over the top of a Settings list; fading its first row reads as "this one can't be chosen", which in a list of checkboxes is a lie.
+- **Bottom only.** Nothing sits over the top of these lists; fading the first row reads as "this one can't be chosen", which in a list of checkboxes is a lie.
 - Fade band: a flat **24px**, borrowed from no bar because there is no bar.
 - **No alpha floor.** The fade is purely an affordance for content past the edge, so it eases in with how much is hidden and clears completely once the list rests at the bottom.
 - No `.ignoresSafeArea()`: a Settings list carries no bar insets to correct for.

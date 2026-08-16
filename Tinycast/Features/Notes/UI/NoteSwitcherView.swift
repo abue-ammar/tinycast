@@ -7,9 +7,13 @@ struct NoteSwitcherView: View {
     var body: some View {
         VStack(spacing: 0) {
             searchField
-            Divider().overlay(Theme.Colors.separator)
             results
         }
+        .frame(width: Theme.Size.noteSwitcher.width, height: Theme.Size.noteSwitcher.height)
+        // Its own window, so it carries the surface recipe the note window would otherwise give it.
+        .background(Color.black.opacity(Theme.Colors.panelDimming))
+        .background(VisualEffectView())
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous))
         .onAppear(perform: focusSearch)
         .onChange(of: notes.switcherFocusRevision) { _, _ in focusSearch() }
         .onChange(of: notes.visibleNotes) { _, _ in
@@ -53,7 +57,7 @@ struct NoteSwitcherView: View {
             }
         }
         .padding(.horizontal, Theme.Spacing.xl)
-        .frame(height: Theme.Size.noteHeaderHeight)
+        .frame(height: Theme.Size.noteSearchHeight)
     }
 
     @ViewBuilder
@@ -62,7 +66,7 @@ struct NoteSwitcherView: View {
             VStack(spacing: Theme.Spacing.md) {
                 SymbolImage(
                     name: notes.isSearching ? "clock" : "text.page",
-                    size: Theme.Size.noteStatus
+                    size: Theme.Size.noteGlyph
                 )
                 .foregroundStyle(Theme.Colors.textSecondary)
                 Text(notes.isSearching ? "Searching notes…" : "No notes found")
@@ -93,6 +97,8 @@ struct NoteSwitcherView: View {
                     }
                     .padding(Theme.Spacing.md)
                 }
+                // The search row is a sibling, not a floating bar, so only the bottom edge fades.
+                .overflowFade()
                 .onChange(of: notes.switcherSelection) { _, selected in
                     if let selected { proxy.scrollTo(selected, anchor: .center) }
                 }
@@ -130,7 +136,7 @@ private struct NoteSwitcherRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
-            SymbolImage(name: "text.page", size: Theme.Size.noteStatus)
+            SymbolImage(name: "text.page", size: Theme.Size.noteGlyph)
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
             if editing {
@@ -195,7 +201,7 @@ private struct NoteSwitcherRow: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .frame(width: Theme.Size.noteStatus, height: Theme.Size.noteStatus)
+                .frame(width: Theme.Size.noteGlyph, height: Theme.Size.noteGlyph)
         }
         .buttonStyle(.plain)
         .help(title)
