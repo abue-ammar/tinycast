@@ -22,7 +22,7 @@ final class FileSearchCoordinator {
     }
 
     func applyEnabled() {
-        appIndex.setFileSearchCommandVisible(settings.fileSearchEnabled)
+        appIndex.setCommandsVisible([.searchFiles], settings.fileSearchEnabled)
         guard !settings.fileSearchEnabled else { return }
         session.cancel()
         if palette.mode == .fileSearch { palette.prepare(mode: .launcher) }

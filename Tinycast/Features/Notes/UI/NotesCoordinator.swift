@@ -74,7 +74,7 @@ final class NotesCoordinator {
     func applyEnabled() {
         enablementGeneration &+= 1
         let generation = enablementGeneration
-        appIndex.setNotesCommandsVisible(settings.notesEnabled)
+        appIndex.setCommandsVisible([.showNotes, .createNote, .searchNotes], settings.notesEnabled)
         guard !settings.notesEnabled else { return }
         presentationGeneration.advance()
         pendingPresentation = nil

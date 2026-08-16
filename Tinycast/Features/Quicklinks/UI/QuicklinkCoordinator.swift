@@ -61,8 +61,10 @@ final class QuicklinkCoordinator {
     func applyQuicklinksPresence() {
         let enabled = settings.quicklinksEnabled
         appIndex.setQuicklinks(
-            enabled && settings.quicklinksShowInLauncher ? store.quicklinks : [],
-            commandsVisible: enabled)
+            enabled && settings.quicklinksShowInLauncher ? store.quicklinks : [])
+        appIndex.setCommandsVisible(
+            [.createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks],
+            enabled)
     }
 
     // MARK: - Opening

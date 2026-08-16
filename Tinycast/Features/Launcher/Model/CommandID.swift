@@ -64,22 +64,6 @@ enum CommandID: String, CaseIterable, Sendable {
         }
     }
 
-    /// Only meaningful while Quicklinks is on, so `AppIndex` drops these when it is off.
-    var isQuicklinkCommand: Bool {
-        switch self {
-        case .createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks: return true
-        default: return false
-        }
-    }
-
-    /// Only meaningful while Notes is on, so `AppIndex` drops these when it is off.
-    var isNotesCommand: Bool {
-        switch self {
-        case .showNotes, .createNote, .searchNotes: return true
-        default: return false
-        }
-    }
-
     /// The built-ins with a global shortcut of their own; the rest open from the launcher.
     var hotKeyAction: HotKeyAction? {
         switch self {
