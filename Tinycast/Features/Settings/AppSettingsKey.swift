@@ -33,4 +33,8 @@ enum AppSettingsKey: String, CaseIterable {
     case quicklinkOpensNewWindow = "quicklinkOpensNewWindow"
     case quicklinkSelectionFallback = "quicklinkSelectionFallback"
     case quicklinkConfirmsBeforeDelete = "quicklinkConfirmsBeforeDelete"
+    case extensionsEnabled = "extensionsEnabled"
+    case extensionsShowInLauncher = "extensionsShowInLauncher"
+    case extensionPackageManager = "extensionPackageManager"
+    case extensionRegistries = "extensionRegistries"
 }

@@ -16,13 +16,16 @@ struct RootPaletteView: View {
     @Environment(UninstallSession.self) private var uninstall
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
+    @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
     @FocusState private var searchFocused: Bool
-    @State private var showActions = false
-    @State private var showAppMenu = false
+    /// Kept apart from the search field's own focus. See docs/features/palette.md.
+    @FocusState private var argumentFocused: String?
+    /// Which in-window menu is open; at most one, so the state cannot disagree with itself.
+    @State private var openMenu: OpenMenu?
     /// Sampled once by `openActions`, so the Quit row can't appear while the menu is up.
     @State private var selectionIsRunning = false
-    /// Highlighted row of whichever menu is open; reset to the first row on open.
+    /// Highlighted row of whichever menu is open; each open path sets where it starts.
     @State private var menuSelection = 0
     /// The pending scroll request; modes are exclusive, so one piece of state serves all.
     @State private var scroll = ScrollIntent(kind: .top)
@@ -63,7 +66,19 @@ struct RootPaletteView: View {
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
                 openActions: openActions)
+        case .extensionCommand:
+            return ExtensionCommandScreen(
+                screen: extensionScreen, extensions: extensions, core: core, vm: vm,
+                openActions: openActions)
         }
+    }
+
+    /// The running command's rendered screen, flattened. `.empty` until the first commit lands.
+    private var extensionScreen: ExtensionScreen {
+        guard vm.mode == .extensionCommand, case .rendered(let tree) = extensions.state else {
+            return .empty
+        }
+        return ExtensionScreen(tree: tree, query: vm.query)
     }
 
     /// Selection clamped into the results: one source for highlight, preview and activation.
@@ -76,7 +91,7 @@ struct RootPaletteView: View {
         selection(count: screen.rows.count)
     }
 
-    private var menuOpen: Bool { showActions || showAppMenu }
+    private var menuOpen: Bool { openMenu != nil }
 
     // MARK: - Popover menu content
 
@@ -84,6 +99,16 @@ struct RootPaletteView: View {
     private var actionsContent: PopoverMenuContent? {
         let screen = screen
         return screen.actions(at: selection(in: screen))
+    }
+
+    /// The clipboard type filter's rows; activating one is the only way the filter changes.
+    private var clipboardFilterContent: PopoverMenuContent {
+        PopoverMenuContent(
+            items: ClipboardFilter.allCases.map { filter in
+                PopoverMenuItem(title: filter.title, systemImage: filter.systemImage) {
+                    vm.clipboardFilter = filter
+                }
+            })
     }
 
     /// The bottom-left app menu content (About / Settings).
@@ -98,11 +123,14 @@ struct RootPaletteView: View {
         ])
     }
 
-    /// Whichever menu is open; the two are mutually exclusive, Actions taking precedence.
+    /// Whichever menu is open — the one source `moveMenu` and `activateMenuItem` address rows through.
     private var menuContent: PopoverMenuContent? {
-        if showActions { return actionsContent }
-        if showAppMenu { return appMenuContent }
-        return nil
+        switch openMenu {
+        case .actions: return actionsContent
+        case .app: return appMenuContent
+        case .clipboardFilter: return clipboardFilterContent
+        case nil: return nil
+        }
     }
 
     var body: some View {
@@ -131,16 +159,17 @@ struct RootPaletteView: View {
         }
         // The panel has no title bar, so this thin top margin is the only place left to grab it.
         .overlay(alignment: .top) { topDragStrip }
+        .modifier(ExtensionToastOverlay(extensions: extensions, showing: vm.mode == .extensionCommand))
         // In-window overlays, so a menu stays clipped inside the panel.
         .overlay {
-            if showAppMenu || showActions {
+            if menuOpen {
                 Color.black.opacity(0.001)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: closeMenus)
             }
         }
         .overlay(alignment: .bottomLeading) {
-            if showAppMenu {
+            if openMenu == .app {
                 let content = appMenuContent
                 PopoverMenu(
                     header: content.header, items: content.items, selection: $menuSelection,
@@ -151,13 +180,35 @@ struct RootPaletteView: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if showActions, let content = actionsContent {
-                PopoverMenu(
-                    header: content.header, items: content.items, selection: $menuSelection,
-                    onActivate: activateMenuItem
-                )
+            if openMenu == .actions, let content = actionsContent {
+                Group {
+                    // An extension declares its own panel, which runs long enough to need scrolling.
+                    if vm.mode == .extensionCommand {
+                        ExtensionActionsPanel(
+                            header: content.header, items: content.items, selection: $menuSelection,
+                            onActivate: activateMenuItem)
+                    } else {
+                        PopoverMenu(
+                            header: content.header, items: content.items, selection: $menuSelection,
+                            onActivate: activateMenuItem)
+                    }
+                }
                 .padding(Self.menuInset)
                 .transition(Self.menuTransition(.bottomTrailing))
+            }
+        }
+        // Hangs off the header's filter button rather than a corner, so it needs the header's metrics.
+        .overlay(alignment: .topTrailing) {
+            if openMenu == .clipboardFilter {
+                let content = clipboardFilterContent
+                PopoverMenu(
+                    items: content.items, selection: $menuSelection,
+                    width: Theme.Size.clipboardFilterMenuWidth, onActivate: activateMenuItem
+                )
+                .padding(.top, Theme.Size.headerPadding + Theme.Size.headerHeight)
+                // Right edges flush with the button's, which sits inside the same trailing gutter.
+                .padding(.trailing, Theme.Spacing.md * 2)
+                .transition(Self.menuTransition(.topTrailing))
             }
         }
         // The window's frame is the size source, so the glass and clip stay matched.
@@ -168,21 +219,34 @@ struct RootPaletteView: View {
         // Every show bumps focusToken: refocus search and drop any menu left open.
         .onChange(of: vm.focusToken) {
             searchFocused = true
-            showActions = false
-            showAppMenu = false
+            openMenu = nil
         }
         .onChange(of: vm.query) {
             vm.selection = 0
             scroll = ScrollIntent(kind: .top)
             if vm.mode == .fileSearch { fileSearch.search(vm.query) }
+            // A command that took over the search text filters its own list.
+            if vm.mode == .extensionCommand, let handler = extensionScreen.searchTextHandler {
+                extensions.dispatch(handler: handler, arguments: [vm.query])
+            }
+        }
+        // A narrower list means the old index points at a different row, or at none.
+        .onChange(of: vm.clipboardFilter) {
+            vm.selection = 0
+            scroll = ScrollIntent(kind: .top)
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
-            showActions = false
+            vm.clipboardFilter = .all
+            openMenu = nil
             scroll = ScrollIntent(kind: .top)
             // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
             if vm.mode != .uninstall { uninstall.cancel() }
             if vm.mode != .fileSearch { fileSearch.cancel() }
+            // Leaving the screen any other way than Escape still ends the command's session.
+            if vm.mode != .extensionCommand, extensions.running != nil {
+                Task { await extensions.stop() }
+            }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
             if vm.mode != .quicklinkArguments { core.quicklinkCoordinator.cancelQuicklinkArguments() }
         }
@@ -190,19 +254,10 @@ struct RootPaletteView: View {
         .onChange(of: vm.resetToken) {
             scroll = ScrollIntent(kind: .top)
         }
-        // Opening either menu closes the other, so exactly one is open and highlighted.
-        .onChange(of: showActions) {
-            if showActions {
-                showAppMenu = false
-                menuSelection = 0
-            }
-            vm.menuOpen = menuOpen
-        }
-        .onChange(of: showAppMenu) {
-            if showAppMenu {
-                showActions = false
-                menuSelection = 0
-            }
+        // ⌘. arrives as a token rather than a key press. See `PaletteState.pinChordToken`.
+        .onChange(of: vm.pinChordToken) { pinSelection() }
+        // One optional makes "exactly one menu" structural; this only mirrors it for the panel.
+        .onChange(of: openMenu) {
             vm.menuOpen = menuOpen
         }
         .onAppear { searchFocused = true }
@@ -273,18 +328,26 @@ struct RootPaletteView: View {
             return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
         }
         .onKeyPress(.escape) {
-            if showActions || showAppMenu {
+            if menuOpen {
                 closeMenus()
+                return .handled
+            }
+            // An extension pops its own navigation stack before the command is left.
+            if vm.mode == .extensionCommand {
+                core.extensionCoordinator.exitExtensionScreen()
                 return .handled
             }
             core.paletteCoordinator.hidePalette()
             return .handled
         }
         .onKeyPress(.tab) {
-            if menuOpen { return .handled }
-            toggleMode()
+            if !menuOpen { advanceTabFocus() }
             return .handled
         }
+        .modifier(
+            ExtensionShortcutKeys(
+                screen: menuOpen ? nil : screen as? ExtensionCommandScreen, selection: sel)
+        )
         // ⌘K toggles the actions panel for the current selection.
         .onKeyPress(keys: ["k"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
@@ -333,18 +396,12 @@ struct RootPaletteView: View {
             if menuOpen { closeMenus() }
             return .handled
         }
-        // ⌘P mirrors the Actions row, and works while that menu is open like the rest.
+        // Never gated on the rows: an over-narrow filter empties them, and this is the way back out.
         .onKeyPress(keys: ["p"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
-            let screen = screen
-            let selection = selection(in: screen)
-            if let clipboard = screen as? ClipboardScreen {
-                return clipboard.pin(at: selection) ? .handled : .ignored
-            }
-            if let quicklinks = screen as? QuicklinkListScreen {
-                return quicklinks.pin(at: selection) ? .handled : .ignored
-            }
-            return .ignored
+            guard !isCollapsed, vm.mode == .clipboard else { return .ignored }
+            toggleClipboardFilter()
+            return .handled
         }
         // Both cases, Shift uppercasing the key; the compact bar shows no target.
         .onKeyPress(keys: ["q", "Q"], phases: .down) { press in
@@ -395,7 +452,21 @@ struct RootPaletteView: View {
                     .frame(width: Theme.Size.headerIconSlot)
             }
             headerGutter(width: Theme.Spacing.md)
-            searchField
+            // One structural position, always: putting the field inside a branch tears down its
+            // field editor when the branch flips, which drops first responder mid-navigation.
+            // The width shrinks to the typed text so argument fields sit right after it, as in Raycast.
+            searchField.frame(width: headerAccessory.map(searchFieldWidth))
+            if let accessory = headerAccessory {
+                accessory.view
+                Spacer(minLength: 0)
+            }
+            // Keyed off the mode, which is what says which screen is up; the field just flexes narrower.
+            if !isCollapsed, vm.mode == .clipboard {
+                headerGutter(width: Theme.Spacing.md)
+                ClipboardFilterButton(
+                    filter: vm.clipboardFilter, isOpen: openMenu == .clipboardFilter,
+                    action: toggleClipboardFilter)
+            }
             // Compact pins favorites beside the field; expanded shows them as rows.
             if isCollapsed, settings.showFavoritesInCompactMode,
                 let launcher = screen as? LauncherScreen
@@ -418,9 +489,35 @@ struct RootPaletteView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Controls the selected row wants beside the search field. Only the expanded launcher offers
+    /// them — inside a sub-screen the search bar belongs to that screen.
+    private var headerAccessory: PaletteHeaderAccessory? {
+        guard vm.mode == .launcher, !isCollapsed else { return nil }
+        let screen = screen
+        return screen.headerAccessory(at: selection(in: screen), focus: $argumentFocused)
+    }
+
+    /// Width the search field shrinks to when an accessory sits beside it: the typed text's own
+    /// width, floored so the caret always has room and capped so the strip can't be pushed off-screen.
+    private func searchFieldWidth(for accessory: PaletteHeaderAccessory) -> CGFloat {
+        let font = Theme.Typography.searchFieldNSFont
+        let typed = (vm.query as NSString).size(withAttributes: [.font: font]).width
+        let chrome = Theme.Size.headerIconSlot + Theme.Spacing.md * 4
+        // +3pt so the caret sits after the last glyph rather than on top of it.
+        return min(
+            max(typed + 3, 18), max(Theme.Size.panelWidth - accessory.width - chrome, 60))
+    }
+
     /// In the argument form the field is that argument's input, so it names the argument.
     private var searchPrompt: String {
-        vm.mode == .quicklinkArguments ? quicklinkArguments.prompt : vm.mode.placeholder
+        // The field is only wide enough for the caret while argument fields are beside it.
+        if headerAccessory != nil { return "" }
+        if vm.mode == .quicklinkArguments { return quicklinkArguments.prompt }
+        // Inside a running command the search bar belongs to the extension.
+        if vm.mode == .extensionCommand, let placeholder = extensionScreen.searchPlaceholder {
+            return placeholder
+        }
+        return vm.mode.placeholder
     }
 
     /// The one search field — past its text it's a drag handle, matching Spotlight.
@@ -455,7 +552,9 @@ struct RootPaletteView: View {
                 }
             }
             // The panel resolves the pointer against this rather than hit-testing for the field.
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .global)
+            } action: {
                 vm.searchFieldFrame = $0
             }
     }
@@ -479,7 +578,7 @@ struct RootPaletteView: View {
 
     private var appMenuButton: some View {
         MenuCircleButton {
-            withAnimation(Self.menuAnimation) { showAppMenu.toggle() }
+            if openMenu == .app { closeMenus() } else { open(.app, highlighting: 0) }
         }
     }
 
@@ -514,22 +613,35 @@ struct RootPaletteView: View {
     private func openActions() {
         let launcher = screen as? LauncherScreen
         selectionIsRunning = launcher.map { $0.isRunning(at: selection(in: $0)) } ?? false
-        withAnimation(Self.menuAnimation) { showActions = true }
+        open(.actions, highlighting: 0)
     }
 
     private func toggleActions() {
-        if showActions {
-            withAnimation(Self.menuAnimation) { showActions = false }
+        if openMenu == .actions {
+            closeMenus()
         } else {
             openActions()
         }
     }
 
-    private func closeMenus() {
-        withAnimation(Self.menuAnimation) {
-            showActions = false
-            showAppMenu = false
+    /// Opens on the active filter, so the current value is the highlighted row like a pop-up's.
+    private func toggleClipboardFilter() {
+        if openMenu == .clipboardFilter {
+            closeMenus()
+            return
         }
+        let active = ClipboardFilter.allCases.firstIndex(of: vm.clipboardFilter) ?? 0
+        open(.clipboardFilter, highlighting: active)
+    }
+
+    /// Every open path lands here, so the highlight is always stated rather than left behind.
+    private func open(_ menu: OpenMenu, highlighting row: Int) {
+        menuSelection = row
+        withAnimation(Self.menuAnimation) { openMenu = menu }
+    }
+
+    private func closeMenus() {
+        withAnimation(Self.menuAnimation) { openMenu = nil }
     }
 
     /// Inset from the bottom corners, so the menu's own corner isn't clipped.
@@ -551,6 +663,11 @@ struct RootPaletteView: View {
 
     /// ↑/↓: the screen's own move where it has one, else a linear step through the rows.
     private func moveVertically(_ delta: Int) {
+        // Moving off a command takes its argument fields with it, so hand focus back first.
+        if argumentFocused != nil {
+            argumentFocused = nil
+            searchFocused = true
+        }
         let screen = screen
         guard let next = screen.move(delta, axis: .vertical, from: selection(in: screen)) else {
             move(delta, in: screen)
@@ -584,22 +701,59 @@ struct RootPaletteView: View {
         closeMenus()
     }
 
+    /// ⌘. — mirrors the Actions row, and works while that menu is open like the rest.
+    private func pinSelection() {
+        let screen = screen
+        let selection = selection(in: screen)
+        if let clipboard = screen as? ClipboardScreen {
+            _ = clipboard.pin(at: selection)
+        } else if let quicklinks = screen as? QuicklinkListScreen {
+            _ = quicklinks.pin(at: selection)
+        }
+    }
+
     /// Tab flips launcher↔clipboard; Calculator History exits rather than joining.
     private func toggleMode() {
         vm.mode = vm.mode == .launcher ? .clipboard : .launcher
     }
 
+    /// Tab walks the inline argument fields first — search field → each argument → back — and only
+    /// toggles the mode when the selection declares none.
+    private func advanceTabFocus() {
+        guard let accessory = headerAccessory else { return toggleMode() }
+        argumentFocused = accessory.fieldAfter(argumentFocused)
+        searchFocused = argumentFocused == nil
+    }
+
     /// Back out to a fresh root search, the same reset `prepare` does on show.
     private func exitToLauncher() {
+        if vm.mode == .extensionCommand {
+            core.extensionCoordinator.exitExtensionScreen()
+            return
+        }
         vm.prepare(mode: .launcher)
     }
 
     private func activateSelection() {
         // Nothing is visibly selected when collapsed, so launch via ⌘1–⌘5 or typing.
         guard !isCollapsed else { return }
+        // An unfilled field blocks the launch; focus it instead of acting on a half-typed row.
+        if let incomplete = headerAccessory?.firstIncompleteField {
+            argumentFocused = incomplete
+            searchFocused = false
+            return
+        }
         let screen = screen
         screen.activate(at: selection(in: screen))
     }
+
+}
+
+/// The palette's in-window menus. One optional of these is the whole "only one is open" invariant.
+private enum OpenMenu {
+    case actions
+    case app
+    case clipboardFilter
 }
 
 /// The footer's menu circle; hover lives here, so a sweep never re-renders the body.
@@ -621,25 +775,6 @@ private struct MenuCircleButton: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .frosted(in: Circle())
-    }
-}
-
-/// Footer button: bare label at rest, a faint capsule fill on hover.
-private struct BarButton<Label: View>: View {
-    let action: () -> Void
-    @ViewBuilder let label: Label
-    @State private var hovered = false
-
-    var body: some View {
-        Button(action: action) {
-            label
-                .padding(.horizontal, Theme.Spacing.md)
-                .frame(height: 28)
-                .contentShape(Capsule())
-                .background(Capsule().fill(hovered ? Theme.Colors.rowHover : Color.clear))
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
     }
 }
 

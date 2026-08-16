@@ -53,6 +53,8 @@ struct PopoverMenu: View {
     var header: String?
     let items: [PopoverMenuItem]
     @Binding var selection: Int
+    /// Fixed, never intrinsic: a menu whose width tracked its longest row would jitter as it changes.
+    var width: CGFloat = Theme.Size.menuWidth
     let onActivate: (Int) -> Void
 
     var body: some View {
@@ -78,7 +80,7 @@ struct PopoverMenu: View {
             }
         }
         .padding(Theme.Spacing.sm)
-        .frame(width: Theme.Size.menuWidth)
+        .frame(width: width)
         // Glass carries its own elevation, so a drop shadow on top reads heavy.
         .glassEffect(
             .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)

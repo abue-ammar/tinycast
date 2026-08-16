@@ -52,7 +52,7 @@ enum RaycastV1Decoder {
         // PKCS#7 unpads cleanly ~1 in 256 times, so the gzip header is the real check.
         let magic = [UInt8](plaintext.prefix(3))
         guard magic.count == 3, magic[0] == 0x1f, magic[1] == 0x8b, magic[2] == 0x08,
-            let json = try? Gunzip.decompress(plaintext)
+            let json = try? Zlib.gunzip(plaintext)
         else { throw RaycastImportError.incorrectPassphrase }
         return json
     }

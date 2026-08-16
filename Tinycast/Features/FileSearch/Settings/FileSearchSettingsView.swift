@@ -26,7 +26,7 @@ struct FileSearchSettingsView: View {
     }
 }
 
-/// The one built-in command with a binding of its own, so it carries a recorder as well as a checkbox.
+/// Search Files has a binding of its own, so it carries a recorder as well as a checkbox.
 private struct SearchFilesCommandSection: View {
     @Environment(VisibilityStore.self) private var visibility
 

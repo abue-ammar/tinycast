@@ -1,9 +1,9 @@
 import Foundation
 
-/// Typed arithmetic for measurements and consent-gated currencies.
+/// Typed arithmetic for measurements and currencies.
 enum CalcQuantity {
     static func evaluate(
-        _ tokens: [CalcToken], query: String, currency: CurrencySource,
+        _ tokens: [CalcToken], query: String, rates: CurrencyRates?, region: String? = nil,
         preserveStandaloneUnit: Bool = false
     ) -> CalcResult? {
         let split = splitConversion(tokens)
@@ -11,7 +11,7 @@ enum CalcQuantity {
             return nil
         }
 
-        var parser = QuantityParser(tokens: split.expressionTokens, currency: currency)
+        var parser = QuantityParser(tokens: split.expressionTokens, rates: rates)
         guard let value = parser.parse() else {
             guard let message = parser.issue else { return nil }
             return CalcResult(expression: query, payload: .error(message: message))
@@ -19,27 +19,23 @@ enum CalcQuantity {
         guard parser.dimensionCount > 0 else { return nil }
 
         if parser.usedCurrency {
-            switch currency {
-            case .off:
-                return nil
-            case .on(nil):
+            guard let rates else {
                 return CalcResult(
                     expression: query,
                     payload: .error(
                         message: "Exchange rates unavailable — check your connection."))
-            case .on(let rates?):
-                if let code = parser.currencyCodes.first(where: { rates.rate(for: $0) == nil }) {
-                    return CalcResult(
-                        expression: query,
-                        payload: .error(message: "No exchange rate for \(code)."))
-                }
+            }
+            if let code = parser.currencyCodes.first(where: { rates.rate(for: $0) == nil }) {
+                return CalcResult(
+                    expression: query,
+                    payload: .error(message: "No exchange rate for \(code)."))
             }
         }
 
         if let targetName = split.targetName {
             return convertedResult(
                 value, targetName: targetName, expressionTokens: split.expressionTokens,
-                query: query, currency: currency)
+                query: query, rates: rates)
         }
 
         switch value.kind {
@@ -63,18 +59,34 @@ enum CalcQuantity {
             return measurementResult(
                 value.amount, unit: unit, expression: expressionText(split.expressionTokens))
         case .currency(let definition):
+            guard parser.operationCount == 0 else {
+                return currencyResult(
+                    value.amount, definition: definition,
+                    expression: expressionText(split.expressionTokens))
+            }
+            let expression = "\(CalcFormatter.display(value.amount)) \(definition.code)"
+            // A bare amount names no target, so the Mac's own currency becomes one once it's typed.
+            guard !preserveStandaloneUnit, let target = regionTarget(region, from: definition),
+                let output = rates?.convert(value.amount, from: definition.code, to: target.code)
+            else {
+                return currencyResult(value.amount, definition: definition, expression: expression)
+            }
             return currencyResult(
-                value.amount, definition: definition,
-                expression:
-                    parser.operationCount == 0
-                    ? "\(CalcFormatter.display(value.amount)) \(definition.code)"
-                    : expressionText(split.expressionTokens))
+                output, definition: target, expression: expression, sourceBadge: definition.name)
         }
+    }
+
+    /// Nil where converting says nothing: no region, an unknown one, or the currency already typed.
+    private static func regionTarget(_ region: String?, from: CurrencyDef) -> CurrencyDef? {
+        guard let target = region.flatMap({ CalcCurrency.byName[$0.lowercased()] }),
+            target.code != from.code
+        else { return nil }
+        return target
     }
 
     private static func convertedResult(
         _ value: QuantityValue, targetName: String, expressionTokens: [CalcToken],
-        query: String, currency: CurrencySource
+        query: String, rates: CurrencyRates?
     ) -> CalcResult? {
         let expression = expressionText(expressionTokens)
         switch value.kind {
@@ -90,13 +102,13 @@ enum CalcQuantity {
                 guard output.isFinite else { return nil }
                 return measurementResult(output, unit: to, expression: expression)
             }
-            if case .on = currency, CalcCurrency.byName[targetName] != nil {
+            if CalcCurrency.byName[targetName] != nil {
                 return conversionError(
                     query, from: from.category.displayName, to: CalcCurrency.categoryName)
             }
             return nil
         case .currency(let from):
-            if case .on(let rates) = currency, let to = CalcCurrency.byName[targetName] {
+            if let to = CalcCurrency.byName[targetName] {
                 guard let rates else {
                     return CalcResult(
                         expression: query,
@@ -137,12 +149,13 @@ enum CalcQuantity {
     }
 
     private static func currencyResult(
-        _ amount: Double, definition: CurrencyDef, expression: String
+        _ amount: Double, definition: CurrencyDef, expression: String,
+        sourceBadge: String = "Expression"
     ) -> CalcResult {
         let formatted = CalcFormatter.currency(amount)
         return CalcResult(
             expression: expression,
-            sourceBadge: "Expression", targetBadge: definition.name,
+            sourceBadge: sourceBadge, targetBadge: definition.name,
             payload: .value(
                 display: "\(CalcFormatter.grouped(formatted)) \(definition.code)",
                 copyText: "\(formatted) \(definition.code)"))
@@ -288,7 +301,7 @@ private struct QuantityValue {
 
 private struct QuantityParser {
     let tokens: [CalcToken]
-    let currency: CurrencySource
+    let rates: CurrencyRates?
     var position = 0
     var operationCount = 0
     var dimensionCount = 0
@@ -300,11 +313,6 @@ private struct QuantityParser {
 
     private var current: CalcToken? {
         position < tokens.count ? tokens[position] : nil
-    }
-
-    private var currencyEnabled: Bool {
-        if case .on = currency { return true }
-        return false
     }
 
     mutating func parse() -> QuantityValue? {
@@ -547,7 +555,7 @@ private struct QuantityParser {
             position += 1
             return value
         case .ident(let name):
-            guard currencyEnabled, CalcUnits.byName[name] == nil,
+            guard CalcUnits.byName[name] == nil,
                 let definition = CalcCurrency.byName[name],
                 let amount = number(at: position + 1)
             else { return nil }
@@ -564,7 +572,7 @@ private struct QuantityParser {
         if let unit = CalcUnits.byName[name] {
             return .unit(unit)
         }
-        guard currencyEnabled, let definition = CalcCurrency.byName[name] else { return nil }
+        guard let definition = CalcCurrency.byName[name] else { return nil }
         recordCurrency(definition.code)
         return .currency(definition)
     }
@@ -574,7 +582,6 @@ private struct QuantityParser {
     ) -> Double? {
         recordCurrency(from.code)
         recordCurrency(to.code)
-        guard case .on(let rates) = currency else { return nil }
         guard let rates else {
             issue = "Exchange rates unavailable — check your connection."
             return nil
@@ -605,8 +612,7 @@ private struct QuantityParser {
         case .number, .compactNumber, .intLiteral:
             return true
         case .ident(let name):
-            return currencyEnabled && CalcUnits.byName[name] == nil
-                && CalcCurrency.byName[name] != nil
+            return CalcUnits.byName[name] == nil && CalcCurrency.byName[name] != nil
                 && number(at: position + 1) != nil
         default:
             return false

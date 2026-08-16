@@ -3,6 +3,11 @@ import SwiftUI
 /// Deliberately not a focusable control. See docs/features/hotkeys.md#recorder.
 struct ShortcutRecorder: View {
     let action: HotKeyAction
+    /// Drops the empty well's *fill* when nothing is bound, for a recorder that repeats once per
+    /// row: a column of identical filled pills reads louder than the commands it belongs to. The
+    /// border stays either way — without it the control reads as dead text — and the fill returns on
+    /// hover, while recording, and whenever there is a shortcut to show.
+    var isQuiet = false
 
     @Environment(HotKeyManager.self) private var hotKeys
     /// Observed so a bound double-tap surfaces its warning the moment the grant changes.
@@ -11,12 +16,21 @@ struct ShortcutRecorder: View {
 
     private var isRecording: Bool { hotKeys.recordingAction == action }
 
+    /// A quiet recorder sits back a shade until it is pointed at, without going so faint that it
+    /// stops reading as something you can press.
+    private var unsetInk: Color {
+        isRecording || !isQuiet || hovered
+            ? Theme.Colors.textSecondary : Theme.Colors.textTertiary
+    }
+
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+        // The width is kept either way, so a column of recorders stays aligned as they fill in.
+        let showsFill = !isQuiet || isRecording || hovered || hotKeys.binding(for: action) != nil
         content
             .padding(.horizontal, Theme.Spacing.sm)
             .frame(width: Theme.Size.shortcutRecorder, height: 24)
-            .background(shape.fill(Theme.Colors.cardFill))
+            .background(shape.fill(Theme.Colors.cardFill).opacity(showsFill ? 1 : 0))
             .overlay(
                 shape.strokeBorder(
                     isRecording ? Color.accentColor : Theme.Colors.cardStroke, lineWidth: 1)
@@ -42,7 +56,7 @@ struct ShortcutRecorder: View {
         } else {
             Text(isRecording ? "Listening…" : "Record")
                 .font(Theme.Typography.keyCap)
-                .foregroundStyle(isRecording ? Theme.Colors.textSecondary : .secondary)
+                .foregroundStyle(unsetInk)
         }
     }
 

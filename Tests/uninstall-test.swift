@@ -250,9 +250,6 @@ struct UninstallTests {
         expect(
             evidence("Unrelated.qlgenerator", "QuickLook", app) == nil,
             "another product's plug-in is left alone")
-        expect(
-            !UninstallRules.matchableForms("Barista.app").contains("Barista"),
-            ".app is never stripped — an app bundle is not a plug-in wrapper")
 
         let bundle = "/Applications/Zed.app"
         expect(

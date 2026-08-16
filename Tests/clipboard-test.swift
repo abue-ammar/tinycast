@@ -13,6 +13,9 @@ struct ClipboardTests {
         pasteLeavesPinsAlone()
         pinsSurvivePruningAndTheWindow()
         pinsLeadFilteredSearches()
+        textFormClassification()
+        typeFilterSplitsTheHistory()
+        typeFilterJoinsTheSearchMemo()
         persistence()
         migrationFromShippedDatabase()
 
@@ -125,7 +128,7 @@ struct ClipboardTests {
             _ = store.importEntries(seed)
             store.togglePinned(item(store, "needle in the haystack"))
 
-            let results = store.search("haystack")
+            let results = store.search("haystack", filter: .all)
             expect(results.count > 200, "FTS results plus the pinned block")
             expect(
                 results.first?.text == "needle in the haystack",
@@ -133,10 +136,86 @@ struct ClipboardTests {
             expect(
                 results.filter(\.isPinned).count == 1, "the pinned row is not duplicated")
 
-            let short = store.search("ne")  // below the trigram threshold: the fallback path
+            // Below the trigram threshold: the fallback path.
+            let short = store.search("ne", filter: .all)
             expect(
                 short.first?.text == "needle in the haystack",
                 "the pinned match leads the fallback search too")
+        }
+    }
+
+    /// The link/address classifier, including the filenames that must not read as links.
+    static func textFormClassification() {
+        let links = [
+            "https://apple.com", "http://apple.com/path?q=1", "apple.com", "apple.com/store",
+            "www.Apple.com", "vscode://file/tmp/x", "docs.google.com", "bit.ly/abc"
+        ]
+        for text in links {
+            expect(form(text) == .link, "\(text) is a link")
+        }
+
+        let addresses = ["hi@apple.com", "mailto:hi@apple.com", "first.last@mail.example.co.uk"]
+        for text in addresses {
+            expect(form(text) == .email, "\(text) is an address")
+        }
+
+        let plain = [
+            // Extensions that collide with a real TLD are the whole reason for the TLD set.
+            "report.pdf", "index.html", "App.swift", "data.json", "Safari.app", "image.png",
+            "hello world", "visit apple.com today", "3.14", "", "   ", "no-dot-at-all",
+            "two@at@signs.com", "@apple.com", "hi@localhost", "line one\nline two"
+        ]
+        for text in plain {
+            expect(form(text) == .plain, "\(String(text.prefix(20))) is plain text")
+        }
+
+        // Past the scan cap, so a multi-MB copy is never walked looking for a scheme.
+        expect(
+            form("https://apple.com/" + String(repeating: "a", count: 4096)) == .plain,
+            "an over-long token is plain by definition")
+
+        expect(
+            ClipboardItem(imagePath: "/tmp/x.png", sourceBundleID: nil).textForm == nil,
+            "an image has no text form")
+    }
+
+    /// Each filter returns only its own kind, and a pin still leads the block.
+    static func typeFilterSplitsTheHistory() {
+        withStore { store, _ in
+            store.addText("just some prose", sourceBundleID: nil)
+            store.addText("https://apple.com", sourceBundleID: nil)
+            store.addText("hi@apple.com", sourceBundleID: nil)
+            store.addText("second.link.dev", sourceBundleID: nil)
+
+            expect(texts(store).count == 4, "every entry under All Types")
+            expect(texts(store, filter: .text) == ["just some prose"], "text excludes links")
+            expect(
+                texts(store, filter: .link) == ["second.link.dev", "https://apple.com"],
+                "links stay newest-first")
+            expect(texts(store, filter: .email) == ["hi@apple.com"], "addresses on their own")
+            expect(texts(store, filter: .image).isEmpty, "no images were captured")
+
+            store.togglePinned(item(store, "https://apple.com"))
+            expect(
+                texts(store, filter: .link) == ["https://apple.com", "second.link.dev"],
+                "a pinned link leads its filtered block")
+        }
+    }
+
+    /// The memo keys on the filter too: same query, new filter, different rows.
+    static func typeFilterJoinsTheSearchMemo() {
+        withStore { store, _ in
+            store.addText("shared token prose", sourceBundleID: nil)
+            store.addText("shared-token.com", sourceBundleID: nil)
+
+            expect(store.search("shared", filter: .all).count == 2, "both match the query")
+            expect(
+                store.search("shared", filter: .link).map(\.text) == ["shared-token.com"],
+                "the same query under a link filter is not served from the wider memo")
+            expect(
+                store.search("shared", filter: .text).map(\.text) == ["shared token prose"],
+                "and switching filters again re-runs rather than reusing")
+            expect(store.search("shared", filter: .all).count == 2, "back to both")
         }
     }
 
@@ -253,14 +332,18 @@ struct ClipboardTests {
         return Set(String(decoding: data, as: UTF8.self).split(separator: "\n").map(String.init))
     }
 
+    static func form(_ text: String) -> ClipboardItem.TextForm? {
+        ClipboardItem(text: text, sourceBundleID: nil).textForm
+    }
+
     static func entry(_ text: String, at date: Date) -> ClipboardItem {
         ClipboardItem(
             id: UUID(), kind: .text, text: text, imagePath: nil, createdAt: date,
             sourceBundleID: nil)
     }
 
-    static func texts(_ store: ClipboardStore) -> [String] {
-        store.search("").compactMap(\.text)
+    static func texts(_ store: ClipboardStore, filter: ClipboardFilter = .all) -> [String] {
+        store.search("", filter: filter).compactMap(\.text)
     }
 
     static func item(_ store: ClipboardStore, _ text: String) -> ClipboardItem {

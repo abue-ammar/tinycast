@@ -39,7 +39,7 @@ struct QuicklinkListScreen: PaletteScreen {
         return true
     }
 
-    /// ⌘P — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
+    /// ⌘. — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
     func pin(at selection: Int) -> Bool {
         guard let quicklink = quicklink(at: selection) else { return false }
         core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
@@ -111,10 +111,10 @@ enum QuicklinkActionsMenu {
             })
         items.append(
             quicklink.isPinned
-                ? PopoverMenuItem(title: "Unpin Quicklink", systemImage: "pin.slash", shortcut: "⌘P") {
+                ? PopoverMenuItem(title: "Unpin Quicklink", systemImage: "pin.slash", shortcut: "⌘.") {
                     core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
                 }
-                : PopoverMenuItem(title: "Pin Quicklink", systemImage: "pin", shortcut: "⌘P") {
+                : PopoverMenuItem(title: "Pin Quicklink", systemImage: "pin", shortcut: "⌘.") {
                     core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
                 })
         items.append(

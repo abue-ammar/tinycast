@@ -10,6 +10,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case quicklinks
     /// Collects a quicklink's `{argument}` values; the request lives on the session.
     case quicklinkArguments
+    /// A Raycast extension command rendering into the palette.
+    case extensionCommand
 
     var id: String { rawValue }
     var title: String {
@@ -22,6 +24,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .uninstall: return "Uninstall Application"
         case .quicklinks: return "Quicklinks"
         case .quicklinkArguments: return "Open Quicklink"
+        case .extensionCommand: return "Extension"
         }
     }
     var systemImage: String {
@@ -33,6 +36,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .fileSearch: return "doc.text.magnifyingglass"
         case .uninstall: return "trash"
         case .quicklinks, .quicklinkArguments: return Quicklink.sfSymbol
+        case .extensionCommand: return "puzzlepiece.extension"
         }
     }
     var placeholder: String {
@@ -46,6 +50,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinks: return "Search quicklinks…"
         // Replaced by the pending argument's name; only reached if the session vanished mid-render.
         case .quicklinkArguments: return "Enter a value…"
+        // Replaced by the command's own `searchBarPlaceholder` whenever it declares one.
+        case .extensionCommand: return "Search…"
         }
     }
 }

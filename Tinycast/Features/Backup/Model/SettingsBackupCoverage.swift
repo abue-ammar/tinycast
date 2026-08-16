@@ -31,7 +31,8 @@ enum SettingsBackupCoverage {
         "quicklinksShowInLauncher": .quicklinksShowInLauncher,
         "quicklinkOpensNewWindow": .quicklinkOpensNewWindow,
         "quicklinkSelectionFallback": .quicklinkSelectionFallback,
-        "quicklinkConfirmsBeforeDelete": .quicklinkConfirmsBeforeDelete
+        "quicklinkConfirmsBeforeDelete": .quicklinkConfirmsBeforeDelete,
+        "extensionsShowInLauncher": .extensionsShowInLauncher
     ]
 
     /// The `SettingsData` fields no `AppSettings` key stands behind, and what they read instead.
@@ -44,6 +45,12 @@ enum SettingsBackupCoverage {
     static let deliberatelyExcluded: [String: String] = [
         AppSettingsKey.snippetsEnabled.rawValue:
             "Doubles as keyword-expansion consent; an import must not enable keystroke listening.",
+        AppSettingsKey.extensionPackageManager.rawValue:
+            "Names a tool on this Mac; the machine a backup lands on may not have it.",
+        AppSettingsKey.extensionRegistries.rawValue:
+            "A registry is a source of executable code; adding one has to be a deliberate act.",
+        AppSettingsKey.extensionsEnabled.rawValue:
+            "Doubles as consent to run third-party JavaScript; an import must not switch it on.",
         AppSettingsKey.palettePosition.rawValue:
             "Machine-local geometry: a point restored onto another display layout lands nowhere."
     ]

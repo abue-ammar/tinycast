@@ -8,7 +8,7 @@ struct ClipboardScreen: PaletteScreen {
     let openActions: () -> Void
     let scrollToFollow: () -> Void
 
-    var rows: [ClipboardItem] { store.search(vm.query) }
+    var rows: [ClipboardItem] { store.search(vm.query, filter: vm.clipboardFilter) }
 
     var primaryActionTitle: String { vm.pasteTarget?.pasteTitle ?? "Paste" }
 
@@ -42,7 +42,7 @@ struct ClipboardScreen: PaletteScreen {
         return true
     }
 
-    /// ⌘P — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
+    /// ⌘. — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
     func pin(at selection: Int) -> Bool {
         guard let item = item(at: selection) else { return false }
         core.clipboardCoordinator.togglePinnedClip(item)
@@ -88,7 +88,8 @@ struct ClipboardScreen: PaletteScreen {
         let rows = rows
         // Empty history: centre one message across the panel, not in the list column.
         if rows.isEmpty {
-            EmptyResults(text: "Clipboard history is empty")
+            // Names the filter, so one hiding every entry doesn't read as an empty history.
+            EmptyResults(text: vm.clipboardFilter.emptyMessage)
         } else {
             let selected = item(at: selection)
             HStack(spacing: 0) {
@@ -144,12 +145,12 @@ enum ClipboardActionsMenu {
         ]
         if item.isPinned {
             items.append(
-                PopoverMenuItem(title: "Unpin Entry", systemImage: "pin.slash", shortcut: "⌘P") {
+                PopoverMenuItem(title: "Unpin Entry", systemImage: "pin.slash", shortcut: "⌘.") {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         } else {
             items.append(
-                PopoverMenuItem(title: "Pin Entry", systemImage: "pin", shortcut: "⌘P") {
+                PopoverMenuItem(title: "Pin Entry", systemImage: "pin", shortcut: "⌘.") {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         }

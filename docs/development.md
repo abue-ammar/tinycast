@@ -161,13 +161,16 @@ node Scripts/gen-emoji.js            # -> Tinycast/Features/Emoji/Model/EmojiDat
 node Scripts/gen-currencies.js       # -> Tinycast/Features/Calculator/Model/CurrencyData.generated.swift
 ```
 
-`gen-currencies.js` joins two sources on the ISO code: **Frankfurter**'s currency list — the same feed
-`CurrencyRateStore` fetches rates from, so the table and the rate source cannot drift apart — and
-**Unicode CLDR**'s `en` currency data, which supplies display names, signs and the singular/plural
-noun. It reads the pinned `cldr-json` checkout rather than the host's `Intl`, whose output shifts with
-the local ICU version and would make the file unreproducible.
+`gen-currencies.js` joins three sources on the ISO code: the **fiat rate feed**'s own quote list — the
+same feed `CurrencyRateStore` fetches rates from, so the table and the rate source cannot drift apart
+— **Unicode CLDR**'s `en` currency data, which supplies display names, signs and the singular/plural
+noun, and **CLDR's supplemental currency data**, which says which codes are still spent anywhere. That
+last one is not optional: the feed carries no retirement metadata and quotes codes their countries
+abandoned years ago. Both CLDR files are read from the pinned `cldr-json` checkout rather than the
+host's `Intl`, whose output shifts with the local ICU version and would make the file unreproducible.
 
 Only unambiguous data is emitted. Anything two currencies claim — `dollars`, `pounds`, `krona` — is
-left out and decided by hand in `CalcCurrency.contested`, the one currency table still written by hand.
-Re-run the script when a currency is added or retired; nothing breaks in the meantime, since an
-unquoted code just reports "no exchange rate".
+left out and decided by hand in `CalcCurrency.contested`. The crypto tickers aren't generated at all:
+they have no external source of truth, so `CalcCurrency.crypto` is hand-written, and that same list is
+the set of symbols the fetch asks for. Re-run the script when a currency is added or retired; nothing
+breaks in the meantime, since an unquoted code just reports "no exchange rate".

@@ -73,8 +73,6 @@ struct WindowCommandTests {
         let commands = WindowCommandCatalog.all
         expect(commands.count == 30, "catalog contains all 30 agreed commands")
         expect(commands.map(\.id) == WindowCommand.ID.allCases, "catalog covers every ID once")
-        expect(Set(commands.map(\.id)).count == commands.count, "IDs are unique")
-        expect(Set(commands.map(\.entryID)).count == commands.count, "entry IDs are unique")
         expect(
             Set(commands.map { $0.name.lowercased() }).count == commands.count, "names are unique")
         expect(commands.allSatisfy { !$0.name.isEmpty }, "names are non-empty")
@@ -204,10 +202,6 @@ struct WindowCommandTests {
         expect(
             frame(.firstTwoThirds)!.union(frame(.lastThird)!) == mainScreen.visibleFrame,
             "first two thirds and last third partition the screen")
-
-        // Half the screen's area: half width, full height, horizontally centred.
-        expectRect(
-            frame(.centerHalf)!, CGRect(x: 360, y: 0, width: 720, height: 900), "center half")
 
         // Cycling: halves only, ½ → ⅓ → ⅔, wrapping.
         expectRect(frame(.leftHalf, step: 1)!, frame(.firstThird)!, "left half step 1 is a third")

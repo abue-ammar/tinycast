@@ -11,7 +11,7 @@ enum RaycastImportV2 {
     // MARK: - Decrypt
 
     static func decrypt(_ raw: Data, passphrase: String) throws -> Data {
-        guard let envelopeData = try? Gunzip.decompress(raw),
+        guard let envelopeData = try? Zlib.gunzip(raw),
             let env = try? JSONSerialization.jsonObject(with: envelopeData) as? [String: Any],
             let dataHex = env["data"] as? String,
             let enc = env["encryption"] as? [String: String],
@@ -32,7 +32,7 @@ enum RaycastImportV2 {
         } catch {
             throw RaycastImportError.incorrectPassphrase
         }
-        guard let plaintext = try? Gunzip.decompress(plaintextGz) else {
+        guard let plaintext = try? Zlib.gunzip(plaintextGz) else {
             throw RaycastImportError.corrupt
         }
         return plaintext

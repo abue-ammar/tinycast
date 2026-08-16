@@ -55,6 +55,18 @@ enum AppActionsMenu {
                     core.uninstallCoordinator.beginUninstall(app)
                 })
         }
+        if app.kind == .extensionCommand {
+            items.append(
+                PopoverMenuItem(title: "Configure Extension", systemImage: "slider.horizontal.3") {
+                    core.extensionCoordinator.showExtensionSettings(for: app)
+                })
+            items.append(
+                PopoverMenuItem(
+                    title: "Uninstall Extension", systemImage: "trash", isDestructive: true
+                ) {
+                    core.extensionCoordinator.confirmUninstall(app)
+                })
+        }
         return PopoverMenuContent(header: app.name, items: items)
     }
 }

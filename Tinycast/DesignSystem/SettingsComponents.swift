@@ -74,13 +74,23 @@ struct FeatureSwitchSection: View {
 struct SettingsFilterField: View {
     let prompt: String
     @Binding var query: String
+    /// The field is plain-styled and so has no bezel of its own: without this, only the glyphs
+    /// themselves are a target, and clicking the rest of the row does nothing.
+    @FocusState private var focused: Bool
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField(prompt, text: $query)
+            // `prompt:`, not the title argument: inside a `Form` a text field's title is rendered as
+            // its label in the left-hand column, which turns the placeholder into a heading. And
+            // `labelsHidden`, or the form reserves that column for the empty title anyway and the
+            // field starts halfway across the row, nowhere near the magnifying glass.
+            TextField("", text: $query, prompt: Text(prompt))
                 .textFieldStyle(.plain)
+                .labelsHidden()
+                .focused($focused)
+                .pointerStyle(.horizontalText)
             if !query.isEmpty {
                 Button {
                     query = ""
@@ -92,5 +102,7 @@ struct SettingsFilterField: View {
                 .accessibilityLabel("Clear search")
             }
         }
+        .contentShape(.rect)
+        .onTapGesture { focused = true }
     }
 }

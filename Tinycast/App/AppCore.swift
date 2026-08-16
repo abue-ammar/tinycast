@@ -33,6 +33,7 @@ final class AppCore {
     let uninstall = UninstallSession()
     let quicklinkArguments = QuicklinkArgumentSession()
     let notesStore: NotesStore
+    let extensions: ExtensionManager
 
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
@@ -63,6 +64,9 @@ final class AppCore {
         session: uninstall, palette: palette, paletteCoordinator: paletteCoordinator,
         appIndex: appIndex, runningApps: runningApps, hotKeys: hotKeys, favorites: favorites,
         visibility: visibility, ranking: launcherRanking, core: self)
+    @ObservationIgnored private(set) lazy var extensionCoordinator = ExtensionCoordinator(
+        extensions: extensions, palette: palette, paletteCoordinator: paletteCoordinator,
+        settingsCoordinator: settingsCoordinator, settings: settings, core: self)
     @ObservationIgnored private(set) lazy var windowCommandCoordinator = WindowCommandCoordinator(
         settings: settings, paletteCoordinator: paletteCoordinator, windowMover: windowMover)
     @ObservationIgnored private(set) lazy var customCommandCoordinator = CustomCommandCoordinator(
@@ -98,7 +102,8 @@ final class AppCore {
         quicklinkCoordinator: quicklinkCoordinator,
         windowCommandCoordinator: windowCommandCoordinator,
         snippetExpansion: snippetExpansion, fileSearchCoordinator: fileSearchCoordinator,
-        notesCoordinator: notesCoordinator, core: self)
+        notesCoordinator: notesCoordinator, extensionCoordinator: extensionCoordinator,
+        core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, palette: palette, windowController: windowController,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -125,6 +130,7 @@ final class AppCore {
         appIndex = AppIndex(ranking: launcherRanking)
         let clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
         self.clipboardManager = clipboardManager
+        extensions = ExtensionManager(clipboardStore: clipboardStore)
         snippetsStore = SnippetsStore()
         snippetTextInjector = SnippetTextInjector(
             clipboardManager: clipboardManager,
@@ -158,6 +164,8 @@ final class AppCore {
             clipboardManager.start()
 
             appIndex.start(settings: settings)
+            extensions.start(appIndex: appIndex, coordinator: extensionCoordinator)
+            extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
             notesCoordinator.applyEnabled()
@@ -198,6 +206,12 @@ final class AppCore {
             }
             hotKeys.onOpenQuicklink = { [weak self] id in
                 self?.quicklinkCoordinator.openQuicklink(id: id)
+            }
+            hotKeys.onRunExtensionCommand = { [weak self] entryID in
+                self?.extensionCoordinator.runExtensionCommand(entryID: entryID)
+            }
+            extensions.onDidUninstall = { [weak self] entryIDs in
+                self?.extensionCoordinator.removeExtensionReferences(entryIDs: entryIDs)
             }
             hotKeys.displayName = { [weak self] action in self?.hotKeyDisplayName(for: action) }
             KeyShortcut.displayedHyperChord = { [settings] in
@@ -253,6 +267,8 @@ final class AppCore {
             return customCommands.command(id: id)?.name
         case .quicklink(let id):
             return quicklinks.quicklink(id: id)?.name
+        case .extensionCommand(let entryID):
+            return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
         case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
             .showNotes, .createNote, .searchNotes, .windowCommand:
             return nil
@@ -347,12 +363,13 @@ final class AppCore {
 
     /// `tone` styles the glyph, `confirmRole` the button; separate on purpose.
     func confirm(
-        title: String, message: String, symbol: String, confirmTitle: String,
-        tone: DialogTone = .danger, confirmRole: DialogAction.Role = .destructive
+        title: String, message: String?, symbol: String, confirmTitle: String,
+        tone: DialogTone = .danger, confirmRole: DialogAction.Role = .destructive,
+        dismissTitle: String = "Cancel"
     ) async -> Bool {
         await dialogs.confirm(
             title: title, message: message, symbol: symbol, tone: tone, confirmTitle: confirmTitle,
-            confirmRole: confirmRole)
+            confirmRole: confirmRole, dismissTitle: dismissTitle)
     }
 
     /// A failure with one usable second option; `true` when the user takes it.

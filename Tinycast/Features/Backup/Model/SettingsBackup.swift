@@ -45,6 +45,7 @@ struct SettingsBackup: Codable {
         // Carried, unlike `snippetsEnabled`: opening a link grants no permission class of its own.
         var quicklinksEnabled: Bool?
         var quicklinksShowInLauncher: Bool?
+        var extensionsShowInLauncher: Bool?
         var quicklinkOpensNewWindow: Bool?
         var quicklinkSelectionFallback: String?
         var quicklinkConfirmsBeforeDelete: Bool?
@@ -114,6 +115,7 @@ extension SettingsBackup {
             windowCycleOnRepeat: s.windowCycleOnRepeat,
             quicklinksEnabled: s.quicklinksEnabled,
             quicklinksShowInLauncher: s.quicklinksShowInLauncher,
+            extensionsShowInLauncher: s.extensionsShowInLauncher,
             quicklinkOpensNewWindow: s.quicklinkOpensNewWindow,
             quicklinkSelectionFallback: s.quicklinkSelectionFallback.rawValue,
             quicklinkConfirmsBeforeDelete: s.quicklinkConfirmsBeforeDelete)
@@ -293,6 +295,10 @@ extension SettingsBackup {
         }
         if let flag = s.quicklinksEnabled {
             settings.quicklinksEnabled = flag
+            count += 1
+        }
+        if let flag = s.extensionsShowInLauncher {
+            settings.extensionsShowInLauncher = flag
             count += 1
         }
         if let flag = s.quicklinksShowInLauncher {

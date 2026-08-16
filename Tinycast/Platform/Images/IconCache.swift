@@ -14,6 +14,21 @@ struct IconCacheGeneration {
     }
 }
 
+/// A tile's fill and the key naming it, so `IconCache` needn't know who chose the colour.
+struct SymbolTint: Hashable, Sendable {
+    let key: String
+    let color: NSColor
+}
+
+/// What a row draws. A feature sets one rather than adding a branch to `AppEntry`, and `artwork`
+/// carries its extent because the size is the caller's decision, judged against `appIconExtent`.
+enum EntryIcon: Hashable, Sendable {
+    case file
+    case symbol(String)
+    case tintedSymbol(name: String, tint: SymbolTint)
+    case artwork(path: String, extent: CGFloat)
+}
+
 /// App icons by path, downsampled and byte-bounded, so rows don't re-hit `NSWorkspace`.
 enum IconCache {
     /// `NSCache` is thread-safe but not `Sendable`, so assert the guarantee once here.
@@ -38,8 +53,12 @@ enum IconCache {
 
     /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
     static func cached(forFile path: String) -> NSImage? { cache.object(forKey: path as NSString) }
-    static func cachedSymbol(named name: String) -> NSImage? {
-        cache.object(forKey: ("symbol:" + name) as NSString)
+    static func cachedSymbol(named name: String, tint: SymbolTint? = nil) -> NSImage? {
+        cache.object(forKey: symbolKey(name, tint))
+    }
+
+    private static func symbolKey(_ name: String, _ tint: SymbolTint?) -> NSString {
+        "symbol:\(tint?.key ?? "plain"):\(name)" as NSString
     }
 
     /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
@@ -61,10 +80,10 @@ enum IconCache {
             return Decoded(image: icon(forFile: path))
         }.value.image
     }
-    static func loadSymbolAsync(named name: String) async -> NSImage? {
-        if let cached = cachedSymbol(named: name) { return cached }
+    static func loadSymbolAsync(named name: String, tint: SymbolTint? = nil) async -> NSImage? {
+        if let cached = cachedSymbol(named: name, tint: tint) { return cached }
         return await Task.detached(priority: .userInitiated) {
-            Decoded(image: symbolIcon(named: name))
+            Decoded(image: symbolIcon(named: name, tint: tint))
         }.value.image
     }
 
@@ -76,19 +95,20 @@ enum IconCache {
         return icon
     }
 
-    /// Command icons: a symbol on a tile, in the same shape as a real app icon.
-    static func symbolIcon(named name: String) -> NSImage {
-        let key = "symbol:" + name as NSString
+    /// A symbol on an app-icon-shaped tile; a tint fills it and brightens the glyph to white.
+    static func symbolIcon(named name: String, tint: SymbolTint? = nil) -> NSImage {
+        let key = symbolKey(name, tint)
         if let cached = cache.object(forKey: key) { return cached }
 
         let side = displayPixel
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { _ in
             // Tile inset mirrors the margin macOS app icons carry inside their canvas.
             let tile = NSRect(x: 0, y: 0, width: side, height: side).insetBy(dx: 4, dy: 4)
-            NSColor.white.withAlphaComponent(0.09).setFill()
+            (tint?.color ?? NSColor.white.withAlphaComponent(0.09)).setFill()
             NSBezierPath(roundedRect: tile, xRadius: 9, yRadius: 9).fill()
 
-            guard let symbol = glyph(named: name, tint: .white.withAlphaComponent(0.85))
+            let ink = tint == nil ? NSColor.white.withAlphaComponent(0.85) : NSColor.white
+            guard let symbol = glyph(named: name, tint: ink)
             else { return true }
             let size = symbol.size
             symbol.draw(
@@ -122,8 +142,74 @@ enum IconCache {
         }
     }
 
-    /// The share of its canvas an app icon paints; folders and documents differ, so scale.
-    private static let artworkExtent: CGFloat = 0.83
+    /// What an app icon paints: the reference for every other artwork, and the guess when unmeasurable.
+    static let appIconExtent: CGFloat = 0.83
+
+    /// The caller chooses the extent; this only measures and rasterizes, so `Platform` learns no why.
+    static func fitted(_ source: NSImage, to extent: CGFloat) -> (NSImage, Int) {
+        let painted = paintedExtent(source) ?? appIconExtent
+        let side = displayPixel * extent / painted
+        let inset = (displayPixel - side) / 2
+        return rasterized(source, into: NSRect(x: inset, y: inset, width: side, height: side))
+    }
+
+    /// Keyed by path and extent, so two features wanting different sizes never serve each other's.
+    static func artwork(atPath path: String, extent: CGFloat) -> NSImage {
+        let key = artworkKey(path, extent)
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let source = NSImage(contentsOfFile: path) else {
+            return symbolIcon(named: "questionmark.square.dashed")
+        }
+        let (icon, cost) = fitted(source, to: extent)
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
+    }
+
+    static func cachedArtwork(atPath path: String, extent: CGFloat) -> NSImage? {
+        cache.object(forKey: artworkKey(path, extent))
+    }
+
+    static func loadArtworkAsync(atPath path: String, extent: CGFloat) async -> NSImage? {
+        if let cached = cachedArtwork(atPath: path, extent: extent) { return cached }
+        return await Task.detached(priority: .userInitiated) {
+            Decoded(image: artwork(atPath: path, extent: extent))
+        }.value.image
+    }
+
+    private static func artworkKey(_ path: String, _ extent: CGFloat) -> NSString {
+        "artwork:\(extent):\(path)" as NSString
+    }
+
+    // MARK: - Drawing an `EntryIcon`
+
+    /// One switch, so a row never has to know which of these paths its entry wants.
+    static func icon(for source: EntryIcon, fileURL: URL) -> NSImage {
+        switch source {
+        case .file: return icon(forFile: fileURL.path)
+        case .symbol(let name): return symbolIcon(named: name)
+        case .tintedSymbol(let name, let tint): return symbolIcon(named: name, tint: tint)
+        case .artwork(let path, let extent): return artwork(atPath: path, extent: extent)
+        }
+    }
+
+    static func cached(_ source: EntryIcon, fileURL: URL) -> NSImage? {
+        switch source {
+        case .file: return cached(forFile: fileURL.path)
+        case .symbol(let name): return cachedSymbol(named: name)
+        case .tintedSymbol(let name, let tint): return cachedSymbol(named: name, tint: tint)
+        case .artwork(let path, let extent): return cachedArtwork(atPath: path, extent: extent)
+        }
+    }
+
+    static func loadAsync(_ source: EntryIcon, fileURL: URL) async -> NSImage? {
+        switch source {
+        case .file: return await loadAsync(forFile: fileURL.path)
+        case .symbol(let name): return await loadSymbolAsync(named: name)
+        case .tintedSymbol(let name, let tint): return await loadSymbolAsync(named: name, tint: tint)
+        case .artwork(let path, let extent):
+            return await loadArtworkAsync(atPath: path, extent: extent)
+        }
+    }
 
     /// Cache-only lookup for `loadFittedAsync`.
     static func cachedFitted(forFile path: String) -> NSImage? {
@@ -161,14 +247,13 @@ enum IconCache {
     private static func fittedKey(_ path: String) -> NSString { ("fit:" + path) as NSString }
 
     private static func fittedIcon(forFile path: String) -> Decoded {
-        let source = NSWorkspace.shared.icon(forFile: path)
-        // Solving `side * extent == displayPixel * artworkExtent` leaves an app icon as-is.
-        let extent = paintedExtent(source) ?? artworkExtent
-        let side = displayPixel * artworkExtent / extent
-        let inset = (displayPixel - side) / 2
-        let (icon, cost) = rasterized(
-            source, into: NSRect(x: inset, y: inset, width: side, height: side))
+        let (icon, cost) = fittedToArtwork(NSWorkspace.shared.icon(forFile: path))
         return Decoded(image: icon, cost: cost)
+    }
+
+    /// Paints the share an app icon does, leaving a real app icon untouched.
+    private static func fittedToArtwork(_ source: NSImage) -> (NSImage, Int) {
+        fitted(source, to: appIconExtent)
     }
 
     /// The artwork's larger dimension, measured at 2×: a 1× grid over-reads the extent.

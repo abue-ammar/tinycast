@@ -153,6 +153,35 @@ final class AppSettings {
         didSet { defaults.set(snippetsShowInLauncher, forKey: Key.snippetsShowInLauncher.rawValue) }
     }
 
+    /// Also consent to run third-party JavaScript, and the one feature with a standing memory cost,
+    /// so it confirms first, defaults off and never rides a backup.
+    var extensionsEnabled: Bool {
+        didSet { defaults.set(extensionsEnabled, forKey: Key.extensionsEnabled.rawValue) }
+    }
+
+    var extensionsShowInLauncher: Bool {
+        didSet {
+            defaults.set(extensionsShowInLauncher, forKey: Key.extensionsShowInLauncher.rawValue)
+        }
+    }
+
+    /// Only a source registry needs one — the store serves extensions already built.
+    var extensionPackageManager: ExtensionPackageManager {
+        didSet {
+            defaults.set(
+                extensionPackageManager.rawValue, forKey: Key.extensionPackageManager.rawValue)
+        }
+    }
+
+    /// Where extensions are searched for. Seeded with the store and the official repository; a user
+    /// can add their own, which is the point of it being a list rather than a flag.
+    var extensionRegistries: [ExtensionRegistry] {
+        didSet {
+            guard let data = try? JSONEncoder().encode(extensionRegistries) else { return }
+            defaults.set(data, forKey: Key.extensionRegistries.rawValue)
+        }
+    }
+
     /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
     var windowManagementEnabled: Bool {
         didSet {
@@ -270,6 +299,18 @@ final class AppSettings {
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.snippetsShowInLauncher.rawValue)
+        // Opt-in, unlike its siblings: until it is asked for, nothing about extensions is loaded.
+        extensionsEnabled = defaults.bool(forKey: Key.extensionsEnabled.rawValue)
+        extensionsShowInLauncher =
+            defaults.object(forKey: Key.extensionsShowInLauncher.rawValue) == nil
+            || defaults.bool(forKey: Key.extensionsShowInLauncher.rawValue)
+        extensionPackageManager =
+            defaults.string(forKey: Key.extensionPackageManager.rawValue)
+            .flatMap(ExtensionPackageManager.init(rawValue:)) ?? .automatic
+        extensionRegistries =
+            defaults.data(forKey: Key.extensionRegistries.rawValue)
+            .flatMap { try? JSONDecoder().decode([ExtensionRegistry].self, from: $0) }
+            ?? ExtensionRegistry.defaults
         windowManagementEnabled = defaults.bool(forKey: Key.windowManagementEnabled.rawValue)
         windowManagementShowInLauncher =
             defaults.object(forKey: Key.windowManagementShowInLauncher.rawValue) == nil

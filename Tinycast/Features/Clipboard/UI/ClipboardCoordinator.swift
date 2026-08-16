@@ -78,6 +78,8 @@ final class ClipboardCoordinator {
 
     /// Select `item`'s row as currently filtered; a moved row isn't always index 0.
     private func selectClip(_ item: ClipboardItem) {
-        palette.selection = clipboardStore.rowIndex(of: item, in: palette.query) ?? 0
+        palette.selection =
+            clipboardStore.rowIndex(
+                of: item, in: palette.query, filter: palette.clipboardFilter) ?? 0
     }
 }

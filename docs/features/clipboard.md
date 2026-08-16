@@ -8,6 +8,9 @@
   `clipboard-test` can compile it standalone. It uses `isolated deinit` for its SQLite teardown.
 - A database that cannot be opened is deleted and recreated. That is only sound because history is
   regenerable — `QuicklinkStore` deliberately does the opposite.
+- **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` stays
+  `text`/`image` — the two things capture can tell apart — so improving the classifier is a code
+  change rather than a database migration plus a backfill.
 
 ## Poll-based capture
 
@@ -45,9 +48,40 @@ references — an image imported from another app's cache — are left on disk w
 retention cut can strand hundreds of files, so those deletions run off the main actor to keep
 capture-time pruning from hitching.
 
+## Type filter
+
+The clipboard header carries a `ClipboardFilterButton` at the trailing edge of the search field —
+the only palette screen with a control up there. It toggles a `PopoverMenu` anchored `.topTrailing`
+under the button, so the ⌘K Actions menu, the app menu and this one are the same view on the same
+glass. **⌘P** toggles it; ↑/↓, ↵ and Esc come free from `RootPaletteView`'s one menu path, and the
+menu opens highlighting the *active* filter rather than the first row, the way a pop-up button does.
+The filter is not gated on the list having rows: an over-narrow filter empties it, and the button is
+the way back out.
+
+`ClipboardFilter` owns the five cases and everything the UI needs from them — title, glyph, and the
+`emptyMessage` that stops "Clipboard history is empty" from appearing over a history that only looks
+empty. The cases are **exclusive**: a copied URL is a link, not a narrower kind of text, so *Text
+Only* means prose.
+
+`ClipboardItem.textForm` derives `plain`/`link`/`email` from the text on demand — nil for an image.
+The classifier is guarded cheapest-first, because `rows` is rebuilt every render: anything over
+2048 UTF-8 bytes is plain by definition (`utf8.count` is O(1), `count` walks graphemes), then
+anything holding whitespace, then a `scheme://` or `mailto:` prefix, an address shape, and finally
+a bare domain. That last step is the only one needing judgement — `report.pdf` and `index.html` are
+domain-shaped — so a bare domain must be lower case (which is what keeps `Safari.app` out) and end
+in one of a compact set of TLDs people actually copy. It is a heuristic whose worst case files a row
+under the wrong type, and `clipboard-test` pins the cases that matter.
+
+`search(_:filter:)` filters **after** the pinned/rest split, so a matching pin still leads its block
+in pin order, and the filter joins the search memo's key — keying on the query alone would serve
+stale rows for a render or more, since the filter changes without the query moving. One consequence
+of filtering after the fact: the FTS statement's `LIMIT 200` applies to the *unfiltered* matches, so
+a narrow filter over a broad query can show fewer rows than the history holds.
+
 ## Pinned entries
 
-A row's ⌘K Actions menu carries **Pin Entry / Unpin Entry** (⌘P), persisted as a `pinned_at` column
+A row's ⌘K Actions menu carries **Pin Entry / Unpin Entry** (⌘., since ⌘P opens the type filter),
+persisted as a `pinned_at` column
 on `items` (added to existing databases by an `ALTER TABLE` migration, alongside `source_app`'s) —
 a stamp rather than a flag, because the Pinned section is ordered by _when you pinned_, not by
 recency.

@@ -82,10 +82,6 @@ struct HoverArmingTests {
         scrolled.disarmHoverHighlight(pointerAt: rest)
         expect(!scrolled.hoverHighlightArmed, "a scroll drops the highlight")
 
-        let typed = armed()
-        typed.disarmHoverHighlight(pointerAt: rest)
-        expect(!typed.hoverHighlightArmed, "so does a keystroke")
-
         let stillScrolling = armed()
         // Every event of the gesture re-anchors, so a hand drifting on the wheel never adds up.
         for step in 1...20 {

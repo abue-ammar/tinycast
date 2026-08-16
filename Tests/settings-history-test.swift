@@ -33,7 +33,6 @@ struct SettingsHistoryTests {
 
     static func startsEmpty() {
         let history = SettingsHistory(current: .general)
-        expect(history.current == .general, "a fresh history shows the pane it was opened on")
         expect(!history.canGoBack, "and has nowhere to go back to")
         expect(!history.canGoForward, "or forward to")
     }

@@ -32,7 +32,7 @@ struct LauncherScreen: PaletteScreen {
 
         let results = appIndex.orderedResults(
             query: vm.query, visibility: visibility, favorites: favorites)
-        let calc = CalcMemo.evaluate(vm.query, currency: currencyRates.source)
+        let calc = CalcMemo.evaluate(vm.query, rates: currencyRates.rates)
         let entries = results.map(Row.entry)
         self.results = results
         self.calc = calc
@@ -68,6 +68,35 @@ struct LauncherScreen: PaletteScreen {
 
     private func row(at selection: Int) -> Row? {
         rows.indices.contains(selection) ? rows[selection] : nil
+    }
+
+    /// A launcher row may want controls beside the search field; what they are is the owning feature's
+    /// business, so this only forwards the selection and hands back whatever it builds.
+    func headerAccessory(
+        at selection: Int, focus: FocusState<String?>.Binding
+    )
+        -> PaletteHeaderAccessory?
+    {
+        guard let entry = entry(at: selection) else { return nil }
+        return ExtensionArgumentsAccessory.make(
+            entry: entry, coordinator: core.extensionCoordinator,
+            values: { name in headerFieldBinding(entry: entry, name: name) },
+            focus: focus, onSubmit: { activate(at: selection) })
+    }
+
+    private func headerFieldBinding(entry: AppEntry, name: String) -> Binding<String> {
+        let key = PaletteState.argumentKey(entry.id, name)
+        return Binding(get: { vm.commandArguments[key] ?? "" }, set: { vm.commandArguments[key] = $0 })
+    }
+
+    /// The typed values for one row, stripped of blanks — what gets handed to the command.
+    private func argumentValues(for entry: AppEntry) -> [String: String] {
+        var values: [String: String] = [:]
+        for argument in core.extensionCoordinator.commandArguments(for: entry) ?? [] {
+            let typed = vm.commandArguments[PaletteState.argumentKey(entry.id, argument.name)] ?? ""
+            if !typed.isEmpty { values[argument.name] = typed }
+        }
+        return values
     }
 
     private func entry(at selection: Int) -> AppEntry? {
@@ -107,7 +136,9 @@ struct LauncherScreen: PaletteScreen {
         switch row(at: selection) {
         // Error cards no-op — copyCalculatorResult only acts on value payloads.
         case .calc(let result): core.calculatorCoordinator.copyCalculatorResult(result)
-        case .entry(let app): core.launcherCoordinator.launch(app, searchQuery: vm.query)
+        case .entry(let app):
+            core.launcherCoordinator.launch(
+                app, searchQuery: vm.query, arguments: argumentValues(for: app))
         case nil: break
         }
     }
