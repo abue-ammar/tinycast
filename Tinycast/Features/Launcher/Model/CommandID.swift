@@ -63,11 +63,12 @@ enum CommandID: String, CaseIterable, Sendable {
         }
     }
 
-    /// The two built-ins with a global shortcut of their own; the rest open from the launcher.
+    /// The built-ins with a global shortcut of their own; the rest open from the launcher.
     var hotKeyAction: HotKeyAction? {
         switch self {
         case .searchFiles: return .searchFiles
         case .clipboardHistory: return .toggleClipboard
+        case .searchEmoji: return .toggleEmoji
         default: return nil
         }
     }

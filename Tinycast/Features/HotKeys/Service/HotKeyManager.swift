@@ -190,9 +190,9 @@ final class HotKeyManager {
         case .togglePalette:
             return "App Launcher"
         case .toggleClipboard:
-            return "Clipboard History"
+            return CommandID.clipboardHistory.name
         case .toggleEmoji:
-            return "Emoji & Symbols"
+            return CommandID.searchEmoji.name
         case .searchFiles:
             return CommandID.searchFiles.name
         case .app(let bundleID), .settingsPane(let bundleID):
