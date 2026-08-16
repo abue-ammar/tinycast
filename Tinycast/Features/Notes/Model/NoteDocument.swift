@@ -8,14 +8,12 @@ struct NoteSummary: Identifiable, Sendable, Equatable {
     let id: NoteID
     let title: String
     let modifiedAt: Date
-    let byteCount: Int
 }
 
 struct NoteSearchResult: Identifiable, Sendable, Equatable {
     var id: NoteID { summary.id }
     let summary: NoteSummary
     let score: Int
-    let excerpt: String?
 }
 
 struct NoteDocument: Sendable, Equatable {
@@ -35,7 +33,6 @@ struct NoteDocument: Sendable, Equatable {
     let id: NoteID
     let source: String
     let revision: Revision
-    let modifiedAt: Date
 }
 
 struct NoteEditorInput: Sendable, Equatable {

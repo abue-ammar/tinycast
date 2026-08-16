@@ -48,7 +48,7 @@ struct NotesRepository: Sendable {
         try mappedError(at: notesDirectory) {
             try ensureDirectory()
             let keys: Set<URLResourceKey> = [
-                .contentModificationDateKey, .fileSizeKey, .isHiddenKey, .isRegularFileKey,
+                .contentModificationDateKey, .isHiddenKey, .isRegularFileKey,
                 .isSymbolicLinkKey
             ]
             return try FileManager.default.contentsOfDirectory(
@@ -68,8 +68,7 @@ struct NotesRepository: Sendable {
                 return NoteSummary(
                     id: NoteID(rawValue: url.lastPathComponent),
                     title: url.deletingPathExtension().lastPathComponent,
-                    modifiedAt: values.contentModificationDate ?? .distantPast,
-                    byteCount: values.fileSize ?? 0)
+                    modifiedAt: values.contentModificationDate ?? .distantPast)
             }
             .sorted(by: summaryPrecedes)
         }
@@ -99,8 +98,7 @@ struct NotesRepository: Sendable {
             return NoteDocument(
                 id: NoteID(rawValue: url.lastPathComponent),
                 source: source,
-                revision: NoteDocument.Revision(data: data),
-                modifiedAt: modificationDate(at: url))
+                revision: NoteDocument.Revision(data: data))
         }
     }
 
@@ -152,8 +150,7 @@ struct NotesRepository: Sendable {
                 return NoteDocument(
                     id: id,
                     source: source,
-                    revision: NoteDocument.Revision(data: data),
-                    modifiedAt: modificationDate(at: mutationURL))
+                    revision: NoteDocument.Revision(data: data))
             }
         }
     }
@@ -309,11 +306,6 @@ struct NotesRepository: Sendable {
     private func revisionIfPresent(at fileURL: URL) throws -> NoteDocument.Revision? {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
         return NoteDocument.Revision(data: try Data(contentsOf: fileURL))
-    }
-
-    private func modificationDate(at fileURL: URL) -> Date {
-        (try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
-            ?? .distantPast
     }
 
     private func summaryPrecedes(_ lhs: NoteSummary, _ rhs: NoteSummary) -> Bool {

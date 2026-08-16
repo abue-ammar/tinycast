@@ -16,13 +16,10 @@ enum NoteSearch {
         summary: NoteSummary,
         source: String?
     ) -> NoteSearchResult? {
-        guard !query.isEmpty else {
-            return NoteSearchResult(summary: summary, score: 0, excerpt: nil)
-        }
+        guard !query.isEmpty else { return nil }
 
         var titleScore = 0
         var titleMatches = 0
-        var firstBodyRange: Range<String.Index>?
         for term in query.terms {
             if let match = FuzzyMatch.match(query: term, candidate: summary.title) {
                 titleMatches += 1
@@ -30,11 +27,10 @@ enum NoteSearch {
                 continue
             }
             guard let source,
-                let range = source.range(
+                source.range(
                     of: term,
-                    options: [.caseInsensitive, .diacriticInsensitive])
+                    options: [.caseInsensitive, .diacriticInsensitive]) != nil
             else { return nil }
-            if firstBodyRange == nil { firstBodyRange = range }
         }
 
         let band: Int
@@ -45,10 +41,7 @@ enum NoteSearch {
         } else {
             band = 0
         }
-        return NoteSearchResult(
-            summary: summary,
-            score: band + titleScore,
-            excerpt: firstBodyRange.flatMap { range in source.map { excerpt(in: $0, around: range) } })
+        return NoteSearchResult(summary: summary, score: band + titleScore)
     }
 
     static func precedes(_ lhs: NoteSearchResult, _ rhs: NoteSearchResult) -> Bool {
@@ -58,25 +51,5 @@ enum NoteSearch {
         }
         return lhs.summary.title.localizedCaseInsensitiveCompare(rhs.summary.title)
             == .orderedAscending
-    }
-
-    private static func excerpt(in source: String, around range: Range<String.Index>) -> String {
-        let radius = 70
-        let lower =
-            source.index(range.lowerBound, offsetBy: -radius, limitedBy: source.startIndex)
-            ?? source.startIndex
-        let upper =
-            source.index(range.upperBound, offsetBy: radius, limitedBy: source.endIndex)
-            ?? source.endIndex
-        var value = String(source[lower..<upper])
-            .replacingOccurrences(of: "\n", with: " ")
-            .replacingOccurrences(of: "\r", with: " ")
-        while value.contains("  ") {
-            value = value.replacingOccurrences(of: "  ", with: " ")
-        }
-        value = value.trimmingCharacters(in: .whitespaces)
-        if lower != source.startIndex { value = "…" + value }
-        if upper != source.endIndex { value += "…" }
-        return value
     }
 }
