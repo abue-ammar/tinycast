@@ -320,7 +320,6 @@ struct NotesTests {
         check("active selection is persisted separately from note files", selection.id == store.activeID)
 
         store.updateSource("first")
-        try? await Task.sleep(for: .milliseconds(80))
         store.updateSource("latest searchable body")
         await waitUntil { !store.isDirty && store.state == .ready }
         let firstID = try require(store.activeID)
@@ -364,10 +363,11 @@ struct NotesTests {
 
         try Data([0xFF]).write(to: activeURL, options: .atomic)
         monitor.sendChange()
-        await waitUntil {
+        let loadFailed = await waitUntil {
             if case .failed = store.state { return true }
             return false
         }
+        check("an external load failure is observed", loadFailed)
         try Data("external repaired".utf8).write(to: activeURL, options: .atomic)
         let reloaded = await store.reload()
         check("an external load failure can be retried", reloaded)
@@ -506,15 +506,17 @@ struct NotesTests {
         return value
     }
 
+    @discardableResult
     private static func waitUntil(
         timeout: Duration = .seconds(3),
         _ condition: @escaping @MainActor () -> Bool
-    ) async {
+    ) async -> Bool {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: timeout)
         while !condition(), clock.now < deadline {
             try? await Task.sleep(for: .milliseconds(20))
         }
+        return condition()
     }
 
     private static func check(_ message: String, _ condition: @autoclosure () throws -> Bool) {
