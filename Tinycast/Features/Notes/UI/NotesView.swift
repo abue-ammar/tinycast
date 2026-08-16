@@ -54,10 +54,8 @@ struct NotesView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Choose Note")
-                .windowDraggable(
-                    true,
+                .clickableDraggable(
                     onClick: notes.openSwitcher,
-                    onBegan: {},
                     onEnded: notes.dragEnded)
                 Spacer(minLength: Theme.Spacing.md)
                 if !notes.isSwitcherPresented || status.showsInSwitcher {

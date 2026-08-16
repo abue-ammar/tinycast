@@ -74,6 +74,7 @@
 		364CB97064000DC67178DDE8 /* EdgeDissolve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6F59F3C88C49BDED945F25 /* EdgeDissolve.swift */; };
 		36784C964DB27B94A62EEAA3 /* tinycast.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6621A88681E993D49EEF07A3 /* tinycast.icon */; };
 		36968DFA1E201E681F0BCD42 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1306524F57602D90FCF153C /* Theme.swift */; };
+		373B2AFED6091623C9E944F5 /* ClickableDragHandle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2A69A381C6A2607A65E1477 /* ClickableDragHandle.swift */; };
 		387201DB768A56DA6C180E05 /* NoteFileMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BBE5D84D3914059887FAEF /* NoteFileMonitor.swift */; };
 		3891DA96CC148D13893F4494 /* ShortcutCaptureSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B235DFF451FF4D52A8E44D00 /* ShortcutCaptureSession.swift */; };
 		3917193B62450F226297B3F1 /* SelectionReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 648F0F43FEEE537F6451756B /* SelectionReveal.swift */; };
@@ -536,6 +537,7 @@
 		CFBF31AF26A4786B234ABB64 /* ExtensionAnimatedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAnimatedImage.swift; sourceTree = "<group>"; };
 		D0508EBDFD6E59370AB2E5B7 /* UninstallScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallScreen.swift; sourceTree = "<group>"; };
 		D23A98172AA46F5C0C89C4AB /* RootPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootPaletteView.swift; sourceTree = "<group>"; };
+		D2A69A381C6A2607A65E1477 /* ClickableDragHandle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickableDragHandle.swift; sourceTree = "<group>"; };
 		D2D032AC22E53BB9997E492F /* CalculatorHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryStore.swift; sourceTree = "<group>"; };
 		D43F1080FB443A1D0616790E /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
 		D755EEABA1DA9CA4CE2D0B4F /* ExtensionAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAppearance.swift; sourceTree = "<group>"; };
@@ -1183,6 +1185,7 @@
 		A100126E58312FFE8EB15106 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				D2A69A381C6A2607A65E1477 /* ClickableDragHandle.swift */,
 				EEAFF79E9897975CAC5EAC0E /* NoteEditorView.swift */,
 				0F5AFB680B55BBAFF2207F99 /* NotesCoordinator.swift */,
 				91151402A1A4586B2496BF35 /* NotesPanel.swift */,
@@ -1671,6 +1674,7 @@
 				5E155BEE2FC62267F516A343 /* CalculatorHistoryView.swift in Sources */,
 				279F586CC34205EBA8ACA892 /* CalloutPlacement.swift in Sources */,
 				80E77985425032856DEECDFD /* CalloutShape.swift in Sources */,
+				373B2AFED6091623C9E944F5 /* ClickableDragHandle.swift in Sources */,
 				A320745F576C5915217DF113 /* ClipboardCoordinator.swift in Sources */,
 				AD9753D6EAF202B6E31510EB /* ClipboardFilter.swift in Sources */,
 				1F8F2135470F74627A644ACC /* ClipboardFilterButton.swift in Sources */,
