@@ -46,6 +46,7 @@ final class NotesStore {
     private let loadSelection: @Sendable () -> NoteID?
     private let saveSelection: @Sendable (NoteID) -> Void
     @ObservationIgnored private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private var flushTask: Task<Bool, Never>?
     @ObservationIgnored private var reconcileTask: Task<Void, Never>?
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var searchWorker: Task<[NoteSearchResult], Never>?
@@ -85,12 +86,16 @@ final class NotesStore {
 
     func start() async -> Bool {
         guard !isStarted else { return hasLoadedDocument }
-        isStarted = true
+        // Only a loaded store counts as started, so a failed load stays retryable.
         if isDirty, hasLoadedDocument {
-            startMonitor()
-            return true
+            isStarted = true
+        } else if await reload(preferredID: activeID ?? loadSelection()) {
+            isStarted = true
+        } else {
+            return false
         }
-        return await reload(preferredID: activeID ?? loadSelection())
+        startMonitor()
+        return true
     }
 
     func reload() async -> Bool {
@@ -116,18 +121,12 @@ final class NotesStore {
     @discardableResult
     func flush() async -> Bool {
         guard isStarted || isDirty else { return true }
-        if isConflicted { return false }
-        if let saveTask {
-            if !saveHasStarted {
-                saveTask.cancel()
-                self.saveTask = nil
-            } else {
-                await saveTask.value
-            }
-        }
-        guard isDirty else { return true }
-        await saveImmediately()
-        return !isDirty && !isConflicted
+        // Single-flight: overlapping flushes would each save against the same stale revision.
+        if let flushTask { return await flushTask.value }
+        let task = Task { await performFlush() }
+        flushTask = task
+        defer { flushTask = nil }
+        return await task.value
     }
 
     @discardableResult
@@ -433,8 +432,22 @@ final class NotesStore {
         case .failure(let failure):
             state = .failed(failure.localizedDescription)
             publish(.load(failure))
+            // The monitor stops itself on every event, so a live store must re-arm it even here.
+            startMonitor()
             return false
         }
+    }
+
+    private func performFlush() async -> Bool {
+        // Two rounds: one for a save already in flight, one for an edit that landed while it ran.
+        for _ in 0..<2 {
+            if isConflicted { return false }
+            guard isDirty || saveHasStarted else { return true }
+            if !saveHasStarted { scheduleSave(after: .zero) }
+            guard let saveTask else { break }
+            await saveTask.value
+        }
+        return !isDirty && !isConflicted
     }
 
     private func scheduleSave(after delay: Duration) {
@@ -574,6 +587,7 @@ final class NotesStore {
         case .failure(let failure):
             state = .failed(failure.localizedDescription)
             publish(.load(failure))
+            startMonitor()
         }
     }
 

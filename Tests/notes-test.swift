@@ -11,6 +11,7 @@ struct NotesTests {
         testWindowLayout()
         try await testStoreCollectionAndExternalEdits()
         try await testCollectionMutationsRequireCleanDraft()
+        try await testStoreRecoversFromFailures()
 
         print(failures == 0 ? "Notes tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -493,6 +494,54 @@ struct NotesTests {
         check(
             "a blocked Trash leaves its target in place",
             FileManager.default.fileExists(atPath: repository.fileURL(for: trashTarget).path))
+        store.stop()
+    }
+
+    private static func testStoreRecoversFromFailures() async throws {
+        let root = temporaryRoot("recovery")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = NotesRepository(applicationSupportDirectory: root)
+        try FileManager.default.createDirectory(
+            at: repository.notesDirectory, withIntermediateDirectories: true)
+        let unreadable = repository.fileURL(for: NoteID(rawValue: "Unreadable.md"))
+        try Data([0xFF]).write(to: unreadable, options: .atomic)
+
+        let failingStore = NotesStore(repository: repository, monitor: NoteFileMonitorProbe())
+        let firstStart = await failingStore.start()
+        check("a store whose first load fails does not report itself started", !firstStart)
+        try Data("repaired".utf8).write(to: unreadable, options: .atomic)
+        let secondStart = await failingStore.start()
+        check(
+            "a failed start can be retried in the same session",
+            secondStart && failingStore.source == "repaired")
+        failingStore.stop()
+
+        let monitor = NoteFileMonitorProbe()
+        let store = NotesStore(repository: repository, monitor: monitor)
+        _ = await store.start()
+        let activeID = try require(store.activeID)
+        let activeURL = repository.fileURL(for: activeID)
+
+        store.updateSource("concurrent draft")
+        async let firstFlush = store.flush()
+        async let secondFlush = store.flush()
+        let flushed = await [firstFlush, secondFlush]
+        check("overlapping flushes agree on one save", flushed.allSatisfy { $0 })
+        check("overlapping flushes do not self-conflict", store.state == .ready)
+        check(
+            "overlapping flushes write the draft once",
+            try String(contentsOf: activeURL, encoding: .utf8) == "concurrent draft")
+
+        try Data([0xFF]).write(to: activeURL, options: .atomic)
+        monitor.sendChange()
+        await waitUntil {
+            if case .failed = store.state { return true }
+            return false
+        }
+        try Data("monitored again".utf8).write(to: activeURL, options: .atomic)
+        monitor.sendChange()
+        let stillMonitored = await waitUntil { store.source == "monitored again" }
+        check("a failed reconcile leaves file monitoring armed", stillMonitored)
         store.stop()
     }
 

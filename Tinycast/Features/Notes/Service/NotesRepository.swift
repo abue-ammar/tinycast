@@ -56,15 +56,14 @@ struct NotesRepository: Sendable {
                 includingPropertiesForKeys: Array(keys),
                 options: [.skipsHiddenFiles]
             )
+            // An entry that can't be read is skipped, never fatal: one bad file must not hide the rest.
             .compactMap { candidate -> NoteSummary? in
-                guard candidate.pathExtension.caseInsensitiveCompare("md") == .orderedSame else {
-                    return nil
-                }
-                let values = try candidate.resourceValues(forKeys: keys)
-                guard values.isRegularFile == true, values.isSymbolicLink != true,
-                    values.isHidden != true
+                guard candidate.pathExtension.caseInsensitiveCompare("md") == .orderedSame,
+                    let values = try? candidate.resourceValues(forKeys: keys),
+                    values.isRegularFile == true, values.isSymbolicLink != true,
+                    values.isHidden != true,
+                    let url = try? validatedFileURL(candidate)
                 else { return nil }
-                let url = try validatedFileURL(candidate)
                 return NoteSummary(
                     id: NoteID(rawValue: url.lastPathComponent),
                     title: url.deletingPathExtension().lastPathComponent,
