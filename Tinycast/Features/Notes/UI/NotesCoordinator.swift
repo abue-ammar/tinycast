@@ -29,6 +29,7 @@ final class NotesCoordinator {
     @ObservationIgnored private var issueTask: Task<Void, Never>?
     @ObservationIgnored private var operationTask: Task<Void, Never>?
     @ObservationIgnored private var pendingIssue: NotesStore.Issue?
+    @ObservationIgnored private var measuredEditorHeight: (id: NoteID?, epoch: Int, height: CGFloat)?
     private var pendingPresentation: Presentation?
     private var enablementGeneration = 0
     private(set) var isSwitcherPresented = false
@@ -317,6 +318,7 @@ final class NotesCoordinator {
         guard !isSwitcherPresented, input.id == current.id, input.epoch == current.epoch else {
             return
         }
+        measuredEditorHeight = (id: input.id, epoch: input.epoch, height: height)
         windowController.updateEditorHeight(height)
     }
 
@@ -400,13 +402,26 @@ final class NotesCoordinator {
         heightBehavior: NotesWindowController.HeightBehavior = .content
     ) {
         windowController.show(
-            initialEditorHeight: {
-                NoteEditorView.contentHeight(
-                    for: store.source,
-                    width: Theme.Size.noteWidth)
+            initialEditorHeight: { [weak self] in
+                self?.premeasuredEditorHeight() ?? Theme.Size.noteMinimumHeight
             },
             focusEditor: focusEditor,
             heightBehavior: heightBehavior)
+    }
+
+    /// The last laid-out height for the current document, measured on demand once per show. Reusing
+    /// it keeps an unchanged note from paying for a second full layout on every panel show.
+    private func premeasuredEditorHeight() -> CGFloat {
+        let input = editorInput
+        if let measured = measuredEditorHeight,
+            measured.id == input.id,
+            measured.epoch == input.epoch
+        {
+            return measured.height
+        }
+        let height = NoteEditorView.contentHeight(for: input.source, width: Theme.Size.noteWidth)
+        measuredEditorHeight = (id: input.id, epoch: input.epoch, height: height)
+        return height
     }
 
     private func present(_ issue: NotesStore.Issue) {
