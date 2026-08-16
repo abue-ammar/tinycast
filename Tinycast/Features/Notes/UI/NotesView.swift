@@ -7,20 +7,31 @@ struct NotesView: View {
         VStack(spacing: 0) {
             header
                 .frame(height: Theme.Size.noteHeaderHeight)
-            if notes.isSwitcherPresented {
-                NoteSwitcherView()
-            } else {
-                NoteEditorView(
-                    input: notes.editorInput,
-                    onSourceChange: notes.updateSource,
-                    onContentHeightChange: notes.updateEditorHeight,
-                    onReady: notes.editorReady)
-            }
+            editorRegion
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(Theme.Colors.panelDimming))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.note, style: .continuous))
+    }
+
+    /// The editor stays mounted while the switcher overlays it, so undo history, the caret and the
+    /// scroll position survive a switcher round trip.
+    private var editorRegion: some View {
+        NoteEditorView(
+            input: notes.editorInput,
+            onSourceChange: notes.updateSource,
+            onContentHeightChange: notes.updateEditorHeight,
+            onReady: notes.editorReady
+        )
+        .opacity(notes.isSwitcherPresented ? 0 : 1)
+        .allowsHitTesting(!notes.isSwitcherPresented)
+        .accessibilityHidden(notes.isSwitcherPresented)
+        .overlay {
+            if notes.isSwitcherPresented {
+                NoteSwitcherView()
+            }
+        }
     }
 
     private var header: some View {
