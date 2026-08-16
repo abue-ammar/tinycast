@@ -125,7 +125,7 @@ find ~/Library/Developer/Xcode/DerivedData -name "Tinycast*.app" -maxdepth 6 -pr
 SwiftLint owns the rules that catch defects, including the two checkable comment rules — the
 100-character cap and the ban on stacked comment lines. Errors block; warnings do not. There is no
 formatter, deliberately — the configuration and the measurements behind that are in
-[development.md](development.md#linting).
+[development.md](development.md#formatting).
 
 ## Performance measurement
 
