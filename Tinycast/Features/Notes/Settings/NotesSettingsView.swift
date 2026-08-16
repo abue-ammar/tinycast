@@ -32,8 +32,8 @@ private struct NotesCommandsSection: View {
         Section {
             ForEach(entries) { entry in
                 SettingsRow(title: entry.name) {
-                    Image(systemName: entry.symbolIconName)
-                        .frame(width: Theme.Size.settingsRowIcon)
+                    AppIconView(app: entry)
+                        .frame(width: Theme.Size.settingsRowIcon, height: Theme.Size.settingsRowIcon)
                 } trailing: {
                     if let action = entry.hotKeyAction {
                         ShortcutRecorder(action: action)
