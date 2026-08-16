@@ -292,9 +292,13 @@ final class NotesStore {
         guard !query.isEmpty else {
             searchResults = []
             isSearching = false
+            searchTask = nil
+            searchWorker = nil
             return
         }
         isSearching = true
+        // The previous query's rows must not linger under the new query text.
+        searchResults = []
         let repository = repository
         let summaries = summaries
         searchTask = Task { [weak self] in
