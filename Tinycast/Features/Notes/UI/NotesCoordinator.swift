@@ -4,14 +4,6 @@ import SwiftUI
 @MainActor
 @Observable
 final class NotesCoordinator {
-    typealias FailureReporter = (
-        _ title: String,
-        _ message: String,
-        _ symbol: String,
-        _ recovery: String?
-    ) async -> Bool
-    typealias TrashConfirmer = (_ title: String) async -> Bool
-
     private enum Presentation {
         case editor
         case create
@@ -21,9 +13,7 @@ final class NotesCoordinator {
     private let store: NotesStore
     private let settings: AppSettings
     private let appIndex: AppIndex
-    private let reportFailure: FailureReporter
-    private let confirmTrash: TrashConfirmer
-    private let showMessage: (_ message: String, _ tone: DialogTone) -> Void
+    private unowned let core: AppCore
     @ObservationIgnored private lazy var windowController = NotesWindowController(coordinator: self)
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var issueTask: Task<Void, Never>?
@@ -43,16 +33,12 @@ final class NotesCoordinator {
         store: NotesStore,
         settings: AppSettings,
         appIndex: AppIndex,
-        reportFailure: @escaping FailureReporter,
-        confirmTrash: @escaping TrashConfirmer,
-        showMessage: @escaping (_ message: String, _ tone: DialogTone) -> Void
+        core: AppCore
     ) {
         self.store = store
         self.settings = settings
         self.appIndex = appIndex
-        self.reportFailure = reportFailure
-        self.confirmTrash = confirmTrash
-        self.showMessage = showMessage
+        self.core = core
         store.onIssue = { [weak self] issue in self?.present(issue) }
     }
 
@@ -103,6 +89,19 @@ final class NotesCoordinator {
             guard generation == enablementGeneration, !settings.notesEnabled else { return }
             store.stop()
         }
+    }
+
+    /// `false` keeps the app open so a conflicted draft survives the quit attempt.
+    func prepareForTermination() async -> Bool {
+        guard await store.preserveConflictForTermination() else {
+            await core.showNotice(
+                title: "Couldn't Preserve Note",
+                message: "Tinycast is staying open so the unsaved note is not lost. Try saving again.",
+                symbol: "exclamationmark.triangle",
+                tone: .danger)
+            return false
+        }
+        return true
     }
 
     func show() {
@@ -269,7 +268,11 @@ final class NotesCoordinator {
         runOperation { [weak self] capturedGeneration in
             guard let self else { return }
             let previousID = store.activeID
-            let confirmed = await confirmTrash(title)
+            let confirmed = await core.confirm(
+                title: "Move “\(title)” to Trash?",
+                message: "You can recover it from the Trash in Finder.",
+                symbol: "trash",
+                confirmTitle: "Move to Trash")
             guard confirmed, settings.notesEnabled, !Task.isCancelled else { return }
             let switcherOrder = visibleNotes.map(\.id)
             let removed = await store.trash(id)
@@ -435,32 +438,32 @@ final class NotesCoordinator {
             guard let self else { return }
             switch issue {
             case .load(let failure):
-                let retry = await reportFailure(
-                    "Couldn't Open Note",
-                    failure.localizedDescription,
-                    "text.page",
-                    "Retry")
+                let retry = await core.reportFailure(
+                    title: "Couldn't Open Note",
+                    message: failure.localizedDescription,
+                    symbol: "text.page",
+                    recovery: "Retry")
                 if retry { _ = await store.reload() }
             case .save(let failure):
-                let retry = await reportFailure(
-                    "Couldn't Save Note",
-                    failure.localizedDescription,
-                    "text.page",
-                    "Retry")
+                let retry = await core.reportFailure(
+                    title: "Couldn't Save Note",
+                    message: failure.localizedDescription,
+                    symbol: "text.page",
+                    recovery: "Retry")
                 if retry { store.retry() }
             case .conflict(let failure):
-                let recover = await reportFailure(
-                    "Note Changed on Disk",
-                    failure.localizedDescription,
-                    "exclamationmark.triangle",
-                    "Save Copy & Reload")
+                let recover = await core.reportFailure(
+                    title: "Note Changed on Disk",
+                    message: failure.localizedDescription,
+                    symbol: "exclamationmark.triangle",
+                    recovery: "Save Copy & Reload")
                 if recover { await recoverConflict() }
             case .operation(let failure):
-                _ = await reportFailure(
-                    "Couldn't Update Note",
-                    failure.localizedDescription,
-                    "text.page",
-                    nil)
+                _ = await core.reportFailure(
+                    title: "Couldn't Update Note",
+                    message: failure.localizedDescription,
+                    symbol: "text.page",
+                    recovery: nil)
             }
             issueTask = nil
             if let pendingIssue {
@@ -473,13 +476,13 @@ final class NotesCoordinator {
     private func recoverConflict() async {
         switch await store.saveConflictCopyAndReload() {
         case .success(let fileURL):
-            showMessage("Draft Saved as \(fileURL.lastPathComponent)", .success)
+            core.showMessage("Draft Saved as \(fileURL.lastPathComponent)", tone: .success)
         case .failure(let failure):
-            _ = await reportFailure(
-                "Couldn't Preserve Note",
-                failure.localizedDescription,
-                "exclamationmark.triangle",
-                nil)
+            _ = await core.reportFailure(
+                title: "Couldn't Preserve Note",
+                message: failure.localizedDescription,
+                symbol: "exclamationmark.triangle",
+                recovery: nil)
         }
     }
 }

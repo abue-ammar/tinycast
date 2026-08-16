@@ -78,20 +78,7 @@ final class AppCore {
         store: notesStore,
         settings: settings,
         appIndex: appIndex,
-        reportFailure: { [unowned self] title, message, symbol, recovery in
-            await self.reportFailure(
-                title: title, message: message, symbol: symbol, recovery: recovery)
-        },
-        confirmTrash: { [unowned self] title in
-            await self.confirm(
-                title: "Move “\(title)” to Trash?",
-                message: "You can recover it from the Trash in Finder.",
-                symbol: "trash",
-                confirmTitle: "Move to Trash")
-        },
-        showMessage: { [unowned self] message, tone in
-            self.showMessage(message, tone: tone)
-        })
+        core: self)
 
     @ObservationIgnored private(set) lazy var launcherCoordinator = LauncherCoordinator(
         ranking: launcherRanking, windowController: windowController,
@@ -276,15 +263,7 @@ final class AppCore {
     }
 
     func prepareNotesForTermination() async -> Bool {
-        guard await notesStore.preserveConflictForTermination() else {
-            await showNotice(
-                title: "Couldn't Preserve Note",
-                message: "Tinycast is staying open so the unsaved note is not lost. Try saving again.",
-                symbol: "exclamationmark.triangle",
-                tone: .danger)
-            return false
-        }
-        return true
+        await notesCoordinator.prepareForTermination()
     }
 
     func prepareForTermination() {
