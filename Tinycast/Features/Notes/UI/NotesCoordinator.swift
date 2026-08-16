@@ -70,7 +70,6 @@ final class NotesCoordinator {
     var state: NotesStore.State { store.state }
     var isDirty: Bool { store.isDirty }
     var activeTitle: String { store.activeTitle }
-    var activeID: NoteID? { store.activeID }
     var isSearching: Bool { store.isSearching }
     var visibleNotes: [NoteSummary] {
         store.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -160,10 +159,6 @@ final class NotesCoordinator {
         }
         if let switcherSelection, notes.contains(where: { $0.id == switcherSelection }) { return }
         switcherSelection = notes.first?.id
-    }
-
-    func updateSwitcherSelection(_ id: NoteID?) {
-        switcherSelection = id
     }
 
     func moveSwitcherSelection(by offset: Int) {
