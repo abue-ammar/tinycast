@@ -1,19 +1,22 @@
 import SwiftUI
 
 struct NoteSwitcherView: View {
+    let onContentHeight: (CGFloat) -> Void
     @Environment(NotesCoordinator.self) private var notes
     @FocusState private var searchFocused: Bool
+
+    private var surface: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             searchField
             results
         }
-        .frame(width: Theme.Size.noteSwitcher.width, height: Theme.Size.noteSwitcher.height)
-        // Its own window, so it carries the surface recipe the note window would otherwise give it.
-        .background(Color.black.opacity(Theme.Colors.panelDimming))
-        .background(VisualEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .glassEffect(.regular, in: surface)
+        .clipShape(surface)
         .onAppear(perform: focusSearch)
         .onChange(of: notes.switcherFocusRevision) { _, _ in focusSearch() }
         .onChange(of: notes.visibleNotes) { _, _ in
@@ -72,7 +75,9 @@ struct NoteSwitcherView: View {
                 Text(notes.isSearching ? "Searching notes…" : "No notes found")
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
+            .frame(height: Theme.Size.noteSwitcherEmptyHeight)
+            .measuredHeight(onContentHeight)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -96,6 +101,7 @@ struct NoteSwitcherView: View {
                         }
                     }
                     .padding(Theme.Spacing.md)
+                    .measuredHeight(onContentHeight)
                 }
                 // The search row is a sibling, not a floating bar, so only the bottom edge fades.
                 .overflowFade()
@@ -110,6 +116,16 @@ struct NoteSwitcherView: View {
         Task { @MainActor in
             await Task.yield()
             searchFocused = true
+        }
+    }
+}
+
+extension View {
+    fileprivate func measuredHeight(_ report: @escaping (CGFloat) -> Void) -> some View {
+        onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            report($0)
         }
     }
 }

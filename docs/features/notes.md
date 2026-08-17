@@ -69,7 +69,9 @@ failed flush retains the draft for retry.
 
 Command-N creates, Command-P opens or refocuses the switcher, Command-O opens the Notes folder, Escape
 closes the switcher before hiding, and Command-W and the red traffic light both hide directly. Hiding
-restores the prior external application or Tinycast window and flushes without delaying the order-out.
+restores the prior external application or Tinycast window and flushes without delaying the order-out —
+but only while that app is still the frontmost one, so closing a window the user has already left behind
+leaves them in whatever app they moved to.
 Command-Q is bound to nothing app-wide, so no chord over Notes can quit Tinycast.
 
 Both windows are one `NotesPanel`, a non-activating floating panel that owns the Escape rule and reads
@@ -80,8 +82,10 @@ AppKit draws the note window's chrome. Its 52-point title bar holds the traffic 
 active title, and one frosted capsule of Create, Browse, and Open Folder. The title is drawn, not
 native, so it centres on the window; it is not hit-testable, so dragging it moves the window.
 
-The switcher is a borderless child window hung under the capsule's trailing edge, not an in-window
-screen — a note window may be 180pt tall, and the list must not be. It travels with its host, dismisses
+The switcher is a borderless child window centred on its host and hung below the title bar, not an
+in-window screen — a note window may be 180pt tall, and the list must not be. It carries the same glass
+surface as a `PopoverMenu`, and its 240-point height is a ceiling rather than a size: the list reports
+its own height and the window shrinks to it with the top edge pinned. It travels with its host, dismisses
 like a popover when it resigns key, and closes outright when the last note goes. An empty query lists
 metadata by recency; a nonempty query searches titles and literal bodies after a 120-millisecond
 debounce. Results are capped at 200, and generation checks prevent superseded search or selection work

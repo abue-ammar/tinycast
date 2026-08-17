@@ -44,7 +44,9 @@ enum Theme {
         static let noteEditorTopInset: CGFloat = 6
         static let noteSearchHeight: CGFloat = 34
         /// The switcher popover, sized independently of a note window that can be 180pt tall.
-        static let noteSwitcher = CGSize(width: 300, height: 340)
+        static let noteSwitcher = CGSize(width: 300, height: 240)
+        static let noteSwitcherEmptyHeight: CGFloat = 96
+        static let noteSwitcherDrop: CGFloat = 56
         static let noteFooterHeight: CGFloat = 28
         /// Holds the launcher's 36-point action capsule with the same margin its own bar gives it.
         static let noteTitlebar: CGFloat = 52

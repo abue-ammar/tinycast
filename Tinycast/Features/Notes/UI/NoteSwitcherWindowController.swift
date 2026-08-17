@@ -6,6 +6,7 @@ import SwiftUI
 final class NoteSwitcherWindowController: NSObject, NSWindowDelegate {
     private unowned let coordinator: NotesCoordinator
     private var panel: NotesPanel?
+    private var height = Theme.Size.noteSwitcher.height
 
     init(coordinator: NotesCoordinator) {
         self.coordinator = coordinator
@@ -40,7 +41,8 @@ final class NoteSwitcherWindowController: NSObject, NSWindowDelegate {
 
     private func ensurePanel() -> NotesPanel {
         if let panel { return panel }
-        let root = NoteSwitcherView().environment(coordinator)
+        let root = NoteSwitcherView { [weak self] in self?.resize(toContentHeight: $0) }
+            .environment(coordinator)
         let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
         let panel = NotesPanel(
@@ -62,13 +64,21 @@ final class NoteSwitcherWindowController: NSObject, NSWindowDelegate {
         return panel
     }
 
-    /// Trailing edges align with the capsule's, so it reads as hanging from the Browse button.
     private func anchor(_ panel: NotesPanel, under host: NSWindow) {
-        let size = Theme.Size.noteSwitcher
+        let size = CGSize(width: Theme.Size.noteSwitcher.width, height: height)
         let host = host.frame
         let origin = CGPoint(
-            x: host.maxX - Theme.Spacing.md - size.width,
-            y: host.maxY - Theme.Size.noteTitlebar - size.height)
+            x: host.midX - size.width / 2,
+            y: host.maxY - Theme.Size.noteTitlebar - Theme.Size.noteSwitcherDrop - size.height)
         panel.setFrame(NSRect(origin: origin, size: size), display: false)
+    }
+
+    private func resize(toContentHeight content: CGFloat) {
+        let fitted = min(Theme.Size.noteSwitcher.height, Theme.Size.noteSearchHeight + content)
+        guard abs(fitted - height) > 0.5 else { return }
+        height = fitted
+        guard let panel, let host = panel.parent else { return }
+        anchor(panel, under: host)
+        panel.invalidateShadow()
     }
 }

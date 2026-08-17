@@ -170,7 +170,8 @@ system font and the `noteText` color. Markdown markers remain visible and receiv
 formatting controls, task overlays, or link behavior. AppKit owns editing, undo, selection, Find, and
 marked text.
 
-The switcher occupies the editor region without changing the frame. Its plain search field and
+The switcher is its own glass panel over the editor, sized to its list up to a 240-point ceiling and
+never resizing the note window. Its plain search field and
 keyboard-navigable rows use the shared selection/hover ramp; rename and Trash remain row actions rather
 than adding another toolbar or window.
 

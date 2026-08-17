@@ -30,8 +30,9 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     }
 
     func hide(restoreFocus: Bool) {
+        let restore = restoreFocus && !userMovedOn
         panel?.orderOut(nil)
-        guard restoreFocus else { return }
+        guard restore else { return }
         if let previousOwnWindow, previousOwnWindow.isVisible {
             NSApp.activate(ignoringOtherApps: true)
             previousOwnWindow.makeKeyAndOrderFront(nil)
@@ -144,6 +145,12 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
                 if let panel = self.panel { self.seatTrafficLights(in: panel) }
             }
         }
+    }
+
+    private var userMovedOn: Bool {
+        let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        return frontmost != NSRunningApplication.current.processIdentifier
+            && frontmost != previousApp?.processIdentifier
     }
 
     private func captureFocusTarget() {
