@@ -111,7 +111,9 @@ final class NotesStore {
         let result = await detached {
             let document = try repository.create()
             return (document, try repository.list())
-        } recover: { repository.notesDirectory }
+        } recover: {
+            repository.notesDirectory
+        }
         switch result {
         case .success(let payload):
             apply(payload.0, summaries: payload.1)
@@ -134,7 +136,9 @@ final class NotesStore {
         let repository = repository
         let result = await detached {
             try repository.load(id)
-        } recover: { repository.fileURL(for: id) }
+        } recover: {
+            repository.fileURL(for: id)
+        }
         guard permitsApply(), !Task.isCancelled else { return false }
         switch result {
         case .success(let document):
@@ -154,7 +158,9 @@ final class NotesStore {
         let result = await detached {
             let renamed = try repository.rename(id: id, title: title)
             return (renamed, try repository.list())
-        } recover: { repository.fileURL(for: id) }
+        } recover: {
+            repository.fileURL(for: id)
+        }
         switch result {
         case .success(let payload):
             summaries = payload.1
@@ -179,7 +185,9 @@ final class NotesStore {
             let summaries = try repository.list()
             let successor = replacesActive ? summaries.first : nil
             return (try successor.map { try repository.load($0.id) }, summaries)
-        } recover: { repository.fileURL(for: id) }
+        } recover: {
+            repository.fileURL(for: id)
+        }
         switch result {
         case .success(let payload):
             cancelSearch()
@@ -259,7 +267,9 @@ final class NotesStore {
         let repository = repository
         let result = await detached {
             try repository.load(preferredID: preferredID)
-        } recover: { repository.notesDirectory }
+        } recover: {
+            repository.notesDirectory
+        }
         switch result {
         case .success(let payload):
             apply(payload.1, summaries: payload.0)
@@ -286,7 +296,9 @@ final class NotesStore {
         let result = await detached {
             try repository.save(id: activeID, source: savedSource)
             return try repository.list()
-        } recover: { repository.fileURL(for: activeID) }
+        } recover: {
+            repository.fileURL(for: activeID)
+        }
         switch result {
         case .success(let summaries):
             self.summaries = summaries
