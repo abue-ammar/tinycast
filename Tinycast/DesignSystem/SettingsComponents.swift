@@ -102,7 +102,13 @@ struct SettingsFilterField: View {
                 .accessibilityLabel("Clear search")
             }
         }
+        // Padded out then back in, so the tap target is the visible row, not just the glyph strip.
+        .padding(Self.rowReach)
         .contentShape(.rect)
         .onTapGesture { focused = true }
+        .padding(-Self.rowReach)
     }
+
+    /// Past the grouped row's inner padding on every side; the row's clipping trims the excess.
+    private static let rowReach: CGFloat = 15
 }
