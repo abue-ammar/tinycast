@@ -1,5 +1,3 @@
-import AppKit
-import Combine
 import SwiftUI
 
 struct GeneralSettingsView: View {
@@ -163,17 +161,16 @@ struct GeneralSettingsView: View {
                     Text("Pop to Root Search")
                     Text("Reset to the launcher this long after the window closes.")
                 }
-                if inputSources.count > 1 {
+                // Empty only when TIS fails; one layout still lists, so the row does not come and go.
+                if !inputSources.isEmpty {
                     Picker(selection: $settings.autoSwitchInputSourceID) {
                         Text("None").tag(nil as String?)
                         ForEach(inputSources) { source in
                             Text(source.title).tag(Optional(source.id))
                         }
                     } label: {
-                        Text("Auto-switch Input Source")
-                        Text(
-                            "Tinycast will automatically switch keyboard to selected input source when opening the window."
-                        )
+                        Text("Auto-switch input source")
+                        Text("Switch the keyboard to this source while the launcher is open.")
                     }
                 }
             } header: {
@@ -195,18 +192,14 @@ struct GeneralSettingsView: View {
         }
         .onAppear(perform: refreshInputSources)
         .onReceive(
-            NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            DistributedNotificationCenter.default().publisher(
+                for: InputSourceSwitcher.sourcesDidChange)
         ) { _ in
             refreshInputSources()
         }
     }
 
     private func refreshInputSources() {
-        inputSources = core.inputSourceSwitcher.availableSources()
-        if let selected = settings.autoSwitchInputSourceID,
-            !inputSources.contains(where: { $0.id == selected })
-        {
-            settings.autoSwitchInputSourceID = nil
-        }
+        inputSources = core.inputSourceSwitcher.options(selecting: settings.autoSwitchInputSourceID)
     }
 }

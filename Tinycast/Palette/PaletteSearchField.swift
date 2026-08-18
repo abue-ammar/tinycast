@@ -18,6 +18,7 @@ struct PaletteSearchField: NSViewRepresentable {
     @Binding var text: String
     @Binding var isFocused: Bool
     let prompt: String
+    /// Runs on every update the field holds focus for, not only on the move into focus.
     let onFocused: (NSTextInputContext) -> Void
     /// `true` keeps the key; `false` leaves it to the caret.
     let onKeyCommand: (PaletteSearchKey, NSEvent.ModifierFlags) -> Bool
@@ -63,10 +64,8 @@ struct PaletteSearchField: NSViewRepresentable {
             textView.replaceWholeString(with: text)
         }
         guard isFocused else { return }
-        if textView.window?.firstResponder !== textView,
-            textView.window?.makeFirstResponder(textView) != true
-        {
-            return
+        if textView.window?.firstResponder !== textView {
+            guard textView.window?.makeFirstResponder(textView) == true else { return }
         }
         if let inputContext = textView.inputContext { onFocused(inputContext) }
     }
