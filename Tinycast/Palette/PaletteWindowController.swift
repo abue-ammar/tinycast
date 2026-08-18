@@ -58,10 +58,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
+            panel.syncMarkedTextState()
             // A never-activated login item can drop the first key request, so re-assert.
             DispatchQueue.main.async { [weak panel] in
                 guard let panel, panel.isVisible, !panel.isKeyWindow else { return }
                 panel.makeKeyAndOrderFront(nil)
+                panel.syncMarkedTextState()
             }
         }
     }
@@ -134,6 +136,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     func windowDidBecomeKey(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
             self?.core.palette.focusToken = UUID()
+            self?.panel?.syncMarkedTextState()
         }
     }
 

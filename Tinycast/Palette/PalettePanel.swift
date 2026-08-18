@@ -20,6 +20,7 @@ final class PalettePanel: NSPanel {
 
     private func attachSelectionObserver() {
         guard let editor = firstResponder as? NSTextView else { return }
+        paletteState?.isComposing = editor.hasMarkedText()
         selectionObserver = NotificationToken(
             NotificationCenter.default.addObserver(
                 forName: NSTextView.didChangeSelectionNotification,
@@ -169,6 +170,11 @@ final class PalettePanel: NSPanel {
         // The controller owns the frame; without this the top edge drifts on the swap.
         hosting.sizingOptions = []
         contentView = hosting
+    }
+
+    func syncMarkedTextState() {
+        guard let editor = firstResponder as? NSTextView else { return }
+        paletteState?.isComposing = editor.hasMarkedText()
     }
 
     override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
