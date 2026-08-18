@@ -8,11 +8,29 @@ final class PalettePanel: NSPanel {
     var onBareBackspace: (() -> Bool)?
     /// Command chords the field editor swallows, plus the ones no main menu handles.
     var onCommandShortcut: ((NSEvent) -> Bool)?
+    /// Tracks IME marked-text composition so the hand-drawn placeholder can hide during input.
+    private var selectionObserver: NotificationToken?
     /// Arms hover from `sendEvent`, the one place both event streams pass through.
     weak var paletteState: PaletteState? {
         didSet {
             paletteState?.onMenuOpenChanged = { [weak self] open in self?.setSearchCaretHidden(open) }
+            attachSelectionObserver()
         }
+    }
+
+    private func attachSelectionObserver() {
+        guard let editor = firstResponder as? NSTextView else { return }
+        selectionObserver = NotificationToken(
+            NotificationCenter.default.addObserver(
+                forName: NSTextView.didChangeSelectionNotification,
+                object: editor,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self, let editor = self.firstResponder as? NSTextView else { return }
+                self.paletteState?.isComposing = editor.hasMarkedText()
+            },
+            center: .default
+        )
     }
 
     /// Keys driving an open menu; they reach `onKeyPress` even while editing is frozen.
@@ -151,6 +169,14 @@ final class PalettePanel: NSPanel {
         // The controller owns the frame; without this the top edge drifts on the swap.
         hosting.sizingOptions = []
         contentView = hosting
+    }
+
+    override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
+        let result = super.makeFirstResponder(responder)
+        if result, responder is NSTextView {
+            attachSelectionObserver()
+        }
+        return result
     }
 
     override var canBecomeKey: Bool { true }

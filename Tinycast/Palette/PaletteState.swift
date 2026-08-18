@@ -7,6 +7,8 @@ final class PaletteState {
     var mode: PaletteMode = .launcher
     var query: String = ""
     var selection: Int = 0
+    /// True while an IME (e.g. Pinyin) has marked text in flight.
+    var isComposing: Bool = false
     /// The clipboard screen's type filter, reset with the rest of the screen state on each summon.
     var clipboardFilter: ClipboardFilter = .all
     /// Changes every time the palette is shown so the search field can re-focus.
@@ -43,6 +45,7 @@ final class PaletteState {
         self.mode = mode
         query = ""
         selection = 0
+        isComposing = false
         commandArguments = [:]
         clipboardFilter = .all
         forceExpanded = false

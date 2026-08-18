@@ -532,7 +532,7 @@ struct RootPaletteView: View {
             // Fills the row's height, so there's no gap above it for topDragStrip to meet.
             .frame(maxHeight: .infinity)
             .background(alignment: .leading) {
-                if vm.query.isEmpty {
+                if vm.query.isEmpty && !vm.isComposing {
                     Text(searchPrompt)
                         .font(Theme.Typography.searchField)
                         .foregroundStyle(Theme.Colors.textTertiary)
