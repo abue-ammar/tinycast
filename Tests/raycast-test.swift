@@ -125,6 +125,9 @@ enum RaycastTests {
             !RaycastFormat.v1.supportedOptions.contains(.launchAtLogin),
             "v1 exports no launch-at-login preference")
         expect(
+            !RaycastFormat.v1.supportedOptions.contains(.aliases),
+            "v1 exports no aliases")
+        expect(
             RaycastFormat.v1.supportedOptions.contains(.shortcuts),
             "v1 still carries app and command hotkeys")
     }

@@ -9,9 +9,12 @@ import SwiftUI
 /// click or fire alongside the one that is focusing a *different* field, and take its focus away.
 private struct FocusReleaseOnOutsideClick: ViewModifier {
     @State private var monitor: Any?
+    // A box, not `@State` on the window: resolving it must not invalidate the view mid-layout.
+    @State private var host = HostWindowBox()
 
     func body(content: Content) -> some View {
         content
+            .background(HostWindowReader { host.window = $0 })
             .onAppear {
                 guard monitor == nil else { return }
                 monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
@@ -26,7 +29,8 @@ private struct FocusReleaseOnOutsideClick: ViewModifier {
     }
 
     private func release(on event: NSEvent) {
-        guard let window = event.window,
+        // A local monitor sees every window in the app; only this pane's own is ours to touch.
+        guard let window = event.window, window === host.window,
             // Only while something is actually being edited: the field editor is the responder.
             let editor = window.firstResponder as? NSTextView, editor.isFieldEditor
         else { return }
@@ -37,8 +41,36 @@ private struct FocusReleaseOnOutsideClick: ViewModifier {
     }
 }
 
+private final class HostWindowBox {
+    weak var window: NSWindow?
+}
+
+/// The window a SwiftUI view landed in; `NSViewRepresentable` is the only route to it.
+private struct HostWindowReader: NSViewRepresentable {
+    var onResolve: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> NSView { HostWindowReaderView(onResolve: onResolve) }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+private final class HostWindowReaderView: NSView {
+    private let onResolve: (NSWindow?) -> Void
+
+    init(onResolve: @escaping (NSWindow?) -> Void) {
+        self.onResolve = onResolve
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        onResolve(window)
+    }
+}
+
 extension View {
-    /// Drops keyboard focus when a click lands outside the field being edited.
+    /// Drops keyboard focus when a click lands outside the field being edited, in this window only.
     func releasesFocusOnOutsideClick() -> some View {
         modifier(FocusReleaseOnOutsideClick())
     }

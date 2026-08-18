@@ -12,6 +12,7 @@ final class QuicklinkCoordinator {
     private let favorites: FavoritesStore
     private let visibility: VisibilityStore
     private let ranking: LauncherRankingStore
+    private let aliases: AliasStore
     private let windowController: PaletteWindowController
     private let paletteCoordinator: PaletteCoordinator
     private let settingsCoordinator: SettingsCoordinator
@@ -33,6 +34,7 @@ final class QuicklinkCoordinator {
         favorites: FavoritesStore,
         visibility: VisibilityStore,
         ranking: LauncherRankingStore,
+        aliases: AliasStore,
         windowController: PaletteWindowController,
         paletteCoordinator: PaletteCoordinator,
         settingsCoordinator: SettingsCoordinator,
@@ -48,6 +50,7 @@ final class QuicklinkCoordinator {
         self.favorites = favorites
         self.visibility = visibility
         self.ranking = ranking
+        self.aliases = aliases
         self.windowController = windowController
         self.paletteCoordinator = paletteCoordinator
         self.settingsCoordinator = settingsCoordinator
@@ -260,6 +263,7 @@ final class QuicklinkCoordinator {
         }
         favorites.remove(keys: entryIDs)
         visibility.removeItemKeys(entryIDs)
+        aliases.removeKeys(entryIDs)
         for entryID in entryIDs {
             ranking.reset(itemKey: entryID)
         }

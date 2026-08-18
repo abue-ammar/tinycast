@@ -11,9 +11,11 @@ struct LauncherItemsSection: View {
     @State private var query = ""
 
     private var entries: [AppEntry] {
-        // Run the matcher once per render, then scope the results to this category.
-        let matched = query.isEmpty ? appIndex.apps : appIndex.matches(query)
-        return matched.filter { $0.kind == kind }
+        let scoped = appIndex.apps.filter { $0.kind == kind }
+        guard !query.isEmpty else { return scoped }
+        // Membership only: score order would move the row being edited out from under the caret.
+        let matched = Set(appIndex.matches(query).map(\.id))
+        return scoped.filter { matched.contains($0.id) }
     }
 
     var body: some View {
@@ -68,6 +70,7 @@ private struct LauncherItemRow: View {
         SettingsRow(title: entry.name) {
             AppIconView(app: entry).frame(width: 18, height: 18)
         } trailing: {
+            AliasField(entry: entry)
             if let action = entry.hotKeyAction {
                 ShortcutRecorder(action: action)
             }
@@ -83,5 +86,67 @@ private struct LauncherItemRow: View {
             get: { visibility.isItemVisible(entry) },
             set: { visibility.setItemVisible($0, for: entry) }
         )
+    }
+}
+
+/// The per-row alias well, dressed like `ShortcutRecorder` so the trailing controls read as a set.
+/// A label until clicked: a form's field editor won't center, and a `Text` centers like Record's.
+private struct AliasField: View {
+    let entry: AppEntry
+    @Environment(AliasStore.self) private var aliases
+    @State private var isEditing = false
+    @State private var draft = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+        Group {
+            if isEditing {
+                TextField("", text: $draft)
+                    .textFieldStyle(.plain)
+                    .font(Theme.Typography.keyCap)
+                    .focused($focused)
+                    .onSubmit(finishEditing)
+                    .onExitCommand(perform: cancelEditing)
+                    // The pane's `releasesFocusOnOutsideClick` resigns; this catches it landing.
+                    .onChange(of: focused) { _, now in
+                        if !now { finishEditing() }
+                    }
+                    .onAppear { focused = true }
+            } else {
+                Text(aliases.alias(for: entry.preferenceKey) ?? "Add Alias")
+                    .font(Theme.Typography.keyCap)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(shape)
+                    .onTapGesture(perform: beginEditing)
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.sm)
+        .frame(width: Theme.Size.shortcutRecorder, height: 24)
+        .background(shape.fill(Theme.Colors.cardFill))
+        .overlay(
+            shape.strokeBorder(
+                isEditing ? Color.accentColor : Theme.Colors.cardStroke, lineWidth: 1))
+        .clipShape(shape)
+        .accessibilityLabel("Alias for \(entry.name)")
+    }
+
+    private func beginEditing() {
+        draft = aliases.alias(for: entry.preferenceKey) ?? ""
+        isEditing = true
+    }
+
+    /// The one commit path — ↵ or focus landing elsewhere; a blank draft removes the alias.
+    private func finishEditing() {
+        guard isEditing else { return }
+        isEditing = false
+        aliases.setAlias(
+            draft.trimmingCharacters(in: .whitespacesAndNewlines), for: entry.preferenceKey)
+    }
+
+    private func cancelEditing() {
+        isEditing = false
     }
 }

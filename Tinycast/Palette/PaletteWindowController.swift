@@ -202,6 +202,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environment(core.clipboardStore)
             .environment(core.favorites)
             .environment(core.visibility)
+            .environment(core.aliases)
             .environment(core.calcHistory)
             .environment(core.currencyRates)
             .environment(core.emojiIndex)

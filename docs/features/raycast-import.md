@@ -79,8 +79,10 @@ Notes that matter:
 - **Clipboard records are flat** (`text` / `filePath` / `category`), not v2's nested representations,
   and their timestamps carry no fractional seconds. Only `image` becomes an image clip: a `file`
   record can be any document and Tinycast has no kind for that, so its label imports as text.
-- **v1 exports no launch-at-login preference and no global palette hotkey**, so neither is ever
-  mapped. That is why `.launchAtLogin` is absent from `RaycastFormat.v1.supportedOptions`.
+- **v1 exports no launch-at-login preference, no global palette hotkey and no aliases**, so none is
+  ever mapped. That is why `.launchAtLogin` and `.aliases` are absent from
+  `RaycastFormat.v1.supportedOptions`. (v2 carries an `alias` string per `settings.commands[]` entry;
+  application ones map to `launcherAliases` by bundle ID, the same resolution the hotkey mapper uses.)
 - `builtin_package_navigation` and `builtin_package_snippets` are mapped defensively — no export with
   favorites or snippets configured has been available to verify their exact shape.
 

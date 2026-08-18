@@ -12,6 +12,7 @@ final class CustomCommandCoordinator {
     private let favorites: FavoritesStore
     private let visibility: VisibilityStore
     private let ranking: LauncherRankingStore
+    private let aliases: AliasStore
     /// Dialog and message-HUD presentation only — never for state this type owns.
     private unowned let core: AppCore
 
@@ -25,6 +26,7 @@ final class CustomCommandCoordinator {
         favorites: FavoritesStore,
         visibility: VisibilityStore,
         ranking: LauncherRankingStore,
+        aliases: AliasStore,
         core: AppCore
     ) {
         self.store = store
@@ -36,6 +38,7 @@ final class CustomCommandCoordinator {
         self.favorites = favorites
         self.visibility = visibility
         self.ranking = ranking
+        self.aliases = aliases
         self.core = core
     }
 
@@ -114,6 +117,7 @@ final class CustomCommandCoordinator {
         }
         favorites.remove(keys: entryIDs)
         visibility.removeItemKeys(entryIDs)
+        aliases.removeKeys(entryIDs)
         for entryID in entryIDs {
             ranking.reset(itemKey: entryID)
         }

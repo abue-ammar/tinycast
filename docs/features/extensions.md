@@ -370,12 +370,13 @@ never shares with an installed copy.
 | Icon override | `UserDefaults` → `extensionAppearances` | yes |
 | Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |
 | Favorites, hidden items | `UserDefaults` → `favoriteApps`, `hiddenItemKeys` | yes |
+| User alias | `UserDefaults` → `launcherAliases` | yes |
 | Launch ranking | `Caches/<bundle id>/launcher-ranking.json` | yes |
 
 `ExtensionCatalog.safeName` maps an npm-style name onto one path segment, and is the **only** copy of
 that mapping — a second one that drifts orphans every file the first one wrote.
 
-The last three rows are pruned by `ExtensionCoordinator.removeExtensionReferences`, reached through
+The last four rows are pruned by `ExtensionCoordinator.removeExtensionReferences`, reached through
 `ExtensionManager.onDidUninstall`. An extension's `preferenceKey` is its entry id, because it has no
 bundle id, so `extension:<name>/<command>` is what those stores are keyed by. `CustomCommandCoordinator`
 and `QuicklinkCoordinator` prune the same stores the same way; extensions are not a special case.

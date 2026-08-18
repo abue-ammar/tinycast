@@ -137,6 +137,7 @@ final class ExtensionCoordinator {
         }
         core.favorites.remove(keys: Set(entryIDs))
         core.visibility.removeItemKeys(Set(entryIDs))
+        core.aliases.removeKeys(Set(entryIDs))
     }
 
     /// A view command takes over the palette; a no-view command closes it and runs headless.

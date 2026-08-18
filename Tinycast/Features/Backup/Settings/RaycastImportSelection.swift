@@ -15,6 +15,7 @@ struct RaycastImportSelection: View {
     private static let categories: [Category] = [
         .init(option: .shortcuts, symbol: "command", label: "Shortcuts"),
         .init(option: .favorites, symbol: "star", label: "Favorites"),
+        .init(option: .aliases, symbol: "character.cursor.ibeam", label: "Aliases"),
         .init(option: .emojiSkinTone, symbol: "face.smiling", label: "Emoji skin tone"),
         .init(option: .launchAtLogin, symbol: "power", label: "Launch at login"),
         .init(option: .menuBarVisibility, symbol: "menubar.rectangle", label: "Menu-bar icon"),

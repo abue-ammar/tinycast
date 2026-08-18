@@ -157,12 +157,14 @@ final class AppIndex {
         let query: String
         let entriesRevision: Int
         let rankingRevision: Int
+        let aliasRevision: Int
     }
 
     private struct ResultsKey: Equatable {
         let query: String
         let entriesRevision: Int
         let rankingRevision: Int
+        let aliasRevision: Int
         let visibilityRevision: Int
         let favoritesRevision: Int
     }
@@ -204,10 +206,12 @@ final class AppIndex {
     /// Set when a refresh lands mid-scan, so a scope edit is never silently dropped.
     private var refreshPending = false
     private let ranking: LauncherRankingStore
+    private let aliases: AliasStore
     private var settings: AppSettings?
 
-    init(ranking: LauncherRankingStore) {
+    init(ranking: LauncherRankingStore, aliases: AliasStore) {
         self.ranking = ranking
+        self.aliases = aliases
     }
 
     /// The always-relevant built-ins, plus whatever a disabled feature has not hidden.
@@ -394,7 +398,8 @@ final class AppIndex {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return apps }
         let key = MatchKey(
-            query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision)
+            query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
+            aliasRevision: aliases.revision)
         return matchMemo.value(for: key) { rank(q, limit: limit) }
     }
 
@@ -405,7 +410,8 @@ final class AppIndex {
         let q = query.trimmingCharacters(in: .whitespaces)
         let key = ResultsKey(
             query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
-            visibilityRevision: visibility.revision, favoritesRevision: favorites.revision)
+            aliasRevision: aliases.revision, visibilityRevision: visibility.revision,
+            favoritesRevision: favorites.revision)
         return resultsMemo.value(for: key) {
             // Filtering stays downstream of `matches` so that memo is never keyed on hidden state.
             let base = matches(q).filter(visibility.isVisible)
@@ -419,8 +425,10 @@ final class AppIndex {
         Signposts.interval("AppIndex.rank") {
             let learned = ranking.boosts(query: q)
             let scored = apps.compactMap { app -> (AppEntry, Int)? in
+                var fields = app.searchFields
+                fields.userAlias = aliases.alias(for: app.preferenceKey)
                 // Base relevance is the strongest field; the boost is added blind to it.
-                guard let score = SearchRelevance.score(query: q, fields: app.searchFields) else {
+                guard let score = SearchRelevance.score(query: q, fields: fields) else {
                     return nil
                 }
                 return (app, score + (learned[app.preferenceKey] ?? 0))

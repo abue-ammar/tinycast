@@ -10,6 +10,8 @@ enum FuzzyMatch {
         case subsequence
 
         var isLiteral: Bool { self != .subsequence }
+        /// Anchored at the candidate's start: what a short, deliberate field must match to win its band.
+        var isAnchored: Bool { self == .exact || self == .prefix }
     }
 
     struct Match: Sendable {
@@ -120,6 +122,8 @@ enum FuzzyMatch {
 struct SearchFields: Sendable {
     /// The display name, plus anything identifying the entry just as strongly.
     var names: [String]
+    /// The user's own alias for the entry; deliberate, so it outranks every vendor field.
+    var userAlias: String?
     /// Spotlight's `kMDItemAlternateNames`: `iBooks`, `Codex`, `浏览器`.
     var alternateNames: [String] = []
     var bundleID: String?
@@ -135,6 +139,7 @@ enum SearchRelevance {
         case nameSubsequence = 3
         case alternateNameLiteral = 4
         case nameLiteral = 5
+        case userAlias = 6
 
         var offset: Int { rawValue * SearchRelevance.bandStride }
     }
@@ -156,6 +161,13 @@ enum SearchRelevance {
             best = max(best ?? Int.min, band.offset + match.score)
         }
 
+        // Only a hit from the alias's start earns the top band; one inside it ranks like a vendor alias.
+        if let alias = fields.userAlias, let match = FuzzyMatch.match(query, candidate: alias),
+            match.tier.isLiteral
+        {
+            let band: Band = match.tier.isAnchored ? .userAlias : .alternateNameLiteral
+            best = max(best ?? Int.min, band.offset + match.score)
+        }
         for name in fields.names {
             consider(name, literal: .nameLiteral, subsequence: .nameSubsequence)
         }
