@@ -22,6 +22,7 @@ final class AppCore {
     let settings: AppSettings
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
+    let aliases = AliasStore()
     let calcHistory = CalculatorHistoryStore()
     let currencyRates = CurrencyRateStore()
     let emojiIndex = EmojiIndex()
@@ -45,7 +46,8 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var quicklinkCoordinator = QuicklinkCoordinator(
         store: quicklinks, argumentSession: quicklinkArguments, settings: settings,
         appIndex: appIndex, injector: snippetTextInjector, hotKeys: hotKeys, favorites: favorites,
-        visibility: visibility, ranking: launcherRanking, windowController: windowController,
+        visibility: visibility, ranking: launcherRanking, aliases: aliases,
+        windowController: windowController,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         clipboardHistory: { [unowned self] in self.snippetExpansion.clipboardHistoryForExpansion() },
         core: self)
@@ -63,7 +65,7 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var uninstallCoordinator = UninstallCoordinator(
         session: uninstall, palette: palette, paletteCoordinator: paletteCoordinator,
         appIndex: appIndex, runningApps: runningApps, hotKeys: hotKeys, favorites: favorites,
-        visibility: visibility, ranking: launcherRanking, core: self)
+        visibility: visibility, ranking: launcherRanking, aliases: aliases, core: self)
     @ObservationIgnored private(set) lazy var extensionCoordinator = ExtensionCoordinator(
         extensions: extensions, palette: palette, paletteCoordinator: paletteCoordinator,
         settingsCoordinator: settingsCoordinator, settings: settings, core: self)
@@ -73,7 +75,7 @@ final class AppCore {
         store: customCommands, settings: settings, appIndex: appIndex,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         hotKeys: hotKeys, favorites: favorites, visibility: visibility,
-        ranking: launcherRanking, core: self)
+        ranking: launcherRanking, aliases: aliases, core: self)
     @ObservationIgnored private(set) lazy var notesCoordinator = NotesCoordinator(
         store: notesStore,
         settings: settings,
@@ -114,7 +116,7 @@ final class AppCore {
         let settings = AppSettings()
         self.launcherRanking = launcherRanking
         self.settings = settings
-        appIndex = AppIndex(ranking: launcherRanking)
+        appIndex = AppIndex(ranking: launcherRanking, aliases: aliases)
         let clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
         self.clipboardManager = clipboardManager
         extensions = ExtensionManager(clipboardStore: clipboardStore)

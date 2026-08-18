@@ -9,5 +9,6 @@ struct SystemActionsSettingsView: View {
                 searchPrompt: "Search system actions…")
         }
         .formStyle(.grouped)
+        .releasesFocusOnOutsideClick()
     }
 }

@@ -10,6 +10,7 @@ struct SettingsBackup: Codable {
     var favoriteApps: [String]?
     var hiddenLauncherItems: [String]?
     var hiddenLauncherKinds: [String]?
+    var launcherAliases: [String: String]?
 
     /// Enums store by raw value, so an unknown one is ignored rather than failing.
     struct SettingsData: Codable {
@@ -74,6 +75,7 @@ struct SettingsBackup: Codable {
         var hotkeys = 0
         var favorites = 0
         var hiddenItems = 0
+        var aliases = 0
         var customCommands = 0
         var quicklinks = 0
     }
@@ -160,6 +162,7 @@ extension SettingsBackup {
         backup.favoriteApps = core.favorites.keys
         backup.hiddenLauncherItems = Array(core.visibility.hiddenItemKeys)
         backup.hiddenLauncherKinds = Array(core.visibility.hiddenKinds)
+        backup.launcherAliases = core.aliases.aliases
         return backup
     }
 
@@ -184,6 +187,11 @@ extension SettingsBackup {
             let kinds = hiddenLauncherKinds ?? Array(core.visibility.hiddenKinds)
             core.visibility.replace(hiddenItems: items, hiddenKinds: kinds)
             summary.hiddenItems = items.count
+        }
+        if let launcherAliases {
+            core.aliases.replace(launcherAliases)
+            // Counted after the store, which drops blanks the file may carry.
+            summary.aliases = core.aliases.aliases.count
         }
         return summary
     }

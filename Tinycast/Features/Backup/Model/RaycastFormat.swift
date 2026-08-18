@@ -26,9 +26,10 @@ struct RaycastImportOptions: OptionSet, Sendable {
     static let popToRoot = RaycastImportOptions(rawValue: 1 << 6)
     static let compactMode = RaycastImportOptions(rawValue: 1 << 7)
     static let snippets = RaycastImportOptions(rawValue: 1 << 8)
+    static let aliases = RaycastImportOptions(rawValue: 1 << 9)
     static let all: RaycastImportOptions = [
         .shortcuts, .favorites, .emojiSkinTone, .launchAtLogin, .menuBarVisibility, .clipboardHistory,
-        .popToRoot, .compactMode, .snippets
+        .popToRoot, .compactMode, .snippets, .aliases
     ]
 }
 
@@ -58,7 +59,7 @@ enum RaycastFormat: Sendable, Equatable {
     /// Categories the format carries; offering one it lacks would import nothing.
     var supportedOptions: RaycastImportOptions {
         switch self {
-        case .v1: return RaycastImportOptions.all.subtracting(.launchAtLogin)
+        case .v1: return RaycastImportOptions.all.subtracting([.launchAtLogin, .aliases])
         case .v2: return .all
         }
     }

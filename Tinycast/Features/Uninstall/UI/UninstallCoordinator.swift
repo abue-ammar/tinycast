@@ -12,6 +12,7 @@ final class UninstallCoordinator {
     private let favorites: FavoritesStore
     private let visibility: VisibilityStore
     private let ranking: LauncherRankingStore
+    private let aliases: AliasStore
     /// Dialog and message-HUD presentation only — never for state this type owns.
     private unowned let core: AppCore
 
@@ -25,6 +26,7 @@ final class UninstallCoordinator {
         favorites: FavoritesStore,
         visibility: VisibilityStore,
         ranking: LauncherRankingStore,
+        aliases: AliasStore,
         core: AppCore
     ) {
         self.session = session
@@ -36,6 +38,7 @@ final class UninstallCoordinator {
         self.favorites = favorites
         self.visibility = visibility
         self.ranking = ranking
+        self.aliases = aliases
         self.core = core
     }
 
@@ -112,6 +115,7 @@ final class UninstallCoordinator {
         favorites.remove(keys: [app.preferenceKey])
         visibility.removeItemKeys([app.preferenceKey])
         ranking.reset(itemKey: app.preferenceKey)
+        aliases.removeKeys([app.preferenceKey])
     }
 
     private func presentUninstallReport(_ report: UninstallReport) async {

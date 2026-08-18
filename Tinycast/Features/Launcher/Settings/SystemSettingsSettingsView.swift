@@ -10,5 +10,6 @@ struct SystemSettingsSettingsView: View {
                 searchPrompt: "Search System Settings…")
         }
         .formStyle(.grouped)
+        .releasesFocusOnOutsideClick()
     }
 }

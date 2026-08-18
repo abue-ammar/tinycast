@@ -130,6 +130,8 @@ private struct AppRow: View {
     let running: Bool
     /// Observed so a hotkey set/cleared in Settings re-renders the row's keycaps immediately.
     @Environment(HotKeyManager.self) private var hotKeys
+    /// Observed for the same reason: an alias edit re-renders the row's badge at once.
+    @Environment(AliasStore.self) private var aliases
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
@@ -160,6 +162,17 @@ private struct AppRow: View {
             Text(app.name)
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
+            if let alias = aliases.alias(for: app.preferenceKey) {
+                Text(alias)
+                    .font(Theme.Typography.rowTrailing)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, Theme.Spacing.sm)
+                    .padding(.vertical, Theme.Spacing.xxs)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                            .fill(Theme.Colors.controlSurface))
+            }
             if let caps = shortcutCaps {
                 HStack(spacing: Theme.Spacing.xxs) {
                     ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in

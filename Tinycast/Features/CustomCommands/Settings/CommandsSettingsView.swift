@@ -46,6 +46,7 @@ struct CommandsSettingsView: View {
             .settingsEnabled(settings.customCommandsEnabled)
         }
         .formStyle(.grouped)
+        .releasesFocusOnOutsideClick()
         .sheet(item: $editor) { target in
             CustomCommandEditorSheet(command: target.command)
         }

@@ -51,14 +51,15 @@ format scalars first, since app metadata can contain bidi/zero-width markers bef
 
 ## Searchable fields
 
-An app is matched on four fields kept deliberately separate — flattening them into one string would
+An app is matched on five fields kept deliberately separate — flattening them into one string would
 lose the thing that decides the ranking. `SearchRelevance.score` evaluates each independently and the
 strongest one becomes the entry's base relevance:
 
 | Band | Field                                   | Match strength                                    |
 | ---- | --------------------------------------- | ------------------------------------------------- |
+| 6    | user alias (any entry kind)             | anchored literal — exact / prefix                 |
 | 5    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
-| 4    | Spotlight alternate names               | literal                                           |
+| 4    | Spotlight alternate names, plus a user alias's word-start / substring hits | literal |
 | 3    | display name                            | subsequence                                       |
 | 2    | Spotlight alternate names               | subsequence                                       |
 | 1    | bundle identifier                       | literal only                                      |
@@ -87,6 +88,30 @@ query (`cop` ⊂ `com.apple.Photos`), which would change _which_ apps appear rat
 order. For the same reason a bundle id is matched with its leading component stripped
 (`apple.Photos`, not `com.apple.Photos`): `com` alone prefixes almost every installed app. The full id
 still matches exactly, so a pasted identifier resolves.
+
+### User aliases
+
+`AliasStore` (`Launcher/Service/`) keeps one user-chosen alias per entry, keyed by `preferenceKey`
+like favorites and learned ranking, so every entry kind — apps, commands, quicklinks, snippets —
+can carry one. An alias is deliberate in a way no vendor field is, so a hit **from its start** —
+exact or prefix — occupies the top band and ranks its entry first. A hit *inside* the alias ranks
+with the Spotlight aliases instead (`term` inside `iterm` must not beat Terminal's own prefix),
+and a subsequence of a short alias would be noise, so it never matches at all. `AppIndex` folds the
+alias into `SearchFields.userAlias` at rank time, keying its memos on the store's revision.
+
+A launcher row shows its entry's alias as a small chip after the name, so what a badge-bearing
+result will answer to is visible without opening anything.
+
+Editing lives in Settings only — an alias is one-time configuration like a shortcut or a
+visibility checkbox, not a per-invocation action, so the ⌘K menu stays out of it. Every pane built
+on `LauncherItemsSection` puts an `AliasField` on each row, dressed like the `ShortcutRecorder`
+beside it; edits store as typed and trim when the field loses focus, and a blank means none. That
+list filters by **membership only**, keeping the index's name order — re-ranking it per keystroke
+would move the row being edited out from under its own field editor.
+
+Aliases ride along in a settings backup (`launcherAliases`), and deleting what an alias points at —
+uninstalling an app, deleting a quicklink or custom command, uninstalling an extension — removes it
+with the entry's other per-entry preferences.
 
 ### Alternate names
 

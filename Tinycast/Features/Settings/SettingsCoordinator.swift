@@ -40,6 +40,7 @@ final class SettingsCoordinator {
             .environment(core.appIndex)
             .environment(core.hotKeys)
             .environment(core.visibility)
+            .environment(core.aliases)
             .environment(core.customCommands)
             .environment(core.snippetsStore)
             .environment(core.quicklinks)

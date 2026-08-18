@@ -14,6 +14,7 @@ enum RaycastImport {
             var trimmed = SettingsBackup()
             if options.contains(.shortcuts) { trimmed.hotkeys = backup.hotkeys }
             if options.contains(.favorites) { trimmed.favoriteApps = backup.favoriteApps }
+            if options.contains(.aliases) { trimmed.launcherAliases = backup.launcherAliases }
 
             var settings = SettingsBackup.SettingsData()
             var hasSettings = false

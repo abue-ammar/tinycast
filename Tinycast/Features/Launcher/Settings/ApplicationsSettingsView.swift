@@ -12,5 +12,6 @@ struct ApplicationsSettingsView: View {
                 searchPrompt: "Search applications…")
         }
         .formStyle(.grouped)
+        .releasesFocusOnOutsideClick()
     }
 }
