@@ -481,6 +481,7 @@ struct RootPaletteView: View {
         @Bindable var vm = vm
         return PaletteSearchField(
             text: $vm.query, isFocused: $searchFocused, prompt: searchPrompt,
+            onFocused: core.inputSourceSwitcher.applySession(to:),
             onKeyCommand: handleSearchKey
         )
         // Fills the row's height, so there's no gap above it for topDragStrip to meet.

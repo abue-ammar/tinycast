@@ -18,6 +18,7 @@ struct PaletteSearchField: NSViewRepresentable {
     @Binding var text: String
     @Binding var isFocused: Bool
     let prompt: String
+    let onFocused: (NSTextInputContext) -> Void
     /// `true` keeps the key; `false` leaves it to the caret.
     let onKeyCommand: (PaletteSearchKey, NSEvent.ModifierFlags) -> Bool
 
@@ -61,8 +62,13 @@ struct PaletteSearchField: NSViewRepresentable {
         if textView.string != text, !textView.hasMarkedText() {
             textView.replaceWholeString(with: text)
         }
-        guard isFocused, textView.window?.firstResponder !== textView else { return }
-        textView.window?.makeFirstResponder(textView)
+        guard isFocused else { return }
+        if textView.window?.firstResponder !== textView,
+            textView.window?.makeFirstResponder(textView) != true
+        {
+            return
+        }
+        if let inputContext = textView.inputContext { onFocused(inputContext) }
     }
 
     @MainActor

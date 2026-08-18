@@ -99,6 +99,16 @@ final class AppSettings {
         didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen.rawValue) }
     }
 
+    var autoSwitchInputSourceID: String? {
+        didSet {
+            guard let autoSwitchInputSourceID else {
+                defaults.removeObject(forKey: Key.autoSwitchInputSource.rawValue)
+                return
+            }
+            defaults.set(autoSwitchInputSourceID, forKey: Key.autoSwitchInputSource.rawValue)
+        }
+    }
+
     /// Lets the panel be dragged by its top edge; off by default, so most launches never grab it.
     var paletteDraggable: Bool {
         didSet { defaults.set(paletteDraggable, forKey: Key.paletteDraggable.rawValue) }
@@ -294,6 +304,7 @@ final class AppSettings {
         openOnCursorScreen =
             defaults.object(forKey: Key.openOnCursorScreen.rawValue) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen.rawValue)
+        autoSwitchInputSourceID = defaults.string(forKey: Key.autoSwitchInputSource.rawValue)
         paletteDraggable = defaults.bool(forKey: Key.paletteDraggable.rawValue)
         // A half-written pair is no position at all, so both coordinates have to be there.
         palettePosition = (defaults.array(forKey: Key.palettePosition.rawValue) as? [Double])

@@ -19,6 +19,9 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   instead; resigning shifts the text a point or two.
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`).
+- **Input-source switching is a palette session.** The source active at summon time is captured before
+  the panel becomes key, the configured source is applied after the search field receives its input
+  context, and the captured source is restored on every hide and on termination.
 
 ## Summoning
 
@@ -31,9 +34,12 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
                                             · records previousApp (the paste / focus target)
                                             · resolves PasteTarget once per summon
                                             · resolves the screen anchor once per summon
+                                            · captures the current input source for the session
                                             · positions, lays out off-screen, orders front
                                                               ↓
                                                     RootPaletteView.body
+                                            · focuses the search field
+                                            · applies the configured source to its input context
 ```
 
 Everything resolved "once per summon" is resolved there deliberately, not per render. `AppCore` holds

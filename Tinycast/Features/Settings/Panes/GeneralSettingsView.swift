@@ -1,3 +1,5 @@
+import AppKit
+import Combine
 import SwiftUI
 
 struct GeneralSettingsView: View {
@@ -8,6 +10,7 @@ struct GeneralSettingsView: View {
     // The same key `MenuBarExtra(isInserted:)` binds, so this updates the icon live.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
     @State private var confirmingRankingReset = false
+    @State private var inputSources: [InputSourceSwitcher.Option] = []
 
     /// The Hyper modifier chord as prose glyphs, tracking the Include Shift toggle.
     private var hyperGlyphs: String { settings.hyperKeyIncludesShift ? "⌃⌥⇧⌘" : "⌃⌥⌘" }
@@ -160,6 +163,19 @@ struct GeneralSettingsView: View {
                     Text("Pop to Root Search")
                     Text("Reset to the launcher this long after the window closes.")
                 }
+                if inputSources.count > 1 {
+                    Picker(selection: $settings.autoSwitchInputSourceID) {
+                        Text("None").tag(nil as String?)
+                        ForEach(inputSources) { source in
+                            Text(source.title).tag(Optional(source.id))
+                        }
+                    } label: {
+                        Text("Auto-switch Input Source")
+                        Text(
+                            "Tinycast will automatically switch keyboard to selected input source when opening the window."
+                        )
+                    }
+                }
             } header: {
                 Text("General")
             }
@@ -176,6 +192,21 @@ struct GeneralSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Tinycast will relearn your preferred results as you use the launcher.")
+        }
+        .onAppear(perform: refreshInputSources)
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+        ) { _ in
+            refreshInputSources()
+        }
+    }
+
+    private func refreshInputSources() {
+        inputSources = core.inputSourceSwitcher.availableSources()
+        if let selected = settings.autoSwitchInputSourceID,
+            !inputSources.contains(where: { $0.id == selected })
+        {
+            settings.autoSwitchInputSourceID = nil
         }
     }
 }

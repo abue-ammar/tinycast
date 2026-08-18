@@ -27,8 +27,9 @@ Write code as if the platform released yesterday:
   migration scaffolding, no "just in case" fallbacks. The two migrations that exist are scheduled for
   deletion; nothing new may depend on them.
 
-Carbon is the one deliberate exception, and it is a capability gap rather than inertia: nothing modern
-registers a system-wide chord. Full reasoning in [standards.md](docs/standards.md#posture).
+Carbon is a deliberate capability-gap dependency rather than inertia: nothing modern registers a
+system-wide chord, and HIToolbox's TIS APIs remain the public input-source mechanism. Full reasoning in
+[standards.md](docs/standards.md#posture).
 
 ## Where things are
 

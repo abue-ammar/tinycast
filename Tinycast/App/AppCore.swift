@@ -19,6 +19,7 @@ final class AppCore {
     let hotKeys = HotKeyManager()
     let hyperKeyTap = HyperKeyTap()
     let windowMover = WindowMover()
+    let inputSourceSwitcher = InputSourceSwitcher()
     let settings: AppSettings
     @ObservationIgnored private var appearanceObservation: NSKeyValueObservation?
     @ObservationIgnored private let iconStyle = IconStyleMonitor()
@@ -268,6 +269,7 @@ final class AppCore {
     func prepareForTermination() {
         // Caps Lock first: its remap is the one teardown that outlives the process.
         hyperKeyTap.prepareForTermination()
+        inputSourceSwitcher.endSession()
         snippetTextInjector.prepareForTermination()
         snippetListener.stop()
         snippetsStore.stop()

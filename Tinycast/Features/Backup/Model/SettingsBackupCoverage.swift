@@ -56,6 +56,8 @@ enum SettingsBackupCoverage {
         AppSettingsKey.extensionsEnabled.rawValue:
             "Doubles as consent to run third-party JavaScript; an import must not switch it on.",
         AppSettingsKey.palettePosition.rawValue:
-            "Machine-local geometry: a point restored onto another display layout lands nowhere."
+            "Machine-local geometry: a point restored onto another display layout lands nowhere.",
+        AppSettingsKey.autoSwitchInputSource.rawValue:
+            "Names a keyboard input source installed on this Mac; another Mac may not have it."
     ]
 }

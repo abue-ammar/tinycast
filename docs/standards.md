@@ -26,10 +26,11 @@ never a completion handler or a `DispatchQueue` hop; `SMAppService` and never an
 shim; structured concurrency and never detached bookkeeping you have to remember to cancel. When one of
 these gains a successor, the migration is the change — not a wrapper preserving the old spelling.
 
-Carbon is the one deliberate exception. The global hotkey engine uses `RegisterEventHotKey` because
-nothing modern can register a system-wide chord, and `CGEventTap` cannot see a lone modifier press.
-That is a capability gap, not inertia — and every raw C pointer is decoded to plain values before it
-crosses into actor code.
+Carbon has two deliberate capability-gap uses. The global hotkey engine uses `RegisterEventHotKey`
+because nothing modern can register a system-wide chord, and `CGEventTap` cannot see a lone modifier
+press. `InputSourceSwitcher` uses HIToolbox's TIS APIs because they remain the public mechanism for
+enumerating and selecting keyboard input sources. Neither use is inertia, and every raw C pointer is
+decoded to plain values before it crosses into actor code.
 
 ## Architecture and feature organization
 
