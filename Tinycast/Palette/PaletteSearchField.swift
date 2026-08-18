@@ -198,7 +198,7 @@ final class PaletteSearchTextView: NSTextView {
     }
 
     private func drawPlaceholder() {
-        guard string.isEmpty, !placeholder.isEmpty, let font else { return }
+        guard string.isEmpty, !hasMarkedText(), !placeholder.isEmpty, let font else { return }
         // The origin TextKit gives the first glyph, so placeholder and query cannot disagree.
         let origin = NSPoint(
             x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0),
