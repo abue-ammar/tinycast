@@ -40,6 +40,7 @@ struct PaletteSearchField: NSViewRepresentable {
         let textView = PaletteSearchTextView()
         Self.configure(textView)
         textView.delegate = coordinator
+        textView.layoutManager?.delegate = coordinator
         textView.onKeyCommand = onKeyCommand
         textView.onFocusChange = { [weak coordinator] in coordinator?.report(focus: $0) }
         textView.placeholder = prompt
@@ -71,12 +72,26 @@ struct PaletteSearchField: NSViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, NSLayoutManagerDelegate {
         var parent: PaletteSearchField
         weak var textView: PaletteSearchTextView?
 
         init(parent: PaletteSearchField) {
             self.parent = parent
+        }
+
+        nonisolated func layoutManager(
+            _ layoutManager: NSLayoutManager,
+            shouldSetLineFragmentRect lineFragmentRect: UnsafeMutablePointer<NSRect>,
+            lineFragmentUsedRect: UnsafeMutablePointer<NSRect>,
+            baselineOffset: UnsafeMutablePointer<CGFloat>,
+            in textContainer: NSTextContainer,
+            forGlyphRange glyphRange: NSRange
+        ) -> Bool {
+            lineFragmentRect.pointee.size.height = PaletteSearchField.lineHeight
+            lineFragmentUsedRect.pointee.size.height = PaletteSearchField.lineHeight
+            baselineOffset.pointee = PaletteSearchField.baselineOffset
+            return true
         }
 
         func textDidChange(_ notification: Notification) {
@@ -99,6 +114,10 @@ struct PaletteSearchField: NSViewRepresentable {
     /// What AppKit's own field editor pads by: the caret is centred on the insertion point, so
     /// column 0 loses half of it to the clip view without this.
     private static let fieldEditorPadding: CGFloat = 2
+    /// Fixed single-line height for Latin and CJK text so the caret never steps when typing spaces after CJK.
+    static let lineHeight: CGFloat = 24
+    /// Fixed baseline offset matching Latin system font ascender so CJK and mixed IME input never jitter vertically.
+    static let baselineOffset: CGFloat = 19
 
     private static func configure(_ textView: PaletteSearchTextView) {
         textView.isFieldEditor = true
@@ -115,9 +134,18 @@ struct PaletteSearchField: NSViewRepresentable {
         textView.textContainer?.size = NSSize(
             width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.textContainer?.lineFragmentPadding = fieldEditorPadding
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.minimumLineHeight = lineHeight
+        paragraphStyle.maximumLineHeight = lineHeight
+        textView.defaultParagraphStyle = paragraphStyle
         textView.font = Theme.Typography.searchFieldNSFont
         textView.textColor = NSColor(Theme.Colors.textPrimary)
         textView.insertionPointColor = NSColor(Theme.Colors.textPrimary)
+        textView.typingAttributes = [
+            .font: Theme.Typography.searchFieldNSFont,
+            .paragraphStyle: paragraphStyle,
+            .foregroundColor: NSColor(Theme.Colors.textPrimary)
+        ]
         textView.selectedTextAttributes = [
             .backgroundColor: NSColor(Theme.Colors.selection),
             .foregroundColor: NSColor(Theme.Colors.textPrimary)
@@ -212,18 +240,27 @@ final class PaletteSearchTextView: NSTextView {
         let origin = NSPoint(
             x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0),
             y: textContainerOrigin.y)
+        let paragraphStyle = defaultParagraphStyle ?? NSParagraphStyle.default
         NSAttributedString(
             string: placeholder,
             attributes: [
                 .font: font,
+                .paragraphStyle: paragraphStyle,
                 .foregroundColor: NSColor(Theme.Colors.textTertiary)
             ]
         ).draw(at: origin)
     }
 
+    /// Keep the caret's height and vertical center fixed regardless of whether text is empty,
+    /// Latin, or CJK fallback glyphs (which would otherwise shrink and jitter the caret by 1-2pt).
+    override func drawInsertionPoint(in rect: NSRect, color: NSColor, turnedOn flag: Bool) {
+        let fixedY = ((bounds.height - lineHeight) / 2).rounded()
+        let fixedRect = NSRect(x: rect.origin.x, y: fixedY, width: rect.width, height: lineHeight)
+        super.drawInsertionPoint(in: fixedRect, color: color, turnedOn: flag)
+    }
+
     private var lineHeight: CGFloat {
-        guard let font else { return 0 }
-        return ceil(font.ascender - font.descender + font.leading)
+        PaletteSearchField.lineHeight
     }
 
     private static func paletteKey(for selector: Selector) -> PaletteSearchKey? {
