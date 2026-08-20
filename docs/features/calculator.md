@@ -169,7 +169,7 @@ its source — CNY is "Yuan Renminbi" to ISO 4217, so `rmb` and `renminbi` resol
 
 ### Crypto
 
-`CalcCurrency.crypto` is the second hand-written table, and the only one with no external source at
+`CalcCurrency.crypto` is the third hand-written table, and the only one with no external source at
 all: no standards body names a coin, and the feed silently omits any symbol it can't price, so it
 can't even report which exist. The list is therefore a product choice — and it is also the symbol
 list the fetch asks for, since `CurrencyRateStore` builds its request from `cryptoCodes`. The two

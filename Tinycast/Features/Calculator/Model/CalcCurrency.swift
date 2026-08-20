@@ -98,7 +98,7 @@ enum CalcCurrency {
         }
     }
 
-    /// The only hand-written currency data: nouns CLDR won't assign. docs/features/calculator.md
+    /// Hand-written because CLDR won't assign a shared noun. docs/features/calculator.md
     private static let contested: [String: [String]] = [
         "USD": ["dollar", "dollars"],  // 22 claimants
         "CHF": ["franc", "francs"],  // 10
@@ -148,7 +148,7 @@ enum CalcCurrency {
     /// `CurrencyRateStore` builds its request from this, so the two lists cannot drift apart.
     static let cryptoCodes: [String] = crypto.map(\.code)
 
-    /// Lookup by lowercased ident, generated data first so `contested` above is applied last.
+    /// Lookup by lowercased ident, generated data first so the hand-written tables above win.
     static let byName: [String: CurrencyDef] = {
         var defs: [String: CurrencyDef] = [:]
         var table: [String: CurrencyDef] = [:]

@@ -67,7 +67,8 @@ Shared nouns are assigned deliberately: `dollars` (22 currencies), `francs` (10)
 `pesos` (8), `rupees` (6). A genuinely ambiguous word produces **no card at all** — `krona` is both
 SEK and ISK, so Tinycast declines to guess.
 
-Slang is deliberately unsupported: **`quid`, `bucks` and `rmb` do not work.**
+Slang is deliberately unsupported: **`quid` and `bucks` do not work.** `rmb` and `renminbi` do —
+ISO 4217 names CNY "Yuan Renminbi", so those are the standard's own words rather than slang.
 
 Units run before currency, so `10 pounds to kg` is weight, `10 pounds to euros` is money, and
 `1 cup to ml` stays volume even though `CUP` is the Cuban peso. Crypto tickers outrank generated
