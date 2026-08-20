@@ -16,9 +16,10 @@ in (see Currency below).
   snapshot has landed yet. `CurrencyRateStore` owns the fetch and the cacheless `.ephemeral` session,
   and `CurrencyFeed` — pure, so the harness covers it — turns the payloads into that snapshot.
 - **`CurrencyData.generated.swift` is emitted by `node Scripts/gen-currencies.js`** and never hand-edited.
-  Two currency tables are hand-maintained, both in `CalcCurrency`: `contested`, the nouns several
-  currencies share (`dollars`, `pounds`), and `crypto`, which no standards body names. Do not add slang
-  or synonyms to either — no source of truth, so they rot.
+  Three currency tables are hand-maintained, all in `CalcCurrency`: `contested`, the nouns several
+  currencies share (`dollars`, `pounds`); `isoNames`, the standard's own names where CLDR substitutes
+  a different one (ISO 4217 calls CNY "Yuan Renminbi"); and `crypto`, which no standards body names.
+  Do not add slang or synonyms to any of them — no source of truth, so they rot.
 
 ## Evaluation pipeline
 
@@ -155,13 +156,16 @@ and folded, so `krónur` and `kronur` both resolve. The noun itself is the name'
 only wrong where that word isn't one — `NOT_NOUNS` in the generator drops those ("Special Drawing
 Rights" is not a "rights").
 
-What's left hand-written in `CalcCurrency.swift` is one table, `contested`: the nouns several
+What's left hand-written in `CalcCurrency.swift` starts with `contested`: the nouns several
 currencies share, where CLDR correctly refuses to choose and the calculator must. `dollars` is
 claimed by 22 currencies, `francs` 10, `pounds` 9, `pesos` 8, `rupees` 6. CLDR says "US dollars" and
 "Canadian dollars"; nothing in it says a bare "dollars" is USD. Words that stay genuinely ambiguous
 are assigned to nobody — `krona` is both SEK and ISK, so it produces no card. Slang and synonyms
-(`quid`, `bucks`, `rmb`) are deliberately _not_ carried: they'd be hand-maintained data with no
-source of truth.
+(`quid`, `bucks`) are deliberately _not_ carried: they'd be hand-maintained data with no source of
+truth. `isoNames` is the narrow exception that proves the rule: where ISO 4217 itself names a
+currency and CLDR substitutes a different word, the standard's name is carried with the standard as
+its source — CNY is "Yuan Renminbi" to ISO 4217, so `rmb` and `renminbi` resolve, while CLDR's own
+"Chinese Yuan" supplies `yuan` through the generator.
 
 ### Crypto
 

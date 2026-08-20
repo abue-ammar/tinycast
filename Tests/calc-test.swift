@@ -511,6 +511,9 @@ struct CalcTests {
         expectError("1 peso to usd", "No exchange rate for MXN.")
         // `krona` is contested (SEK vs ISK) and deliberately assigned to neither
         expectNil("1 krona to usd")
+        // ISO 4217's own name for CNY is "Yuan Renminbi"; CLDR carries only "Chinese Yuan"
+        expectError("1 rmb to usd", "No exchange rate for CNY.")
+        expectError("1 renminbi to usd", "No exchange rate for CNY.")
         // Slang is no longer carried: CLDR has no "quid", and we don't hand-maintain synonyms
         expectNil("50 quid to usd")
         expectNil("100 bucks to eur")

@@ -113,6 +113,11 @@ enum CalcCurrency {
         "SAR": ["riyal", "riyals"]  // 2
     ]
 
+    /// ISO 4217's own names where CLDR carries a different one; the standard is the source of truth.
+    private static let isoNames: [String: [String]] = [
+        "CNY": ["rmb", "renminbi"]  // ISO 4217 names CNY "Yuan Renminbi"; CLDR says "Chinese Yuan"
+    ]
+
     /// Hand-written because no standards body names a coin. docs/features/calculator.md
     static let crypto: [(code: String, name: String, aliases: [String])] = [
         ("ADA", "Cardano", ["cardano"]),
@@ -163,6 +168,10 @@ enum CalcCurrency {
             for word in entry.aliases { table[word] = def }
         }
         for (code, words) in contested {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
+        }
+        for (code, words) in isoNames {
             guard let def = defs[code] else { continue }
             for word in words { table[word] = def }
         }
