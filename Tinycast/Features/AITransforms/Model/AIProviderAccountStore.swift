@@ -65,34 +65,32 @@ final class AIProviderAccountStore {
     @discardableResult
     func add(_ draft: AIProviderAccount) throws -> AIProviderAccount {
         let clean = try validated(draft)
-        accounts.append(clean)
-        if accounts.count == 1 || defaultAccountID == nil {
+        let isFirst = accounts.isEmpty || defaultAccountID == nil
+        commit(accounts + [clean])
+        if isFirst {
             defaultAccountID = clean.id
         }
-        persist()
-        onChange?(accounts)
         return clean
     }
 
     func update(_ draft: AIProviderAccount) throws {
         let clean = try validated(draft, isUpdate: true)
         guard let index = accounts.firstIndex(where: { $0.id == clean.id }) else { return }
-        accounts[index] = clean
-        persist()
-        onChange?(accounts)
+        var updated = accounts
+        updated[index] = clean
+        commit(updated)
     }
 
     @discardableResult
     func remove(id: UUID) -> AIProviderAccount? {
         guard let index = accounts.firstIndex(where: { $0.id == id }) else { return nil }
-        let removed = accounts.remove(at: index)
+        var updated = accounts
+        let removed = updated.remove(at: index)
         if defaultAccountID == id {
-            defaultAccountID = accounts.first?.id
+            defaultAccountID = updated.first?.id
         }
-        // Clean up stored API key for this account
         SecretStore.setSecret(nil, account: removed.secretAccountKey)
-        persist()
-        onChange?(accounts)
+        commit(updated)
         return removed
     }
 
@@ -150,9 +148,15 @@ final class AIProviderAccountStore {
         return clean
     }
 
+    private func commit(_ updated: [AIProviderAccount]) {
+        guard updated != accounts else { return }
+        accounts = updated
+        persist()
+        onChange?(updated)
+    }
+
     private func persist() {
-        if let data = try? JSONEncoder().encode(accounts) {
-            defaults.set(data, forKey: Self.accountsKey)
-        }
+        guard let data = try? JSONEncoder().encode(accounts) else { return }
+        defaults.set(data, forKey: Self.accountsKey)
     }
 }
