@@ -234,18 +234,7 @@ final class ChatGPTOAuthService {
                     self?.state = .failed("Token response did not contain access_token.")
                     return
                 }
-                let refresh = tokenObj["refresh_token"] as? String
-                let expiresIn = (tokenObj["expires_in"] as? Double) ?? 3600
-                let expiresAt = Date().addingTimeInterval(expiresIn).timeIntervalSince1970
-
-                let email = self?.extractEmail(fromIDToken: tokenObj["id_token"] as? String)
-
-                SecretStore.setSecret(access, account: Self.accessTokenKey)
-                if let refresh { SecretStore.setSecret(refresh, account: Self.refreshTokenKey) }
-                SecretStore.setSecret(String(expiresAt), account: Self.expiresAtKey)
-                if let email { SecretStore.setSecret(email, account: Self.emailKey) }
-
-                self?.state = .authenticated(email: email)
+                self?.persistTokenResponse(tokenObj, access: access)
             } catch {
                 self?.state = .failed("Token exchange failed: \(error.localizedDescription)")
             }
@@ -277,18 +266,22 @@ final class ChatGPTOAuthService {
             throw AIClientError.unauthorized
         }
 
-        let newRefresh = tokenObj["refresh_token"] as? String
+        return persistTokenResponse(tokenObj, access: newAccess)
+    }
+    @discardableResult
+    private func persistTokenResponse(_ tokenObj: [String: Any], access: String) -> String {
+        let refresh = tokenObj["refresh_token"] as? String
         let expiresIn = (tokenObj["expires_in"] as? Double) ?? 3600
         let expiresAt = Date().addingTimeInterval(expiresIn).timeIntervalSince1970
         let email = extractEmail(fromIDToken: tokenObj["id_token"] as? String)
 
-        SecretStore.setSecret(newAccess, account: Self.accessTokenKey)
-        if let newRefresh { SecretStore.setSecret(newRefresh, account: Self.refreshTokenKey) }
+        SecretStore.setSecret(access, account: Self.accessTokenKey)
+        if let refresh { SecretStore.setSecret(refresh, account: Self.refreshTokenKey) }
         SecretStore.setSecret(String(expiresAt), account: Self.expiresAtKey)
         if let email { SecretStore.setSecret(email, account: Self.emailKey) }
 
         state = .authenticated(email: email ?? SecretStore.secret(account: Self.emailKey))
-        return newAccess
+        return access
     }
 
     private func hasValidTokens() -> Bool {
@@ -321,22 +314,21 @@ final class ChatGPTOAuthService {
 
     // MARK: - Utilities
 
+    private static func base64URLEncode(_ data: Data) -> String {
+        data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
     private static func generateRandomString(length: Int) -> String {
         var bytes = [UInt8](repeating: 0, count: length)
         _ = SecRandomCopyBytes(kSecRandomDefault, length, &bytes)
-        return Data(bytes).base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-            .prefix(length).description
+        return String(base64URLEncode(Data(bytes)).prefix(length))
     }
 
     private static func sha256Base64URL(_ input: String) -> String {
-        let digest = SHA256.hash(data: Data(input.utf8))
-        return Data(digest).base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
+        base64URLEncode(Data(SHA256.hash(data: Data(input.utf8))))
     }
 
     private static func base64URLDecode(_ string: String) -> Data? {
