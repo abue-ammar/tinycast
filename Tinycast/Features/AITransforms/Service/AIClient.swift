@@ -187,18 +187,8 @@ enum AIClient {
         guard !request.apiKey.isEmpty, !request.model.isEmpty else {
             throw AIClientError.notConfigured
         }
-        do {
-            let (data, response) = try await session.data(for: request.makeURLRequest())
-            guard let http = response as? HTTPURLResponse else {
-                throw AIClientError.network("the server did not return an HTTP response")
-            }
-            return try parseResponse(data, status: http.statusCode)
-        } catch let error as AIClientError {
-            throw error
-        } catch {
-            // Never logs key or text, so the message carries only the transport failure.
-            throw AIClientError.network(error.localizedDescription)
-        }
+        let (data, http) = try await send(request.makeURLRequest())
+        return try parseResponse(data, status: http.statusCode)
     }
 
     /// The settings pane's model poller: GET `/models`, the one listing route every
@@ -209,22 +199,13 @@ enum AIClient {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "GET"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                throw AIClientError.network("the server did not return an HTTP response")
-            }
-            guard (200..<300).contains(http.statusCode) else {
-                throw AIClientError.provider(
-                    status: http.statusCode,
-                    message: failureMessage(in: data) ?? "HTTP \(http.statusCode)")
-            }
-            return parseModelList(data)
-        } catch let error as AIClientError {
-            throw error
-        } catch {
-            throw AIClientError.network(error.localizedDescription)
+        let (data, http) = try await send(request)
+        guard (200..<300).contains(http.statusCode) else {
+            throw AIClientError.provider(
+                status: http.statusCode,
+                message: failureMessage(in: data) ?? "HTTP \(http.statusCode)")
         }
+        return parseModelList(data)
     }
 
     /// Reads model IDs out of any listing shape: the OpenAI envelope (`data[].id`), a bare
@@ -270,13 +251,18 @@ enum AIClient {
             let endpoint = AICompletionRequest.endpointURL(
                 fromBase: baseURL, path: "/chat/completions")
         else { throw AIClientError.invalidBaseURL(baseURL) }
+        let (data, http) = try await send(
+            makeTestURLRequest(endpoint: endpoint, apiKey: apiKey, model: model))
+        _ = try parseResponse(data, status: http.statusCode)
+    }
+
+    private static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         do {
-            let (data, response) = try await session.data(
-                for: makeTestURLRequest(endpoint: endpoint, apiKey: apiKey, model: model))
+            let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 throw AIClientError.network("the server did not return an HTTP response")
             }
-            _ = try parseResponse(data, status: http.statusCode)
+            return (data, http)
         } catch let error as AIClientError {
             throw error
         } catch {
