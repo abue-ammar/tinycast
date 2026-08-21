@@ -153,22 +153,10 @@ final class AITransformCoordinator {
 
     /// Launcher activation: opens interactive preview window or executes directly based on execution mode setting.
     func launchTransform(id: UUID) {
-        guard settings.aiTransformsEnabled else { return }
-        guard let transform = store.transform(id: id) else { return }
-        Task {
-            guard let config = await resolveConfig(for: transform) else {
-                await presentFailure(.notConfigured, transform: transform)
-                return
-            }
-            if config.mode == .interactive {
-                openInteractiveSession(transform: transform, config: config)
-            } else {
-                runTransformDirect(transform: transform, config: config)
-            }
-        }
+        runTransform(id: id)
     }
 
-    /// The one funnel for direct background execution (e.g. global hotkey).
+    /// The one funnel for transform execution (interactive window or direct background).
     func runTransform(id: UUID) {
         guard settings.aiTransformsEnabled else { return }
         guard let transform = store.transform(id: id) else { return }
@@ -248,39 +236,32 @@ final class AITransformCoordinator {
                 await presentFailure(aiError, transform: transform)
                 return
             }
-            switch config.action {
-            case .overwriteSelection:
+            let isBoth = config.action == .both
+            if config.action == .copyToClipboard || isBoth {
+                Paster.copyPlainText(result)
+            }
+
+            if config.action == .overwriteSelection || isBoth {
                 let outcome = await delivery.replaceSelection(
                     result, originalSelection: selection, in: target)
                 switch outcome {
                 case .replaced, .pasted:
-                    core.showMessage("“\(transform.name)” applied", tone: .neutral)
+                    core.showMessage(
+                        isBoth ? "“\(transform.name)” applied & copied" : "“\(transform.name)” applied",
+                        tone: .neutral)
                 case .copiedToClipboard:
-                    core.showMessage("Couldn’t paste back — result copied", tone: .neutral)
+                    core.showMessage(
+                        isBoth
+                            ? "“\(transform.name)” copied to clipboard"
+                            : "Couldn’t paste back — result copied",
+                        tone: .neutral)
                 case .failed(let message):
                     await core.reportFailure(
                         title: "“\(transform.name)” Failed", message: message,
                         symbol: AITransform.sfSymbol, recovery: nil)
                 }
-
-            case .copyToClipboard:
-                Paster.copyPlainText(result)
+            } else {
                 core.showMessage("“\(transform.name)” copied to clipboard", tone: .neutral)
-
-            case .both:
-                Paster.copyPlainText(result)
-                let outcome = await delivery.replaceSelection(
-                    result, originalSelection: selection, in: target)
-                switch outcome {
-                case .replaced, .pasted:
-                    core.showMessage("“\(transform.name)” applied & copied", tone: .neutral)
-                case .copiedToClipboard:
-                    core.showMessage("“\(transform.name)” copied to clipboard", tone: .neutral)
-                case .failed(let message):
-                    await core.reportFailure(
-                        title: "“\(transform.name)” Failed", message: message,
-                        symbol: AITransform.sfSymbol, recovery: nil)
-                }
             }
         }
     }
