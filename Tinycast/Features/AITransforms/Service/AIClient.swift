@@ -79,7 +79,7 @@ struct AICompletionRequest: Sendable {
 
     /// Mirrors the wire shape every OpenAI-compatible provider accepts; `stream` is spelled out
     /// so a provider default can never turn this into a streaming response.
-    private struct Body: Encodable {
+    struct Body: Encodable {
         var model: String
         var stream: Bool
         var maxTokens: Int?
@@ -252,12 +252,13 @@ enum AIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let isReasoning = model.lowercased().hasPrefix("o1") || model.lowercased().hasPrefix("o3")
         request.httpBody = try? JSONEncoder().encode(
-            TestBody(
+            AICompletionRequest.Body(
                 model: model,
                 stream: false,
                 maxTokens: isReasoning ? nil : 16,
                 maxCompletionTokens: isReasoning ? 16 : nil,
-                messages: [TestBody.Message(role: "user", content: "Reply with the word OK.")]))
+                messages: [AICompletionRequest.Body.Message(role: "user", content: "Reply with the word OK.")]
+            ))
         return request
     }
 
@@ -282,27 +283,6 @@ enum AIClient {
             throw AIClientError.network(error.localizedDescription)
         }
     }
-    /// The probe's body, spelled out separately from `AICompletionRequest.Body` so its shape
-    /// (one user message, a token-few ceiling) is visible at the call site.
-    private struct TestBody: Encodable {
-        var model: String
-        var stream: Bool
-        var maxTokens: Int?
-        var maxCompletionTokens: Int?
-        var messages: [Message]
-
-        struct Message: Encodable {
-            var role: String
-            var content: String
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case model, stream, messages
-            case maxTokens = "max_tokens"
-            case maxCompletionTokens = "max_completion_tokens"
-        }
-    }
-
     /// Cacheless, never `URLSession.shared`, so neither the key nor a completion lingers anywhere.
     private nonisolated static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
