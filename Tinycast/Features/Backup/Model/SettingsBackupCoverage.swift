@@ -28,6 +28,7 @@ enum SettingsBackupCoverage {
         "aiBaseURL": .aiBaseURL,
         "aiModel": .aiModel,
         "aiExecutionMode": .aiExecutionMode,
+        "aiCompletionAction": .aiCompletionAction,
         "snippetsShowInLauncher": .snippetsShowInLauncher,
         "windowManagementEnabled": .windowManagementEnabled,
         "windowManagementShowInLauncher": .windowManagementShowInLauncher,

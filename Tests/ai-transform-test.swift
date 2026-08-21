@@ -145,6 +145,13 @@ struct AITransformTests {
         check("reasoning medium wire value is medium", AIReasoningEffort.medium.wireValue == "medium")
         check("reasoning high wire value is high", AIReasoningEffort.high.wireValue == "high")
 
+        // MARK: Completion Action
+
+        check("completion action has overwrite, copy, both", AICompletionAction.allCases.count == 3)
+        check("overwrite action has correct id", AICompletionAction.overwriteSelection.id == "overwrite")
+        check("copy action has correct id", AICompletionAction.copyToClipboard.id == "copy")
+        check("both action has correct id", AICompletionAction.both.id == "both")
+
         // MARK: Provider Account Store
 
         let accountSuite = "com.tinycast.ai-account-tests.\(UUID().uuidString)"

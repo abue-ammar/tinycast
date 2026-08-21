@@ -29,6 +29,7 @@ enum AppSettingsKey: String, CaseIterable {
     case aiBaseURL = "aiBaseURL"
     case aiModel = "aiModel"
     case aiExecutionMode = "aiExecutionMode"
+    case aiCompletionAction = "aiCompletionAction"
     case snippetsEnabled = "snippetsEnabled"
     case snippetsShowInLauncher = "snippetsShowInLauncher"
     case windowManagementEnabled = "windowManagementEnabled"

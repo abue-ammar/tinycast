@@ -21,6 +21,8 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
     var reasoningEffort: AIReasoningEffort?
     /// Per-preset activation mode; nil means inherit the global setting.
     var activationMode: AIExecutionMode?
+    /// Per-preset completion action; nil means inherit the global setting.
+    var completionAction: AICompletionAction?
 
     init(
         id: UUID = UUID(),
@@ -30,7 +32,8 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
         model: String? = nil,
         providerAccountID: UUID? = nil,
         reasoningEffort: AIReasoningEffort? = nil,
-        activationMode: AIExecutionMode? = nil
+        activationMode: AIExecutionMode? = nil,
+        completionAction: AICompletionAction? = nil
     ) {
         self.id = id
         self.name = name
@@ -40,8 +43,8 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
         self.providerAccountID = providerAccountID
         self.reasoningEffort = reasoningEffort
         self.activationMode = activationMode
+        self.completionAction = completionAction
     }
-
     var symbol: String {
         iconSymbol ?? Self.sfSymbol
     }
@@ -141,7 +144,8 @@ final class AITransformStore {
             model: original.model,
             providerAccountID: original.providerAccountID,
             reasoningEffort: original.reasoningEffort,
-            activationMode: original.activationMode
+            activationMode: original.activationMode,
+            completionAction: original.completionAction
         )
         return try add(clone)
     }
@@ -206,7 +210,8 @@ final class AITransformStore {
             model: model,
             providerAccountID: draft.providerAccountID,
             reasoningEffort: draft.reasoningEffort,
-            activationMode: draft.activationMode
+            activationMode: draft.activationMode,
+            completionAction: draft.completionAction
         )
     }
     private func commit(_ updated: [AITransform]) {
@@ -244,7 +249,8 @@ final class AITransformStore {
                     model: model,
                     providerAccountID: value.providerAccountID,
                     reasoningEffort: value.reasoningEffort,
-                    activationMode: value.activationMode
+                    activationMode: value.activationMode,
+                    completionAction: value.completionAction
                 )
             )
         }

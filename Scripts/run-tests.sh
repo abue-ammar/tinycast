@@ -126,6 +126,7 @@ run ai-transform-test    Tinycast/Platform/AppPaths.swift \
                          Tinycast/Platform/SecretStore.swift \
                          Tinycast/Features/AITransforms/Model/AIReasoningEffort.swift \
                          Tinycast/Features/AITransforms/Model/AIExecutionMode.swift \
+                         Tinycast/Features/AITransforms/Model/AICompletionAction.swift \
                          Tinycast/Features/AITransforms/Model/AIProviderAccount.swift \
                          Tinycast/Features/AITransforms/Model/AIProviderAccountStore.swift \
                          Tinycast/Features/AITransforms/Model/AITransform.swift \

@@ -253,6 +253,7 @@
 		B6525300EEDACE4F9DC3179E /* CalcCurrency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0F5891A80B604FBE21897B /* CalcCurrency.swift */; };
 		B8CECD85524BCCCBC0CDC2B5 /* ExtensionCommandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2DDA019FE0EF38A91AA495 /* ExtensionCommandView.swift */; };
 		BBAB44C0E70AABE70A048889 /* QuicklinkArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = F616D2EE62AEC6782E77364D /* QuicklinkArchive.swift */; };
+		BBC4D29FC4728A7037C0430A /* AICompletionAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF30853EEDDD6F9B7390D9D6 /* AICompletionAction.swift */; };
 		BC755BD99ECA1F2D382D5C94 /* SettingsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C845A6718CFBD1AFE93BA903 /* SettingsDetailView.swift */; };
 		BD45A99F26C015BF00AC77D5 /* ApplicationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289FC415E1D1776DD1C4EB9E /* ApplicationsSettingsView.swift */; };
 		BE1540DC6EE5F095F89CED5F /* EmojiGridGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0966995230FE7B7072C0018B /* EmojiGridGeometry.swift */; };
@@ -589,6 +590,7 @@
 		BE3331A5E8F892CC257AD31B /* SnippetMarkdownSerializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetMarkdownSerializer.swift; sourceTree = "<group>"; };
 		BE6972F177922B1EB8831735 /* OnboardingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCard.swift; sourceTree = "<group>"; };
 		BEDDA8820165672AF8464E25 /* SettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComponents.swift; sourceTree = "<group>"; };
+		BF30853EEDDD6F9B7390D9D6 /* AICompletionAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICompletionAction.swift; sourceTree = "<group>"; };
 		BFB023D167225228757CC4B2 /* HealthTicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthTicker.swift; sourceTree = "<group>"; };
 		C004F2C2EFDD340A73C6AB02 /* PaletteCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteCoordinator.swift; sourceTree = "<group>"; };
 		C3E30EFA3197FC5EF1E85C21 /* BundleSignature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleSignature.swift; sourceTree = "<group>"; };
@@ -720,6 +722,7 @@
 		0C3001E9B4F4DB565377E756 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				BF30853EEDDD6F9B7390D9D6 /* AICompletionAction.swift */,
 				182298C055E60AD40AEC8AF5 /* AIExecutionMode.swift */,
 				042E9B6BADDB6C90EAEE6553 /* AIProvider.swift */,
 				5755603E71642CB1E1E023DA /* AIProviderAccount.swift */,
@@ -1828,6 +1831,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6BE7F1BBE984FEE473DF5246 /* AIClient.swift in Sources */,
+				BBC4D29FC4728A7037C0430A /* AICompletionAction.swift in Sources */,
 				A00578A020F0955FFB05D5CB /* AIExecutionMode.swift in Sources */,
 				2AAF90CA4EFEBB9AF07C7176 /* AIProvider.swift in Sources */,
 				0080844FAA7D70CF9B3E89A6 /* AIProviderAccount.swift in Sources */,

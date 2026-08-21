@@ -59,6 +59,15 @@ struct AITransformsSettingsView: View {
                     Text("Default Activation Mode")
                     Text(settings.aiExecutionMode.subtitle)
                 }
+
+                Picker(selection: $settings.aiCompletionAction) {
+                    ForEach(AICompletionAction.allCases) { action in
+                        Text(action.title).tag(action)
+                    }
+                } label: {
+                    Text("Default Action on Completion")
+                    Text(settings.aiCompletionAction.subtitle)
+                }
             }
             .settingsEnabled(settings.aiTransformsEnabled)
 
@@ -299,6 +308,8 @@ private struct AITransformLibraryRow: View {
         var parts: [String] = []
         let mode = transform.activationMode?.title ?? "Inherit Mode"
         parts.append(mode)
+        let action = transform.completionAction?.title ?? "Inherit Action"
+        parts.append(action)
         parts.append(accountName)
         if let model = transform.model, !model.isEmpty {
             parts.append(model)

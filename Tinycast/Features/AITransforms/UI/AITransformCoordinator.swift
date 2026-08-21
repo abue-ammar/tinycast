@@ -95,8 +95,8 @@ final class AITransformCoordinator {
         let model: String
         let reasoning: AIReasoningEffort?
         let mode: AIExecutionMode
+        let action: AICompletionAction
     }
-
     private func resolveConfig(for transform: AITransform) async -> ResolvedConfig? {
         let account: AIProviderAccount
         if let accountID = transform.providerAccountID,
@@ -138,6 +138,7 @@ final class AITransformCoordinator {
         let reasoning =
             transform.reasoningEffort ?? (account.defaultReasoning == .none ? nil : account.defaultReasoning)
         let mode = transform.activationMode ?? settings.aiExecutionMode
+        let action = transform.completionAction ?? settings.aiCompletionAction
 
         return ResolvedConfig(
             account: account,
@@ -145,7 +146,8 @@ final class AITransformCoordinator {
             baseURL: baseURL,
             model: model,
             reasoning: reasoning,
-            mode: mode
+            mode: mode,
+            action: action
         )
     }
 
@@ -246,17 +248,39 @@ final class AITransformCoordinator {
                 await presentFailure(aiError, transform: transform)
                 return
             }
-            let outcome = await delivery.replaceSelection(
-                result, originalSelection: selection, in: target)
-            switch outcome {
-            case .replaced, .pasted:
-                core.showMessage("“\(transform.name)” applied", tone: .neutral)
-            case .copiedToClipboard:
-                core.showMessage("Couldn’t paste back — result copied", tone: .neutral)
-            case .failed(let message):
-                await core.reportFailure(
-                    title: "“\(transform.name)” Failed", message: message,
-                    symbol: AITransform.sfSymbol, recovery: nil)
+            switch config.action {
+            case .overwriteSelection:
+                let outcome = await delivery.replaceSelection(
+                    result, originalSelection: selection, in: target)
+                switch outcome {
+                case .replaced, .pasted:
+                    core.showMessage("“\(transform.name)” applied", tone: .neutral)
+                case .copiedToClipboard:
+                    core.showMessage("Couldn’t paste back — result copied", tone: .neutral)
+                case .failed(let message):
+                    await core.reportFailure(
+                        title: "“\(transform.name)” Failed", message: message,
+                        symbol: AITransform.sfSymbol, recovery: nil)
+                }
+
+            case .copyToClipboard:
+                Paster.copyPlainText(result)
+                core.showMessage("“\(transform.name)” copied to clipboard", tone: .neutral)
+
+            case .both:
+                Paster.copyPlainText(result)
+                let outcome = await delivery.replaceSelection(
+                    result, originalSelection: selection, in: target)
+                switch outcome {
+                case .replaced, .pasted:
+                    core.showMessage("“\(transform.name)” applied & copied", tone: .neutral)
+                case .copiedToClipboard:
+                    core.showMessage("“\(transform.name)” copied to clipboard", tone: .neutral)
+                case .failed(let message):
+                    await core.reportFailure(
+                        title: "“\(transform.name)” Failed", message: message,
+                        symbol: AITransform.sfSymbol, recovery: nil)
+                }
             }
         }
     }

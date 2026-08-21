@@ -183,6 +183,10 @@ final class AppSettings {
     var aiExecutionMode: AIExecutionMode {
         didSet { defaults.set(aiExecutionMode.rawValue, forKey: Key.aiExecutionMode.rawValue) }
     }
+
+    var aiCompletionAction: AICompletionAction {
+        didSet { defaults.set(aiCompletionAction.rawValue, forKey: Key.aiCompletionAction.rawValue) }
+    }
     /// Also keyword-expansion consent, so it confirms first and never rides a backup.
     var snippetsEnabled: Bool {
         didSet { defaults.set(snippetsEnabled, forKey: Key.snippetsEnabled.rawValue) }
@@ -356,6 +360,9 @@ final class AppSettings {
         aiExecutionMode =
             defaults.string(forKey: Key.aiExecutionMode.rawValue)
             .flatMap(AIExecutionMode.init(rawValue:)) ?? .interactive
+        aiCompletionAction =
+            defaults.string(forKey: Key.aiCompletionAction.rawValue)
+            .flatMap(AICompletionAction.init(rawValue:)) ?? .overwriteSelection
         snippetsEnabled = defaults.bool(forKey: Key.snippetsEnabled.rawValue)
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher.rawValue) == nil

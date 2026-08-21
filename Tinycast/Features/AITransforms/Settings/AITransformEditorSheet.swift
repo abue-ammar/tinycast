@@ -14,6 +14,7 @@ struct AITransformEditorSheet: View {
     @State private var providerAccountID: UUID?
     @State private var reasoningEffort: AIReasoningEffort?
     @State private var activationMode: AIExecutionMode?
+    @State private var completionAction: AICompletionAction?
     @State private var fetchedModels: [String] = []
     @State private var forceCustomModel = false
     @State private var isFetchingModels = false
@@ -30,6 +31,7 @@ struct AITransformEditorSheet: View {
         _providerAccountID = State(initialValue: transform?.providerAccountID)
         _reasoningEffort = State(initialValue: transform?.reasoningEffort)
         _activationMode = State(initialValue: transform?.activationMode)
+        _completionAction = State(initialValue: transform?.completionAction)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
@@ -137,7 +139,6 @@ struct AITransformEditorSheet: View {
                     .font(.callout.weight(.medium))
                 Picker("Activation Mode", selection: $activationMode) {
                     Text("Inherit Global (\(settings.aiExecutionMode.title))").tag(nil as AIExecutionMode?)
-                    Divider()
                     ForEach(AIExecutionMode.allCases) { mode in
                         Text(mode.title).tag(mode as AIExecutionMode?)
                     }
@@ -145,9 +146,24 @@ struct AITransformEditorSheet: View {
                 .pickerStyle(.menu)
                 .labelsHidden()
             }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Action on Completion")
+                    .font(.callout.weight(.medium))
+                Picker("Action on Completion", selection: $completionAction) {
+                    Text("Inherit Global (\(settings.aiCompletionAction.title))").tag(
+                        nil as AICompletionAction?)
+                    Divider()
+                    ForEach(AICompletionAction.allCases) { action in
+                        Text(action.title).tag(action as AICompletionAction?)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text("Model Override")
-                    .font(.callout.weight(.medium))
                 Text("Leave on Default to use the provider's default model.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -237,7 +253,8 @@ struct AITransformEditorSheet: View {
             model: trimmedModel.isEmpty ? nil : trimmedModel,
             providerAccountID: providerAccountID,
             reasoningEffort: reasoningEffort,
-            activationMode: activationMode
+            activationMode: activationMode,
+            completionAction: completionAction
         )
         do {
             if transform == nil {
@@ -251,7 +268,6 @@ struct AITransformEditorSheet: View {
             errorMessage = error.localizedDescription
         }
     }
-
     private var resolvedAccount: AIProviderAccount? {
         if let providerAccountID, let account = core.aiProviderAccounts.account(id: providerAccountID) {
             return account
