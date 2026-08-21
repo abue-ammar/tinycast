@@ -87,13 +87,6 @@ struct AITransformsSettingsView: View {
                 }
             } header: {
                 Text("Configured Providers")
-            } footer: {
-                Text(
-                    "Multiple accounts allow mixing OpenAI, Gemini, local Ollama, and work/personal keys. "
-                        + "Credentials are saved in Application Support with private 0600 permissions."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
             .settingsEnabled(settings.aiTransformsEnabled)
 
