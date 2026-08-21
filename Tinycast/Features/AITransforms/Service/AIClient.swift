@@ -22,11 +22,18 @@ struct AICompletionRequest: Sendable {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Reasoning models (o1, o3, etc.) reject `max_tokens` and require `max_completion_tokens`.
+        let isReasoning =
+            model.lowercased().hasPrefix("o1")
+            || model.lowercased().hasPrefix("o3")
+            || (reasoningEffort != nil && reasoningEffort != .none)
+
         request.httpBody = try? JSONEncoder().encode(
             Body(
                 model: model,
                 stream: false,
-                maxTokens: 4096,
+                maxTokens: isReasoning ? nil : 4096,
+                maxCompletionTokens: isReasoning ? 4096 : nil,
                 messages: [
                     Body.Message(role: "system", content: Self.systemInstruction(instruction)),
                     Body.Message(role: "user", content: selection)
@@ -75,7 +82,8 @@ struct AICompletionRequest: Sendable {
     private struct Body: Encodable {
         var model: String
         var stream: Bool
-        var maxTokens: Int
+        var maxTokens: Int?
+        var maxCompletionTokens: Int?
         var messages: [Message]
         var reasoningEffort: String?
 
@@ -87,6 +95,7 @@ struct AICompletionRequest: Sendable {
         enum CodingKeys: String, CodingKey {
             case model, stream, messages
             case maxTokens = "max_tokens"
+            case maxCompletionTokens = "max_completion_tokens"
             case reasoningEffort = "reasoning_effort"
         }
     }
@@ -248,11 +257,13 @@ enum AIClient {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let isReasoning = model.lowercased().hasPrefix("o1") || model.lowercased().hasPrefix("o3")
         request.httpBody = try? JSONEncoder().encode(
             TestBody(
                 model: model,
                 stream: false,
-                maxTokens: 16,
+                maxTokens: isReasoning ? nil : 16,
+                maxCompletionTokens: isReasoning ? 16 : nil,
                 messages: [TestBody.Message(role: "user", content: "Reply with the word OK.")]))
         return request
     }
@@ -283,7 +294,8 @@ enum AIClient {
     private struct TestBody: Encodable {
         var model: String
         var stream: Bool
-        var maxTokens: Int
+        var maxTokens: Int?
+        var maxCompletionTokens: Int?
         var messages: [Message]
 
         struct Message: Encodable {
@@ -294,6 +306,7 @@ enum AIClient {
         enum CodingKeys: String, CodingKey {
             case model, stream, messages
             case maxTokens = "max_tokens"
+            case maxCompletionTokens = "max_completion_tokens"
         }
     }
 

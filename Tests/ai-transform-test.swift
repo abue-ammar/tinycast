@@ -258,7 +258,8 @@ struct AITransformTests {
         struct WireBody: Decodable {
             var model: String
             var stream: Bool
-            var max_tokens: Int
+            var max_tokens: Int?
+            var max_completion_tokens: Int?
             var messages: [WireMessage]
             var reasoning_effort: String?
 
@@ -274,7 +275,8 @@ struct AITransformTests {
         }
         check("the body names the model", body.model == "gpt-4o-mini")
         check("streaming is off", body.stream == false)
-        check("max_tokens is capped at 4096", body.max_tokens == 4096)
+        check("max_tokens is capped at 4096 for standard models", body.max_tokens == 4096)
+        check("max_completion_tokens is nil for standard models", body.max_completion_tokens == nil)
         check("there are exactly two messages", body.messages.count == 2)
         check("the system message comes first", body.messages[0].role == "system")
         check("the user message comes second", body.messages[1].role == "user")
@@ -302,7 +304,8 @@ struct AITransformTests {
         let reasoningWire = try? JSONDecoder().decode(
             WireBody.self, from: reasoningRequest.makeURLRequest().httpBody ?? Data())
         check("reasoning request body carries reasoning_effort", reasoningWire?.reasoning_effort == "high")
-
+        check("reasoning request uses max_completion_tokens", reasoningWire?.max_completion_tokens == 4096)
+        check("reasoning request omits max_tokens", reasoningWire?.max_tokens == nil)
         // MARK: Endpoint normalization
 
         func endpoint(_ base: String) -> String? {
