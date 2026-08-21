@@ -13,19 +13,11 @@ final class AITransformSession {
     }
 
     struct HistoryEntry: Identifiable, Equatable {
-        let id: UUID
+        var id = UUID()
         let instruction: String
         let output: String
         let model: String
-        let date: Date
-
-        init(id: UUID = UUID(), instruction: String, output: String, model: String, date: Date = Date()) {
-            self.id = id
-            self.instruction = instruction
-            self.output = output
-            self.model = model
-            self.date = date
-        }
+        var date = Date()
     }
 
     private(set) var preset: AITransform?
