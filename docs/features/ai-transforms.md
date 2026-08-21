@@ -18,10 +18,13 @@ keep working.
 - **`Model/AITransform.swift` and `Service/AIClient.swift` stay free of AppKit and SwiftUI**
   (Foundation plus URLSession) so `ai-transform-test` can compile them standalone. That is why the
   delivery step lives in `AITextDelivery` and the funnel in `AITransformCoordinator`.
-- **The API key never leaves this Mac's Keychain.** It is stored through `SecretStore` under the
-  account `ai.api-key`, is read only inside a request's lifetime, and is never included in a backup.
+- **The API key is stored securely in Application Support.** It lives in `secrets.json` with
+  POSIX `0600` permissions (read/write only by the user's UID), is read only inside a request's
+  lifetime, and is never included in a backup or sent over telemetry.
 - **No idle cost when disabled.** No timers, event taps, monitors or caches anywhere in the feature;
   the store loads one small array at init, and the URL session exists only inside a request.
+- **Two execution modes**: an interactive Raycast-style preview and multi-turn refinement window
+  inside Tinycast's palette, or instant background in-place replacement with toast notifications.
 - One transform runs at a time; two overlapping runs would race for the same selection.
 
 ## Ownership and persistence
@@ -50,11 +53,31 @@ Only the user-facing name enters fuzzy matching; the prompt text is deliberately
 
 ## Execution contract
 
-`runTransform(id:)` gates on the feature switch, hides the palette, reads the focused selection via
-`AccessibilityText`, then builds an `AICompletionRequest`: the preset prompt wrapped as the system
-message (`systemInstruction` appends a no-commentary wrapper so a chatty model cannot corrupt an
-in-place replace) and the selection as the user message. `AIClient.complete` posts to
-`baseURL + "/chat/completions"` with `stream: false` and decodes `choices[0].message.content`.
+### Modes
+
+1. **Interactive Window** (Default for launcher activation):
+   Opens the transform inside Tinycast's palette window (`PaletteMode.aiTransform`). Displays the
+   original selection input card, an animated loading state (`"Transforming with <model>…"`), and a
+   scrollable Markdown-rendered output card.
+   - **`↵ Enter`**: Inserts the output back into the previous app, replacing the original selection.
+   - **`⌘C` / `⌘↵`**: Copies the transformed output to the clipboard.
+   - **`⌘R`**: Regenerates the transform using the active model.
+   - **`Type query + ↵`**: Refines the result with follow-up instructions (e.g. *"translate to French"*),
+     preserving prior conversation context.
+   - **`⌘K`**: Actions popover with Insert, Copy, Copy Original Input, and Regenerate.
+   - **`Esc`**: Dismisses back to the root launcher, automatically canceling any active network tasks.
+
+2. **Direct In-Place** (Global hotkeys or when set as default):
+   Gates on the feature switch, hides the palette, reads the focused selection via `AccessibilityText`,
+   presents a starting toast (`"Transforming…"`), executes the request, replaces the text in place via
+   `AITextDelivery`, and presents a completion toast (`"“<Preset>” applied"`).
+
+### Request & Delivery
+
+`AIClient.complete` posts an `AICompletionRequest` to `baseURL + "/chat/completions"` with `stream: false`
+and decodes `choices[0].message.content`. The system instruction enforces a strict output contract
+stipulating no preamble, commentary, greetings, engagement questions, or markdown code fences unless
+explicitly asked.
 
 Delivery mirrors Snippets' proven mechanics in `AITextDelivery`: an Accessibility in-place write
 first; if the selection isn't directly writable, a synthetic ⌘V over the selection rides the real
@@ -63,13 +86,20 @@ parked on the clipboard instead of pasted blind. The pasteboard handshake is rep
 `onPasteboardMutation` → `ClipboardManager.synchronizeAfterTinycastPasteboardMutation`, so restoring
 the original clipboard never lands in clipboard history.
 
+### Provider & Model Management
+
+- **Provider Catalog**: 19 verified OpenAI-compatible roots with vector SVG brand logos from
+  `models.dev` (including Gemini's `/v1beta/openai`, Groq's `/openai/v1`, and Anthropic's `/v1`).
+- **Model Polling (`[ ↻ ]`)**: Queries `GET /models` from the configured base URL to populate the model
+  dropdown.
+- **Connection Probe**: **Test Connection** button sends an end-to-end 1-token request and reports
+  live round-trip latency (`✓ Working (0.8s)`) or diagnostic provider error messages inline.
+
 ## Reporting
 
-Failures surface as Tinycast dialogs with friendly mapped errors: missing key or model is
-"not configured", 401/403 is unauthorized, 429 is rate-limited, other statuses carry the provider's
-message. Success is silent except for the outcomes worth saying out loud — clipboard fallback tells
-the user where the result went.
-
+Failures surface as Tinycast dialogs or inline status messages with friendly mapped errors: missing
+key or model is "not configured", 401/403 is unauthorized, 429 is rate-limited, other statuses carry the
+provider's message. Success presents clear confirmation toasts.
 ## Manual checks
 
 The delivery path needs a real focused text field and a live provider, so verify by hand:
