@@ -129,49 +129,13 @@ struct AITransformScreenView: View {
             HStack(spacing: Theme.Spacing.md) {
                 switch session.phase {
                 case .completed:
-                    HStack(spacing: Theme.Spacing.xs) {
-                        KeyCapChip(text: "↵", style: .outline)
-                        Text("Insert")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack(spacing: Theme.Spacing.xs) {
-                        HStack(spacing: Theme.Spacing.xxs) {
-                            KeyCapChip(text: "⌘", style: .outline)
-                            KeyCapChip(text: "C", style: .outline)
-                        }
-                        Text("Copy")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack(spacing: Theme.Spacing.xs) {
-                        HStack(spacing: Theme.Spacing.xxs) {
-                            KeyCapChip(text: "⌘", style: .outline)
-                            KeyCapChip(text: "R", style: .outline)
-                        }
-                        Text("Regenerate")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
+                    shortcutChip("Insert", keys: ["↵"])
+                    shortcutChip("Copy", keys: ["⌘", "C"])
+                    shortcutChip("Regenerate", keys: ["⌘", "R"])
                 case .failed:
-                    HStack(spacing: Theme.Spacing.xs) {
-                        KeyCapChip(text: "↵", style: .outline)
-                        Text("Retry")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
+                    shortcutChip("Retry", keys: ["↵"])
                 case .idle:
-                    HStack(spacing: Theme.Spacing.xs) {
-                        KeyCapChip(text: "↵", style: .outline)
-                        Text("Transform")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
+                    shortcutChip("Transform", keys: ["↵"])
                 case .processing:
                     EmptyView()
                 }
@@ -188,6 +152,18 @@ struct AITransformScreenView: View {
         }
         .padding(Theme.Spacing.md)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+    private func shortcutChip(_ label: String, keys: [String]) -> some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            HStack(spacing: Theme.Spacing.xxs) {
+                ForEach(keys, id: \.self) { key in
+                    KeyCapChip(text: key, style: .outline)
+                }
+            }
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 
     /// Markdown formatting preserving whitespace and inline bold/code/italics.
