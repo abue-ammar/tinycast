@@ -200,6 +200,31 @@ struct AITransformTests {
         )
         check("the selection is the user message", body.messages[1].content == "Helo world")
 
+        // MARK: Endpoint normalization
+
+        func endpoint(_ base: String) -> String? {
+            AICompletionRequest.endpointURL(fromBase: base)?.absoluteString
+        }
+        check(
+            "a plain versioned root joins the path",
+            endpoint("https://api.openai.com/v1") == "https://api.openai.com/v1/chat/completions")
+        check(
+            "a trailing slash is dropped before joining",
+            endpoint("https://generativelanguage.googleapis.com/v1beta/")
+                == "https://generativelanguage.googleapis.com/v1beta/chat/completions")
+        check(
+            "a full pasted endpoint keeps working instead of doubling the path",
+            endpoint("https://api.openai.com/v1/chat/completions/")
+                == "https://api.openai.com/v1/chat/completions")
+        check(
+            "surrounding whitespace goes",
+            endpoint("  https://api.openai.com/v1  ") == "https://api.openai.com/v1/chat/completions"
+        )
+        check(
+            "the suffix match ignores case",
+            endpoint("https://api.openai.com/v1/Chat/Completions")
+                == "https://api.openai.com/v1/chat/completions")
+
         // MARK: Response parsing
 
         func parseError(_ data: Data, status: Int) -> AIClientError? {
@@ -239,8 +264,30 @@ struct AITransformTests {
             "malformed JSON with a good status is an empty response",
             parseError(malformed, status: 200) == .emptyResponse)
         check(
-            "malformed JSON with a bad status falls back to the bare status",
-            parseError(malformed, status: 502) == .provider(status: 502, message: "HTTP 502"))
+            "malformed JSON with a bad status degrades to a bounded raw snippet",
+            parseError(malformed, status: 502) == .provider(status: 502, message: "not json"))
+
+        let googleError = """
+            {"error":{"code":404,"message":"Requested entity was not found.","status":"NOT_FOUND"}}
+            """.data(using: .utf8)!
+        let notFound = parseError(googleError, status: 404)
+        if case .provider(404, let message)? = notFound {
+            check(
+                "a Google-style error body surfaces its message",
+                message.hasPrefix("Requested entity was not found."))
+            check(
+                "a 404 carries the base-URL hint",
+                message.contains("/v1beta/openai"))
+        } else {
+            check("a 404 maps to a provider error", false)
+        }
+        let flatMessage = """
+            {"message":"Model gemini-x does not exist"}
+            """.data(using: .utf8)!
+        check(
+            "a flat top-level message is surfaced too",
+            parseError(flatMessage, status: 400)
+                == .provider(status: 400, message: "Model gemini-x does not exist"))
 
         let emptyChoices = """
             {"choices":[]}

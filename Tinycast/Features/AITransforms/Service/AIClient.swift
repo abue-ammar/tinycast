@@ -12,7 +12,11 @@ struct AICompletionRequest: Sendable {
     var selection: String
 
     func makeURLRequest() -> URLRequest {
-        var request = URLRequest(url: URL(string: baseURL.absoluteString + "/chat/completions")!)
+        // The user pastes the base URL; tolerate a trailing slash and a full endpoint pasted
+        // wholesale, both of which otherwise double a path segment and 404 opaquely.
+        let endpoint = Self.endpointURL(fromBase: baseURL.absoluteString) ?? baseURL
+        var request = URLRequest(url: endpoint)
+
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -31,6 +35,18 @@ struct AICompletionRequest: Sendable {
     /// Appends the no-commentary wrapper, so a chatty model cannot corrupt an in-place replace.
     static func systemInstruction(_ prompt: String) -> String {
         prompt + "\n\nReturn only the transformed text with no commentary, quotes, or code fences."
+    }
+
+    /// Joins whatever the user configured into the chat-completions endpoint: whitespace and
+    /// trailing slashes go, and a base URL that already ends in the path keeps working.
+    static func endpointURL(fromBase baseURLString: String) -> URL? {
+        var trimmed = baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        while trimmed.hasSuffix("/") { trimmed.removeLast() }
+        if trimmed.lowercased().hasSuffix("/chat/completions") {
+            trimmed.removeLast("/chat/completions".count)
+            while trimmed.hasSuffix("/") { trimmed.removeLast() }
+        }
+        return URL(string: trimmed + "/chat/completions")
     }
 
     /// Mirrors the wire shape every OpenAI-compatible provider accepts; `stream` is spelled out
@@ -96,8 +112,15 @@ enum AIClient {
     static func parseResponse(_ data: Data, status: Int) throws -> String {
         let decoded = try? JSONDecoder().decode(Response.self, from: data)
         guard (200..<300).contains(status) else {
-            // Providers put the human-readable cause in an error body; fall back to the bare status.
-            let message = decoded?.error?.message ?? "HTTP \(status)"
+            // Providers put the human-readable cause in an error body; a non-JSON body (an HTML
+            // 404 page from a wrong base URL, most often) degrades to a bounded raw snippet.
+            var message = failureMessage(in: data) ?? "HTTP \(status)"
+            if status == 404 {
+                message +=
+                    " — the endpoint was not found. Check the base URL: it must be the provider's"
+                    + " OpenAI-compatible root, ending before “/chat/completions” (Gemini's is"
+                    + " https://generativelanguage.googleapis.com/v1beta/openai)."
+            }
             switch status {
             case 401, 403: throw AIClientError.unauthorized
             case 429: throw AIClientError.rateLimited
@@ -109,6 +132,23 @@ enum AIClient {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !content.isEmpty
         else { throw AIClientError.emptyResponse }
         return content
+    }
+
+    /// Fishes the human-readable cause out of any error shape: OpenAI and Gemini nest it at
+    /// `error.message`, some providers keep a flat `message`, and anything else survives only
+    /// as a bounded snippet so an HTML error page can't flood the dialog.
+    private static func failureMessage(in data: Data) -> String? {
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let error = object["error"]
+            let candidate =
+                (error as? [String: Any])?["message"] ?? (error as? String) ?? object["message"]
+            if let message = candidate as? String, !message.isEmpty { return message }
+        }
+        guard
+            let raw = String(data: data.prefix(160), encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty
+        else { return nil }
+        return raw
     }
 
     static func complete(_ request: AICompletionRequest) async throws -> String {
@@ -139,11 +179,8 @@ enum AIClient {
     }()
 
     private struct Response: Decodable {
-        // Optional: an error body carries no choices and must still decode far enough to
-        // surface the provider's message.
+        // Optional: an error status carries no choices; the success path only needs the first.
         var choices: [Choice]?
-
-        var error: ErrorBody?
 
         struct Choice: Decodable {
             var message: Message
@@ -151,24 +188,6 @@ enum AIClient {
 
         struct Message: Decodable {
             var content: String?
-        }
-
-        struct ErrorBody: Decodable {
-            var message: String?
-
-            enum CodingKeys: String, CodingKey {
-                case message
-            }
-
-            init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                // OpenAI nests the message one level down; other providers keep it flat.
-                if let nested = try? container.decode(ErrorBody.self, forKey: .message) {
-                    message = nested.message
-                } else {
-                    message = try? container.decode(String.self, forKey: .message)
-                }
-            }
         }
     }
 }

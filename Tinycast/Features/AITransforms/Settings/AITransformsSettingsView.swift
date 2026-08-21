@@ -9,6 +9,8 @@ struct AITransformsSettingsView: View {
     @State private var pendingDeletion: AITransform?
     /// Stays empty until the user types; the stored key itself never round-trips through UI.
     @State private var keyDraft = ""
+    /// Mirrors Keychain presence so the row can say plainly whether a key is saved.
+    @State private var keyIsStored = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -40,20 +42,40 @@ struct AITransformsSettingsView: View {
                         .frame(width: 260)
                 }
                 LabeledContent("API Key") {
-                    SecureField(hasStoredKey ? "Saved in Keychain" : "sk-…", text: $keyDraft)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 260)
-                        // Write-through on every edit: the pane resigns focus on outside clicks,
-                        // so waiting for Return could silently drop a typed key.
-                        .onChange(of: keyDraft) { _, draft in
-                            SecretStore.setSecret(
-                                draft.isEmpty ? nil : draft, account: SecretStore.aiAPIKeyAccount)
+                    HStack(spacing: Theme.Spacing.sm) {
+                        SecureField(keyIsStored ? "Replace saved key" : "sk-…", text: $keyDraft)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 200)
+                        Button("Save") { saveKey() }
+                            .disabled(keyDraft.isEmpty)
+                        if keyIsStored {
+                            Button("Remove", role: .destructive) {
+                                SecretStore.setSecret(nil, account: SecretStore.aiAPIKeyAccount)
+                                keyDraft = ""
+                                keyIsStored = false
+                            }
                         }
+                    }
                 }
-            } footer: {
-                Text("The key is stored in your login Keychain and never included in backups.")
+                LabeledContent {
+                    EmptyView()
+                } label: {
+                    Text(
+                        keyIsStored
+                            ? "A key is saved in your login Keychain."
+                            : "No key saved."
+                    )
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                }
+            } footer: {
+                Text(
+                    "The key is stored in your login Keychain and never included in backups. "
+                        + "Any OpenAI-compatible endpoint works — for Gemini use "
+                        + "https://generativelanguage.googleapis.com/v1beta/openai."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             .settingsEnabled(settings.aiTransformsEnabled)
 
@@ -77,8 +99,8 @@ struct AITransformsSettingsView: View {
             }
             .settingsEnabled(settings.aiTransformsEnabled)
         }
+        .onAppear { keyIsStored = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) != nil }
         .formStyle(.grouped)
-        .releasesFocusOnOutsideClick()
         .sheet(item: $editor) { target in
             AITransformEditorSheet(transform: target.transform)
         }
@@ -93,8 +115,12 @@ struct AITransformsSettingsView: View {
         }
     }
 
-    private var hasStoredKey: Bool {
-        SecretStore.secret(account: SecretStore.aiAPIKeyAccount) != nil
+    private func saveKey() {
+        SecretStore.setSecret(
+            keyDraft.trimmingCharacters(in: .whitespacesAndNewlines),
+            account: SecretStore.aiAPIKeyAccount)
+        keyDraft = ""
+        keyIsStored = true
     }
 
     private var sortedTransforms: [AITransform] {
