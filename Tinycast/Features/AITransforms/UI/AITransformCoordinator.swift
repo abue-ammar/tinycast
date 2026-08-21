@@ -98,16 +98,10 @@ final class AITransformCoordinator {
         let action: AICompletionAction
     }
     func resolveConfig(for transform: AITransform) async -> ResolvedConfig? {
-        let account: AIProviderAccount
-        if let accountID = transform.providerAccountID,
-            let customAccount = core.aiProviderAccounts.account(id: accountID)
-        {
-            account = customAccount
-        } else if let defaultAccount = core.aiProviderAccounts.defaultAccount {
-            account = defaultAccount
-        } else {
-            return nil
-        }
+        guard
+            let account = transform.providerAccountID.flatMap(core.aiProviderAccounts.account(id:))
+                ?? core.aiProviderAccounts.defaultAccount
+        else { return nil }
 
         let key: String
         if account.isOAuth {
