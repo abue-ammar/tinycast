@@ -253,6 +253,7 @@ struct RootPaletteView: View {
             }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
             if vm.mode != .quicklinkArguments { core.quicklinkCoordinator.cancelQuicklinkArguments() }
+            if vm.mode != .aiTransform { core.aiTransformSession.cancel() }
         }
         // `prepare` may change nothing, so this intent still snaps the scroll to the origin.
         .onChange(of: vm.resetToken) {

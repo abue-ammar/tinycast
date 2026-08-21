@@ -72,6 +72,18 @@ struct AITransformScreen: PaletteScreen {
                     action: { regenerate() }
                 )
             )
+            if !session.originalSelection.isEmpty {
+                items.append(
+                    PopoverMenuItem(
+                        title: "Copy Original Input",
+                        systemImage: "text.quote",
+                        action: {
+                            Paster.copyPlainText(session.originalSelection)
+                            core.showMessage("Copied original text", tone: .neutral)
+                        }
+                    )
+                )
+            }
         } else if case .failed = session.phase {
             items.append(
                 PopoverMenuItem(
