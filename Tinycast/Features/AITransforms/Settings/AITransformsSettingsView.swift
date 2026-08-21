@@ -52,15 +52,28 @@ struct AITransformsSettingsView: View {
                 showsInLauncher: $settings.aiTransformsShowInLauncher)
 
             Section {
-                Picker(selection: providerSelection) {
-                    ForEach(AIProvider.catalog) { provider in
-                        Text(provider.name).tag(provider.id)
+                HStack {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                        Text("Provider")
+                        Text("Select a service or choose Custom for other endpoints.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    Divider()
-                    Text("Custom").tag(AIProvider.customID)
-                } label: {
-                    Text("Provider")
-                    Text("Select a service or choose Custom for other endpoints.")
+
+                    Spacer()
+
+                    Picker(selection: providerSelection) {
+                        ForEach(AIProvider.catalog) { provider in
+                            Text(provider.name).tag(provider.id)
+                        }
+                        Divider()
+                        Text("Custom").tag(AIProvider.customID)
+                    } label: {
+                        EmptyView()
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(minWidth: 160)
                 }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -71,12 +84,12 @@ struct AITransformsSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    TextField("", text: $settings.aiBaseURL, prompt: Text(AIClient.defaultBaseURL))
-                        .textFieldStyle(.roundedBorder)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    LeftAlignedTextField(
+                        prompt: AIClient.defaultBaseURL,
+                        text: $settings.aiBaseURL
+                    )
+                    .frame(height: 22)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     HStack {
@@ -104,15 +117,13 @@ struct AITransformsSettingsView: View {
                         }
                     }
 
-                    SecureField(
-                        "", text: $keyDraft,
-                        prompt: Text(keyIsStored ? "Replace saved key" : "sk-…")
+                    LeftAlignedTextField(
+                        prompt: keyIsStored ? "Replace saved key" : "sk-…",
+                        text: $keyDraft,
+                        isSecure: true
                     )
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: 22)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     HStack {
@@ -156,18 +167,24 @@ struct AITransformsSettingsView: View {
                         }
                     }
 
-                    TextField(
-                        "", text: $settings.aiModel,
-                        prompt: Text("Model ID (e.g. gemini-2.5-flash)")
+                    LeftAlignedTextField(
+                        prompt: "Model ID (e.g. gemini-2.5-flash)",
+                        text: $settings.aiModel,
+                        isEnabled: isCustomModel || fetchedModels.isEmpty
                     )
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .disabled(!isCustomModel && !fetchedModels.isEmpty)
-                    .opacity((!isCustomModel && !fetchedModels.isEmpty) ? 0.5 : 1.0)
+                    .frame(height: 22)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                LabeledContent {
+
+                HStack {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                        Text("Connection")
+                        Text("Verify your API key, base URL, and model.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
                     HStack(spacing: Theme.Spacing.md) {
                         if let connectionNote {
                             HStack(spacing: Theme.Spacing.xs) {
@@ -182,8 +199,6 @@ struct AITransformsSettingsView: View {
                             }
                             .font(.caption)
                             .foregroundStyle(connectionNote.tone)
-                        } else {
-                            Spacer()
                         }
 
                         Button {
@@ -198,9 +213,6 @@ struct AITransformsSettingsView: View {
                         }
                         .disabled(isTestingConnection || settings.aiModel.isEmpty)
                     }
-                } label: {
-                    Text("Connection")
-                    Text("Verify your API key, base URL, and model.")
                 }
             } footer: {
                 Text(
@@ -393,6 +405,46 @@ private struct AITransformSettingsRow: View {
             .buttonStyle(.plain)
             .help("Delete Transform")
             .accessibilityLabel("Delete \(transform.name)")
+        }
+    }
+}
+
+/// Wraps `NSTextField` / `NSSecureTextField` with guaranteed `.left` alignment and standard rounded bezel.
+private struct LeftAlignedTextField: NSViewRepresentable {
+    var prompt: String = ""
+    @Binding var text: String
+    var isSecure: Bool = false
+    var isEnabled: Bool = true
+
+    func makeNSView(context: Context) -> NSTextField {
+        let tf = isSecure ? NSSecureTextField() : NSTextField()
+        tf.placeholderString = prompt
+        tf.alignment = .left
+        tf.bezelStyle = .roundedBezel
+        tf.delegate = context.coordinator
+        tf.font = .systemFont(ofSize: NSFont.systemFontSize)
+        return tf
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+        nsView.isEnabled = isEnabled
+        nsView.alignment = .left
+        nsView.placeholderString = prompt
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    @MainActor
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: LeftAlignedTextField
+        init(_ parent: LeftAlignedTextField) { self.parent = parent }
+        func controlTextDidChange(_ obj: Notification) {
+            if let tf = obj.object as? NSTextField {
+                parent.text = tf.stringValue
+            }
         }
     }
 }
