@@ -72,6 +72,7 @@ the shared primitives and system shims every feature draws on. Neither may depen
 
 `AppCore.shared` (`App/AppCore.swift`) is a `@MainActor` singleton owning every long-lived thing in the
 app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`, `CustomCommandStore`,
+`AITransformStore`,
 `FavoritesStore`, `VisibilityStore`, `AliasStore`, `LauncherRankingStore`, `CalculatorHistoryStore`,
 `CurrencyRateStore`, `FrequentEmojiStore`), the managers and monitors (`ClipboardManager`,
 `HotKeyManager`, `HyperKeyTap`, `RunningAppsMonitor`, `SnippetKeywordListener`), the shared state
@@ -188,7 +189,8 @@ Tinycast/
   Features/
     PaletteRowIndex.swift   the flat selection index — palette-owned, so it sits at the top
     Launcher/ Clipboard/ Calculator/ Emoji/ FileSearch/ Notes/ Quicklinks/ Snippets/ Uninstall/
-    SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/ Extensions/
+    SystemActions/ CustomCommands/ AITransforms/ HotKeys/ Backup/ WindowManagement/ Onboarding/
+    Extensions/
         Model/      pure — the harness inputs
         Service/    effects — stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator

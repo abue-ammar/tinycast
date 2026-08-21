@@ -159,6 +159,27 @@ final class AppSettings {
         }
     }
 
+    var aiTransformsEnabled: Bool {
+        didSet { defaults.set(aiTransformsEnabled, forKey: Key.aiTransformsEnabled.rawValue) }
+    }
+
+    /// With the feature on, controls only whether its launcher section appears.
+    var aiTransformsShowInLauncher: Bool {
+        didSet {
+            defaults.set(
+                aiTransformsShowInLauncher, forKey: Key.aiTransformsShowInLauncher.rawValue)
+        }
+    }
+
+    /// One global provider config; per-preset overrides touch the model only.
+    var aiBaseURL: String {
+        didSet { defaults.set(aiBaseURL, forKey: Key.aiBaseURL.rawValue) }
+    }
+
+    var aiModel: String {
+        didSet { defaults.set(aiModel, forKey: Key.aiModel.rawValue) }
+    }
+
     /// Also keyword-expansion consent, so it confirms first and never rides a backup.
     var snippetsEnabled: Bool {
         didSet { defaults.set(snippetsEnabled, forKey: Key.snippetsEnabled.rawValue) }
@@ -322,6 +343,13 @@ final class AppSettings {
         customCommandsShowInLauncher =
             defaults.object(forKey: Key.customCommandsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.customCommandsShowInLauncher.rawValue)
+        aiTransformsEnabled = defaults.bool(forKey: Key.aiTransformsEnabled.rawValue)
+        aiTransformsShowInLauncher =
+            defaults.object(forKey: Key.aiTransformsShowInLauncher.rawValue) == nil
+            || defaults.bool(forKey: Key.aiTransformsShowInLauncher.rawValue)
+        aiBaseURL =
+            defaults.string(forKey: Key.aiBaseURL.rawValue) ?? AIClient.defaultBaseURL
+        aiModel = defaults.string(forKey: Key.aiModel.rawValue) ?? AIClient.defaultModel
         snippetsEnabled = defaults.bool(forKey: Key.snippetsEnabled.rawValue)
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher.rawValue) == nil

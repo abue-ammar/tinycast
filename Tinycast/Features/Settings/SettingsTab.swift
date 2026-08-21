@@ -1,6 +1,7 @@
 enum SettingsTab: CaseIterable, Identifiable {
-    case general, applications, systemSettings, systemActions, commands, quicklinks, fileSearch,
-        notes, snippets, windowManagement, clipboard, emoji, extensions, permissions, backup, about
+    case general, applications, systemSettings, systemActions, commands, aiTransforms, quicklinks,
+        fileSearch, notes, snippets, windowManagement, clipboard, emoji, extensions, permissions,
+        backup, about
     /// The case, never an index: a selectable `List` flattens section and row IDs together.
     var id: Self { self }
 
@@ -11,6 +12,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .systemSettings: return "System Settings"
         case .systemActions: return "System Actions"
         case .commands: return "Commands"
+        case .aiTransforms: return "AI Transforms"
         case .quicklinks: return "Quicklinks"
         case .fileSearch: return "File Search"
         case .notes: return "Notes"
@@ -32,6 +34,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .systemSettings: return "gearshape"
         case .systemActions: return "bolt"
         case .commands: return "terminal"
+        case .aiTransforms: return "wand.and.stars"
         case .quicklinks: return "link"
         case .fileSearch: return "doc.text.magnifyingglass"
         case .notes: return "text.page"
@@ -66,7 +69,10 @@ enum SettingsSection: CaseIterable, Identifiable {
         switch self {
         case .general: return [.general, .permissions]
         case .launcher:
-            return [.applications, .systemSettings, .systemActions, .commands, .quicklinks]
+            return [
+                .applications, .systemSettings, .systemActions, .commands, .aiTransforms,
+                .quicklinks
+            ]
         case .features:
             return [
                 .fileSearch, .notes, .snippets, .windowManagement, .clipboard, .emoji, .extensions

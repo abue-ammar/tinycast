@@ -34,6 +34,7 @@ open with an `## Invariants` section; read it before changing anything in that a
 [hotkeys](features/hotkeys.md) ·
 [window management](features/window-management.md) ·
 [custom commands](features/custom-commands.md) ·
+[AI transforms](features/ai-transforms.md) ·
 [uninstall](features/uninstall.md) ·
 [backup](features/backup.md) ·
 [Raycast import](features/raycast-import.md) ·

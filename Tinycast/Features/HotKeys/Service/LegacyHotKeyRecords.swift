@@ -59,7 +59,7 @@ enum LegacyHotKeyRecords {
         case .quicklink(let id):
             "KeyboardShortcuts_quicklinkHotkey." + id.uuidString.lowercased()
         // Newer than the package it adopts records from, so there is nothing to adopt.
-        case .extensionCommand: nil
+        case .aiTransform, .extensionCommand: nil
         }
     }
 }

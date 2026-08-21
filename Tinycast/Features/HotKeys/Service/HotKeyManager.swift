@@ -12,6 +12,7 @@ final class HotKeyManager {
     var onSearchNotes: (() -> Void)?
     var onSearchFiles: (() -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
+    var onRunAITransform: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
     var onOpenQuicklink: ((UUID) -> Void)?
@@ -49,12 +50,16 @@ final class HotKeyManager {
     private let boundKey = "boundAppBundleIDs"
     private let boundPaneKey = "boundPaneBundleIDs"
     private let boundCustomCommandKey = "boundCustomCommandIDs"
+    private let boundAITransformKey = "boundAITransformIDs"
     private let boundQuicklinkKey = "boundQuicklinkIDs"
     private let boundExtensionCommandKey = "boundExtensionCommandEntryIDs"
 
-    func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>) {
+    func start(
+        customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>, aiTransformIDs: Set<UUID>
+    ) {
         LegacyHotKeyRecords.adopt(candidateActions, decoder: decoder, encoder: encoder)
         prune(key: boundCustomCommandKey, live: customCommandIDs) { .customCommand(id: $0) }
+        prune(key: boundAITransformKey, live: aiTransformIDs) { .aiTransform(id: $0) }
         prune(key: boundQuicklinkKey, live: quicklinkIDs) { .quicklink(id: $0) }
         // After the prunes, so a dropped record can't survive in memory this session.
         for action in candidateActions { bindings[action] = storedBinding(for: action) }
@@ -89,6 +94,9 @@ final class HotKeyManager {
 
     /// Custom-command UUIDs with a binding, indexed separately so startup can re-register them.
     var boundCustomCommandIDs: [UUID] { boundIDs(key: boundCustomCommandKey) }
+
+    /// AI-transform UUIDs with a binding — the same index, its own namespace.
+    var boundAITransformIDs: [UUID] { boundIDs(key: boundAITransformKey) }
 
     /// Quicklink UUIDs with a binding — the same index, its own namespace.
     var boundQuicklinkIDs: [UUID] { boundIDs(key: boundQuicklinkKey) }
@@ -132,6 +140,8 @@ final class HotKeyManager {
             UserDefaults.standard.set(Array(set), forKey: boundPaneKey)
         case .customCommand(let id):
             index(id, bound: binding != nil, key: boundCustomCommandKey)
+        case .aiTransform(let id):
+            index(id, bound: binding != nil, key: boundAITransformKey)
         case .quicklink(let id):
             index(id, bound: binding != nil, key: boundQuicklinkKey)
         case .extensionCommand(let entryID):
@@ -178,6 +188,7 @@ final class HotKeyManager {
         actions += boundBundleIDs.map { .app(bundleID: $0) }
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
+        actions += boundAITransformIDs.map { .aiTransform(id: $0) }
         actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
         actions += boundExtensionCommandEntryIDs.map { .extensionCommand(entryID: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
@@ -206,6 +217,8 @@ final class HotKeyManager {
             return displayName?(action) ?? bundleID
         case .customCommand:
             return displayName?(action) ?? "Custom Command"
+        case .aiTransform:
+            return displayName?(action) ?? "AI Transform"
         case .systemAction(let id):
             return SystemActionCatalog.action(id: id).name
         case .windowCommand(let id):
@@ -247,6 +260,7 @@ final class HotKeyManager {
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)
+        case .aiTransform(let id): onRunAITransform?(id)
         case .systemAction(let id): onRunSystemAction?(id)
         case .windowCommand(let id): onRunWindowCommand?(id)
         case .quicklink(let id): onOpenQuicklink?(id)

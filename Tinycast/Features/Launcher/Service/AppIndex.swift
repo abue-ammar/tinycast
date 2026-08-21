@@ -6,6 +6,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case systemSettings
         case command
         case customCommand
+        case aiTransform
         case snippet
         case systemAction
         case windowCommand
@@ -30,6 +31,10 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Custom Command", sectionTitle: "Custom Commands",
                     openVerb: "Run Custom Command", canRevealInFinder: false, isSymbolIcon: true)
+            case .aiTransform:
+                return KindDescriptor(
+                    label: "AI Transform", sectionTitle: "AI Transforms",
+                    openVerb: "Run AI Transform", canRevealInFinder: false, isSymbolIcon: true)
             case .snippet:
                 return KindDescriptor(
                     label: "Snippet", sectionTitle: "Snippets",
@@ -104,6 +109,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return bundleID.map { .settingsPane(bundleID: $0) }
         case .customCommand:
             return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
+        case .aiTransform:
+            return AITransform.id(fromEntryID: id).map { .aiTransform(id: $0) }
         case .systemAction:
             return SystemActionCatalog.action(forEntryID: id).map { .systemAction(id: $0.id) }
         case .windowCommand:
@@ -132,6 +139,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .quicklink: return Quicklink.sfSymbol
         case .snippet: return "text.quote"
         case .customCommand: return CustomCommand.sfSymbol
+        case .aiTransform: return AITransform.sfSymbol
         case .command: return CommandCatalog.command(for: self)?.sfSymbol ?? "questionmark"
         case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"
         case .windowCommand:
@@ -212,6 +220,7 @@ final class AppIndex {
 
     private var discoveredEntries: [AppEntry] = []
     private var customCommandEntries: [AppEntry] = []
+    private var aiTransformEntries: [AppEntry] = []
     private var windowCommandEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
     private var extensionEntries: [AppEntry] = []
@@ -258,6 +267,20 @@ final class AppIndex {
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
         customCommandEntries = entries
+        publishEntries()
+    }
+
+    /// Replaces the AI-transform slice; a toggle can't split its entries from their section.
+    func setAITransforms(_ transforms: [AITransform]) {
+        let entries = transforms.map { transform in
+            AppEntry(
+                id: transform.entryID, name: transform.name,
+                url: URL(string: "tinycast://ai-transform/" + transform.id.uuidString)!,
+                bundleID: nil, kind: .aiTransform)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        guard entries != aiTransformEntries else { return }
+        aiTransformEntries = entries
         publishEntries()
     }
 
@@ -404,7 +427,7 @@ final class AppIndex {
         let updated =
             discoveredEntries + extensionEntries + quicklinkEntries + snippetEntries
             + Self.systemActionEntries + windowCommandEntries + customCommandEntries
-            + commandEntries
+            + aiTransformEntries + commandEntries
         guard updated != apps else { return }
         apps = updated
         entriesRevision &+= 1

@@ -8,6 +8,7 @@ final class LauncherCoordinator {
     private let paletteCoordinator: PaletteCoordinator
     private let settingsCoordinator: SettingsCoordinator
     private let customCommandCoordinator: CustomCommandCoordinator
+    private let aiTransformCoordinator: AITransformCoordinator
     private let systemActionCoordinator: SystemActionCoordinator
     private let quicklinkCoordinator: QuicklinkCoordinator
     private let windowCommandCoordinator: WindowCommandCoordinator
@@ -24,6 +25,7 @@ final class LauncherCoordinator {
         paletteCoordinator: PaletteCoordinator,
         settingsCoordinator: SettingsCoordinator,
         customCommandCoordinator: CustomCommandCoordinator,
+        aiTransformCoordinator: AITransformCoordinator,
         systemActionCoordinator: SystemActionCoordinator,
         quicklinkCoordinator: QuicklinkCoordinator,
         windowCommandCoordinator: WindowCommandCoordinator,
@@ -38,6 +40,7 @@ final class LauncherCoordinator {
         self.paletteCoordinator = paletteCoordinator
         self.settingsCoordinator = settingsCoordinator
         self.customCommandCoordinator = customCommandCoordinator
+        self.aiTransformCoordinator = aiTransformCoordinator
         self.systemActionCoordinator = systemActionCoordinator
         self.quicklinkCoordinator = quicklinkCoordinator
         self.windowCommandCoordinator = windowCommandCoordinator
@@ -65,6 +68,12 @@ final class LauncherCoordinator {
         if app.kind == .customCommand {
             guard let id = CustomCommand.id(fromEntryID: app.id) else { return }
             customCommandCoordinator.runCustomCommand(id: id)
+            return
+        }
+        // Before the palette hides: the transform needs the selection it was invoked on.
+        if app.kind == .aiTransform {
+            guard let id = AITransform.id(fromEntryID: app.id) else { return }
+            aiTransformCoordinator.runTransform(id: id)
             return
         }
         if app.kind == .systemAction {
@@ -99,7 +108,7 @@ final class LauncherCoordinator {
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
             snippetExpansion.expandSnippet(id: snippetID, targetApp: previous)
-        case .command, .customCommand, .systemAction, .windowCommand, .quicklink,
+        case .command, .customCommand, .aiTransform, .systemAction, .windowCommand, .quicklink,
             .extensionCommand:
             break  // handled above
         }

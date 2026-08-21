@@ -9,12 +9,14 @@ final class AppCore {
     let launcherRanking: LauncherRankingStore
     let appIndex: AppIndex
     let customCommands = CustomCommandStore()
+    let aiTransforms = AITransformStore()
     let quicklinks = QuicklinkStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
     let snippetListener = SnippetKeywordListener(
         syntheticEventTag: Paster.tinycastEventTag)
+    let aiTextDelivery = AITextDelivery()
     let snippetTextInjector: SnippetTextInjector
     let hotKeys = HotKeyManager()
     let hyperKeyTap = HyperKeyTap()
@@ -82,6 +84,11 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         hotKeys: hotKeys, favorites: favorites, visibility: visibility,
         ranking: launcherRanking, aliases: aliases, core: self)
+    @ObservationIgnored private(set) lazy var aiTransformCoordinator = AITransformCoordinator(
+        store: aiTransforms, settings: settings, appIndex: appIndex,
+        paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
+        hotKeys: hotKeys, favorites: favorites, visibility: visibility,
+        ranking: launcherRanking, aliases: aliases, delivery: aiTextDelivery, core: self)
     @ObservationIgnored private(set) lazy var notesCoordinator = NotesCoordinator(
         store: notesStore,
         settings: settings,
@@ -93,6 +100,7 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator,
         settingsCoordinator: settingsCoordinator,
         customCommandCoordinator: customCommandCoordinator,
+        aiTransformCoordinator: aiTransformCoordinator,
         systemActionCoordinator: systemActionCoordinator,
         quicklinkCoordinator: quicklinkCoordinator,
         windowCommandCoordinator: windowCommandCoordinator,
@@ -165,6 +173,10 @@ final class AppCore {
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
             }
             customCommandCoordinator.applyCustomCommandsPresence()
+            aiTransforms.onChange = { [weak self] _ in
+                self?.aiTransformCoordinator.applyPresence()
+            }
+            aiTransformCoordinator.applyPresence()
             applyWindowCommandsPresence()
             quicklinks.onChange = { [weak self] _ in
                 self?.quicklinkCoordinator.applyQuicklinksPresence()
@@ -195,6 +207,9 @@ final class AppCore {
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
             }
+            hotKeys.onRunAITransform = { [weak self] id in
+                self?.aiTransformCoordinator.runTransform(id: id)
+            }
             hotKeys.onRunSystemAction = { [weak self] id in
                 self?.systemActionCoordinator.runSystemAction(id: id)
             }
@@ -211,6 +226,10 @@ final class AppCore {
                 self?.extensionCoordinator.removeExtensionReferences(entryIDs: entryIDs)
             }
             hotKeys.displayName = { [weak self] action in self?.hotKeyDisplayName(for: action) }
+            aiTextDelivery.onPasteboardMutation = { [weak self] changeCount in
+                self?.clipboardManager.synchronizeAfterTinycastPasteboardMutation(
+                    changeCount: changeCount)
+            }
             KeyShortcut.displayedHyperChord = { [settings] in
                 guard settings.hyperKey != .none else { return nil }
                 return KeyShortcut.hyperChord(includesShift: settings.hyperKeyIncludesShift)
@@ -220,7 +239,8 @@ final class AppCore {
             }
             hotKeys.start(
                 customCommandIDs: Set(customCommands.commands.map(\.id)),
-                quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)))
+                quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)),
+                aiTransformIDs: Set(aiTransforms.transforms.map(\.id)))
             // Keeps running while Carbon pauses: the recorder needs its rewritten flags.
             hyperKeyTap.start(settings: settings)
 
@@ -263,6 +283,8 @@ final class AppCore {
                 .name
         case .customCommand(let id):
             return customCommands.command(id: id)?.name
+        case .aiTransform(let id):
+            return aiTransforms.transform(id: id)?.name
         case .quicklink(let id):
             return quicklinks.quicklink(id: id)?.name
         case .extensionCommand(let entryID):
@@ -299,6 +321,19 @@ final class AppCore {
                 _ = $0.customCommandsEnabled
                 _ = $0.customCommandsShowInLauncher
             }, reproject: { $0.customCommandCoordinator.applyCustomCommandsPresence() })
+        track(
+            {
+                _ = $0.aiTransformsEnabled
+                _ = $0.aiTransformsShowInLauncher
+            }, reproject: { $0.aiTransformCoordinator.applyPresence() })
+        // Seeding belongs to the enable transition alone: an import or a deliberate emptying
+        // is never overwritten, and toggling visibility can't resurrect the presets.
+        track(
+            { _ = $0.aiTransformsEnabled },
+            reproject: { core in
+                guard core.settings.aiTransformsEnabled else { return }
+                core.aiTransforms.seedBuiltInsIfEmpty()
+            })
         track(
             {
                 _ = $0.quicklinksEnabled

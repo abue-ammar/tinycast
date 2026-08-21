@@ -122,6 +122,8 @@ run space-gesture-test     Tinycast/Features/WindowManagement/WindowCommand.swif
                            Tinycast/Features/WindowManagement/SpaceGesture.swift
 run custom-command-test    Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
                            Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift
+run ai-transform-test      Tinycast/Features/AITransforms/Model/AITransform.swift \
+                           Tinycast/Features/AITransforms/Service/AIClient.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
                            Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
                            Tinycast/Features/Uninstall/Model/UninstallRules.swift \

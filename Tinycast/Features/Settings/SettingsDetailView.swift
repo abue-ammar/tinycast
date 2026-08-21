@@ -13,6 +13,7 @@ struct SettingsDetailView: View {
             case .systemSettings: SystemSettingsSettingsView()
             case .systemActions: SystemActionsSettingsView()
             case .commands: CommandsSettingsView()
+            case .aiTransforms: AITransformsSettingsView()
             case .quicklinks: QuicklinksSettingsView()
             case .fileSearch: FileSearchSettingsView()
             case .notes: NotesSettingsView()
