@@ -498,17 +498,13 @@ struct AIProviderAccountEditorSheet: View {
 
         do {
             if account == nil {
-                let created = try core.aiProviderAccounts.add(draft)
-                if !isOAuthState {
-                    SecretStore.setSecret(
-                        trimmedKey.isEmpty ? nil : trimmedKey, account: created.secretAccountKey)
-                }
+                try core.aiProviderAccounts.add(draft)
             } else {
                 try core.aiProviderAccounts.update(draft)
-                if !isOAuthState {
-                    SecretStore.setSecret(
-                        trimmedKey.isEmpty ? nil : trimmedKey, account: draft.secretAccountKey)
-                }
+            }
+            if !isOAuthState {
+                SecretStore.setSecret(
+                    trimmedKey.isEmpty ? nil : trimmedKey, account: draft.secretAccountKey)
             }
             dismiss()
         } catch {
