@@ -14,6 +14,7 @@ struct AITransformsSettingsView: View {
     /// Model IDs the provider listed; empty until polled, which keeps the dropdown on Custom…
     /// for anyone who never asks for it.
     @State private var fetchedModels: [String] = []
+    @State private var forceCustomModel = false
     @State private var isFetchingModels = false
     @State private var isTestingConnection = false
     @State private var connectionNote: ConnectionNote?
@@ -62,25 +63,34 @@ struct AITransformsSettingsView: View {
                     Text("Select a service or choose Custom for other endpoints.")
                 }
 
-                LabeledContent {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                        Text("Base URL")
+                        Text("OpenAI-compatible root ending before /chat/completions.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
                     TextField("", text: $settings.aiBaseURL, prompt: Text(AIClient.defaultBaseURL))
                         .textFieldStyle(.roundedBorder)
                         .multilineTextAlignment(.leading)
-                } label: {
-                    Text("Base URL")
-                    Text("OpenAI-compatible root ending before /chat/completions.")
                 }
 
-                LabeledContent {
-                    HStack(spacing: Theme.Spacing.sm) {
-                        SecureField(
-                            "", text: $keyDraft, prompt: Text(keyIsStored ? "Replace saved key" : "sk-…")
-                        )
-                        .textFieldStyle(.roundedBorder)
-                        .multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                            Text("API Key")
+                            Text(keyIsStored ? "Saved in login Keychain." : "Required for cloud providers.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
                         if !keyDraft.isEmpty {
                             Button("Save") { saveKey() }
                                 .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
                         } else if keyIsStored {
                             Button("Clear", role: .destructive) {
                                 SecretStore.setSecret(nil, account: SecretStore.aiAPIKeyAccount)
@@ -88,15 +98,29 @@ struct AITransformsSettingsView: View {
                                 keyIsStored = false
                                 fetchedModels = []
                             }
+                            .controlSize(.small)
                         }
                     }
-                } label: {
-                    Text("API Key")
-                    Text(keyIsStored ? "Saved in login Keychain." : "Required for cloud providers.")
+
+                    SecureField(
+                        "", text: $keyDraft,
+                        prompt: Text(keyIsStored ? "Replace saved key" : "sk-…")
+                    )
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.leading)
                 }
 
-                LabeledContent {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                            Text("Default Model")
+                            Text("Used when a transform has no model override.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
                         HStack(spacing: Theme.Spacing.sm) {
                             Picker(selection: modelSelection) {
                                 Text("Custom…").tag(Self.customModelID)
@@ -111,6 +135,7 @@ struct AITransformsSettingsView: View {
                             }
                             .labelsHidden()
                             .pickerStyle(.menu)
+                            .frame(minWidth: 160)
 
                             Button {
                                 refreshModels()
@@ -125,18 +150,16 @@ struct AITransformsSettingsView: View {
                             .help("Fetch models from provider")
                             .disabled(isFetchingModels)
                         }
-
-                        if isCustomModel || fetchedModels.isEmpty {
-                            TextField(
-                                "", text: $settings.aiModel, prompt: Text("Model ID (e.g. gemini-2.5-flash)")
-                            )
-                            .textFieldStyle(.roundedBorder)
-                            .multilineTextAlignment(.leading)
-                        }
                     }
-                } label: {
-                    Text("Default Model")
-                    Text("Used when a transform has no model override.")
+
+                    TextField(
+                        "", text: $settings.aiModel,
+                        prompt: Text("Model ID (e.g. gemini-2.5-flash)")
+                    )
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.leading)
+                    .disabled(!isCustomModel && !fetchedModels.isEmpty)
+                    .opacity((!isCustomModel && !fetchedModels.isEmpty) ? 0.5 : 1.0)
                 }
 
                 LabeledContent {
@@ -258,14 +281,19 @@ struct AITransformsSettingsView: View {
     private static let customModelID = "custom"
 
     /// A model the provider listed is chosen in the dropdown; anything else (including a
-    /// hand-typed ID) reads as Custom…, which is when the freeform field shows.
-    private var isCustomModel: Bool { !fetchedModels.contains(settings.aiModel) }
+    /// hand-typed ID) reads as Custom…, which is when the freeform field is enabled.
+    private var isCustomModel: Bool {
+        forceCustomModel || !fetchedModels.contains(settings.aiModel)
+    }
 
     private var modelSelection: Binding<String> {
         Binding(
             get: { isCustomModel ? Self.customModelID : settings.aiModel },
             set: { selection in
-                if selection != Self.customModelID {
+                if selection == Self.customModelID {
+                    forceCustomModel = true
+                } else {
+                    forceCustomModel = false
                     settings.aiModel = selection
                     connectionNote = nil
                 }
