@@ -28,12 +28,7 @@ struct AITransformScreen: PaletteScreen {
     }
 
     func hasPrimaryAction(at selection: Int) -> Bool {
-        switch session.phase {
-        case .processing:
-            return false
-        case .idle, .completed, .failed:
-            return true
-        }
+        !session.isProcessing
     }
 
     func secondary(at selection: Int) -> Bool {

@@ -94,11 +94,9 @@ final class AITransformSession {
     }
     func regenerate(apiKey: String, baseURL: String) {
         guard let preset else { return }
-        let promptToUse = history.last?.instruction ?? preset.prompt
-        let inputToUse = originalSelection
         execute(
-            instruction: promptToUse,
-            input: inputToUse,
+            instruction: history.last?.instruction ?? preset.prompt,
+            input: originalSelection,
             model: currentModel,
             apiKey: apiKey,
             baseURL: baseURL
