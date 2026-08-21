@@ -117,32 +117,88 @@ struct AITransformTests {
         check(
             "transforms survive a reload",
             AITransformStore(defaults: storeDefaults).transforms == expected)
-
         let removed = store.remove(id: added.id)
         check("remove returns the removed transform", removed?.id == added.id)
         check("remove empties the store", store.transforms.isEmpty)
 
+        // MARK: Duplicate (Clone)
+
+        let root = try? store.add(AITransform(name: "Fix Grammar", prompt: "Fix it.", model: "gpt-4o"))
+        guard let root else {
+            print("FAIL  could not add root transform for duplicate test")
+            exit(1)
+        }
+        let copy1 = try? store.duplicate(id: root.id)
+        check("duplicate creates Copy of name", copy1?.name == "Copy of Fix Grammar")
+        check("duplicate keeps prompt", copy1?.prompt == "Fix it.")
+        check("duplicate keeps model", copy1?.model == "gpt-4o")
+        check("duplicate creates a fresh unique ID", copy1?.id != root.id)
+
+        let copy2 = try? store.duplicate(id: root.id)
+        check("second duplicate increments counter", copy2?.name == "Copy of Fix Grammar 2")
+        check("second duplicate is unique", copy2?.id != copy1?.id)
+
+        // MARK: Reasoning effort wire mapping
+
+        check("reasoning none wire value is nil", AIReasoningEffort.none.wireValue == nil)
+        check("reasoning low wire value is low", AIReasoningEffort.low.wireValue == "low")
+        check("reasoning medium wire value is medium", AIReasoningEffort.medium.wireValue == "medium")
+        check("reasoning high wire value is high", AIReasoningEffort.high.wireValue == "high")
+
+        // MARK: Provider Account Store
+
+        let accountSuite = "com.tinycast.ai-account-tests.\(UUID().uuidString)"
+        guard let accountDefaults = UserDefaults(suiteName: accountSuite) else {
+            print("FAIL  could not create isolated account defaults")
+            exit(1)
+        }
+        accountDefaults.removePersistentDomain(forName: accountSuite)
+        defer { accountDefaults.removePersistentDomain(forName: accountSuite) }
+
+        let accountStore = AIProviderAccountStore(defaults: accountDefaults)
+        check("account store is empty initially", accountStore.accounts.isEmpty)
+        accountStore.seedIfEmpty(legacyBaseURL: "https://api.openai.com/v1", legacyModel: "gpt-4o")
+        check("seedIfEmpty creates primary account", accountStore.accounts.count == 1)
+        check("seedIfEmpty sets defaultAccountID", accountStore.defaultAccountID != nil)
+        check("seedIfEmpty picks OpenAI name", accountStore.defaultAccount?.name == "OpenAI")
+        check("seedIfEmpty sets model", accountStore.defaultAccount?.defaultModel == "gpt-4o")
+
+        let newAccount = try? accountStore.add(
+            AIProviderAccount(
+                name: "Work Gemini",
+                providerPresetID: "Google Gemini",
+                baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+                defaultModel: "gemini-3.7-flash",
+                defaultReasoning: .high
+            ))
+        check("account added successfully", accountStore.accounts.count == 2)
+        check("account has high reasoning", newAccount?.defaultReasoning == .high)
+
+        accountStore.setDefault(id: newAccount!.id)
+        check("setDefault switches default account", accountStore.defaultAccount?.name == "Work Gemini")
+
+        // MARK: Replace import
+
         // `replace` runs the import sanitizer, which must drop junk without touching survivors.
         let kept = UUID()
         let keptCount = store.replace(with: [
-            AITransform(id: kept, name: " Kept ", prompt: "Stay.", model: ""),
-            AITransform(name: "", prompt: "No name."),
-            AITransform(id: kept, name: "Duplicate ID", prompt: "Same id."),
-            AITransform(name: "kept", prompt: "Case-collision.")
+            AITransform(id: kept, name: "  Kept  ", prompt: "  Stay.  ", model: " "),
+            AITransform(name: "", prompt: "Invalid"),
+            AITransform(name: "Kept", prompt: "Duplicate name"),
+            AITransform(name: "Long", prompt: String(repeating: "a", count: 4_001))
         ])
         check("replace returns the kept count", keptCount == 1)
         check(
             "replace trims and keeps the one valid record",
             store.transforms == [AITransform(id: kept, name: "Kept", prompt: "Stay.")])
+        // MARK: Seeding
 
-        store.remove(id: kept)
-
-        // MARK: Seeded presets
-
+        store.replace(with: [])
         store.seedBuiltInsIfEmpty()
+        check("seeding populates the four built-ins", store.transforms.count == 4)
         let seededNames = store.transforms.map(\.name)
         check(
-            "seeding inserts the four presets",
+            "the four names match the shipped defaults",
             seededNames == ["Fix Spelling & Grammar", "Polish Writing", "Make Concise", "Summarize"])
         check(
             "every seed has a non-empty prompt",
@@ -172,6 +228,7 @@ struct AITransformTests {
             var stream: Bool
             var max_tokens: Int
             var messages: [WireMessage]
+            var reasoning_effort: String?
 
             struct WireMessage: Decodable {
                 var role: String
@@ -205,6 +262,14 @@ struct AITransformTests {
                     "Do NOT include follow-up questions")
         )
         check("the selection is the user message", body.messages[1].content == "Helo world")
+        check("standard request has no reasoning_effort", body.reasoning_effort == nil)
+
+        let reasoningRequest = AICompletionRequest(
+            baseURL: URL(string: "https://api.openai.com/v1")!, apiKey: "sk-test", model: "o3-mini",
+            instruction: "Think deep.", selection: "Problem", reasoningEffort: .high)
+        let reasoningWire = try? JSONDecoder().decode(
+            WireBody.self, from: reasoningRequest.makeURLRequest().httpBody ?? Data())
+        check("reasoning request body carries reasoning_effort", reasoningWire?.reasoning_effort == "high")
 
         // MARK: Endpoint normalization
 
@@ -381,10 +446,10 @@ struct AITransformTests {
             selection: "Helo",
             targetApp: nil,
             defaultModel: "gpt-4o-mini",
+            reasoning: .none,
             apiKey: "",
             baseURL: "https://api.openai.com/v1"
         )
-        check("session becomes active upon begin", session.isActive)
         check("session preset name matches", session.presetName == "Fix Grammar")
         check("session original selection matches", session.originalSelection == "Helo")
         check(

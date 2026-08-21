@@ -43,6 +43,7 @@ final class SettingsCoordinator {
             .environment(core.aliases)
             .environment(core.customCommands)
             .environment(core.aiTransforms)
+            .environment(core.aiProviderAccounts)
             .environment(core.snippetsStore)
             .environment(core.quicklinks)
             // Propagates down so the window's materials show through, not each list's backing.

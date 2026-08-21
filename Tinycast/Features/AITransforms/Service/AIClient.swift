@@ -10,6 +10,8 @@ struct AICompletionRequest: Sendable {
     var instruction: String
     /// The highlighted text, sent as the user message.
     var selection: String
+    /// Reasoning level for reasoning-capable models (e.g. o3-mini, Gemini 2.5/3.7, DeepSeek-R1).
+    var reasoningEffort: AIReasoningEffort? = nil
 
     func makeURLRequest() -> URLRequest {
         // The user pastes the base URL; tolerate a trailing slash and a full endpoint pasted
@@ -28,7 +30,9 @@ struct AICompletionRequest: Sendable {
                 messages: [
                     Body.Message(role: "system", content: Self.systemInstruction(instruction)),
                     Body.Message(role: "user", content: selection)
-                ]))
+                ],
+                reasoningEffort: reasoningEffort?.wireValue
+            ))
         return request
     }
 
@@ -73,6 +77,7 @@ struct AICompletionRequest: Sendable {
         var stream: Bool
         var maxTokens: Int
         var messages: [Message]
+        var reasoningEffort: String?
 
         struct Message: Encodable {
             var role: String
@@ -82,6 +87,7 @@ struct AICompletionRequest: Sendable {
         enum CodingKeys: String, CodingKey {
             case model, stream, messages
             case maxTokens = "max_tokens"
+            case reasoningEffort = "reasoning_effort"
         }
     }
 }

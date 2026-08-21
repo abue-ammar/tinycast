@@ -31,6 +31,7 @@ final class AITransformSession {
     private(set) var preset: AITransform?
     private(set) var originalSelection: String = ""
     private(set) var currentModel: String = ""
+    private(set) var currentReasoning: AIReasoningEffort?
     private(set) var targetApp: NSRunningApplication?
     private(set) var phase: Phase = .idle
     private(set) var history: [HistoryEntry] = []
@@ -67,6 +68,7 @@ final class AITransformSession {
         selection: String,
         targetApp: NSRunningApplication?,
         defaultModel: String,
+        reasoning: AIReasoningEffort?,
         apiKey: String,
         baseURL: String
     ) {
@@ -74,6 +76,7 @@ final class AITransformSession {
         self.preset = preset
         self.originalSelection = selection
         self.targetApp = targetApp
+        self.currentReasoning = reasoning
         let chosenModel = preset.model ?? (defaultModel.isEmpty ? AIClient.defaultModel : defaultModel)
         if selection.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             self.phase = .idle
@@ -180,9 +183,9 @@ final class AITransformSession {
             apiKey: apiKey,
             model: model,
             instruction: instruction,
-            selection: input
+            selection: input,
+            reasoningEffort: currentReasoning
         )
-
         activeTask = Task { [weak self] in
             do {
                 let result = try await AIClient.complete(request)

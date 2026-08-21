@@ -10,18 +10,24 @@ struct AITransformEditorSheet: View {
     @State private var name: String
     @State private var prompt: String
     @State private var model: String
+    @State private var providerAccountID: UUID?
+    @State private var reasoningEffort: AIReasoningEffort?
+    @State private var activationMode: AIExecutionMode?
     @State private var fetchedModels: [String] = []
     @State private var forceCustomModel = false
     @State private var isFetchingModels = false
     @State private var errorMessage: String?
     @FocusState private var nameFocused: Bool
+
     init(transform: AITransform?) {
         self.transform = transform
         _name = State(initialValue: transform?.name ?? "")
         _prompt = State(initialValue: transform?.prompt ?? "")
         _model = State(initialValue: transform?.model ?? "")
+        _providerAccountID = State(initialValue: transform?.providerAccountID)
+        _reasoningEffort = State(initialValue: transform?.reasoningEffort)
+        _activationMode = State(initialValue: transform?.activationMode)
     }
-
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
             Text(transform == nil ? "Add AI Transform" : "Edit AI Transform")
@@ -61,6 +67,58 @@ struct AITransformEditorSheet: View {
             .font(.caption)
             .foregroundStyle(.secondary)
 
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Provider Account")
+                    .font(.callout.weight(.medium))
+                Picker("Provider Account", selection: $providerAccountID) {
+                    Text("Inherit Default (\(defaultAccountName))").tag(nil as UUID?)
+                    if !core.aiProviderAccounts.accounts.isEmpty {
+                        Divider()
+                        ForEach(core.aiProviderAccounts.accounts) { account in
+                            Label {
+                                Text(account.name)
+                            } icon: {
+                                if let icon = account.providerPreset?.iconName {
+                                    Image(icon)
+                                } else {
+                                    Image(systemName: account.providerPreset?.symbolFallback ?? "sparkles")
+                                }
+                            }
+                            .tag(account.id as UUID?)
+                        }
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Reasoning / Thinking Level")
+                    .font(.callout.weight(.medium))
+                Picker("Reasoning Level", selection: $reasoningEffort) {
+                    Text("Inherit Provider (\(inheritedReasoningTitle))").tag(nil as AIReasoningEffort?)
+                    Divider()
+                    ForEach(AIReasoningEffort.allCases) { effort in
+                        Text(effort.title).tag(effort as AIReasoningEffort?)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Activation Mode")
+                    .font(.callout.weight(.medium))
+                Picker("Activation Mode", selection: $activationMode) {
+                    Text("Inherit Global (\(settings.aiExecutionMode.title))").tag(nil as AIExecutionMode?)
+                    Divider()
+                    ForEach(AIExecutionMode.allCases) { mode in
+                        Text(mode.title).tag(mode as AIExecutionMode?)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 HStack {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
@@ -137,16 +195,10 @@ struct AITransformEditorSheet: View {
             }
         }
         .task {
-            if let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount), !key.isEmpty {
-                isFetchingModels = true
-                defer { isFetchingModels = false }
-                do {
-                    fetchedModels = try await AIClient.listModels(
-                        baseURL: settings.aiBaseURL, apiKey: key)
-                } catch {
-                    fetchedModels = []
-                }
-            }
+            refreshModels()
+        }
+        .onChange(of: providerAccountID) { _, _ in
+            refreshModels()
         }
         .onAppear {
             if transform == nil {
@@ -161,8 +213,14 @@ struct AITransformEditorSheet: View {
         // Editing keeps the UUID, and with it every reference the transform owns.
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
         let draft = AITransform(
-            id: transform?.id ?? UUID(), name: name, prompt: prompt,
-            model: trimmedModel.isEmpty ? nil : trimmedModel)
+            id: transform?.id ?? UUID(),
+            name: name,
+            prompt: prompt,
+            model: trimmedModel.isEmpty ? nil : trimmedModel,
+            providerAccountID: providerAccountID,
+            reasoningEffort: reasoningEffort,
+            activationMode: activationMode
+        )
         do {
             if transform == nil {
                 try core.aiTransformCoordinator.addTransform(draft)
@@ -176,6 +234,27 @@ struct AITransformEditorSheet: View {
         }
     }
 
+    private var resolvedAccount: AIProviderAccount? {
+        if let providerAccountID, let account = core.aiProviderAccounts.account(id: providerAccountID) {
+            return account
+        }
+        return core.aiProviderAccounts.defaultAccount
+    }
+
+    private var defaultAccountName: String {
+        core.aiProviderAccounts.defaultAccount?.name ?? "Default Provider"
+    }
+
+    private var inheritedReasoningTitle: String {
+        resolvedAccount?.defaultReasoning.title ?? AIReasoningEffort.none.title
+    }
+
+    private var defaultModelName: String {
+        resolvedAccount?.defaultModel.isEmpty == false
+            ? resolvedAccount!.defaultModel
+            : (settings.aiModel.isEmpty ? AIClient.defaultModel : settings.aiModel)
+    }
+
     // MARK: Model selection logic
 
     private static let defaultModelID = "default"
@@ -187,10 +266,6 @@ struct AITransformEditorSheet: View {
 
     private var isCustomModel: Bool {
         forceCustomModel || (!isDefaultModel && !fetchedModels.contains(model))
-    }
-
-    private var defaultModelName: String {
-        settings.aiModel.isEmpty ? AIClient.defaultModel : settings.aiModel
     }
 
     private var modelSelection: Binding<String> {
@@ -218,15 +293,15 @@ struct AITransformEditorSheet: View {
     }
 
     private func refreshModels() {
-        guard let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount), !key.isEmpty else {
-            return
-        }
+        guard let account = resolvedAccount else { return }
+        let key = SecretStore.secret(account: account.secretAccountKey) ?? ""
+        guard account.isLocal || !key.isEmpty else { return }
         isFetchingModels = true
         Task {
             defer { isFetchingModels = false }
             do {
                 fetchedModels = try await AIClient.listModels(
-                    baseURL: settings.aiBaseURL, apiKey: key)
+                    baseURL: account.baseURL, apiKey: key)
             } catch {
                 fetchedModels = []
             }

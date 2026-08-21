@@ -88,29 +88,94 @@ final class AITransformCoordinator {
 
     // MARK: - Running
 
+    struct ResolvedConfig {
+        let account: AIProviderAccount
+        let key: String
+        let baseURL: URL
+        let model: String
+        let reasoning: AIReasoningEffort?
+        let mode: AIExecutionMode
+    }
+
+    private func resolveConfig(for transform: AITransform) -> ResolvedConfig? {
+        let account: AIProviderAccount
+        if let accountID = transform.providerAccountID,
+            let customAccount = core.aiProviderAccounts.account(id: accountID)
+        {
+            account = customAccount
+        } else if let defaultAccount = core.aiProviderAccounts.defaultAccount {
+            account = defaultAccount
+        } else {
+            return nil
+        }
+
+        let key =
+            SecretStore.secret(account: account.secretAccountKey)
+            ?? SecretStore.secret(account: SecretStore.aiAPIKeyAccount)
+            ?? ""
+
+        guard account.isLocal || !key.isEmpty else { return nil }
+
+        guard
+            let baseURL = AICompletionRequest.endpointURL(
+                fromBase: account.baseURL, path: "/chat/completions"),
+            baseURL.host != nil
+        else { return nil }
+
+        let rawModel =
+            transform.model
+            ?? (account.defaultModel.isEmpty
+                ? (settings.aiModel.isEmpty ? AIClient.defaultModel : settings.aiModel)
+                : account.defaultModel)
+        let model = rawModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !model.isEmpty else { return nil }
+
+        let reasoning =
+            transform.reasoningEffort ?? (account.defaultReasoning == .none ? nil : account.defaultReasoning)
+        let mode = transform.activationMode ?? settings.aiExecutionMode
+
+        return ResolvedConfig(
+            account: account,
+            key: key,
+            baseURL: baseURL,
+            model: model,
+            reasoning: reasoning,
+            mode: mode
+        )
+    }
+
     /// Launcher activation: opens interactive preview window or executes directly based on execution mode setting.
     func launchTransform(id: UUID) {
-        if settings.aiExecutionMode == .interactive {
-            openInteractiveSession(id: id)
+        guard settings.aiTransformsEnabled else { return }
+        guard let transform = store.transform(id: id) else { return }
+        guard let config = resolveConfig(for: transform) else {
+            Task { await presentFailure(.notConfigured, transform: transform) }
+            return
+        }
+        if config.mode == .interactive {
+            openInteractiveSession(transform: transform, config: config)
         } else {
-            runTransform(id: id)
+            runTransformDirect(transform: transform, config: config)
+        }
+    }
+
+    /// The one funnel for direct background execution (e.g. global hotkey).
+    func runTransform(id: UUID) {
+        guard settings.aiTransformsEnabled else { return }
+        guard let transform = store.transform(id: id) else { return }
+        guard let config = resolveConfig(for: transform) else {
+            Task { await presentFailure(.notConfigured, transform: transform) }
+            return
+        }
+        if config.mode == .interactive {
+            openInteractiveSession(transform: transform, config: config)
+        } else {
+            runTransformDirect(transform: transform, config: config)
         }
     }
 
     /// Opens the interactive transformation session inside Tinycast's palette window.
-    func openInteractiveSession(id: UUID) {
-        guard settings.aiTransformsEnabled else { return }
-        guard let transform = store.transform(id: id) else { return }
-        let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
-        let model = transform.model ?? settings.aiModel
-        guard !key.isEmpty, !model.isEmpty else {
-            Task { await presentFailure(.notConfigured, transform: transform) }
-            return
-        }
-        guard let baseURL = URL(string: settings.aiBaseURL), baseURL.host != nil else {
-            Task { await presentFailure(.invalidBaseURL(settings.aiBaseURL), transform: transform) }
-            return
-        }
+    private func openInteractiveSession(transform: AITransform, config: ResolvedConfig) {
         let target = paletteCoordinator.targetApp
         Permissions.ensureAccessibility()
         let selection = target.flatMap({ AccessibilityText.selection(in: $0) }) ?? ""
@@ -119,35 +184,19 @@ final class AITransformCoordinator {
             preset: transform,
             selection: selection,
             targetApp: target,
-            defaultModel: settings.aiModel,
-            apiKey: key,
-            baseURL: settings.aiBaseURL
+            defaultModel: config.model,
+            reasoning: config.reasoning,
+            apiKey: config.key,
+            baseURL: config.account.baseURL
         )
         paletteCoordinator.showPalette(mode: .aiTransform)
     }
 
-    /// The one funnel for direct background execution (e.g. global hotkey).
-    func runTransform(id: UUID) {
-        guard settings.aiTransformsEnabled else { return }
-        guard let transform = store.transform(id: id) else { return }
+    private func runTransformDirect(transform: AITransform, config: ResolvedConfig) {
         guard !isTransforming else {
             core.showMessage("Already transforming", tone: .neutral)
             return
         }
-        // Config resolves before anything touches the target app, so a bad setup fails with no
-        // side effects and the fix is one dialog away.
-        let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
-        let model = transform.model ?? settings.aiModel
-        guard !key.isEmpty, !model.isEmpty else {
-            Task { await presentFailure(.notConfigured, transform: transform) }
-            return
-        }
-        guard let baseURL = URL(string: settings.aiBaseURL), baseURL.host != nil else {
-            Task { await presentFailure(.invalidBaseURL(settings.aiBaseURL), transform: transform) }
-            return
-        }
-        // Visible palette means its recorded previous app is the one displaced; on the hotkey
-        // path nothing is up and frontmost is right — exactly what `targetApp` encodes.
         let target = paletteCoordinator.targetApp
         Permissions.ensureAccessibility()
         guard let selection = target.flatMap({ AccessibilityText.selection(in: $0) }),
@@ -176,8 +225,13 @@ final class AITransformCoordinator {
             do {
                 result = try await AIClient.complete(
                     AICompletionRequest(
-                        baseURL: baseURL, apiKey: key, model: model,
-                        instruction: transform.prompt, selection: selection))
+                        baseURL: config.baseURL,
+                        apiKey: config.key,
+                        model: config.model,
+                        instruction: transform.prompt,
+                        selection: selection,
+                        reasoningEffort: config.reasoning
+                    ))
             } catch {
                 let aiError = error as? AIClientError ?? .network(error.localizedDescription)
                 await presentFailure(aiError, transform: transform)
@@ -197,7 +251,6 @@ final class AITransformCoordinator {
             }
         }
     }
-
     private func removeTransformReferences(ids: Set<UUID>, entryIDs: Set<String>) {
         for id in ids {
             let action = HotKeyAction.aiTransform(id: id)

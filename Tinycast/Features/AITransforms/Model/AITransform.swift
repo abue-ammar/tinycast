@@ -11,16 +11,32 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
     var name: String
     /// Instruction for the model; the selected text is sent as the user message.
     var prompt: String
-    /// Optional override of the global model, so one preset can pin a stronger one.
+    /// Optional override of the provider's default model.
     var model: String?
+    /// Specific provider account to use; nil means inherit the default account.
+    var providerAccountID: UUID?
+    /// Reasoning level for models supporting reasoning; nil means inherit account default.
+    var reasoningEffort: AIReasoningEffort?
+    /// Per-preset activation mode; nil means inherit the global setting.
+    var activationMode: AIExecutionMode?
 
-    init(id: UUID = UUID(), name: String, prompt: String, model: String? = nil) {
+    init(
+        id: UUID = UUID(),
+        name: String,
+        prompt: String,
+        model: String? = nil,
+        providerAccountID: UUID? = nil,
+        reasoningEffort: AIReasoningEffort? = nil,
+        activationMode: AIExecutionMode? = nil
+    ) {
         self.id = id
         self.name = name
         self.prompt = prompt
         self.model = model
+        self.providerAccountID = providerAccountID
+        self.reasoningEffort = reasoningEffort
+        self.activationMode = activationMode
     }
-
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
     static func id(fromEntryID entryID: String) -> UUID? {
@@ -92,12 +108,34 @@ final class AITransformStore {
     @discardableResult
     func remove(id: UUID) -> AITransform? {
         guard let index = transforms.firstIndex(where: { $0.id == id }) else { return nil }
-        var updated = transforms
-        let removed = updated.remove(at: index)
-        commit(updated)
+        let removed = transforms.remove(at: index)
+        persist()
+        onChange?(transforms)
         return removed
     }
 
+    /// Clones a transform in place with a unique "Copy of <Name>" title.
+    @discardableResult
+    func duplicate(id: UUID) throws -> AITransform? {
+        guard let original = transform(id: id) else { return nil }
+        var copyName = "Copy of \(original.name)"
+        var counter = 2
+        while transforms.contains(where: { $0.name.localizedCaseInsensitiveCompare(copyName) == .orderedSame }
+        ) {
+            copyName = "Copy of \(original.name) \(counter)"
+            counter += 1
+        }
+        let clone = AITransform(
+            id: UUID(),
+            name: copyName,
+            prompt: original.prompt,
+            model: original.model,
+            providerAccountID: original.providerAccountID,
+            reasoningEffort: original.reasoningEffort,
+            activationMode: original.activationMode
+        )
+        return try add(clone)
+    }
     /// Replaces the whole set on backup import, dropping invalid and duplicate records.
     @discardableResult
     func replace(with newTransforms: [AITransform]) -> Int {
@@ -134,28 +172,33 @@ final class AITransformStore {
     ]
 
     private func validated(_ draft: AITransform) throws -> AITransform {
-        var value = draft
-        value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        value.prompt = draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let model = draft.model?.trimmingCharacters(in: .whitespacesAndNewlines)
-        value.model = (model?.isEmpty ?? true) ? nil : model
-        guard !value.name.isEmpty else { throw AITransformValidationError.emptyName }
-        guard !value.prompt.isEmpty else { throw AITransformValidationError.emptyPrompt }
-        guard value.name.count <= AITransform.maxNameLength else {
+        let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPrompt = draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { throw AITransformValidationError.emptyName }
+        guard !trimmedPrompt.isEmpty else { throw AITransformValidationError.emptyPrompt }
+        guard trimmedName.count <= AITransform.maxNameLength else {
             throw AITransformValidationError.nameTooLong
         }
-        guard value.prompt.count <= AITransform.maxPromptLength else {
+        guard trimmedPrompt.count <= AITransform.maxPromptLength else {
             throw AITransformValidationError.promptTooLong
         }
-        guard
-            !transforms.contains(where: {
-                $0.id != value.id
-                    && $0.name.compare(value.name, options: .caseInsensitive) == .orderedSame
-            })
-        else { throw AITransformValidationError.duplicateName }
-        return value
-    }
+        let duplicate = transforms.contains {
+            $0.id != draft.id && $0.name.localizedCaseInsensitiveCompare(trimmedName) == .orderedSame
+        }
+        guard !duplicate else { throw AITransformValidationError.duplicateName }
 
+        let rawModel = draft.model?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let model = (rawModel?.isEmpty == true) ? nil : rawModel
+        return AITransform(
+            id: draft.id,
+            name: trimmedName,
+            prompt: trimmedPrompt,
+            model: model,
+            providerAccountID: draft.providerAccountID,
+            reasoningEffort: draft.reasoningEffort,
+            activationMode: draft.activationMode
+        )
+    }
     private func commit(_ updated: [AITransform]) {
         guard updated != transforms else { return }
         transforms = updated
@@ -169,25 +212,31 @@ final class AITransformStore {
     }
 
     private static func sanitized(_ values: [AITransform]) -> [AITransform] {
-        var ids = Set<UUID>()
-        var names = Set<String>()
-        var result: [AITransform] = []
+        var seenNames = Set<String>()
+        var sanitized: [AITransform] = []
         for value in values {
-            // Copy-and-clean rather than rebuild, so a new option can never be dropped on import.
-            var cleaned = value
-            cleaned.name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            cleaned.prompt = value.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-            let model = value.model?.trimmingCharacters(in: .whitespacesAndNewlines)
-            cleaned.model = (model?.isEmpty ?? true) ? nil : model
-            let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: .current)
-            guard
-                !cleaned.name.isEmpty, !cleaned.prompt.isEmpty,
-                cleaned.name.count <= AITransform.maxNameLength,
-                cleaned.prompt.count <= AITransform.maxPromptLength,
-                ids.insert(cleaned.id).inserted, names.insert(foldedName).inserted
+            let name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let prompt = value.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, !prompt.isEmpty,
+                name.count <= AITransform.maxNameLength,
+                prompt.count <= AITransform.maxPromptLength,
+                !seenNames.contains(name.lowercased())
             else { continue }
-            result.append(cleaned)
+            seenNames.insert(name.lowercased())
+            let rawModel = value.model?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let model = (rawModel?.isEmpty == true) ? nil : rawModel
+            sanitized.append(
+                AITransform(
+                    id: value.id,
+                    name: name,
+                    prompt: prompt,
+                    model: model,
+                    providerAccountID: value.providerAccountID,
+                    reasoningEffort: value.reasoningEffort,
+                    activationMode: value.activationMode
+                )
+            )
         }
-        return result
+        return sanitized
     }
 }

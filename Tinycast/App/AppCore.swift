@@ -10,6 +10,7 @@ final class AppCore {
     let appIndex: AppIndex
     let customCommands = CustomCommandStore()
     let aiTransforms = AITransformStore()
+    let aiProviderAccounts = AIProviderAccountStore()
     let quicklinks = QuicklinkStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
