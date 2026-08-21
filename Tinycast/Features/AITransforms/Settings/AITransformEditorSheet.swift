@@ -305,22 +305,13 @@ struct AITransformEditorSheet: View {
     private var modelSelection: Binding<String> {
         Binding(
             get: {
-                if isDefaultModel {
-                    return Self.defaultModelID
-                } else if isCustomModel {
-                    return Self.customModelID
-                } else {
-                    return model
-                }
+                isDefaultModel ? Self.defaultModelID : (isCustomModel ? Self.customModelID : model)
             },
             set: { selection in
+                forceCustomModel = (selection == Self.customModelID)
                 if selection == Self.defaultModelID {
-                    forceCustomModel = false
                     model = ""
-                } else if selection == Self.customModelID {
-                    forceCustomModel = true
-                } else {
-                    forceCustomModel = false
+                } else if selection != Self.customModelID {
                     model = selection
                 }
             })
