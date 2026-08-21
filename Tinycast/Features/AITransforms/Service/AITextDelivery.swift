@@ -202,29 +202,21 @@ private struct Snapshot {
     /// The marked item carries only the plain result — stale rich data from the original copy
     /// would paste the old text right back — while later items ride along untouched.
     func markedItems(replacingFirstStringWith text: String) -> [NSPasteboardItem]? {
-        var pasteboardItems: [NSPasteboardItem] = []
-        pasteboardItems.reserveCapacity(max(items.count, 1))
-        for (index, item) in items.enumerated() {
-            let pasteboardItem = NSPasteboardItem()
-            if index == 0 {
-                guard pasteboardItem.setString(text, forType: .string),
-                    pasteboardItem.setData(Data(), forType: AITextDelivery.markerType)
-                else { return nil }
-                pasteboardItems.append(pasteboardItem)
-                continue
-            }
+        let first = NSPasteboardItem()
+        guard first.setString(text, forType: .string),
+            first.setData(Data(), forType: AITextDelivery.markerType)
+        else { return nil }
+        if items.isEmpty { return [first] }
+
+        var result = [first]
+        result.reserveCapacity(items.count)
+        for item in items.dropFirst() {
+            let pbItem = NSPasteboardItem()
             for value in item.values {
-                guard pasteboardItem.setData(value.data, forType: value.type) else { return nil }
+                guard pbItem.setData(value.data, forType: value.type) else { return nil }
             }
-            pasteboardItems.append(pasteboardItem)
+            result.append(pbItem)
         }
-        if items.isEmpty {
-            let pasteboardItem = NSPasteboardItem()
-            guard pasteboardItem.setString(text, forType: .string),
-                pasteboardItem.setData(Data(), forType: AITextDelivery.markerType)
-            else { return nil }
-            pasteboardItems.append(pasteboardItem)
-        }
-        return pasteboardItems
+        return result
     }
 }
