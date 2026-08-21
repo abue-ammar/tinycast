@@ -32,25 +32,31 @@ struct AITransformsSettingsView: View {
 
             Section {
                 LabeledContent("Provider") {
-                    Picker("Provider", selection: providerSelection) {
+                    Picker(selection: providerSelection) {
                         ForEach(AIProvider.catalog) { provider in
                             Text(provider.name).tag(provider.id)
                         }
                         Text("Custom").tag(AIProvider.customID)
+                    } label: {
+                        EmptyView()
                     }
                     .pickerStyle(.menu)
-                    .frame(width: 260)
+                    .frame(width: 220)
                 }
                 LabeledContent("Base URL") {
                     TextField(AIClient.defaultBaseURL, text: $settings.aiBaseURL)
                         .textFieldStyle(.roundedBorder)
-                        .frame(width: 260)
+                        .frame(width: 340)
                 }
-                LabeledContent("API Key") {
+                SettingsRow(
+                    title: "API Key",
+                    subtitle: keyIsStored
+                        ? "A key is saved in your login Keychain." : "No key saved."
+                ) {
                     HStack(spacing: Theme.Spacing.sm) {
-                        SecureField(keyIsStored ? "Replace saved key" : "sk-…", text: $keyDraft)
+                        SecureField(keyIsStored ? "New key" : "sk-…", text: $keyDraft)
                             .textFieldStyle(.roundedBorder)
-                            .frame(width: 200)
+                            .frame(width: 160)
                         Button("Save") { saveKey() }
                             .disabled(keyDraft.isEmpty)
                         if keyIsStored {
@@ -61,17 +67,6 @@ struct AITransformsSettingsView: View {
                             }
                         }
                     }
-                }
-                LabeledContent {
-                    EmptyView()
-                } label: {
-                    Text(
-                        keyIsStored
-                            ? "A key is saved in your login Keychain."
-                            : "No key saved."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 }
             } footer: {
                 Text(
