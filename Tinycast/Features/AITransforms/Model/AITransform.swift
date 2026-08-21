@@ -7,44 +7,22 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
     static let maxNameLength = 60
     static let maxPromptLength = 4_000
 
-    let id: UUID
+    var id: UUID = UUID()
     var name: String
     /// Instruction for the model; the selected text is sent as the user message.
     var prompt: String
     /// Optional SF Symbol override; nil uses the default wand.and.stars.
-    var iconSymbol: String?
+    var iconSymbol: String? = nil
     /// Optional override of the provider's default model.
-    var model: String?
+    var model: String? = nil
     /// Specific provider account to use; nil means inherit the default account.
-    var providerAccountID: UUID?
+    var providerAccountID: UUID? = nil
     /// Reasoning level for models supporting reasoning; nil means inherit account default.
-    var reasoningEffort: AIReasoningEffort?
+    var reasoningEffort: AIReasoningEffort? = nil
     /// Per-preset activation mode; nil means inherit the global setting.
-    var activationMode: AIExecutionMode?
+    var activationMode: AIExecutionMode? = nil
     /// Per-preset completion action; nil means inherit the global setting.
-    var completionAction: AICompletionAction?
-
-    init(
-        id: UUID = UUID(),
-        name: String,
-        prompt: String,
-        iconSymbol: String? = nil,
-        model: String? = nil,
-        providerAccountID: UUID? = nil,
-        reasoningEffort: AIReasoningEffort? = nil,
-        activationMode: AIExecutionMode? = nil,
-        completionAction: AICompletionAction? = nil
-    ) {
-        self.id = id
-        self.name = name
-        self.prompt = prompt
-        self.iconSymbol = iconSymbol
-        self.model = model
-        self.providerAccountID = providerAccountID
-        self.reasoningEffort = reasoningEffort
-        self.activationMode = activationMode
-        self.completionAction = completionAction
-    }
+    var completionAction: AICompletionAction? = nil
     var symbol: String {
         iconSymbol ?? Self.sfSymbol
     }

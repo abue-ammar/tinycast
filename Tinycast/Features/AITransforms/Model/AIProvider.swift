@@ -9,29 +9,13 @@ struct AIProvider: Hashable, Identifiable, Sendable {
     let name: String
     let baseURL: String
     /// Vector asset icon name in `Assets.xcassets`, if available.
-    let iconName: String?
+    var iconName: String? = nil
     /// SF Symbol fallback when no vector asset exists.
-    let symbolFallback: String
+    var symbolFallback: String = "sparkles"
     /// Local servers ignore the key entirely; saying so spares the user hunting for one.
-    let isLocal: Bool
+    var isLocal: Bool = false
     /// True when authenticated via OAuth 2.0 PKCE with a user subscription (ChatGPT Plus/Pro/Team).
-    let isOAuth: Bool
-
-    init(
-        name: String,
-        baseURL: String,
-        iconName: String? = nil,
-        symbolFallback: String = "sparkles",
-        isLocal: Bool = false,
-        isOAuth: Bool = false
-    ) {
-        self.name = name
-        self.baseURL = baseURL
-        self.iconName = iconName
-        self.symbolFallback = symbolFallback
-        self.isLocal = isLocal
-        self.isOAuth = isOAuth
-    }
+    var isOAuth: Bool = false
 
     /// The picker's escape hatch: any other OpenAI-compatible root, typed by hand.
     static let customID = "custom"
