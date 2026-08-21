@@ -31,13 +31,18 @@ struct AITransformsSettingsView: View {
                 showsInLauncher: $settings.aiTransformsShowInLauncher)
 
             Section {
+                LabeledContent("Provider") {
+                    Picker("Provider", selection: providerSelection) {
+                        ForEach(AIProvider.catalog) { provider in
+                            Text(provider.name).tag(provider.id)
+                        }
+                        Text("Custom").tag(AIProvider.customID)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 260)
+                }
                 LabeledContent("Base URL") {
                     TextField(AIClient.defaultBaseURL, text: $settings.aiBaseURL)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 260)
-                }
-                LabeledContent("Model") {
-                    TextField(AIClient.defaultModel, text: $settings.aiModel)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 260)
                 }
@@ -71,8 +76,8 @@ struct AITransformsSettingsView: View {
             } footer: {
                 Text(
                     "The key is stored in your login Keychain and never included in backups. "
-                        + "Any OpenAI-compatible endpoint works — for Gemini use "
-                        + "https://generativelanguage.googleapis.com/v1beta/openai."
+                        + "Picking a provider fills the base URL; Custom takes any "
+                        + "OpenAI-compatible root, ending before “/chat/completions”."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -113,6 +118,20 @@ struct AITransformsSettingsView: View {
                 },
                 secondaryButton: .cancel())
         }
+    }
+
+    /// Reads back which provider the base URL came from, so hand-edited URLs read as Custom;
+    /// picking a provider writes its root into the field, where it stays editable.
+    private var providerSelection: Binding<String> {
+        Binding(
+            get: {
+                AIProvider.matching(baseURL: settings.aiBaseURL)?.id ?? AIProvider.customID
+            },
+            set: { selection in
+                if let provider = AIProvider.catalog.first(where: { $0.id == selection }) {
+                    settings.aiBaseURL = provider.baseURL
+                }
+            })
     }
 
     private func saveKey() {

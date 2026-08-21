@@ -62,6 +62,7 @@
 		279F586CC34205EBA8ACA892 /* CalloutPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5DFA4E0FDAC12379F2D38B5 /* CalloutPlacement.swift */; };
 		29AE7D39F2969F706A8038A6 /* FileSearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847C792F7F5F31259EB56ACC /* FileSearchScreen.swift */; };
 		2A7F775568D6F50A7AF4C587 /* CalcParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77FF4F18AAA5D514A674878 /* CalcParser.swift */; };
+		2AAF90CA4EFEBB9AF07C7176 /* AIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042E9B6BADDB6C90EAEE6553 /* AIProvider.swift */; };
 		2C788DCDF146ED245150EF82 /* WindowCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B9ADC5C0B42F7EF38F77DE6 /* WindowCommand.swift */; };
 		2C8F7F5073D77EDC1070E639 /* ToolRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFEBE220187043060F7F286 /* ToolRunner.swift */; };
 		2D51D92BE8EAB5440F4C8517 /* ExtensionPaletteModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FB3A9CA762A7A8DB99BA6 /* ExtensionPaletteModifiers.swift */; };
@@ -328,6 +329,7 @@
 		02BCAB1F3B6930FE0B819F6D /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
 		03757CDEFC14359CAEF4CE93 /* FileSearchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchSession.swift; sourceTree = "<group>"; };
 		03D29ADBBE565419B1E98281 /* SettingsSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebarView.swift; sourceTree = "<group>"; };
+		042E9B6BADDB6C90EAEE6553 /* AIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProvider.swift; sourceTree = "<group>"; };
 		045EC0C36F08176EE0304F49 /* ExtensionFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionFormView.swift; sourceTree = "<group>"; };
 		06125F7DDE68BB4D52065C06 /* WindowCommandCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCommandCoordinator.swift; sourceTree = "<group>"; };
 		08279257B0F5995E86FF2C03 /* EntryIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryIconView.swift; sourceTree = "<group>"; };
@@ -700,6 +702,7 @@
 		0C3001E9B4F4DB565377E756 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				042E9B6BADDB6C90EAEE6553 /* AIProvider.swift */,
 				659AC6AB7C5F2542164D99A4 /* AITransform.swift */,
 			);
 			path = Model;
@@ -1798,6 +1801,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6BE7F1BBE984FEE473DF5246 /* AIClient.swift in Sources */,
+				2AAF90CA4EFEBB9AF07C7176 /* AIProvider.swift in Sources */,
 				C21D43AC144B42F3AA928E9F /* AITextDelivery.swift in Sources */,
 				806904865C62BA92EC374430 /* AITransform.swift in Sources */,
 				54356678C1F06D0E05DDDF68 /* AITransformCoordinator.swift in Sources */,

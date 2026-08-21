@@ -225,6 +225,26 @@ struct AITransformTests {
             endpoint("https://api.openai.com/v1/Chat/Completions")
                 == "https://api.openai.com/v1/chat/completions")
 
+        // MARK: Provider catalog
+
+        check("catalog names are unique", Set(AIProvider.catalog.map(\.id)).count == AIProvider.catalog.count)
+        for provider in AIProvider.catalog {
+            let url = AICompletionRequest.endpointURL(fromBase: provider.baseURL)
+            check(
+                "the \(provider.name) root joins into a valid endpoint",
+                url != nil && url?.host != nil
+                    && url?.path.hasSuffix("/chat/completions") == true)
+            check(
+                "the \(provider.name) scheme matches locality",
+                provider.isLocal == (url?.scheme == "http"))
+        }
+        check(
+            "matching tolerates a trailing slash",
+            AIProvider.matching(baseURL: "https://api.groq.com/openai/v1/")?.name == "Groq")
+        check(
+            "an unknown root reads as no provider at all",
+            AIProvider.matching(baseURL: "https://my-box.example/v1") == nil)
+
         // MARK: Response parsing
 
         func parseError(_ data: Data, status: Int) -> AIClientError? {
