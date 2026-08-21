@@ -152,6 +152,23 @@ struct AITransformTests {
         check("copy action has correct id", AICompletionAction.copyToClipboard.id == "copy")
         check("both action has correct id", AICompletionAction.both.id == "both")
 
+        // MARK: Execution Mode
+
+        check("execution mode has interactive and direct", AIExecutionMode.allCases.count == 2)
+        check("interactive mode id is interactive", AIExecutionMode.interactive.id == "interactive")
+        check("direct mode id is direct", AIExecutionMode.direct.id == "direct")
+        check(
+            "mode titles and subtitles are non-empty",
+            AIExecutionMode.allCases.allSatisfy { !$0.title.isEmpty && !$0.subtitle.isEmpty })
+
+        // MARK: Transform Symbol Override
+
+        let defaultSymbolTransform = AITransform(name: "Default", prompt: "Prompt")
+        check(
+            "default transform symbol is wand.and.stars",
+            defaultSymbolTransform.symbol == AITransform.sfSymbol)
+        let customSymbolTransform = AITransform(name: "Custom", prompt: "Prompt", iconSymbol: "bolt.fill")
+        check("custom transform symbol is bolt.fill", customSymbolTransform.symbol == "bolt.fill")
         // MARK: Provider Account Store
 
         let accountSuite = "com.tinycast.ai-account-tests.\(UUID().uuidString)"
@@ -183,6 +200,14 @@ struct AITransformTests {
 
         accountStore.setDefault(id: newAccount!.id)
         check("setDefault switches default account", accountStore.defaultAccount?.name == "Work Gemini")
+        check("provider preset resolves for account", newAccount?.providerPreset?.name == "Google Gemini")
+        check(
+            "secret account key has expected format",
+            newAccount?.secretAccountKey.hasPrefix("ai.api-key.") == true)
+        let chatgptPreset = AIProvider.catalog.first { $0.id == "ChatGPT (Subscription)" }
+        check("ChatGPT subscription preset is flagged as OAuth", chatgptPreset?.isOAuth == true)
+        let openaiPreset = AIProvider.catalog.first { $0.id == "OpenAI (API Key)" }
+        check("OpenAI API key preset is not flagged as OAuth", openaiPreset?.isOAuth == false)
 
         // MARK: Replace import
 
