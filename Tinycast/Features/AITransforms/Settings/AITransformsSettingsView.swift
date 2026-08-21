@@ -9,8 +9,7 @@ struct AITransformsSettingsView: View {
 
     @State private var editor: EditorTarget?
     @State private var pendingDeletion: AITransform?
-    @State private var editingAccount: AIProviderAccount?
-
+    @State private var editingAccount: AccountEditorTarget?
     var body: some View {
         @Bindable var settings = settings
         return Form {
@@ -81,18 +80,13 @@ struct AITransformsSettingsView: View {
                         AIProviderAccountSettingsRow(
                             account: account,
                             isDefault: account.id == accounts.defaultAccountID,
-                            onEdit: { editingAccount = account }
+                            onEdit: { editingAccount = AccountEditorTarget(account: account) }
                         )
                     }
                 }
 
                 Button("Add Provider Account…") {
-                    editingAccount = AIProviderAccount(
-                        name: "",
-                        providerPresetID: AIProvider.catalog.first?.id ?? AIProvider.customID,
-                        baseURL: AIClient.defaultBaseURL,
-                        defaultModel: AIClient.defaultModel
-                    )
+                    editingAccount = AccountEditorTarget(account: nil)
                 }
             } header: {
                 Text("Configured Providers")
@@ -126,11 +120,8 @@ struct AITransformsSettingsView: View {
         .sheet(item: $editor) { target in
             AITransformEditorSheet(transform: target.transform)
         }
-        .sheet(item: $editingAccount) { account in
-            AIProviderAccountEditorSheet(
-                account: account.name.isEmpty && !accounts.accounts.contains(where: { $0.id == account.id })
-                    ? nil : account
-            )
+        .sheet(item: $editingAccount) { target in
+            AIProviderAccountEditorSheet(account: target.account)
         }
         .alert(item: $pendingDeletion) { transform in
             Alert(
@@ -175,6 +166,11 @@ struct AITransformsSettingsView: View {
 private struct EditorTarget: Identifiable {
     let id = UUID()
     let transform: AITransform?
+}
+
+private struct AccountEditorTarget: Identifiable {
+    let id = UUID()
+    let account: AIProviderAccount?
 }
 
 /// A row in the Configured Providers section.
