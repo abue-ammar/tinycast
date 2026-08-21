@@ -92,7 +92,9 @@ struct AITransformScreen: PaletteScreen {
         switch session.phase {
         case .idle:
             if !query.isEmpty {
-                refine(with: query)
+                let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
+                session.executeCustomInput(query, apiKey: key, baseURL: core.settings.aiBaseURL)
+                vm.query = ""
             }
         case .processing:
             break
@@ -121,6 +123,12 @@ struct AITransformScreen: PaletteScreen {
                 onRetry: { regenerate() }
             )
         )
+    }
+
+    func regenerateAction() {
+        if case .completed = session.phase {
+            regenerate()
+        }
     }
 
     // MARK: - Actions

@@ -56,11 +56,20 @@ struct AITransformScreenView: View {
 
                 switch session.phase {
                 case .idle:
-                    Text("Select a transform or enter a prompt to begin.")
+                    VStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: AITransform.sfSymbol)
+                            .font(.largeTitle)
+                            .foregroundStyle(.tertiary)
+                        Text(
+                            session.originalSelection.isEmpty
+                                ? "Type or paste text above, then press ↵ to \(session.presetName.lowercased())."
+                                : "Press ↵ to \(session.presetName.lowercased())."
+                        )
+                        .font(.callout)
                         .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                        .padding(.vertical, Theme.Spacing.xl)
-
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .padding(.vertical, Theme.Spacing.xl)
                 case .processing(let model):
                     HStack(spacing: Theme.Spacing.md) {
                         ProgressView()

@@ -75,18 +75,30 @@ final class AITransformSession {
         self.originalSelection = selection
         self.targetApp = targetApp
         let chosenModel = preset.model ?? (defaultModel.isEmpty ? AIClient.defaultModel : defaultModel)
-        self.currentModel = chosenModel
-        self.history = []
+        if selection.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            self.phase = .idle
+        } else {
+            execute(
+                instruction: preset.prompt,
+                input: selection,
+                model: chosenModel,
+                apiKey: apiKey,
+                baseURL: baseURL
+            )
+        }
+    }
 
+    func executeCustomInput(_ input: String, apiKey: String, baseURL: String) {
+        guard let preset else { return }
+        self.originalSelection = input
         execute(
             instruction: preset.prompt,
-            input: selection,
-            model: chosenModel,
+            input: input,
+            model: currentModel,
             apiKey: apiKey,
             baseURL: baseURL
         )
     }
-
     func regenerate(apiKey: String, baseURL: String) {
         guard let preset else { return }
         let promptToUse = history.last?.instruction ?? preset.prompt
