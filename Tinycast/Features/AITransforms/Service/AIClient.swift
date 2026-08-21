@@ -239,14 +239,7 @@ enum AIClient {
             return nil
         }
         let object = try? JSONSerialization.jsonObject(with: data)
-        let entries: [Any]
-        if let envelope = object as? [String: Any], let data = envelope["data"] as? [Any] {
-            entries = data
-        } else if let bare = object as? [Any] {
-            entries = bare
-        } else {
-            entries = []
-        }
+        let entries = (object as? [String: Any])?["data"] as? [Any] ?? (object as? [Any]) ?? []
         return Set(entries.compactMap(id(of:))).sorted()
     }
 
