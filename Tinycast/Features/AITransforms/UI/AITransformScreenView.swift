@@ -58,7 +58,7 @@ struct AITransformScreenView: View {
                 case .idle:
                     Text("Select a transform or enter a prompt to begin.")
                         .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                         .padding(.vertical, Theme.Spacing.xl)
 
                 case .processing(let model):
@@ -69,8 +69,7 @@ struct AITransformScreenView: View {
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, Theme.Spacing.xl)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
                 case .completed(let output, _):
                     ScrollView(.vertical) {
@@ -80,7 +79,7 @@ struct AITransformScreenView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, Theme.Spacing.xs)
                     }
-                    .frame(maxHeight: 280)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
                 case .failed(let error, _):
                     VStack(spacing: Theme.Spacing.sm) {
@@ -97,10 +96,10 @@ struct AITransformScreenView: View {
                             .buttonStyle(.borderedProminent)
                             .controlSize(.small)
                     }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, Theme.Spacing.lg)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(Theme.Spacing.md)
             .background(Theme.Colors.cardFill, in: .rect(cornerRadius: Theme.Radius.row))
             .overlay(
@@ -147,5 +146,6 @@ struct AITransformScreenView: View {
             .padding(.horizontal, Theme.Spacing.xs)
         }
         .padding(Theme.Spacing.md)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
