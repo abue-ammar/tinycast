@@ -146,48 +146,39 @@ struct AITransformEditorSheet: View {
                 .labelsHidden()
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                HStack {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                        Text("Model Override")
-                            .font(.callout.weight(.medium))
-                        Text("Leave on Default to use the provider's default model.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                Text("Model Override")
+                    .font(.callout.weight(.medium))
+                Text("Leave on Default to use the provider's default model.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
-                    Spacer()
-
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Picker(selection: modelSelection) {
-                            Text("Default (\(defaultModelName))").tag(Self.defaultModelID)
-                            if !fetchedModels.isEmpty {
-                                Divider()
-                                ForEach(fetchedModels, id: \.self) { model in
-                                    Text(model).tag(model)
-                                }
-                            }
+                HStack(spacing: Theme.Spacing.sm) {
+                    Picker("Model Override", selection: modelSelection) {
+                        Text("Default (\(defaultModelName))").tag(Self.defaultModelID)
+                        if !fetchedModels.isEmpty {
                             Divider()
-                            Text("Custom…").tag(Self.customModelID)
-                        } label: {
-                            EmptyView()
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .frame(minWidth: 160)
-
-                        Button {
-                            refreshModels()
-                        } label: {
-                            if isFetchingModels {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Image(systemName: "arrow.clockwise")
+                            ForEach(fetchedModels, id: \.self) { model in
+                                Text(model).tag(model)
                             }
                         }
-                        .help("Fetch models from provider")
-                        .disabled(isFetchingModels)
+                        Divider()
+                        Text("Custom…").tag(Self.customModelID)
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+
+                    Button {
+                        refreshModels()
+                    } label: {
+                        if isFetchingModels {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .help("Fetch models from provider")
+                    .disabled(isFetchingModels)
                 }
 
                 TextField(
@@ -200,8 +191,8 @@ struct AITransformEditorSheet: View {
                 )
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.leading)
-                .disabled(isDefaultModel || (!isCustomModel && !fetchedModels.isEmpty))
-                .opacity((isDefaultModel || (!isCustomModel && !fetchedModels.isEmpty)) ? 0.5 : 1.0)
+                .disabled(!isCustomModel)
+                .opacity(isCustomModel ? 1.0 : 0.5)
             }
             if let errorMessage {
                 Text(errorMessage)
