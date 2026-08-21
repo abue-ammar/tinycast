@@ -21,6 +21,11 @@ rewritten app and share almost no data shape, so each has its own decrypt and it
   `RaycastImportV1`, not the decoder, validates them against `PopToRootTimeout` / `EmojiSkinTone` /
   `HyperKeyPhysicalKey` / `KeyShortcut`.
 - **Never commit a real `.rayconfig` as a fixture.** The harness builds its own.
+- **Unauthenticated gzip is 64 MB; post-decrypt gzip is 1 GiB.** The v2 envelope is inflated before
+  AES-GCM, so that gunzip stays on `Zlib.defaultMaxOutput` (64 MB) as a zip-bomb bound. After AES,
+  v1's plaintext gzip and v2's inner gzip use `Zlib.postDecryptMaxOutput` (1 GiB): clipboard-heavy v1
+  exports decompress to hundreds of MB, and that is not a wrong passphrase. Category selection runs
+  after inflate and parse, so unchecking Clipboard history does not skip the gunzip.
 
 ## Detection
 
@@ -31,6 +36,21 @@ other, so a wrong passphrase reports a wrong passphrase instead of "not a Raycas
 
 Detection needs no passphrase, so the Backup pane runs it the moment a file is chosen: it labels the
 row and disables the categories that format can't carry (`RaycastFormat.supportedOptions`).
+
+## Inflate caps
+
+Two gunzip caps, because one of the two streams is not yet authenticated:
+
+| Stream | When | Cap | Constant |
+| ------ | ---- | --- | -------- |
+| v2 envelope gzip | before AES-GCM | 64 MB | `Zlib.defaultMaxOutput` |
+| v1 plaintext gzip | after AES-CBC | 1 GiB | `Zlib.postDecryptMaxOutput` |
+| v2 inner gzip | after AES-GCM open | 1 GiB | `Zlib.postDecryptMaxOutput` |
+
+Exceeding the post-decrypt cap is `RaycastImportError.tooLarge`, not `incorrectPassphrase`. A gzip
+magic miss after v1 CBC still reports a wrong passphrase — PKCS#7 unpads cleanly about 1 in 256
+times, so the header remains the real key check. Other post-header gunzip failures stay
+`incorrectPassphrase` on v1 (lucky-magic wrong keys) and `corrupt` on v2 (the GCM tag already passed).
 
 ## v1 wire format
 

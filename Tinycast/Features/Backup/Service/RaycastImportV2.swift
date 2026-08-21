@@ -32,10 +32,13 @@ enum RaycastImportV2 {
         } catch {
             throw RaycastImportError.incorrectPassphrase
         }
-        guard let plaintext = try? Zlib.gunzip(plaintextGz) else {
+        do {
+            return try Zlib.gunzip(plaintextGz, maxOutput: Zlib.postDecryptMaxOutput)
+        } catch ZlibError.tooLarge {
+            throw RaycastImportError.tooLarge
+        } catch {
             throw RaycastImportError.corrupt
         }
-        return plaintext
     }
 
     // MARK: - Map

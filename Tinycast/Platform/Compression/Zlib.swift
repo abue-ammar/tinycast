@@ -10,9 +10,10 @@ enum ZlibError: Error { case notGzip, corrupt, tooLarge }
 /// any zlib linkage or build-system detour, and serves two callers: the Raycast settings import, and
 /// the `zlib` Node shim extensions reach for.
 enum Zlib {
-    /// Real inputs here are a Raycast export (a few KB) or an extension's own payload; the cap stops a
-    /// hand-crafted bomb — the import envelope is inflated before it is ever authenticated.
+    /// Unauthenticated inflate. Authenticated Raycast payloads use postDecryptMaxOutput instead.
     static let defaultMaxOutput = 64 * 1024 * 1024
+    /// Clipboard-heavy Raycast exports decompress past 64 MB after AES has already authenticated them.
+    static let postDecryptMaxOutput = 1024 * 1024 * 1024
 
     // MARK: - gzip (RFC 1952)
 

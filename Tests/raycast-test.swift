@@ -34,7 +34,12 @@ enum RaycastTests {
             failures += 1
             print("FAIL: \(message) — threw \(error), expected \(expected)")
         } catch {
-            passes += 1
+            if expected == nil {
+                passes += 1
+            } else {
+                failures += 1
+                print("FAIL: \(message) — threw \(error), expected \(String(describing: expected))")
+            }
         }
     }
 
@@ -46,6 +51,7 @@ enum RaycastTests {
         clipboardMapping()
         favoritesAndSnippets()
         gunzipSlices()
+        oversizedInflate()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -407,5 +413,72 @@ enum RaycastTests {
             "a non-zero-index gzip slice decompresses instead of trapping")
         expect((try? Zlib.gunzip(gzippedJSON)) == plainJSON, "a zero-based gzip still works")
         expect((try? Zlib.gunzip(Data(repeating: 0x00, count: 32))) == nil, "non-gzip throws")
+    }
+
+    // MARK: - Oversized inflate
+
+    static let overDefaultUncompressed = 65 * 1024 * 1024
+
+    // Zeros gzip to a few KB, so a 65 MB inflate fixture stays tiny on disk.
+    static func gzipZeros(_ count: Int) -> Data {
+        do {
+            return try Zlib.gzip(Data(repeating: 0, count: count))
+        } catch {
+            preconditionFailure("fixture gzip failed: \(error)")
+        }
+    }
+
+    static func oversizedInflate() {
+        let gz = gzipZeros(overDefaultUncompressed)
+
+        do {
+            _ = try Zlib.gunzip(gz)
+            failures += 1
+            print("FAIL: default 64 MB cap — did not throw")
+        } catch ZlibError.tooLarge {
+            passes += 1
+        } catch {
+            failures += 1
+            print("FAIL: default 64 MB cap — threw \(error), expected tooLarge")
+        }
+
+        do {
+            let inflated = try Zlib.gunzip(gz, maxOutput: Zlib.postDecryptMaxOutput)
+            expect(
+                inflated.count == overDefaultUncompressed,
+                "gunzip past 64 MB succeeds under the post-decrypt cap")
+        } catch {
+            failures += 1
+            print("FAIL: gunzip past 64 MB under post-decrypt cap — \(error)")
+        }
+
+        do {
+            _ = try Zlib.gunzip(gz, maxOutput: 1024 * 1024)
+            failures += 1
+            print("FAIL: exceeding a passed cap — did not throw")
+        } catch ZlibError.tooLarge {
+            passes += 1
+        } catch {
+            failures += 1
+            print("FAIL: exceeding a passed cap — threw \(error), expected tooLarge")
+        }
+
+        let file = makeV1File(gz, passphrase: "12345678")
+        do {
+            let decrypted = try RaycastV1Decoder.decrypt(file, passphrase: "12345678")
+            expect(
+                decrypted.count == overDefaultUncompressed,
+                "v1 decrypt of a >64 MB gzip is not incorrectPassphrase")
+        } catch {
+            failures += 1
+            print("FAIL: v1 decrypt of a >64 MB gzip — \(error)")
+        }
+
+        expectThrows("oversized v1 export", .tooLarge) {
+            try RaycastV1Decoder.decrypt(file, passphrase: "12345678", maxOutput: 1024 * 1024)
+        }
+        expectThrows("wrong passphrase on an oversized v1 export", .incorrectPassphrase) {
+            try RaycastV1Decoder.decrypt(file, passphrase: "wrong")
+        }
     }
 }

@@ -42,7 +42,9 @@ struct RaycastV1Payload: Sendable, Equatable {
 
 /// Decrypts a bare 1.x `.rayconfig` blob. See docs/features/raycast-import.md.
 enum RaycastV1Decoder {
-    static func decrypt(_ raw: Data, passphrase: String) throws -> Data {
+    static func decrypt(
+        _ raw: Data, passphrase: String, maxOutput: Int = Zlib.postDecryptMaxOutput
+    ) throws -> Data {
         guard raw.count >= 32, raw.count % 16 == 0 else { throw RaycastImportError.notRaycastFile }
         let plaintext = try decryptCBC(
             Data(raw.dropFirst(ivLength)),
@@ -51,10 +53,16 @@ enum RaycastV1Decoder {
 
         // PKCS#7 unpads cleanly ~1 in 256 times, so the gzip header is the real check.
         let magic = [UInt8](plaintext.prefix(3))
-        guard magic.count == 3, magic[0] == 0x1f, magic[1] == 0x8b, magic[2] == 0x08,
-            let json = try? Zlib.gunzip(plaintext)
-        else { throw RaycastImportError.incorrectPassphrase }
-        return json
+        guard magic.count == 3, magic[0] == 0x1f, magic[1] == 0x8b, magic[2] == 0x08 else {
+            throw RaycastImportError.incorrectPassphrase
+        }
+        do {
+            return try Zlib.gunzip(plaintext, maxOutput: maxOutput)
+        } catch ZlibError.tooLarge {
+            throw RaycastImportError.tooLarge
+        } catch {
+            throw RaycastImportError.incorrectPassphrase
+        }
     }
 
     static func payload(_ decrypted: Data) throws -> RaycastV1Payload {
