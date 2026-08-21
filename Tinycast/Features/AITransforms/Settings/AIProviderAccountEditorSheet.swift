@@ -402,43 +402,40 @@ struct AIProviderAccountEditorSheet: View {
         Binding(
             get: { isCustomModel ? "custom" : defaultModel },
             set: { selection in
-                if selection == "custom" {
-                    forceCustomModel = true
-                } else {
-                    forceCustomModel = false
+                forceCustomModel = (selection == "custom")
+                if selection != "custom" {
                     defaultModel = selection
                     connectionNote = nil
                 }
             })
     }
 
+    private func resolveKey() async throws -> String {
+        if isOAuthState {
+            return try await oauth.validAccessToken()
+        }
+        let key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !isLocal && key.isEmpty {
+            throw AIClientError.notConfigured
+        }
+        return key
+    }
+
     private func refreshModels() {
         isFetchingModels = true
         Task {
             defer { isFetchingModels = false }
-            do {
-                let key: String
-                if isOAuthState {
-                    key = try await oauth.validAccessToken()
-                } else {
-                    key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard isLocal || !key.isEmpty else { return }
-                }
-                fetchedModels = try await AIClient.listModels(baseURL: baseURL, apiKey: key)
-            } catch {
-                fetchedModels = []
-            }
+            guard let key = try? await resolveKey() else { return }
+            fetchedModels = (try? await AIClient.listModels(baseURL: baseURL, apiKey: key)) ?? []
         }
     }
 
     private func validateKey() {
-        let key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty else { return }
         keyValidationState = .validating
         Task {
             do {
-                let models = try await AIClient.listModels(baseURL: baseURL, apiKey: key)
-                fetchedModels = models
+                let key = try await resolveKey()
+                fetchedModels = try await AIClient.listModels(baseURL: baseURL, apiKey: key)
                 keyValidationState = .valid
             } catch {
                 keyValidationState = .invalid(error.localizedDescription)
@@ -452,17 +449,7 @@ struct AIProviderAccountEditorSheet: View {
         let started = Date()
         Task {
             do {
-                let key: String
-                if isOAuthState {
-                    key = try await oauth.validAccessToken()
-                } else {
-                    key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard isLocal || !key.isEmpty else {
-                        connectionNote = ConnectionNote(text: "Enter an API key first.", isGood: false)
-                        testState = .failed
-                        return
-                    }
-                }
+                let key = try await resolveKey()
                 guard !defaultModel.isEmpty else {
                     connectionNote = ConnectionNote(text: "Set a model to test.", isGood: false)
                     testState = .failed
