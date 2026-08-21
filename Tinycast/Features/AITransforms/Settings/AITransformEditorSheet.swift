@@ -324,12 +324,7 @@ struct AITransformEditorSheet: View {
         isFetchingModels = true
         Task {
             defer { isFetchingModels = false }
-            do {
-                fetchedModels = try await AIClient.listModels(
-                    baseURL: account.baseURL, apiKey: key)
-            } catch {
-                fetchedModels = []
-            }
+            fetchedModels = (try? await AIClient.listModels(baseURL: account.baseURL, apiKey: key)) ?? []
         }
     }
 }
