@@ -11,6 +11,8 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
     var name: String
     /// Instruction for the model; the selected text is sent as the user message.
     var prompt: String
+    /// Optional SF Symbol override; nil uses the default wand.and.stars.
+    var iconSymbol: String?
     /// Optional override of the provider's default model.
     var model: String?
     /// Specific provider account to use; nil means inherit the default account.
@@ -24,6 +26,7 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
         id: UUID = UUID(),
         name: String,
         prompt: String,
+        iconSymbol: String? = nil,
         model: String? = nil,
         providerAccountID: UUID? = nil,
         reasoningEffort: AIReasoningEffort? = nil,
@@ -32,10 +35,15 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
         self.id = id
         self.name = name
         self.prompt = prompt
+        self.iconSymbol = iconSymbol
         self.model = model
         self.providerAccountID = providerAccountID
         self.reasoningEffort = reasoningEffort
         self.activationMode = activationMode
+    }
+
+    var symbol: String {
+        iconSymbol ?? Self.sfSymbol
     }
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
@@ -129,6 +137,7 @@ final class AITransformStore {
             id: UUID(),
             name: copyName,
             prompt: original.prompt,
+            iconSymbol: original.iconSymbol,
             model: original.model,
             providerAccountID: original.providerAccountID,
             reasoningEffort: original.reasoningEffort,
@@ -193,6 +202,7 @@ final class AITransformStore {
             id: draft.id,
             name: trimmedName,
             prompt: trimmedPrompt,
+            iconSymbol: draft.iconSymbol?.trimmingCharacters(in: .whitespacesAndNewlines),
             model: model,
             providerAccountID: draft.providerAccountID,
             reasoningEffort: draft.reasoningEffort,
@@ -230,6 +240,7 @@ final class AITransformStore {
                     id: value.id,
                     name: name,
                     prompt: prompt,
+                    iconSymbol: value.iconSymbol?.trimmingCharacters(in: .whitespacesAndNewlines),
                     model: model,
                     providerAccountID: value.providerAccountID,
                     reasoningEffort: value.reasoningEffort,

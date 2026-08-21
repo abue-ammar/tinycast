@@ -243,7 +243,7 @@ private struct AITransformLibraryRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
-            Image(systemName: AITransform.sfSymbol)
+            SymbolImage(name: transform.symbol, size: 16)
                 .frame(width: 18, height: 18)
                 .foregroundStyle(Theme.Colors.textPrimary)
 

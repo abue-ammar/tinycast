@@ -9,6 +9,7 @@ struct AITransformEditorSheet: View {
     @Environment(AppSettings.self) private var settings
     @State private var name: String
     @State private var prompt: String
+    @State private var iconSymbol: String?
     @State private var model: String
     @State private var providerAccountID: UUID?
     @State private var reasoningEffort: AIReasoningEffort?
@@ -16,6 +17,7 @@ struct AITransformEditorSheet: View {
     @State private var fetchedModels: [String] = []
     @State private var forceCustomModel = false
     @State private var isFetchingModels = false
+    @State private var showingIconPicker = false
     @State private var errorMessage: String?
     @FocusState private var nameFocused: Bool
 
@@ -23,6 +25,7 @@ struct AITransformEditorSheet: View {
         self.transform = transform
         _name = State(initialValue: transform?.name ?? "")
         _prompt = State(initialValue: transform?.prompt ?? "")
+        _iconSymbol = State(initialValue: transform?.iconSymbol)
         _model = State(initialValue: transform?.model ?? "")
         _providerAccountID = State(initialValue: transform?.providerAccountID)
         _reasoningEffort = State(initialValue: transform?.reasoningEffort)
@@ -33,13 +36,36 @@ struct AITransformEditorSheet: View {
             Text(transform == nil ? "Add AI Transform" : "Edit AI Transform")
                 .font(.title2.weight(.bold))
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Name")
-                    .font(.callout.weight(.medium))
-                TextField("", text: $name, prompt: Text("Fix Spelling & Grammar"))
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.leading)
-                    .focused($nameFocused)
+            HStack(spacing: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Name")
+                        .font(.callout.weight(.medium))
+                    TextField("", text: $name, prompt: Text("Fix Spelling & Grammar"))
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.leading)
+                        .focused($nameFocused)
+                }
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Icon")
+                        .font(.callout.weight(.medium))
+                    Button {
+                        showingIconPicker = true
+                    } label: {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            SymbolImage(name: iconSymbol ?? AITransform.sfSymbol, size: 14)
+                            Text(iconSymbol == nil ? "Default" : "Custom")
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(width: 100)
+                    }
+                    .popover(isPresented: $showingIconPicker, arrowEdge: .bottom) {
+                        AITransformIconPicker(selection: $iconSymbol) {
+                            showingIconPicker = false
+                        }
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -216,6 +242,7 @@ struct AITransformEditorSheet: View {
             id: transform?.id ?? UUID(),
             name: name,
             prompt: prompt,
+            iconSymbol: iconSymbol,
             model: trimmedModel.isEmpty ? nil : trimmedModel,
             providerAccountID: providerAccountID,
             reasoningEffort: reasoningEffort,
@@ -306,5 +333,90 @@ struct AITransformEditorSheet: View {
                 fetchedModels = []
             }
         }
+    }
+}
+
+/// Curated grid of SF Symbols for AI Transforms with live search.
+private struct AITransformIconPicker: View {
+    @Binding var selection: String?
+    let onPick: () -> Void
+    @State private var query = ""
+
+    private static let curatedSymbols = [
+        "wand.and.stars", "sparkles", "bolt.fill", "brain.head.profile", "lightbulb.fill",
+        "text.alignleft", "character.cursor.ibeam", "text.word.spacing", "pencil", "highlighter",
+        "doc.text.fill", "doc.plaintext", "text.quote", "bubble.left.and.bubble.right.fill",
+        "message.fill", "translate", "globe", "book.fill", "bookmark.fill", "graduationcap.fill",
+        "terminal.fill", "chevron.left.forwardslash.chevron.right", "hammer.fill",
+        "wrench.and.screwdriver.fill",
+        "ladybug.fill", "cpu.fill", "server.rack", "lock.shield.fill", "checklist", "list.bullet",
+        "chart.bar.fill", "chart.pie.fill", "magnifyingglass", "eye.fill", "face.smiling",
+        "heart.fill", "star.fill", "flame.fill", "paintbrush.fill", "scissors"
+    ]
+
+    private var filteredSymbols: [String] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty else { return Self.curatedSymbols }
+        return Self.curatedSymbols.filter { $0.lowercased().contains(trimmed) }
+    }
+
+    private let columns = Array(repeating: GridItem(.fixed(30), spacing: Theme.Spacing.sm), count: 6)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Button {
+                selection = nil
+                onPick()
+            } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    SymbolImage(name: AITransform.sfSymbol, size: 14)
+                    Text("Default (wand.and.stars)")
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search icons…", text: $query)
+                    .textFieldStyle(.plain)
+            }
+            .padding(.horizontal, Theme.Spacing.sm)
+            .padding(.vertical, 4)
+            .background(Theme.Colors.controlSurface, in: .rect(cornerRadius: Theme.Radius.row))
+
+            ScrollView(.vertical) {
+                LazyVGrid(columns: columns, spacing: Theme.Spacing.sm) {
+                    ForEach(filteredSymbols, id: \.self) { symbol in
+                        Button {
+                            selection = symbol
+                            onPick()
+                        } label: {
+                            SymbolImage(name: symbol, size: 15)
+                                .frame(width: 30, height: 26)
+                                .background(
+                                    RoundedRectangle(
+                                        cornerRadius: Theme.Radius.menu, style: .continuous
+                                    )
+                                    .fill(
+                                        selection == symbol
+                                            ? Theme.Colors.selection : Color.clear
+                                    )
+                                )
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(symbol)
+                    }
+                }
+            }
+            .frame(maxHeight: 180)
+        }
+        .padding(Theme.Spacing.md)
+        .frame(width: 260)
     }
 }

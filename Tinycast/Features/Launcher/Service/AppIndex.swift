@@ -276,7 +276,8 @@ final class AppIndex {
             AppEntry(
                 id: transform.entryID, name: transform.name,
                 url: URL(string: "tinycast://ai-transform/" + transform.id.uuidString)!,
-                bundleID: nil, kind: .aiTransform)
+                bundleID: nil, kind: .aiTransform,
+                symbolName: transform.iconSymbol ?? AITransform.sfSymbol)
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != aiTransformEntries else { return }
