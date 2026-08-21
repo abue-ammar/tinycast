@@ -423,9 +423,10 @@ private struct LeftAlignedTextField: NSViewRepresentable {
         tf.bezelStyle = .roundedBezel
         tf.delegate = context.coordinator
         tf.font = .systemFont(ofSize: NSFont.systemFontSize)
+        tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return tf
     }
-
     func updateNSView(_ nsView: NSTextField, context: Context) {
         if nsView.stringValue != text {
             nsView.stringValue = text
