@@ -14,6 +14,7 @@ struct AITransformEditorSheet: View {
     @State private var forceCustomModel = false
     @State private var isFetchingModels = false
     @State private var errorMessage: String?
+    @FocusState private var nameFocused: Bool
     init(transform: AITransform?) {
         self.transform = transform
         _name = State(initialValue: transform?.name ?? "")
@@ -32,6 +33,7 @@ struct AITransformEditorSheet: View {
                 TextField("", text: $name, prompt: Text("Fix Spelling & Grammar"))
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.leading)
+                    .focused($nameFocused)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -144,6 +146,11 @@ struct AITransformEditorSheet: View {
                 } catch {
                     fetchedModels = []
                 }
+            }
+        }
+        .onAppear {
+            if transform == nil {
+                nameFocused = true
             }
         }
         .padding(Theme.Spacing.xxl)

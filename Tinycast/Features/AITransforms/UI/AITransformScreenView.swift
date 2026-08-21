@@ -50,6 +50,16 @@ struct AITransformScreenView: View {
                             .background(Theme.Colors.controlSurface, in: .capsule)
                             .foregroundStyle(.secondary)
                     }
+
+                    if case .completed = session.phase {
+                        Button(action: onCopy) {
+                            Image(systemName: "doc.on.doc")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Copy output (⌘C)")
+                    }
                 }
 
                 Divider()
