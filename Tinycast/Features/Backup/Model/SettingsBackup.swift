@@ -45,6 +45,7 @@ struct SettingsBackup: Codable {
         var aiTransformsShowInLauncher: Bool?
         var aiBaseURL: String?
         var aiModel: String?
+        var aiExecutionMode: String?
         var snippetsShowInLauncher: Bool?
         // Safe to carry: it grants no permission class paste doesn't already prompt for.
         var windowManagementEnabled: Bool?
@@ -125,6 +126,7 @@ extension SettingsBackup {
             aiTransformsShowInLauncher: s.aiTransformsShowInLauncher,
             aiBaseURL: s.aiBaseURL,
             aiModel: s.aiModel,
+            aiExecutionMode: s.aiExecutionMode.rawValue,
             snippetsShowInLauncher: s.snippetsShowInLauncher,
             windowManagementEnabled: s.windowManagementEnabled,
             windowManagementShowInLauncher: s.windowManagementShowInLauncher,
@@ -323,6 +325,10 @@ extension SettingsBackup {
         }
         if let model = s.aiModel {
             settings.aiModel = model
+            count += 1
+        }
+        if let mode = s.aiExecutionMode, let em = AIExecutionMode(rawValue: mode) {
+            settings.aiExecutionMode = em
             count += 1
         }
         if let flag = s.snippetsShowInLauncher {

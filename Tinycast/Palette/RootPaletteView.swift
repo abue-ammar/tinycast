@@ -71,6 +71,9 @@ struct RootPaletteView: View {
             return ExtensionCommandScreen(
                 screen: extensionScreen, extensions: extensions, core: core, vm: vm,
                 openActions: openActions)
+        case .aiTransform:
+            return AITransformScreen(
+                session: core.aiTransformSession, core: core, vm: vm, openActions: openActions)
         }
     }
 

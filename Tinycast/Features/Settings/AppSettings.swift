@@ -24,6 +24,27 @@ enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
     var interval: TimeInterval { TimeInterval(rawValue) }
 }
 
+enum AIExecutionMode: String, CaseIterable, Identifiable, Sendable {
+    case interactive
+    case direct
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .interactive: return "Interactive Window"
+        case .direct: return "Direct In-Place"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .interactive: return "Preview, refine with follow-up prompts, and insert on ↵."
+        case .direct: return "Transform in background and paste directly with toast notifications."
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class AppSettings {
@@ -180,6 +201,9 @@ final class AppSettings {
         didSet { defaults.set(aiModel, forKey: Key.aiModel.rawValue) }
     }
 
+    var aiExecutionMode: AIExecutionMode {
+        didSet { defaults.set(aiExecutionMode.rawValue, forKey: Key.aiExecutionMode.rawValue) }
+    }
     /// Also keyword-expansion consent, so it confirms first and never rides a backup.
     var snippetsEnabled: Bool {
         didSet { defaults.set(snippetsEnabled, forKey: Key.snippetsEnabled.rawValue) }
@@ -350,6 +374,9 @@ final class AppSettings {
         aiBaseURL =
             defaults.string(forKey: Key.aiBaseURL.rawValue) ?? AIClient.defaultBaseURL
         aiModel = defaults.string(forKey: Key.aiModel.rawValue) ?? AIClient.defaultModel
+        aiExecutionMode =
+            defaults.string(forKey: Key.aiExecutionMode.rawValue)
+            .flatMap(AIExecutionMode.init(rawValue:)) ?? .interactive
         snippetsEnabled = defaults.bool(forKey: Key.snippetsEnabled.rawValue)
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher.rawValue) == nil

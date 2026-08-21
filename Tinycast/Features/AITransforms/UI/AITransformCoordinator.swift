@@ -8,6 +8,7 @@ final class AITransformCoordinator {
     private let store: AITransformStore
     private let settings: AppSettings
     private let appIndex: AppIndex
+    private let session: AITransformSession
     private let paletteCoordinator: PaletteCoordinator
     private let settingsCoordinator: SettingsCoordinator
     private let hotKeys: HotKeyManager
@@ -21,11 +22,11 @@ final class AITransformCoordinator {
 
     /// One transform in flight at a time: two overlapping runs would race for the same selection.
     private var isTransforming = false
-
     init(
         store: AITransformStore,
         settings: AppSettings,
         appIndex: AppIndex,
+        session: AITransformSession,
         paletteCoordinator: PaletteCoordinator,
         settingsCoordinator: SettingsCoordinator,
         hotKeys: HotKeyManager,
@@ -39,6 +40,7 @@ final class AITransformCoordinator {
         self.store = store
         self.settings = settings
         self.appIndex = appIndex
+        self.session = session
         self.paletteCoordinator = paletteCoordinator
         self.settingsCoordinator = settingsCoordinator
         self.hotKeys = hotKeys
@@ -86,9 +88,46 @@ final class AITransformCoordinator {
 
     // MARK: - Running
 
-    /// The one funnel for palette activation and the global hotkey.
+    /// Launcher activation: opens interactive preview window or executes directly based on execution mode setting.
+    func launchTransform(id: UUID) {
+        if settings.aiExecutionMode == .interactive {
+            openInteractiveSession(id: id)
+        } else {
+            runTransform(id: id)
+        }
+    }
+
+    /// Opens the interactive transformation session inside Tinycast's palette window.
+    func openInteractiveSession(id: UUID) {
+        guard settings.aiTransformsEnabled else { return }
+        guard let transform = store.transform(id: id) else { return }
+        let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
+        let model = transform.model ?? settings.aiModel
+        guard !key.isEmpty, !model.isEmpty else {
+            Task { await presentFailure(.notConfigured, transform: transform) }
+            return
+        }
+        guard let baseURL = URL(string: settings.aiBaseURL), baseURL.host != nil else {
+            Task { await presentFailure(.invalidBaseURL(settings.aiBaseURL), transform: transform) }
+            return
+        }
+        let target = paletteCoordinator.targetApp
+        Permissions.ensureAccessibility()
+        let selection = target.flatMap({ AccessibilityText.selection(in: $0) }) ?? ""
+
+        session.begin(
+            preset: transform,
+            selection: selection,
+            targetApp: target,
+            defaultModel: settings.aiModel,
+            apiKey: key,
+            baseURL: settings.aiBaseURL
+        )
+        paletteCoordinator.showPalette(mode: .aiTransform)
+    }
+
+    /// The one funnel for direct background execution (e.g. global hotkey).
     func runTransform(id: UUID) {
-        // Also the feature switch: with it off a registered hotkey must run nothing.
         guard settings.aiTransformsEnabled else { return }
         guard let transform = store.transform(id: id) else { return }
         guard !isTransforming else {
@@ -148,9 +187,9 @@ final class AITransformCoordinator {
                 result, originalSelection: selection, in: target)
             switch outcome {
             case .replaced, .pasted:
-                break  // The changed text is the feedback.
+                core.showMessage("“\(transform.name)” applied", tone: .neutral)
             case .copiedToClipboard:
-                core.showMessage("Couldn't paste back — result copied", tone: .neutral)
+                core.showMessage("Couldn’t paste back — result copied", tone: .neutral)
             case .failed(let message):
                 await core.reportFailure(
                     title: "“\(transform.name)” Failed", message: message,

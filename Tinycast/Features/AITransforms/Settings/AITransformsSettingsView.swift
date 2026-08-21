@@ -52,6 +52,17 @@ struct AITransformsSettingsView: View {
                 showsInLauncher: $settings.aiTransformsShowInLauncher)
 
             Section {
+                Picker(selection: $settings.aiExecutionMode) {
+                    ForEach(AIExecutionMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                } label: {
+                    Text("Activation Mode")
+                    Text(settings.aiExecutionMode.subtitle)
+                }
+            }
+            .settingsEnabled(settings.aiTransformsEnabled)
+            Section {
                 HStack {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                         Text("Provider")

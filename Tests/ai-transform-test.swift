@@ -368,6 +368,33 @@ struct AITransformTests {
             "the probe sends one user message",
             testBody?.messages.count == 1 && testBody?.messages.first?.role == "user")
 
+        // MARK: Interactive session state machine
+
+        let session = AITransformSession()
+        check("a fresh session is inactive", !session.isActive)
+        check("a fresh session is idle", session.phase == .idle)
+        check("idle placeholder is informative", session.placeholder.contains("choose transform"))
+
+        let samplePreset = AITransform(name: "Fix Grammar", prompt: "Fix grammar.")
+        session.begin(
+            preset: samplePreset,
+            selection: "Helo",
+            targetApp: nil,
+            defaultModel: "gpt-4o-mini",
+            apiKey: "",
+            baseURL: "https://api.openai.com/v1"
+        )
+        check("session becomes active upon begin", session.isActive)
+        check("session preset name matches", session.presetName == "Fix Grammar")
+        check("session original selection matches", session.originalSelection == "Helo")
+        check(
+            "missing api key transitions to failed",
+            session.phase == .failed(error: "No API key configured.", model: "gpt-4o-mini"))
+        check("failed placeholder mentions retry", session.placeholder.contains("retry"))
+
+        session.cancel()
+        check("canceled session resets to idle", session.phase == .idle)
+        check("canceled session is inactive", !session.isActive)
         check(
             "error descriptions stay human sentences",
             AIClientError.notConfigured.errorDescription?.isEmpty == false

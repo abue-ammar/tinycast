@@ -12,7 +12,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case quicklinkArguments
     /// A Raycast extension command rendering into the palette.
     case extensionCommand
-
+    /// An interactive AI transform session running inside the palette.
+    case aiTransform
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -25,6 +26,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinks: return "Quicklinks"
         case .quicklinkArguments: return "Open Quicklink"
         case .extensionCommand: return "Extension"
+        case .aiTransform: return "AI Transform"
         }
     }
     var systemImage: String {
@@ -37,6 +39,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .uninstall: return "trash"
         case .quicklinks, .quicklinkArguments: return Quicklink.sfSymbol
         case .extensionCommand: return "puzzlepiece.extension"
+        case .aiTransform: return "wand.and.stars"
         }
     }
     var placeholder: String {
@@ -52,6 +55,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinkArguments: return "Enter a value…"
         // Replaced by the command's own `searchBarPlaceholder` whenever it declares one.
         case .extensionCommand: return "Search…"
+        case .aiTransform: return "Type to refine result…"
         }
     }
 }

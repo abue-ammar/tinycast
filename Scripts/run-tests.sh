@@ -123,6 +123,7 @@ run space-gesture-test     Tinycast/Features/WindowManagement/WindowCommand.swif
 run custom-command-test    Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
                            Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift
 run ai-transform-test    Tinycast/Features/AITransforms/Model/AITransform.swift \
+                         Tinycast/Features/AITransforms/Model/AITransformSession.swift \
                          Tinycast/Features/AITransforms/Model/AIProvider.swift \
                          Tinycast/Features/AITransforms/Service/AIClient.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \

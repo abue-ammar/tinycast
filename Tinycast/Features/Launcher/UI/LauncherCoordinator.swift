@@ -73,7 +73,7 @@ final class LauncherCoordinator {
         // Before the palette hides: the transform needs the selection it was invoked on.
         if app.kind == .aiTransform {
             guard let id = AITransform.id(fromEntryID: app.id) else { return }
-            aiTransformCoordinator.runTransform(id: id)
+            aiTransformCoordinator.launchTransform(id: id)
             return
         }
         if app.kind == .systemAction {

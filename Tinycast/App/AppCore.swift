@@ -40,9 +40,9 @@ final class AppCore {
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let quicklinkArguments = QuicklinkArgumentSession()
+    let aiTransformSession = AITransformSession()
     let notesStore: NotesStore
     let extensions: ExtensionManager
-
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
 
@@ -86,6 +86,7 @@ final class AppCore {
         ranking: launcherRanking, aliases: aliases, core: self)
     @ObservationIgnored private(set) lazy var aiTransformCoordinator = AITransformCoordinator(
         store: aiTransforms, settings: settings, appIndex: appIndex,
+        session: aiTransformSession,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         hotKeys: hotKeys, favorites: favorites, visibility: visibility,
         ranking: launcherRanking, aliases: aliases, delivery: aiTextDelivery, core: self)
