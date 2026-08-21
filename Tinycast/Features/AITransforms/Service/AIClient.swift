@@ -37,16 +37,22 @@ struct AICompletionRequest: Sendable {
         prompt + "\n\nReturn only the transformed text with no commentary, quotes, or code fences."
     }
 
-    /// Joins whatever the user configured into the chat-completions endpoint: whitespace and
-    /// trailing slashes go, and a base URL that already ends in the path keeps working.
-    static func endpointURL(fromBase baseURLString: String) -> URL? {
+    /// Joins whatever the user configured into a provider endpoint: whitespace and trailing
+    /// slashes go, and a base URL that already ends in the path keeps working. The suffix strip
+    /// is case-insensitive and keyed on the last path segment pair, so `/models` against a base
+    /// that was pasted as a chat endpoint still lands where the user meant.
+    static func endpointURL(
+        fromBase baseURLString: String, path: String = "/chat/completions"
+    )
+        -> URL?
+    {
         var trimmed = baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
         while trimmed.hasSuffix("/") { trimmed.removeLast() }
-        if trimmed.lowercased().hasSuffix("/chat/completions") {
-            trimmed.removeLast("/chat/completions".count)
+        if trimmed.lowercased().hasSuffix(path.lowercased()) {
+            trimmed.removeLast(path.count)
             while trimmed.hasSuffix("/") { trimmed.removeLast() }
         }
-        return URL(string: trimmed + "/chat/completions")
+        return URL(string: trimmed + path)
     }
 
     /// Mirrors the wire shape every OpenAI-compatible provider accepts; `stream` is spelled out
@@ -166,6 +172,111 @@ enum AIClient {
         } catch {
             // Never logs key or text, so the message carries only the transport failure.
             throw AIClientError.network(error.localizedDescription)
+        }
+    }
+
+    /// The settings pane's model poller: GET `/models`, the one listing route every
+    /// OpenAI-compatible root serves. Returns sorted, de-duplicated model IDs.
+    static func listModels(baseURL: String, apiKey: String) async throws -> [String] {
+        guard let endpoint = AICompletionRequest.endpointURL(fromBase: baseURL, path: "/models")
+        else { throw AIClientError.invalidBaseURL(baseURL) }
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw AIClientError.network("the server did not return an HTTP response")
+            }
+            guard (200..<300).contains(http.statusCode) else {
+                throw AIClientError.provider(
+                    status: http.statusCode,
+                    message: failureMessage(in: data) ?? "HTTP \(http.statusCode)")
+            }
+            return parseModelList(data)
+        } catch let error as AIClientError {
+            throw error
+        } catch {
+            throw AIClientError.network(error.localizedDescription)
+        }
+    }
+
+    /// Reads model IDs out of any listing shape: the OpenAI envelope (`data[].id`), a bare
+    /// array, or objects carrying `name` instead. Empty, never an error — a provider that
+    /// serves chat but lists nothing still lets the user type a model by hand.
+    static func parseModelList(_ data: Data) -> [String] {
+        func id(of entry: Any) -> String? {
+            if let id = entry as? String { return id }
+            if let object = entry as? [String: Any] {
+                return (object["id"] ?? object["name"]) as? String
+            }
+            return nil
+        }
+        let object = try? JSONSerialization.jsonObject(with: data)
+        let entries: [Any]
+        if let envelope = object as? [String: Any], let data = envelope["data"] as? [Any] {
+            entries = data
+        } else if let bare = object as? [Any] {
+            entries = bare
+        } else {
+            entries = []
+        }
+        return Set(entries.compactMap(id(of:))).sorted()
+    }
+
+    /// The probe request: one user message, a token-few ceiling, Bearer auth — everything the
+    /// Test button needs to prove the chain without spending real tokens.
+    static func makeTestURLRequest(endpoint: URL, apiKey: String, model: String) -> URLRequest {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(
+            TestBody(
+                model: model,
+                stream: false,
+                maxTokens: 16,
+                messages: [TestBody.Message(role: "user", content: "Reply with the word OK.")]))
+        return request
+    }
+
+    /// One tiny completion, purely so the pane's Test button can prove the whole chain —
+    /// URL, key, and model — before the user commits a transform to it.
+    static func testConnection(baseURL: String, apiKey: String, model: String) async throws {
+        guard !apiKey.isEmpty, !model.isEmpty else { throw AIClientError.notConfigured }
+        guard
+            let endpoint = AICompletionRequest.endpointURL(
+                fromBase: baseURL, path: "/chat/completions")
+        else { throw AIClientError.invalidBaseURL(baseURL) }
+        do {
+            let (data, response) = try await session.data(
+                for: makeTestURLRequest(endpoint: endpoint, apiKey: apiKey, model: model))
+            guard let http = response as? HTTPURLResponse else {
+                throw AIClientError.network("the server did not return an HTTP response")
+            }
+            _ = try parseResponse(data, status: http.statusCode)
+        } catch let error as AIClientError {
+            throw error
+        } catch {
+            throw AIClientError.network(error.localizedDescription)
+        }
+    }
+    /// The probe's body, spelled out separately from `AICompletionRequest.Body` so its shape
+    /// (one user message, a token-few ceiling) is visible at the call site.
+    private struct TestBody: Encodable {
+        var model: String
+        var stream: Bool
+        var maxTokens: Int
+        var messages: [Message]
+
+        struct Message: Encodable {
+            var role: String
+            var content: String
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case model, stream, messages
+            case maxTokens = "max_tokens"
         }
     }
 

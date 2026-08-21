@@ -323,6 +323,45 @@ struct AITransformTests {
             "whitespace-only content is an empty response",
             parseError(blankContent, status: 200) == .emptyResponse)
 
+        // MARK: Model listing
+
+        let envelope = """
+            {"data":[{"id":"zeta"},{"id":"alpha"},{"id":"alpha"},{"object":"model"}]}
+            """.data(using: .utf8)!
+        check(
+            "the OpenAI envelope yields sorted unique ids",
+            AIClient.parseModelList(envelope) == ["alpha", "zeta"])
+        let bare = """
+            ["m2", {"name": "m1"}]
+            """.data(using: .utf8)!
+        check(
+            "a bare array with mixed entries still lists",
+            AIClient.parseModelList(bare) == ["m1", "m2"])
+        check(
+            "an unrecognizable body lists nothing",
+            AIClient.parseModelList("nope".data(using: .utf8)!) == [])
+
+        // MARK: Connection test request
+
+        let testRequest = AIClient.makeTestURLRequest(
+            endpoint: URL(string: "https://api.openai.com/v1/chat/completions")!,
+            apiKey: "sk-test", model: "gpt-4o-mini")
+        check("the probe posts", testRequest.httpMethod == "POST")
+        check(
+            "the probe authenticates",
+            testRequest.value(forHTTPHeaderField: "Authorization") == "Bearer sk-test")
+        struct TestWire: Decodable {
+            var model: String
+            var stream: Bool
+            var max_tokens: Int
+            var messages: [WireBody.WireMessage]
+        }
+        let testBody = try? JSONDecoder().decode(TestWire.self, from: testRequest.httpBody ?? Data())
+        check("the probe caps tokens", testBody?.max_tokens == 16)
+        check(
+            "the probe sends one user message",
+            testBody?.messages.count == 1 && testBody?.messages.first?.role == "user")
+
         check(
             "error descriptions stay human sentences",
             AIClientError.notConfigured.errorDescription?.isEmpty == false
