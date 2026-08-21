@@ -376,11 +376,7 @@ struct AIProviderAccountEditorSheet: View {
         .frame(width: Theme.Size.editorSheetWidth)
         .onAppear {
             if account == nil {
-                if isOAuthState || isLocal {
-                    focusedField = .name
-                } else {
-                    focusedField = .apiKey
-                }
+                focusedField = (isOAuthState || isLocal) ? .name : .apiKey
             }
         }
         .task {
