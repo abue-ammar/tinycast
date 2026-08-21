@@ -74,13 +74,12 @@ final class AIProviderAccountStore {
     }
 
     func update(_ draft: AIProviderAccount) throws {
-        let clean = try validated(draft, isUpdate: true)
+        let clean = try validated(draft)
         guard let index = accounts.firstIndex(where: { $0.id == clean.id }) else { return }
         var updated = accounts
         updated[index] = clean
         commit(updated)
     }
-
     @discardableResult
     func remove(id: UUID) -> AIProviderAccount? {
         guard let index = accounts.firstIndex(where: { $0.id == id }) else { return nil }
@@ -127,7 +126,7 @@ final class AIProviderAccountStore {
         try? add(primary)
     }
 
-    private func validated(_ draft: AIProviderAccount, isUpdate: Bool = false) throws -> AIProviderAccount {
+    private func validated(_ draft: AIProviderAccount) throws -> AIProviderAccount {
         let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { throw AIProviderAccountValidationError.emptyName }
         guard let url = AICompletionRequest.endpointURL(fromBase: draft.baseURL, path: "/chat/completions"),
