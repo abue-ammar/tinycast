@@ -7,9 +7,9 @@ struct AITransformsSettingsView: View {
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
 
-    @State private var editor: EditorTarget?
+    @State private var editor: SheetItem<AITransform>?
     @State private var pendingDeletion: AITransform?
-    @State private var editingAccount: AccountEditorTarget?
+    @State private var editingAccount: SheetItem<AIProviderAccount>?
     var body: some View {
         @Bindable var settings = settings
         return Form {
@@ -76,13 +76,13 @@ struct AITransformsSettingsView: View {
                         AIProviderAccountSettingsRow(
                             account: account,
                             isDefault: account.id == accounts.defaultAccountID,
-                            onEdit: { editingAccount = AccountEditorTarget(account: account) }
+                            onEdit: { editingAccount = SheetItem(value: account) }
                         )
                     }
                 }
 
                 Button("Add Provider Account…") {
-                    editingAccount = AccountEditorTarget(account: nil)
+                    editingAccount = SheetItem(value: nil)
                 }
             } header: {
                 Text("Configured Providers")
@@ -100,13 +100,13 @@ struct AITransformsSettingsView: View {
                             transform: transform,
                             accountName: accountName(for: transform),
                             onDuplicate: { duplicate(transform) },
-                            onEdit: { editor = EditorTarget(transform: transform) },
+                            onEdit: { editor = SheetItem(value: transform) },
                             onDelete: { pendingDeletion = transform }
                         )
                     }
                 }
 
-                Button("Add AI Transform…") { editor = EditorTarget(transform: nil) }
+                Button("Add AI Transform…") { editor = SheetItem(value: nil) }
             } header: {
                 Text("Transforms Library")
             }
@@ -114,10 +114,10 @@ struct AITransformsSettingsView: View {
         }
         .formStyle(.grouped)
         .sheet(item: $editor) { target in
-            AITransformEditorSheet(transform: target.transform)
+            AITransformEditorSheet(transform: target.value)
         }
         .sheet(item: $editingAccount) { target in
-            AIProviderAccountEditorSheet(account: target.account)
+            AIProviderAccountEditorSheet(account: target.value)
         }
         .alert(item: $pendingDeletion) { transform in
             Alert(
@@ -133,11 +133,7 @@ struct AITransformsSettingsView: View {
     private var defaultAccountBinding: Binding<UUID?> {
         Binding(
             get: { accounts.defaultAccountID },
-            set: { newID in
-                if let newID {
-                    accounts.setDefault(id: newID)
-                }
-            }
+            set: { if let newID = $0 { accounts.setDefault(id: newID) } }
         )
     }
 
@@ -159,14 +155,9 @@ struct AITransformsSettingsView: View {
     }
 }
 
-private struct EditorTarget: Identifiable {
+private struct SheetItem<T>: Identifiable {
     let id = UUID()
-    let transform: AITransform?
-}
-
-private struct AccountEditorTarget: Identifiable {
-    let id = UUID()
-    let account: AIProviderAccount?
+    let value: T?
 }
 /// Renders a brand vector asset or fallback SF symbol for an AI provider preset.
 struct AIProviderIcon: View {
