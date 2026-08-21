@@ -32,9 +32,20 @@ struct AICompletionRequest: Sendable {
         return request
     }
 
-    /// Appends the no-commentary wrapper, so a chatty model cannot corrupt an in-place replace.
+    /// Appends the strict output contract, guaranteeing that the returned text replaces the selection cleanly.
     static func systemInstruction(_ prompt: String) -> String {
-        prompt + "\n\nReturn only the transformed text with no commentary, quotes, or code fences."
+        """
+        \(prompt)
+
+        CRITICAL OUTPUT INSTRUCTIONS:
+        Unless explicitly requested otherwise by the prompt above:
+        - Output ONLY the transformed text directly.
+        - Do NOT include any preamble, introduction, greetings, or conversational filler (e.g. "Here is...", "Sure!").
+        - Do NOT include any commentary, explanation, breakdown of changes, notes, or concluding remarks.
+        - Do NOT include follow-up questions, suggestions, or engagement hooks.
+        - Do NOT enclose the entire output in quotes or markdown code blocks unless code formatting was explicitly requested.
+        - The returned output will replace the highlighted selection in place on the user's screen; output nothing except the replacement text.
+        """
     }
 
     /// Joins whatever the user configured into a provider endpoint: whitespace and trailing

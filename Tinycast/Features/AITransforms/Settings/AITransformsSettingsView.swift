@@ -64,10 +64,19 @@ struct AITransformsSettingsView: View {
 
                     Picker(selection: providerSelection) {
                         ForEach(AIProvider.catalog) { provider in
-                            Text(provider.name).tag(provider.id)
+                            Label {
+                                Text(provider.name)
+                            } icon: {
+                                if let iconName = provider.iconName {
+                                    Image(iconName)
+                                } else {
+                                    Image(systemName: provider.symbolFallback)
+                                }
+                            }
+                            .tag(provider.id)
                         }
                         Divider()
-                        Text("Custom").tag(AIProvider.customID)
+                        Label("Custom", systemImage: "slider.horizontal.3").tag(AIProvider.customID)
                     } label: {
                         EmptyView()
                     }

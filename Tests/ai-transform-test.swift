@@ -194,9 +194,15 @@ struct AITransformTests {
             body.messages[0].content
                 == AICompletionRequest.systemInstruction("Fix mistakes."))
         check(
-            "the system instruction appends the no-commentary wrapper",
-            AICompletionRequest.systemInstruction("Fix mistakes.")
-                == "Fix mistakes.\n\nReturn only the transformed text with no commentary, quotes, or code fences."
+            "the system instruction appends the strict output contract",
+            AICompletionRequest.systemInstruction("Fix mistakes.").contains(
+                "Unless explicitly requested otherwise")
+                && AICompletionRequest.systemInstruction("Fix mistakes.").contains(
+                    "Do NOT include any preamble")
+                && AICompletionRequest.systemInstruction("Fix mistakes.").contains(
+                    "Do NOT include any commentary")
+                && AICompletionRequest.systemInstruction("Fix mistakes.").contains(
+                    "Do NOT include follow-up questions")
         )
         check("the selection is the user message", body.messages[1].content == "Helo world")
 
