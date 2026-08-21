@@ -37,20 +37,24 @@ struct AIProviderAccountEditorSheet: View {
 
     init(account: AIProviderAccount?) {
         self.account = account
-        _name = State(initialValue: account?.name ?? "")
-        _providerPresetID = State(
-            initialValue: account?.providerPresetID ?? AIProvider.catalog.first?.id ?? AIProvider.customID)
-        _baseURL = State(initialValue: account?.baseURL ?? AIClient.defaultBaseURL)
-        _defaultModel = State(initialValue: account?.defaultModel ?? AIClient.defaultModel)
+        let initialPresetID =
+            account?.providerPresetID ?? AIProvider.catalog.first?.id ?? AIProvider.customID
+        let initialPreset = AIProvider.catalog.first { $0.id == initialPresetID }
+        _name = State(initialValue: account?.name ?? initialPreset?.name ?? "")
+        _providerPresetID = State(initialValue: initialPresetID)
+        _baseURL = State(initialValue: account?.baseURL ?? initialPreset?.baseURL ?? AIClient.defaultBaseURL)
+        _defaultModel = State(
+            initialValue: account?.defaultModel
+                ?? (initialPresetID == "Google Gemini"
+                    ? "gemini-3.7-flash"
+                    : (initialPresetID == "ChatGPT (Subscription)" ? "gpt-4o" : AIClient.defaultModel)))
         _defaultReasoning = State(initialValue: account?.defaultReasoning ?? .none)
-        _isLocal = State(initialValue: account?.isLocal ?? false)
-        let preset = AIProvider.catalog.first { $0.id == (account?.providerPresetID ?? "") }
-        let isOAuth = account?.isOAuth ?? preset?.isOAuth ?? false
+        _isLocal = State(initialValue: account?.isLocal ?? initialPreset?.isLocal ?? false)
+        let isOAuth = account?.isOAuth ?? initialPreset?.isOAuth ?? false
         _isOAuthState = State(initialValue: isOAuth)
         let key = account.flatMap { SecretStore.secret(account: $0.secretAccountKey) } ?? ""
         _keyDraft = State(initialValue: key)
     }
-
     @State private var isOAuthState: Bool
     private var oauth: ChatGPTOAuthService { ChatGPTOAuthService.shared }
 
@@ -94,9 +98,7 @@ struct AIProviderAccountEditorSheet: View {
                         baseURL = preset.baseURL
                         isLocal = preset.isLocal
                         isOAuthState = preset.isOAuth
-                        if name.isEmpty || AIProvider.catalog.contains(where: { $0.name == name }) {
-                            name = preset.name
-                        }
+                        name = preset.name
                         if preset.id == "Google Gemini" {
                             defaultModel = "gemini-3.7-flash"
                         } else if preset.id == "ChatGPT (Subscription)" {
@@ -106,19 +108,11 @@ struct AIProviderAccountEditorSheet: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Base URL")
-                    .font(.callout.weight(.medium))
-                TextField("", text: $baseURL, prompt: Text(AIClient.defaultBaseURL))
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.leading)
-            }
+            if isOAuthState {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Authentication")
+                        .font(.callout.weight(.medium))
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(isOAuthState ? "ChatGPT Subscription Authentication" : "API Key")
-                    .font(.callout.weight(.medium))
-
-                if isOAuthState {
                     HStack(spacing: Theme.Spacing.sm) {
                         switch oauth.state {
                         case .authenticated(let email):
@@ -163,54 +157,64 @@ struct AIProviderAccountEditorSheet: View {
                         }
                     }
                     .padding(.vertical, 4)
-                } else {
+                }
+            } else {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Base URL")
+                        .font(.callout.weight(.medium))
+                    TextField("", text: $baseURL, prompt: Text(AIClient.defaultBaseURL))
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.leading)
+                }
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("API Key")
+                        .font(.callout.weight(.medium))
                     SecureField("", text: $keyDraft, prompt: Text(isLocal ? "Keyless local server" : "sk-…"))
                         .textFieldStyle(.roundedBorder)
                         .multilineTextAlignment(.leading)
                         .disabled(isLocal)
                 }
             }
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                HStack {
-                    Text("Default Model")
-                        .font(.callout.weight(.medium))
-                    Spacer()
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Picker(selection: modelSelection) {
-                            Text("Custom…").tag("custom")
-                            if !fetchedModels.isEmpty {
-                                Divider()
-                                ForEach(fetchedModels, id: \.self) { model in
-                                    Text(model).tag(model)
-                                }
-                            }
-                        } label: {
-                            EmptyView()
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .frame(minWidth: 160)
 
-                        Button {
-                            refreshModels()
-                        } label: {
-                            if isFetchingModels {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Image(systemName: "arrow.clockwise")
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Default Model")
+                    .font(.callout.weight(.medium))
+
+                HStack(spacing: Theme.Spacing.sm) {
+                    Picker(selection: modelSelection) {
+                        Text("Custom…").tag("custom")
+                        if !fetchedModels.isEmpty {
+                            Divider()
+                            ForEach(fetchedModels, id: \.self) { model in
+                                Text(model).tag(model)
                             }
                         }
-                        .help("Fetch models from provider")
-                        .disabled(isFetchingModels)
+                    } label: {
+                        EmptyView()
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+
+                    Button {
+                        refreshModels()
+                    } label: {
+                        if isFetchingModels {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .help("Fetch models from provider")
+                    .disabled(isFetchingModels)
                 }
 
                 TextField("", text: $defaultModel, prompt: Text("Model ID (e.g. gemini-2.5-flash)"))
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.leading)
-                    .disabled(!isCustomModel && !fetchedModels.isEmpty)
-                    .opacity((!isCustomModel && !fetchedModels.isEmpty) ? 0.5 : 1.0)
+                    .disabled(!isCustomModel)
+                    .opacity(isCustomModel ? 1.0 : 0.5)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
