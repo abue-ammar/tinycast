@@ -41,13 +41,11 @@ final class AITransformSession {
     var presetName: String { preset?.name ?? "AI Transform" }
 
     var currentOutput: String {
-        if case .completed(let output, _) = phase { return output }
-        return ""
+        if case .completed(let output, _) = phase { output } else { "" }
     }
 
     var isProcessing: Bool {
-        if case .processing = phase { return true }
-        return false
+        if case .processing = phase { true } else { false }
     }
 
     var placeholder: String {
