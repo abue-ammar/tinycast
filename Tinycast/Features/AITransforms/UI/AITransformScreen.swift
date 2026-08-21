@@ -131,6 +131,14 @@ struct AITransformScreen: PaletteScreen {
         }
     }
 
+    func copyAction() -> Bool {
+        if case .completed = session.phase {
+            copyToClipboard()
+            return true
+        }
+        return false
+    }
+
     // MARK: - Actions
 
     private func insertResult() {

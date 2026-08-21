@@ -79,6 +79,7 @@ final class AITextDelivery {
         // The model ran while the user kept working; pasting over a moved selection would corrupt
         // unrelated text, so fail closed to the clipboard instead of guessing.
         if let targetApp,
+            !originalSelection.isEmpty,
             let current = AccessibilityText.selection(in: targetApp),
             current != originalSelection
         {
