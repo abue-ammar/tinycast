@@ -117,12 +117,6 @@ struct AITransformsSettingsView: View {
                 Button("Add AI Transform…") { editor = EditorTarget(transform: nil) }
             } header: {
                 Text("Transforms Library")
-            } footer: {
-                Text(
-                    "Click ❐ to duplicate as “Copy of…”, ✏️ to customize prompts, or 🗑️ to delete. Hotkeys and aliases are configured above."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
             .settingsEnabled(settings.aiTransformsEnabled)
         }
@@ -221,9 +215,11 @@ private struct AIProviderAccountSettingsRow: View {
             }
 
             Spacer()
-
             Button(action: onEdit) {
                 Image(systemName: "pencil")
+                    .font(.body)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help("Edit Provider Account")
@@ -273,22 +269,31 @@ private struct AITransformLibraryRow: View {
 
             Spacer()
 
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: Theme.Spacing.xs) {
                 Button(action: onDuplicate) {
                     Image(systemName: "doc.on.doc")
+                        .font(.body)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Duplicate as Copy of…")
 
                 Button(action: onEdit) {
                     Image(systemName: "pencil")
+                        .font(.body)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Edit Transform")
 
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
+                        .font(.body)
                         .foregroundStyle(.red)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Delete Transform")
