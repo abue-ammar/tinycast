@@ -14,19 +14,23 @@ struct AIProvider: Hashable, Identifiable, Sendable {
     let symbolFallback: String
     /// Local servers ignore the key entirely; saying so spares the user hunting for one.
     let isLocal: Bool
+    /// True when authenticated via OAuth 2.0 PKCE with a user subscription (ChatGPT Plus/Pro/Team).
+    let isOAuth: Bool
 
     init(
         name: String,
         baseURL: String,
         iconName: String? = nil,
         symbolFallback: String = "sparkles",
-        isLocal: Bool = false
+        isLocal: Bool = false,
+        isOAuth: Bool = false
     ) {
         self.name = name
         self.baseURL = baseURL
         self.iconName = iconName
         self.symbolFallback = symbolFallback
         self.isLocal = isLocal
+        self.isOAuth = isOAuth
     }
 
     /// The picker's escape hatch: any other OpenAI-compatible root, typed by hand.
@@ -34,8 +38,14 @@ struct AIProvider: Hashable, Identifiable, Sendable {
 
     /// Verified against each provider's own documentation and models.dev SVG assets.
     static let catalog: [AIProvider] = [
-        AIProvider(name: "OpenAI", baseURL: "https://api.openai.com/v1", iconName: "ProviderOpenAI"),
-        AIProvider(name: "Anthropic", baseURL: "https://api.anthropic.com/v1", iconName: "ProviderAnthropic"),
+        AIProvider(
+            name: "ChatGPT (Subscription)",
+            baseURL: "https://chatgpt.com/backend-api/codex",
+            iconName: "ProviderOpenAI",
+            isOAuth: true
+        ),
+        AIProvider(
+            name: "OpenAI (API Key)", baseURL: "https://api.openai.com/v1", iconName: "ProviderOpenAI"),
         AIProvider(
             name: "Google Gemini",
             baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",

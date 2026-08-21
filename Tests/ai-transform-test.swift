@@ -160,7 +160,7 @@ struct AITransformTests {
         accountStore.seedIfEmpty(legacyBaseURL: "https://api.openai.com/v1", legacyModel: "gpt-4o")
         check("seedIfEmpty creates primary account", accountStore.accounts.count == 1)
         check("seedIfEmpty sets defaultAccountID", accountStore.defaultAccountID != nil)
-        check("seedIfEmpty picks OpenAI name", accountStore.defaultAccount?.name == "OpenAI")
+        check("seedIfEmpty picks OpenAI name", accountStore.defaultAccount?.name == "OpenAI (API Key)")
         check("seedIfEmpty sets model", accountStore.defaultAccount?.defaultModel == "gpt-4o")
 
         let newAccount = try? accountStore.add(

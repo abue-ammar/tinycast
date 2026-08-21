@@ -1,6 +1,5 @@
 import Foundation
 
-/// A configured provider account with its own endpoint, default model, reasoning level, and credentials.
 struct AIProviderAccount: Codable, Hashable, Identifiable, Sendable {
     let id: UUID
     var name: String
@@ -9,6 +8,7 @@ struct AIProviderAccount: Codable, Hashable, Identifiable, Sendable {
     var defaultModel: String
     var defaultReasoning: AIReasoningEffort
     var isLocal: Bool
+    var isOAuth: Bool
 
     init(
         id: UUID = UUID(),
@@ -17,7 +17,8 @@ struct AIProviderAccount: Codable, Hashable, Identifiable, Sendable {
         baseURL: String,
         defaultModel: String = "",
         defaultReasoning: AIReasoningEffort = .none,
-        isLocal: Bool = false
+        isLocal: Bool = false,
+        isOAuth: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -26,6 +27,7 @@ struct AIProviderAccount: Codable, Hashable, Identifiable, Sendable {
         self.defaultModel = defaultModel
         self.defaultReasoning = defaultReasoning
         self.isLocal = isLocal
+        self.isOAuth = isOAuth
     }
 
     /// Resolves the provider preset representation (including brand SVG icon and default title).

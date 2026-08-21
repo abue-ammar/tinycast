@@ -44,9 +44,15 @@ struct AIProviderAccountEditorSheet: View {
         _defaultModel = State(initialValue: account?.defaultModel ?? AIClient.defaultModel)
         _defaultReasoning = State(initialValue: account?.defaultReasoning ?? .none)
         _isLocal = State(initialValue: account?.isLocal ?? false)
+        let preset = AIProvider.catalog.first { $0.id == (account?.providerPresetID ?? "") }
+        let isOAuth = account?.isOAuth ?? preset?.isOAuth ?? false
+        _isOAuthState = State(initialValue: isOAuth)
         let key = account.flatMap { SecretStore.secret(account: $0.secretAccountKey) } ?? ""
         _keyDraft = State(initialValue: key)
     }
+
+    @State private var isOAuthState: Bool
+    private var oauth: ChatGPTOAuthService { ChatGPTOAuthService.shared }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
@@ -87,11 +93,14 @@ struct AIProviderAccountEditorSheet: View {
                     if let preset = AIProvider.catalog.first(where: { $0.id == newID }) {
                         baseURL = preset.baseURL
                         isLocal = preset.isLocal
+                        isOAuthState = preset.isOAuth
                         if name.isEmpty || AIProvider.catalog.contains(where: { $0.name == name }) {
                             name = preset.name
                         }
                         if preset.id == "Google Gemini" {
                             defaultModel = "gemini-3.7-flash"
+                        } else if preset.id == "ChatGPT (Subscription)" {
+                            defaultModel = "gpt-4o"
                         }
                     }
                 }
@@ -106,14 +115,61 @@ struct AIProviderAccountEditorSheet: View {
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("API Key")
+                Text(isOAuthState ? "ChatGPT Subscription Authentication" : "API Key")
                     .font(.callout.weight(.medium))
-                SecureField("", text: $keyDraft, prompt: Text(isLocal ? "Keyless local server" : "sk-…"))
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.leading)
-                    .disabled(isLocal)
-            }
 
+                if isOAuthState {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        switch oauth.state {
+                        case .authenticated(let email):
+                            HStack(spacing: Theme.Spacing.xs) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Text(
+                                    email.map { "Signed in as \($0)" }
+                                        ?? "Signed in with ChatGPT Subscription"
+                                )
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("Sign Out", role: .destructive) {
+                                oauth.signOut()
+                            }
+                            .controlSize(.small)
+
+                        case .authenticating:
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Waiting for browser login…")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Cancel") {
+                                oauth.cancel()
+                            }
+                            .controlSize(.small)
+
+                        case .unauthenticated, .failed:
+                            Button("Sign in with ChatGPT…") {
+                                oauth.startAuthFlow()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            if case .failed(let error) = oauth.state {
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } else {
+                    SecureField("", text: $keyDraft, prompt: Text(isLocal ? "Keyless local server" : "sk-…"))
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.leading)
+                        .disabled(isLocal)
+                }
+            }
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 HStack {
                     Text("Default Model")
@@ -246,12 +302,17 @@ struct AIProviderAccountEditorSheet: View {
     }
 
     private func refreshModels() {
-        let key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard isLocal || !key.isEmpty else { return }
         isFetchingModels = true
         Task {
             defer { isFetchingModels = false }
             do {
+                let key: String
+                if isOAuthState {
+                    key = try await oauth.validAccessToken()
+                } else {
+                    key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard isLocal || !key.isEmpty else { return }
+                }
                 fetchedModels = try await AIClient.listModels(baseURL: baseURL, apiKey: key)
             } catch {
                 fetchedModels = []
@@ -260,21 +321,26 @@ struct AIProviderAccountEditorSheet: View {
     }
 
     private func testConnection() {
-        let key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard isLocal || !key.isEmpty else {
-            connectionNote = ConnectionNote(text: "Enter an API key first.", isGood: false)
-            return
-        }
-        guard !defaultModel.isEmpty else {
-            connectionNote = ConnectionNote(text: "Set a model to test.", isGood: false)
-            return
-        }
         connectionNote = ConnectionNote(text: "Testing…", isGood: nil)
         isTestingConnection = true
         let started = Date()
         Task {
             defer { isTestingConnection = false }
             do {
+                let key: String
+                if isOAuthState {
+                    key = try await oauth.validAccessToken()
+                } else {
+                    key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard isLocal || !key.isEmpty else {
+                        connectionNote = ConnectionNote(text: "Enter an API key first.", isGood: false)
+                        return
+                    }
+                }
+                guard !defaultModel.isEmpty else {
+                    connectionNote = ConnectionNote(text: "Set a model to test.", isGood: false)
+                    return
+                }
                 try await AIClient.testConnection(baseURL: baseURL, apiKey: key, model: defaultModel)
                 let seconds = String(format: "%.1f", Date().timeIntervalSince(started))
                 connectionNote = ConnectionNote(text: "Working — responded in \(seconds)s.", isGood: true)
@@ -297,17 +363,23 @@ struct AIProviderAccountEditorSheet: View {
             baseURL: trimmedURL,
             defaultModel: trimmedModel,
             defaultReasoning: defaultReasoning,
-            isLocal: isLocal
+            isLocal: isLocal,
+            isOAuth: isOAuthState
         )
 
         do {
             if account == nil {
                 let created = try core.aiProviderAccounts.add(draft)
-                SecretStore.setSecret(
-                    trimmedKey.isEmpty ? nil : trimmedKey, account: created.secretAccountKey)
+                if !isOAuthState {
+                    SecretStore.setSecret(
+                        trimmedKey.isEmpty ? nil : trimmedKey, account: created.secretAccountKey)
+                }
             } else {
                 try core.aiProviderAccounts.update(draft)
-                SecretStore.setSecret(trimmedKey.isEmpty ? nil : trimmedKey, account: draft.secretAccountKey)
+                if !isOAuthState {
+                    SecretStore.setSecret(
+                        trimmedKey.isEmpty ? nil : trimmedKey, account: draft.secretAccountKey)
+                }
             }
             dismiss()
         } catch {

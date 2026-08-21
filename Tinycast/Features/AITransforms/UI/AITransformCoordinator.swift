@@ -97,7 +97,7 @@ final class AITransformCoordinator {
         let mode: AIExecutionMode
     }
 
-    private func resolveConfig(for transform: AITransform) -> ResolvedConfig? {
+    private func resolveConfig(for transform: AITransform) async -> ResolvedConfig? {
         let account: AIProviderAccount
         if let accountID = transform.providerAccountID,
             let customAccount = core.aiProviderAccounts.account(id: accountID)
@@ -109,10 +109,15 @@ final class AITransformCoordinator {
             return nil
         }
 
-        let key =
-            SecretStore.secret(account: account.secretAccountKey)
-            ?? SecretStore.secret(account: SecretStore.aiAPIKeyAccount)
-            ?? ""
+        let key: String
+        if account.isOAuth {
+            key = (try? await ChatGPTOAuthService.shared.validAccessToken()) ?? ""
+        } else {
+            key =
+                SecretStore.secret(account: account.secretAccountKey)
+                ?? SecretStore.secret(account: SecretStore.aiAPIKeyAccount)
+                ?? ""
+        }
 
         guard account.isLocal || !key.isEmpty else { return nil }
 
@@ -148,14 +153,16 @@ final class AITransformCoordinator {
     func launchTransform(id: UUID) {
         guard settings.aiTransformsEnabled else { return }
         guard let transform = store.transform(id: id) else { return }
-        guard let config = resolveConfig(for: transform) else {
-            Task { await presentFailure(.notConfigured, transform: transform) }
-            return
-        }
-        if config.mode == .interactive {
-            openInteractiveSession(transform: transform, config: config)
-        } else {
-            runTransformDirect(transform: transform, config: config)
+        Task {
+            guard let config = await resolveConfig(for: transform) else {
+                await presentFailure(.notConfigured, transform: transform)
+                return
+            }
+            if config.mode == .interactive {
+                openInteractiveSession(transform: transform, config: config)
+            } else {
+                runTransformDirect(transform: transform, config: config)
+            }
         }
     }
 
@@ -163,14 +170,16 @@ final class AITransformCoordinator {
     func runTransform(id: UUID) {
         guard settings.aiTransformsEnabled else { return }
         guard let transform = store.transform(id: id) else { return }
-        guard let config = resolveConfig(for: transform) else {
-            Task { await presentFailure(.notConfigured, transform: transform) }
-            return
-        }
-        if config.mode == .interactive {
-            openInteractiveSession(transform: transform, config: config)
-        } else {
-            runTransformDirect(transform: transform, config: config)
+        Task {
+            guard let config = await resolveConfig(for: transform) else {
+                await presentFailure(.notConfigured, transform: transform)
+                return
+            }
+            if config.mode == .interactive {
+                openInteractiveSession(transform: transform, config: config)
+            } else {
+                runTransformDirect(transform: transform, config: config)
+            }
         }
     }
 
