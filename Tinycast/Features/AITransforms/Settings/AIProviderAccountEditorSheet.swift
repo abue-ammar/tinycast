@@ -100,11 +100,7 @@ struct AIProviderAccountEditorSheet: View {
                         Label {
                             Text(provider.name)
                         } icon: {
-                            if let icon = provider.iconName {
-                                Image(icon)
-                            } else {
-                                Image(systemName: provider.symbolFallback)
-                            }
+                            AIProviderIcon(preset: provider, size: 14)
                         }
                         .tag(provider.id)
                     }

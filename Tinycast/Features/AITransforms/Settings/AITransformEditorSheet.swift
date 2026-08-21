@@ -106,11 +106,7 @@ struct AITransformEditorSheet: View {
                             Label {
                                 Text(account.name)
                             } icon: {
-                                if let icon = account.providerPreset?.iconName {
-                                    Image(icon)
-                                } else {
-                                    Image(systemName: account.providerPreset?.symbolFallback ?? "sparkles")
-                                }
+                                AIProviderIcon(preset: account.providerPreset, size: 14)
                             }
                             .tag(account.id as UUID?)
                         }

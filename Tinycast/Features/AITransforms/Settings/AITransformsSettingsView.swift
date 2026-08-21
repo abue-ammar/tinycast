@@ -36,11 +36,7 @@ struct AITransformsSettingsView: View {
                             Label {
                                 Text(account.name)
                             } icon: {
-                                if let icon = account.providerPreset?.iconName {
-                                    Image(icon)
-                                } else {
-                                    Image(systemName: account.providerPreset?.symbolFallback ?? "sparkles")
-                                }
+                                AIProviderIcon(preset: account.providerPreset, size: 14)
                             }
                             .tag(account.id as UUID?)
                         }
@@ -172,6 +168,24 @@ private struct AccountEditorTarget: Identifiable {
     let id = UUID()
     let account: AIProviderAccount?
 }
+/// Renders a brand vector asset or fallback SF symbol for an AI provider preset.
+struct AIProviderIcon: View {
+    let preset: AIProvider?
+    var size: CGFloat = 16
+
+    var body: some View {
+        if let icon = preset?.iconName {
+            Image(icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            Image(systemName: preset?.symbolFallback ?? "sparkles")
+                .frame(width: size, height: size)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
 
 /// A row in the Configured Providers section.
 private struct AIProviderAccountSettingsRow: View {
@@ -181,16 +195,7 @@ private struct AIProviderAccountSettingsRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
-            if let iconName = account.providerPreset?.iconName {
-                Image(iconName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-            } else {
-                Image(systemName: account.providerPreset?.symbolFallback ?? "sparkles")
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(.secondary)
-            }
+            AIProviderIcon(preset: account.providerPreset, size: 18)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 HStack(spacing: Theme.Spacing.xs) {
