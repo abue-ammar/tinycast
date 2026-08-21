@@ -82,14 +82,13 @@ struct AITransformScreenView: View {
 
                 case .completed(let output, _):
                     ScrollView(.vertical) {
-                        Text(output)
+                        Text(formattedOutput(output))
                             .font(.body)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, Theme.Spacing.xs)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
                 case .failed(let error, _):
                     VStack(spacing: Theme.Spacing.sm) {
                         HStack(spacing: Theme.Spacing.xs) {
@@ -118,7 +117,8 @@ struct AITransformScreenView: View {
 
             // Bottom Shortcuts Bar
             HStack(spacing: Theme.Spacing.md) {
-                if case .completed = session.phase {
+                switch session.phase {
+                case .completed:
                     HStack(spacing: Theme.Spacing.xs) {
                         KeyCapChip(text: "↵", style: .outline)
                         Text("Insert")
@@ -145,16 +145,45 @@ struct AITransformScreenView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+
+                case .failed:
+                    HStack(spacing: Theme.Spacing.xs) {
+                        KeyCapChip(text: "↵", style: .outline)
+                        Text("Retry")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                case .idle:
+                    HStack(spacing: Theme.Spacing.xs) {
+                        KeyCapChip(text: "↵", style: .outline)
+                        Text("Transform")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                case .processing:
+                    EmptyView()
                 }
+
                 Spacer()
 
-                Text("Type query to refine")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                if case .completed = session.phase {
+                    Text("Type query to refine")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
             .padding(.horizontal, Theme.Spacing.xs)
         }
         .padding(Theme.Spacing.md)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Markdown formatting preserving whitespace and inline bold/code/italics.
+    private func formattedOutput(_ text: String) -> AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(
+            interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
     }
 }
