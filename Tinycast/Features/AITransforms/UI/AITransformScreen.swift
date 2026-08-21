@@ -104,8 +104,10 @@ struct AITransformScreen: PaletteScreen {
         switch session.phase {
         case .idle:
             if !query.isEmpty {
-                let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
-                session.executeCustomInput(query, apiKey: key, baseURL: core.settings.aiBaseURL)
+                Task {
+                    let (key, baseURL) = await resolveCredentials()
+                    session.executeCustomInput(query, apiKey: key, baseURL: baseURL)
+                }
                 vm.query = ""
             }
         case .processing:
@@ -189,14 +191,28 @@ struct AITransformScreen: PaletteScreen {
     }
 
     private func regenerate() {
-        let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
-        session.regenerate(apiKey: key, baseURL: core.settings.aiBaseURL)
+        Task {
+            let (key, baseURL) = await resolveCredentials()
+            session.regenerate(apiKey: key, baseURL: baseURL)
+        }
         vm.query = ""
     }
 
     private func refine(with query: String) {
-        let key = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
-        session.refine(followUp: query, apiKey: key, baseURL: core.settings.aiBaseURL)
+        Task {
+            let (key, baseURL) = await resolveCredentials()
+            session.refine(followUp: query, apiKey: key, baseURL: baseURL)
+        }
         vm.query = ""
+    }
+
+    private func resolveCredentials() async -> (key: String, baseURL: String) {
+        if let preset = session.preset,
+            let config = await core.aiTransformCoordinator.resolveConfig(for: preset)
+        {
+            return (config.key, config.baseURL.absoluteString)
+        }
+        let fallbackKey = SecretStore.secret(account: SecretStore.aiAPIKeyAccount) ?? ""
+        return (fallbackKey, core.settings.aiBaseURL)
     }
 }

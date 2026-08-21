@@ -97,7 +97,7 @@ final class AITransformCoordinator {
         let mode: AIExecutionMode
         let action: AICompletionAction
     }
-    private func resolveConfig(for transform: AITransform) async -> ResolvedConfig? {
+    func resolveConfig(for transform: AITransform) async -> ResolvedConfig? {
         let account: AIProviderAccount
         if let accountID = transform.providerAccountID,
             let customAccount = core.aiProviderAccounts.account(id: accountID)

@@ -29,6 +29,13 @@ final class ChatGPTOAuthService {
     private static let refreshTokenKey = "ai.oauth.chatgpt.refresh-token"
     private static let expiresAtKey = "ai.oauth.chatgpt.expires-at"
     private static let emailKey = "ai.oauth.chatgpt.email"
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        config.httpCookieStorage = nil
+        config.timeoutIntervalForRequest = 30
+        return URLSession(configuration: config)
+    }()
 
     @ObservationIgnored private var listener: NWListener?
     @ObservationIgnored private var codeVerifier: String?
@@ -215,7 +222,7 @@ final class ChatGPTOAuthService {
 
         activeTask = Task { [weak self] in
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await Self.session.data(for: request)
                 guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                     let message = String(data: data, encoding: .utf8) ?? "HTTP error"
                     self?.state = .failed("Token exchange failed: \(message)")
@@ -262,7 +269,7 @@ final class ChatGPTOAuthService {
         request.httpBody = params.map { "\($0.key)=\(Self.urlEncode($0.value))" }.joined(separator: "&").data(
             using: .utf8)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
             let tokenObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let newAccess = tokenObj["access_token"] as? String
