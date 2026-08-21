@@ -406,7 +406,7 @@ private struct AITransformSettingsRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        SettingsRow(title: transform.name, subtitle: transform.prompt) {
+        SettingsRow(title: transform.name, subtitle: subtitleText) {
             Image(systemName: AITransform.sfSymbol)
         } trailing: {
             ShortcutRecorder(action: .aiTransform(id: transform.id))
@@ -426,6 +426,13 @@ private struct AITransformSettingsRow: View {
             .help("Delete Transform")
             .accessibilityLabel("Delete \(transform.name)")
         }
+    }
+
+    private var subtitleText: String {
+        if let model = transform.model, !model.isEmpty {
+            return "\(transform.prompt) · \(model)"
+        }
+        return transform.prompt
     }
 }
 
