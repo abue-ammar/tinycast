@@ -26,8 +26,9 @@ struct AITransformEditorSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Name")
                     .font(.callout.weight(.medium))
-                TextField("Fix Spelling & Grammar", text: $name)
+                TextField("", text: $name, prompt: Text("Fix Spelling & Grammar"))
                     .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.leading)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -58,8 +59,9 @@ struct AITransformEditorSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Model Override")
                     .font(.callout.weight(.medium))
-                TextField("Leave empty to use the default model", text: $model)
+                TextField("", text: $model, prompt: Text("Leave empty to use the default model"))
                     .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.leading)
             }
 
             if let errorMessage {

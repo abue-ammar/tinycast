@@ -74,7 +74,9 @@ struct AITransformsSettingsView: View {
                     TextField("", text: $settings.aiBaseURL, prompt: Text(AIClient.defaultBaseURL))
                         .textFieldStyle(.roundedBorder)
                         .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     HStack {
@@ -108,7 +110,9 @@ struct AITransformsSettingsView: View {
                     )
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     HStack {
@@ -158,10 +162,11 @@ struct AITransformsSettingsView: View {
                     )
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .disabled(!isCustomModel && !fetchedModels.isEmpty)
                     .opacity((!isCustomModel && !fetchedModels.isEmpty) ? 0.5 : 1.0)
                 }
-
+                .frame(maxWidth: .infinity, alignment: .leading)
                 LabeledContent {
                     HStack(spacing: Theme.Spacing.md) {
                         if let connectionNote {
