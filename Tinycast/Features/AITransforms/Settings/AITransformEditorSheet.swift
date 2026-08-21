@@ -266,10 +266,8 @@ struct AITransformEditorSheet: View {
         }
     }
     private var resolvedAccount: AIProviderAccount? {
-        if let providerAccountID, let account = core.aiProviderAccounts.account(id: providerAccountID) {
-            return account
-        }
-        return core.aiProviderAccounts.defaultAccount
+        providerAccountID.flatMap(core.aiProviderAccounts.account(id:))
+            ?? core.aiProviderAccounts.defaultAccount
     }
 
     private var defaultAccountName: String {
