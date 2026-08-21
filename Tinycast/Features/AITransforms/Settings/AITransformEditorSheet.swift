@@ -135,6 +135,7 @@ struct AITransformEditorSheet: View {
                     .font(.callout.weight(.medium))
                 Picker("Activation Mode", selection: $activationMode) {
                     Text("Inherit Global (\(settings.aiExecutionMode.title))").tag(nil as AIExecutionMode?)
+                    Divider()
                     ForEach(AIExecutionMode.allCases) { mode in
                         Text(mode.title).tag(mode as AIExecutionMode?)
                     }

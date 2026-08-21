@@ -231,8 +231,7 @@ private struct AIProviderAccountSettingsRow: View {
     }
 
     private var subtitleText: String {
-        var parts: [String] = []
-        parts.append(account.baseURL)
+        var parts = [account.baseURL]
         if !account.defaultModel.isEmpty {
             parts.append("Model: \(account.defaultModel)")
         }
@@ -306,12 +305,11 @@ private struct AITransformLibraryRow: View {
     }
 
     private var metaBadgeText: String {
-        var parts: [String] = []
-        let mode = transform.activationMode?.title ?? "Inherit Mode"
-        parts.append(mode)
-        let action = transform.completionAction?.title ?? "Inherit Action"
-        parts.append(action)
-        parts.append(accountName)
+        var parts = [
+            transform.activationMode?.title ?? "Inherit Mode",
+            transform.completionAction?.title ?? "Inherit Action",
+            accountName
+        ]
         if let model = transform.model, !model.isEmpty {
             parts.append(model)
         }
