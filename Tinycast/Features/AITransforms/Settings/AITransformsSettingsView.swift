@@ -14,8 +14,9 @@ struct AITransformsSettingsView: View {
     /// Model IDs the provider listed; empty until polled, which keeps the dropdown on Custom…
     /// for anyone who never asks for it.
     @State private var fetchedModels: [String] = []
+    @State private var isFetchingModels = false
+    @State private var isTestingConnection = false
     @State private var connectionNote: ConnectionNote?
-
     /// Inline progress/result line under the poll and test buttons: green when proven,
     /// red when the provider refused, neutral while in flight.
     private struct ConnectionNote: Equatable {
@@ -50,42 +51,38 @@ struct AITransformsSettingsView: View {
                 showsInLauncher: $settings.aiTransformsShowInLauncher)
 
             Section {
-                LabeledContent("Provider") {
-                    Picker(selection: providerSelection) {
-                        ForEach(AIProvider.catalog) { provider in
-                            Text(provider.name).tag(provider.id)
-                        }
-                        Text("Custom").tag(AIProvider.customID)
-                    } label: {
-                        EmptyView()
+                Picker(selection: providerSelection) {
+                    ForEach(AIProvider.catalog) { provider in
+                        Text(provider.name).tag(provider.id)
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 220)
+                    Divider()
+                    Text("Custom").tag(AIProvider.customID)
+                } label: {
+                    Text("Provider")
+                    Text("Select a service or choose Custom for other endpoints.")
                 }
-                LabeledContent("Base URL") {
-                    // `prompt:`, not the title argument: inside a Form the title renders as a
-                    // second label beside the field. See SettingsFilterField.
-                    TextField(
-                        "", text: $settings.aiBaseURL, prompt: Text(AIClient.defaultBaseURL)
-                    )
-                    .textFieldStyle(.roundedBorder)
-                    .labelsHidden()
-                    .frame(width: 340)
+
+                LabeledContent {
+                    TextField("", text: $settings.aiBaseURL, prompt: Text(AIClient.defaultBaseURL))
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.leading)
+                } label: {
+                    Text("Base URL")
+                    Text("OpenAI-compatible root ending before /chat/completions.")
                 }
-                SettingsRow(
-                    title: "API Key",
-                    subtitle: keyIsStored
-                        ? "A key is saved in your login Keychain." : "No key saved."
-                ) {
+
+                LabeledContent {
                     HStack(spacing: Theme.Spacing.sm) {
-                        SecureField("", text: $keyDraft, prompt: Text("New key"))
-                            .textFieldStyle(.roundedBorder)
-                            .labelsHidden()
-                            .frame(width: 180)
-                        Button("Save") { saveKey() }
-                            .disabled(keyDraft.isEmpty)
-                        if keyIsStored {
-                            Button("Remove", role: .destructive) {
+                        SecureField(
+                            "", text: $keyDraft, prompt: Text(keyIsStored ? "Replace saved key" : "sk-…")
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.leading)
+                        if !keyDraft.isEmpty {
+                            Button("Save") { saveKey() }
+                                .buttonStyle(.borderedProminent)
+                        } else if keyIsStored {
+                            Button("Clear", role: .destructive) {
                                 SecretStore.setSecret(nil, account: SecretStore.aiAPIKeyAccount)
                                 keyDraft = ""
                                 keyIsStored = false
@@ -93,50 +90,94 @@ struct AITransformsSettingsView: View {
                             }
                         }
                     }
+                } label: {
+                    Text("API Key")
+                    Text(keyIsStored ? "Saved in login Keychain." : "Required for cloud providers.")
                 }
-                LabeledContent("Model") {
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Picker(selection: modelSelection) {
-                            Text("Custom…").tag(Self.customModelID)
-                            ForEach(fetchedModels, id: \.self) { model in
-                                Text(model).tag(model)
+
+                LabeledContent {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Picker(selection: modelSelection) {
+                                Text("Custom…").tag(Self.customModelID)
+                                if !fetchedModels.isEmpty {
+                                    Divider()
+                                    ForEach(fetchedModels, id: \.self) { model in
+                                        Text(model).tag(model)
+                                    }
+                                }
+                            } label: {
+                                EmptyView()
                             }
-                        } label: {
-                            EmptyView()
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+
+                            Button {
+                                refreshModels()
+                            } label: {
+                                if isFetchingModels {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                            }
+                            .help("Fetch models from provider")
+                            .disabled(isFetchingModels)
                         }
-                        .pickerStyle(.menu)
-                        .frame(width: 220)
-                        .disabled(fetchedModels.isEmpty)
-                        if isCustomModel {
-                            TextField("", text: $settings.aiModel, prompt: Text("model id"))
-                                .textFieldStyle(.roundedBorder)
-                                .labelsHidden()
-                                .frame(width: 170)
+
+                        if isCustomModel || fetchedModels.isEmpty {
+                            TextField(
+                                "", text: $settings.aiModel, prompt: Text("Model ID (e.g. gemini-2.5-flash)")
+                            )
+                            .textFieldStyle(.roundedBorder)
+                            .multilineTextAlignment(.leading)
                         }
                     }
+                } label: {
+                    Text("Default Model")
+                    Text("Used when a transform has no model override.")
                 }
-                HStack(spacing: Theme.Spacing.sm) {
-                    Button {
-                        refreshModels()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .help("Fetch the models this provider serves")
-                    Button("Test Connection") { testConnection() }
-                    if let connectionNote {
-                        Text(connectionNote.text)
+
+                LabeledContent {
+                    HStack(spacing: Theme.Spacing.md) {
+                        if let connectionNote {
+                            HStack(spacing: Theme.Spacing.xs) {
+                                Image(
+                                    systemName: connectionNote.isGood == true
+                                        ? "checkmark.circle.fill"
+                                        : (connectionNote.isGood == false
+                                            ? "exclamationmark.triangle.fill" : "circle.dotted")
+                                )
+                                Text(connectionNote.text)
+                                    .lineLimit(2)
+                            }
                             .font(.caption)
                             .foregroundStyle(connectionNote.tone)
-                            .lineLimit(2)
+                        } else {
+                            Spacer()
+                        }
+
+                        Button {
+                            testConnection()
+                        } label: {
+                            if isTestingConnection {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Text("Test Connection")
+                            }
+                        }
+                        .disabled(isTestingConnection || settings.aiModel.isEmpty)
                     }
+                } label: {
+                    Text("Connection")
+                    Text("Verify your API key, base URL, and model.")
                 }
             } footer: {
                 Text(
-                    "The key is stored in your login Keychain and never included in backups. "
-                        + "Picking a provider fills the base URL; Custom takes any "
-                        + "OpenAI-compatible root, ending before “/chat/completions”. "
-                        + "The arrow polls the provider's model list; Test Connection sends a "
-                        + "one-word completion to prove the whole chain."
+                    "The API key is stored in your login Keychain and never included in backups. "
+                        + "The refresh button polls the provider's /models endpoint to populate the dropdown."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -237,7 +278,9 @@ struct AITransformsSettingsView: View {
             return
         }
         connectionNote = ConnectionNote(text: "Fetching models…", isGood: nil)
+        isFetchingModels = true
         Task {
+            defer { isFetchingModels = false }
             do {
                 let models = try await AIClient.listModels(
                     baseURL: settings.aiBaseURL, apiKey: key)
@@ -264,8 +307,10 @@ struct AITransformsSettingsView: View {
             return
         }
         connectionNote = ConnectionNote(text: "Testing…", isGood: nil)
+        isTestingConnection = true
         let started = Date()
         Task {
+            defer { isTestingConnection = false }
             do {
                 try await AIClient.testConnection(
                     baseURL: settings.aiBaseURL, apiKey: key, model: settings.aiModel)
