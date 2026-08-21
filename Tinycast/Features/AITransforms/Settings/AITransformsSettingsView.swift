@@ -104,7 +104,7 @@ struct AITransformsSettingsView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             Text("API Key")
-                            Text(keyIsStored ? "Saved in login Keychain." : "Required for cloud providers.")
+                            Text(keyIsStored ? "Saved securely." : "Required for cloud providers.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -225,7 +225,7 @@ struct AITransformsSettingsView: View {
                 }
             } footer: {
                 Text(
-                    "The API key is stored in your login Keychain and never included in backups. "
+                    "The API key is stored securely with private permissions and never included in backups. "
                         + "The refresh button polls the provider's /models endpoint to populate the dropdown."
                 )
                 .font(.caption)
