@@ -37,64 +37,39 @@ struct AITransformScreen: PaletteScreen {
     }
 
     func secondary(at selection: Int) -> Bool {
-        if case .completed = session.phase {
-            copyToClipboard()
-            return true
-        }
-        return false
+        copyAction()
     }
 
     func actions(at selection: Int) -> PopoverMenuContent? {
         var items: [PopoverMenuItem] = []
-
         if case .completed = session.phase {
-            items.append(
+            items = [
                 PopoverMenuItem(
-                    title: "Insert in Previous App",
-                    systemImage: "arrow.down.doc",
-                    shortcut: "↵",
-                    action: { insertResult() }
-                )
-            )
-            items.append(
+                    title: "Insert in Previous App", systemImage: "arrow.down.doc", shortcut: "↵",
+                    action: { insertResult() }),
                 PopoverMenuItem(
-                    title: "Copy to Clipboard",
-                    systemImage: "doc.on.doc",
-                    shortcut: "⌘C",
-                    action: { copyToClipboard() }
-                )
-            )
-            items.append(
+                    title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘C",
+                    action: { copyToClipboard() }),
                 PopoverMenuItem(
-                    title: "Regenerate",
-                    systemImage: "arrow.clockwise",
-                    shortcut: "⌘R",
-                    action: { regenerate() }
-                )
-            )
+                    title: "Regenerate", systemImage: "arrow.clockwise", shortcut: "⌘R",
+                    action: { regenerate() })
+            ]
             if !session.originalSelection.isEmpty {
                 items.append(
                     PopoverMenuItem(
-                        title: "Copy Original Input",
-                        systemImage: "text.quote",
+                        title: "Copy Original Input", systemImage: "text.quote",
                         action: {
                             Paster.copyPlainText(session.originalSelection)
                             core.showMessage("Copied original text", tone: .neutral)
-                        }
-                    )
-                )
+                        }))
             }
         } else if case .failed = session.phase {
-            items.append(
+            items = [
                 PopoverMenuItem(
-                    title: "Retry",
-                    systemImage: "arrow.clockwise",
-                    shortcut: "↵",
-                    action: { regenerate() }
-                )
-            )
+                    title: "Retry", systemImage: "arrow.clockwise", shortcut: "↵",
+                    action: { regenerate() })
+            ]
         }
-
         return PopoverMenuContent(header: session.presetName, items: items)
     }
 
