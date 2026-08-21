@@ -16,11 +16,31 @@ struct AIProviderAccountEditorSheet: View {
     @State private var isLocal: Bool
     @State private var fetchedModels: [String] = []
     @State private var isFetchingModels = false
-    @State private var isTestingConnection = false
+    @State private var testState: TestState = .idle
+    @State private var keyValidationState: KeyValidationState = .unvalidated
     @State private var connectionNote: ConnectionNote?
     @State private var errorMessage: String?
     @State private var forceCustomModel = false
-    @FocusState private var nameFocused: Bool
+
+    private enum FocusField: Hashable {
+        case name
+        case apiKey
+    }
+    @FocusState private var focusedField: FocusField?
+
+    private enum KeyValidationState: Equatable {
+        case unvalidated
+        case validating
+        case valid
+        case invalid(String)
+    }
+
+    private enum TestState: Equatable {
+        case idle
+        case testing
+        case success
+        case failed
+    }
 
     private struct ConnectionNote: Equatable {
         let text: String
@@ -69,7 +89,7 @@ struct AIProviderAccountEditorSheet: View {
                 TextField("", text: $name, prompt: Text("e.g. Google Gemini (Personal), OpenAI (Work)"))
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.leading)
-                    .focused($nameFocused)
+                    .focused($focusedField, equals: .name)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -99,10 +119,16 @@ struct AIProviderAccountEditorSheet: View {
                         isLocal = preset.isLocal
                         isOAuthState = preset.isOAuth
                         name = preset.name
+                        keyValidationState = .unvalidated
+                        testState = .idle
+                        connectionNote = nil
                         if preset.id == "Google Gemini" {
                             defaultModel = "gemini-3.7-flash"
                         } else if preset.id == "ChatGPT (Subscription)" {
                             defaultModel = "gpt-4o"
+                        }
+                        if !preset.isOAuth && !preset.isLocal {
+                            focusedField = .apiKey
                         }
                     }
                 }
@@ -168,12 +194,61 @@ struct AIProviderAccountEditorSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text("API Key")
-                        .font(.callout.weight(.medium))
-                    SecureField("", text: $keyDraft, prompt: Text(isLocal ? "Keyless local server" : "sk-…"))
+                    HStack {
+                        Text("API Key")
+                            .font(.callout.weight(.medium))
+                        if case .valid = keyValidationState {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.caption)
+                        } else if case .invalid = keyValidationState {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                                .font(.caption)
+                        }
+                    }
+
+                    HStack(spacing: Theme.Spacing.sm) {
+                        SecureField(
+                            "", text: $keyDraft, prompt: Text(isLocal ? "Keyless local server" : "sk-…")
+                        )
                         .textFieldStyle(.roundedBorder)
                         .multilineTextAlignment(.leading)
                         .disabled(isLocal)
+                        .focused($focusedField, equals: .apiKey)
+                        .onChange(of: keyDraft) { _, _ in
+                            keyValidationState = .unvalidated
+                            testState = .idle
+                        }
+
+                        if !isLocal {
+                            Button {
+                                validateKey()
+                            } label: {
+                                switch keyValidationState {
+                                case .validating:
+                                    ProgressView()
+                                        .controlSize(.small)
+                                case .valid:
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                case .invalid:
+                                    Image(systemName: "arrow.clockwise.circle.fill")
+                                        .foregroundStyle(.red)
+                                case .unvalidated:
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                            .help("Validate API Key")
+                            .disabled(
+                                keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    || keyValidationState == .validating)
+                        }
+                    }
                 }
             }
 
@@ -229,26 +304,19 @@ struct AIProviderAccountEditorSheet: View {
                 .labelsHidden()
             }
 
-            HStack {
-                Button("Test Connection") { testConnection() }
-                    .disabled(isTestingConnection || defaultModel.isEmpty)
-
-                if let connectionNote {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        Image(
-                            systemName: connectionNote.isGood == true
-                                ? "checkmark.circle.fill"
-                                : (connectionNote.isGood == false
-                                    ? "exclamationmark.triangle.fill" : "circle.dotted")
-                        )
-                        Text(connectionNote.text)
-                            .lineLimit(2)
-                    }
-                    .font(.caption)
-                    .foregroundStyle(connectionNote.tone)
+            if let connectionNote {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Image(
+                        systemName: connectionNote.isGood == true
+                            ? "checkmark.circle.fill"
+                            : (connectionNote.isGood == false
+                                ? "exclamationmark.triangle.fill" : "circle.dotted")
+                    )
+                    Text(connectionNote.text)
+                        .lineLimit(2)
                 }
-
-                Spacer()
+                .font(.caption)
+                .foregroundStyle(connectionNote.tone)
             }
 
             if let errorMessage {
@@ -257,31 +325,70 @@ struct AIProviderAccountEditorSheet: View {
                     .foregroundStyle(.orange)
             }
 
-            HStack {
+            HStack(spacing: Theme.Spacing.md) {
                 if let account {
-                    Button("Delete Account", role: .destructive) {
+                    Button(role: .destructive) {
                         core.aiProviderAccounts.remove(id: account.id)
                         dismiss()
+                    } label: {
+                        Label("Remove Provider", systemImage: "trash")
+                            .foregroundStyle(.red)
                     }
+                    .buttonStyle(.plain)
                 }
 
                 Spacer()
 
+                Button {
+                    testConnection()
+                } label: {
+                    HStack(spacing: Theme.Spacing.xs) {
+                        switch testState {
+                        case .testing:
+                            ProgressView()
+                                .controlSize(.small)
+                        case .success:
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        case .failed:
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                                .foregroundStyle(.red)
+                        case .idle:
+                            Image(systemName: "bolt")
+                        }
+                        Text("Test")
+                    }
+                }
+                .disabled(testState == .testing || defaultModel.isEmpty)
+
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
 
-                Button("Save", action: save)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button(action: save) {
+                    if account == nil {
+                        Label("Add", systemImage: "plus")
+                    } else {
+                        Label("Save", systemImage: "checkmark")
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: Theme.Size.editorSheetWidth)
         .onAppear {
-            if account == nil { nameFocused = true }
+            if account == nil {
+                if isOAuthState || isLocal {
+                    focusedField = .name
+                } else {
+                    focusedField = .apiKey
+                }
+            }
         }
         .task {
-            if !keyDraft.isEmpty {
+            if !keyDraft.isEmpty || isOAuthState {
                 refreshModels()
             }
         }
@@ -324,12 +431,26 @@ struct AIProviderAccountEditorSheet: View {
         }
     }
 
+    private func validateKey() {
+        let key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return }
+        keyValidationState = .validating
+        Task {
+            do {
+                let models = try await AIClient.listModels(baseURL: baseURL, apiKey: key)
+                fetchedModels = models
+                keyValidationState = .valid
+            } catch {
+                keyValidationState = .invalid(error.localizedDescription)
+            }
+        }
+    }
+
     private func testConnection() {
         connectionNote = ConnectionNote(text: "Testing…", isGood: nil)
-        isTestingConnection = true
+        testState = .testing
         let started = Date()
         Task {
-            defer { isTestingConnection = false }
             do {
                 let key: String
                 if isOAuthState {
@@ -338,18 +459,22 @@ struct AIProviderAccountEditorSheet: View {
                     key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard isLocal || !key.isEmpty else {
                         connectionNote = ConnectionNote(text: "Enter an API key first.", isGood: false)
+                        testState = .failed
                         return
                     }
                 }
                 guard !defaultModel.isEmpty else {
                     connectionNote = ConnectionNote(text: "Set a model to test.", isGood: false)
+                    testState = .failed
                     return
                 }
                 try await AIClient.testConnection(baseURL: baseURL, apiKey: key, model: defaultModel)
                 let seconds = String(format: "%.1f", Date().timeIntervalSince(started))
                 connectionNote = ConnectionNote(text: "Working — responded in \(seconds)s.", isGood: true)
+                testState = .success
             } catch {
                 connectionNote = ConnectionNote(text: error.localizedDescription, isGood: false)
+                testState = .failed
             }
         }
     }
