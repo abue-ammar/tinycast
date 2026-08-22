@@ -157,9 +157,10 @@ struct AITransformScreenView: View {
 
             // Bottom Shortcuts Bar
             HStack(spacing: Theme.Spacing.md) {
+                Spacer()
+
                 switch session.phase {
                 case .completed:
-                    shortcutChip("Insert", keys: ["↵"])
                     shortcutChip("Copy", keys: ["⌘", "C"])
                     if !session.originalSelection.isEmpty {
                         shortcutChip(session.isShowingDiff ? "Text View" : "Diff View", keys: ["⌘", "D"])
@@ -171,14 +172,6 @@ struct AITransformScreenView: View {
                     shortcutChip("Transform", keys: ["↵"])
                 case .processing:
                     EmptyView()
-                }
-
-                Spacer()
-
-                if case .completed = session.phase {
-                    Text("Type query to refine")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
                 }
             }
             .padding(.horizontal, Theme.Spacing.xs)
