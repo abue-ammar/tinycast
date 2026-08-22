@@ -7,12 +7,9 @@ enum AIProviderAccountValidationError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .emptyName:
-            return "Give the provider account a name."
-        case .invalidBaseURL:
-            return "Provide a valid base URL for the provider."
-        case .duplicateName:
-            return "An account with this name already exists."
+        case .emptyName: return "Give the provider account a name."
+        case .invalidBaseURL: return "Provide a valid base URL for the provider."
+        case .duplicateName: return "An account with this name already exists."
         }
     }
 }
