@@ -563,11 +563,25 @@ struct AITransformTests {
         )
         check("active session starts with preset name", refinementSession.presetName == "Fix Grammar")
         check("active session has original selection", refinementSession.originalSelection == "Raw text.")
+        // MARK: Differential engine
+
+        let identicalChunks = AIDiffEngine.diff(original: "hello world", modified: "hello world")
+        check("identical strings yield single equal chunk", identicalChunks == [.equal("hello world")])
+
+        let wordChange = AIDiffEngine.diff(original: "helo world", modified: "hello world")
+        check(
+            "diff detects word deletion and insertion",
+            wordChange.contains(.deleted("helo")) && wordChange.contains(.inserted("hello")))
+
+        let renderedDiff = AIDiffEngine.renderDiff(original: "helo world", modified: "hello world")
+        check(
+            "renderDiff outputs non-empty AttributedString", String(renderedDiff.characters).contains("hello")
+        )
+
         check(
             "error descriptions stay human sentences",
             AIClientError.notConfigured.errorDescription?.isEmpty == false
                 && AIClientError.rateLimited.errorDescription?.contains("Rate limited") == true)
-
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
     }

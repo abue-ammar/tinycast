@@ -8,6 +8,7 @@ struct AITransformScreenView: View {
     let onRegenerate: () -> Void
     let onRetry: () -> Void
 
+    @State private var isShowingDiff: Bool = true
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
             // Source Input Card
@@ -52,6 +53,26 @@ struct AITransformScreenView: View {
                     }
 
                     if case .completed = session.phase {
+                        if !session.originalSelection.isEmpty {
+                            Button(action: { isShowingDiff.toggle() }) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: isShowingDiff ? "text.badge.checkmark" : "plusminus")
+                                        .font(.caption2)
+                                    Text(isShowingDiff ? "Diff" : "Text")
+                                        .font(.caption2.weight(.medium))
+                                }
+                                .padding(.horizontal, Theme.Spacing.xs)
+                                .padding(.vertical, 2)
+                                .background(
+                                    isShowingDiff ? Theme.Colors.selection : Theme.Colors.controlSurface,
+                                    in: .capsule
+                                )
+                                .foregroundStyle(isShowingDiff ? Theme.Colors.textPrimary : .secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Toggle differences (⌘D)")
+                        }
+
                         Button(action: onCopy) {
                             Image(systemName: "doc.on.doc")
                                 .font(.caption2)
@@ -63,7 +84,6 @@ struct AITransformScreenView: View {
                 }
 
                 Divider()
-
                 switch session.phase {
                 case .idle:
                     VStack(spacing: Theme.Spacing.sm) {
@@ -92,12 +112,24 @@ struct AITransformScreenView: View {
 
                 case .completed(let output, _):
                     ScrollView(.vertical) {
-                        Text(formattedOutput(output))
+                        if isShowingDiff && !session.originalSelection.isEmpty {
+                            Text(
+                                AIDiffEngine.renderDiff(
+                                    original: session.originalSelection, modified: output)
+                            )
                             .font(.body)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, Theme.Spacing.xs)
+                        } else {
+                            Text(formattedOutput(output))
+                                .font(.body)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, Theme.Spacing.xs)
+                        }
                     }
+                    .transition(.opacity)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 case .failed(let error, _):
                     VStack(spacing: Theme.Spacing.sm) {
@@ -131,6 +163,9 @@ struct AITransformScreenView: View {
                 case .completed:
                     shortcutChip("Insert", keys: ["↵"])
                     shortcutChip("Copy", keys: ["⌘", "C"])
+                    if !session.originalSelection.isEmpty {
+                        shortcutChip(isShowingDiff ? "Text View" : "Diff View", keys: ["⌘", "D"])
+                    }
                     shortcutChip("Regenerate", keys: ["⌘", "R"])
                 case .failed:
                     shortcutChip("Retry", keys: ["↵"])
@@ -152,6 +187,9 @@ struct AITransformScreenView: View {
         }
         .padding(Theme.Spacing.md)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .onAppear {
+            isShowingDiff = session.preset?.showDiff ?? true
+        }
     }
     private func shortcutChip(_ label: String, keys: [String]) -> some View {
         HStack(spacing: Theme.Spacing.xs) {

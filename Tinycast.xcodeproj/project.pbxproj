@@ -96,6 +96,7 @@
 		3E2E2CFAD5C5731A5F059AD5 /* IconStyleMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C39345D0335ACA895133ABD /* IconStyleMonitor.swift */; };
 		4109B5CF37DCA4BCDAE46412 /* ShellCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBFE3C41897391C14DB5A55C /* ShellCommandRunner.swift */; };
 		410F1B5FFAA44378AC9EC2DB /* SystemSettingsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951E746BA1AD25D167A1775F /* SystemSettingsSettingsView.swift */; };
+		4330082BC53FD540C3F0EF8F /* AIDiffEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0B1AA153569AEEC113F9BC /* AIDiffEngine.swift */; };
 		43885792945F28AF3CDE30BC /* WindowCommandCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06125F7DDE68BB4D52065C06 /* WindowCommandCoordinator.swift */; };
 		43928B59AF6064FB35381E3B /* AITransformsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E49C2DDB0E8520CF9119EBC /* AITransformsSettingsView.swift */; };
 		43DBCE7B5A84D0D6322124F5 /* MessageHUDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2CB71671625A1F446316A1 /* MessageHUDController.swift */; };
@@ -659,6 +660,7 @@
 		FBFE3C41897391C14DB5A55C /* ShellCommandRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellCommandRunner.swift; sourceTree = "<group>"; };
 		FC2B77DA46386E7E459406E4 /* NotesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesStore.swift; sourceTree = "<group>"; };
 		FD508D2A6133B55EDD89596C /* AITransformSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITransformSession.swift; sourceTree = "<group>"; };
+		FE0B1AA153569AEEC113F9BC /* AIDiffEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIDiffEngine.swift; sourceTree = "<group>"; };
 		FE41DC04958D7C2FF8C47F62 /* CustomCommandCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCommandCoordinator.swift; sourceTree = "<group>"; };
 		FE72CE02F853ACE956627347 /* SystemAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAction.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -723,6 +725,7 @@
 			isa = PBXGroup;
 			children = (
 				BF30853EEDDD6F9B7390D9D6 /* AICompletionAction.swift */,
+				FE0B1AA153569AEEC113F9BC /* AIDiffEngine.swift */,
 				182298C055E60AD40AEC8AF5 /* AIExecutionMode.swift */,
 				042E9B6BADDB6C90EAEE6553 /* AIProvider.swift */,
 				5755603E71642CB1E1E023DA /* AIProviderAccount.swift */,
@@ -1832,6 +1835,7 @@
 			files = (
 				6BE7F1BBE984FEE473DF5246 /* AIClient.swift in Sources */,
 				BBC4D29FC4728A7037C0430A /* AICompletionAction.swift in Sources */,
+				4330082BC53FD540C3F0EF8F /* AIDiffEngine.swift in Sources */,
 				A00578A020F0955FFB05D5CB /* AIExecutionMode.swift in Sources */,
 				2AAF90CA4EFEBB9AF07C7176 /* AIProvider.swift in Sources */,
 				0080844FAA7D70CF9B3E89A6 /* AIProviderAccount.swift in Sources */,

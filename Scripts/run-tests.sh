@@ -131,6 +131,7 @@ run ai-transform-test    Tinycast/Platform/AppPaths.swift \
                          Tinycast/Features/AITransforms/Model/AIProviderAccountStore.swift \
                          Tinycast/Features/AITransforms/Model/AITransform.swift \
                          Tinycast/Features/AITransforms/Model/AITransformSession.swift \
+                         Tinycast/Features/AITransforms/Model/AIDiffEngine.swift \
                          Tinycast/Features/AITransforms/Model/AIProvider.swift \
                          Tinycast/Features/AITransforms/Service/AIClient.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \

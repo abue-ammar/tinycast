@@ -15,6 +15,7 @@ struct AITransformEditorSheet: View {
     @State private var reasoningEffort: AIReasoningEffort?
     @State private var activationMode: AIExecutionMode?
     @State private var completionAction: AICompletionAction?
+    @State private var showDiff: Bool
     @State private var fetchedModels: [String] = []
     @State private var forceCustomModel = false
     @State private var isFetchingModels = false
@@ -32,6 +33,7 @@ struct AITransformEditorSheet: View {
         _reasoningEffort = State(initialValue: transform?.reasoningEffort)
         _activationMode = State(initialValue: transform?.activationMode)
         _completionAction = State(initialValue: transform?.completionAction)
+        _showDiff = State(initialValue: transform?.showDiff ?? true)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
@@ -207,6 +209,17 @@ struct AITransformEditorSheet: View {
                 .disabled(!isCustomModel)
                 .opacity(isCustomModel ? 1.0 : 0.5)
             }
+            Toggle(isOn: $showDiff) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                    Text("Highlight differences")
+                    Text(
+                        "Show insertions and strikethroughs comparing with original text in interactive mode."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.checkbox)
             if let errorMessage {
                 Text(errorMessage)
                     .font(.caption)
@@ -251,7 +264,8 @@ struct AITransformEditorSheet: View {
             providerAccountID: providerAccountID,
             reasoningEffort: reasoningEffort,
             activationMode: activationMode,
-            completionAction: completionAction
+            completionAction: completionAction,
+            showDiff: showDiff
         )
         do {
             if transform == nil {

@@ -23,6 +23,8 @@ struct AITransform: Codable, Hashable, Identifiable, Sendable {
     var activationMode: AIExecutionMode? = nil
     /// Per-preset completion action; nil means inherit the global setting.
     var completionAction: AICompletionAction? = nil
+    /// Whether to display a word-level differential view by default in interactive mode.
+    var showDiff: Bool? = nil
     var symbol: String {
         iconSymbol ?? Self.sfSymbol
     }
@@ -138,20 +140,24 @@ final class AITransformStore {
             name: "Fix Spelling & Grammar",
             prompt:
                 "Fix all spelling and grammar mistakes in the text. Preserve the author's voice, "
-                + "formatting, line breaks, and meaning. Do not rewrite style."),
+                + "formatting, line breaks, and meaning. Do not rewrite style.",
+            showDiff: true),
         AITransform(
             name: "Polish Writing",
             prompt:
                 "Improve clarity, flow, and word choice. Keep the author's intent, tone, "
-                + "formatting, and approximate length."),
+                + "formatting, and approximate length.",
+            showDiff: true),
         AITransform(
             name: "Make Concise",
             prompt:
                 "Rewrite the text to be as concise as possible while preserving every fact, "
-                + "requirement, and nuance. Keep formatting."),
+                + "requirement, and nuance. Keep formatting.",
+            showDiff: true),
         AITransform(
             name: "Summarize",
-            prompt: "Summarize the text into a short paragraph capturing the key points.")
+            prompt: "Summarize the text into a short paragraph capturing the key points.",
+            showDiff: false)
     ]
 
     private func validated(_ draft: AITransform) throws -> AITransform {
@@ -181,7 +187,8 @@ final class AITransformStore {
             providerAccountID: draft.providerAccountID,
             reasoningEffort: draft.reasoningEffort,
             activationMode: draft.activationMode,
-            completionAction: draft.completionAction
+            completionAction: draft.completionAction,
+            showDiff: draft.showDiff
         )
     }
     private func commit(_ updated: [AITransform]) {
@@ -220,7 +227,8 @@ final class AITransformStore {
                     providerAccountID: value.providerAccountID,
                     reasoningEffort: value.reasoningEffort,
                     activationMode: value.activationMode,
-                    completionAction: value.completionAction
+                    completionAction: value.completionAction,
+                    showDiff: value.showDiff
                 )
             )
         }
