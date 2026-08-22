@@ -387,15 +387,9 @@ private struct AITransformIconPicker: View {
                             SymbolImage(name: symbol, size: 15)
                                 .frame(width: 30, height: 26)
                                 .background(
-                                    RoundedRectangle(
-                                        cornerRadius: Theme.Radius.menu, style: .continuous
-                                    )
-                                    .fill(
-                                        selection == symbol
-                                            ? Theme.Colors.selection : Color.clear
-                                    )
+                                    selection == symbol ? Theme.Colors.selection : Color.clear,
+                                    in: .rect(cornerRadius: Theme.Radius.menu)
                                 )
-                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .help(symbol)
