@@ -12,7 +12,7 @@ struct AITransformsSettingsView: View {
     @State private var editingAccount: SheetItem<AIProviderAccount>?
     var body: some View {
         @Bindable var settings = settings
-        return Form {
+        Form {
             // 1. Canonical Tinycast Launcher Category (Aliases & Checkboxes)
             LauncherItemsSection(
                 kind: .aiTransform,
