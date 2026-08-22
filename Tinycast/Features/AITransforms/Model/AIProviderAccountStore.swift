@@ -44,18 +44,13 @@ final class AIProviderAccountStore {
         let decoded = data.flatMap { try? JSONDecoder().decode([AIProviderAccount].self, from: $0) }
         self.accounts = decoded ?? []
 
-        if let rawID = defaults.string(forKey: Self.defaultAccountIDKey), let uuid = UUID(uuidString: rawID) {
-            self.defaultAccountID = uuid
-        } else {
-            self.defaultAccountID = self.accounts.first?.id
-        }
+        self.defaultAccountID =
+            defaults.string(forKey: Self.defaultAccountIDKey)
+            .flatMap(UUID.init) ?? accounts.first?.id
     }
 
     var defaultAccount: AIProviderAccount? {
-        if let defaultAccountID, let account = account(id: defaultAccountID) {
-            return account
-        }
-        return accounts.first
+        defaultAccountID.flatMap(account(id:)) ?? accounts.first
     }
 
     func account(id: UUID) -> AIProviderAccount? {
