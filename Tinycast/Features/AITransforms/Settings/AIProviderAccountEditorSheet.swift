@@ -361,11 +361,7 @@ struct AIProviderAccountEditorSheet: View {
                     .keyboardShortcut(.cancelAction)
 
                 Button(action: save) {
-                    if account == nil {
-                        Label("Add", systemImage: "plus")
-                    } else {
-                        Label("Save", systemImage: "checkmark")
-                    }
+                    Label(account == nil ? "Add" : "Save", systemImage: account == nil ? "plus" : "checkmark")
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)

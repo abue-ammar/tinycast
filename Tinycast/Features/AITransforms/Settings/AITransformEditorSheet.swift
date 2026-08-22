@@ -217,7 +217,7 @@ struct AITransformEditorSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Save", action: save)
+                Button(transform == nil ? "Add" : "Save", action: save)
                     .keyboardShortcut(.defaultAction)
                     .disabled(
                         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
