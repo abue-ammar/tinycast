@@ -144,7 +144,7 @@ final class AITransformSession {
             phase = .failed(error: "No API key configured.", model: model)
             return
         }
-        guard let url = AICompletionRequest.endpointURL(fromBase: baseURL, path: "/chat/completions") else {
+        guard let url = AICompletionRequest.endpointURL(fromBase: baseURL) else {
             phase = .failed(error: "Invalid base URL: \(baseURL)", model: model)
             return
         }

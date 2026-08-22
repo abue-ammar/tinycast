@@ -116,8 +116,7 @@ final class AITransformCoordinator {
         guard account.isLocal || !key.isEmpty else { return nil }
 
         guard
-            let baseURL = AICompletionRequest.endpointURL(
-                fromBase: account.baseURL, path: "/chat/completions"),
+            let baseURL = AICompletionRequest.endpointURL(fromBase: account.baseURL),
             baseURL.host != nil
         else { return nil }
 

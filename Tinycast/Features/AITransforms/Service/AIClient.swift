@@ -247,9 +247,7 @@ enum AIClient {
     /// URL, key, and model — before the user commits a transform to it.
     static func testConnection(baseURL: String, apiKey: String, model: String) async throws {
         guard !apiKey.isEmpty, !model.isEmpty else { throw AIClientError.notConfigured }
-        guard
-            let endpoint = AICompletionRequest.endpointURL(
-                fromBase: baseURL, path: "/chat/completions")
+        guard let endpoint = AICompletionRequest.endpointURL(fromBase: baseURL)
         else { throw AIClientError.invalidBaseURL(baseURL) }
         let (data, http) = try await send(
             makeTestURLRequest(endpoint: endpoint, apiKey: apiKey, model: model))
