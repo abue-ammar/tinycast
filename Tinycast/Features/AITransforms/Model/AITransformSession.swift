@@ -82,15 +82,8 @@ final class AITransformSession {
     }
 
     func executeCustomInput(_ input: String, apiKey: String, baseURL: String) {
-        guard let preset else { return }
         self.originalSelection = input
-        execute(
-            instruction: preset.prompt,
-            input: input,
-            model: currentModel,
-            apiKey: apiKey,
-            baseURL: baseURL
-        )
+        regenerate(apiKey: apiKey, baseURL: baseURL)
     }
     func regenerate(apiKey: String, baseURL: String) {
         guard let preset else { return }
