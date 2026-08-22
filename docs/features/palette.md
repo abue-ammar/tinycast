@@ -279,6 +279,8 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and a
 
 - **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
 - **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
+- **The physical number-row slots.** `FavoriteSlots` matches ⌘1…⌘0 by key code before fixed command
+  chords, then publishes the resolved position to the active screen.
 - **Chords AppKit has already bound to a selector.** `⌘.` is the one that bites: AppKit binds it to
   `cancelOperation:` alongside Escape, so `interpretKeyEvents` hands it to the field editor and
   `onKeyPress(keys: ["."])` never fires. Pin (⌘.) therefore arrives through `onCommandShortcut`,

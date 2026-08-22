@@ -298,10 +298,10 @@ across the list — the top of Favorites on add, the neighbour above the one tha
 
 ### ⌘-digit slots
 
-`FavoriteSlots` (`Launcher/Model/FavoriteSlots.swift`) is the whole rule: **⌘1…⌘9 then ⌘0 for the
-tenth**, ten digit keys being the physical ceiling — there is no ⌘10. The eleventh favorite is still
-listed and reorderable, and simply has no chord and no number. Three places read that table — the key
-handler, the row's number, the compact tooltip — so none of them can invent an eleventh slot.
+`FavoriteSlots` (`Launcher/Model/FavoriteSlots.swift`) defines ten local palette slots: **⌘1…⌘9 then
+⌘0**. They match the physical number row, not the character produced by the current keyboard layout,
+so the same positions work on QWERTY and AZERTY. The same slots address pinned Clipboard entries in
+that screen; the eleventh favorite is still listed and reorderable, and simply has no slot.
 
 Both palette sizes serve the chords from the same prefix, because `paletteIsCollapsed` already
 requires an empty query: **compact implies empty implies `favoriteCount` is the pinned prefix**. That

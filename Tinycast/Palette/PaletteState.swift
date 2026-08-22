@@ -20,6 +20,10 @@ final class PaletteState {
     /// Bumped when the panel intercepts ⌘.. AppKit binds that chord to `cancelOperation:`, so the
     /// field editor eats it before `onKeyPress`; the screen still owns which row it pins.
     private(set) var pinChordToken = UUID()
+    /// Bumped when AppKit resolves ⌘1…⌘0 to a slot index from the physical number row.
+    private(set) var favoriteSlotToken = UUID()
+    /// The last slot index from `noteFavoriteSlot`, consumed by the SwiftUI layer.
+    private(set) var favoriteSlotIndex: Int?
     /// Set by the compact bar's overflow to expand without a query; cleared by `prepare`.
     var forceExpanded = false
     /// The paste target, mirrored on every show; `prepare` resets the screen, not this.
@@ -64,6 +68,11 @@ final class PaletteState {
 
     func notePinChord() {
         pinChordToken = UUID()
+    }
+
+    func noteFavoriteSlot(_ index: Int) {
+        favoriteSlotIndex = index
+        favoriteSlotToken = UUID()
     }
 
     func noteCommandHeld(_ held: Bool) {

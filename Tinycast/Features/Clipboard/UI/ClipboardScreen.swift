@@ -28,6 +28,15 @@ struct ClipboardScreen: PaletteScreen {
         core.clipboardCoordinator.paste(item)
     }
 
+    /// ⌘1…⌘0 — paste the Nth visible pinned entry (Pinned section order), if present.
+    func activatePinned(at index: Int) -> Bool {
+        guard let item = store.pinnedItem(at: index, in: vm.query, filter: vm.clipboardFilter) else {
+            return false
+        }
+        core.clipboardCoordinator.paste(item)
+        return true
+    }
+
     /// ⌘↵ — copy without pasting, leaving the frontmost app's own clipboard use alone.
     func secondary(at selection: Int) -> Bool {
         guard let item = item(at: selection) else { return false }

@@ -2050,6 +2050,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = tinycast;
 				CODE_SIGN_ENTITLEMENTS = Tinycast/Tinycast.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = Tinycast/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

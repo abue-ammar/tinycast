@@ -257,6 +257,8 @@ struct RootPaletteView: View {
         }
         // ⌘. arrives as a token rather than a key press. See `PaletteState.pinChordToken`.
         .onChange(of: vm.pinChordToken) { pinSelection() }
+        // ⌘1…⌘0 arrives as a slot index from AppKit keyCode matching.
+        .onChange(of: vm.favoriteSlotToken) { activateFavoriteSlotShortcut() }
         // One optional makes "exactly one menu" structural; this only mirrors it for the panel.
         .onChange(of: openMenu) {
             vm.menuOpen = menuOpen
@@ -265,15 +267,6 @@ struct RootPaletteView: View {
         // Several paths flip `paletteIsCollapsed`, so resize the window to match.
         .onChange(of: core.paletteCoordinator.paletteIsCollapsed) {
             core.paletteCoordinator.syncPaletteSize()
-        }
-        // ⌘1–⌘9/⌘0 launch favorites by position, in both palette sizes.
-        .onKeyPress(keys: Self.favoriteSlotKeys, phases: .down) { press in
-            guard press.modifiers.contains(.command),
-                !isCollapsed || settings.showFavoritesInCompactMode,
-                let index = FavoriteSlots.index(for: press.key.character),
-                let launcher = screen as? LauncherScreen
-            else { return .ignored }
-            return launcher.launchFavorite(at: index) ? .handled : .ignored
         }
         // Repeat included: holding the key must keep stepping, as the bare-key form does by default.
         .onKeyPress(keys: [.downArrow], phases: [.down, .repeat]) { press in
@@ -652,10 +645,6 @@ struct RootPaletteView: View {
         withAnimation(Self.menuAnimation) { openMenu = nil }
     }
 
-    /// SwiftUI wants a Set; built once so the palette isn't allocating one per render.
-    private static let favoriteSlotKeys: Set<KeyEquivalent> =
-        Set(FavoriteSlots.digits.map { KeyEquivalent($0) })
-
     /// Inset from the bottom corners, so the menu's own corner isn't clipped.
     private static let menuInset: CGFloat = 8
     private static let menuAnimation: Animation = .easeOut(duration: 0.14)
@@ -731,6 +720,19 @@ struct RootPaletteView: View {
             _ = clipboard.pin(at: selection)
         } else if let quicklinks = screen as? QuicklinkListScreen {
             _ = quicklinks.pin(at: selection)
+        }
+    }
+
+    /// Dispatches the Cmd+number slot action to the active screen.
+    private func activateFavoriteSlotShortcut() {
+        guard let index = vm.favoriteSlotIndex else { return }
+        if let launcher = screen as? LauncherScreen {
+            guard !isCollapsed || settings.showFavoritesInCompactMode else { return }
+            _ = launcher.launchFavorite(at: index)
+            return
+        }
+        if let clipboard = screen as? ClipboardScreen {
+            _ = clipboard.activatePinned(at: index)
         }
     }
 

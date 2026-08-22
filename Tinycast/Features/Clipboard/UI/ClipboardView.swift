@@ -13,11 +13,11 @@ struct ClipboardList: View {
 
     private enum Row: Identifiable {
         case header(String)
-        case item(ClipboardItem)
+        case item(ClipboardItem, slot: Character?)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
-            case .item(let item): return item.id.uuidString
+            case .item(let item, _): return item.id.uuidString
             }
         }
     }
@@ -31,13 +31,16 @@ struct ClipboardList: View {
     private var rows: [Row] {
         var rows: [Row] = []
         var currentTitle: String?
+        var pinnedSlot = 0
         for item in results {
             let title = item.isPinned ? "Pinned" : DateBucket(for: item.createdAt).title
             if title != currentTitle {
                 rows.append(.header(title))
                 currentTitle = title
             }
-            rows.append(.item(item))
+            let slot = item.isPinned ? FavoriteSlots.digit(at: pinnedSlot) : nil
+            if item.isPinned { pinnedSlot += 1 }
+            rows.append(.item(item, slot: slot))
         }
         return rows
     }
@@ -51,10 +54,10 @@ struct ClipboardList: View {
                         switch row {
                         case .header(let title):
                             SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                        case .item(let item):
+                        case .item(let item, let slot):
                             ClipboardRow(
                                 item: item, selected: item.id == selectedID,
-                                imageURL: store.imageURL(for: item)
+                                imageURL: store.imageURL(for: item), slot: slot
                             )
                             .selectionFrame(item.id == selectedID)
                             .contentShape(Rectangle())
@@ -118,6 +121,9 @@ private struct ClipboardRow: View {
     let item: ClipboardItem
     let selected: Bool
     let imageURL: URL?
+    /// This row's ⌘-digit, or nil when it is not among the first ten visible pins.
+    let slot: Character?
+    @Environment(PaletteState.self) private var palette
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
@@ -135,6 +141,12 @@ private struct ClipboardRow: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 0)
+            if let slot, palette.commandHeld {
+                HStack(spacing: Theme.Spacing.xxs) {
+                    KeyCapChip(text: "⌘", style: .outline)
+                    KeyCapChip(text: String(slot), style: .outline)
+                }
+            }
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)

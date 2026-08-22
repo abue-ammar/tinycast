@@ -252,6 +252,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             guard let self, !event.isARepeat,
                 event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
             else { return false }
+            if let index = FavoriteSlots.index(forKeyCode: event.keyCode) {
+                self.core.palette.noteFavoriteSlot(index)
+                return true
+            }
             // Escape has no character, so it matches by key code.
             if Int(event.keyCode) == kVK_Escape {
                 self.core.palette.prepare(mode: .launcher)

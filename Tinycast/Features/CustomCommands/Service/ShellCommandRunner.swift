@@ -31,7 +31,7 @@ enum ShellCommandRunner {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         // zsh reads `.zshrc` only for interactive shells, so `-l` alone sees no aliases.
-        process.arguments = [loadingShellEnvironment ? "-ilc" : "-lc", command]
+        process.arguments = [loadingShellEnvironment ? "-il" : "-l", "+m", "-c", command]
         process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         // Lets a shell config skip slow sections when Tinycast is the caller.
         process.environment = ProcessInfo.processInfo.environment.merging(["TINYCAST": "1"]) { _, new in

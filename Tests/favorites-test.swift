@@ -23,6 +23,11 @@ struct FavoritesTest {
         check("⌘0 is the tenth, not the first", FavoriteSlots.index(for: "0") == 9)
         check("a letter is not a slot", FavoriteSlots.index(for: "a") == nil)
 
+        check("keycode 1 maps to first slot", FavoriteSlots.index(forKeyCode: 18) == 0)
+        check("keycode 9 maps to ninth slot", FavoriteSlots.index(forKeyCode: 25) == 8)
+        check("keycode 0 maps to tenth slot", FavoriteSlots.index(forKeyCode: 29) == 9)
+        check("unknown keycode is not a slot", FavoriteSlots.index(forKeyCode: 0) == nil)
+
         check("the first row shows 1", FavoriteSlots.digit(at: 0) == "1")
         check("the tenth row shows 0", FavoriteSlots.digit(at: 9) == "0")
         check("the eleventh row shows nothing", FavoriteSlots.digit(at: 10) == nil)
