@@ -495,6 +495,22 @@ struct AITransformTests {
         session.cancel()
         check("canceled session resets to idle", session.phase == .idle)
         check("canceled session is inactive", !session.isActive)
+
+        let idleSession = AITransformSession()
+        idleSession.begin(
+            preset: samplePreset,
+            selection: "",
+            targetApp: nil,
+            defaultModel: "gemini-3.7-flash",
+            reasoning: .none,
+            apiKey: "test-key",
+            baseURL: "https://api.openai.com/v1"
+        )
+        check("empty selection begins in idle phase", idleSession.phase == .idle)
+        check("empty selection preserves active preset", idleSession.isActive)
+        check(
+            "empty selection sets currentModel from defaultModel",
+            idleSession.currentModel == "gemini-3.7-flash")
         check(
             "error descriptions stay human sentences",
             AIClientError.notConfigured.errorDescription?.isEmpty == false

@@ -67,14 +67,14 @@ final class AITransformSession {
         self.originalSelection = selection
         self.targetApp = targetApp
         self.currentReasoning = reasoning
-        let chosenModel = preset.model ?? (defaultModel.isEmpty ? AIClient.defaultModel : defaultModel)
+        self.currentModel = preset.model ?? (defaultModel.isEmpty ? AIClient.defaultModel : defaultModel)
         if selection.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             self.phase = .idle
         } else {
             execute(
                 instruction: preset.prompt,
                 input: selection,
-                model: chosenModel,
+                model: currentModel,
                 apiKey: apiKey,
                 baseURL: baseURL
             )
