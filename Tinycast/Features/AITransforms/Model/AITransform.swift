@@ -114,17 +114,9 @@ final class AITransformStore {
             copyName = "Copy of \(original.name) \(counter)"
             counter += 1
         }
-        let clone = AITransform(
-            id: UUID(),
-            name: copyName,
-            prompt: original.prompt,
-            iconSymbol: original.iconSymbol,
-            model: original.model,
-            providerAccountID: original.providerAccountID,
-            reasoningEffort: original.reasoningEffort,
-            activationMode: original.activationMode,
-            completionAction: original.completionAction
-        )
+        var clone = original
+        clone.id = UUID()
+        clone.name = copyName
         return try add(clone)
     }
     /// Replaces the whole set on backup import, dropping invalid and duplicate records.
