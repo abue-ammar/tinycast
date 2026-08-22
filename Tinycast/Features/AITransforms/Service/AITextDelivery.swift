@@ -36,9 +36,7 @@ final class AITextDelivery {
     ) -> AIDeliveryOutcome? {
         guard let targetApp,
             let element = AccessibilityText.focusedElement(in: targetApp),
-            isAttributeSettable(kAXSelectedTextAttribute, in: element)
-        else { return nil }
-        guard
+            isAttributeSettable(kAXSelectedTextAttribute, in: element),
             AXUIElementSetAttributeValue(
                 element,
                 kAXSelectedTextAttribute as CFString,
