@@ -32,8 +32,9 @@ in (see Currency below).
 4. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
 5. Base conversion
 6. Explicit unit conversion (`10km to mi`)
-7. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`), which also
-   answers a bare amount (`1 usd`, `1 btc`) in the Mac's own currency
+7. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`,
+   `(20 sgd to usd) * 30`), which also answers a bare amount (`1 usd`, `1 btc`) in the Mac's own
+   currency
 8. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
 9. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
    `CalcUnits.parseBareConversion` + the `autoTargets` map)
@@ -58,8 +59,9 @@ the way date pickers do — 00–68 to the 2000s, 69–99 to the 1900s.
 
 `CalcQuantity` is a separate typed precedence parser rather than a mode added to the scalar
 `CalcParser`. Scalar `*` / `/` preserve the unit, compatible quantity division returns a scalar, and a
-trailing `to` / `in` converts the complete expression. Percentages keep relative semantics for addition
-(`10kg + 20%` → `12 kg`) and act as fractional scalars for multiplication and division
+trailing `to` / `in` converts the complete expression. A conversion inside parentheses is itself a
+quantity, so `(20 sgd to usd) * 30` converts then multiplies. Percentages keep relative semantics
+for addition (`10kg + 20%` → `12 kg`) and act as fractional scalars for multiplication and division
 (`10kg * 3%` → `0.3 kg`, `10kg / 25%` → `40 kg`).
 
 **The last unit typed decides the answer's unit.** `+` / `-` convert the _left_ side into the right
@@ -190,7 +192,9 @@ and a unit on the other produces the same friendly category error as any other m
 The typed quantity path uses the same ordering and injected rate snapshot. Currency arithmetic is
 therefore deterministic: `$10 + €5` converts the left operand into euros when rates are available —
 the same last-unit-typed rule the measurements follow. Bare prefix and suffix signs (`$10`, `10$`)
-are accepted, and a conversion suffix applies to the whole expression.
+are accepted, and a conversion suffix applies to the whole expression. Parentheses make the
+conversion an operand (`(20 sgd to usd) * 30`), matching a trailing suffix on a scalar product
+(`20 sgd * 30 to usd`).
 
 ### The Mac's own currency
 

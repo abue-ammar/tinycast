@@ -171,7 +171,7 @@ enum CalcQuantity {
         (amount * from.factor + from.offset - to.offset) / to.factor
     }
 
-    private static func splitConversion(
+    fileprivate static func splitConversion(
         _ tokens: [CalcToken]
     ) -> (expressionTokens: [CalcToken], targetName: String?) {
         guard tokens.count >= 3, CalcUnits.isConnector(tokens[tokens.count - 2]),
@@ -548,12 +548,7 @@ private struct QuantityParser {
             position += 1
             return parseExpression(minBindingPower: Self.unaryBindingPower)
         case .op("("):
-            position += 1
-            guard let value = parseExpression(minBindingPower: 0),
-                case .op(")") = current
-            else { return nil }
-            position += 1
-            return value
+            return parseGrouped()
         case .ident(let name):
             guard CalcUnits.byName[name] == nil,
                 let definition = CalcCurrency.byName[name],
@@ -565,6 +560,92 @@ private struct QuantityParser {
             return QuantityValue(amount: amount, kind: .currency(definition))
         default:
             return nil
+        }
+    }
+
+    /// A group is its own conversion scope, so `(20 sgd to usd) * 30` converts then multiplies.
+    private mutating func parseGrouped() -> QuantityValue? {
+        guard let inner = takeGroupedTokens() else { return nil }
+        let split = CalcQuantity.splitConversion(inner)
+        var grouped = QuantityParser(tokens: split.expressionTokens, rates: rates)
+        let value: QuantityValue
+        if let parsed = grouped.parse() {
+            value = parsed
+        } else if let implied = grouped.impliedConversionSource(split.expressionTokens) {
+            value = implied
+        } else {
+            issue = grouped.issue
+            return nil
+        }
+        absorb(grouped)
+        guard let targetName = split.targetName else { return value }
+        operationCount += 1
+        return converted(value, to: targetName)
+    }
+
+    private mutating func takeGroupedTokens() -> [CalcToken]? {
+        guard case .op("(") = current else { return nil }
+        position += 1
+        let start = position
+        var depth = 1
+        while position < tokens.count, depth > 0 {
+            if case .op("(") = tokens[position] { depth += 1 }
+            if case .op(")") = tokens[position] { depth -= 1 }
+            if depth > 0 { position += 1 }
+        }
+        guard depth == 0 else { return nil }
+        let inner = Array(tokens[start..<position])
+        position += 1
+        return inner
+    }
+
+    private mutating func impliedConversionSource(_ tokens: [CalcToken]) -> QuantityValue? {
+        guard tokens.count == 1, case .ident(let name) = tokens[0],
+            let kind = dimension(named: name)
+        else { return nil }
+        dimensionCount += 1
+        return QuantityValue(amount: 1, kind: kind)
+    }
+
+    private mutating func converted(_ value: QuantityValue, to targetName: String) -> QuantityValue? {
+        switch value.kind {
+        case .scalar:
+            return nil
+        case .unit(let from):
+            if let to = CalcUnits.byName[targetName] {
+                guard from.category == to.category else {
+                    return fail(
+                        "Cannot convert \(from.category.displayName) to \(to.category.displayName).")
+                }
+                let output = CalcQuantity.convertUnit(value.amount, from: from, to: to)
+                guard output.isFinite else { return nil }
+                return QuantityValue(amount: output, kind: .unit(to))
+            }
+            if CalcCurrency.byName[targetName] != nil {
+                return fail(
+                    "Cannot convert \(from.category.displayName) to \(CalcCurrency.categoryName).")
+            }
+            return nil
+        case .currency(let from):
+            if let to = CalcCurrency.byName[targetName] {
+                guard let output = convertedCurrency(value.amount, from: from, to: to)
+                else { return nil }
+                return QuantityValue(amount: output, kind: .currency(to))
+            }
+            if let to = CalcUnits.byName[targetName] {
+                return fail(
+                    "Cannot convert \(CalcCurrency.categoryName) to \(to.category.displayName).")
+            }
+            return nil
+        }
+    }
+
+    private mutating func absorb(_ other: QuantityParser) {
+        operationCount += other.operationCount
+        dimensionCount += other.dimensionCount
+        usedCurrency = usedCurrency || other.usedCurrency
+        for code in other.currencyCodes where !currencyCodes.contains(code) {
+            currencyCodes.append(code)
         }
     }
 
