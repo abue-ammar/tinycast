@@ -64,10 +64,7 @@ struct AIProviderAccountEditorSheet: View {
         _providerPresetID = State(initialValue: initialPresetID)
         _baseURL = State(initialValue: account?.baseURL ?? initialPreset?.baseURL ?? AIClient.defaultBaseURL)
         _defaultModel = State(
-            initialValue: account?.defaultModel
-                ?? (initialPresetID == "Google Gemini"
-                    ? "gemini-3.7-flash"
-                    : (initialPresetID == "ChatGPT (Subscription)" ? "gpt-4o" : AIClient.defaultModel)))
+            initialValue: account?.defaultModel ?? initialPreset?.defaultModel ?? AIClient.defaultModel)
         _defaultReasoning = State(initialValue: account?.defaultReasoning ?? .none)
         _isLocal = State(initialValue: account?.isLocal ?? initialPreset?.isLocal ?? false)
         let isOAuth = account?.isOAuth ?? initialPreset?.isOAuth ?? false
@@ -115,14 +112,10 @@ struct AIProviderAccountEditorSheet: View {
                         isLocal = preset.isLocal
                         isOAuthState = preset.isOAuth
                         name = preset.name
+                        defaultModel = preset.defaultModel
                         keyValidationState = .unvalidated
                         testState = .idle
                         connectionNote = nil
-                        if preset.id == "Google Gemini" {
-                            defaultModel = "gemini-3.7-flash"
-                        } else if preset.id == "ChatGPT (Subscription)" {
-                            defaultModel = "gpt-4o"
-                        }
                         if !preset.isOAuth && !preset.isLocal {
                             focusedField = .apiKey
                         }
