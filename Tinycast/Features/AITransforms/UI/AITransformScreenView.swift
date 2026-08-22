@@ -54,20 +54,25 @@ struct AITransformScreenView: View {
 
                     if case .completed = session.phase {
                         if !session.originalSelection.isEmpty {
-                            Button(action: { isShowingDiff.toggle() }) {
+                            Button(action: { session.toggleDiff() }) {
                                 HStack(spacing: 3) {
-                                    Image(systemName: isShowingDiff ? "text.badge.checkmark" : "plusminus")
-                                        .font(.caption2)
-                                    Text(isShowingDiff ? "Diff" : "Text")
+                                    Image(
+                                        systemName: session.isShowingDiff
+                                            ? "text.badge.checkmark" : "plusminus"
+                                    )
+                                    .font(.caption2)
+                                    Text(session.isShowingDiff ? "Diff" : "Text")
                                         .font(.caption2.weight(.medium))
                                 }
                                 .padding(.horizontal, Theme.Spacing.xs)
                                 .padding(.vertical, 2)
                                 .background(
-                                    isShowingDiff ? Theme.Colors.selection : Theme.Colors.controlSurface,
+                                    session.isShowingDiff
+                                        ? Theme.Colors.selection : Theme.Colors.controlSurface,
                                     in: .capsule
                                 )
-                                .foregroundStyle(isShowingDiff ? Theme.Colors.textPrimary : .secondary)
+                                .foregroundStyle(
+                                    session.isShowingDiff ? Theme.Colors.textPrimary : .secondary)
                             }
                             .buttonStyle(.plain)
                             .help("Toggle differences (⌘D)")
@@ -112,15 +117,8 @@ struct AITransformScreenView: View {
 
                 case .completed(let output, _):
                     ScrollView(.vertical) {
-                        if isShowingDiff && !session.originalSelection.isEmpty {
-                            Text(
-                                AIDiffEngine.renderDiff(
-                                    original: session.originalSelection, modified: output)
-                            )
-                            .font(.body)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, Theme.Spacing.xs)
+                        if session.isShowingDiff && !session.originalSelection.isEmpty {
+                            diffView(original: session.originalSelection, modified: output)
                         } else {
                             Text(formattedOutput(output))
                                 .font(.body)
@@ -164,7 +162,7 @@ struct AITransformScreenView: View {
                     shortcutChip("Insert", keys: ["↵"])
                     shortcutChip("Copy", keys: ["⌘", "C"])
                     if !session.originalSelection.isEmpty {
-                        shortcutChip(isShowingDiff ? "Text View" : "Diff View", keys: ["⌘", "D"])
+                        shortcutChip(session.isShowingDiff ? "Text View" : "Diff View", keys: ["⌘", "D"])
                     }
                     shortcutChip("Regenerate", keys: ["⌘", "R"])
                 case .failed:
@@ -205,6 +203,48 @@ struct AITransformScreenView: View {
     }
 
     /// Markdown formatting preserving whitespace and inline bold/code/italics.
+    @ViewBuilder
+    private func diffView(original: String, modified: String) -> some View {
+        let chunks = AIDiffEngine.diff(original: original, modified: modified)
+        renderChunks(chunks)
+            .font(.body)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, Theme.Spacing.xs)
+    }
+
+    private func renderChunks(_ chunks: [AIDiffEngine.Chunk]) -> Text {
+        var combined = Text("")
+        for (index, chunk) in chunks.enumerated() {
+            switch chunk {
+            case .equal(let text):
+                combined = combined + Text(text).foregroundColor(Theme.Colors.textPrimary)
+
+            case .deleted(let text):
+                combined =
+                    combined
+                    + Text(text)
+                    .strikethrough(true, color: Color.red.opacity(0.85))
+                    .foregroundColor(Color.red.opacity(0.85))
+
+                if index + 1 < chunks.count {
+                    if case .inserted(let nextText) = chunks[index + 1],
+                        !text.hasSuffix(" ") && !nextText.hasPrefix(" ")
+                    {
+                        combined = combined + Text(" ")
+                    }
+                }
+
+            case .inserted(let text):
+                combined =
+                    combined
+                    + Text(text)
+                    .bold()
+                    .foregroundColor(Color.green)
+            }
+        }
+        return combined
+    }
     private func formattedOutput(_ text: String) -> AttributedString {
         let options = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace)

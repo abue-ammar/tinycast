@@ -52,6 +52,11 @@ struct AITransformScreen: PaletteScreen {
             if !session.originalSelection.isEmpty {
                 items.append(
                     PopoverMenuItem(
+                        title: session.isShowingDiff ? "Show Clean Text" : "Show Diff Highlights",
+                        systemImage: "plusminus", shortcut: "⌘D",
+                        action: { session.toggleDiff() }))
+                items.append(
+                    PopoverMenuItem(
                         title: "Copy Original Input", systemImage: "text.quote",
                         action: {
                             Paster.copyPlainText(session.originalSelection)
@@ -118,6 +123,13 @@ struct AITransformScreen: PaletteScreen {
     func copyAction() -> Bool {
         if case .completed = session.phase {
             copyToClipboard()
+            return true
+        }
+        return false
+    }
+    func toggleDiffAction() -> Bool {
+        if case .completed = session.phase, !session.originalSelection.isEmpty {
+            session.toggleDiff()
             return true
         }
         return false

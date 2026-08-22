@@ -51,11 +51,12 @@ enum AIDiffEngine: Sendable {
     }
 
     /// Renders diff chunks into an `AttributedString` with strikethroughs on deletions and highlights on additions.
+    /// Renders diff chunks into an `AttributedString` with strikethroughs on deletions and highlights on additions.
     static func renderDiff(original: String, modified: String) -> AttributedString {
         let chunks = diff(original: original, modified: modified)
         var result = AttributedString()
 
-        for chunk in chunks {
+        for (index, chunk) in chunks.enumerated() {
             switch chunk {
             case .equal(let text):
                 result.append(AttributedString(text))
@@ -64,6 +65,13 @@ enum AIDiffEngine: Sendable {
                 var attr = AttributedString(text)
                 attr.inlinePresentationIntent = .strikethrough
                 result.append(attr)
+                if index + 1 < chunks.count {
+                    if case .inserted(let nextText) = chunks[index + 1],
+                        !text.hasSuffix(" ") && !nextText.hasPrefix(" ")
+                    {
+                        result.append(AttributedString(" "))
+                    }
+                }
 
             case .inserted(let text):
                 var attr = AttributedString(text)

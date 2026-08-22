@@ -435,6 +435,13 @@ struct RootPaletteView: View {
             }
             return .ignored
         }
+        .onKeyPress(keys: ["d", "D"], phases: .down) { press in
+            guard press.modifiers.contains(.command), !isCollapsed else { return .ignored }
+            if vm.mode == .aiTransform, let aiScreen = screen as? AITransformScreen {
+                return aiScreen.toggleDiffAction() ? .handled : .ignored
+            }
+            return .ignored
+        }
     }
 
     /// A thin strip along the top edge for grabbing the window; the Appearance setting gates it.

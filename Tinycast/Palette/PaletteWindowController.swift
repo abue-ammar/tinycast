@@ -270,6 +270,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             case "w":
                 self.core.paletteCoordinator.hidePalette()
                 return true
+            case "d":
+                if self.core.palette.mode == .aiTransform {
+                    self.core.aiTransformSession.toggleDiff()
+                    return true
+                }
+                return false
             default:
                 return false
             }

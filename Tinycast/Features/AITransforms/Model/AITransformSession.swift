@@ -27,6 +27,7 @@ final class AITransformSession {
     private(set) var targetApp: NSRunningApplication?
     private(set) var phase: Phase = .idle
     private(set) var history: [HistoryEntry] = []
+    private(set) var isShowingDiff: Bool = true
     private var activeTask: Task<Void, Never>?
 
     var isActive: Bool { preset != nil }
@@ -52,6 +53,9 @@ final class AITransformSession {
             return "Press ↵ to retry or type new prompt…"
         }
     }
+    func toggleDiff() {
+        isShowingDiff.toggle()
+    }
 
     func begin(
         preset: AITransform,
@@ -67,6 +71,7 @@ final class AITransformSession {
         self.originalSelection = selection
         self.targetApp = targetApp
         self.currentReasoning = reasoning
+        self.isShowingDiff = preset.showDiff ?? true
         self.currentModel = preset.model ?? (defaultModel.isEmpty ? AIClient.defaultModel : defaultModel)
         if selection.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             self.phase = .idle
