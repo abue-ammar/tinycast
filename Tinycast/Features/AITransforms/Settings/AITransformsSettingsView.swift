@@ -215,8 +215,8 @@ private struct AIProviderAccountSettingsRow: View {
             }
             .buttonStyle(.plain)
             .help("Edit Provider Account")
+            .accessibilityLabel("Edit \(account.name)")
         }
-        .padding(.vertical, 2)
     }
 
     private var subtitleText: String {
@@ -269,6 +269,7 @@ private struct AITransformLibraryRow: View {
                 }
                 .buttonStyle(.plain)
                 .help("Duplicate as Copy of…")
+                .accessibilityLabel("Duplicate \(transform.name)")
 
                 Button(action: onEdit) {
                     Image(systemName: "pencil")
@@ -278,6 +279,7 @@ private struct AITransformLibraryRow: View {
                 }
                 .buttonStyle(.plain)
                 .help("Edit Transform")
+                .accessibilityLabel("Edit \(transform.name)")
 
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
@@ -288,6 +290,7 @@ private struct AITransformLibraryRow: View {
                 }
                 .buttonStyle(.plain)
                 .help("Delete Transform")
+                .accessibilityLabel("Delete \(transform.name)")
             }
         }
         .padding(.vertical, 2)

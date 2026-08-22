@@ -353,12 +353,9 @@ struct AIProviderAccountEditorSheet: View {
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
 
-                Button(action: save) {
-                    Label(account == nil ? "Add" : "Save", systemImage: account == nil ? "plus" : "checkmark")
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button(account == nil ? "Add" : "Save", action: save)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .padding(Theme.Spacing.xxl)
