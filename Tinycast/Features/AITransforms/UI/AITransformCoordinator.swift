@@ -275,13 +275,11 @@ final class AITransformCoordinator {
 
     /// Setup and provider failures that the AI pane can fix offer the jump there.
     private func presentFailure(_ error: AIClientError, transform: AITransform) async {
-        let offersSettings: Bool
-        switch error {
-        case .notConfigured, .invalidBaseURL, .unauthorized:
-            offersSettings = true
-        case .rateLimited, .provider, .emptyResponse, .network:
-            offersSettings = false
-        }
+        let offersSettings =
+            switch error {
+            case .notConfigured, .invalidBaseURL, .unauthorized: true
+            default: false
+            }
         guard
             await core.reportFailure(
                 title: "“\(transform.name)” Failed", message: error.localizedDescription,
