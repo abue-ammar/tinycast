@@ -97,68 +97,81 @@ struct AITransformEditorSheet: View {
             .font(.caption)
             .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Provider Account")
-                    .font(.callout.weight(.medium))
-                Picker("Provider Account", selection: $providerAccountID) {
-                    Text("Inherit Default (\(defaultAccountName))").tag(nil as UUID?)
-                    if !core.aiProviderAccounts.accounts.isEmpty {
-                        Divider()
-                        ForEach(core.aiProviderAccounts.accounts) { account in
-                            Label {
-                                Text(account.name)
-                            } icon: {
-                                AIProviderIcon(preset: account.providerPreset, size: 14)
+            // Row 1: Provider Account (Left) & Reasoning Level (Right)
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Provider Account")
+                        .font(.callout.weight(.medium))
+                    Picker("Provider Account", selection: $providerAccountID) {
+                        Text("Inherit (\(defaultAccountName))").tag(nil as UUID?)
+                        if !core.aiProviderAccounts.accounts.isEmpty {
+                            Divider()
+                            ForEach(core.aiProviderAccounts.accounts) { account in
+                                Label {
+                                    Text(account.name)
+                                } icon: {
+                                    AIProviderIcon(preset: account.providerPreset, size: 14)
+                                }
+                                .tag(account.id as UUID?)
                             }
-                            .tag(account.id as UUID?)
                         }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Reasoning / Thinking")
+                        .font(.callout.weight(.medium))
+                    Picker("Reasoning Level", selection: $reasoningEffort) {
+                        Text("Inherit (\(inheritedReasoningTitle))").tag(nil as AIReasoningEffort?)
+                        Divider()
+                        ForEach(AIReasoningEffort.allCases) { effort in
+                            Text(effort.title).tag(effort as AIReasoningEffort?)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Reasoning / Thinking Level")
-                    .font(.callout.weight(.medium))
-                Picker("Reasoning Level", selection: $reasoningEffort) {
-                    Text("Inherit Provider (\(inheritedReasoningTitle))").tag(nil as AIReasoningEffort?)
-                    Divider()
-                    ForEach(AIReasoningEffort.allCases) { effort in
-                        Text(effort.title).tag(effort as AIReasoningEffort?)
+            // Row 2: Activation Mode (Left) & Action on Completion (Right)
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Activation Mode")
+                        .font(.callout.weight(.medium))
+                    Picker("Activation Mode", selection: $activationMode) {
+                        Text("Inherit (\(settings.aiExecutionMode.title))").tag(nil as AIExecutionMode?)
+                        Divider()
+                        ForEach(AIExecutionMode.allCases) { mode in
+                            Text(mode.title).tag(mode as AIExecutionMode?)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Activation Mode")
-                    .font(.callout.weight(.medium))
-                Picker("Activation Mode", selection: $activationMode) {
-                    Text("Inherit Global (\(settings.aiExecutionMode.title))").tag(nil as AIExecutionMode?)
-                    Divider()
-                    ForEach(AIExecutionMode.allCases) { mode in
-                        Text(mode.title).tag(mode as AIExecutionMode?)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Action on Completion")
+                        .font(.callout.weight(.medium))
+                    Picker("Action on Completion", selection: $completionAction) {
+                        Text("Inherit (\(settings.aiCompletionAction.title))").tag(nil as AICompletionAction?)
+                        Divider()
+                        ForEach(AICompletionAction.allCases) { action in
+                            Text(action.title).tag(action as AICompletionAction?)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Action on Completion")
-                    .font(.callout.weight(.medium))
-                Picker("Action on Completion", selection: $completionAction) {
-                    Text("Inherit Global (\(settings.aiCompletionAction.title))").tag(
-                        nil as AICompletionAction?)
-                    Divider()
-                    ForEach(AICompletionAction.allCases) { action in
-                        Text(action.title).tag(action as AICompletionAction?)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
