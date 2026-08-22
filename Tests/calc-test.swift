@@ -560,6 +560,9 @@ struct CalcTests {
         expectBadges("(20 eur to usd) * 30", source: "Expression", target: "US Dollar")
         expectDisplay("(20 eur to usd) *", "21.74 USD")
         expectError("(10 kg to usd) * 2", "Cannot convert Weight to Currency.")
+        // A trailing suffix reports through the same conversion the group uses.
+        expectError("($10 + $5) to npr", "No exchange rate for NPR.")
+        expectError("(1kg + 500g) to usd", "Cannot convert Weight to Currency.")
         expectNil("20 eur to usd * 30")  // mid-expression `to` needs parens or a trailing suffix
         expectDisplay("$10 +", "10.00 USD")
         expectBadges("$10 +", source: "Expression", target: "US Dollar")
