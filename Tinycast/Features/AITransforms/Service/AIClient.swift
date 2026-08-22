@@ -70,7 +70,11 @@ struct AICompletionRequest: Sendable {
     {
         var trimmed = baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
         while trimmed.hasSuffix("/") { trimmed.removeLast() }
-        if trimmed.lowercased().hasSuffix(path.lowercased()) {
+        let chatSuffix = "/chat/completions"
+        if trimmed.lowercased().hasSuffix(chatSuffix) {
+            trimmed.removeLast(chatSuffix.count)
+            while trimmed.hasSuffix("/") { trimmed.removeLast() }
+        } else if trimmed.lowercased().hasSuffix(path.lowercased()) {
             trimmed.removeLast(path.count)
             while trimmed.hasSuffix("/") { trimmed.removeLast() }
         }

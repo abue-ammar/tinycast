@@ -204,11 +204,39 @@ struct AITransformTests {
         check(
             "secret account key has expected format",
             newAccount?.secretAccountKey.hasPrefix("ai.api-key.") == true)
+
+        // MARK: Account store validation & deletion
+
+        let duplicateAccount = AIProviderAccount(
+            name: "work gemini",
+            providerPresetID: "Google Gemini",
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
+        )
+        let duplicateError: AIProviderAccountValidationError? = {
+            do { _ = try accountStore.add(duplicateAccount); return nil } catch let error
+                as AIProviderAccountValidationError
+            { return error } catch { return nil }
+        }()
+        check("duplicate account name is rejected", duplicateError == .duplicateName)
+
+        let invalidURLError: AIProviderAccountValidationError? = {
+            do {
+                _ = try accountStore.add(
+                    AIProviderAccount(name: "Bad URL", providerPresetID: "custom", baseURL: "not a url"))
+                return nil
+            } catch let error as AIProviderAccountValidationError { return error } catch { return nil }
+        }()
+        check("invalid base URL is rejected", invalidURLError == .invalidBaseURL)
+
+        let deletedDefault = accountStore.remove(id: newAccount!.id)
+        check("deleting active default account succeeds", deletedDefault?.id == newAccount?.id)
+        check("defaultAccountID reassigns to next remaining account", accountStore.defaultAccountID != nil)
+        check("defaultAccount falls back to OpenAI", accountStore.defaultAccount?.name == "OpenAI (API Key)")
+
         let chatgptPreset = AIProvider.catalog.first { $0.id == "ChatGPT (Subscription)" }
         check("ChatGPT subscription preset is flagged as OAuth", chatgptPreset?.isOAuth == true)
         let openaiPreset = AIProvider.catalog.first { $0.id == "OpenAI (API Key)" }
         check("OpenAI API key preset is not flagged as OAuth", openaiPreset?.isOAuth == false)
-
         // MARK: Replace import
 
         // `replace` runs the import sanitizer, which must drop junk without touching survivors.
@@ -330,7 +358,16 @@ struct AITransformTests {
             "the suffix match ignores case",
             endpoint("https://api.openai.com/v1/Chat/Completions")
                 == "https://api.openai.com/v1/chat/completions")
-
+        check(
+            "custom endpoint path /models works against root with chat suffix",
+            AICompletionRequest.endpointURL(
+                fromBase: "https://api.openai.com/v1/chat/completions", path: "/models")?.absoluteString
+                == "https://api.openai.com/v1/models")
+        check(
+            "custom endpoint path /models works against trailing slash root",
+            AICompletionRequest.endpointURL(fromBase: "https://api.openai.com/v1/", path: "/models")?
+                .absoluteString
+                == "https://api.openai.com/v1/models")
         // MARK: Provider catalog
 
         check("catalog names are unique", Set(AIProvider.catalog.map(\.id)).count == AIProvider.catalog.count)
@@ -511,6 +548,21 @@ struct AITransformTests {
         check(
             "empty selection sets currentModel from defaultModel",
             idleSession.currentModel == "gemini-3.7-flash")
+
+        // MARK: Multi-turn refinement chaining
+
+        let refinementSession = AITransformSession()
+        refinementSession.begin(
+            preset: samplePreset,
+            selection: "Raw text.",
+            targetApp: nil,
+            defaultModel: "gpt-4o-mini",
+            reasoning: .none,
+            apiKey: "sk-test",
+            baseURL: "https://api.openai.com/v1"
+        )
+        check("active session starts with preset name", refinementSession.presetName == "Fix Grammar")
+        check("active session has original selection", refinementSession.originalSelection == "Raw text.")
         check(
             "error descriptions stay human sentences",
             AIClientError.notConfigured.errorDescription?.isEmpty == false
