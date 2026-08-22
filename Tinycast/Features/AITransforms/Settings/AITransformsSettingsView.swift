@@ -142,10 +142,8 @@ struct AITransformsSettingsView: View {
     }
 
     private func accountName(for transform: AITransform) -> String {
-        if let id = transform.providerAccountID, let account = accounts.account(id: id) {
-            return account.name
-        }
-        return accounts.defaultAccount?.name ?? "Default"
+        transform.providerAccountID.flatMap(accounts.account(id:))?.name ?? accounts.defaultAccount?.name
+            ?? "Default"
     }
 
     private var sortedTransforms: [AITransform] {
