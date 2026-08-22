@@ -63,8 +63,7 @@ struct AIProviderAccountEditorSheet: View {
         _name = State(initialValue: account?.name ?? initialPreset?.name ?? "")
         _providerPresetID = State(initialValue: initialPresetID)
         _baseURL = State(initialValue: account?.baseURL ?? initialPreset?.baseURL ?? AIClient.defaultBaseURL)
-        _defaultModel = State(
-            initialValue: account?.defaultModel ?? initialPreset?.defaultModel ?? AIClient.defaultModel)
+        _defaultModel = State(initialValue: account?.defaultModel ?? "")
         _defaultReasoning = State(initialValue: account?.defaultReasoning ?? .none)
         _isLocal = State(initialValue: account?.isLocal ?? initialPreset?.isLocal ?? false)
         let isOAuth = account?.isOAuth ?? initialPreset?.isOAuth ?? false
@@ -112,7 +111,6 @@ struct AIProviderAccountEditorSheet: View {
                         isLocal = preset.isLocal
                         isOAuthState = preset.isOAuth
                         name = preset.name
-                        defaultModel = preset.defaultModel
                         keyValidationState = .unvalidated
                         testState = .idle
                         connectionNote = nil
