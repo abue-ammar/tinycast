@@ -48,6 +48,7 @@ struct SnippetsTests {
             ["name": "Email", "text": "person@example.com", "keyword": "  !email  "],
             ["name": "Multiline 雪", "text": "First\nSecond"],
             ["name": "Blank Keyword", "text": "Body", "keyword": "   "],
+            ["title": "Raycast 2", "text": "Current format"],
             ["name": "   ", "text": "Skipped"],
             ["name": "Missing Text"]
         ])
@@ -57,9 +58,9 @@ struct SnippetsTests {
             RaycastSnippetImport.parse(["snippets": []]).isEmpty)
         check(
             "Raycast import keeps valid entries and source order",
-            imported.map(\.name) == ["Email", "Multiline 雪", "Blank Keyword"])
+            imported.map(\.name) == ["Email", "Multiline 雪", "Blank Keyword", "Raycast 2"])
         // The remaining assertions index into the result, so a wrong count has to fail rather than trap.
-        guard imported.count == 3 else { return }
+        guard imported.count == 4 else { return }
         check("Raycast import preserves text and Unicode", imported[1].text == "First\nSecond")
         check(
             "Raycast import trims keywords and normalizes blanks",

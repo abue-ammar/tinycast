@@ -41,6 +41,7 @@ enum RaycastTests {
     static func main() {
         detection()
         decryption()
+        v3Decryption()
         hotkeyParsing()
         preferenceMapping()
         clipboardMapping()
@@ -99,6 +100,9 @@ enum RaycastTests {
         expect(
             (try? RaycastFormat.detect(makeV1File(gzippedJSON, passphrase: "pw"))) == .v1,
             "a headerless block-aligned blob is v1")
+        expect(
+            (try? RaycastFormat.detect(Data("RAYCFG3\n".utf8))) == .v3,
+            "the v3 container signature wins before its body is read")
 
         expectThrows("empty data", .notRaycastFile) { try RaycastFormat.detect(Data()) }
         expectThrows("one byte", .notRaycastFile) { try RaycastFormat.detect(Data([0x00])) }
@@ -121,6 +125,7 @@ enum RaycastTests {
             "gzip magic wins over the v1 size rules")
 
         expect(RaycastFormat.v2.supportedOptions == .all, "v2 carries every category")
+        expect(RaycastFormat.v3.supportedOptions == .all, "v3 carries every category")
         expect(
             !RaycastFormat.v1.supportedOptions.contains(.launchAtLogin),
             "v1 exports no launch-at-login preference")
@@ -130,6 +135,61 @@ enum RaycastTests {
         expect(
             RaycastFormat.v1.supportedOptions.contains(.shortcuts),
             "v1 still carries app and command hotkeys")
+    }
+
+    // MARK: - V3 decrypt
+
+    static func v3Decryption() {
+        let passphrase = "12345678"
+        let salt = Data(repeating: 0x22, count: 16)
+        let iv = Data(repeating: 0x33, count: 16)
+        let key = SymmetricKey(
+            data: Scrypt.derive(
+                passphrase: Array(passphrase.utf8), salt: [UInt8](salt),
+                n: 16384, r: 8, p: 1, dkLen: 32))
+        guard let nonce = try? AES.GCM.Nonce(data: iv),
+            let sealed = try? AES.GCM.seal(gzippedJSON, using: key, nonce: nonce)
+        else {
+            failures += 1
+            print("FAIL: v3 fixture encryption")
+            return
+        }
+
+        let metadata: [String: Any] = [
+            "appVersion": "2.0.5.0",
+            "schemaVersion": 3,
+            "encryption": ["iv": iv.hexEncoded, "salt": salt.hexEncoded]
+        ]
+        guard let metadataJSON = try? JSONSerialization.data(withJSONObject: metadata),
+            let compressedMetadata = try? Zlib.gzip(metadataJSON)
+        else {
+            failures += 1
+            print("FAIL: v3 fixture metadata")
+            return
+        }
+
+        var file = Data("RAYCFG3\n".utf8)
+        let length = UInt32(compressedMetadata.count)
+        file.append(contentsOf: [
+            UInt8(length & 0xff), UInt8((length >> 8) & 0xff),
+            UInt8((length >> 16) & 0xff), UInt8(length >> 24)
+        ])
+        file.append(compressedMetadata)
+        file.append(sealed.ciphertext)
+        file.append(sealed.tag)
+
+        expect(
+            (try? RaycastV3Decoder.decrypt(file, passphrase: passphrase)) == plainJSON,
+            "v3 container decrypts its length-prefixed gzip metadata and tagged payload")
+        expectThrows("v3 wrong passphrase", .incorrectPassphrase) {
+            try RaycastV3Decoder.decrypt(file, passphrase: "wrong-passphrase")
+        }
+
+        var truncated = file
+        truncated.removeLast(16)
+        expectThrows("v3 missing authentication tag", .incorrectPassphrase) {
+            try RaycastV3Decoder.decrypt(truncated, passphrase: passphrase)
+        }
     }
 
     // MARK: - Decrypt

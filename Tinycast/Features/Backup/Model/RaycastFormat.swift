@@ -33,15 +33,18 @@ struct RaycastImportOptions: OptionSet, Sendable {
     ]
 }
 
-/// The one branch between the two readers. See docs/features/raycast-import.md.
+/// The one branch between the readers. See docs/features/raycast-import.md.
 enum RaycastFormat: Sendable, Equatable {
     /// Raycast 1.x: a bare `IV(16) ‖ AES-256-CBC(gzip(JSON), PKCS#7)` blob with no header.
     case v1
     /// Raycast X: gzip → JSON envelope → AES-256-GCM ciphertext under a scrypt key.
     case v2
+    /// Raycast 2.x: a binary container with gzip metadata and an AES-256-GCM payload.
+    case v3
 
     /// From the leading bytes alone, so a file is labelled before a passphrase is typed.
     static func detect(_ raw: Data) throws -> RaycastFormat {
+        if raw.starts(with: Data("RAYCFG3\n".utf8)) { return .v3 }
         let magic = [UInt8](raw.prefix(3))
         if magic.count == 3, magic[0] == 0x1f, magic[1] == 0x8b, magic[2] == 0x08 { return .v2 }
         // A v1 file is whole AES blocks: a 16-byte IV plus at least one block of ciphertext.
@@ -53,6 +56,7 @@ enum RaycastFormat: Sendable, Equatable {
         switch self {
         case .v1: return "Raycast 1.x export"
         case .v2: return "Raycast X export"
+        case .v3: return "Raycast 2.x export"
         }
     }
 
@@ -60,7 +64,7 @@ enum RaycastFormat: Sendable, Equatable {
     var supportedOptions: RaycastImportOptions {
         switch self {
         case .v1: return RaycastImportOptions.all.subtracting([.launchAtLogin, .aliases])
-        case .v2: return .all
+        case .v2, .v3: return .all
         }
     }
 }

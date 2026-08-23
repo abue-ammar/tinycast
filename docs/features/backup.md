@@ -25,12 +25,14 @@ feature lives in `Features/Backup/`.
 | --- | --- |
 | `Model/SettingsBackup.swift` | The settings, fixed/per-item hotkey payloads, and their `Codable` shape |
 | `Model/SettingsBackupCoverage.swift` | The coverage declaration the harness checks |
-| `Model/RaycastFormat.swift` | Detects v1 vs v2 — the only branch between the two |
+| `Model/RaycastFormat.swift` | Detects all formats from their leading bytes |
 | `Model/RaycastV1Decoder.swift` | v1 decrypt and decode |
 | `Model/RaycastImportV1.swift` | v1 → Tinycast field mapping and validation |
-| `Model/RaycastImport.swift` | The shared `Result` both formats meet at |
-| `Service/RaycastImportV2.swift` | v2 decrypt, decode and mapping |
-| `Service/Scrypt.swift`, `Service/Gunzip.swift` | The crypto and decompression primitives |
+| `Model/RaycastImport.swift` | The shared `Result` and dispatcher |
+| `Service/RaycastImportV2.swift` | v2 decrypt and import entry point |
+| `Service/RaycastImportV3.swift` | v3 decrypt and import entry point |
+| `Service/RaycastPayloadMapper.swift` | Shared v2/v3 payload mapping |
+| `Service/RaycastV3Decoder.swift`, `Service/Scrypt.swift`, `Platform/Compression/Zlib.swift`, `Platform/Hex.swift` | v2/v3 hex, crypto and compression |
 | `Service/BackupActions.swift` | The effectful half: file pickers, writes, applying an import |
 | `Settings/BackupSettingsView.swift` | The pane |
 
