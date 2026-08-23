@@ -8,7 +8,7 @@ struct ExtensionCommandView: View {
     let assetsPath: String?
     let scroll: ScrollIntent
     let onSelect: (Int) -> Void
-    let onActivate: () -> Void
+    let onActivate: (Int) -> Void
     let onActions: (Int) -> Void
     let onFieldChange: (RenderNode, Any) -> Void
 
@@ -41,7 +41,7 @@ struct ExtensionCommandView: View {
             case .form:
                 ExtensionFormView(
                     screen: screen, assetsPath: assetsPath, onChange: onFieldChange,
-                    onSubmit: onActivate)
+                    onSubmit: { onActivate(selection) })
             case .unsupported(let type):
                 if type.isEmpty {
                     // A commit arrived but the command rendered nothing — it returned null, usually

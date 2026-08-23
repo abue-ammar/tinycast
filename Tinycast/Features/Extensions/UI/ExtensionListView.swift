@@ -10,7 +10,7 @@ struct ExtensionListView: View {
     /// Changes only when the list should scroll, so mouse selection never yanks it.
     let scroll: ScrollIntent
     let onSelect: (Int) -> Void
-    let onActivate: () -> Void
+    let onActivate: (Int) -> Void
     let onActions: (Int) -> Void
 
     var body: some View {
@@ -77,7 +77,7 @@ struct ExtensionListView: View {
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 onSelect(item.index)
-                                onActivate()
+                                onActivate(item.index)
                             }
                             .onRightClick { onActions(item.index) }
                             .selectionFrame(item.index == selection)
@@ -118,7 +118,7 @@ struct ExtensionListView: View {
                         .contentShape(Rectangle())
                         .onTapGesture {
                             onSelect(item.index)
-                            onActivate()
+                            onActivate(item.index)
                         }
                         .onRightClick { onActions(item.index) }
                         .selectionFrame(item.index == selection)
