@@ -169,13 +169,13 @@ struct RootPaletteView: View {
         // The panel has no title bar, so this thin top margin is the only place left to grab it.
         .overlay(alignment: .top) { topDragStrip }
         .modifier(ExtensionToastOverlay(extensions: extensions, showing: vm.mode == .extensionCommand))
-        // In-window overlays, so a menu stays clipped inside the panel.
+        // Never conditionally mounted: unmounting strands SwiftUI's hover target and eats clicks.
         .overlay {
-            if menuOpen {
-                Color.black.opacity(0.001)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: closeMenus)
-            }
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                // Not a tap: a drifting press must still dismiss, the way a native menu's does.
+                .gesture(DragGesture(minimumDistance: 0).onEnded { _ in closeMenus() })
+                .allowsHitTesting(menuOpen)
         }
         .overlay(alignment: .bottomLeading) {
             if openMenu == .app {
