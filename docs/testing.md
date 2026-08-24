@@ -197,7 +197,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### Core
 
-- Palette hotkey opens the launcher; pressing it again closes it; Escape closes it; clicking away closes it
+- Palette hotkey opens the launcher; pressing it again closes it; Escape clears a non-empty query,
+  then hides on a second press; clicking away closes it
 - Reopening focuses the search field with an empty query, in the same position and at the same size
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - With a CJK IME: the placeholder clears as soon as composition starts and the composing text never

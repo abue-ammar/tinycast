@@ -353,16 +353,16 @@ struct RootPaletteView: View {
             return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
         }
         .onKeyPress(.escape) {
-            if menuOpen {
+            switch PaletteEscapeAction.resolve(menuOpen: menuOpen, query: vm.query, mode: vm.mode) {
+            case .closeMenu:
                 closeMenus()
-                return .handled
-            }
-            // An extension pops its own navigation stack before the command is left.
-            if vm.mode == .extensionCommand {
+            case .clearQuery:
+                vm.query = ""
+            case .exitExtensionScreen:
                 core.extensionCoordinator.exitExtensionScreen()
-                return .handled
+            case .hidePalette:
+                core.paletteCoordinator.hidePalette()
             }
-            core.paletteCoordinator.hidePalette()
             return .handled
         }
         .onKeyPress(.tab) {

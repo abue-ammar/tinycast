@@ -75,7 +75,8 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab cycles launcher ↔
 clipboard and nothing else** unless the selected row declares arguments, in which case it walks those
 fields first (see below); the rest are reached by a command or a global hotkey, and Uninstall only
-from a launcher app's Actions menu, scoped to that app.
+from a launcher app's Actions menu, scoped to that app. **Escape clears a non-empty query before it
+hides the palette or exits an extension screen**, so one press clears and the next leaves.
 
 The argument screen is the one mode where the search field is not a search field: it _is_ the current
 argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.
