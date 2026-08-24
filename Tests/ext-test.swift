@@ -73,18 +73,17 @@ struct ExtensionTests {
                 return "[]"
             case "oauth.authorize":
                 let state = arguments.first?.objectValue?["state"]?.stringValue ?? ""
-                return "{\"code\":\"auth_code_swift_test\",\"state\":\"\(state)\"}"
+                return "{\"authorizationCode\":\"auth_code_swift_test\",\"state\":\"\(state)\"}"
             case "oauth.getTokens":
-                let providerId = arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                let providerId = arguments.first?.stringValue ?? arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
                 return oauthTokens[providerId] ?? ""
             case "oauth.setTokens":
-                let providerId = arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
-                if let tokens = arguments.first?.objectValue?["tokens"] {
-                    oauthTokens[providerId] = ExtensionRuntime.jsonString(from: tokens.jsonValue)
-                }
+                let providerId = arguments.first?.stringValue ?? arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                let tokens = arguments[safe: 1]?.stringValue ?? arguments.first?.objectValue?["tokens"]?.stringValue ?? ""
+                oauthTokens[providerId] = tokens
                 return ""
             case "oauth.removeTokens":
-                let providerId = arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                let providerId = arguments.first?.stringValue ?? arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
                 oauthTokens.removeValue(forKey: providerId)
                 return ""
             default:

@@ -1,6 +1,5 @@
 import { base64ToBytes, bytesToBase64, utf8Encode } from "../polyfills.js";
 import { hostCall, hostCallSync } from "../host.js";
-import { environment } from "./system.js";
 import { nestedEnums } from "./enums.generated.js";
 
 function generateRandomBytes(length) {
@@ -66,15 +65,15 @@ export class PKCEClient {
     const codeChallengeMethod = "S256";
     const state = generateState();
 
-    let redirectURI;
-    if (
-      this.redirectMethod === nestedEnums.OAuth.RedirectMethod.App ||
-      this.redirectMethod === nestedEnums.OAuth.RedirectMethod.AppURI
-    ) {
-      redirectURI = "raycast://oauth";
-    } else {
-      const extName = environment.extensionName || "Extension";
-      redirectURI = `https://raycast.com/redirect?packageName=${encodeURIComponent(extName)}`;
+    let redirectURI = options.extraParameters?.redirect_uri;
+    if (!redirectURI) {
+      if (this.redirectMethod === nestedEnums.OAuth.RedirectMethod.App) {
+        redirectURI = "raycast://oauth?package_name=Extension";
+      } else if (this.redirectMethod === nestedEnums.OAuth.RedirectMethod.AppURI) {
+        redirectURI = "raycast://oauth/extension";
+      } else {
+        redirectURI = "https://raycast.com/redirect?packageName=Extension";
+      }
     }
 
     const url = new URL(options.endpoint);
@@ -128,8 +127,6 @@ export class PKCEClient {
         url,
         state,
         providerId: this.providerId,
-        providerName: this.providerName,
-        description: this.description,
       },
     ]);
 
@@ -139,43 +136,32 @@ export class PKCEClient {
       } catch {}
     }
 
-    const authorizationCode = res?.code || res?.authorizationCode || "";
-    const returnedState = res?.state || state;
-
     return {
-      authorizationCode,
-      state: returnedState,
+      authorizationCode: res?.authorizationCode ?? res?.code ?? "",
+      accessToken: res?.accessToken,
+      state: res?.state,
     };
   }
 
   async getTokens() {
-    const res = await hostCall("oauth", "getTokens", [{ providerId: this.providerId }]);
-    if (!res) return undefined;
-    const tokens = typeof res === "string" ? JSON.parse(res) : res;
-    if (!tokens || typeof tokens !== "object") return undefined;
-    return new TokenSet(tokens);
+    let raw = await hostCall("oauth", "getTokens", [this.providerId]);
+    if (!raw) return undefined;
+    if (typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw);
+      } catch {
+        return undefined;
+      }
+    }
+    return new TokenSet(raw);
   }
 
   async setTokens(tokens) {
-    if (!tokens) return;
-    const tokenObj = {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      idToken: tokens.idToken,
-      tokenType: tokens.tokenType,
-      scope: tokens.scope,
-      expiresIn: tokens.expiresIn,
-      createdAt: tokens.createdAt,
-    };
-    await hostCall("oauth", "setTokens", [
-      {
-        providerId: this.providerId,
-        tokens: tokenObj,
-      },
-    ]);
+    const json = typeof tokens === "string" ? tokens : JSON.stringify(tokens);
+    await hostCall("oauth", "setTokens", [this.providerId, json]);
   }
 
   async removeTokens() {
-    await hostCall("oauth", "removeTokens", [{ providerId: this.providerId }]);
+    await hostCall("oauth", "removeTokens", [this.providerId]);
   }
 }
