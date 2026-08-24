@@ -76,7 +76,6 @@ enum RaycastImport {
         switch try RaycastFormat.detect(raw) {
         case .v1: return try RaycastImportV1.read(raw, passphrase: passphrase)
         case .v2: return try RaycastImportV2.read(raw, passphrase: passphrase)
-        case .v3: return try RaycastImportV3.read(raw, passphrase: passphrase)
         }
     }
 }

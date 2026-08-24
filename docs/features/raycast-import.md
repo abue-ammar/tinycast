@@ -1,38 +1,46 @@
 # Raycast import
 
-Tinycast reads all three `.rayconfig` formats in the wild. They come from different generations of a
-rewritten app. v1 has its own mapper; v2 and v3 share Raycast X's settings-data payload shape but use
-different containers:
+Tinycast reads both `.rayconfig` formats in the wild. They come from different generations of a
+rewritten app and share almost no data shape, so each has its own decrypt and its own mapper:
 
-|          | v1                                                     | v2                                               | v3                         |
-| -------- | ------------------------------------------------------ | ------------------------------------------------ | -------------------------- |
-| Ships in | Raycast 1.104.x (classic)                              | Raycast X (`appVersion` 0.68, `schemaVersion` 2) | Raycast 2.x                |
-| File     | `IV(16) ‖ AES-256-CBC(gzip(JSON), PKCS#7)` — no header | gzip → JSON envelope → AES-256-GCM               | binary container → AES-GCM |
-| Key      | `EVP_BytesToKey(SHA-256, salt: none)`                  | scrypt(N=16384, r=8, p=1)                        | same scrypt parameters     |
-| Reader   | `RaycastImportV1` + `RaycastV1Decoder`                 | `RaycastImportV2`                                | `RaycastImportV3`          |
+|          | v1                                                     | v2                                                  |
+| -------- | ------------------------------------------------------ | --------------------------------------------------- |
+| Ships in | Raycast 1.104.x (classic)                              | Raycast 2.x (`schemaVersion` 3)                     |
+| File     | `IV(16) ‖ AES-256-CBC(gzip(JSON), PKCS#7)` — no header | `RAYCFG3` container → AES-256-GCM                   |
+| Key      | `EVP_BytesToKey(SHA-256, salt: none)`                  | scrypt(N=16384, r=8, p=1)                           |
+| Reader   | `RaycastImportV1` + `RaycastV1Decoder`                 | `RaycastImportV2` + `RaycastV2Decoder`              |
+
+The Raycast X beta that sat between them (`appVersion` 0.68, `schemaVersion` 2, a gzip stream wrapping
+a hex-field JSON envelope) is over, and its reader is deleted rather than carried. v1 follows once
+Raycast 1.x users have moved.
 
 ## Invariants
 
-- **Detection is the only format branch.** A reader is never tried as fallback for another, so a wrong
-  passphrase reports a wrong passphrase instead of "not a Raycast export". v1 owns its legacy mapper;
-  v2 and v3 share only their common settings-data mapping after format-specific decryption. All three
-  meet at `RaycastImport.Result`.
-- **The format detector and decoders stay platform-UI-free** so `raycast-test` compiles them standalone
-  — which is why the v1 decoder returns Raycast's own values and `RaycastImportV1`, not the decoder,
-  validates them against `PopToRootTimeout` / `EmojiSkinTone` / `HyperKeyPhysicalKey` / `KeyShortcut`.
+- **The two export formats share no mapper.** `RaycastFormat.detect` is the *only* branch between them;
+  each reader owns its own decrypt and its own field mapping, and neither is ever tried as a fallback
+  for the other. That is what makes a wrong passphrase report a wrong passphrase instead of "not a
+  Raycast export". They meet only at `RaycastImport.Result`.
+- **`RaycastFormat`, `RaycastV1Decoder` and `RaycastV2Decoder` stay platform-UI-free** so `raycast-test`
+  compiles them standalone — which is why the v1 decoder returns Raycast's own values and
+  `RaycastImportV1`, not the decoder, validates them against `PopToRootTimeout` / `EmojiSkinTone` /
+  `HyperKeyPhysicalKey` / `KeyShortcut`.
 - **Never commit a real `.rayconfig` as a fixture.** The harness builds its own.
+- **Every scrypt derive costs seconds in the unoptimized harness.** `raycast-test` derives once for its
+  fixture and keeps the cases that reach key derivation to the few that need it; anything testing the
+  container's framing is written to fail before it.
 
 ## Detection
 
-`RaycastFormat.detect(_:)` decides from the leading bytes and is the **only** branch between formats.
-A v3 file begins `RAYCFG3\n`; a v2 file is a gzip stream (`1f 8b 08`); anything else must be a v1 blob,
-which is whole AES blocks — a 16-byte IV plus at least one block of ciphertext. Readers are never tried
-as fallbacks for each other.
+`RaycastFormat.detect(_:)` decides from the leading bytes and is the **only** branch between the two.
+A v2 file begins with the 8-byte signature `RAYCFG3\n`; anything else must be a v1 blob, which is whole
+AES blocks — a 16-byte IV plus at least one block of ciphertext. Neither reader is ever tried as a
+fallback for the other, so a wrong passphrase reports a wrong passphrase instead of "not a Raycast
+export".
 
 Detection needs no passphrase, so the Backup pane runs it the moment a file is chosen: it labels the
 row and disables the categories that format can't carry (`RaycastFormat.supportedOptions`).
 
-## v3 wire format
+## v2 wire format
 
 ```
 file = "RAYCFG3\n" ‖ UInt32LE(header.count) ‖ gzip(header JSON) ‖ ciphertext ‖ tag(16)
@@ -40,9 +48,14 @@ body = AES-256-GCM(gzip(payload JSON))
 key  = scrypt(passphrase, salt, N=16384, r=8, p=1, dkLen=32)
 ```
 
-The header carries `schemaVersion`, `iv` and `salt`; Raycast uses 16 bytes for both IV and salt. The
-payload is category-keyed JSON. Its `settings` and `clipboardHistory` objects retain v2's shape, while
-snippets live under the top-level `snippets` category.
+gzip is still here, just moved inside: the beta wrapped the whole file in it, so `1f 8b 08` was the
+signature. Now the header and the payload are each gzipped separately and the container carries its
+own.
+
+The header carries `schemaVersion`, `iv` and `salt`, hex-encoded, 16 bytes each. `schemaVersion` is
+Raycast's own container number and is **3** for what we call v2 — the beta was their 2. The payload is
+category-keyed JSON: `settings` and `clipboardHistory` kept the beta's shape, while snippets moved to
+the top-level `snippets` category and each snippet's `name` became `title`.
 
 ## v1 wire format
 
@@ -100,12 +113,12 @@ Notes that matter:
 
 ## Layout
 
-`RaycastFormat.swift`, `RaycastV1Decoder.swift`, and `RaycastV3Decoder.swift` stay platform-UI-free so
-`Tests/raycast-test.swift` compiles them against the real sources. The v1 decoder's job is _shape_ — it
-returns Raycast's own values in a plain `RaycastV1Payload`; turning those into Tinycast's domain types
-(`PopToRootTimeout`, `EmojiSkinTone`, `HyperKeyPhysicalKey`, `KeyShortcut`) is `RaycastImportV1`'s job.
-That is the same pure-layer / platform-layer split `Features/WindowManagement/` uses.
+`RaycastFormat.swift`, `RaycastV1Decoder.swift` and `RaycastV2Decoder.swift` stay platform-UI-free so
+`Tests/raycast-test.swift` compiles them against the real sources. Each version splits the same way: a
+decoder whose job is _shape_ — unwrapping the container and returning Raycast's own values — and an
+importer that turns those into Tinycast's domain types (`PopToRootTimeout`, `EmojiSkinTone`,
+`HyperKeyPhysicalKey`, `KeyShortcut`). That is the same pure-layer / platform-layer split
+`Features/WindowManagement/` uses.
 
 `RaycastImport` itself is only the facade: `Result`, `selecting(_:)`, and the `read(file:passphrase:)`
-dispatcher. `RaycastImportV2` and `RaycastImportV3` own their readers; `RaycastPayloadMapper` owns
-only shared payload fields. `BackupActions.importRaycast` runs the facade off the main actor.
+dispatcher. `BackupActions.importRaycast` runs the facade off the main actor.

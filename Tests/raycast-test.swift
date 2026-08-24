@@ -2,7 +2,7 @@ import CommonCrypto
 import CryptoKit
 import Foundation
 
-// Format detection, the v1 AES-256-CBC decrypt and the JSON → RaycastV1Payload mapping. No real export is used: the crypto cases encrypt a synthetic gzip fixture in-process and the mapping cases hand `payload(_:)` hand-written JSON. Turning payload values into Tinycast's own types lives in `RaycastImportV1`, which needs AppKit and is covered by the app build.
+// Format detection, the v1 AES-256-CBC decrypt, the v2 RAYCFG3 container and the JSON → RaycastV1Payload mapping. No real export is used: the crypto cases build a synthetic fixture in-process and the mapping cases hand `payload(_:)` hand-written JSON. Turning payload values into Tinycast's own types lives in `RaycastImportV1` and `RaycastImportV2`, which need AppKit and are covered by the app build. Scrypt costs seconds per derive here, so `v2Fixture` derives once and only the cases that must reach key derivation do.
 @main
 @MainActor
 enum RaycastTests {
@@ -41,7 +41,7 @@ enum RaycastTests {
     static func main() {
         detection()
         decryption()
-        v3Decryption()
+        v2Decryption()
         hotkeyParsing()
         preferenceMapping()
         clipboardMapping()
@@ -96,13 +96,12 @@ enum RaycastTests {
     // MARK: - Detection
 
     static func detection() {
-        expect((try? RaycastFormat.detect(gzippedJSON)) == .v2, "gzip magic is v2")
         expect(
             (try? RaycastFormat.detect(makeV1File(gzippedJSON, passphrase: "pw"))) == .v1,
             "a headerless block-aligned blob is v1")
         expect(
-            (try? RaycastFormat.detect(Data("RAYCFG3\n".utf8))) == .v3,
-            "the v3 container signature wins before its body is read")
+            (try? RaycastFormat.detect(Data("RAYCFG3\n".utf8))) == .v2,
+            "the v2 container signature wins before its body is read")
 
         expectThrows("empty data", .notRaycastFile) { try RaycastFormat.detect(Data()) }
         expectThrows("one byte", .notRaycastFile) { try RaycastFormat.detect(Data([0x00])) }
@@ -119,13 +118,13 @@ enum RaycastTests {
             (try? RaycastFormat.detect(Data(repeating: 0xa5, count: 32))) == .v1,
             "the smallest legal v1 file is IV + one block")
 
-        // A truncated gzip is still v2: routing must not silently retry it as the other format.
+        // Block-aligned and signed: routing must not silently retry a broken v2 file as v1.
+        let alignedContainer = Data("RAYCFG3\n".utf8) + Data(repeating: 0xa5, count: 24)
         expect(
-            (try? RaycastFormat.detect(Data([0x1f, 0x8b, 0x08]))) == .v2,
-            "gzip magic wins over the v1 size rules")
+            (try? RaycastFormat.detect(alignedContainer)) == .v2,
+            "the container signature wins over the v1 size rules")
 
         expect(RaycastFormat.v2.supportedOptions == .all, "v2 carries every category")
-        expect(RaycastFormat.v3.supportedOptions == .all, "v3 carries every category")
         expect(
             !RaycastFormat.v1.supportedOptions.contains(.launchAtLogin),
             "v1 exports no launch-at-login preference")
@@ -137,59 +136,107 @@ enum RaycastTests {
             "v1 still carries app and command hotkeys")
     }
 
-    // MARK: - V3 decrypt
+    // MARK: - V2 decrypt
 
-    static func v3Decryption() {
-        let passphrase = "12345678"
+    static let v2Passphrase = "12345678"
+
+    /// A `RAYCFG3` container around `gzippedJSON`, so no real export is ever committed. Scrypt is
+    /// deliberately slow and this harness is unoptimized, so the one derive here is shared by all.
+    static let v2Fixture: (file: Data, payloadStart: Int, futureSchema: Data)? = {
         let salt = Data(repeating: 0x22, count: 16)
         let iv = Data(repeating: 0x33, count: 16)
         let key = SymmetricKey(
             data: Scrypt.derive(
-                passphrase: Array(passphrase.utf8), salt: [UInt8](salt),
+                passphrase: Array(v2Passphrase.utf8), salt: [UInt8](salt),
                 n: 16384, r: 8, p: 1, dkLen: 32))
+        func hex(_ data: Data) -> String { data.map { String(format: "%02x", $0) }.joined() }
+        func container(schemaVersion: Int, sealed: AES.GCM.SealedBox) -> Data? {
+            let header: [String: Any] = [
+                "appVersion": "2.0.5.0",
+                "schemaVersion": schemaVersion,
+                "encryption": ["iv": hex(iv), "salt": hex(salt)]
+            ]
+            guard let headerJSON = try? JSONSerialization.data(withJSONObject: header),
+                let compressedHeader = try? Zlib.gzip(headerJSON)
+            else { return nil }
+            var file = Data("RAYCFG3\n".utf8)
+            let length = UInt32(compressedHeader.count)
+            file.append(contentsOf: [
+                UInt8(length & 0xff), UInt8((length >> 8) & 0xff),
+                UInt8((length >> 16) & 0xff), UInt8(length >> 24)
+            ])
+            file.append(compressedHeader)
+            file.append(sealed.ciphertext)
+            file.append(sealed.tag)
+            return file
+        }
         guard let nonce = try? AES.GCM.Nonce(data: iv),
-            let sealed = try? AES.GCM.seal(gzippedJSON, using: key, nonce: nonce)
-        else {
+            let sealed = try? AES.GCM.seal(gzippedJSON, using: key, nonce: nonce),
+            let file = container(schemaVersion: 3, sealed: sealed),
+            let futureSchema = container(schemaVersion: 4, sealed: sealed)
+        else { return nil }
+        return (file, file.count - sealed.ciphertext.count - 16, futureSchema)
+    }()
+
+    static func v2Decryption() {
+        guard let fixture = v2Fixture else {
             failures += 1
-            print("FAIL: v3 fixture encryption")
+            print("FAIL: v2 fixture encryption")
             return
         }
-
-        let metadata: [String: Any] = [
-            "appVersion": "2.0.5.0",
-            "schemaVersion": 3,
-            "encryption": ["iv": iv.hexEncoded, "salt": salt.hexEncoded]
-        ]
-        guard let metadataJSON = try? JSONSerialization.data(withJSONObject: metadata),
-            let compressedMetadata = try? Zlib.gzip(metadataJSON)
-        else {
-            failures += 1
-            print("FAIL: v3 fixture metadata")
-            return
-        }
-
-        var file = Data("RAYCFG3\n".utf8)
-        let length = UInt32(compressedMetadata.count)
-        file.append(contentsOf: [
-            UInt8(length & 0xff), UInt8((length >> 8) & 0xff),
-            UInt8((length >> 16) & 0xff), UInt8(length >> 24)
-        ])
-        file.append(compressedMetadata)
-        file.append(sealed.ciphertext)
-        file.append(sealed.tag)
+        let file = fixture.file
 
         expect(
-            (try? RaycastV3Decoder.decrypt(file, passphrase: passphrase)) == plainJSON,
-            "v3 container decrypts its length-prefixed gzip metadata and tagged payload")
-        expectThrows("v3 wrong passphrase", .incorrectPassphrase) {
-            try RaycastV3Decoder.decrypt(file, passphrase: "wrong-passphrase")
+            (try? RaycastV2Decoder.decrypt(file, passphrase: v2Passphrase)) == plainJSON,
+            "the container decrypts its length-prefixed gzip header and tagged payload")
+        expectThrows("v2 wrong passphrase", .incorrectPassphrase) {
+            try RaycastV2Decoder.decrypt(file, passphrase: "wrong-passphrase")
         }
 
-        var truncated = file
-        truncated.removeLast(16)
-        expectThrows("v3 missing authentication tag", .incorrectPassphrase) {
-            try RaycastV3Decoder.decrypt(truncated, passphrase: passphrase)
+        // A slice keeps the caller's indices, which the offsets inside the decoder must not assume.
+        let padded = Data(repeating: 0x00, count: 7) + file
+        expect(
+            (try? RaycastV2Decoder.decrypt(padded.dropFirst(7), passphrase: v2Passphrase))
+                == plainJSON,
+            "a non-zero-based slice decrypts the same as the whole file")
+
+        // Everything below is rejected before the key derivation, so none of it pays scrypt's cost.
+        expectThrows("v2 without the container signature", .notRaycastFile) {
+            try RaycastV2Decoder.decrypt(file.dropFirst(), passphrase: v2Passphrase)
         }
+        expectThrows("v2 shorter than the fixed header", .corrupt) {
+            try RaycastV2Decoder.decrypt(file.prefix(11), passphrase: v2Passphrase)
+        }
+        // Raycast's own schema number, which is not our v1/v2 split, gates the reader.
+        expectThrows("v2 unknown container schema", .corrupt) {
+            try RaycastV2Decoder.decrypt(fixture.futureSchema, passphrase: v2Passphrase)
+        }
+
+        // Every truncation short of the payload, so no offset inside the decoder can run off an end.
+        var misclassified: [Int] = []
+        for cut in 0..<fixture.payloadStart {
+            let expected: RaycastImportError = cut < 8 ? .notRaycastFile : .corrupt
+            do {
+                _ = try RaycastV2Decoder.decrypt(file.prefix(cut), passphrase: "")
+                misclassified.append(cut)
+            } catch {
+                if (error as? RaycastImportError) != expected { misclassified.append(cut) }
+            }
+        }
+        expect(misclassified.isEmpty, "a truncated container is rejected, not read: \(misclassified)")
+
+        var lengthsRead: [UInt32] = []
+        for value: UInt32 in [0, 1, 0x0010_0001, 0xffff_ffff] {
+            var damaged = file
+            damaged[8] = UInt8(value & 0xff)
+            damaged[9] = UInt8((value >> 8) & 0xff)
+            damaged[10] = UInt8((value >> 16) & 0xff)
+            damaged[11] = UInt8(value >> 24)
+            if (try? RaycastV2Decoder.decrypt(damaged, passphrase: "")) != nil {
+                lengthsRead.append(value)
+            }
+        }
+        expect(lengthsRead.isEmpty, "an out-of-range header length is rejected: \(lengthsRead)")
     }
 
     // MARK: - Decrypt

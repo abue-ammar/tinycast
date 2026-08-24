@@ -4,7 +4,7 @@ enum RaycastSnippetImport {
     static func parse(_ value: Any?) -> [Snippet] {
         guard let entries = value as? [[String: Any]] else { return [] }
         return entries.compactMap { entry in
-            guard let name = (entry["name"] as? String) ?? (entry["title"] as? String),
+            guard let name = entry["title"] as? String,
                 !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 let text = entry["text"] as? String
             else { return nil }
