@@ -9,13 +9,20 @@
 import { createContext, runInContext } from "node:vm";
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID, randomBytes, createHmac } from "node:crypto";
 import { homedir, tmpdir } from "node:os";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
 
-const runtime = readFileSync(resolve("../../Tinycast/Resources/RaycastRuntime.generated.js"), "utf8");
+const runtimePath = [
+  resolve("Tinycast/Resources/RaycastRuntime.generated.js"),
+  resolve("../../Tinycast/Resources/RaycastRuntime.generated.js"),
+  fileURLToPath(new URL("../../Tinycast/Resources/RaycastRuntime.generated.js", import.meta.url)),
+].find(existsSync);
+
+const runtime = readFileSync(runtimePath, "utf8");
 
 export function createHarness({ onRender, onFail, verbose = false } = {}) {
   const context = createContext({});
@@ -239,6 +246,24 @@ async function stubHostCall(api, method, args) {
     }
     case "proc.run":
       return syncHostCall(api, method, args);
+    case "oauth.authorize": {
+      const spec = args[0] || {};
+      return { code: "auth-code-12345", state: spec.state || "" };
+    }
+    case "oauth.getTokens": {
+      return globalThis.__mockOAuthTokens?.[args[0]?.providerId] || null;
+    }
+    case "oauth.setTokens": {
+      globalThis.__mockOAuthTokens = globalThis.__mockOAuthTokens || {};
+      globalThis.__mockOAuthTokens[args[0]?.providerId] = args[0]?.tokens;
+      return null;
+    }
+    case "oauth.removeTokens": {
+      if (globalThis.__mockOAuthTokens) {
+        delete globalThis.__mockOAuthTokens[args[0]?.providerId];
+      }
+      return null;
+    }
     default:
       if (["window", "feedback", "cache", "storage", "clipboard", "system"].includes(api)) return null;
       throw new Error(`harness: no async stub for ${api}.${method}`);

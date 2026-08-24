@@ -1,0 +1,181 @@
+import { base64ToBytes, bytesToBase64, utf8Encode } from "../polyfills.js";
+import { hostCall, hostCallSync } from "../host.js";
+import { environment } from "./system.js";
+import { nestedEnums } from "./enums.generated.js";
+
+function generateRandomBytes(length) {
+  const base64 = hostCallSync("crypto", "random", [length]);
+  return base64ToBytes(base64);
+}
+
+function base64UrlEncode(bytes) {
+  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function generateCodeVerifier() {
+  const bytes = generateRandomBytes(32);
+  return base64UrlEncode(bytes);
+}
+
+function computeCodeChallenge(verifier) {
+  const verifierBytes = utf8Encode(verifier);
+  const hashBase64 = hostCallSync("crypto", "hash", ["sha256", bytesToBase64(verifierBytes), null]);
+  const hashBytes = base64ToBytes(hashBase64);
+  return base64UrlEncode(hashBytes);
+}
+
+function generateState() {
+  const bytes = generateRandomBytes(16);
+  return base64UrlEncode(bytes);
+}
+
+export class TokenSet {
+  constructor(options = {}) {
+    this.accessToken = options.accessToken ?? options.access_token ?? "";
+    this.refreshToken = options.refreshToken ?? options.refresh_token;
+    this.idToken = options.idToken ?? options.id_token;
+    this.tokenType = options.tokenType ?? options.token_type ?? "Bearer";
+    this.scope = options.scope;
+    this.expiresIn = options.expiresIn ?? options.expires_in;
+    this.createdAt = options.createdAt ?? Date.now();
+  }
+
+  isExpired() {
+    if (this.expiresIn == null) return false;
+    const expiresAt = this.createdAt + (this.expiresIn - 30) * 1000;
+    return Date.now() >= expiresAt;
+  }
+}
+
+export class PKCEClient {
+  constructor(options = {}) {
+    this.redirectMethod = options.redirectMethod || nestedEnums.OAuth.RedirectMethod.Web;
+    this.providerName = options.providerName || "";
+    this.providerIcon = options.providerIcon;
+    this.providerId = options.providerId || "";
+    this.description = options.description || "";
+  }
+
+  async authorizationRequest(options) {
+    if (!options || !options.endpoint || !options.clientId) {
+      throw new Error("authorizationRequest requires endpoint and clientId");
+    }
+
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = computeCodeChallenge(codeVerifier);
+    const codeChallengeMethod = "S256";
+    const state = generateState();
+
+    let redirectURI;
+    if (
+      this.redirectMethod === nestedEnums.OAuth.RedirectMethod.App ||
+      this.redirectMethod === nestedEnums.OAuth.RedirectMethod.AppURI
+    ) {
+      redirectURI = "raycast://oauth";
+    } else {
+      const extName = environment.extensionName || "Extension";
+      redirectURI = `https://raycast.com/redirect?packageName=${encodeURIComponent(extName)}`;
+    }
+
+    const url = new URL(options.endpoint);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("client_id", options.clientId);
+    if (options.scope) {
+      url.searchParams.set("scope", options.scope);
+    }
+    url.searchParams.set("redirect_uri", redirectURI);
+    url.searchParams.set("code_challenge", codeChallenge);
+    url.searchParams.set("code_challenge_method", codeChallengeMethod);
+    url.searchParams.set("state", state);
+
+    if (options.extraParameters) {
+      for (const [key, value] of Object.entries(options.extraParameters)) {
+        if (value !== undefined && value !== null) {
+          url.searchParams.set(key, String(value));
+        }
+      }
+    }
+
+    return {
+      endpoint: options.endpoint,
+      clientId: options.clientId,
+      scope: options.scope,
+      codeVerifier,
+      codeChallenge,
+      codeChallengeMethod,
+      state,
+      redirectURI,
+      toURL() {
+        return url.toString();
+      },
+    };
+  }
+
+  async authorize(request) {
+    const url =
+      typeof request === "string"
+        ? request
+        : request?.toURL
+        ? request.toURL()
+        : request?.url || request?.endpoint;
+    if (!url) {
+      throw new Error("authorize requires a valid authorization URL");
+    }
+    const state = typeof request === "object" ? request?.state : undefined;
+
+    let res = await hostCall("oauth", "authorize", [
+      {
+        url,
+        state,
+        providerId: this.providerId,
+        providerName: this.providerName,
+        description: this.description,
+      },
+    ]);
+
+    if (typeof res === "string") {
+      try {
+        res = JSON.parse(res);
+      } catch {}
+    }
+
+    const authorizationCode = res?.code || res?.authorizationCode || "";
+    const returnedState = res?.state || state;
+
+    return {
+      authorizationCode,
+      state: returnedState,
+    };
+  }
+
+  async getTokens() {
+    const res = await hostCall("oauth", "getTokens", [{ providerId: this.providerId }]);
+    if (!res) return undefined;
+    const tokens = typeof res === "string" ? JSON.parse(res) : res;
+    if (!tokens || typeof tokens !== "object") return undefined;
+    return new TokenSet(tokens);
+  }
+
+  async setTokens(tokens) {
+    if (!tokens) return;
+    const tokenObj = {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      idToken: tokens.idToken,
+      tokenType: tokens.tokenType,
+      scope: tokens.scope,
+      expiresIn: tokens.expiresIn,
+      createdAt: tokens.createdAt,
+    };
+    await hostCall("oauth", "setTokens", [
+      {
+        providerId: this.providerId,
+        tokens: tokenObj,
+      },
+    ]);
+  }
+
+  async removeTokens() {
+    await hostCall("oauth", "removeTokens", [{ providerId: this.providerId }]);
+  }
+}

@@ -124,6 +124,8 @@
 		5A91C58340D02ED0939BCAE2 /* CurrencyFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE35B5E7B1CC94F759116097 /* CurrencyFeed.swift */; };
 		5B5BCDD482A9058D38C49314 /* CalcUnits.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC67BADEB6FEC76C88585361 /* CalcUnits.swift */; };
 		5B90A314CF4801995EA0EE01 /* ExtensionHostBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38765BC6C35D03659655BD2B /* ExtensionHostBridge.swift */; };
+		A1000002CF4801995EA0EE01 /* ExtensionOAuthKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001C35D03659655BD2B /* ExtensionOAuthKeychain.swift */; };
+		A1000004CF4801995EA0EE01 /* ExtensionOAuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003C35D03659655BD2B /* ExtensionOAuthSession.swift */; };
 		5C801A9043908577FB99A555 /* DialogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32733B27AE0BD75742D1394F /* DialogView.swift */; };
 		5D3E51C5FDA9EE53AFD12181 /* ExtensionFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 045EC0C36F08176EE0304F49 /* ExtensionFormView.swift */; };
 		5D3F00F708106ADE1CE263B1 /* EmojiGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1A2CE5E4D5F10346B5F6F3 /* EmojiGridView.swift */; };

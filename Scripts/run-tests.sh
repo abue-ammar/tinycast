@@ -31,7 +31,7 @@ run() {
     local name=$1
     shift
     if [ -n "$only" ] && [ "$name" != "$only" ]; then return 0; fi
-    ran=$((ran + 1))
+    ran=$((ran + 1))\
 
     # Absolute paths throughout: sourcekit-lsp resolves the command itself and does not apply
     # `directory` to relative arguments, so a relative path there silently yields no index.
@@ -168,6 +168,8 @@ run ext-test               -parse-as-library \
                            $E/Service/ExtensionCatalog.swift \
                            $E/Service/ExtensionFetcher.swift \
                            $E/Service/ExtensionNodeShims.swift \
+                           $E/Service/ExtensionOAuthKeychain.swift \
+                           $E/Service/ExtensionOAuthSession.swift \
                            $E/Service/ExtensionRuntime.swift \
                            $E/UI/ExtensionScreen.swift \
                            $L/SearchRelevance.swift \

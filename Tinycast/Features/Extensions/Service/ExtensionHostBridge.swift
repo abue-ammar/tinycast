@@ -25,6 +25,7 @@ protocol ExtensionHostContext: AnyObject {
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool
     func openWithPicker(path: String) async
     func launch(command: String, extensionName: String?, arguments: [String: String]) throws
+    func authorizeOAuth(url: URL, state: String?) async throws -> [String: String]
 }
 
 /// A toast as the palette shows it.
@@ -39,74 +40,73 @@ struct ExtensionToast: Sendable, Equatable, Identifiable {
         }
     }
 
-    struct Action: Sendable, Equatable {
-        let title: String
-        /// Echoed back to `runToastAction` so JS can find the callback.
-        let token: String
-    }
-
     var id: Int = 0
     var style: Style = .success
-    var title: String = ""
+    var title: String
     var message: String?
-    var primaryAction: Action?
-    var secondaryAction: Action?
+    var primaryTitle: String?
+    var primaryAction: String?
+    var secondaryTitle: String?
+    var secondaryAction: String?
 
     init(
-        id: Int = 0, style: Style = .success, title: String = "", message: String? = nil,
-        primaryAction: Action? = nil, secondaryAction: Action? = nil
+        title: String, message: String? = nil, style: Style = .success, primaryTitle: String? = nil,
+        primaryAction: String? = nil, secondaryTitle: String? = nil, secondaryAction: String? = nil
     ) {
-        self.id = id
-        self.style = style
         self.title = title
         self.message = message
+        self.style = style
+        self.primaryTitle = primaryTitle
         self.primaryAction = primaryAction
+        self.secondaryTitle = secondaryTitle
         self.secondaryAction = secondaryAction
     }
 
-    init(payload: [String: RenderValue]) {
-        style = Style(raw: payload["style"]?.stringValue)
-        title = payload["title"]?.stringValue ?? ""
-        message = payload["message"]?.stringValue
-        primaryAction = ExtensionToast.action(from: payload["primaryAction"])
-        secondaryAction = ExtensionToast.action(from: payload["secondaryAction"])
-    }
-
-    private static func action(from value: RenderValue?) -> Action? {
-        guard let fields = value?.objectValue, let token = fields["token"]?.stringValue else {
-            return nil
-        }
-        return Action(title: fields["title"]?.stringValue ?? "", token: token)
+    init?(json: [String: RenderValue]) {
+        guard let title = json["title"]?.stringValue else { return nil }
+        self.init(
+            title: title,
+            message: json["message"]?.stringValue,
+            style: Style(raw: json["style"]?.stringValue),
+            primaryTitle: json["primaryTitle"]?.stringValue,
+            primaryAction: json["primaryAction"]?.handlerID,
+            secondaryTitle: json["secondaryTitle"]?.stringValue,
+            secondaryAction: json["secondaryAction"]?.handlerID
+        )
     }
 }
 
-struct ExtensionAlert: Sendable {
+/// A question dialog hoisted out of the extension.
+struct ExtensionAlert: Sendable, Equatable {
     var title: String
-    var message: String?
+    var message: String
     var primaryTitle: String
     var dismissTitle: String
     var isDestructive: Bool
 
-    init(payload: [String: RenderValue]) {
-        title = payload["title"]?.stringValue ?? "Are you sure?"
-        message = payload["message"]?.stringValue
-        let primary = payload["primaryAction"]?.objectValue
-        primaryTitle = primary?["title"]?.stringValue ?? "Confirm"
-        dismissTitle = payload["dismissAction"]?.objectValue?["title"]?.stringValue ?? "Cancel"
-        isDestructive = primary?["style"]?.stringValue == "destructive"
+    init?(json: [String: RenderValue]) {
+        guard let title = json["title"]?.stringValue else { return nil }
+        self.title = title
+        self.message = json["message"]?.stringValue ?? ""
+        let primary = json["primaryAction"]?.objectValue ?? [:]
+        self.primaryTitle = primary["title"]?.stringValue ?? "Confirm"
+        let dismiss = json["dismissAction"]?.objectValue ?? [:]
+        self.dismissTitle = dismiss["title"]?.stringValue ?? "Cancel"
+        let rawStyle = primary["style"]?.stringValue ?? "DEFAULT"
+        self.isDestructive = rawStyle.uppercased() == "DESTRUCTIVE"
     }
 }
 
 enum ExtensionHostError: LocalizedError {
-    case noActiveExtension
     case unknown(String)
+    case noActiveExtension
     case unsupported(String)
 
     var errorDescription: String? {
         switch self {
-        case .noActiveExtension: return "No extension command is running."
-        case .unknown(let what): return "Unknown host call '\(what)'."
-        case .unsupported(let what): return "\(what) is not supported in Tinycast extensions."
+        case .unknown(let call): return "Unknown host call: \(call)"
+        case .noActiveExtension: return "No extension is currently running."
+        case .unsupported(let feature): return "\(feature) is not supported in Tinycast."
         }
     }
 }
@@ -136,6 +136,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         case "system": return try await system(method: method, arguments: arguments)
         case "fetch": return try await fetcher.request(arguments.first)
         case "proc": return try await ExtensionAsyncProcess.run(arguments.first)
+        case "oauth": return try await oauth(method: method, arguments: arguments)
         default: throw ExtensionHostError.unknown("\(api).\(method)")
         }
     }
@@ -185,49 +186,51 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         }
     }
 
-    /// The file and its picture both: Finder takes the URL, a chat box takes the image data.
+    private func clipboardText(from content: [String: RenderValue]) -> String? {
+        if let text = content["text"]?.stringValue { return text }
+        if let number = content["number"]?.doubleValue {
+            return number == number.rounded() && number.magnitude < 1e15
+                ? String(Int(number)) : String(number)
+        }
+        return nil
+    }
+
     private func writeFileToPasteboard(_ path: String) {
         let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        var items: [NSPasteboardWriting] = [url as NSURL]
-        if let image = NSImage(contentsOf: url) { items.append(image) }
-        pasteboard.writeObjects(items)
-    }
-
-    private func clipboardText(from content: [String: RenderValue]) -> String? {
-        if let text = content["text"]?.stringValue { return text }
-        if let html = content["html"]?.stringValue { return html }
-        return nil
+        pasteboard.writeObjects([url as NSURL])
     }
 
     // MARK: - LocalStorage
 
     private func storage(method: String, arguments: [RenderValue]) throws -> Any? {
         let (context, name) = try requireContext()
+        let storage = context.storage
         switch method {
         case "get":
             guard let key = arguments.first?.stringValue else { return nil }
-            return context.storage.localStorageValue(extension: name, key: key)?.jsonValue
+            return storage.localStorageValue(extension: name, key: key)?.jsonValue
 
         case "set":
             guard let key = arguments.first?.stringValue,
-                let value = arguments[safe: 1].flatMap(ExtensionStorage.StoredValue.init(renderValue:))
+                let renderValue = arguments.dropFirst().first,
+                let stored = ExtensionStorage.StoredValue(renderValue: renderValue)
             else { return nil }
-            context.storage.setLocalStorage(extension: name, key: key, value: value)
+            storage.setLocalStorage(extension: name, key: key, value: stored)
             return nil
 
         case "remove":
             guard let key = arguments.first?.stringValue else { return nil }
-            context.storage.removeLocalStorage(extension: name, key: key)
+            storage.removeLocalStorage(extension: name, key: key)
             return nil
 
         case "clear":
-            context.storage.clearLocalStorage(extension: name)
+            storage.clearLocalStorage(extension: name)
             return nil
 
         case "all":
-            return context.storage.allLocalStorage(extension: name).mapValues(\.jsonValue)
+            return storage.allLocalStorage(extension: name).mapValues(\.jsonValue)
 
         default:
             throw ExtensionHostError.unknown("storage.\(method)")
@@ -238,17 +241,19 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     private func cache(method: String, arguments: [RenderValue]) throws -> Any? {
         let (context, name) = try requireContext()
-        let namespace = arguments.first?.stringValue ?? "default"
+        let storage = context.storage
+        let namespace = arguments.first?.stringValue ?? ""
+
         switch method {
         case "set":
-            // A nil key clears the namespace; a nil value removes one entry.
-            let key = arguments[safe: 1]?.stringValue
-            let value = arguments[safe: 2]?.stringValue
-            context.storage.setCache(extension: name, namespace: namespace, key: key, value: value)
+            let key = arguments.dropFirst().first?.stringValue
+            let value = arguments.dropFirst(2).first?.stringValue
+            storage.setCache(extension: name, namespace: namespace, key: key, value: value)
             return nil
-        case "clear":
-            context.storage.clearCache(extension: name, namespace: namespace)
-            return nil
+
+        case "all":
+            return storage.caches(extension: name)
+
         default:
             throw ExtensionHostError.unknown("cache.\(method)")
         }
@@ -259,14 +264,12 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     private func window(method: String, arguments: [RenderValue]) -> Any? {
         switch method {
         case "close":
-            let options = arguments.first?.objectValue ?? [:]
-            context?.closeMainWindow(clearRootSearch: options["clearRootSearch"]?.boolValue ?? false)
+            let clear = arguments.first?.objectValue?["clearRootSearch"]?.boolValue ?? false
+            context?.closeMainWindow(clearRootSearch: clear)
         case "popToRoot":
             context?.popToRoot()
         case "clearSearchBar":
             context?.clearSearchBar()
-        case "openPreferences":
-            context?.openPreferences(scope: arguments.first?.stringValue ?? "extension")
         default:
             break
         }
@@ -276,30 +279,36 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     // MARK: - Feedback
 
     private func feedback(method: String, arguments: [RenderValue]) async throws -> Any? {
-        guard let context else { throw ExtensionHostError.noActiveExtension }
         switch method {
         case "showToast":
-            guard let payload = arguments.first?.objectValue else { return nil }
-            return context.present(toast: ExtensionToast(payload: payload))
+            guard let json = arguments.first?.objectValue,
+                let toast = ExtensionToast(json: json)
+            else { return 0 }
+            return context?.present(toast: toast) ?? 0
 
         case "updateToast":
-            guard let id = arguments.first?.doubleValue.map(Int.init),
-                let payload = arguments[safe: 1]?.objectValue
+            guard let id = arguments.first?.numberValue.flatMap({ Int($0) }),
+                let json = arguments.dropFirst().first?.objectValue,
+                let toast = ExtensionToast(json: json)
             else { return nil }
-            context.update(toast: id, with: ExtensionToast(payload: payload))
+            context?.update(toast: id, with: toast)
             return nil
 
         case "hideToast":
-            if let id = arguments.first?.doubleValue.map(Int.init) { context.hide(toast: id) }
+            guard let id = arguments.first?.numberValue.flatMap({ Int($0) }) else { return nil }
+            context?.hide(toast: id)
             return nil
 
         case "showHUD":
-            context.showHUD(arguments.first?.stringValue ?? "")
+            guard let text = arguments.first?.stringValue else { return nil }
+            context?.showHUD(text)
             return nil
 
         case "confirmAlert":
-            guard let payload = arguments.first?.objectValue else { return false }
-            return await context.confirmAlert(ExtensionAlert(payload: payload))
+            guard let json = arguments.first?.objectValue,
+                let alert = ExtensionAlert(json: json)
+            else { return false }
+            return await context?.confirmAlert(alert) ?? false
 
         default:
             throw ExtensionHostError.unknown("feedback.\(method)")
@@ -312,69 +321,95 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         switch method {
         case "open":
             guard let target = arguments.first?.stringValue else { return nil }
-            open(target: target, application: arguments[safe: 1]?.stringValue)
+            let application = arguments.dropFirst().first?.stringValue
+            open(target: target, application: application)
             return nil
 
-        case "openWith":
-            await context?.openWithPicker(path: arguments.first?.stringValue ?? "")
-            return nil
-
-        case "showInFinder":
+        case "openWithPicker":
             guard let path = arguments.first?.stringValue else { return nil }
-            AppLauncher.showInFinder(URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+            await context?.openWithPicker(path: path)
             return nil
 
-        case "trash":
-            let paths = (arguments.first?.arrayValue ?? []).compactMap(\.stringValue)
-            for path in paths {
-                try? FileManager.default.trashItem(
-                    at: URL(fileURLWithPath: (path as NSString).expandingTildeInPath),
-                    resultingItemURL: nil)
-            }
+        case "openPreferences":
+            let scope = arguments.first?.stringValue ?? "extension"
+            context?.openPreferences(scope: scope)
             return nil
-
-        case "applications":
-            return applications(forPath: arguments.first?.stringValue)
-
-        case "defaultApplication":
-            guard let path = arguments.first?.stringValue,
-                let url = NSWorkspace.shared.urlForApplication(
-                    toOpen: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
-            else { throw ExtensionHostError.unsupported("getDefaultApplication") }
-            return describe(application: url)
 
         case "frontmostApplication":
-            guard let app = context?.pasteTarget ?? NSWorkspace.shared.frontmostApplication,
+            guard let app = NSWorkspace.shared.frontmostApplication,
                 let url = app.bundleURL
-            else { throw ExtensionHostError.unsupported("getFrontmostApplication") }
+            else { return nil }
             return describe(application: url)
+
+        case "applications":
+            let path = arguments.first?.stringValue
+            return applications(forPath: path)
 
         case "selectedText":
             return try selectedText()
 
-        case "selectedFinderItems":
+        case "finderSelection":
             return try finderSelection()
-
-        case "launchCommand":
-            let options = arguments.first?.objectValue ?? [:]
-            guard let name = options["name"]?.stringValue else {
-                throw ExtensionHostError.unsupported("launchCommand without a name")
-            }
-            var launchArguments: [String: String] = [:]
-            for (key, value) in options["arguments"]?.objectValue ?? [:] {
-                launchArguments[key] = value.stringValue
-            }
-            try context?.launch(
-                command: name, extensionName: options["extensionName"]?.stringValue,
-                arguments: launchArguments)
-            return nil
-
-        case "updateCommandMetadata":
-            // Subtitle metadata only shows on menu-bar commands, which Tinycast doesn't run.
-            return nil
 
         default:
             throw ExtensionHostError.unknown("system.\(method)")
+        }
+    }
+
+    // MARK: - OAuth
+
+    private func oauth(method: String, arguments: [RenderValue]) async throws -> Any? {
+        let (_, name) = try requireContext()
+        let options = arguments.first?.objectValue ?? [:]
+        let providerId = options["providerId"]?.stringValue
+
+        switch method {
+        case "authorize":
+            guard let urlString = options["url"]?.stringValue,
+                let url = URL(string: urlString)
+            else {
+                throw ExtensionHostError.unsupported("oauth.authorize requires a valid url")
+            }
+            let state = options["state"]?.stringValue
+            guard let context else {
+                throw ExtensionHostError.noActiveExtension
+            }
+            return try await context.authorizeOAuth(url: url, state: state)
+
+        case "getTokens":
+            guard let json = ExtensionOAuthKeychain.getTokens(extensionName: name, providerId: providerId) else {
+                return nil
+            }
+            if let data = json.data(using: .utf8),
+                let obj = try? JSONSerialization.jsonObject(with: data)
+            {
+                return obj
+            }
+            return json
+
+        case "setTokens":
+            guard let tokens = options["tokens"] else { return nil }
+            let jsonString: String
+            if let obj = tokens.objectValue {
+                let dict = obj.mapValues(\.jsonValue)
+                guard let data = try? JSONSerialization.data(withJSONObject: dict),
+                    let str = String(data: data, encoding: .utf8)
+                else { return nil }
+                jsonString = str
+            } else if let str = tokens.stringValue {
+                jsonString = str
+            } else {
+                return nil
+            }
+            _ = ExtensionOAuthKeychain.setTokens(jsonString, extensionName: name, providerId: providerId)
+            return nil
+
+        case "removeTokens":
+            _ = ExtensionOAuthKeychain.removeTokens(extensionName: name, providerId: providerId)
+            return nil
+
+        default:
+            throw ExtensionHostError.unknown("oauth.\(method)")
         }
     }
 
@@ -383,7 +418,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             URL(string: target).flatMap { $0.scheme == nil ? nil : $0 }
             ?? URL(fileURLWithPath: (target as NSString).expandingTildeInPath)
         // Extensions address Raycast by scheme; handing that to the workspace would launch Raycast.
-        if let scheme = url.scheme, scheme == "raycast" || scheme == "raycastinternal" {
+        if let scheme = url.scheme, scheme == "raycast" || scheme == "raycastinternal" || scheme == "tinycast" {
             openRaycastURL(url)
             return
         }
@@ -406,6 +441,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     /// A command URL runs it when installed; every other Raycast URL just brings the palette back.
     private func openRaycastURL(_ url: URL) {
+        if ExtensionOAuthSession.handleCallbackURL(url) {
+            return
+        }
         let path = url.pathComponents.filter { $0 != "/" }
         if url.host == "extensions", path.count >= 3,
             (try? context?.launch(command: path[2], extensionName: path[1], arguments: [:])) != nil

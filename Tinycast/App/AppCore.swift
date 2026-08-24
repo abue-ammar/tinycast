@@ -253,6 +253,18 @@ final class AppCore {
         paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
     }
 
+    func handleOpenURL(_ url: URL) {
+        if ExtensionOAuthSession.handleCallbackURL(url) {
+            return
+        }
+        let path = url.pathComponents.filter { $0 != "/" }
+        if url.host == "extensions", path.count >= 3 {
+            let extensionName = path[1]
+            let commandName = path[2]
+            extensionCoordinator.runExtensionCommand(entryID: "ext:\(extensionName):\(commandName)")
+        }
+    }
+
     /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.
     private func hotKeyDisplayName(for action: HotKeyAction) -> String? {
         switch action {

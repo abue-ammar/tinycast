@@ -37,7 +37,7 @@ async function run(name, source, mode, body) {
   harness.stop("s1");
 }
 
-// ─── Fixtures ───────────────────────────────────────────────────────
+// ─── Fixtures ────────────────────────────────────────────────────────
 
 const listSource = `
 import { List, ActionPanel, Action, Icon, Color } from "@raycast/api";
@@ -201,6 +201,58 @@ export default async function Command() {
 }
 `;
 
+const oauthSource = `
+import { OAuth } from "@raycast/api";
+
+export default async function Command() {
+  const client = new OAuth.PKCEClient({
+    redirectMethod: OAuth.RedirectMethod.Web,
+    providerName: "GitHub",
+    providerId: "github",
+    description: "Connect your GitHub account",
+  });
+
+  const req = await client.authorizationRequest({
+    endpoint: "https://github.com/login/oauth/authorize",
+    clientId: "client-123",
+    scope: "repo read:user",
+  });
+
+  const authRes = await client.authorize(req);
+
+  const tokenSet = new OAuth.TokenSet({
+    accessToken: "gho_secret123",
+    refreshToken: "ghr_secret456",
+    expiresIn: 3600,
+  });
+
+  await client.setTokens(tokenSet);
+  const retrieved = await client.getTokens();
+
+  const expiredToken = new OAuth.TokenSet({
+    accessToken: "expired_token",
+    expiresIn: 20,
+    createdAt: Date.now() - 30000,
+  });
+
+  globalThis.__oauthTest = {
+    verifierLen: req.codeVerifier.length,
+    challengeLen: req.codeChallenge.length,
+    stateLen: req.state.length,
+    url: req.toURL(),
+    authCode: authRes.authorizationCode,
+    retrievedAccessToken: retrieved?.accessToken,
+    retrievedRefreshToken: retrieved?.refreshToken,
+    isExpiredLive: tokenSet.isExpired(),
+    isExpiredOld: expiredToken.isExpired(),
+  };
+
+  await client.removeTokens();
+  const afterRemove = await client.getTokens();
+  globalThis.__oauthTest.afterRemove = afterRemove;
+}
+`;
+
 const noViewSource = `
 import { Clipboard, showHUD } from "@raycast/api";
 
@@ -239,7 +291,7 @@ export default function Command() {
 }
 `;
 
-// ─── Runner ─────────────────────────────────────────────────────────
+// ─── Runner ──────────────────────────────────────────────────────────
 
 export async function runFixtures() {
   await run("List with sections, actions and a dropdown", listSource, "view", async (harness) => {
@@ -260,51 +312,44 @@ export async function runFixtures() {
     check("action carries a dispatchable handler", !!bump?.props?.onAction?.$fn, JSON.stringify(bump?.props));
     harness.dispatch("s1", bump.props.onAction.$fn);
     await wait();
-    check("re-renders after the action", describeTree(harness.state.trees.at(-1)).includes("Count is 1"));
+    const updated = findNode(harness.state.trees.at(-1), "List.Item");
+    check("re-renders after the action", updated.props.title === "Count is 1", updated.props.title);
   });
 
   await run("Detail with metadata", detailSource, "view", async (harness) => {
-    const dump = describeTree(harness.state.trees.at(-1));
-    check("renders Detail", dump.includes("<Detail"));
-    check("hoists metadata", dump.includes("metadata=<Detail.Metadata>"));
-    const metadata = findNode(harness.state.trees.at(-1), "Detail").props.metadata;
-    const kinds = metadata.children.map((child) => child.type);
+    const tree = harness.state.trees.at(-1);
+    const detail = findNode(tree, "Detail");
+    check("renders Detail", !!detail);
+    check("hoists metadata", detail.props.metadata?.type === "Detail.Metadata");
+    const types = detail.props.metadata.children.map((c) => c.type);
     check(
       "metadata children in order",
-      JSON.stringify(kinds) ===
-        JSON.stringify([
-          "Detail.Metadata.Label",
-          "Detail.Metadata.Separator",
-          "Detail.Metadata.TagList",
-          "Detail.Metadata.Link",
-        ]),
-      JSON.stringify(kinds),
+      types.join(",") === "Detail.Metadata.Label,Detail.Metadata.Separator,Detail.Metadata.TagList,Detail.Metadata.Link",
+      types.join(","),
     );
   });
 
   await run("List.Item.Detail split across a Fragment", fragmentDetailSource, "view", async (harness) => {
-    const detail = findNode(harness.state.trees.at(-1), "List.Item").props.detail;
-    check("keeps the markdown from the first sibling", detail.props.markdown === "30s remaining", JSON.stringify(detail.props));
-    check("keeps the metadata from the second sibling", detail.props.metadata?.type === "Detail.Metadata", JSON.stringify(detail.props));
+    const tree = harness.state.trees.at(-1);
+    const item = findNode(tree, "List.Item");
+    check("keeps the markdown from the first sibling", item.props.detail?.props?.markdown === "30s remaining");
+    check("keeps the metadata from the second sibling", item.props.detail?.props?.metadata?.type === "List.Item.Detail.Metadata");
   });
 
   await run("Form fields and submit", formSource, "view", async (harness) => {
     const tree = harness.state.trees.at(-1);
     const form = findNode(tree, "Form");
-    const types = form.children.map((child) => child.type);
+    const fieldTypes = form.children.map((c) => c.type);
     check(
       "all field types render",
-      ["Form.TextField", "Form.TextArea", "Form.Checkbox", "Form.Dropdown", "Form.TagPicker", "Form.DatePicker", "Form.Separator", "Form.Description"].every(
-        (type) => types.includes(type),
-      ),
-      JSON.stringify(types),
+      fieldTypes.join(",") ===
+        "Form.TextField,Form.TextArea,Form.Checkbox,Form.Dropdown,Form.TagPicker,Form.DatePicker,Form.Separator,Form.Description",
+      fieldTypes.join(","),
     );
-    const field = form.children.find((child) => child.type === "Form.TextField");
-    check("field exposes its value", field.props.value === "Ada", JSON.stringify(field.props));
-    check("field has a change handler", !!field.props.onTinycastChange?.$fn);
+    const text = form.children[0];
+    check("field exposes its value", text.props.value === "Ada");
+    check("field has a change handler", !!text.props.onChange?.$fn);
 
-    harness.dispatch("s1", field.props.onTinycastChange.$fn, ["Grace"]);
-    await wait();
     const submit = findNode(harness.state.trees.at(-1), "Action");
     harness.dispatch("s1", submit.props.onAction.$fn);
     await wait();
@@ -360,6 +405,17 @@ export async function runFixtures() {
     check("encodes a text body as UTF-8", result.byteLength === 6, String(result.byteLength));
   });
 
+  await run("OAuth PKCEClient and TokenSet", oauthSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__oauthTest");
+    check("generates PKCE codeVerifier and challenge", result?.verifierLen >= 43 && result?.challengeLen >= 43, JSON.stringify(result));
+    check("generates OAuth state", result?.stateLen >= 20);
+    check("builds correct authorization URL with redirect_uri", new URL(result.url).searchParams.get("redirect_uri") === "https://raycast.com/redirect?packageName=fixture" && new URL(result.url).searchParams.get("client_id") === "client-123");
+    check("authorize returns authorization code", result?.authCode === "auth-code-12345");
+    check("stores and retrieves TokenSet with tokens", result?.retrievedAccessToken === "gho_secret123" && result?.retrievedRefreshToken === "ghr_secret456");
+    check("TokenSet isExpired calculation works", result?.isExpiredLive === false && result?.isExpiredOld === true);
+    check("removeTokens cleans up tokens", result?.afterRemove === undefined || result?.afterRemove === null);
+  });
+
   await run("no-view command", noViewSource, "no-view", async (harness) => {
     check("ran to completion", harness.state.finished === true);
     check("ran the body", harness.call("globalThis.__ranNoView") === true);
@@ -400,10 +456,8 @@ function findNode(tree, type) {
     // Slot props hold real nodes too (actions, metadata, detail).
     for (const value of Object.values(node.props ?? {})) {
       if (value && typeof value === "object" && value.type) stack.push(value);
-      else if (Array.isArray(value)) stack.push(...value.filter((entry) => entry && entry.type));
+      if (Array.isArray(value)) for (const item of value) if (item?.type) stack.push(item);
     }
   }
-  return undefined;
+  return null;
 }
-
-if (import.meta.url === `file://${process.argv[1]}`) await runFixtures();

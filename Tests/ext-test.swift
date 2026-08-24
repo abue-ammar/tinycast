@@ -35,6 +35,7 @@ struct ExtensionTests {
         var calls: [String] = []
         var toasts: [String] = []
         var huds: [String] = []
+        var oauthTokens: [String: String] = [:]
         private let fetcher = ExtensionFetcher()
 
         func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String {
@@ -70,6 +71,22 @@ struct ExtensionTests {
                     #"{"name":"Finder","path":"/System/Library/CoreServices/Finder.app","bundleId":"com.apple.finder"}"#
             case "system.applications":
                 return "[]"
+            case "oauth.authorize":
+                let state = arguments.first?.objectValue?["state"]?.stringValue ?? ""
+                return "{\"code\":\"auth_code_swift_test\",\"state\":\"\(state)\"}"
+            case "oauth.getTokens":
+                let providerId = arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                return oauthTokens[providerId] ?? ""
+            case "oauth.setTokens":
+                let providerId = arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                if let tokens = arguments.first?.objectValue?["tokens"] {
+                    oauthTokens[providerId] = ExtensionRuntime.jsonString(from: tokens.jsonValue)
+                }
+                return ""
+            case "oauth.removeTokens":
+                let providerId = arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                oauthTokens.removeValue(forKey: providerId)
+                return ""
             default:
                 return ""
             }
@@ -180,6 +197,7 @@ struct ExtensionTests {
         manifestChecks()
         renderNodeChecks()
         screenChecks()
+        oauthUnitChecks()
         await runtimeChecks()
 
         print("\n\(passes) passed, \(failures) failed")
@@ -361,8 +379,7 @@ struct ExtensionTests {
             {"id":2,"type":"List","props":{"filtering":true,"searchBarPlaceholder":"Find…"},"children":[
               {"id":3,"type":"List.Section","props":{"title":"Alpha","subtitle":"two"},"children":[
                 {"id":4,"type":"List.Item","props":{"title":"Apple"},"children":[]},
-                {"id":5,"type":"List.Item","props":{"title":"Banana"},"children":[]}]},
-              {"id":6,"type":"List.Item","props":{"title":"Cherry","keywords":["red"]},"children":[]}]}
+                {"id":5,"type":"List.Item","props":{"title":"Banana"},"children":[]}]},{"id":6,"type":"List.Item","props":{"title":"Cherry","keywords":["red"]},"children":[]}]}
             """
         let list = ExtensionScreen(tree: tree(listJSON), query: "")
         check("kind is list", list.kind == .list)
@@ -420,7 +437,7 @@ struct ExtensionTests {
         check("form has no selectable rows", form.items.isEmpty)
 
         let detail = ExtensionScreen(
-            // Doubled delimiters: the markdown heading contains `"#`, which closes a single-# raw string.
+            // Doubled delimiters: the markdown heading contains `"#, which closes a single-# raw string.
             tree: tree(##"{"id":2,"type":"Detail","props":{"markdown":"# Hi"},"children":[]}"##),
             query: "")
         check("kind is detail", detail.kind == .detail)
@@ -442,6 +459,42 @@ struct ExtensionTests {
         check("item panel wins", panels.actionPanel(forItemAt: 0)?.id == 9)
         check("screen panel is the fallback", panels.actionPanel(forItemAt: 1)?.id == 8)
         check("out-of-range selection falls back", panels.actionPanel(forItemAt: 99)?.id == 8)
+    }
+
+    @MainActor
+    static func oauthUnitChecks() {
+        // Keychain round-trip
+        let extName = "com.test.unit"
+        let provId = "unit_provider"
+        let json = "{\"accessToken\":\"token_xyz\",\"refreshToken\":\"refresh_abc\"}"
+
+        ExtensionOAuthKeychain.setTokens(json, extensionName: extName, providerId: provId)
+        let read = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: provId)
+        check("OAuth Keychain sets and gets tokens", read == json, read ?? "nil")
+
+        ExtensionOAuthKeychain.removeTokens(extensionName: extName, providerId: provId)
+        let afterRemove = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: provId)
+        check("OAuth Keychain removes tokens", afterRemove == nil, afterRemove ?? "not nil")
+
+        ExtensionOAuthKeychain.setTokens(json, extensionName: extName, providerId: "prov1")
+        ExtensionOAuthKeychain.setTokens(json, extensionName: extName, providerId: "prov2")
+        ExtensionOAuthKeychain.removeAllTokens(extensionName: extName)
+        let afterRemoveAll1 = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: "prov1")
+        let afterRemoveAll2 = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: "prov2")
+        check("OAuth Keychain removeAllTokens clears all for extension", afterRemoveAll1 == nil && afterRemoveAll2 == nil)
+
+        // URL parsing in ExtensionOAuthSession
+        let raycastURL = URL(string: "raycast://oauth?code=auth_123&state=state_456")!
+        let params = ExtensionOAuthSession.parseCallback(url: raycastURL)
+        check("parseCallback parses query parameters", params["code"] == "auth_123" && params["state"] == "state_456")
+
+        let fragmentURL = URL(string: "raycast://oauth#access_token=token_xyz&state=state_789")!
+        let fragParams = ExtensionOAuthSession.parseCallback(url: fragmentURL)
+        check("parseCallback parses hash fragment", fragParams["access_token"] == "token_xyz" && fragParams["state"] == "state_789")
+
+        let nonOAuthURL = URL(string: "raycast://extensions/installed")!
+        let notHandled = ExtensionOAuthSession.handleCallbackURL(nonOAuthURL)
+        check("handleCallbackURL ignores non-oauth URL", !notHandled)
     }
 
     // MARK: - End-to-end through JavaScriptCore
@@ -545,6 +598,43 @@ struct ExtensionTests {
                 screen.items.first?.node.string("title") == "count=11",
                 screen.items.first?.node.string("title") ?? "nil")
         }
+
+        // OAuth PKCE and TokenSet runtime tests
+        let (oauthRuntime, oauthHost, oauthRecorder) = makeRuntime()
+        try? await oauthRuntime.boot(
+            config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        let oauthCommand = """
+            "use strict";
+            const { OAuth, showHUD } = require("@raycast/api");
+            module.exports.default = async function () {
+              const client = new OAuth.PKCEClient({
+                redirectMethod: OAuth.RedirectMethod.Web,
+                providerName: "GitHub",
+                providerId: "gh",
+              });
+              const req = await client.authorizationRequest({
+                endpoint: "https://github.com/login/oauth/authorize",
+                clientId: "id123",
+              });
+              const auth = await client.authorize(req);
+              const tokens = new OAuth.TokenSet({
+                accessToken: "token_" + auth.authorizationCode,
+                refreshToken: "refresh_123",
+                expiresIn: 3600,
+              });
+              await client.setTokens(tokens);
+              const read = await client.getTokens();
+              await showHUD(read.accessToken);
+            };
+            """
+        await oauthRuntime.start(
+            session: "sOAuth", code: oauthCommand,
+            file: URL(fileURLWithPath: "/tmp/oauth.js"), mode: .noView,
+            context: launchContext(mode: .noView))
+        await settle()
+        check("oauth command finished", oauthRecorder.finished, oauthRecorder.failures.joined())
+        check("oauth flow reached token storage", oauthHost.huds == ["token_auth_code_swift_test"], oauthHost.huds.joined(separator: ","))
+        await oauthRuntime.stop(session: "sOAuth")
 
         // Command arguments must reach `props.arguments`, and the bag must exist even when empty.
         let (withArguments, _, argumentRecorder) = makeRuntime()
@@ -768,7 +858,7 @@ struct ExtensionTests {
                 let accessories = node.array("accessories").count
                 print(
                     "  • \(node.string("title") ?? "")"
-                        + (node.string("subtitle").map { "  —  \($0)" } ?? "")
+                        + (node.string("subtitle").map { "  —  \(String(describing: $0))" } ?? "")
                         + (accessories > 0 ? "  [\(accessories) accessories]" : "")
                         + (node.node("actions") != nil ? "  ⌘K" : ""))
             }
