@@ -30,11 +30,12 @@ function generateRandomString(length = 16) {
 
 function generateState(client) {
   // raycast.com/redirect expects state to be a JSON object (base64url-encoded)
-  // containing providerName so it can display the header and redirect to raycast://oauth
+  // containing providerName and scheme ("tinycast") so it redirects to tinycast://oauth
   const payload = {
     token: generateRandomString(16),
     providerName: client?.providerName || "",
     providerId: client?.providerId || "",
+    scheme: "tinycast",
   };
   const json = JSON.stringify(payload);
   const bytes = utf8Encode(json);
