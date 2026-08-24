@@ -334,7 +334,7 @@ final class AppCore {
             {
                 _ = $0.autoJoinMeetings
                 _ = $0.menuBarEvents
-            }, reproject: { $0.calendarCoordinator.applyClock() })\
+            }, reproject: { $0.calendarCoordinator.applyClock() })
         track(
             {
                 _ = $0.fileSearchScopes
