@@ -1,6 +1,6 @@
 ---
 title: Window management
-description: 32 commands — halves, quarters, thirds, nudges, display moves and instant Space switching.
+description: 34 commands — halves, quarters, fourths, thirds, nudges, display moves and instant Space switching.
 ---
 
 Move and resize the window you were last in, without installing anything else.
@@ -16,6 +16,8 @@ launcher entries and a still-registered shortcut moves nothing.
 **Halves** — Left · Right · Top · Bottom
 
 **Quarters** — Top Left · Top Right · Bottom Left · Bottom Right
+
+**Fourths** — First Three Fourths · Last Three Fourths
 
 **Thirds** — First Third · Center Third · Last Third · First Two Thirds · Last Two Thirds
 

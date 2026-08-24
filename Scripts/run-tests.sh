@@ -72,8 +72,10 @@ run file-search-session-test Tinycast/Platform/Signposts.swift \
                              Tinycast/Features/FileSearch/Service/*.swift
 run ranking-test           $L/SearchRelevance.swift $L/LauncherRankingStore.swift
 run scopes-test            $L/SearchScopes.swift
+run app-name-test          Tinycast/Platform/AppDisplayName.swift
 run favorites-test         $L/FavoriteSlots.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift
+run calendar-test          Tinycast/Features/Calendar/Model/*.swift
 run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift
 run emoji-test             Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
@@ -148,6 +150,8 @@ run notes-editor-test      Tinycast/Platform/Signposts.swift \
                            Tinycast/Features/Notes/UI/NoteEditorView.swift
 run raycast-test           Tinycast/Features/Backup/Model/RaycastFormat.swift \
                            Tinycast/Features/Backup/Model/RaycastV1Decoder.swift \
+                           Tinycast/Features/Backup/Service/RaycastV2Decoder.swift \
+                           Tinycast/Features/Backup/Service/Scrypt.swift \
                            Tinycast/Platform/Compression/Zlib.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift
@@ -168,6 +172,8 @@ run ext-test               -parse-as-library \
                            $E/Service/ExtensionCatalog.swift \
                            $E/Service/ExtensionFetcher.swift \
                            $E/Service/ExtensionNodeShims.swift \
+                           $E/Service/ExtensionOAuthKeychain.swift \
+                           $E/Service/ExtensionOAuthSession.swift \
                            $E/Service/ExtensionRuntime.swift \
                            $E/UI/ExtensionScreen.swift \
                            $L/SearchRelevance.swift \

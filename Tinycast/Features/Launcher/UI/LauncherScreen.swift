@@ -9,6 +9,9 @@ struct LauncherScreen: PaletteScreen {
     let vm: PaletteState
     /// Sampled by `openActions`, so the Quit row can't appear or vanish while the menu is up.
     let running: Bool
+    /// The join card's meeting, resolved by the coordinator; nil unless one is due.
+    let meeting: MeetingEvent?
+    let now: Date
     let openActions: () -> Void
     /// Called when an action reorders the list, so the highlight scrolls back into view.
     let scrollToFollow: () -> Void
@@ -28,6 +31,7 @@ struct LauncherScreen: PaletteScreen {
     init(
         appIndex: AppIndex, favorites: FavoritesStore, visibility: VisibilityStore,
         currencyRates: CurrencyRateStore, core: AppCore, vm: PaletteState, running: Bool,
+        meeting: MeetingEvent?, now: Date,
         openActions: @escaping () -> Void, scrollToFollow: @escaping () -> Void
     ) {
         self.appIndex = appIndex
@@ -36,6 +40,7 @@ struct LauncherScreen: PaletteScreen {
         self.core = core
         self.vm = vm
         self.running = running
+        self.now = now
         self.openActions = openActions
         self.scrollToFollow = scrollToFollow
 
@@ -44,22 +49,34 @@ struct LauncherScreen: PaletteScreen {
         let calc = CalcMemo.evaluate(vm.query, rates: currencyRates.rates)
         let entries = results.map(Row.entry)
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespaces).isEmpty
+        // The calculator only answers a typed query and the card only an empty one, so at most one
+        // of them ever leads, and the flat index keeps a single-row offset.
+        let meeting = pinsFavorites ? meeting : nil
+        self.meeting = meeting
         self.results = results
         self.calc = calc
         self.showSections = pinsFavorites || AppEntry.Kind.named(by: vm.query) != nil
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? results.prefix(while: favorites.isFavorite).count : 0
-        self.rows = calc.map { [.calc($0)] + entries } ?? entries
+        if let calc {
+            self.rows = [.calc(calc)] + entries
+        } else if let meeting {
+            self.rows = [.meeting(meeting)] + entries
+        } else {
+            self.rows = entries
+        }
     }
 
     /// The card is a row like any other, so the flat selection indexes `rows` with no offset.
     enum Row: Equatable, Identifiable {
         case calc(CalcResult)
+        case meeting(MeetingEvent)
         case entry(AppEntry)
 
         var id: String {
             switch self {
             case .calc: return "calc-card"
+            case .meeting: return "meeting-card"
             case .entry(let app): return app.id
             }
         }
@@ -74,6 +91,8 @@ struct LauncherScreen: PaletteScreen {
     var primaryActionTitle: String {
         switch row(at: clampedSelection) {
         case .calc: return "Copy Answer"
+        case .meeting(let meeting):
+            return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
         case nil: return "Open Application"
         }
@@ -118,8 +137,16 @@ struct LauncherScreen: PaletteScreen {
     }
 
     private func isCardSelected(_ selection: Int) -> Bool {
-        if case .calc = row(at: selection) { return true }
-        return false
+        switch row(at: selection) {
+        case .calc, .meeting: return true
+        case .entry, nil: return false
+        }
+    }
+
+    /// Whichever card leads, in the terms the list draws it in.
+    private var leadCard: LauncherList.LeadCard? {
+        if let calc { return .calc(calc) }
+        return meeting.map { .meeting($0, now: now) }
     }
 
     /// An error card is selectable but has no action: it must drive neither the pill nor ⌘K.
@@ -132,6 +159,8 @@ struct LauncherScreen: PaletteScreen {
         switch row(at: selection) {
         case .calc(let result):
             return result.isActionable ? CalcActionsMenu.content(result: result, core: core) : nil
+        case .meeting(let meeting):
+            return MeetingActionsMenu.content(meeting: meeting, core: core)
         case .entry(let app):
             return AppActionsMenu.content(
                 app: app, searchQuery: vm.query, core: core, running: running,
@@ -150,6 +179,7 @@ struct LauncherScreen: PaletteScreen {
         switch row(at: selection) {
         // Error cards no-op — copyCalculatorResult only acts on value payloads.
         case .calc(let result): core.calculatorCoordinator.copyCalculatorResult(result)
+        case .meeting(let meeting): core.calendarCoordinator.activateMeeting(id: meeting.id)
         case .entry(let app):
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))
@@ -246,7 +276,7 @@ struct LauncherScreen: PaletteScreen {
     }
 
     private func select(row index: Int) {
-        vm.selection = index + (calc == nil ? 0 : 1)
+        vm.selection = index + (calc == nil && meeting == nil ? 0 : 1)
         scrollToFollow()
     }
 
@@ -274,14 +304,14 @@ struct LauncherScreen: PaletteScreen {
             favoriteCount: favoriteCount,
             showSections: showSections,
             scroll: scroll,
-            calc: calc,
-            calcSelected: isCardSelected(selection),
-            onActivateCalc: {
+            card: leadCard,
+            cardSelected: isCardSelected(selection),
+            onActivateCard: {
                 vm.selection = 0
                 activate(at: 0)
             },
-            onCalcActions: {
-                guard let calc, case .value = calc.payload else { return }
+            onCardActions: {
+                guard hasPrimaryAction(at: 0) else { return }
                 vm.selection = 0
                 openActions()
             },

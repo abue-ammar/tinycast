@@ -67,7 +67,7 @@ struct ExtensionCommandScreen: PaletteScreen {
                 assetsPath: assetsPath,
                 scroll: scroll,
                 onSelect: { vm.selection = $0 },
-                onActivate: { activate(at: selection) },
+                onActivate: { activate(at: $0) },
                 onActions: { index in
                     vm.selection = index
                     openActions()

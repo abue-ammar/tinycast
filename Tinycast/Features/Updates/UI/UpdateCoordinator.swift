@@ -81,12 +81,18 @@ final class UpdateCoordinator {
         }
     }
 
-    /// The automatic path. It may interrupt the user, so it defers to whatever they are doing.
-    func presentIfAvailable(_ release: AvailableRelease) {
-        guard UpdateReadiness.evaluate(activity) == nil else { return }
-        if case .installing = stage { return }
-        stage = .available(release)
-        present()
+    /// The automatic path: `false` answers that it withheld the prompt, so the store re-offers it.
+    func presentIfAvailable(_ release: AvailableRelease) -> Bool {
+        switch stage {
+        // Already in hand: re-offering would throw away a download or the relaunch it earned.
+        case .installing, .readyToRelaunch:
+            return true
+        case .checking, .upToDate, .localBuild, .available, .blocked, .failed:
+            guard UpdateReadiness.evaluate(activity) == nil else { return false }
+            stage = .available(release)
+            present()
+            return true
+        }
     }
 
     // MARK: - Actions

@@ -54,6 +54,29 @@ enum ExtensionIconCache {
         return image
     }
 
+    // MARK: - Carried inline by the extension
+
+    /// The bytes a `data:` URL holds. Uncached and unfitted: the payload is already resident, and an
+    /// extension that draws its own SVG has already sized it.
+    static func loadInlineAsync(_ url: URL) async -> NSImage? {
+        guard let data = inlineData(url) else { return nil }
+        return await Task.detached(priority: .userInitiated) {
+            Decoded(image: NSImage(data: data))
+        }.value.image
+    }
+
+    /// `data:[<mediatype>][;base64],<payload>`, minus any query — Detail markdown appends Raycast's
+    /// `?raycast-width=…` sizing hints, and neither encoding can produce a `?` of its own.
+    private static func inlineData(_ url: URL) -> Data? {
+        let text = url.absoluteString
+        guard let comma = text.firstIndex(of: ",") else { return nil }
+        let payload = String(text[text.index(after: comma)...].prefix { $0 != "?" })
+        guard text[..<comma].hasSuffix(";base64") else {
+            return payload.removingPercentEncoding.map { Data($0.utf8) }
+        }
+        return Data(base64Encoded: payload, options: .ignoreUnknownCharacters)
+    }
+
     // MARK: - Fetched by the extension
 
     /// A failure caches nothing, so a transient error retries; `asIcon` is off for markdown images.

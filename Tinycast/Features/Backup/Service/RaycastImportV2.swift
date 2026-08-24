@@ -1,46 +1,13 @@
 import AppKit
-import CryptoKit
 import Foundation
 
-/// Decrypts and maps a Raycast X export. See docs/features/raycast-import.md.
+/// Maps a Raycast 2.x payload onto Tinycast's fields. See docs/features/raycast-import.md.
 enum RaycastImportV2 {
     static func read(_ raw: Data, passphrase: String) throws -> RaycastImport.Result {
-        try parse(decrypt(raw, passphrase: passphrase))
+        try map(RaycastV2Decoder.decrypt(raw, passphrase: passphrase))
     }
 
-    // MARK: - Decrypt
-
-    static func decrypt(_ raw: Data, passphrase: String) throws -> Data {
-        guard let envelopeData = try? Zlib.gunzip(raw),
-            let env = try? JSONSerialization.jsonObject(with: envelopeData) as? [String: Any],
-            let dataHex = env["data"] as? String,
-            let enc = env["encryption"] as? [String: String],
-            let iv = enc["iv"].flatMap(Data.init(hex:)),
-            let salt = enc["salt"].flatMap(Data.init(hex:)),
-            let tag = enc["authTag"].flatMap(Data.init(hex:)),
-            let ciphertext = Data(hex: dataHex)
-        else { throw RaycastImportError.notRaycastFile }
-
-        let key = Scrypt.derive(
-            passphrase: Array(passphrase.utf8), salt: [UInt8](salt), n: 16384, r: 8, p: 1, dkLen: 32)
-
-        let plaintextGz: Data
-        do {
-            let box = try AES.GCM.SealedBox(
-                nonce: try AES.GCM.Nonce(data: iv), ciphertext: ciphertext, tag: tag)
-            plaintextGz = try AES.GCM.open(box, using: SymmetricKey(data: key))
-        } catch {
-            throw RaycastImportError.incorrectPassphrase
-        }
-        guard let plaintext = try? Zlib.gunzip(plaintextGz) else {
-            throw RaycastImportError.corrupt
-        }
-        return plaintext
-    }
-
-    // MARK: - Map
-
-    static func parse(_ decrypted: Data) throws -> RaycastImport.Result {
+    private static func map(_ decrypted: Data) throws -> RaycastImport.Result {
         guard let json = try? JSONSerialization.jsonObject(with: decrypted) as? [String: Any] else {
             throw RaycastImportError.corrupt
         }
@@ -51,7 +18,7 @@ enum RaycastImportV2 {
         backup.launcherAliases = mapAliases(json)
         let (clipboard, missing) = mapClipboard(json)
         let snippets = RaycastSnippetImport.parse(
-            (json["builtin_package_snippets"] as? [String: Any])?["snippets"])
+            (json["snippets"] as? [String: Any])?["snippets"])
         return RaycastImport.Result(
             backup: backup,
             clipboard: clipboard,
@@ -289,30 +256,5 @@ enum RaycastImportV2 {
             }
         }
         return nil
-    }
-}
-
-extension Data {
-    /// Parses an even-length hex string; returns nil on any non-hex character.
-    init?(hex: String) {
-        let chars = Array(hex.utf8)
-        guard chars.count % 2 == 0 else { return nil }
-        var bytes = [UInt8]()
-        bytes.reserveCapacity(chars.count / 2)
-        func nibble(_ c: UInt8) -> UInt8? {
-            switch c {
-            case 0x30...0x39: return c - 0x30
-            case 0x61...0x66: return c - 0x61 + 10
-            case 0x41...0x46: return c - 0x41 + 10
-            default: return nil
-            }
-        }
-        var i = 0
-        while i < chars.count {
-            guard let hi = nibble(chars[i]), let lo = nibble(chars[i + 1]) else { return nil }
-            bytes.append(hi << 4 | lo)
-            i += 2
-        }
-        self = Data(bytes)
     }
 }

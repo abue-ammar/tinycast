@@ -121,6 +121,21 @@ jobs:
           name: Tinycast-${{ steps.meta.outputs.full_version }}
           path: dist/
 
+      # The changelog GitHub derives from the merged PRs, with the install text below a marker the
+      # update window cuts at. Nothing is committed anywhere — see docs/release.md.
+      - name: Compose release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CHANNEL: ${{ github.event.inputs.channel }}
+          TAG: v${{ steps.meta.outputs.full_version }}
+          SHA: ${{ github.sha }}
+          VERSION: ${{ steps.meta.outputs.full_version }}
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+          BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
+          CASK: ${{ steps.meta.outputs.cask_name }}
+        run: ./Scripts/release-notes.sh "$RUNNER_TEMP/notes.md" "$RUNNER_TEMP/changelog.md"
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -130,24 +145,13 @@ jobs:
           if [ "${{ steps.meta.outputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
+          # --notes-file, never --generate-notes: gh prepends --notes to generated notes, which would
+          # put the install boilerplate back above the changelog.
           gh release create "$TAG" \
             "dist/${{ steps.meta.outputs.dmg_file }}" \
             "dist/${{ steps.meta.outputs.zip_file }}" \
             --title "${{ steps.meta.outputs.display_name }} ${{ steps.meta.outputs.full_version }}" \
-            --notes "**Channel:** ${{ github.event.inputs.channel }}
-          **Version:** ${{ steps.meta.outputs.full_version }}
-          **Bundle ID:** \`${{ steps.meta.outputs.bundle_id }}\`
-          Built from ${{ github.sha }}.
-
-          **Recommended:** install via Homebrew — it clears the quarantine flag automatically on every install and update, so there's nothing to run by hand:
-          \`\`\`sh
-          brew trust --tap abue-ammar/tinycast
-          brew install --cask abue-ammar/tinycast/${{ steps.meta.outputs.cask_name }}
-          \`\`\`
-          This build is self-signed. If you download the DMG directly instead of using Homebrew, macOS will refuse to open it until you clear the quarantine flag once:
-          \`\`\`sh
-          xattr -dr com.apple.quarantine \"/Applications/${{ steps.meta.outputs.display_name }}.app\"
-          \`\`\`" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
             $PRERELEASE_FLAG
 
       - name: Update Homebrew cask
@@ -182,7 +186,7 @@ jobs:
           fi
 
       # Announce the release in the Discord release channel. A Components V2 (flags 32768) card:
-      # channel-tinted container, title + right-aligned Download button, Homebrew install block.
+      # channel-tinted container, title + right-aligned Download button, changelog, Homebrew block.
       # No-ops with a warning if the webhook secret isn't set.
       - name: Announce on Discord
         if: success()
@@ -203,20 +207,27 @@ jobs:
           INSTALL="brew install --cask abue-ammar/tinycast/${CASK}"
           # Build with jq so backticks stay literal (printf in single quotes escaped them,
           # which Discord rendered as verbatim backticks instead of a code block).
+          # Components V2 forbids a top-level `content`, so @everyone is a text component, and
+          # without allowed_mentions Discord renders the ping as inert text.
           jq -n \
             --argjson color "${COLOR}" \
             --arg heading "## 🚀 ${DISPLAY_NAME} ${VERSION}" \
             --arg sub "Now available on the **${CHANNEL}** channel." \
             --arg install "${INSTALL}" \
             --arg url "${RELEASE_URL}" \
+            --rawfile changelog "${RUNNER_TEMP}/changelog.md" \
             '{
               flags: 32768,
+              allowed_mentions: { parse: ["everyone"] },
               components: [
+                { type: 10, content: "@everyone" },
                 { type: 17, accent_color: $color, components: [
                   { type: 9,
                     components: [ { type: 10, content: ($heading + "\n" + $sub) } ],
                     accessory: { type: 2, style: 5, label: "Download", url: $url }
                   },
+                  { type: 14 },
+                  { type: 10, content: ($changelog | rtrimstr("\n")) },
                   { type: 14 },
                   { type: 10, content: ("**Install / update via Homebrew**\n```\n" + $install + "\n```") }
                 ] }

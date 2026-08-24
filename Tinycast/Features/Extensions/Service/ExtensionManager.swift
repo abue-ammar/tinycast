@@ -29,11 +29,14 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Whether the commands reach the launcher at all; independent of `isEnabled`.
     private(set) var showsInLauncher = true
 
+    var isAuthorizing: Bool { oauthSession.isAuthorizing }
+
     let storage: ExtensionStorage
     /// Extension-scoped state the launcher and Settings read through here, like `storage`.
     let appearances = ExtensionAppearanceStore()
     @ObservationIgnored private let runtime: ExtensionRuntime
     @ObservationIgnored private let bridge: ExtensionHostBridge
+    @ObservationIgnored private let oauthSession = ExtensionOAuthSession()
     @ObservationIgnored private weak var appIndex: AppIndex?
     @ObservationIgnored private weak var coordinator: ExtensionCoordinator?
 
@@ -42,6 +45,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     @ObservationIgnored private var sessionID: String?
     @ObservationIgnored private var nextToastID = 1
+    @ObservationIgnored private var lastOAuthExtensionName: String?
 
     init(clipboardStore: ClipboardStore) {
         storage = ExtensionStorage(directory: ExtensionCatalog.storageDirectory())
@@ -220,6 +224,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 extensionName: installedExtension.manifest.name, commandName: $0.name
             ).entryID
         }
+        ExtensionOAuthKeychain.removeAllTokens(extensionName: installedExtension.manifest.name)
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
         appearances.set(nil, for: installedExtension.manifest.name)
@@ -337,6 +342,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     func stop() async {
+        oauthSession.cancel()
         guard let sessionID else {
             resetSessionState()
             return
@@ -503,5 +509,26 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             let command = owner.command(named: name)
         else { throw LaunchError.unknownCommand(name) }
         Task { await run(owner, command: command, arguments: arguments) }
+    }
+
+    func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult
+    {
+        lastOAuthExtensionName = running?.extensionName
+        return try await oauthSession.authorize(options: options)
+    }
+
+    func getOAuthTokens(providerId: String) -> String? {
+        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return nil }
+        return ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: providerId)
+    }
+
+    func setOAuthTokens(providerId: String, tokens: String) {
+        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return }
+        ExtensionOAuthKeychain.setTokens(tokens, extensionName: extName, providerId: providerId)
+    }
+
+    func removeOAuthTokens(providerId: String) {
+        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return }
+        ExtensionOAuthKeychain.removeTokens(extensionName: extName, providerId: providerId)
     }
 }

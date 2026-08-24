@@ -13,6 +13,9 @@ struct RootPaletteView: View {
     @Environment(EmojiIndex.self) private var emojiIndex
     @Environment(FrequentEmojiStore.self) private var frequentEmoji
     @Environment(FileSearchSession.self) private var fileSearch
+    @Environment(CalendarStore.self) private var calendarStore
+    /// Observed so the join card's countdown redraws on the minute boundary.
+    @Environment(MeetingClock.self) private var meetingClock
     @Environment(UninstallSession.self) private var uninstall
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
@@ -40,6 +43,7 @@ struct RootPaletteView: View {
             return LauncherScreen(
                 appIndex: appIndex, favorites: favorites, visibility: visibility,
                 currencyRates: currencyRates, core: core, vm: vm, running: selectionIsRunning,
+                meeting: core.calendarCoordinator.cardedMeeting, now: meetingClock.now,
                 openActions: openActions,
                 scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
         case .uninstall:
@@ -59,6 +63,10 @@ struct RootPaletteView: View {
         case .fileSearch:
             return FileSearchScreen(
                 session: fileSearch, core: core, vm: vm, openActions: openActions)
+        case .schedule:
+            return ScheduleScreen(
+                store: calendarStore, clock: meetingClock, core: core, vm: vm,
+                openActions: openActions)
         case .clipboard:
             return ClipboardScreen(
                 store: store, core: core, vm: vm, openActions: openActions,
@@ -161,13 +169,13 @@ struct RootPaletteView: View {
         // The panel has no title bar, so this thin top margin is the only place left to grab it.
         .overlay(alignment: .top) { topDragStrip }
         .modifier(ExtensionToastOverlay(extensions: extensions, showing: vm.mode == .extensionCommand))
-        // In-window overlays, so a menu stays clipped inside the panel.
+        // Never conditionally mounted: unmounting strands SwiftUI's hover target and eats clicks.
         .overlay {
-            if menuOpen {
-                Color.black.opacity(0.001)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: closeMenus)
-            }
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                // Not a tap: a drifting press must still dismiss, the way a native menu's does.
+                .gesture(DragGesture(minimumDistance: 0).onEnded { _ in closeMenus() })
+                .allowsHitTesting(menuOpen)
         }
         .overlay(alignment: .bottomLeading) {
             if openMenu == .app {
@@ -245,7 +253,7 @@ struct RootPaletteView: View {
             if vm.mode != .uninstall { uninstall.cancel() }
             if vm.mode != .fileSearch { fileSearch.cancel() }
             // Leaving the screen any other way than Escape still ends the command's session.
-            if vm.mode != .extensionCommand, extensions.running != nil {
+            if vm.mode != .extensionCommand, extensions.running != nil, !extensions.isAuthorizing {
                 Task { await extensions.stop() }
             }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.

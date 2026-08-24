@@ -76,8 +76,35 @@ needed. Run it from the **Actions** tab (`Release` → **Run workflow**) and pic
 - **version** — base semver, e.g. `0.2.0`.
 
 It builds on a `macos-26` runner with Xcode 26 and publishes a GitHub Release tagged
-`v<full-version>` with a versioned DMG asset (`Tinycast-<full-version>.dmg`), marked prerelease for
-beta. On success it also bumps the matching cask in the tap.
+`v<full-version>` with a versioned DMG and zip asset, marked prerelease for beta. On success it also
+bumps the matching cask in the tap and announces the release on Discord.
+
+### Release notes
+
+`Scripts/release-notes.sh` composes the release body, and CI runs it just before `gh release create`.
+It is safe to run by hand against any tag — it only reads:
+
+```sh
+CHANNEL=beta TAG=v0.9.13-beta.61 ./Scripts/release-notes.sh /tmp/body.md /tmp/discord.md
+```
+
+The changelog itself comes from GitHub's own release-notes API, which lists every merged PR with its
+author and number — so contributors are credited without anyone maintaining a `CHANGELOG.md`, and
+without Conventional Commits. **Nothing is ever committed to this repo**: the tag is created
+server-side by `gh release create`, and no release, bot or version-bump commit exists.
+
+Two details the script exists for:
+
+- **The previous tag is picked per channel.** Beta and stable tags interleave on `main` — the same
+  commit can carry both — so "the previous release" is only ever right within one channel. A stable
+  release therefore spans every beta since the last stable.
+- **The body is split by `<!-- tinycast:install -->`.** Everything above it is the changelog;
+  everything below is the Homebrew and quarantine text, which only a download page needs. The update
+  window cuts at that marker — see [features/updates.md](features/updates.md). Full PR URLs are
+  shortened to `#304`, which still autolinks on the web and fits a 460pt window.
+
+The Discord announcement carries the same changelog, truncated to fit Discord's component limit, and
+pings `@everyone`.
 
 ### Homebrew tap automation
 

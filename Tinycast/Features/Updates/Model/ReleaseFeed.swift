@@ -13,6 +13,9 @@ struct AvailableRelease: Codable, Hashable, Sendable {
 /// Reads GitHub's releases list. Nothing throws: an unusable body is indistinguishable from
 /// "nothing to install", and both mean the pump simply retries later.
 enum ReleaseFeed {
+    /// Where releases come from, and what every `@handle` and `#304` in their notes points at.
+    static let repository = "abue-ammar/tinycast"
+
     /// The newest release this channel accepts, ignoring drafts and anything without a zip.
     static func newest(from data: Data, channel: ReleaseChannel) -> AvailableRelease? {
         guard let entries = try? JSONDecoder().decode([Entry].self, from: data) else { return nil }
@@ -40,7 +43,7 @@ enum ReleaseFeed {
         return AvailableRelease(
             version: version,
             tag: entry.tagName,
-            notes: entry.body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
+            notes: ReleaseNotes.summary(of: entry.body ?? ""),
             assetURL: asset.browserDownloadURL,
             assetSize: asset.size,
             publishedAt: entry.publishedAt.flatMap { try? Date($0, strategy: .iso8601) })

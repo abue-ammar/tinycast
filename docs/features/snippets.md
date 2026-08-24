@@ -55,10 +55,10 @@ every change.
 ## Importing from Raycast
 
 The encrypted `.rayconfig` flow in **Settings → Backup** can import Raycast's built-in snippets as
-an independently selectable category. Tinycast reads `name`, `text`, and the optional `keyword` from
-the backup's `builtin_package_snippets.snippets` collection. Invalid entries are skipped; valid entries
-are added in source order without overwriting the existing library. Duplicate names receive the same
-filename suffixes as snippets created in Tinycast, and duplicate keywords are preserved.
+an independently selectable category. Tinycast reads `title`, `text` and the optional `keyword` from
+the export's `snippets.snippets` collection. Invalid entries are skipped; valid entries are added in
+source order without overwriting the existing library. Duplicate names receive the same filename
+suffixes as snippets created in Tinycast, and duplicate keywords are preserved.
 
 Imported snippets are enabled and launcher-visible, with their confirmation off. Importing
 never enables automatic keyword expansion. A failure writing the snippet files is reported in the

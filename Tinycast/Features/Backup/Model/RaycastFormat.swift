@@ -37,13 +37,15 @@ struct RaycastImportOptions: OptionSet, Sendable {
 enum RaycastFormat: Sendable, Equatable {
     /// Raycast 1.x: a bare `IV(16) ‖ AES-256-CBC(gzip(JSON), PKCS#7)` blob with no header.
     case v1
-    /// Raycast X: gzip → JSON envelope → AES-256-GCM ciphertext under a scrypt key.
+    /// Raycast 2.x: a `RAYCFG3` container with a gzip header and an AES-256-GCM payload.
     case v2
+
+    /// The v2 container signature, shared with the reader that parses what follows it.
+    static let v2Magic = Data("RAYCFG3\n".utf8)
 
     /// From the leading bytes alone, so a file is labelled before a passphrase is typed.
     static func detect(_ raw: Data) throws -> RaycastFormat {
-        let magic = [UInt8](raw.prefix(3))
-        if magic.count == 3, magic[0] == 0x1f, magic[1] == 0x8b, magic[2] == 0x08 { return .v2 }
+        if raw.starts(with: v2Magic) { return .v2 }
         // A v1 file is whole AES blocks: a 16-byte IV plus at least one block of ciphertext.
         guard raw.count >= 32, raw.count % 16 == 0 else { throw RaycastImportError.notRaycastFile }
         return .v1
@@ -52,7 +54,7 @@ enum RaycastFormat: Sendable, Equatable {
     var title: String {
         switch self {
         case .v1: return "Raycast 1.x export"
-        case .v2: return "Raycast X export"
+        case .v2: return "Raycast 2.x export"
         }
     }
 

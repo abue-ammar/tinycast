@@ -20,6 +20,19 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Raycast and Tinycast URL Scheme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>raycast</string>
+				<string>tinycast</string>
+				<string>com.raycast</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
@@ -28,6 +41,10 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Tinycast uses automation to perform system actions you explicitly run.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Tinycast shows a camera preview so you can check yourself before joining a meeting.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Tinycast reads today's and tomorrow's events so you can join a meeting from the palette.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Tinycast uses Bluetooth access only when you run the Toggle Bluetooth action.</string>
 	<key>NSHumanReadableCopyright</key>

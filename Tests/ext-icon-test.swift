@@ -39,6 +39,35 @@ struct ExtensionIconTests {
         expect(icon.size.width > 0, "a missing icon falls back to the puzzle-piece tile")
     }
 
+    /// Extensions that render their own artwork hand it over as a `data:` URL rather than a file,
+    /// in either encoding, and Detail markdown appends Raycast's sizing query to it.
+    static func inlineDataURLsDecode() async {
+        let svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" \
+            fill="none" stroke="currentColor"><path d="M2 12 L22 12"/></svg>
+            """
+        let escaped = CharacterSet(charactersIn: "<>\"# %{}|\\^~[]`").inverted
+        guard let encoded = svg.addingPercentEncoding(withAllowedCharacters: escaped) else {
+            return expect(false, "the fixture encodes")
+        }
+
+        for suffix in ["", "?raycast-width=200&raycast-height=200"] {
+            let url = URL(string: "data:image/svg+xml,\(encoded)\(suffix)")!
+            let image = await ExtensionIconCache.loadInlineAsync(url)
+            expect(image?.size == NSSize(width: 24, height: 24), "percent-encoded SVG\(suffix)")
+        }
+
+        let png = writePNG("inline", inset: 0).flatMap { try? Data(contentsOf: $0) }
+        guard let png else { return expect(false, "the PNG fixture writes") }
+        let base64 = URL(string: "data:image/png;base64,\(png.base64EncodedString())")!
+        let decoded = await ExtensionIconCache.loadInlineAsync(base64)
+        expect(decoded != nil, "base64 payload decodes")
+
+        let broken = URL(string: "data:image/png;base64,not-base-64")!
+        let rejected = await ExtensionIconCache.loadInlineAsync(broken)
+        expect(rejected == nil, "a broken payload is nil")
+    }
+
     /// A red square on a transparent canvas, `inset` pixels in from each edge.
     static func writePNG(_ name: String, inset: Int) -> URL? {
         let side = 512
@@ -92,9 +121,10 @@ struct ExtensionIconTests {
         return CGFloat(max(maxX - minX + 1, maxY - minY + 1)) / CGFloat(side)
     }
 
-    static func main() {
+    static func main() async {
         artworkIsNormalized()
         missingFileFallsBack()
+        await inlineDataURLsDecode()
 
         print(failures == 0 ? "Extension icon tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)

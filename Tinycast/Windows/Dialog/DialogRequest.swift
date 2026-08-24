@@ -31,6 +31,19 @@ struct DialogRequest {
     var defaultIndex: Int
     /// Resolved when the dialog goes without a choice: Esc, or losing key status.
     var cancelIndex: Int
-    /// Set only by the Set Volume prompt; the slider binds to it and the caller reads the result.
-    var volume: VolumeState?
+    /// The one control a dialog may carry beyond its buttons; the caller reads the result back
+    /// out of the state object it passed in.
+    var accessory: DialogAccessory?
+}
+
+/// A dialog carries at most one control, so the cases are exclusive by construction.
+enum DialogAccessory {
+    case volume(VolumeState)
+    case eventDraft(EventDraftState)
+
+    /// Whether ←/→/↑/↓ belong to the control rather than to whatever has focus inside it.
+    var claimsArrowKeys: Bool {
+        if case .volume = self { return true }
+        return false
+    }
 }

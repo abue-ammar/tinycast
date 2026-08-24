@@ -23,6 +23,9 @@ struct UpdatesTests {
         picksNewestForChannel()
         rejectsUnusableFeeds()
         offersOnlyWhatIsWorthInstalling()
+        keepsOnlyTheChangelog()
+        laysOutTheChangelog()
+        linksMentionsAndPullRequests()
         blocksWhileBusy()
 
         print("\(passes) passed, \(failures) failed")
@@ -230,6 +233,122 @@ struct UpdatesTests {
         expect(
             ReleaseFeed.offer(newer, running: running, skipped: AppVersion("0.2.5")) != nil,
             "skipping one version does not skip the next one")
+    }
+
+    // MARK: - ReleaseNotes
+
+    /// A body as `Scripts/release-notes.sh` composes it.
+    static let composedBody = """
+        ## What's Changed
+        * Adjust top padding in **UpdateWindowView** by @abue-ammar in #304
+        * Resolve rmb and renminbi to CNY by @tipybara in #294
+
+        ## New Contributors
+        * @tipybara made their first contribution in #294
+
+        \(ReleaseNotes.installMarker)
+
+        **Channel:** beta · **Version:** 0.9.13-beta.61
+        Built from 419a5b4. [Full changelog](https://example.invalid/compare)
+        """
+
+    static func keepsOnlyTheChangelog() {
+        let summary = ReleaseNotes.summary(of: composedBody)
+        expect(summary.hasPrefix("## What's Changed"), "the changelog leads the summary")
+        expect(summary.hasSuffix("first contribution in #294"), "and the install half is cut away")
+        expect(!summary.contains("Homebrew"), "so no install instruction survives the cut")
+        expect(!summary.contains(ReleaseNotes.installMarker), "and the marker goes with it")
+
+        expect(
+            ReleaseNotes.summary(of: "  Plain notes.\n\n") == "Plain notes.",
+            "a body published before the marker existed comes back whole, trimmed")
+        expect(ReleaseNotes.summary(of: "") == "", "an empty body stays empty")
+        expect(
+            ReleaseNotes.summary(of: "\(ReleaseNotes.installMarker)\nOnly install text.") == "",
+            "a body that is nothing but install text leaves nothing to show")
+
+        let feedNotes = ReleaseFeed.newest(
+            from: feed(
+                entry(
+                    tag: "v0.3.0", prerelease: false, body: "Changes.\\n\\n<!-- tinycast:install -->\\nBrew.")
+            ),
+            channel: .stable)?.notes
+        expect(feedNotes == "Changes.", "the feed stores the cut summary, so the cache holds it too")
+    }
+
+    static func laysOutTheChangelog() {
+        let blocks = ReleaseNotes.blocks(from: ReleaseNotes.summary(of: composedBody))
+        expect(blocks.count == 5, "five blocks: two headings, three bullets")
+        expect(blocks.first == .heading(level: 2, text: "What's Changed"), "a heading loses its hashes")
+        expect(
+            blocks.dropFirst().first
+                == .bullet(
+                    "Adjust top padding in **UpdateWindowView** by "
+                        + "[@abue-ammar](https://github.com/abue-ammar) in "
+                        + "[#304](https://github.com/\(ReleaseFeed.repository)/pull/304)"),
+            "a bullet loses its marker, keeps its inline markup, and links its author and PR")
+        expect(
+            blocks.contains(.heading(level: 2, text: "New Contributors")),
+            "the contributors heading survives the blank line before it")
+
+        expect(ReleaseNotes.blocks(from: "").isEmpty, "nothing renders nothing")
+        expect(
+            ReleaseNotes.blocks(from: "One line.\nStill the same block.")
+                == [.paragraph("One line.\nStill the same block.")],
+            "a single newline continues a paragraph rather than starting one")
+        expect(
+            ReleaseNotes.blocks(from: "Before.\n\nAfter.")
+                == [.paragraph("Before."), .paragraph("After.")],
+            "a blank line separates paragraphs")
+        expect(
+            ReleaseNotes.blocks(from: "### Fixes") == [.heading(level: 3, text: "Fixes")],
+            "a deeper heading keeps its level, so the renderer can size it")
+        expect(
+            ReleaseNotes.blocks(from: "- dash\n+ plus") == [.bullet("dash"), .bullet("plus")],
+            "every Markdown bullet marker is a bullet")
+        expect(
+            ReleaseNotes.blocks(from: "#hashtag") == [.paragraph("#hashtag")],
+            "a hash with no space is text, not a heading")
+        expect(
+            ReleaseNotes.blocks(from: "2 * 3 = 6") == [.paragraph("2 * 3 = 6")],
+            "an asterisk mid-line is not a bullet")
+    }
+
+    static func linksMentionsAndPullRequests() {
+        func rendered(_ text: String) -> String {
+            guard case .bullet(let linked)? = ReleaseNotes.blocks(from: "* \(text)").first else {
+                return "not a bullet"
+            }
+            return linked
+        }
+        let pull = "https://github.com/\(ReleaseFeed.repository)/pull"
+
+        expect(
+            rendered("Fix by @abue-ammar in #304")
+                == "Fix by [@abue-ammar](https://github.com/abue-ammar) in [#304](\(pull)/304)",
+            "a mention and a PR reference both become links")
+        expect(
+            rendered("@tipybara made their first contribution in #294")
+                == "[@tipybara](https://github.com/tipybara) made their first contribution in [#294](\(pull)/294)",
+            "a mention opening the line is linked too")
+        expect(
+            rendered("track @raycast/api 2.0.3").contains("github.com/raycast") == false,
+            "a scoped package name is not a person, so it is left alone")
+        expect(
+            rendered("mail me at name@example.invalid").contains("github.com/example") == false,
+            "an address is not a mention")
+        expect(
+            rendered("issue #12 and #7") == "issue [#12](\(pull)/12) and [#7](\(pull)/7)",
+            "every reference on a line is linked")
+        expect(
+            rendered("a #hashtag, C# and 0#1") == "a #hashtag, C# and 0#1",
+            "a hash without digits, or joined to a word, is not a reference")
+        expect(
+            rendered("see [#304](\(pull)/304)") == "see [#304](\(pull)/304)",
+            "an existing link is left exactly as written")
+        expect(
+            ReleaseNotes.blocks(from: "## What's Changed") == [.heading(level: 2, text: "What's Changed")],
+            "a heading is not linkified")
     }
 
     // MARK: - UpdateReadiness

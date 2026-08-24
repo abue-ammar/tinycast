@@ -9,13 +9,20 @@
 import { createContext, runInContext } from "node:vm";
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID, randomBytes, createHmac } from "node:crypto";
 import { homedir, tmpdir } from "node:os";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
 
-const runtime = readFileSync(resolve("../../Tinycast/Resources/RaycastRuntime.generated.js"), "utf8");
+const runtimePath = [
+  resolve("Tinycast/Resources/RaycastRuntime.generated.js"),
+  resolve("../../Tinycast/Resources/RaycastRuntime.generated.js"),
+  fileURLToPath(new URL("../../Tinycast/Resources/RaycastRuntime.generated.js", import.meta.url)),
+].find(existsSync);
+
+const runtime = readFileSync(runtimePath, "utf8");
 
 export function createHarness({ onRender, onFail, verbose = false } = {}) {
   const context = createContext({});
@@ -207,6 +214,8 @@ function syncHostCall(api, method, args) {
   }
 }
 
+const oauthTokens = new Map();
+
 async function stubHostCall(api, method, args) {
   switch (`${api}.${method}`) {
     case "storage.get":
@@ -239,6 +248,17 @@ async function stubHostCall(api, method, args) {
     }
     case "proc.run":
       return syncHostCall(api, method, args);
+    // Positional arguments throughout, matching `src/api/oauth.js`.
+    case "oauth.authorize":
+      return { authorizationCode: "auth-code-12345", state: args[1] ?? "" };
+    case "oauth.getTokens":
+      return oauthTokens.get(args[0]) ?? null;
+    case "oauth.setTokens":
+      oauthTokens.set(args[0], args[1]);
+      return null;
+    case "oauth.removeTokens":
+      oauthTokens.delete(args[0]);
+      return null;
     default:
       if (["window", "feedback", "cache", "storage", "clipboard", "system"].includes(api)) return null;
       throw new Error(`harness: no async stub for ${api}.${method}`);

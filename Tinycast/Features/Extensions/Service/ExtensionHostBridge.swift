@@ -25,6 +25,10 @@ protocol ExtensionHostContext: AnyObject {
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool
     func openWithPicker(path: String) async
     func launch(command: String, extensionName: String?, arguments: [String: String]) throws
+    func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult
+    func getOAuthTokens(providerId: String) -> String?
+    func setOAuthTokens(providerId: String, tokens: String)
+    func removeOAuthTokens(providerId: String)
 }
 
 /// A toast as the palette shows it.
@@ -136,6 +140,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         case "system": return try await system(method: method, arguments: arguments)
         case "fetch": return try await fetcher.request(arguments.first)
         case "proc": return try await ExtensionAsyncProcess.run(arguments.first)
+        case "oauth": return try await oauth(method: method, arguments: arguments)
         default: throw ExtensionHostError.unknown("\(api).\(method)")
         }
     }
@@ -428,10 +433,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     private func describe(application url: URL) -> [String: Any] {
         let bundle = Bundle(url: url)
-        let name =
-            (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-            ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
-            ?? url.deletingPathExtension().lastPathComponent
+        let name = bundle?.installedAppName ?? url.deletingPathExtension().lastPathComponent
         return [
             "name": name, "path": url.path, "bundleId": bundle?.bundleIdentifier ?? NSNull(),
             "localizedName": name
@@ -472,5 +474,43 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         return result.stringValue?
             .split(separator: "\n")
             .map { ["path": String($0)] } ?? []
+    }
+
+    // MARK: - OAuth
+
+    private func oauth(method: String, arguments: [RenderValue]) async throws -> Any? {
+        guard let context else { throw ExtensionHostError.noActiveExtension }
+        switch method {
+        case "authorize":
+            guard let urlString = arguments.first?.stringValue, let url = URL(string: urlString) else {
+                throw ExtensionHostError.unsupported("authorize requires url")
+            }
+            let options = ExtensionOAuthAuthorizeOptions(
+                url: url, state: arguments[safe: 1]?.stringValue)
+            let result = try await context.authorizeOAuth(options: options)
+            var dict: [String: Any] = ["authorizationCode": result.authorizationCode]
+            if let token = result.accessToken { dict["accessToken"] = token }
+            if let state = result.state { dict["state"] = state }
+            return dict
+
+        case "getTokens":
+            let providerId = arguments.first?.stringValue ?? ""
+            guard let tokens = context.getOAuthTokens(providerId: providerId) else { return nil }
+            return tokens
+
+        case "setTokens":
+            let providerId = arguments.first?.stringValue ?? ""
+            let tokens = arguments[safe: 1]?.stringValue ?? ""
+            context.setOAuthTokens(providerId: providerId, tokens: tokens)
+            return nil
+
+        case "removeTokens":
+            let providerId = arguments.first?.stringValue ?? ""
+            context.removeOAuthTokens(providerId: providerId)
+            return nil
+
+        default:
+            throw ExtensionHostError.unknown("oauth.\(method)")
+        }
     }
 }

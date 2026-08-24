@@ -357,7 +357,9 @@ struct ExtensionMarkdownView: View {
         }
         let inner = line[line.index(after: open)..<line.index(before: line.endIndex)]
         let target = inner.split(separator: " ").first.map(String.init) ?? String(inner)
-        guard let url = URL(string: target), url.scheme?.hasPrefix("http") == true else { return nil }
+        guard let url = URL(string: target), let scheme = url.scheme,
+            scheme.hasPrefix("http") || scheme == "data"
+        else { return nil }
         return url
     }
 }
@@ -373,7 +375,7 @@ extension String {
     }
 }
 
-/// A remote image inside a Detail's markdown, capped so a large asset can't push the layout around.
+/// An image inside a Detail's markdown, capped so a large asset can't push the layout around.
 private struct ExtensionMarkdownImage: View {
     let url: URL
     @State private var image: NSImage?
@@ -396,6 +398,11 @@ private struct ExtensionMarkdownImage: View {
                     .frame(height: 120)
             }
         }
-        .task(id: url) { image = await ExtensionIconCache.loadRemoteAsync(url, asIcon: false) }
+        .task(id: url) {
+            image =
+                url.scheme == "data"
+                ? await ExtensionIconCache.loadInlineAsync(url)
+                : await ExtensionIconCache.loadRemoteAsync(url, asIcon: false)
+        }
     }
 }

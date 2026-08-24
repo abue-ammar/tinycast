@@ -8,8 +8,8 @@ extension EnvironmentValues {
 }
 
 enum ExtensionImage {
-    /// A resolved icon: an SF Symbol, an image file, the Finder icon of a path, a remote URL, or a
-    /// bare emoji/text glyph.
+    /// A resolved icon: an SF Symbol, an image file, the Finder icon of a path, a URL — fetched or
+    /// carrying its own bytes — or a bare emoji/text glyph.
     enum Source: Equatable {
         case symbol(String)
         case file(String)
@@ -17,6 +17,8 @@ enum ExtensionImage {
         /// not an image to decode.
         case fileIcon(String)
         case remote(URL)
+        /// A `data:` URL — an extension that renders its own SVG hands over bytes rather than a path.
+        case inline(URL)
         case glyph(String)
     }
 
@@ -93,8 +95,9 @@ enum ExtensionImage {
             if let digits = numberGlyph(forIcon: text) { return .glyph(digits) }
             if let symbol = symbolName(forIcon: text) { return .symbol(symbol) }
         }
-        if let url = URL(string: text), let scheme = url.scheme, scheme.hasPrefix("http") {
-            return .remote(url)
+        if let url = URL(string: text), let scheme = url.scheme {
+            if scheme.hasPrefix("http") { return .remote(url) }
+            if scheme == "data" { return .inline(url) }
         }
         if text.hasPrefix("/") || text.hasPrefix("~") {
             return .file((text as NSString).expandingTildeInPath)
@@ -323,7 +326,7 @@ struct ExtensionIconView: View {
         content
             .frame(width: size, height: size)
             .clipShape(shape)
-            .task(id: cacheKey) { await load() }
+            .task(id: resolved?.source) { await load() }
     }
 
     @ViewBuilder
@@ -339,13 +342,18 @@ struct ExtensionIconView: View {
             Text(text)
                 .font(.system(size: size * 0.72))
                 .frame(width: size, height: size)
-        case .file, .fileIcon, .remote:
+        case .file, .fileIcon, .remote, .inline:
             if let loaded {
                 // Only a multi-frame image pays for `NSImageView`; a still stays on SwiftUI's path.
                 if animates, loaded.isAnimated {
                     AnimatedImageView(image: loaded)
                 } else {
-                    Image(nsImage: loaded).resizable().aspectRatio(contentMode: .fit)
+                    // A `tintColor` masks the artwork, which is what colours a `currentColor` SVG.
+                    Image(nsImage: loaded)
+                        .resizable()
+                        .renderingMode(resolved?.tint == nil ? .original : .template)
+                        .scaledToFit()
+                        .foregroundStyle(resolved?.tint ?? .primary)
                 }
             } else {
                 placeholder
@@ -366,15 +374,6 @@ struct ExtensionIconView: View {
             : AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
     }
 
-    private var cacheKey: String {
-        switch resolved?.source {
-        case .file(let path): return "file:" + path
-        case .fileIcon(let path): return "fileIcon:" + path
-        case .remote(let url): return "remote:" + url.absoluteString
-        default: return ""
-        }
-    }
-
     /// An animating tile takes the image as shipped; the fitted path would hand back one frame.
     private func load() async {
         switch resolved?.source {
@@ -389,6 +388,8 @@ struct ExtensionIconView: View {
             loaded = await IconCache.loadFittedAsync(forFile: path)
         case .remote(let url):
             loaded = await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
+        case .inline(let url):
+            loaded = await ExtensionIconCache.loadInlineAsync(url)
         default:
             loaded = nil
         }

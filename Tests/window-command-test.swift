@@ -71,7 +71,7 @@ struct WindowCommandTests {
 
     static func testCatalog() {
         let commands = WindowCommandCatalog.all
-        expect(commands.count == 32, "catalog contains all 32 agreed commands")
+        expect(commands.count == 34, "catalog contains all 34 agreed commands")
         expect(commands.map(\.id) == WindowCommand.ID.allCases, "catalog covers every ID once")
         expect(
             Set(commands.map { $0.name.lowercased() }).count == commands.count, "names are unique")
@@ -131,6 +131,7 @@ struct WindowCommandTests {
             "every group is represented, in declaration order")
         expect(grouped.first { $0.group == .halves }?.commands.count == 4, "four halves")
         expect(grouped.first { $0.group == .quarters }?.commands.count == 4, "four quarters")
+        expect(grouped.first { $0.group == .fourths }?.commands.count == 2, "two fourths")
         expect(grouped.first { $0.group == .thirds }?.commands.count == 5, "five thirds")
         expect(grouped.first { $0.group == .sizing }?.commands.count == 10, "ten sizing commands")
         expect(grouped.first { $0.group == .moving }?.commands.count == 6, "six moving commands")
@@ -199,6 +200,19 @@ struct WindowCommandTests {
         }
         expect(!overlapping, "quarters never overlap")
 
+        expectRect(
+            frame(.firstThreeFourths)!, CGRect(x: 0, y: 0, width: 1080, height: 900),
+            "first three fourths")
+        expectRect(
+            frame(.lastThreeFourths)!, CGRect(x: 360, y: 0, width: 1080, height: 900),
+            "last three fourths")
+        expect(
+            frame(.firstThreeFourths)!.union(frame(.lastThreeFourths)!) == mainScreen.visibleFrame,
+            "the two three-fourths cover the screen between them")
+        expect(
+            frame(.firstThreeFourths)!.intersection(frame(.lastThreeFourths)!) == frame(.centerHalf)!,
+            "they overlap on exactly the centre half, so all three share the quarter grid")
+
         expectRect(frame(.firstThird)!, CGRect(x: 0, y: 0, width: 480, height: 900), "first third")
         expectRect(
             frame(.centerThird)!, CGRect(x: 480, y: 0, width: 480, height: 900), "center third")
@@ -252,7 +266,8 @@ struct WindowCommandTests {
     // MARK: - Non-divisible widths
 
     static func testNonDivisible() {
-        for width in [1441, 1000, 1367] as [CGFloat] {
+        // 1366 is the tie case for fourths: a quarter of it lands exactly on .5.
+        for width in [1441, 1000, 1367, 1366] as [CGFloat] {
             let screen = WindowLayout.Screen(
                 id: 9, frame: CGRect(x: 0, y: 0, width: width, height: 901),
                 visibleFrame: CGRect(x: 0, y: 0, width: width, height: 901))
@@ -274,6 +289,18 @@ struct WindowCommandTests {
             let top = frame(.topHalf, on: screen)!
             let bottom = frame(.bottomHalf, on: screen)!
             expect(top.maxY == bottom.minY, "\(width): vertical halves share an edge exactly")
+
+            let firstFourths = frame(.firstThreeFourths, on: screen)!
+            let lastFourths = frame(.lastThreeFourths, on: screen)!
+            expect(
+                abs(firstFourths.width - lastFourths.width) <= 1,
+                "\(width): the two three-fourths differ by at most a point")
+            expect(
+                abs(firstFourths.width - width * 0.75) <= 1,
+                "\(width): three fourths is three quarters of the screen")
+            expect(
+                firstFourths.union(lastFourths) == screen.visibleFrame,
+                "\(width): the two three-fourths still cover the screen")
         }
     }
 
@@ -340,6 +367,14 @@ struct WindowCommandTests {
             quarters.allSatisfy {
                 $0.minX >= 10 && $0.minY >= 10 && $0.maxX <= 1430 && $0.maxY <= 890
             }, "quarters stay inset from every screen edge")
+
+        // Fourths: the outer edge takes the full gap, the interior one half of it.
+        expectRect(
+            frame(.firstThreeFourths, gap: 10)!, CGRect(x: 10, y: 10, width: 1065, height: 880),
+            "first three fourths with a 10pt gap")
+        expectRect(
+            frame(.lastThreeFourths, gap: 10)!, CGRect(x: 365, y: 10, width: 1065, height: 880),
+            "last three fourths with a 10pt gap")
 
         // Thirds: two gutters, both exact.
         expect(

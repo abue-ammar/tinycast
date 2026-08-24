@@ -40,4 +40,13 @@ enum AppSettingsKey: String, CaseIterable {
     case extensionPackageManager = "extensionPackageManager"
     case extensionRegistries = "extensionRegistries"
     case extensionCustomSearchPaths = "extensionCustomSearchPaths"
+    case calendarEnabled = "calendarEnabled"
+    case calendarShowInLauncher = "calendarShowInLauncher"
+    case joinWindowMinutes = "joinWindowMinutes"
+    case autoJoinMeetings = "autoJoinMeetings"
+    case autoJoinConfirms = "autoJoinConfirms"
+    case cameraPreview = "cameraPreview"
+    case menuBarEvents = "menuBarEvents"
+    case menuBarLinkedEventsOnly = "menuBarLinkedEventsOnly"
+    case hideCurrentEvent = "hideCurrentEvent"
 }

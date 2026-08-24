@@ -5,11 +5,14 @@ import Foundation
 @Observable
 final class UpdateCheckStore {
     private nonisolated static let endpoint = URL(
-        string: "https://api.github.com/repos/abue-ammar/tinycast/releases?per_page=20")!
+        string: "https://api.github.com/repos/\(ReleaseFeed.repository)/releases?per_page=20")!
     /// Daily, measured from `lastCheckedAt`, so relaunching never re-asks GitHub.
     private static let refreshInterval: TimeInterval = 24 * 3600
     /// Shorter retry, so a machine offline at launch sees a release soon after it reconnects.
     private static let retryInterval: TimeInterval = 2 * 3600
+    /// A withheld prompt is re-offered this often, this many times, then left to the daily check.
+    private static let withheldInterval: TimeInterval = 120
+    private static let withheldRetryLimit = 15
     /// Keeps the first check, and any window it raises, clear of the login rush.
     private static let startupDelay = Duration.seconds(30)
 
@@ -21,13 +24,14 @@ final class UpdateCheckStore {
     private(set) var lastCheckedAt: Date?
     private(set) var isChecking = false
 
-    /// Raised when a check turns up something unskipped; the coordinator decides what to show.
-    @ObservationIgnored var onUpdateAvailable: (@MainActor (AvailableRelease) -> Void)?
+    /// Raised on an unskipped release; `false` answers that the prompt was withheld and is owed.
+    @ObservationIgnored var onUpdateAvailable: (@MainActor (AvailableRelease) -> Bool)?
 
     private let fileURL: URL
     private var skippedVersion: AppVersion?
     /// At most one uninvited appearance per version per launch; after that the window is the user's.
     @ObservationIgnored private var announcedVersion: AppVersion?
+    @ObservationIgnored private var withheldRetries = 0
     @ObservationIgnored private var pump: Task<Void, Never>?
 
     init() {
@@ -42,6 +46,8 @@ final class UpdateCheckStore {
         lastCheckedAt = cache.lastCheckedAt
         skippedVersion = cache.skippedVersion
     }
+
+    deinit { pump?.cancel() }
 
     /// Newer than what is running. What the window offers, including a version already skipped.
     var update: AvailableRelease? {
@@ -61,17 +67,10 @@ final class UpdateCheckStore {
         pump?.cancel()
         pump = Task { [weak self] in
             try? await Task.sleep(for: Self.startupDelay)
-            while !Task.isCancelled, let self {
-                // Clamped, so a future-stamped check can't park the loop past one interval.
-                let age = max(0, self.lastCheckedAt.map { Date().timeIntervalSince($0) } ?? .infinity)
-                guard age >= Self.refreshInterval else {
-                    self.announce()
-                    try? await Task.sleep(for: .seconds(Self.refreshInterval - age))
-                    continue
-                }
-                let ok = await self.check()
-                self.announce()
-                try? await Task.sleep(for: .seconds(ok ? Self.refreshInterval : Self.retryInterval))
+            while !Task.isCancelled {
+                // Optional-chained: the sleep must not retain the store, or nothing can release it.
+                guard let wait = await self?.advance() else { return }
+                try? await Task.sleep(for: .seconds(wait))
             }
         }
     }
@@ -95,10 +94,30 @@ final class UpdateCheckStore {
         persist()
     }
 
-    private func announce() {
-        guard let release = unskippedUpdate, announcedVersion != release.version else { return }
+    /// One turn of the pump: check if due, offer what is pending, and answer how long to wait.
+    private func advance() async -> TimeInterval {
+        // Clamped, so a future-stamped check can't park the loop past one interval.
+        let age = max(0, lastCheckedAt.map { Date().timeIntervalSince($0) } ?? .infinity)
+        var wait = Self.refreshInterval - age
+        if wait <= 0 {
+            wait = await check() ? Self.refreshInterval : Self.retryInterval
+        }
+        if announce() {
+            withheldRetries = 0
+        } else if withheldRetries < Self.withheldRetryLimit {
+            // A launch straight into the palette must not spend the day's only announcement.
+            withheldRetries += 1
+            wait = min(wait, Self.withheldInterval)
+        }
+        return wait
+    }
+
+    /// `false` only when a pending release was withheld, so the pump comes back for it.
+    private func announce() -> Bool {
+        guard let release = unskippedUpdate, announcedVersion != release.version else { return true }
+        guard onUpdateAvailable?(release) ?? true else { return false }
         announcedVersion = release.version
-        onUpdateAvailable?(release)
+        return true
     }
 
     private func persist() {

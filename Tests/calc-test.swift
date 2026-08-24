@@ -545,6 +545,25 @@ struct CalcTests {
         expectDisplay("$100 / 25%", "400.00 USD")
         expectDisplay("($100 * 3%) to eur", "2.76 EUR")
         expectDisplay("($10 + $5) to eur", "13.80 EUR")
+        // A parenthesized conversion is a quantity, so it can be multiplied or added.
+        expectDisplay("(20 eur to usd) * 30", "652.17 USD")
+        expectDisplay("(20 eur to usd) * 20", "434.78 USD")
+        expectDisplay("(20 sgd to usd) * 30", "444.44 USD")
+        expectDisplay("2 * (20 eur to usd)", "43.48 USD")
+        expectDisplay("(20 eur to usd) / 2", "10.87 USD")
+        expectDisplay("(eur to usd) * 2", "2.17 USD")  // implied amount of 1
+        expectDisplay("(20 eur to usd) + (10 gbp to usd)", "34.40 USD")
+        expectDisplay("((20 eur to usd) + 1) * 2", "45.48 USD")
+        expectDisplay("(10km to mi) * 2", "12.42742384 mi")
+        expectDisplay("(1hr + 30min to s) * 2", "10,800 s")
+        expectExpression("(20 eur to usd) * 30", "(20 EUR to USD) × 30")
+        expectBadges("(20 eur to usd) * 30", source: "Expression", target: "US Dollar")
+        expectDisplay("(20 eur to usd) *", "21.74 USD")
+        expectError("(10 kg to usd) * 2", "Cannot convert Weight to Currency.")
+        // A trailing suffix reports through the same conversion the group uses.
+        expectError("($10 + $5) to npr", "No exchange rate for NPR.")
+        expectError("(1kg + 500g) to usd", "Cannot convert Weight to Currency.")
+        expectNil("20 eur to usd * 30")  // mid-expression `to` needs parens or a trailing suffix
         expectDisplay("$10 +", "10.00 USD")
         expectBadges("$10 +", source: "Expression", target: "US Dollar")
         // Juxtaposition multiplies on either side of the amount, same as an explicit "*"
@@ -652,7 +671,7 @@ struct CalcTests {
         base: "USD",
         rates: [
             "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
-            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725,
+            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725, "SGD": 1.35,
             "BTC": 1.0 / 60_000, "ETH": 1.0 / 2_000, "SOL": 1.0 / 100, "DOGE": 10
         ],
         fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))

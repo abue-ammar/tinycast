@@ -45,11 +45,12 @@ struct SnippetsTests {
 
     private static func testRaycastImport() {
         let imported = RaycastSnippetImport.parse([
-            ["name": "Email", "text": "person@example.com", "keyword": "  !email  "],
-            ["name": "Multiline 雪", "text": "First\nSecond"],
-            ["name": "Blank Keyword", "text": "Body", "keyword": "   "],
-            ["name": "   ", "text": "Skipped"],
-            ["name": "Missing Text"]
+            ["title": "Email", "text": "person@example.com", "keyword": "  !email  "],
+            ["title": "Multiline 雪", "text": "First\nSecond"],
+            ["title": "Blank Keyword", "text": "Body", "keyword": "   "],
+            ["title": "   ", "text": "Skipped"],
+            ["title": "Missing Text"],
+            ["name": "Retired Key", "text": "Skipped"]
         ])
 
         check(

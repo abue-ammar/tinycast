@@ -57,6 +57,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             panel.contentView?.layoutSubtreeIfNeeded()
             core.inputSourceSwitcher.beginSession(
                 preferredInputSourceID: core.settings.autoSwitchInputSourceID)
+            // Events go stale while the palette is closed, and the countdown only ticks while up.
+            core.calendarCoordinator.paletteDidShow()
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
@@ -71,6 +73,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
         core.inputSourceSwitcher.endSession()
+        core.calendarCoordinator.paletteDidHide()
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
         anchor = nil
         // The guides must never outlive the panel they point at.
@@ -91,6 +94,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it.
     private func schedulePopToRoot() {
+        // Don't pop to root if an extension is waiting for OAuth authorization in the browser.
+        guard !core.extensions.isAuthorizing else { return }
         popToRootTimer?.invalidate()
         let timeout = core.settings.popToRootTimeout
         guard timeout != .immediately else {
@@ -100,8 +105,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
             [weak self] _ in
             MainActor.assumeIsolated {
-                self?.popToRootTimer = nil
-                self?.core.palette.prepare(mode: .launcher)
+                guard let self, !self.core.extensions.isAuthorizing else { return }
+                self.popToRootTimer = nil
+                self.core.palette.prepare(mode: .launcher)
             }
         }
     }
@@ -225,6 +231,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environment(core.quicklinks)
             .environment(core.quicklinkArguments)
             .environment(core.extensions)
+            .environment(core.calendarStore)
+            .environment(core.meetingClock)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteState = core.palette

@@ -29,11 +29,31 @@ release feed the website already reads is the feed the app reads.
   on the expanded copy before `replaceItemAt` runs, and the running app survives any failure untouched.
 - **Relaunching goes through `NSApp.terminate`, never `exit`.** That is what flushes a pending note
   draft and hands back the Hyper Key's HID-level caps remap, which outlives the process.
-- **An automatic prompt defers to whatever the user is doing.** `UpdateReadiness` withholds it while a
-  snippet is expanding, an extension command is running, an uninstall is trashing, a shortcut is being
-  recorded, a prompt or dialog is up, or the palette is open. Readiness is asked again at the click.
+- **An automatic prompt defers to whatever the user is doing, and is never spent unshown.**
+  `UpdateReadiness` withholds it while a snippet is expanding, an extension command is running, an
+  uninstall is trashing, a shortcut is being recorded, a prompt or dialog is up, or the palette is
+  open. A withheld prompt is still owed: `presentIfAvailable` answers `false`, the version is left
+  unannounced, and the pump re-offers it every two minutes for half an hour before falling back to
+  the daily rhythm. That is what a hand-launched copy depends on — its one announcement falls 30 s
+  in, straight into the palette the user opened the app to use, where a launch-at-login copy would
+  have found the desktop idle. The window itself still appears at most once per version per launch:
+  `announcedVersion` is set the moment an offer lands, so re-offering can never turn into nagging.
+  Readiness is asked again at the click.
 - **Nothing about updates is persisted in `AppSettings`.** The feature owns one cache file, so no
   `AppSettingsKey` and no `SettingsBackupCoverage` entry exist for it.
+- **The window shows the changelog and nothing else.** CI writes install instructions below
+  `<!-- tinycast:install -->`, and `ReleaseNotes.summary` — the single reader of that marker, called
+  where the feed is parsed so the cache holds the cut text too — drops them. An app that installs its
+  own updates has no use for a Homebrew command, and a body published before the marker existed has
+  none, so it comes back whole.
+- **The notes are laid out by `ReleaseNotesView`, which is this feature's own.** `AttributedString`
+  parses inline styling only; headings and bullets are placed by hand or they arrive as literal `##`
+  and `*`. `ExtensionMarkdownView` does the same job and is deliberately not reused — an extension's
+  views never leave `Features/Extensions/`.
+- **`@handle` and `#304` are linked by the app, never by the release body.** GitHub autolinks both on
+  the web, and a bare mention is what notifies the contributor, so the published body keeps them
+  plain and `ReleaseNotes` spells them as Markdown links on the way to the window. Both point at
+  `ReleaseFeed.repository`, the one place the repo is named.
 
 ## Channel and version
 
@@ -99,6 +119,10 @@ ditto -c -k --keepParent --sequesterRsrc "$APP" "dist/$ZIP_FILE"
 
 which is the only zip that leaves the code signature verifiable — plain `zip` drops symlinks and
 breaks the seal, and the signature check above would then reject every update.
+
+The body it publishes is composed by `Scripts/release-notes.sh`: GitHub's generated changelog first,
+then `<!-- tinycast:install -->`, then the install text. Anything a release wants the update window to
+show has to go above that marker — see [release.md](../release.md#release-notes).
 
 **The casks must declare `auto_updates true`** in `abue-ammar/homebrew-tinycast`. Without it Homebrew
 compares its Caskroom receipt against the cask version, sees a self-updated app as outdated forever,

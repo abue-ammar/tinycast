@@ -28,9 +28,10 @@ feature lives in `Features/Backup/`.
 | `Model/RaycastFormat.swift` | Detects v1 vs v2 — the only branch between the two |
 | `Model/RaycastV1Decoder.swift` | v1 decrypt and decode |
 | `Model/RaycastImportV1.swift` | v1 → Tinycast field mapping and validation |
-| `Model/RaycastImport.swift` | The shared `Result` both formats meet at |
-| `Service/RaycastImportV2.swift` | v2 decrypt, decode and mapping |
-| `Service/Scrypt.swift`, `Service/Gunzip.swift` | The crypto and decompression primitives |
+| `Model/RaycastImport.swift` | The shared `Result` and dispatcher |
+| `Service/RaycastV2Decoder.swift` | v2 container decrypt and decode |
+| `Service/RaycastImportV2.swift` | v2 → Tinycast field mapping |
+| `Service/Scrypt.swift`, `Platform/Compression/Zlib.swift` | The crypto and decompression primitives |
 | `Service/BackupActions.swift` | The effectful half: file pickers, writes, applying an import |
 | `Settings/BackupSettingsView.swift` | The pane |
 
