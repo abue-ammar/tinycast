@@ -147,7 +147,7 @@ struct RootPaletteView: View {
         let screen = screen
         let count = screen.rows.count
         let sel = selection(count: count)
-        // The argument form has no rows to count, but ⏎ still does something.
+        // The argument form has no rows to count, but ↵ still does something.
         let showActionGroup =
             (count > 0 || vm.mode == .quicklinkArguments) && screen.hasPrimaryAction(at: sel)
 
@@ -318,7 +318,7 @@ struct RootPaletteView: View {
             if menuOpen { return .handled }
             return moveHorizontally(1) ? .handled : .ignored
         }
-        // Plain ⏎ activates an open menu's row; a modified ⏎ always runs the selection's.
+        // Plain ↵ activates an open menu's row; a modified ↵ always runs the selection's.
         .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
@@ -606,7 +606,7 @@ struct RootPaletteView: View {
                     Text(pillLabel)
                         .font(Theme.Typography.bar)
                         .foregroundStyle(pillTint)
-                    KeyCapChip(text: "⏎", style: .outline)
+                    KeyCapChip(text: "↵", style: .outline)
                 }
             }
             BarButton(action: toggleActions) {
