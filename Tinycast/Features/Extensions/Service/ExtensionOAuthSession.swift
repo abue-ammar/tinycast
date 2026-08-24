@@ -82,30 +82,17 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
 
-            let authSession = ASWebAuthenticationSession(
-                url: url,
-                callbackURLScheme: callbackScheme
-            ) { callbackURL, error in
-                DispatchQueue.main.async {
-                    guard let self = Self.activeSession else { return }
-                    if let error = error as? ASWebAuthenticationSessionError,
-                        error.code == .canceledLogin
-                    {
-                        self.finish(error: OAuthError.canceled)
-                        return
-                    }
-                    if let error {
-                        self.finish(error: OAuthError.failed(error.localizedDescription))
-                        return
-                    }
-                    guard let callbackURL else {
-                        self.finish(error: OAuthError.failed("No callback URL received from authorization."))
-                        return
-                    }
-
-                    self.receiveCallback(url: callbackURL)
+            let completion: @Sendable (URL?, (any Error)?) -> Void = { callbackURL, error in
+                Task { @MainActor in
+                    Self.activeSession?.handleCompletion(callbackURL: callbackURL, error: error)
                 }
             }
+
+            let authSession = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: callbackScheme,
+                completionHandler: completion
+            )
 
             authSession.presentationContextProvider = self
             authSession.prefersEphemeralWebBrowserSession = false
@@ -115,6 +102,25 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
                 self.finish(error: OAuthError.failed("Failed to start web authentication session."))
             }
         }
+    }
+
+    private func handleCompletion(callbackURL: URL?, error: Error?) {
+        if let error = error as? ASWebAuthenticationSessionError,
+            error.code == .canceledLogin
+        {
+            finish(error: OAuthError.canceled)
+            return
+        }
+        if let error {
+            finish(error: OAuthError.failed(error.localizedDescription))
+            return
+        }
+        guard let callbackURL else {
+            finish(error: OAuthError.failed("No callback URL received from authorization."))
+            return
+        }
+
+        receiveCallback(url: callbackURL)
     }
 
     private func receiveCallback(url: URL) {
