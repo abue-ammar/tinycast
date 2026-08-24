@@ -1,7 +1,8 @@
 import AppKit
 import Foundation
 
-/// A protocol, so the bridge has no hard dependency on the `ExtensionManager` that owns it.\n@MainActor
+/// A protocol, so the bridge has no hard dependency on the `ExtensionManager` that owns it.
+@MainActor
 protocol ExtensionHostContext: AnyObject {
     /// The extension whose command is running — the namespace for storage, cache and preferences.
     var activeExtensionName: String? { get }
@@ -341,7 +342,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             return applications(forPath: arguments.first?.stringValue)
 
         case "defaultApplication":
-            guard let path = arguments.first?.stringValue,\
+            guard let path = arguments.first?.stringValue,
                 let url = NSWorkspace.shared.urlForApplication(
                     toOpen: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
             else { throw ExtensionHostError.unsupported("getDefaultApplication") }
