@@ -23,8 +23,21 @@ function computeCodeChallenge(verifier) {
   return base64UrlEncode(hashBytes);
 }
 
-function generateState() {
-  const bytes = generateRandomBytes(16);
+function generateRandomString(length = 16) {
+  const bytes = generateRandomBytes(length);
+  return base64UrlEncode(bytes);
+}
+
+function generateState(client) {
+  // raycast.com/redirect expects state to be a JSON object (base64url-encoded)
+  // containing providerName so it can display the header and redirect to raycast://oauth
+  const payload = {
+    token: generateRandomString(16),
+    providerName: client?.providerName || "",
+    providerId: client?.providerId || "",
+  };
+  const json = JSON.stringify(payload);
+  const bytes = utf8Encode(json);
   return base64UrlEncode(bytes);
 }
 
@@ -63,7 +76,7 @@ export class PKCEClient {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = computeCodeChallenge(codeVerifier);
     const codeChallengeMethod = "S256";
-    const state = generateState();
+    const state = options.state || generateState(this);
 
     let redirectURI = options.extraParameters?.redirect_uri;
     if (!redirectURI) {
