@@ -22,7 +22,7 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
     private var continuation: CheckedContinuation<[String: String], Error>?
     private var expectedState: String?
 
-    // Active session registry for fallback deep links via AppDelegate.
+    // Active session registry for callback dispatch.
     private static weak var activeSession: ExtensionOAuthSession?
 
     enum OAuthError: LocalizedError {
@@ -85,9 +85,9 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
             let authSession = ASWebAuthenticationSession(
                 url: url,
                 callbackURLScheme: callbackScheme
-            ) { [weak self] callbackURL, error in
-                guard let self else { return }
-                Task { @MainActor in
+            ) { callbackURL, error in
+                DispatchQueue.main.async {
+                    guard let self = Self.activeSession else { return }
                     if let error = error as? ASWebAuthenticationSessionError,
                         error.code == .canceledLogin
                     {
@@ -159,11 +159,19 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
 
     // MARK: - ASWebAuthenticationPresentationContextProviding
 
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        NSApp.keyWindow
-            ?? NSApp.mainWindow
-            ?? NSApp.windows.first(where: { $0.isVisible })
-            ?? NSWindow()
+    nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        if Thread.isMainThread {
+            return NSApp.keyWindow
+                ?? NSApp.mainWindow
+                ?? NSApp.windows.first(where: { $0.isVisible })
+                ?? NSWindow()
+        }
+        return DispatchQueue.main.sync {
+            NSApp.keyWindow
+                ?? NSApp.mainWindow
+                ?? NSApp.windows.first(where: { $0.isVisible })
+                ?? NSWindow()
+        }
     }
 
     // MARK: - URL Parsing
@@ -178,14 +186,15 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
                 result[item.name] = item.value ?? ""
             }
         }
-        // Also parse fragment in case provider returned token/code in hash fragment
+        // Handle fragment for implicit / hash callbacks: raycast://oauth#code=...
         if let fragment = components.fragment, !fragment.isEmpty {
             let pairs = fragment.split(separator: "&")
             for pair in pairs {
                 let parts = pair.split(separator: "=", maxSplits: 1)
-                if let key = parts.first {
-                    let val = parts.count > 1 ? String(parts[1]) : ""
-                    result[String(key)] = val.removingPercentEncoding ?? val
+                if parts.count == 2 {
+                    let key = String(parts[0])
+                    let val = String(parts[1]).removingPercentEncoding ?? String(parts[1])
+                    result[key] = val
                 }
             }
         }
