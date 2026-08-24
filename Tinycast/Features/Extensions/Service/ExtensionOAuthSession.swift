@@ -1,5 +1,4 @@
 import AppKit
-import AuthenticationServices
 import Foundation
 
 struct ExtensionOAuthAuthorizeOptions: Sendable {
@@ -13,12 +12,11 @@ struct ExtensionOAuthAuthorizeResult: Sendable {
     let state: String?
 }
 
-/// Manages an in-app OAuth 2.0 PKCE authorization session via `ASWebAuthenticationSession`.
-/// Intercepts `raycast://oauth` and `tinycast://oauth` redirects directly inside the app,
-/// avoiding collisions with external apps or LaunchServices routing.
+/// Manages an OAuth 2.0 PKCE authorization session for extensions.
+/// Opens authorization URLs in the default browser and captures `raycast://oauth` and `tinycast://oauth`
+/// redirect callbacks to complete the authentication flow.
 @MainActor
-final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationContextProviding {
-    private var session: ASWebAuthenticationSession?
+final class ExtensionOAuthSession: NSObject {
     private var continuation: CheckedContinuation<[String: String], Error>?
     private var expectedState: String?
 
@@ -82,45 +80,11 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
 
-            let completion: @Sendable (URL?, (any Error)?) -> Void = { callbackURL, error in
-                Task { @MainActor in
-                    Self.activeSession?.handleCompletion(callbackURL: callbackURL, error: error)
-                }
-            }
-
-            let authSession = ASWebAuthenticationSession(
-                url: url,
-                callbackURLScheme: callbackScheme,
-                completionHandler: completion
-            )
-
-            authSession.presentationContextProvider = self
-            authSession.prefersEphemeralWebBrowserSession = false
-            self.session = authSession
-
-            if !authSession.start() {
-                self.finish(error: OAuthError.failed("Failed to start web authentication session."))
+            let opened = NSWorkspace.shared.open(url)
+            if !opened {
+                self.finish(error: OAuthError.failed("Failed to open authorization URL in default browser."))
             }
         }
-    }
-
-    private func handleCompletion(callbackURL: URL?, error: Error?) {
-        if let error = error as? ASWebAuthenticationSessionError,
-            error.code == .canceledLogin
-        {
-            finish(error: OAuthError.canceled)
-            return
-        }
-        if let error {
-            finish(error: OAuthError.failed(error.localizedDescription))
-            return
-        }
-        guard let callbackURL else {
-            finish(error: OAuthError.failed("No callback URL received from authorization."))
-            return
-        }
-
-        receiveCallback(url: callbackURL)
     }
 
     private func receiveCallback(url: URL) {
@@ -143,7 +107,6 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
     }
 
     private func finish(result: [String: String]? = nil, error: Error? = nil) {
-        session = nil
         Self.activeSession = nil
 
         if let continuation = self.continuation {
@@ -159,25 +122,7 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
     }
 
     func cancel() {
-        session?.cancel()
         finish(error: OAuthError.canceled)
-    }
-
-    // MARK: - ASWebAuthenticationPresentationContextProviding
-
-    nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        if Thread.isMainThread {
-            return NSApp.keyWindow
-                ?? NSApp.mainWindow
-                ?? NSApp.windows.first(where: { $0.isVisible })
-                ?? NSWindow()
-        }
-        return DispatchQueue.main.sync {
-            NSApp.keyWindow
-                ?? NSApp.mainWindow
-                ?? NSApp.windows.first(where: { $0.isVisible })
-                ?? NSWindow()
-        }
     }
 
     // MARK: - URL Parsing
