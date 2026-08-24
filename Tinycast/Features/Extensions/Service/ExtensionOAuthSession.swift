@@ -2,6 +2,17 @@ import AppKit
 import AuthenticationServices
 import Foundation
 
+struct ExtensionOAuthAuthorizeOptions: Sendable {
+    let url: URL
+    let state: String?
+}
+
+struct ExtensionOAuthAuthorizeResult: Sendable {
+    let authorizationCode: String
+    let accessToken: String?
+    let state: String?
+}
+
 /// Manages an in-app OAuth 2.0 PKCE authorization session via `ASWebAuthenticationSession`.
 /// Intercepts `raycast://oauth` and `tinycast://oauth` redirects directly inside the app,
 /// avoiding collisions with external apps or LaunchServices routing.
@@ -46,6 +57,14 @@ final class ExtensionOAuthSession: NSObject, ASWebAuthenticationPresentationCont
         guard let active = activeSession else { return false }
         active.receiveCallback(url: url)
         return true
+    }
+
+    func authorize(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult {
+        let params = try await authorize(url: options.url, expectedState: options.state)
+        let code = params["code"] ?? ""
+        let token = params["access_token"]
+        let state = params["state"]
+        return ExtensionOAuthAuthorizeResult(authorizationCode: code, accessToken: token, state: state)
     }
 
     func authorize(

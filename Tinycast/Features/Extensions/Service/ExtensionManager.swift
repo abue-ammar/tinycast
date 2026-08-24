@@ -45,7 +45,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     @ObservationIgnored private var nextToastID = 1
 
     init(clipboardStore: ClipboardStore) {
-        storage = ExtensionStorage(directory: ExtensionCatalog.storageDirectory())\
+        storage = ExtensionStorage(directory: ExtensionCatalog.storageDirectory())
         bridge = ExtensionHostBridge(clipboardStore: clipboardStore)
         runtime = ExtensionRuntime(hostAPI: bridge)
         bridge.context = self
@@ -119,39 +119,98 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     /// One command as a row; a chosen appearance replaces the shipped icon for all of them.
-    private func entry(for command: ExtensionManifest.Command, in owner: InstalledExtension)
-        -> AppEntry
-    {
-        let ref = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
-        let iconURL = appearances.appearance(for: owner.manifest.name)?.iconURL
+    private func entry(for command: ExtensionCommand, in owner: InstalledExtension) -> AppEntry {
+        let appearance = appearances.appearance(for: owner.manifest.name)
+        let reference = ExtensionCommandRef(
+            extensionName: owner.manifest.name, commandName: command.name)
         return AppEntry(
-            id: ref.entryID,
-            name: "\(command.title) — \(owner.title)",
-            displayName: command.title,
-            displaySubtitle: owner.title,
-            bundleURL: nil,
-            executableURL: nil,
-            icon: .extensionIcon(
-                file: iconURL ?? owner.iconURL,
-                symbol: iconURL == nil ? owner.iconSymbol : nil),
-            scope: .extensions,
+            id: reference.entryID,
+            name: command.title,
+            url: owner.directory,
+            bundleID: nil,
             kind: .extensionCommand,
-            extensionMetadata: ExtensionMetadata(
-                extensionName: owner.manifest.name,
-                commandName: command.name,
-                extensionTitle: owner.title,
-                commandTitle: command.title
-            )
-        )
+            iconOverride: icon(for: command, in: owner, appearance: appearance),
+            labelOverride: owner.title)
     }
 
-    /// Map a launcher row back to the command and the extension that owns it.
-    func resolve(_ app: AppEntry) -> (InstalledExtension, ExtensionManifest.Command)? {
-        guard let reference = ExtensionCommandRef(entryID: app.id),
-            let owner = extensionNamed(reference.extensionName),
-            let command = owner.command(named: reference.commandName)
-        else { return nil }
-        return (owner, command)
+    /// Persist and re-publish, so rows change under the user rather than on the next scan.
+    func setAppearance(_ appearance: ExtensionAppearance?, for extensionName: String) {
+        appearances.set(appearance, for: extensionName)
+        publishLauncherEntries()
+    }
+
+    /// Bulk apply from a settings backup.
+    func replaceAppearances(_ overrides: [String: ExtensionAppearance]) {
+        appearances.replace(overrides)
+        publishLauncherEntries()
+    }
+
+    /// An appearance wins, else the shipped artwork: the launcher is handed the answer, not the why.
+    private func icon(
+        for command: ExtensionCommand, in owner: InstalledExtension,
+        appearance: ExtensionAppearance?
+    ) -> EntryIcon {
+        if let appearance {
+            return .tintedSymbol(name: appearance.symbol, tint: appearance.tint.symbolTint)
+        }
+        guard let path = commandIconPath(command, in: owner) ?? owner.iconPath else {
+            return .symbol("puzzlepiece.extension")
+        }
+        return .artwork(path: path, extent: ExtensionIconCache.extent)
+    }
+
+    private func commandIconPath(_ command: ExtensionCommand, in owner: InstalledExtension) -> String? {
+        guard let icon = command.icon else { return nil }
+        let candidate = owner.directory.appendingPathComponent("assets").appendingPathComponent(icon)
+        return FileManager.default.fileExists(atPath: candidate.path) ? candidate.path : nil
+    }
+
+    // MARK: - Install / uninstall
+
+    func install(from source: URL) async throws {
+        _ = try ExtensionCatalog.install(from: source)
+        await refresh()
+    }
+
+    /// Scanned off-main: it reads a manifest per directory, and a full Raycast install is dozens.
+    func raycastImportCandidates() async -> [RaycastImportCandidate] {
+        let candidates = await Task.detached(priority: .userInitiated) {
+            ExtensionCatalog.importableFromRaycast()
+        }.value
+        let have = Set(installed.map(\.manifest.name))
+        return candidates.map {
+            RaycastImportCandidate(installed: $0, isInstalled: have.contains($0.manifest.name))
+        }
+    }
+
+    /// Progress is reported per step: building from source can take minutes.
+    func install(
+        listing: ExtensionListing, packageManager: ExtensionPackageManager,
+        additionalSearchPaths: [String] = [],
+        onProgress: @Sendable @escaping (ExtensionInstaller.Progress) -> Void
+    ) async throws {
+        let installer = ExtensionInstaller(
+            packageManager: packageManager, additionalSearchPaths: additionalSearchPaths)
+        try await installer.install(listing, onProgress: onProgress)
+        await refresh()
+    }
+
+    /// Refreshes once at the end, and returns what failed so the pane can name it.
+    @discardableResult
+    func importAllFromRaycast(
+        _ candidates: [InstalledExtension], onProgress: (Int) -> Void = { _ in }
+    ) async -> [String] {
+        var failed: [String] = []
+        for (index, candidate) in candidates.enumerated() {
+            do {
+                _ = try ExtensionCatalog.install(from: candidate.directory)
+            } catch {
+                failed.append(candidate.title)
+            }
+            onProgress(index + 1)
+        }
+        await refresh()
+        return failed
     }
 
     /// Takes everything keyed to it: files, storage, icon, and through `onDidUninstall` its shortcuts.
@@ -162,9 +221,9 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 extensionName: installedExtension.manifest.name, commandName: $0.name
             ).entryID
         }
+        ExtensionOAuthKeychain.removeAllTokens(extensionName: installedExtension.manifest.name)
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
-        ExtensionOAuthKeychain.removeAllTokens(extensionName: installedExtension.manifest.name)
         appearances.set(nil, for: installedExtension.manifest.name)
         onDidUninstall?(entryIDs)
         await refresh()
@@ -191,78 +250,89 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
     }
 
-    /// Launches one command. Running commands are mutually exclusive — starting one displaces another.
+    /// Resolve a launcher row to a command, or nil when the row isn't an extension command.
+    func resolve(_ entry: AppEntry) -> (InstalledExtension, ExtensionCommand)? {
+        guard let reference = ExtensionCommandRef(entryID: entry.id),
+            let owner = extensionNamed(reference.extensionName),
+            let command = owner.command(named: reference.commandName)
+        else { return nil }
+        return (owner, command)
+    }
+
+    func run(_ entry: AppEntry, arguments: [String: String] = [:]) async {
+        guard let (owner, command) = resolve(entry) else {
+            state = .failed(LaunchError.unknownCommand(entry.id).localizedDescription)
+            return
+        }
+        await run(owner, command: command, arguments: arguments)
+    }
+
     func run(
-        _ owner: InstalledExtension, command: ExtensionManifest.Command,
-        arguments: [String: String] = [:]
+        _ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:]
     ) async {
-        guard isEnabled else { return }
-
-        // A no-view command leaves the palette closed; everything else summons it immediately so
-        // the user sees the spinner and never wonders if their tap landed.
-        let showsPalette = command.mode != .noView
-        if showsPalette { coordinator?.showExtensionPalette() }
-
-        // Stop any running command first, so we don't hold two contexts in memory across the await.
         await stop()
 
-        let ref = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
-        running = ref
-        state = .launching
-        toasts = []
-        navigationDepth = 1
-
-        let session = UUID().uuidString
-        sessionID = session
-
-        guard command.mode != .menuBar else {
-            state = .failed("Menu-bar commands run inside the menu bar, not in the palette.")
+        if let reason = command.mode.unsupportedReason {
+            state = .failed(reason)
+            running = ExtensionCommandRef(
+                extensionName: owner.manifest.name, commandName: command.name)
             return
         }
-
-        guard let bundle = owner.bundleURL(for: command) else {
-            state = .failed(LaunchError.notBuilt(owner.title).localizedDescription)
-            return
-        }
-
-        let missing = missingRequiredPreferences(in: owner, command: command)
+        let schemas = owner.manifest.preferences + command.preferences
+        let missing = storage.missingRequiredPreferences(
+            extension: owner.manifest.name, schemas: schemas)
         guard missing.isEmpty else {
+            running = ExtensionCommandRef(
+                extensionName: owner.manifest.name, commandName: command.name)
             state = .failed(LaunchError.missingPreferences(missing).localizedDescription)
             return
         }
+        guard let bundle = owner.bundleURL(for: command) else {
+            running = ExtensionCommandRef(
+                extensionName: owner.manifest.name, commandName: command.name)
+            state = .failed(LaunchError.notBuilt(command.title).localizedDescription)
+            return
+        }
 
-        let bootConfig = ExtensionBootConfig.current(
-            extensionDirectory: owner.directory,
-            extensionTitle: owner.title,
-            commandTitle: command.title
-        )
+        running = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
+        navigationDepth = 1
+        state = .launching
+
+        let supportPath = ExtensionCatalog.supportPath(for: owner.manifest.name)
+        try? FileManager.default.createDirectory(at: supportPath, withIntermediateDirectories: true)
+
         do {
-            try await runtime.boot(config: bootConfig)
+            // No-op while a context is already up; after `stop()` this builds a fresh one.
+            try await runtime.boot(config: .current(supportDirectory: supportPath))
         } catch {
             state = .failed(error.localizedDescription)
             return
         }
 
-        let code: String
-        do {
-            code = try String(contentsOf: bundle, encoding: .utf8)
-        } catch {
-            state = .failed("Failed to read the command's bundle: \(error.localizedDescription)")
+        // Reading the bundle is IO on a file that can be a few hundred KB; keep it off the main actor.
+        let code = await Task.detached(priority: .userInitiated) {
+            (try? String(contentsOf: bundle, encoding: .utf8)) ?? ""
+        }.value
+        guard !code.isEmpty else {
+            state = .failed(LaunchError.notBuilt(command.title).localizedDescription)
             return
         }
 
-        let preferences = allPreferences(for: owner, command: command)
+        let session = UUID().uuidString
+        sessionID = session
         let context = ExtensionLaunchContext(
             extensionName: owner.manifest.name,
+            extensionTitle: owner.title,
             commandName: command.name,
             commandMode: command.mode,
-            environment: bootConfig.environment,
-            preferences: preferences,
-            arguments: arguments,
+            assetsPath: owner.assetsPath,
+            supportPath: supportPath.path,
+            preferences: storage.resolvedPreferences(
+                extension: owner.manifest.name, schemas: schemas),
             caches: storage.caches(extension: owner.manifest.name),
-            allLocalStorage: storage.allLocalStorage(extension: owner.manifest.name)
-                .mapValues(\.jsonValue)
-        )
+            arguments: command.completeArguments(arguments),
+            fallbackText: nil,
+            isDarkAppearance: NSApp.effectiveAppearance.isDark)
 
         await runtime.start(
             session: session, code: code, file: bundle, mode: command.mode, context: context)
@@ -297,14 +367,14 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         Task { await runtime.dispatch(session: sessionID, handler: handler, payload: payload) }
     }
 
-    func push(node: RenderNode) {
-        guard let sessionID else { return }
-        Task { await runtime.push(session: sessionID, node: node) }
+    /// Pops the extension's stack; false when there is nothing to pop and the palette should close.
+    func popNavigation() async -> Bool {
+        guard let sessionID, navigationDepth > 1 else { return false }
+        return await runtime.popNavigation(session: sessionID)
     }
 
-    func pop() {
-        guard let sessionID else { return }
-        Task { await runtime.pop(session: sessionID) }
+    func runToastAction(token: String) {
+        Task { await runtime.runToastAction(token: token) }
     }
 
     // MARK: - ExtensionRuntimeDelegate
@@ -312,6 +382,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     func runtime(_ runtime: ExtensionRuntime, session: String, didRender tree: RenderTree) {
         guard session == sessionID else { return }
         state = .rendered(tree)
+        navigationDepth = tree.depth
     }
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didFail message: String) {
@@ -319,17 +390,16 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         state = .failed(message)
     }
 
-    func runtime(_ runtime: ExtensionRuntime, session: String, navigationDepth: Int) {
+    func runtime(_ runtime: ExtensionRuntime, session: String, navigationDepth depth: Int) {
         guard session == sessionID else { return }
-        self.navigationDepth = navigationDepth
+        navigationDepth = depth
     }
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didFinish: Void) {
         guard session == sessionID else { return }
+        // A no-view command is done: the palette is already closing, so just release the session.
         state = .finished
-        // A no-view command that finishes leaves the palette alone (it was never opened); a view
-        // command that finishes has returned to its terminal state, so we close the palette.
-        coordinator?.closeMainWindow()
+        Task { await stop() }
     }
 
     func runtime(_ runtime: ExtensionRuntime, log level: String, message: String) {
@@ -438,32 +508,22 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         Task { await run(owner, command: command, arguments: arguments) }
     }
 
-    func authorizeOAuth(url: URL, state: String?) async throws -> [String: String] {
-        try await oauthSession.authorize(url: url, expectedState: state)
+    func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult {
+        try await oauthSession.authorize(options: options)
     }
 
-    // MARK: - Preferences resolution
-
-    private func missingRequiredPreferences(
-        in owner: InstalledExtension, command: ExtensionManifest.Command
-    ) -> [ExtensionPreferenceSchema] {
-        let schemas = owner.manifest.preferences + command.preferences
-        let values = storage.allPreferences(extension: owner.manifest.name)
-        return schemas.filter { schema in
-            schema.required && schema.defaultValue == nil && values[schema.name] == nil
-        }
+    func getOAuthTokens(providerId: String) -> String? {
+        guard let extName = running?.extensionName else { return nil }
+        return ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: providerId)
     }
 
-    private func allPreferences(
-        for owner: InstalledExtension, command: ExtensionManifest.Command
-    ) -> [String: ExtensionPreferenceValue] {
-        var values = storage.allPreferences(extension: owner.manifest.name)
-        let schemas = owner.manifest.preferences + command.preferences
-        for schema in schemas {
-            if values[schema.name] == nil, let fallback = schema.defaultValue {
-                values[schema.name] = fallback
-            }
-        }
-        return values
+    func setOAuthTokens(providerId: String, tokens: String) {
+        guard let extName = running?.extensionName else { return }
+        ExtensionOAuthKeychain.setTokens(tokens, extensionName: extName, providerId: providerId)
+    }
+
+    func removeOAuthTokens(providerId: String) {
+        guard let extName = running?.extensionName else { return }
+        ExtensionOAuthKeychain.removeTokens(extensionName: extName, providerId: providerId)
     }
 }
