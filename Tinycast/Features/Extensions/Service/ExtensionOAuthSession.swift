@@ -4,13 +4,6 @@ import Foundation
 struct ExtensionOAuthAuthorizeOptions: Sendable {
     let url: URL
     let state: String?
-    let providerId: String?
-
-    init(url: URL, state: String? = nil, providerId: String? = nil) {
-        self.url = url
-        self.state = state
-        self.providerId = providerId
-    }
 }
 
 struct ExtensionOAuthAuthorizeResult: Sendable {
@@ -31,25 +24,18 @@ final class ExtensionOAuthSession {
     // Active session registry for callback dispatch.
     private static weak var activeSession: ExtensionOAuthSession?
 
-    /// True while an authorization request is currently pending in the browser.
-    static var isAuthorizing: Bool {
-        activeSession?.continuation != nil
-    }
-
-    /// True while this instance is currently authorizing.
+    /// True while this session is waiting for the browser to come back.
     var isAuthorizing: Bool {
         continuation != nil
     }
 
     enum OAuthError: LocalizedError {
-        case invalidURL(String)
         case canceled
         case failed(String)
         case stateMismatch
 
         var errorDescription: String? {
             switch self {
-            case .invalidURL(let url): return "Invalid authorization URL: \(url)"
             case .canceled: return "Authentication was canceled."
             case .failed(let message): return message
             case .stateMismatch: return "OAuth state mismatch. Please try authenticating again."
@@ -57,25 +43,33 @@ final class ExtensionOAuthSession {
         }
     }
 
-    /// Handle deep links coming from NSApplicationDelegate (e.g. raycast://oauth?code=... or tinycast://oauth?code=...)
-    @discardableResult
-    static func handleCallbackURL(_ url: URL) -> Bool {
+    /// What a deep link turned out to be, so the caller can tell "not ours" from "too late".
+    enum Callback {
+        case delivered
+        case expired
+        case ignored
+    }
+
+    /// Handle deep links coming from NSApplicationDelegate (e.g. raycast://oauth?code=… or tinycast://oauth?code=…)
+    static func handleCallbackURL(_ url: URL) -> Callback {
         guard let scheme = url.scheme?.lowercased(),
             scheme == "raycast" || scheme == "tinycast" || scheme == "com.raycast"
-        else { return false }
+        else { return .ignored }
 
         let host = url.host?.lowercased() ?? ""
         let path = url.path.lowercased()
-        guard host == "oauth" || host == "redirect"
-            || path == "/oauth" || path == "/redirect"
-            || path.hasPrefix("/oauth/") || path.hasPrefix("/redirect/")
+        guard
+            host == "oauth" || host == "redirect"
+                || path == "/oauth" || path == "/redirect"
+                || path.hasPrefix("/oauth/") || path.hasPrefix("/redirect/")
         else {
-            return false
+            return .ignored
         }
 
-        guard let active = activeSession else { return false }
+        // The browser can come back after the session is gone: quit, timed out, or torn down.
+        guard let active = activeSession else { return .expired }
         active.receiveCallback(url: url)
-        return true
+        return .delivered
     }
 
     func authorize(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult {

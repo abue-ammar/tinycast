@@ -485,24 +485,11 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         guard let context else { throw ExtensionHostError.noActiveExtension }
         switch method {
         case "authorize":
-            let urlString: String?
-            let state: String?
-            let providerId: String?
-
-            if let payload = arguments.first?.objectValue {
-                urlString = payload["url"]?.stringValue
-                state = payload["state"]?.stringValue
-                providerId = payload["providerId"]?.stringValue
-            } else {
-                urlString = arguments.first?.stringValue
-                state = arguments[safe: 1]?.stringValue
-                providerId = arguments[safe: 2]?.stringValue
-            }
-
-            guard let urlString, let url = URL(string: urlString) else {
+            guard let urlString = arguments.first?.stringValue, let url = URL(string: urlString) else {
                 throw ExtensionHostError.unsupported("authorize requires url")
             }
-            let options = ExtensionOAuthAuthorizeOptions(url: url, state: state, providerId: providerId)
+            let options = ExtensionOAuthAuthorizeOptions(
+                url: url, state: arguments[safe: 1]?.stringValue)
             let result = try await context.authorizeOAuth(options: options)
             var dict: [String: Any] = ["authorizationCode": result.authorizationCode]
             if let token = result.accessToken { dict["accessToken"] = token }

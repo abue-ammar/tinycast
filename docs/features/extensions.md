@@ -305,7 +305,24 @@ along with the extension's stored preferences and its chosen icon.
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `openExtensionPreferences`,
 `useNavigation`, `OAuth`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
 
-**OAuth 2.0 PKCE** — `OAuth.PKCEClient`, `OAuth.TokenSet`, `OAuth.RedirectMethod`. Supports AppURI custom schemes (`com.raycast:/oauth`, `raycast://oauth`, `tinycast://oauth`) and Raycast web proxy redirects (`raycast.com/redirect`). OAuth tokens are securely stored in the system Keychain (`kSecAttrAccessibleWhenUnlocked`).
+**OAuth 2.0 PKCE** — `OAuth.PKCEClient`, `OAuth.TokenSet`, `OAuth.RedirectMethod`, with S256 challenges and
+tokens in the login Keychain (service `com.tinycast.extensions.oauth`, `kSecAttrAccessibleWhenUnlocked`),
+scoped per extension and dropped on uninstall.
+
+The redirect address belongs to the extension author's OAuth app registration, so Tinycast cannot choose
+it — it can only be there to catch it. **Tinycast therefore claims `raycast`, `com.raycast` and `tinycast`
+as URL schemes**, which is what makes all three of Raycast's redirect methods land back in the app:
+
+| `RedirectMethod` | Registered address | How it returns |
+| --- | --- | --- |
+| `App` | `raycast://oauth?package_name=Extension` | straight to Tinycast, no server |
+| `AppURI` | `com.raycast:/oauth?package_name=Extension` | straight to Tinycast, no server |
+| `Web` | `https://raycast.com/redirect?packageName=Extension` | through Raycast's page, which reopens a claimed scheme |
+
+Claiming `raycast` means an installed Raycast competes with Tinycast for those links and macOS picks the
+winner. That is a deliberate trade: without it, `App` redirects have nowhere to land. `Web` additionally
+depends on a page Raycast can change at any time — `ExtensionOAuthSession` times out after five minutes so
+a redirect that never arrives cannot wedge the palette.
 
 **`raycast://` URLs** — extensions address Raycast by scheme; the most common is a bare
 `open("raycast://")` to bring the window back after something stole focus (1Password's auth flow does
@@ -322,15 +339,17 @@ stub that throws only when used, so a bundle that merely references `dgram` or `
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`.
 
-Measured against the 37 extensions installed in a real Raycast on the development machine: **35
-extensions / 140 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
-`Scripts/run-tests.sh ext-test` reproduce that measurement.
+Measured against the 37 extensions installed in a real Raycast on the development machine: **32
+extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
+`Scripts/run-tests.sh ext-test` reproduce that measurement. OAuth landed after this run, so the three
+OAuth extensions it excluded are not counted yet — re-measure before quoting these numbers.
 
 ## What isn't supported yet
 
 | Gap | Why |
 | --- | --- |
 | **`menu-bar` commands** | The launcher lists them and explains why they don't open. |
+| **Raycast's PKCE proxy (`oauth.raycast.com`)** | Extensions whose provider has no PKCE support exchange tokens through Raycast's proxy. `OAuth.PKCEClient` works; a provider that needs that proxy still fails. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **WebSocket** | No polyfill yet; `URLSessionWebSocketTask` could back one. |
 | **Aborting a `fetch` already in flight** | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |
@@ -433,3 +452,50 @@ the same tile `IconCache` draws for the built-in commands, so the row reads as p
 ### `ExtensionIconCache`, and why extension artwork draws smaller
 
 An extension's own artwork has its own cache — `Service/ExtensionIconCache.swift` — rather than
+living in `IconCache`. That split is the point: `IconCache` stays the app-and-symbol layer and knows
+nothing about extensions. It lends out only the pixel work (`displayPixel`, `artworkExtent`,
+`paintedExtent`, `rasterized`), so there is one definition of how an icon is measured and drawn.
+
+`ExtensionIconCache.extent` fits that artwork to **0.76** of the canvas, where an app icon and a
+symbol tile both sit at `IconCache.artworkExtent` **0.83**. The gap is deliberate and optical, not a
+size correction — measured, all three paths already produce an identical 40pt box.
+
+Every macOS 26 app icon is a squircle with a glyph inside it, and the ground disappears into the
+palette, so only the glyph reads. A Raycast icon is a flat, fully saturated tile,
+so every pixel of it reads. At equal geometry the extension shouts, and fitting it smaller is what
+makes the two match by eye. Shipped and fetched images take the same target, so an icon doesn't
+change size depending on where it came from.
+
+Change the number only against a rendered strip of real icons; it means nothing on its own.
+`ext-icon-test` guards the invariant: padding in the source cannot change the drawn size.
+
+- `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
+  `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance
+  Raycast has when a command declares no icon of its own.
+- `ExtensionManager.publishLauncherEntries` resolves it into each `AppEntry`; `setAppearance`
+  re-publishes immediately, so rows change without waiting for a rescan.
+- 18 tints, pinned sRGB rather than system colours: tiles rasterize off the main thread, where a dynamic
+  colour would resolve against whatever appearance that thread sees. Pinning also makes the picker's
+  SwiftUI preview and the drawn bitmap the same colour by construction.
+- "Use Original" clears the override. Choices ride along in a settings backup.
+
+### Where the symbols come from
+
+`SymbolCatalog` reads **the system's own catalog** at runtime from
+`/System/Library/CoreServices/CoreGlyphs.bundle` — the symbol order, each symbol's categories, and the
+extra search terms the SF Symbols app matches on, so "coffee" finds `cup.and.saucer`. Reading it beats
+bundling a name list: the offer always matches the OS, with nothing to regenerate per release.
+
+Two filters apply, leaving ~6,500 of the 8,302 names on macOS 26:
+
+- **Apple's reserved marks** (`symbol_restrictions.strings`, ~600 symbols: iCloud, iPhone, AirPlay…),
+  which may only refer to those products.
+- **Locale renderings** (`.ar`, `.hi`, `.rtl`…), near-duplicates of a symbol already in the list.
+
+None of this is API, so every read is optional and `SymbolCatalog.fallback` — the curated ~85 in
+`SymbolCatalog.suggested` — stands in if the bundle ever moves. That curated set is also what the picker
+opens on, since scrolling six thousand icons is not a way to choose one; a search reaches the whole
+catalog regardless of the selected category.
+
+`Tests/symbols-test.swift` compiles the real source and asserts those invariants against this machine's
+CoreGlyphs (shapes and rules, not counts — those move every release).

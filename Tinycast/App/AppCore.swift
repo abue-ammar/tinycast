@@ -266,8 +266,13 @@ final class AppCore {
     }
 
     func handleOpenURL(_ url: URL) {
-        if ExtensionOAuthSession.handleCallbackURL(url) {
+        switch ExtensionOAuthSession.handleCallbackURL(url) {
+        case .delivered:
             paletteCoordinator.showPalette(mode: .extensionCommand, restoreAnyMode: true)
+        case .expired:
+            showMessage("Sign-in expired — run the command again", tone: .danger)
+        case .ignored:
+            break
         }
     }
 

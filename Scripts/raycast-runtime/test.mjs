@@ -214,6 +214,8 @@ function syncHostCall(api, method, args) {
   }
 }
 
+const oauthTokens = new Map();
+
 async function stubHostCall(api, method, args) {
   switch (`${api}.${method}`) {
     case "storage.get":
@@ -246,28 +248,17 @@ async function stubHostCall(api, method, args) {
     }
     case "proc.run":
       return syncHostCall(api, method, args);
-    case "oauth.authorize": {
-      const state = typeof args[0] === "object" ? args[0]?.state : args[1];
-      return { authorizationCode: "auth-code-12345", code: "auth-code-12345", state: state || "" };
-    }
-    case "oauth.getTokens": {
-      const providerId = typeof args[0] === "object" ? args[0]?.providerId : args[0];
-      return globalThis.__mockOAuthTokens?.[providerId] || null;
-    }
-    case "oauth.setTokens": {
-      const providerId = typeof args[0] === "object" ? args[0]?.providerId : args[0];
-      const tokens = typeof args[0] === "object" ? args[0]?.tokens : args[1];
-      globalThis.__mockOAuthTokens = globalThis.__mockOAuthTokens || {};
-      globalThis.__mockOAuthTokens[providerId] = tokens;
+    // Positional arguments throughout, matching `src/api/oauth.js`.
+    case "oauth.authorize":
+      return { authorizationCode: "auth-code-12345", state: args[1] ?? "" };
+    case "oauth.getTokens":
+      return oauthTokens.get(args[0]) ?? null;
+    case "oauth.setTokens":
+      oauthTokens.set(args[0], args[1]);
       return null;
-    }
-    case "oauth.removeTokens": {
-      const providerId = typeof args[0] === "object" ? args[0]?.providerId : args[0];
-      if (globalThis.__mockOAuthTokens) {
-        delete globalThis.__mockOAuthTokens[providerId];
-      }
+    case "oauth.removeTokens":
+      oauthTokens.delete(args[0]);
       return null;
-    }
     default:
       if (["window", "feedback", "cache", "storage", "clipboard", "system"].includes(api)) return null;
       throw new Error(`harness: no async stub for ${api}.${method}`);

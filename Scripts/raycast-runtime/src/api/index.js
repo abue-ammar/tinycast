@@ -151,9 +151,10 @@ export const raycastApi = {
   launchCommand: system.launchCommand,
   updateCommandMetadata: system.updateCommandMetadata,
 
-  // Namespaces
-  AI,
   OAuth,
+
+  // Unimplemented namespaces
+  AI,
   BrowserExtension,
   WindowManagement,
 

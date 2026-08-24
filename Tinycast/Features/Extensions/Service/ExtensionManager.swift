@@ -511,7 +511,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         Task { await run(owner, command: command, arguments: arguments) }
     }
 
-    func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult {
+    func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult
+    {
         lastOAuthExtensionName = running?.extensionName
         return try await oauthSession.authorize(options: options)
     }

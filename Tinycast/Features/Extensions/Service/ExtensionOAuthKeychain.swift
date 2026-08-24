@@ -19,7 +19,7 @@ struct KeychainOAuthTokenStore: ExtensionOAuthTokenStore {
             kSecAttrService as String: serviceName,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
         var item: CFTypeRef?
@@ -36,12 +36,12 @@ struct KeychainOAuthTokenStore: ExtensionOAuthTokenStore {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: account
         ]
 
         let attributes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
         ]
 
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -58,7 +58,7 @@ struct KeychainOAuthTokenStore: ExtensionOAuthTokenStore {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: account
         ]
         let status = SecItemDelete(query as CFDictionary)
         return status == errSecSuccess || status == errSecItemNotFound
@@ -69,7 +69,7 @@ struct KeychainOAuthTokenStore: ExtensionOAuthTokenStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
             kSecReturnAttributes as String: true,
-            kSecMatchLimit as String: kSecMatchLimitAll,
+            kSecMatchLimit as String: kSecMatchLimitAll
         ]
 
         var item: CFTypeRef?
@@ -82,7 +82,7 @@ struct KeychainOAuthTokenStore: ExtensionOAuthTokenStore {
                 let deleteQuery: [String: Any] = [
                     kSecClass as String: kSecClassGenericPassword,
                     kSecAttrService as String: serviceName,
-                    kSecAttrAccount as String: account,
+                    kSecAttrAccount as String: account
                 ]
                 SecItemDelete(deleteQuery as CFDictionary)
             }

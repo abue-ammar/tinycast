@@ -1,5 +1,7 @@
-// Fixture-based integration tests for the React runtime. Each fixture exercises a slice of the
-// bridge contract against the real prebuilt runtime.
+// Self-contained checks for the embedded runtime: each fixture is a tiny extension command compiled
+// with esbuild exactly the way a real one is (CJS, JSX automatic, @raycast/api + react external).
+//
+//   node fixtures.mjs
 
 import { createHarness, bootConfig, describeTree } from "./test.mjs";
 import { transformSync } from "esbuild";
@@ -28,7 +30,7 @@ function compile(source) {
   return code;
 }
 
-const wait = (ms = 15) => new Promise((resolve) => setTimeout(resolve, ms));
+const wait = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function run(name, source, mode, verify) {
   console.log(`\n▶ ${name}`);

@@ -136,7 +136,7 @@ export class PKCEClient {
     }
     const state = typeof request === "object" ? request?.state : undefined;
 
-    let res = await hostCall("oauth", "authorize", [url, state, this.providerId]);
+    let res = await hostCall("oauth", "authorize", [url, state]);
 
     if (typeof res === "string") {
       try {

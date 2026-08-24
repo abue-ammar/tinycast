@@ -72,7 +72,7 @@ struct ExtensionTests {
             case "system.applications":
                 return "[]"
             case "oauth.authorize":
-                let state = arguments[safe: 2]?.stringValue ?? ""
+                let state = arguments[safe: 1]?.stringValue ?? ""
                 return "{\"authorizationCode\":\"auth_code_swift_test\",\"state\":\"\(state)\"}"
             case "oauth.getTokens":
                 let providerId = arguments.first?.stringValue ?? ""
@@ -508,20 +508,33 @@ struct ExtensionTests {
         ExtensionOAuthKeychain.removeAllTokens(extensionName: extName)
         let afterRemoveAll1 = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: "prov1")
         let afterRemoveAll2 = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: "prov2")
-        check("OAuth Keychain removeAllTokens clears all for extension", afterRemoveAll1 == nil && afterRemoveAll2 == nil)
+        check(
+            "OAuth Keychain removeAllTokens clears all for extension",
+            afterRemoveAll1 == nil && afterRemoveAll2 == nil)
 
         // URL parsing in ExtensionOAuthSession
         let raycastURL = URL(string: "raycast://oauth?code=auth_123&state=state_456")!
         let params = ExtensionOAuthSession.parseCallback(url: raycastURL)
-        check("parseCallback parses query parameters", params["code"] == "auth_123" && params["state"] == "state_456")
+        check(
+            "parseCallback parses query parameters",
+            params["code"] == "auth_123" && params["state"] == "state_456")
 
         let fragmentURL = URL(string: "raycast://oauth#access_token=token_xyz&state=state_789")!
         let fragParams = ExtensionOAuthSession.parseCallback(url: fragmentURL)
-        check("parseCallback parses hash fragment", fragParams["access_token"] == "token_xyz" && fragParams["state"] == "state_789")
+        check(
+            "parseCallback parses hash fragment",
+            fragParams["access_token"] == "token_xyz" && fragParams["state"] == "state_789")
 
         let nonOAuthURL = URL(string: "raycast://extensions/installed")!
-        let notHandled = ExtensionOAuthSession.handleCallbackURL(nonOAuthURL)
-        check("handleCallbackURL ignores non-oauth URL", !notHandled)
+        check(
+            "handleCallbackURL ignores a non-oauth URL",
+            ExtensionOAuthSession.handleCallbackURL(nonOAuthURL) == .ignored)
+
+        // A callback with nothing waiting for it is reported, not silently dropped.
+        let strayURL = URL(string: "tinycast://oauth?code=abc&state=xyz")!
+        check(
+            "handleCallbackURL reports an expired callback",
+            ExtensionOAuthSession.handleCallbackURL(strayURL) == .expired)
     }
 
     // MARK: - End-to-end through JavaScriptCore
@@ -660,7 +673,10 @@ struct ExtensionTests {
             context: launchContext(mode: .noView))
         await settle()
         check("oauth command finished", oauthRecorder.finished, oauthRecorder.failures.joined())
-        check("oauth flow reached token storage", oauthHost.huds == ["token_auth_code_swift_test"], oauthHost.huds.joined(separator: ","))
+        check(
+            "oauth flow reached token storage",
+            oauthHost.huds == ["token_auth_code_swift_test"],
+            oauthHost.huds.joined(separator: ","))
         await oauthRuntime.stop(session: "sOAuth")
 
         // Command arguments must reach `props.arguments`, and the bag must exist even when empty.
