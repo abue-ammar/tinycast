@@ -108,6 +108,10 @@ Pasting a pinned entry deliberately does **not** promote it: it holds its place 
 section, so `promote` skips pinned rows instead of rewriting the row and its FTS entry for no
 visible change.
 
+The ten palette slots shared with launcher favorites address this visible Pinned block too. A slot
+uses the current query and type filter, so its first entry is the first visible pin; a missing slot is
+a no-op. They are fixed to the physical number row, with ⌘1…⌘9 then ⌘0 as their labels.
+
 `load` reads every pinned row plus the newest 1000 unpinned ones as two indexed branches over a
 partial index on `pinned_at` (`Tests/clipboard-test.swift` covers the shape). The single
 `pinned_at IS NOT NULL OR rowid >= ?` form reads better but cannot be driven from an index while

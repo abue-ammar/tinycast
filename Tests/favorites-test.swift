@@ -23,6 +23,14 @@ struct FavoritesTest {
         check("⌘0 is the tenth, not the first", FavoriteSlots.index(for: "0") == 9)
         check("a letter is not a slot", FavoriteSlots.index(for: "a") == nil)
 
+        let numberRowKeyCodes: [UInt16] = [18, 19, 20, 21, 23, 22, 26, 28, 25, 29]
+        for (index, keyCode) in numberRowKeyCodes.enumerated() {
+            check(
+                "physical number-row keycode \(keyCode) maps to slot \(index)",
+                FavoriteSlots.index(forKeyCode: keyCode) == index)
+        }
+        check("unknown keycode is not a slot", FavoriteSlots.index(forKeyCode: 0) == nil)
+
         check("the first row shows 1", FavoriteSlots.digit(at: 0) == "1")
         check("the tenth row shows 0", FavoriteSlots.digit(at: 9) == "0")
         check("the eleventh row shows nothing", FavoriteSlots.digit(at: 10) == nil)

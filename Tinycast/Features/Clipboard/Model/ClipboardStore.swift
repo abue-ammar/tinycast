@@ -299,6 +299,12 @@ final class ClipboardStore {
         search(query, filter: filter).firstIndex { $0.id == item.id }
     }
 
+    /// The Nth visible pinned entry under `query` and `filter`, where 0 is the first pinned row.
+    func pinnedItem(at index: Int, in query: String, filter: ClipboardFilter) -> ClipboardItem? {
+        guard index >= 0 else { return nil }
+        return search(query, filter: filter).prefix(while: \.isPinned).dropFirst(index).first
+    }
+
     private func unfiltered(_ q: String) -> [ClipboardItem] {
         guard !q.isEmpty else { return orderedItems }
         // Pins are matched in memory: all resident, and the LIMIT would otherwise drop one.
