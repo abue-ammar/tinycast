@@ -309,6 +309,20 @@ struct RootPaletteView: View {
             moveVertically(-1)
             return .handled
         }
+        .onKeyPress(keys: ["j", "J"], phases: [.down, .repeat]) { press in
+            guard menuOpen,
+                press.modifiers.isDisjoint(with: [.command, .control, .option])
+            else { return .ignored }
+            moveMenu(1)
+            return .handled
+        }
+        .onKeyPress(keys: ["k", "K"], phases: [.down, .repeat]) { press in
+            guard menuOpen,
+                press.modifiers.isDisjoint(with: [.command, .control, .option])
+            else { return .ignored }
+            moveMenu(-1)
+            return .handled
+        }
         // Horizontal arrows step the grid; elsewhere they stay with the caret.
         .onKeyPress(.leftArrow) {
             if menuOpen { return .handled }

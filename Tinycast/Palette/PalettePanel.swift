@@ -52,12 +52,6 @@ final class PalettePanel: NSPanel {
         compositionObserver = NotificationToken(token, center: center)
     }
 
-    /// Keys driving an open menu; they reach `onKeyPress` even while editing is frozen.
-    private static let menuNavKeys: Set<Int> = [
-        kVK_UpArrow, kVK_DownArrow, kVK_LeftArrow, kVK_RightArrow,
-        kVK_Return, kVK_ANSI_KeypadEnter, kVK_Escape, kVK_Tab
-    ]
-
     /// ⌃N/⌃P/⌃F/⌃B respelled as their arrow, so the arrow handlers serve both spellings.
     private static func emacsArrow(for event: NSEvent) -> NSEvent? {
         guard event.modifierFlags.intersection([.command, .option, .control, .shift]) == .control
@@ -144,7 +138,7 @@ final class PalettePanel: NSPanel {
         if event.type == .keyDown,
             paletteState?.menuOpen == true,
             event.modifierFlags.isDisjoint(with: [.command, .control]),
-            !Self.menuNavKeys.contains(Int(event.keyCode))
+            !MenuNavigation.handles(Int(event.keyCode))
         {
             return
         }

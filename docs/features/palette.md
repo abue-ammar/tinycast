@@ -251,24 +251,26 @@ the arrow outside it, and AppKit's own alternation over the field came straight 
 structural instead of a pair of `onChange` handlers pushing each other closed. Three cases today —
 the ⌘K Actions menu (`.bottomTrailing`), the app menu (`.bottomLeading`) and the clipboard type
 filter (`.topTrailing`, hung under its header button). `menuContent` resolves the open case to one
-`PopoverMenuContent`, which is what lets ↑/↓, plain ↵, Esc and the click-away catcher serve every
-menu without knowing which is up. Every open path goes through `open(_:highlighting:)` and states
-where the highlight starts: the first row, except the type filter, which opens on the active filter.
+`PopoverMenuContent`, which is what lets ↑/↓, J/K, plain ↵, Esc and the click-away catcher serve
+every menu without knowing which is up. Every open path goes through `open(_:highlighting:)` and
+states where the highlight starts: the first row, except the type filter, which opens on the active
+filter.
 
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
 
 ## Menu-open input freeze
 
-While a popover menu (⌘K Actions / app menu / clipboard type filter) is open the search field reads as inert but
-**never resigns first responder** — resigning makes the `NSTextField` swap between its field-editor
-and cell rendering, shifting the text / placeholder a point or two, so focus stays put. Input is
-frozen instead:
+While a popover menu (⌘K Actions / app menu / clipboard type filter) is open the search field reads
+as inert but **never resigns first responder** — resigning makes the `NSTextField` swap between its
+field-editor and cell rendering, shifting the text / placeholder a point or two, so focus stays put.
+Input is frozen instead:
 
 - `RootPaletteView` mirrors the open state into `PaletteState.menuOpen`, whose `didSet` fires
   `onMenuOpenChanged`.
 - `PalettePanel.sendEvent` then swallows text-editing keystrokes while `menuOpen` (letting ⌘/⌃ chords
-  and menu-nav keys through to SwiftUI `onKeyPress`), which is how ⌘. and ⌃X still reach their rows.
+  and menu-nav keys through to SwiftUI `onKeyPress`), which is how ⌘., ⌃X and bare J/K still reach
+  their rows.
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
   force-casts its field editor to a private subclass, so vending a custom one crashes — only the
   existing one can be tuned.
