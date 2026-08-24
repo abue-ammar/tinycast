@@ -48,13 +48,14 @@ temperatures may only be added or subtracted within one scale.
 
 ## Currency and crypto
 
-| You type                    | It means             |
-| --------------------------- | -------------------- |
-| `1 euro to dollars`         | Named currencies     |
-| `€20 to GBP` / `20€ to GBP` | Symbols, either side |
-| `eur to usd`                | Amount 1 implied     |
-| `1 btc to eur`              | Crypto               |
-| `$10 + €5`                  | Mixed arithmetic     |
+| You type                    | It means                    |
+| --------------------------- | --------------------------- |
+| `1 euro to dollars`         | Named currencies            |
+| `€20 to GBP` / `20€ to GBP` | Symbols, either side        |
+| `eur to usd`                | Amount 1 implied            |
+| `1 btc to eur`              | Crypto                      |
+| `$10 + €5`                  | Mixed arithmetic            |
+| `(20 sgd to usd) * 30`      | Convert, then multiply      |
 
 159 fiat codes plus a hand-picked crypto list.
 

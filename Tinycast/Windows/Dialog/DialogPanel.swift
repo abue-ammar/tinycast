@@ -12,6 +12,8 @@ final class DialogPanel: NSPanel {
     }
 
     var onKey: ((Key) -> Void)?
+    /// Arrows are a control's keys, not the panel's; a text field needs them for its caret.
+    var handlesArrowKeys = false
 
     init(content: NSView) {
         super.init(
@@ -46,9 +48,11 @@ final class DialogPanel: NSPanel {
             onKey(.cancel)
         case kVK_Return, kVK_ANSI_KeypadEnter:
             onKey(.confirm)
-        case kVK_LeftArrow, kVK_DownArrow:
+        case kVK_LeftArrow,
+            kVK_DownArrow where handlesArrowKeys:
             onKey(.decrement)
-        case kVK_RightArrow, kVK_UpArrow:
+        case kVK_RightArrow,
+            kVK_UpArrow where handlesArrowKeys:
             onKey(.increment)
         default:
             super.sendEvent(event)

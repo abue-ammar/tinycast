@@ -128,6 +128,8 @@ enum Theme {
         static let dialogWidth: CGFloat = 420
         /// A dialog's leading glyph, larger than a row icon: it carries the subject.
         static let dialogIcon: CGFloat = 32
+        /// 16:9 at the dialog's own width, so the two surfaces read as siblings.
+        static let cameraPreview = CGSize(width: 420, height: 236)
         /// Transient volume HUD shown after any volume or mute command.
         static let hudWidth: CGFloat = 200
         static let hudHeight: CGFloat = 100

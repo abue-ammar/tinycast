@@ -33,9 +33,11 @@ enum CalcQuantity {
         }
 
         if let targetName = split.targetName {
-            return convertedResult(
-                value, targetName: targetName, expressionTokens: split.expressionTokens,
-                query: query, rates: rates)
+            guard let output = parser.converted(value, to: targetName) else {
+                guard let message = parser.issue else { return nil }
+                return CalcResult(expression: query, payload: .error(message: message))
+            }
+            return convertedResult(output, expression: expressionText(split.expressionTokens))
         }
 
         switch value.kind {
@@ -85,55 +87,15 @@ enum CalcQuantity {
     }
 
     private static func convertedResult(
-        _ value: QuantityValue, targetName: String, expressionTokens: [CalcToken],
-        query: String, rates: CurrencyRates?
+        _ value: QuantityValue, expression: String
     ) -> CalcResult? {
-        let expression = expressionText(expressionTokens)
         switch value.kind {
         case .scalar:
             return nil
-        case .unit(let from):
-            if let to = CalcUnits.byName[targetName] {
-                guard from.category == to.category else {
-                    return conversionError(
-                        query, from: from.category.displayName, to: to.category.displayName)
-                }
-                let output = convertUnit(value.amount, from: from, to: to)
-                guard output.isFinite else { return nil }
-                return measurementResult(output, unit: to, expression: expression)
-            }
-            if CalcCurrency.byName[targetName] != nil {
-                return conversionError(
-                    query, from: from.category.displayName, to: CalcCurrency.categoryName)
-            }
-            return nil
-        case .currency(let from):
-            if let to = CalcCurrency.byName[targetName] {
-                guard let rates else {
-                    return CalcResult(
-                        expression: query,
-                        payload: .error(
-                            message: "Exchange rates unavailable — check your connection."))
-                }
-                guard rates.rate(for: from.code) != nil else {
-                    return CalcResult(
-                        expression: query,
-                        payload: .error(message: "No exchange rate for \(from.code)."))
-                }
-                guard rates.rate(for: to.code) != nil else {
-                    return CalcResult(
-                        expression: query,
-                        payload: .error(message: "No exchange rate for \(to.code)."))
-                }
-                guard let output = rates.convert(value.amount, from: from.code, to: to.code)
-                else { return nil }
-                return currencyResult(output, definition: to, expression: expression)
-            }
-            if let to = CalcUnits.byName[targetName] {
-                return conversionError(
-                    query, from: CalcCurrency.categoryName, to: to.category.displayName)
-            }
-            return nil
+        case .unit(let unit):
+            return measurementResult(value.amount, unit: unit, expression: expression)
+        case .currency(let definition):
+            return currencyResult(value.amount, definition: definition, expression: expression)
         }
     }
 
@@ -159,12 +121,6 @@ enum CalcQuantity {
             payload: .value(
                 display: "\(CalcFormatter.grouped(formatted)) \(definition.code)",
                 copyText: "\(formatted) \(definition.code)"))
-    }
-
-    private static func conversionError(_ query: String, from: String, to: String) -> CalcResult {
-        CalcResult(
-            expression: query,
-            payload: .error(message: "Cannot convert \(from) to \(to)."))
     }
 
     fileprivate static func convertUnit(_ amount: Double, from: UnitDef, to: UnitDef) -> Double {
@@ -548,12 +504,7 @@ private struct QuantityParser {
             position += 1
             return parseExpression(minBindingPower: Self.unaryBindingPower)
         case .op("("):
-            position += 1
-            guard let value = parseExpression(minBindingPower: 0),
-                case .op(")") = current
-            else { return nil }
-            position += 1
-            return value
+            return parseGrouped()
         case .ident(let name):
             guard CalcUnits.byName[name] == nil,
                 let definition = CalcCurrency.byName[name],
@@ -564,6 +515,88 @@ private struct QuantityParser {
             dimensionCount += 1
             return QuantityValue(amount: amount, kind: .currency(definition))
         default:
+            return nil
+        }
+    }
+
+    /// A group is its own conversion scope, so `(20 sgd to usd) * 30` converts then multiplies.
+    private mutating func parseGrouped() -> QuantityValue? {
+        guard let close = matchingParenthesis() else { return nil }
+        position += 1
+        let targetName = groupedTarget(before: close)
+        guard let value = parseGroupedValue(upTo: targetName == nil ? close : close - 2)
+        else { return nil }
+        position = close + 1
+        guard let targetName else { return value }
+        operationCount += 1
+        return converted(value, to: targetName)
+    }
+
+    /// A lone unit or currency implies an amount of 1, the way `eur to usd` already does.
+    private mutating func parseGroupedValue(upTo end: Int) -> QuantityValue? {
+        if end - position == 1, case .ident(let name) = tokens[position],
+            let kind = dimension(named: name)
+        {
+            position = end
+            dimensionCount += 1
+            return QuantityValue(amount: 1, kind: kind)
+        }
+        guard let value = parseExpression(minBindingPower: 0), position == end else { return nil }
+        return value
+    }
+
+    private func matchingParenthesis() -> Int? {
+        guard case .op("(")? = current else { return nil }
+        var depth = 0
+        for index in position..<tokens.count {
+            if case .op("(") = tokens[index] { depth += 1 }
+            if case .op(")") = tokens[index] {
+                depth -= 1
+                if depth == 0 { return index }
+            }
+        }
+        return nil
+    }
+
+    /// The group's own `to` / `in` / `->` suffix, which the enclosing expression never sees.
+    private func groupedTarget(before close: Int) -> String? {
+        guard close - position >= 3, CalcUnits.isConnector(tokens[close - 2]),
+            case .ident(let name) = tokens[close - 1]
+        else { return nil }
+        return name
+    }
+
+    mutating func converted(
+        _ value: QuantityValue, to targetName: String
+    ) -> QuantityValue? {
+        switch value.kind {
+        case .scalar:
+            return nil
+        case .unit(let from):
+            if let to = CalcUnits.byName[targetName] {
+                guard from.category == to.category else {
+                    return fail(
+                        "Cannot convert \(from.category.displayName) to \(to.category.displayName).")
+                }
+                let output = CalcQuantity.convertUnit(value.amount, from: from, to: to)
+                guard output.isFinite else { return nil }
+                return QuantityValue(amount: output, kind: .unit(to))
+            }
+            if CalcCurrency.byName[targetName] != nil {
+                return fail(
+                    "Cannot convert \(from.category.displayName) to \(CalcCurrency.categoryName).")
+            }
+            return nil
+        case .currency(let from):
+            if let to = CalcCurrency.byName[targetName] {
+                guard let output = convertedCurrency(value.amount, from: from, to: to)
+                else { return nil }
+                return QuantityValue(amount: output, kind: .currency(to))
+            }
+            if let to = CalcUnits.byName[targetName] {
+                return fail(
+                    "Cannot convert \(CalcCurrency.categoryName) to \(to.category.displayName).")
+            }
             return nil
         }
     }

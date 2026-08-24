@@ -424,6 +424,30 @@ per-scroll-view shim: chasing that flip after the fact is what caused the flash.
 
 ---
 
+## The camera preview panel
+
+`CameraPreviewPanel` is the third borderless surface, beside the dialog and the notes panel. It takes
+the same recipe — `panelScrim`, then `VisualEffectView`, then the clip — and the same optical lift a
+dialog takes, but sits at `.floating` rather than `.modalPanel` so a failure report still lands on
+top of it.
+
+`AVCaptureVideoPreviewLayer` is hosted in one `NSViewRepresentable` and nothing else; the title,
+countdown and buttons around it are Tinycast's own. Its buttons are a **deliberate copy** of
+`DialogButton` rather than a share: the dialog owns its button, and a preview that had to move with
+it would couple two unrelated surfaces.
+
+## Dialog accessories
+
+A dialog carries at most one control beyond its buttons, and `DialogAccessory` makes that structural
+rather than a convention — `.volume` for the Set Volume prompt, `.eventDraft` for New Event. Two
+things follow from the enum:
+
+- **Arrow keys belong to the accessory, not the panel.** `DialogPanel.handlesArrowKeys` is set from
+  `DialogAccessory.claimsArrowKeys`, so the slider still steps on ←/→ while the New Event title field
+  keeps its caret.
+- **An accessory can refuse its own primary action.** An invalid draft leaves the dialog up on ↵ and
+  on a click alike, which is what a greyed-out button would say if `DialogAction` could carry one.
+
 ## Settings
 
 Source: `DesignSystem/SettingsComponents.swift`.

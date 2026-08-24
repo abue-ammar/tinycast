@@ -115,9 +115,7 @@ struct UpdateWindowView: View {
     }
 
     private func notes(_ release: AvailableRelease) -> some View {
-        Text(markdown(release.notes))
-            .font(.callout)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        ReleaseNotesView(text: release.notes)
     }
 
     private func report(_ failure: UpdateFailure) -> some View {
@@ -152,8 +150,10 @@ struct UpdateWindowView: View {
             content()
                 .textSelection(.enabled)
                 .padding(Theme.Spacing.xl)
+                .hideNativeScrollers()
         }
         .frame(height: Self.cardHeight)
+        .thinScrollbar()
         .background(Theme.Colors.cardFill)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
     }
@@ -195,12 +195,5 @@ struct UpdateWindowView: View {
                     .keyboardShortcut(.defaultAction)
             }
         }
-    }
-
-    /// GitHub release bodies are Markdown; anything it can't parse still reads fine as plain text.
-    private func markdown(_ text: String) -> AttributedString {
-        let options = AttributedString.MarkdownParsingOptions(
-            interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
     }
 }

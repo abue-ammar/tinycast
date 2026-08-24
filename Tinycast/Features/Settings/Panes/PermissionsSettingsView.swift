@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PermissionsSettingsView: View {
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
+    @State private var calendarAccess = Permissions.calendarAccess()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -35,12 +36,44 @@ struct PermissionsSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                LabeledContent {
+                    Label(calendarStatus.title, systemImage: calendarStatus.symbol)
+                        .foregroundStyle(calendarStatus.tint)
+                } label: {
+                    Text("Calendars")
+                    Text("Lets Tinycast find the join link for the meeting you are about to be in.")
+                }
+
+                LabeledContent {
+                    Button("Open…") { Permissions.openCalendarSettings() }
+                } label: {
+                    Text("Manage in System Settings")
+                    // Only the Calendar pane's own switch may ask for this, so this never prompts.
+                    Text("Opens Privacy & Security › Calendars.")
+                }
+            } header: {
+                Text("Calendars")
+            }
         }
         .formStyle(.grouped)
-        .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
-        .onReceive(refreshTimer) { _ in
-            let trusted = Permissions.isAccessibilityTrusted()
-            if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+        .onAppear(perform: refresh)
+        .onReceive(refreshTimer) { _ in refresh() }
+    }
+
+    private var calendarStatus: (title: String, symbol: String, tint: Color) {
+        switch calendarAccess {
+        case .granted: return ("Granted", "checkmark.circle.fill", .green)
+        case .notDetermined: return ("Not asked yet", "questionmark.circle.fill", .secondary)
+        case .denied: return ("Not granted", "exclamationmark.triangle.fill", .orange)
         }
+    }
+
+    private func refresh() {
+        let trusted = Permissions.isAccessibilityTrusted()
+        if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+        let access = Permissions.calendarAccess()
+        if access != calendarAccess { calendarAccess = access }
     }
 }

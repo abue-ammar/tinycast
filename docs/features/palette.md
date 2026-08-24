@@ -66,6 +66,7 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList` |
 | `.emoji` | `EmojiScreen` | `EmojiGridView` |
 | `.fileSearch` | `FileSearchScreen` | `FileSearchList` (see [file-search.md](file-search.md)) |
+| `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
@@ -100,8 +101,8 @@ The typed values live on `PaletteState.commandArguments`, keyed by
 `PaletteState.argumentKey(entryID, name)`, and are cleared with the rest of the screen.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
-match the visible row order**, including the inline calculator card at index 0 when present (see
-[calculator.md](calculator.md)).
+match the visible row order**, including the card at index 0 when present — the calculator's (see
+[calculator.md](calculator.md)) or the meeting join card (see [calendar.md](calendar.md)), never both.
 
 ## Window placement
 
