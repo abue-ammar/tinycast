@@ -68,7 +68,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard enabled != isEnabled else { return }
         isEnabled = enabled
         guard enabled else {
-            await stop()
+            await stop(force: true)
             installed = []
             appIndex?.setExtensionCommands([])
             return
@@ -215,7 +215,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     /// Takes everything keyed to it: files, storage, icon, and through `onDidUninstall` its shortcuts.
     func uninstall(_ installedExtension: InstalledExtension) async {
-        if running?.extensionName == installedExtension.manifest.name { await stop() }
+        if running?.extensionName == installedExtension.manifest.name { await stop(force: true) }
         let entryIDs = installedExtension.manifest.commands.map {
             ExtensionCommandRef(
                 extensionName: installedExtension.manifest.name, commandName: $0.name
@@ -270,7 +270,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     func run(
         _ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:]
     ) async {
-        await stop()
+        await stop(force: true)
 
         if let reason = command.mode.unsupportedReason {
             state = .failed(reason)
@@ -338,7 +338,10 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             session: session, code: code, file: bundle, mode: command.mode, context: context)
     }
 
-    func stop() async {
+    func stop(force: Bool = false) async {
+        if !force && ExtensionOAuthSession.isAuthorizing {
+            return
+        }
         oauthSession.cancel()
         guard let sessionID else {
             resetSessionState()
@@ -399,7 +402,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard session == sessionID else { return }
         // A no-view command is done: the palette is already closing, so just release the session.
         state = .finished
-        Task { await stop() }
+        Task { await stop(force: true) }
     }
 
     func runtime(_ runtime: ExtensionRuntime, log level: String, message: String) {

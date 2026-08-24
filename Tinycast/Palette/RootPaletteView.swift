@@ -245,7 +245,7 @@ struct RootPaletteView: View {
             if vm.mode != .uninstall { uninstall.cancel() }
             if vm.mode != .fileSearch { fileSearch.cancel() }
             // Leaving the screen any other way than Escape still ends the command's session.
-            if vm.mode != .extensionCommand, extensions.running != nil {
+            if vm.mode != .extensionCommand, extensions.running != nil, !ExtensionOAuthSession.isAuthorizing {
                 Task { await extensions.stop() }
             }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.

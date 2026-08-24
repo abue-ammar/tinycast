@@ -23,6 +23,11 @@ final class ExtensionOAuthSession: NSObject {
     // Active session registry for callback dispatch.
     private static weak var activeSession: ExtensionOAuthSession?
 
+    /// True while an authorization request is currently pending in the browser.
+    static var isAuthorizing: Bool {
+        activeSession?.continuation != nil
+    }
+
     enum OAuthError: LocalizedError {
         case invalidURL(String)
         case canceled

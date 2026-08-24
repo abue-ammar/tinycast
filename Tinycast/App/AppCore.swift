@@ -255,6 +255,7 @@ final class AppCore {
 
     func handleOpenURL(_ url: URL) {
         if ExtensionOAuthSession.handleCallbackURL(url) {
+            paletteCoordinator.showPalette(mode: .extensionCommand, restoreAnyMode: true)
             return
         }
         let path = url.pathComponents.filter { $0 != "/" }
