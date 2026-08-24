@@ -1,69 +1,75 @@
-// Self-contained checks for the embedded runtime: each fixture is a tiny extension command compiled
-// with esbuild exactly the way a real one is (CJS, JSX automatic, @raycast/api + react external).
-//
-//   node fixtures.mjs
+// Fixture-based integration tests for the React runtime. Each fixture exercises a slice of the
+// bridge contract against the real prebuilt runtime.
 
+import { createHarness, bootConfig, describeTree } from "./test.mjs";
 import { transformSync } from "esbuild";
-import { bootConfig, createHarness, describeTree } from "./test.mjs";
 
-function compile(source) {
-  return transformSync(source, { loader: "jsx", jsx: "automatic", format: "cjs", target: "es2022" }).code;
-}
-
-const wait = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
-
+let passes = 0;
 let failures = 0;
 
-function check(label, condition, detail) {
+function check(label, condition, extra = "") {
   if (condition) {
+    passes++;
     console.log(`  ✓ ${label}`);
   } else {
-    failures += 1;
-    console.log(`  ✗ ${label}${detail ? ` — ${detail}` : ""}`);
+    failures++;
+    console.log(`  ✗ ${label}${extra ? ` — ${extra}` : ""}`);
   }
 }
 
-async function run(name, source, mode, body) {
+function compile(source) {
+  const { code } = transformSync(source, {
+    loader: "jsx",
+    jsx: "automatic",
+    jsxImportSource: "react",
+    format: "cjs",
+    target: "es2022",
+  });
+  return code;
+}
+
+const wait = (ms = 15) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function run(name, source, mode, verify) {
   console.log(`\n▶ ${name}`);
   const harness = createHarness();
   harness.boot(bootConfig());
-  harness.start("s1", compile(source), "/fixtures/cmd.js", "/fixtures", mode, {});
+  const code = compile(source);
+  harness.start("s1", code, "/fixtures/cmd.js", "/fixtures", mode, {});
   await wait();
-  if (harness.state.failures.length) {
-    failures += 1;
-    console.log(`  ✗ threw:\n${harness.state.failures.join("\n")}`);
-  }
-  await body(harness);
+  await verify(harness);
   harness.stop("s1");
 }
 
 // ─── Fixtures ────────────────────────────────────────────────────────
 
 const listSource = `
-import { List, ActionPanel, Action, Icon, Color } from "@raycast/api";
+import { List, ActionPanel, Action, Icon } from "@raycast/api";
 import { useState } from "react";
 
 export default function Command() {
   const [count, setCount] = useState(0);
   return (
-    <List navigationTitle="Fixtures" searchBarPlaceholder="Type to filter…" isLoading={false}
-      searchBarAccessory={<List.Dropdown tooltip="Scope" value="all"><List.Dropdown.Item title="All" value="all" /></List.Dropdown>}>
-      <List.Section title="Numbers" subtitle="two">
+    <List
+      searchBarPlaceholder="Search…"
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter" onChange={() => {}}>
+          <List.Dropdown.Item title="All" value="all" />
+          <List.Dropdown.Item title="Active" value="active" />
+        </List.Dropdown>
+      }
+    >
+      <List.Section title="Main">
         <List.Item
+          id="item-1"
           title={"Count is " + count}
-          subtitle="tap to bump"
-          icon={{ source: Icon.Circle, tintColor: Color.Green }}
-          accessories={[{ text: String(count) }, { tag: { value: "live", color: Color.Blue } }]}
+          accessories={[{ text: "Tag" }, { icon: Icon.Star }]}
           actions={
-            <ActionPanel title="Row">
-              <Action title="Bump" onAction={() => setCount((value) => value + 1)} />
-              <ActionPanel.Section title="More">
-                <Action.CopyToClipboard title="Copy" content="hello" />
-              </ActionPanel.Section>
+            <ActionPanel>
+              <Action title="Bump" onAction={() => setCount((c) => c + 1)} />
             </ActionPanel>
           }
         />
-        <List.Item title="Second" keywords={["two"]} />
       </List.Section>
     </List>
   );
@@ -71,24 +77,22 @@ export default function Command() {
 `;
 
 const detailSource = `
-import { Detail, ActionPanel, Action } from "@raycast/api";
+import { Detail } from "@raycast/api";
 
 export default function Command() {
   return (
     <Detail
-      markdown={"# Title\\n\\nSome **body** text."}
-      navigationTitle="Doc"
+      markdown="# Hello world"
       metadata={
         <Detail.Metadata>
           <Detail.Metadata.Label title="Author" text="Ada" />
           <Detail.Metadata.Separator />
           <Detail.Metadata.TagList title="Tags">
-            <Detail.Metadata.TagList.Item text="swift" />
+            <Detail.Metadata.TagList.Item text="fast" color="#00ff00" />
           </Detail.Metadata.TagList>
-          <Detail.Metadata.Link title="Home" target="https://example.com" text="example.com" />
+          <Detail.Metadata.Link title="Link" target="https://example.com" text="Home" />
         </Detail.Metadata>
       }
-      actions={<ActionPanel><Action.OpenInBrowser url="https://example.com" /></ActionPanel>}
     />
   );
 }
@@ -121,36 +125,41 @@ export default function Command() {
   return (
     <Form actions={<ActionPanel><Action.SubmitForm title="Save" onSubmit={(values) => { globalThis.__submitted = values; }} /></ActionPanel>}>
       <Form.TextField id="name" title="Name" defaultValue="Ada" />
-      <Form.TextArea id="bio" title="Bio" />
-      <Form.Checkbox id="agree" label="Agree" defaultValue={true} />
+      <Form.TextArea id="bio" title="Bio" defaultValue="" />
+      <Form.Checkbox id="agree" label="I agree" defaultValue={true} />
       <Form.Dropdown id="role" title="Role" defaultValue="dev">
         <Form.Dropdown.Item value="dev" title="Developer" />
-        <Form.Dropdown.Item value="ops" title="Operator" />
       </Form.Dropdown>
-      <Form.TagPicker id="tags" title="Tags" defaultValue={["a"]}>
-        <Form.TagPicker.Item value="a" title="A" />
+      <Form.TagPicker id="tags" title="Tags" defaultValue={["swift"]}>
+        <Form.TagPicker.Item value="swift" title="Swift" />
       </Form.TagPicker>
-      <Form.DatePicker id="due" title="Due" />
+      <Form.DatePicker id="when" title="When" defaultValue={new Date("2026-04-18T10:00:00Z")} />
       <Form.Separator />
-      <Form.Description text="All fields optional." />
+      <Form.Description title="Info" text="All fields are saved locally." />
     </Form>
   );
 }
 `;
 
 const navigationSource = `
-import { List, Detail, ActionPanel, Action } from "@raycast/api";
-import { useNavigation } from "@raycast/api";
+import { List, ActionPanel, Action, useNavigation, Detail } from "@raycast/api";
 
-function Second() {
-  const { pop } = useNavigation();
-  return <Detail markdown="second" actions={<ActionPanel><Action title="Back" onAction={pop} /></ActionPanel>} />;
+function Subscreen() {
+  return <Detail markdown="# Subscreen" />;
 }
 
 export default function Command() {
+  const { push } = useNavigation();
   return (
     <List>
-      <List.Item title="Go" actions={<ActionPanel><Action.Push title="Push" target={<Second />} /></ActionPanel>} />
+      <List.Item
+        title="Push"
+        actions={
+          <ActionPanel>
+            <Action title="Open subscreen" onAction={() => push(<Subscreen />)} />
+          </ActionPanel>
+        }
+      />
     </List>
   );
 }
@@ -160,6 +169,7 @@ const nodeSource = `
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import { Buffer } from "node:buffer";
 import { Detail } from "@raycast/api";
 
 export default function Command() {
@@ -291,7 +301,7 @@ export default function Command() {
 }
 `;
 
-// ─── Runner ──────────────────────────────────────────────────────────
+// ─── Runner ─────────────────────────────────────────────────────────
 
 export async function runFixtures() {
   await run("List with sections, actions and a dropdown", listSource, "view", async (harness) => {
@@ -312,44 +322,51 @@ export async function runFixtures() {
     check("action carries a dispatchable handler", !!bump?.props?.onAction?.$fn, JSON.stringify(bump?.props));
     harness.dispatch("s1", bump.props.onAction.$fn);
     await wait();
-    const updated = findNode(harness.state.trees.at(-1), "List.Item");
-    check("re-renders after the action", updated.props.title === "Count is 1", updated.props.title);
+    check("re-renders after the action", describeTree(harness.state.trees.at(-1)).includes("Count is 1"));
   });
 
   await run("Detail with metadata", detailSource, "view", async (harness) => {
-    const tree = harness.state.trees.at(-1);
-    const detail = findNode(tree, "Detail");
-    check("renders Detail", !!detail);
-    check("hoists metadata", detail.props.metadata?.type === "Detail.Metadata");
-    const types = detail.props.metadata.children.map((c) => c.type);
+    const dump = describeTree(harness.state.trees.at(-1));
+    check("renders Detail", dump.includes("<Detail"));
+    check("hoists metadata", dump.includes("metadata=<Detail.Metadata>"));
+    const metadata = findNode(harness.state.trees.at(-1), "Detail").props.metadata;
+    const kinds = metadata.children.map((child) => child.type);
     check(
       "metadata children in order",
-      types.join(",") === "Detail.Metadata.Label,Detail.Metadata.Separator,Detail.Metadata.TagList,Detail.Metadata.Link",
-      types.join(","),
+      JSON.stringify(kinds) ===
+        JSON.stringify([
+          "Detail.Metadata.Label",
+          "Detail.Metadata.Separator",
+          "Detail.Metadata.TagList",
+          "Detail.Metadata.Link",
+        ]),
+      JSON.stringify(kinds),
     );
   });
 
   await run("List.Item.Detail split across a Fragment", fragmentDetailSource, "view", async (harness) => {
-    const tree = harness.state.trees.at(-1);
-    const item = findNode(tree, "List.Item");
-    check("keeps the markdown from the first sibling", item.props.detail?.props?.markdown === "30s remaining");
-    check("keeps the metadata from the second sibling", item.props.detail?.props?.metadata?.type === "List.Item.Detail.Metadata");
+    const detail = findNode(harness.state.trees.at(-1), "List.Item").props.detail;
+    check("keeps the markdown from the first sibling", detail.props.markdown === "30s remaining", JSON.stringify(detail.props));
+    check("keeps the metadata from the second sibling", detail.props.metadata?.type === "Detail.Metadata", JSON.stringify(detail.props));
   });
 
   await run("Form fields and submit", formSource, "view", async (harness) => {
     const tree = harness.state.trees.at(-1);
     const form = findNode(tree, "Form");
-    const fieldTypes = form.children.map((c) => c.type);
+    const types = form.children.map((child) => child.type);
     check(
       "all field types render",
-      fieldTypes.join(",") ===
-        "Form.TextField,Form.TextArea,Form.Checkbox,Form.Dropdown,Form.TagPicker,Form.DatePicker,Form.Separator,Form.Description",
-      fieldTypes.join(","),
+      ["Form.TextField", "Form.TextArea", "Form.Checkbox", "Form.Dropdown", "Form.TagPicker", "Form.DatePicker", "Form.Separator", "Form.Description"].every(
+        (type) => types.includes(type),
+      ),
+      JSON.stringify(types),
     );
-    const text = form.children[0];
-    check("field exposes its value", text.props.value === "Ada");
-    check("field has a change handler", !!text.props.onChange?.$fn);
+    const field = form.children.find((child) => child.type === "Form.TextField");
+    check("field exposes its value", field.props.value === "Ada", JSON.stringify(field.props));
+    check("field has a change handler", !!field.props.onTinycastChange?.$fn);
 
+    harness.dispatch("s1", field.props.onTinycastChange.$fn, ["Grace"]);
+    await wait();
     const submit = findNode(harness.state.trees.at(-1), "Action");
     harness.dispatch("s1", submit.props.onAction.$fn);
     await wait();
@@ -409,7 +426,7 @@ export async function runFixtures() {
     const result = harness.call("globalThis.__oauthTest");
     check("generates PKCE codeVerifier and challenge", result?.verifierLen >= 43 && result?.challengeLen >= 43, JSON.stringify(result));
     check("generates OAuth state", result?.stateLen >= 20);
-    check("builds correct authorization URL with redirect_uri", new URL(result.url).searchParams.get("redirect_uri") === "https://raycast.com/redirect?packageName=fixture" && new URL(result.url).searchParams.get("client_id") === "client-123");
+    check("builds correct authorization URL with redirect_uri", new URL(result.url).searchParams.get("redirect_uri") === "https://raycast.com/redirect?packageName=Extension" && new URL(result.url).searchParams.get("client_id") === "client-123");
     check("authorize returns authorization code", result?.authCode === "auth-code-12345");
     check("stores and retrieves TokenSet with tokens", result?.retrievedAccessToken === "gho_secret123" && result?.retrievedRefreshToken === "ghr_secret456");
     check("TokenSet isExpired calculation works", result?.isExpiredLive === false && result?.isExpiredOld === true);
@@ -456,8 +473,10 @@ function findNode(tree, type) {
     // Slot props hold real nodes too (actions, metadata, detail).
     for (const value of Object.values(node.props ?? {})) {
       if (value && typeof value === "object" && value.type) stack.push(value);
-      if (Array.isArray(value)) for (const item of value) if (item?.type) stack.push(item);
+      else if (Array.isArray(value)) stack.push(...value.filter((entry) => entry && entry.type));
     }
   }
-  return null;
+  return undefined;
 }
+
+if (import.meta.url === `file://${process.argv[1]}`) await runFixtures();

@@ -29,6 +29,7 @@
 			<array>
 				<string>raycast</string>
 				<string>tinycast</string>
+				<string>com.raycast</string>
 			</array>
 		</dict>
 	</array>

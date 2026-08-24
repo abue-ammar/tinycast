@@ -247,20 +247,24 @@ async function stubHostCall(api, method, args) {
     case "proc.run":
       return syncHostCall(api, method, args);
     case "oauth.authorize": {
-      const spec = args[0] || {};
-      return { code: "auth-code-12345", state: spec.state || "" };
+      const state = typeof args[0] === "object" ? args[0]?.state : args[1];
+      return { authorizationCode: "auth-code-12345", code: "auth-code-12345", state: state || "" };
     }
     case "oauth.getTokens": {
-      return globalThis.__mockOAuthTokens?.[args[0]?.providerId] || null;
+      const providerId = typeof args[0] === "object" ? args[0]?.providerId : args[0];
+      return globalThis.__mockOAuthTokens?.[providerId] || null;
     }
     case "oauth.setTokens": {
+      const providerId = typeof args[0] === "object" ? args[0]?.providerId : args[0];
+      const tokens = typeof args[0] === "object" ? args[0]?.tokens : args[1];
       globalThis.__mockOAuthTokens = globalThis.__mockOAuthTokens || {};
-      globalThis.__mockOAuthTokens[args[0]?.providerId] = args[0]?.tokens;
+      globalThis.__mockOAuthTokens[providerId] = tokens;
       return null;
     }
     case "oauth.removeTokens": {
+      const providerId = typeof args[0] === "object" ? args[0]?.providerId : args[0];
       if (globalThis.__mockOAuthTokens) {
-        delete globalThis.__mockOAuthTokens[args[0]?.providerId];
+        delete globalThis.__mockOAuthTokens[providerId];
       }
       return null;
     }

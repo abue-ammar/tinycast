@@ -4,6 +4,13 @@ import Foundation
 struct ExtensionOAuthAuthorizeOptions: Sendable {
     let url: URL
     let state: String?
+    let providerId: String?
+
+    init(url: URL, state: String? = nil, providerId: String? = nil) {
+        self.url = url
+        self.state = state
+        self.providerId = providerId
+    }
 }
 
 struct ExtensionOAuthAuthorizeResult: Sendable {
@@ -13,12 +20,13 @@ struct ExtensionOAuthAuthorizeResult: Sendable {
 }
 
 /// Manages an OAuth 2.0 PKCE authorization session for extensions.
-/// Opens authorization URLs in the default browser and captures `raycast://oauth` and `tinycast://oauth`
+/// Opens authorization URLs in the default browser and captures `raycast://oauth`, `com.raycast:/oauth`, and `tinycast://oauth`
 /// redirect callbacks to complete the authentication flow.
 @MainActor
-final class ExtensionOAuthSession: NSObject {
+final class ExtensionOAuthSession {
     private var continuation: CheckedContinuation<[String: String], Error>?
     private var expectedState: String?
+    private var timeoutTimer: Timer?
 
     // Active session registry for callback dispatch.
     private static weak var activeSession: ExtensionOAuthSession?
@@ -26,6 +34,11 @@ final class ExtensionOAuthSession: NSObject {
     /// True while an authorization request is currently pending in the browser.
     static var isAuthorizing: Bool {
         activeSession?.continuation != nil
+    }
+
+    /// True while this instance is currently authorizing.
+    var isAuthorizing: Bool {
+        continuation != nil
     }
 
     enum OAuthError: LocalizedError {
@@ -44,16 +57,19 @@ final class ExtensionOAuthSession: NSObject {
         }
     }
 
-    /// Handle deep links coming from NSApplicationDelegate (e.g. raycast://oauth?code=...)
+    /// Handle deep links coming from NSApplicationDelegate (e.g. raycast://oauth?code=... or tinycast://oauth?code=...)
     @discardableResult
     static func handleCallbackURL(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased(),
-            scheme == "raycast" || scheme == "tinycast"
+            scheme == "raycast" || scheme == "tinycast" || scheme == "com.raycast"
         else { return false }
 
         let host = url.host?.lowercased() ?? ""
         let path = url.path.lowercased()
-        guard host == "oauth" || host == "redirect" || path.contains("oauth") || path.contains("redirect") else {
+        guard host == "oauth" || host == "redirect"
+            || path == "/oauth" || path == "/redirect"
+            || path.hasPrefix("/oauth/") || path.hasPrefix("/redirect/")
+        else {
             return false
         }
 
@@ -72,8 +88,7 @@ final class ExtensionOAuthSession: NSObject {
 
     func authorize(
         url: URL,
-        expectedState: String? = nil,
-        callbackScheme: String = "raycast"
+        expectedState: String? = nil
     ) async throws -> [String: String] {
         if continuation != nil {
             cancel()
@@ -84,6 +99,14 @@ final class ExtensionOAuthSession: NSObject {
 
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
+
+            // Timeout after 5 minutes of inactivity
+            self.timeoutTimer?.invalidate()
+            self.timeoutTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: false) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.finish(error: OAuthError.failed("Authentication timed out."))
+                }
+            }
 
             let opened = NSWorkspace.shared.open(url)
             if !opened {
@@ -100,19 +123,23 @@ final class ExtensionOAuthSession: NSObject {
             return
         }
 
-        if let expected = expectedState, !expected.isEmpty,
-            let received = params["state"], !received.isEmpty,
-            received != expected
-        {
-            finish(error: OAuthError.stateMismatch)
-            return
+        if let expected = expectedState, !expected.isEmpty {
+            guard let received = params["state"], !received.isEmpty, received == expected else {
+                finish(error: OAuthError.stateMismatch)
+                return
+            }
         }
 
         finish(result: params)
     }
 
     private func finish(result: [String: String]? = nil, error: Error? = nil) {
-        Self.activeSession = nil
+        timeoutTimer?.invalidate()
+        timeoutTimer = nil
+
+        if Self.activeSession === self {
+            Self.activeSession = nil
+        }
 
         if let continuation = self.continuation {
             self.continuation = nil

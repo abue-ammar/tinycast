@@ -84,7 +84,7 @@ export class PKCEClient {
       if (this.redirectMethod === nestedEnums.OAuth.RedirectMethod.App) {
         redirectURI = "raycast://oauth?package_name=Extension";
       } else if (this.redirectMethod === nestedEnums.OAuth.RedirectMethod.AppURI) {
-        redirectURI = "raycast://oauth/extension";
+        redirectURI = "com.raycast:/oauth?package_name=Extension";
       } else {
         redirectURI = "https://raycast.com/redirect?packageName=Extension";
       }
@@ -136,13 +136,7 @@ export class PKCEClient {
     }
     const state = typeof request === "object" ? request?.state : undefined;
 
-    let res = await hostCall("oauth", "authorize", [
-      {
-        url,
-        state,
-        providerId: this.providerId,
-      },
-    ]);
+    let res = await hostCall("oauth", "authorize", [url, state, this.providerId]);
 
     if (typeof res === "string") {
       try {

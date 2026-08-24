@@ -1,8 +1,7 @@
 import AppKit
 import Foundation
 
-/// A protocol, so the bridge has no hard dependency on the `ExtensionManager` that owns it.
-@MainActor
+/// A protocol, so the bridge has no hard dependency on the `ExtensionManager` that owns it.\n@MainActor
 protocol ExtensionHostContext: AnyObject {
     /// The extension whose command is running — the namespace for storage, cache and preferences.
     var activeExtensionName: String? { get }
@@ -342,7 +341,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             return applications(forPath: arguments.first?.stringValue)
 
         case "defaultApplication":
-            guard let path = arguments.first?.stringValue,
+            guard let path = arguments.first?.stringValue,\
                 let url = NSWorkspace.shared.urlForApplication(
                     toOpen: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
             else { throw ExtensionHostError.unsupported("getDefaultApplication") }
@@ -485,12 +484,24 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         guard let context else { throw ExtensionHostError.noActiveExtension }
         switch method {
         case "authorize":
-            guard let payload = arguments.first?.objectValue,
-                let urlString = payload["url"]?.stringValue,
-                let url = URL(string: urlString)
-            else { throw ExtensionHostError.unsupported("authorize requires url") }
-            let state = payload["state"]?.stringValue
-            let options = ExtensionOAuthAuthorizeOptions(url: url, state: state)
+            let urlString: String?
+            let state: String?
+            let providerId: String?
+
+            if let payload = arguments.first?.objectValue {
+                urlString = payload["url"]?.stringValue
+                state = payload["state"]?.stringValue
+                providerId = payload["providerId"]?.stringValue
+            } else {
+                urlString = arguments.first?.stringValue
+                state = arguments[safe: 1]?.stringValue
+                providerId = arguments[safe: 2]?.stringValue
+            }
+
+            guard let urlString, let url = URL(string: urlString) else {
+                throw ExtensionHostError.unsupported("authorize requires url")
+            }
+            let options = ExtensionOAuthAuthorizeOptions(url: url, state: state, providerId: providerId)
             let result = try await context.authorizeOAuth(options: options)
             var dict: [String: Any] = ["authorizationCode": result.authorizationCode]
             if let token = result.accessToken { dict["accessToken"] = token }

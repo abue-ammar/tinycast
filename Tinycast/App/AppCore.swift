@@ -268,13 +268,6 @@ final class AppCore {
     func handleOpenURL(_ url: URL) {
         if ExtensionOAuthSession.handleCallbackURL(url) {
             paletteCoordinator.showPalette(mode: .extensionCommand, restoreAnyMode: true)
-            return
-        }
-        let path = url.pathComponents.filter { $0 != "/" }
-        if url.host == "extensions", path.count >= 3 {
-            let extensionName = path[1]
-            let commandName = path[2]
-            extensionCoordinator.runExtensionCommand(entryID: "ext:\(extensionName):\(commandName)")
         }
     }
 
@@ -341,7 +334,7 @@ final class AppCore {
             {
                 _ = $0.autoJoinMeetings
                 _ = $0.menuBarEvents
-            }, reproject: { $0.calendarCoordinator.applyClock() })
+            }, reproject: { $0.calendarCoordinator.applyClock() })\
         track(
             {
                 _ = $0.fileSearchScopes

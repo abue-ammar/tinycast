@@ -122,7 +122,7 @@ struct RootPaletteView: View {
 
     /// The bottom-left app menu content (About / Settings).
     private var appMenuContent: PopoverMenuContent {
-        PopoverMenuContent(items: [
+        PopoverMenuContent(items: [\
             PopoverMenuItem(title: "About Tinycast", systemImage: "info.circle") {
                 core.settingsCoordinator.showAbout()
             },
@@ -147,7 +147,7 @@ struct RootPaletteView: View {
         let screen = screen
         let count = screen.rows.count
         let sel = selection(count: count)
-        // The argument form has no rows to count, but ↵ still does something.
+        // The argument form has no rows to count, but ⏎ still does something.
         let showActionGroup =
             (count > 0 || vm.mode == .quicklinkArguments) && screen.hasPrimaryAction(at: sel)
 
@@ -253,7 +253,7 @@ struct RootPaletteView: View {
             if vm.mode != .uninstall { uninstall.cancel() }
             if vm.mode != .fileSearch { fileSearch.cancel() }
             // Leaving the screen any other way than Escape still ends the command's session.
-            if vm.mode != .extensionCommand, extensions.running != nil, !ExtensionOAuthSession.isAuthorizing {
+            if vm.mode != .extensionCommand, extensions.running != nil, !extensions.isAuthorizing {
                 Task { await extensions.stop() }
             }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
@@ -318,7 +318,7 @@ struct RootPaletteView: View {
             if menuOpen { return .handled }
             return moveHorizontally(1) ? .handled : .ignored
         }
-        // Plain ↵ activates an open menu's row; a modified ↵ always runs the selection's.
+        // Plain ⏎ activates an open menu's row; a modified ⏎ always runs the selection's.
         .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
@@ -606,7 +606,7 @@ struct RootPaletteView: View {
                     Text(pillLabel)
                         .font(Theme.Typography.bar)
                         .foregroundStyle(pillTint)
-                    KeyCapChip(text: "↵", style: .outline)
+                    KeyCapChip(text: "⏎", style: .outline)
                 }
             }
             BarButton(action: toggleActions) {

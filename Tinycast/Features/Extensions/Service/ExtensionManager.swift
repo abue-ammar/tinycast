@@ -29,6 +29,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Whether the commands reach the launcher at all; independent of `isEnabled`.
     private(set) var showsInLauncher = true
 
+    var isAuthorizing: Bool { oauthSession.isAuthorizing }
+
     let storage: ExtensionStorage
     /// Extension-scoped state the launcher and Settings read through here, like `storage`.
     let appearances = ExtensionAppearanceStore()
@@ -43,6 +45,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     @ObservationIgnored private var sessionID: String?
     @ObservationIgnored private var nextToastID = 1
+    @ObservationIgnored private var lastOAuthExtensionName: String?
 
     init(clipboardStore: ClipboardStore) {
         storage = ExtensionStorage(directory: ExtensionCatalog.storageDirectory())
@@ -68,7 +71,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard enabled != isEnabled else { return }
         isEnabled = enabled
         guard enabled else {
-            await stop(force: true)
+            await stop()
             installed = []
             appIndex?.setExtensionCommands([])
             return
@@ -215,7 +218,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     /// Takes everything keyed to it: files, storage, icon, and through `onDidUninstall` its shortcuts.
     func uninstall(_ installedExtension: InstalledExtension) async {
-        if running?.extensionName == installedExtension.manifest.name { await stop(force: true) }
+        if running?.extensionName == installedExtension.manifest.name { await stop() }
         let entryIDs = installedExtension.manifest.commands.map {
             ExtensionCommandRef(
                 extensionName: installedExtension.manifest.name, commandName: $0.name
@@ -270,7 +273,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     func run(
         _ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:]
     ) async {
-        await stop(force: true)
+        await stop()
 
         if let reason = command.mode.unsupportedReason {
             state = .failed(reason)
@@ -338,10 +341,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             session: session, code: code, file: bundle, mode: command.mode, context: context)
     }
 
-    func stop(force: Bool = false) async {
-        if !force && ExtensionOAuthSession.isAuthorizing {
-            return
-        }
+    func stop() async {
         oauthSession.cancel()
         guard let sessionID else {
             resetSessionState()
@@ -402,7 +402,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard session == sessionID else { return }
         // A no-view command is done: the palette is already closing, so just release the session.
         state = .finished
-        Task { await stop(force: true) }
+        Task { await stop() }
     }
 
     func runtime(_ runtime: ExtensionRuntime, log level: String, message: String) {
@@ -512,21 +512,22 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult {
-        try await oauthSession.authorize(options: options)
+        lastOAuthExtensionName = running?.extensionName
+        return try await oauthSession.authorize(options: options)
     }
 
     func getOAuthTokens(providerId: String) -> String? {
-        guard let extName = running?.extensionName else { return nil }
+        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return nil }
         return ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: providerId)
     }
 
     func setOAuthTokens(providerId: String, tokens: String) {
-        guard let extName = running?.extensionName else { return }
+        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return }
         ExtensionOAuthKeychain.setTokens(tokens, extensionName: extName, providerId: providerId)
     }
 
     func removeOAuthTokens(providerId: String) {
-        guard let extName = running?.extensionName else { return }
+        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return }
         ExtensionOAuthKeychain.removeTokens(extensionName: extName, providerId: providerId)
     }
 }

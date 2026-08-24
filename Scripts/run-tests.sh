@@ -31,7 +31,7 @@ run() {
     local name=$1
     shift
     if [ -n "$only" ] && [ "$name" != "$only" ]; then return 0; fi
-    ran=$((ran + 1))\
+    ran=$((ran + 1))
 
     # Absolute paths throughout: sourcekit-lsp resolves the command itself and does not apply
     # `directory` to relative arguments, so a relative path there silently yields no index.

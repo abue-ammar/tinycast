@@ -88,6 +88,7 @@ same arrangement as `EmojiData.generated.swift`: building Tinycast never needs N
 | `src/reconciler.js` | `react-reconciler` host config that commits into a JSON tree |
 | `src/api/components.js` | every `@raycast/api` component |
 | `src/api/system.js` | Clipboard, LocalStorage, Cache, Toast, preferences, environment |
+| `src/api/oauth.js` | `OAuth.PKCEClient`, `OAuth.TokenSet`, redirect url builders |
 | `src/api/enums.generated.js` | Icon / Color / Toast.Style / … extracted from the real `@raycast/api` types |
 | `src/node-shims.js` | `path`, `fs`, `os`, `child_process`, `crypto`, `zlib`, `util`, `events`, `buffer`, `punycode`, … |
 | `src/url.js`, `src/punycode.js`, `src/buffer.js` | web/Node primitives JavaScriptCore lacks |
@@ -95,7 +96,7 @@ same arrangement as `EmojiData.generated.swift`: building Tinycast never needs N
 Two host-call flavours:
 
 - **Async** (`invoke`) for anything that needs the main actor — clipboard, toasts, window control,
-  `fetch`, `exec`. Swift answers later through `__tinycast.settle`, so the JS thread never blocks on the
+  `fetch`, `exec`, `oauth`. Swift answers later through `__tinycast.settle`, so the JS thread never blocks on the
   UI.
 - **Blocking** (`invokeSync`) for the synchronous Node shims only — `fs.readFileSync`,
   `execSync`, `createHash`, `gunzipSync`. Safe because Swift services these entirely on the JS queue;
@@ -108,9 +109,11 @@ Two host-call flavours:
 | File | Role |
 | --- | --- |
 | `Service/ExtensionRuntime.swift` | the `JSContext`, host-function installation, timers, exception reporting |
-| `Service/ExtensionHostBridge.swift` | main-actor host APIs (clipboard, storage, cache, window, toasts, system) |
+| `Service/ExtensionHostBridge.swift` | main-actor host APIs (clipboard, storage, cache, window, toasts, system, oauth) |
 | `Service/ExtensionNodeShims.swift` | the synchronous `fs` / `child_process` / `crypto` / `zlib` services |
 | `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus the async `exec` and the shared PATH resolver |
+| `Service/ExtensionOAuthKeychain.swift` | secure OAuth token storage backed by macOS Keychain |
+| `Service/ExtensionOAuthSession.swift` | PKCE state tracking, browser launch, and callback redirect resolution |
 | `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
 | `Service/ExtensionCatalog.swift` | discovery on disk, install, uninstall, import-from-Raycast |
 | `Service/ExtensionCleanup.swift` | the build workspace's name, the launch sweep, and reclaiming orphans |
@@ -300,7 +303,9 @@ along with the extension's stored preferences and its chosen icon.
 `showHUD`, `confirmAlert`, `closeMainWindow`, `popToRoot`, `clearSearchBar`, `open`, `trash`,
 `showInFinder`, `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `openExtensionPreferences`,
-`useNavigation`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
+`useNavigation`, `OAuth`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
+
+**OAuth 2.0 PKCE** — `OAuth.PKCEClient`, `OAuth.TokenSet`, `OAuth.RedirectMethod`. Supports AppURI custom schemes (`com.raycast:/oauth`, `raycast://oauth`, `tinycast://oauth`) and Raycast web proxy redirects (`raycast.com/redirect`). OAuth tokens are securely stored in the system Keychain (`kSecAttrAccessibleWhenUnlocked`).
 
 **`raycast://` URLs** — extensions address Raycast by scheme; the most common is a bare
 `open("raycast://")` to bring the window back after something stole focus (1Password's auth flow does
@@ -317,15 +322,14 @@ stub that throws only when used, so a bundle that merely references `dgram` or `
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`.
 
-Measured against the 37 extensions installed in a real Raycast on the development machine: **32
-extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
+Measured against the 37 extensions installed in a real Raycast on the development machine: **35
+extensions / 140 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
 `Scripts/run-tests.sh ext-test` reproduce that measurement.
 
 ## What isn't supported yet
 
 | Gap | Why |
 | --- | --- |
-| **OAuth** (`OAuth.PKCEClient`) | The `Web` redirect method routes through `raycast.com/redirect`, which the provider's app registration is bound to. Not portable without that service; `App`/`AppURI` redirects would need a Tinycast URL scheme. This is the single biggest gap — 3 of the 37 extensions measured, 26 commands. |
 | **`menu-bar` commands** | The launcher lists them and explains why they don't open. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **WebSocket** | No polyfill yet; `URLSessionWebSocketTask` could back one. |
@@ -387,6 +391,7 @@ never shares with an installed copy.
 | The extension | `extensions/<name>/` | yes |
 | `LocalStorage`, `Cache`, preferences | `extension-data/<safe name>.json` | yes |
 | `environment.supportPath` | `extension-support/<safe name>/` | yes |
+| OAuth tokens | macOS Keychain (`com.tinycast.extensions.oauth`) | yes |
 | Icon override | `UserDefaults` → `extensionAppearances` | yes |
 | Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |
 | Favorites, hidden items | `UserDefaults` → `favoriteApps`, `hiddenItemKeys` | yes |
@@ -428,50 +433,3 @@ the same tile `IconCache` draws for the built-in commands, so the row reads as p
 ### `ExtensionIconCache`, and why extension artwork draws smaller
 
 An extension's own artwork has its own cache — `Service/ExtensionIconCache.swift` — rather than
-living in `IconCache`. That split is the point: `IconCache` stays the app-and-symbol layer and knows
-nothing about extensions. It lends out only the pixel work (`displayPixel`, `artworkExtent`,
-`paintedExtent`, `rasterized`), so there is one definition of how an icon is measured and drawn.
-
-`ExtensionIconCache.extent` fits that artwork to **0.76** of the canvas, where an app icon and a
-symbol tile both sit at `IconCache.artworkExtent` **0.83**. The gap is deliberate and optical, not a
-size correction — measured, all three paths already produce an identical 40pt box.
-
-Every macOS 26 app icon is a squircle with a glyph inside it, and the ground disappears into the
-palette, so only the glyph reads. A Raycast icon is a flat, fully saturated tile,
-so every pixel of it reads. At equal geometry the extension shouts, and fitting it smaller is what
-makes the two match by eye. Shipped and fetched images take the same target, so an icon doesn't
-change size depending on where it came from.
-
-Change the number only against a rendered strip of real icons; it means nothing on its own.
-`ext-icon-test` guards the invariant: padding in the source cannot change the drawn size.
-
-- `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
-  `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance
-  Raycast has when a command declares no icon of its own.
-- `ExtensionManager.publishLauncherEntries` resolves it into each `AppEntry`; `setAppearance`
-  re-publishes immediately, so rows change without waiting for a rescan.
-- 18 tints, pinned sRGB rather than system colours: tiles rasterize off the main thread, where a dynamic
-  colour would resolve against whatever appearance that thread sees. Pinning also makes the picker's
-  SwiftUI preview and the drawn bitmap the same colour by construction.
-- "Use Original" clears the override. Choices ride along in a settings backup.
-
-### Where the symbols come from
-
-`SymbolCatalog` reads **the system's own catalog** at runtime from
-`/System/Library/CoreServices/CoreGlyphs.bundle` — the symbol order, each symbol's categories, and the
-extra search terms the SF Symbols app matches on, so "coffee" finds `cup.and.saucer`. Reading it beats
-bundling a name list: the offer always matches the OS, with nothing to regenerate per release.
-
-Two filters apply, leaving ~6,500 of the 8,302 names on macOS 26:
-
-- **Apple's reserved marks** (`symbol_restrictions.strings`, ~600 symbols: iCloud, iPhone, AirPlay…),
-  which may only refer to those products.
-- **Locale renderings** (`.ar`, `.hi`, `.rtl`…), near-duplicates of a symbol already in the list.
-
-None of this is API, so every read is optional and `SymbolCatalog.fallback` — the curated ~85 in
-`SymbolCatalog.suggested` — stands in if the bundle ever moves. That curated set is also what the picker
-opens on, since scrolling six thousand icons is not a way to choose one; a search reaches the whole
-catalog regardless of the selected category.
-
-`Tests/symbols-test.swift` compiles the real source and asserts those invariants against this machine's
-CoreGlyphs (shapes and rules, not counts — those move every release).

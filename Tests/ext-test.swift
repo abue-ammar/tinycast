@@ -72,18 +72,18 @@ struct ExtensionTests {
             case "system.applications":
                 return "[]"
             case "oauth.authorize":
-                let state = arguments.first?.objectValue?["state"]?.stringValue ?? ""
+                let state = arguments[safe: 2]?.stringValue ?? ""
                 return "{\"authorizationCode\":\"auth_code_swift_test\",\"state\":\"\(state)\"}"
             case "oauth.getTokens":
-                let providerId = arguments.first?.stringValue ?? arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                let providerId = arguments.first?.stringValue ?? ""
                 return oauthTokens[providerId] ?? ""
             case "oauth.setTokens":
-                let providerId = arguments.first?.stringValue ?? arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
-                let tokens = arguments[safe: 1]?.stringValue ?? arguments.first?.objectValue?["tokens"]?.stringValue ?? ""
+                let providerId = arguments.first?.stringValue ?? ""
+                let tokens = arguments[safe: 1]?.stringValue ?? ""
                 oauthTokens[providerId] = tokens
                 return ""
             case "oauth.removeTokens":
-                let providerId = arguments.first?.stringValue ?? arguments.first?.objectValue?["providerId"]?.stringValue ?? ""
+                let providerId = arguments.first?.stringValue ?? ""
                 oauthTokens.removeValue(forKey: providerId)
                 return ""
             default:
@@ -378,7 +378,8 @@ struct ExtensionTests {
             {"id":2,"type":"List","props":{"filtering":true,"searchBarPlaceholder":"Find…"},"children":[
               {"id":3,"type":"List.Section","props":{"title":"Alpha","subtitle":"two"},"children":[
                 {"id":4,"type":"List.Item","props":{"title":"Apple"},"children":[]},
-                {"id":5,"type":"List.Item","props":{"title":"Banana"},"children":[]}]},{"id":6,"type":"List.Item","props":{"title":"Cherry","keywords":["red"]},"children":[]}]}
+                {"id":5,"type":"List.Item","props":{"title":"Banana"},"children":[]}]},
+              {"id":6,"type":"List.Item","props":{"title":"Cherry","keywords":["red"]},"children":[]}]}
             """
         let list = ExtensionScreen(tree: tree(listJSON), query: "")
         check("kind is list", list.kind == .list)
@@ -436,7 +437,7 @@ struct ExtensionTests {
         check("form has no selectable rows", form.items.isEmpty)
 
         let detail = ExtensionScreen(
-            // Doubled delimiters: the markdown heading contains `"#, which closes a single-# raw string.
+            // Doubled delimiters: the markdown heading contains `"#`, which closes a single-# raw string.
             tree: tree(##"{"id":2,"type":"Detail","props":{"markdown":"# Hi"},"children":[]}"##),
             query: "")
         check("kind is detail", detail.kind == .detail)
@@ -460,8 +461,35 @@ struct ExtensionTests {
         check("out-of-range selection falls back", panels.actionPanel(forItemAt: 99)?.id == 8)
     }
 
+    private final class MockTokenStore: ExtensionOAuthTokenStore, @unchecked Sendable {
+        var storage: [String: String] = [:]
+
+        func get(account: String) -> String? {
+            storage[account]
+        }
+
+        func set(_ value: String, account: String) -> Bool {
+            storage[account] = value
+            return true
+        }
+
+        func remove(account: String) -> Bool {
+            storage.removeValue(forKey: account) != nil
+        }
+
+        func removeAll(prefix: String, exactMatch: String) {
+            storage = storage.filter { key, _ in
+                key != exactMatch && !key.hasPrefix(prefix)
+            }
+        }
+    }
+
     @MainActor
     static func oauthUnitChecks() {
+        let originalStore = ExtensionOAuthKeychain.store
+        ExtensionOAuthKeychain.store = MockTokenStore()
+        defer { ExtensionOAuthKeychain.store = originalStore }
+
         // Keychain round-trip
         let extName = "com.test.unit"
         let provId = "unit_provider"
@@ -857,7 +885,7 @@ struct ExtensionTests {
                 let accessories = node.array("accessories").count
                 print(
                     "  • \(node.string("title") ?? "")"
-                        + (node.string("subtitle").map { "  —  \(String(describing: $0))" } ?? "")
+                        + (node.string("subtitle").map { "  —  \($0)" } ?? "")
                         + (accessories > 0 ? "  [\(accessories) accessories]" : "")
                         + (node.node("actions") != nil ? "  ⌘K" : ""))
             }
