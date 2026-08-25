@@ -32,6 +32,9 @@ struct MarkdownTableView: View {
                 }
             }
         }
+        // Given only a width, Grid measures a wrapping row a line short of what it draws, and the
+        // transcript's scroll view then stops above the message's own end.
+        .fixedSize(horizontal: false, vertical: true)
         .padding(Theme.Spacing.xl)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)

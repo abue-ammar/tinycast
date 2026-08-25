@@ -21,7 +21,9 @@ struct ChatTranscriptView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: Theme.Spacing.xl) {
+                // Not lazy: a transcript is a few tall rows, and an estimated height is what every
+                // anchored jump and the end test are measured against.
+                VStack(spacing: Theme.Spacing.xl) {
                     ForEach(messages) { message in
                         ChatMessageView(
                             message: message,
@@ -50,7 +52,10 @@ struct ChatTranscriptView: View {
             .onScrollGeometryChange(for: ScrollMark.self) { geometry in
                 ScrollMark(
                     offset: geometry.contentOffset.y,
+                    // The offset rests at `-insetTop`, so the end sits that much past a raw
+                    // offset plus the band — without it the true bottom never reads as the end.
                     atEnd: geometry.contentOffset.y + geometry.containerSize.height
+                        + geometry.contentInsets.top
                         >= geometry.contentSize.height - Theme.Spacing.chatFollowTailSlack)
             } action: { old, new in
                 // A plain wheel reports no ScrollPhase, so the offset is the only signal every
