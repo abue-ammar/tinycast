@@ -700,6 +700,8 @@ private struct AIConnectionEditorSheet: View {
             content()
                 .labelsHidden()
                 .textFieldStyle(.roundedBorder)
+                // LabeledContent right-aligns its value text, caret and all; a field reads left.
+                .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         } label: {
             Text(title).font(.callout.weight(.medium))
