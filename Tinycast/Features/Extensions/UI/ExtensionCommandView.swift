@@ -156,40 +156,35 @@ struct ExtensionFeedbackOverlay: View {
     }
 }
 
-/// Actions menu content for the running command's current selection.
+/// The ⌘K panel's content for the running command's current selection.
 @MainActor
 enum ExtensionActionsMenu {
+    /// Rows carry a resolved `ExtensionImage` rather than a symbol name: an `Action`'s icon is an
+    /// `ImageLike`, so it can name any source and tint it, which `PopoverMenuItem` cannot express.
     static func content(
         screen: ExtensionScreen, selection: Int, assetsPath: String?, core: AppCore
-    ) -> PopoverMenuContent? {
+    ) -> ExtensionActionsContent? {
         let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
         guard !actions.isEmpty else { return nil }
         let header =
             screen.items.indices.contains(selection)
             ? screen.items[selection].node.string("title") : screen.navigationTitle
-        return PopoverMenuContent(
+        return ExtensionActionsContent(
             header: header,
             items: actions.map { action in
-                PopoverMenuItem(
+                ExtensionActionItem(
                     title: action.title,
-                    systemImage: symbolName(for: action),
-                    shortcut: action.shortcutCaps?.joined()
+                    icon: ExtensionImage.actionIcon(
+                        action.iconValue, assetsPath: assetsPath,
+                        // Read rather than injected: a panel is rebuilt each time it opens.
+                        isDark: NSApp.effectiveAppearance.isDark,
+                        isDestructive: action.isDestructive),
+                    shortcut: action.shortcutCaps?.joined(),
+                    isDestructive: action.isDestructive
                 ) {
                     guard let handler = action.handler else { return }
                     core.extensions.dispatch(handler: handler)
                 }
             })
-    }
-
-    /// The popover menu draws SF Symbols, so an extension icon resolves to one; a file-based icon falls
-    /// back to a neutral glyph rather than an empty slot.
-    private static func symbolName(for action: ExtensionAction) -> String {
-        // Read rather than injected: a menu is rebuilt each time it opens, so it never goes stale.
-        guard
-            let resolved = ExtensionImage.resolve(
-                action.iconValue, assetsPath: nil, isDark: NSApp.effectiveAppearance.isDark),
-            case .symbol(let name) = resolved.source
-        else { return action.isDestructive ? "trash" : "bolt" }
-        return name
     }
 }

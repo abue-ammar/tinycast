@@ -58,6 +58,19 @@ enum ExtensionImage {
         }
     }
 
+    /// An action row's glyph. Unlike a list row's, it always resolves to something: an action with no
+    /// usable icon draws a generic one rather than an empty slot, and a destructive action that named
+    /// no tint of its own takes red — the convention a native menu's delete row is drawn with.
+    static func actionIcon(
+        _ value: RenderValue?, assetsPath: String?, isDark: Bool, isDestructive: Bool
+    ) -> Resolved {
+        var icon =
+            resolve(value, assetsPath: assetsPath, isDark: isDark)
+            ?? Resolved(source: .symbol(isDestructive ? "trash" : "bolt"))
+        if isDestructive, icon.tint == nil { icon.tint = .red }
+        return icon
+    }
+
     /// A `{light, dark}` themed source picks the side the host is rendering, falling back to the
     /// other when an extension supplies only one.
     private static func string(from value: RenderValue?, isDark: Bool) -> String? {

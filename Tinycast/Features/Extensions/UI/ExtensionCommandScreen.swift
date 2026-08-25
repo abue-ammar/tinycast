@@ -46,10 +46,9 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }
 
-    func actions(at selection: Int) -> PopoverMenuContent? {
-        ExtensionActionsMenu.content(
-            screen: screen, selection: selection, assetsPath: assetsPath, core: core)
-    }
+    /// Nil by design: a command's rows carry tinted, extension-owned icons, so the palette reads them
+    /// through `ExtensionActionsMenu.content` and draws `ExtensionActionsPanel` instead of the menu.
+    func actions(at selection: Int) -> PopoverMenuContent? { nil }
 
     func activate(at selection: Int) {
         guard let handler = primaryAction(at: selection)?.handler else { return }

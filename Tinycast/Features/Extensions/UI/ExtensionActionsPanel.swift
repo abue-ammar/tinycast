@@ -11,10 +11,26 @@ private enum Metrics {
     static var maxHeight: CGFloat { visibleRows * (rowHeight + rowSpacing) }
 }
 
+/// One row of a running command's ⌘K panel. Its own type, not `PopoverMenuItem`: an extension names
+/// any icon and tints it, and the palette's menu row carries neither.
+struct ExtensionActionItem {
+    let title: String
+    let icon: ExtensionImage.Resolved
+    var shortcut: String?
+    var isDestructive = false
+    let action: () -> Void
+}
+
+/// A panel's header and rows, built once and consumed by render and keyboard alike.
+struct ExtensionActionsContent {
+    var header: String?
+    let items: [ExtensionActionItem]
+}
+
 /// The ⌘K panel of a running command. Not `PopoverMenu`: an extension's panel is long, so it scrolls.
 struct ExtensionActionsPanel: View {
     var header: String?
-    let items: [PopoverMenuItem]
+    let items: [ExtensionActionItem]
     @Binding var selection: Int
     let onActivate: (Int) -> Void
 
@@ -77,7 +93,7 @@ struct ExtensionActionsPanel: View {
 
 /// Its own row, not the palette's: that one is file-private, and this one may grow its own trimmings.
 private struct ExtensionActionRow: View {
-    let item: PopoverMenuItem
+    let item: ExtensionActionItem
     let selected: Bool
     /// Fired on enter, so the owner can move selection and share one highlight.
     let onHover: () -> Void
@@ -113,24 +129,18 @@ private struct ExtensionActionRow: View {
         .onHover { if $0 { onHover() } }
     }
 
+    /// A symbol is drawn here rather than handed to `ExtensionIconView`: the row's glyph is sized to
+    /// the menu's 20pt slot, which that view's own scale would shrink. Everything else it draws better.
     @ViewBuilder
     private var icon: some View {
-        switch item.icon {
-        case .symbol(let name):
+        if case .symbol(let name) = item.icon.source {
             Image(systemName: name)
                 .font(Theme.Typography.menuIcon)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
+                .symbolRenderingMode(item.icon.tint == nil ? .hierarchical : .monochrome)
+                .foregroundStyle(item.icon.tint ?? Color.secondary)
                 .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
-        case .asset(let name):
-            Image(name)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
-                .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
-        case .file(let path):
-            ExtensionIconView(
-                resolved: ExtensionImage.Resolved(source: .file(path)), size: Theme.Size.menuIcon)
+        } else {
+            ExtensionIconView(resolved: item.icon, size: Theme.Size.menuIcon)
         }
     }
 }

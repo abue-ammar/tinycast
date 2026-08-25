@@ -175,8 +175,13 @@ screens hold (see [palette.md](palette.md)).
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
   edit dispatches `onTinycastChange` and the resulting re-render is what updates the control, so
   `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
-- **ActionPanel** — flattened (sections and submenus included) into the palette's ⌘K menu. The first
-  action is the primary ↵ action; an action's own `shortcut` is matched against modified keystrokes.
+- **ActionPanel** — flattened (sections and submenus included) into `ExtensionActionsPanel`, the
+  feature's own scrolling ⌘K panel. Its rows are `ExtensionActionItem`, not `PopoverMenuItem`: an
+  action's `icon` is a full `ImageLike`, so it resolves through `ExtensionImage` like every other
+  extension icon and keeps its `tintColor` — which is what makes a palette of `{Icon.Circle, tintColor}`
+  rows read as colours rather than a column of grey circles. A destructive action with no tint of its
+  own falls back to red. The first action is the primary ↵ action; an action's own `shortcut` is
+  matched against modified keystrokes.
 - **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, and `confirmAlert`
   goes through `DialogController` like every other question the app asks. Its dialog sits at
   `.modalPanel`, above the palette's `.floating`, so a view command keeps its screen behind it — and

@@ -11,7 +11,9 @@
 //
 //   /tmp/ext-test ~/.config/raycast/extensions/<uuid> [command-name]
 
+import AppKit
 import Foundation
+import SwiftUI
 
 @main
 struct ExtensionTests {
@@ -196,6 +198,7 @@ struct ExtensionTests {
         manifestChecks()
         renderNodeChecks()
         screenChecks()
+        actionIconChecks()
         oauthUnitChecks()
         await runtimeChecks()
 
@@ -459,6 +462,53 @@ struct ExtensionTests {
         check("item panel wins", panels.actionPanel(forItemAt: 0)?.id == 9)
         check("screen panel is the fallback", panels.actionPanel(forItemAt: 1)?.id == 8)
         check("out-of-range selection falls back", panels.actionPanel(forItemAt: 99)?.id == 8)
+    }
+
+    /// An `Action`'s icon is a full `ImageLike`, so the ⌘K panel has to keep its tint: a picker built
+    /// from `{Icon.Circle, tintColor}` rows is one grey column without it. See docs/features/extensions.md.
+    @MainActor
+    static func actionIconChecks() {
+        func icon(
+            _ json: String, isDestructive: Bool = false, assets: String? = nil
+        ) -> ExtensionImage.Resolved {
+            let wrapped = Data(#"{"icon": \#(json)}"#.utf8)
+            let props = (try? JSONSerialization.jsonObject(with: wrapped)) as? [String: Any]
+            return ExtensionImage.actionIcon(
+                props?["icon"].map(RenderValue.init(json:)), assetsPath: assets, isDark: true,
+                isDestructive: isDestructive)
+        }
+
+        let tinted = icon(#"{"source":"circle-16","tintColor":"raycast-green"}"#)
+        check("a tinted symbol keeps its source", tinted.source == .symbol("circle"))
+        check("a tinted symbol keeps its tint", tinted.tint == .green)
+
+        // Doubled delimiters: the hex tint contains `"#`, which closes a single-# raw string.
+        check(
+            "raw hex tints too",
+            icon(##"{"source":"circle-16","tintColor":"#FF3B30"}"##).tint
+                == Color(red: 1, green: 0x3B / 255, blue: 0x30 / 255))
+        check(
+            "a themed tint picks the dark side",
+            icon(#"{"source":"circle-16","tintColor":{"light":"raycast-red","dark":"raycast-blue"}}"#)
+                .tint == .blue)
+
+        let bare = icon(#""checkmark-circle-16""#)
+        check("a bare icon still resolves", bare.source == .symbol("checkmark.circle"))
+        check("and carries no tint", bare.tint == nil)
+
+        let asset = icon(#""logo.png""#, assets: "/tmp/demo/assets")
+        check(
+            "an asset name resolves against assets/", asset.source == .file("/tmp/demo/assets/logo.png"),
+            String(describing: asset.source))
+
+        check("no icon falls back to a glyph", icon("null").source == .symbol("bolt"))
+        let destructive = icon("null", isDestructive: true)
+        check("a destructive fallback is a trash glyph", destructive.source == .symbol("trash"))
+        check("and takes red", destructive.tint == .red)
+        check(
+            "a destructive action's own tint wins",
+            icon(#"{"source":"circle-16","tintColor":"raycast-yellow"}"#, isDestructive: true).tint
+                == .yellow)
     }
 
     private final class MockTokenStore: ExtensionOAuthTokenStore, @unchecked Sendable {

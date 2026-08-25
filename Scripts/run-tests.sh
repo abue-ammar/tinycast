@@ -197,15 +197,21 @@ run ext-store-test         $E/Model/ExtensionRegistry.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift
 run slow ext-test          -parse-as-library \
+                           Tinycast/Platform/Appearance.swift \
+                           Tinycast/Platform/Images/IconCache.swift \
+                           Tinycast/DesignSystem/Theme.swift \
                            $E/Model/ExtensionBootConfig.swift \
                            $E/Model/ExtensionManifest.swift \
                            $E/Model/RenderNode.swift \
                            $E/Service/ExtensionCatalog.swift \
                            $E/Service/ExtensionFetcher.swift \
+                           $E/Service/ExtensionIconCache.swift \
                            $E/Service/ExtensionNodeShims.swift \
                            $E/Service/ExtensionOAuthKeychain.swift \
                            $E/Service/ExtensionOAuthSession.swift \
                            $E/Service/ExtensionRuntime.swift \
+                           $E/UI/ExtensionAnimatedImage.swift \
+                           $E/UI/ExtensionImage.swift \
                            $E/UI/ExtensionScreen.swift \
                            $L/SearchRelevance.swift \
                            Tinycast/Platform/Compression/Zlib.swift
