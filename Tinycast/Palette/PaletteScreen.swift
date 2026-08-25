@@ -6,6 +6,35 @@ enum PaletteAxis {
     case horizontal
 }
 
+/// A menu supplied by a palette screen, including its rendering and row activation.
+@MainActor struct PaletteMenuContent {
+    let rowCount: Int
+    let view: AnyView
+    let activate: (Int) -> Void
+
+    init(rowCount: Int, view: AnyView, activate: @escaping (Int) -> Void) {
+        self.rowCount = rowCount
+        self.view = view
+        self.activate = activate
+    }
+
+    init(
+        popover: PopoverMenuContent, selection: Binding<Int>, width: CGFloat = Theme.Size.menuWidth,
+        onActivate: @escaping (Int) -> Void
+    ) {
+        self.init(
+            rowCount: popover.items.count,
+            view: AnyView(
+                PopoverMenu(
+                    header: popover.header, items: popover.items, selection: selection,
+                    width: width, onActivate: onActivate)),
+            activate: { index in
+                guard popover.items.indices.contains(index) else { return }
+                popover.items[index].action()
+            })
+    }
+}
+
 /// One palette mode. `rows` is its single source of visible order, so selection indexes it.
 @MainActor protocol PaletteScreen {
     associatedtype Row: Identifiable
@@ -16,6 +45,9 @@ enum PaletteAxis {
     /// False when the selection can't be acted on, which hides the footer pill and swallows ⌘K.
     func hasPrimaryAction(at selection: Int) -> Bool
     func actions(at selection: Int) -> PopoverMenuContent?
+    func menuContent(
+        at selection: Int, selection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent?
     func activate(at selection: Int)
     /// ⌘↵. False when the selection has no secondary action, leaving the key unhandled.
     func secondary(at selection: Int) -> Bool
@@ -33,6 +65,13 @@ enum PaletteAxis {
 
 extension PaletteScreen {
     func hasPrimaryAction(at selection: Int) -> Bool { true }
+    func menuContent(
+        at selection: Int, selection menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent? {
+        guard let content = actions(at: selection) else { return nil }
+        return PaletteMenuContent(
+            popover: content, selection: menuSelection, onActivate: onActivate)
+    }
     func pasteKeepingWindowOpen(at selection: Int) -> Bool { false }
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? { nil }
     func headerAccessory(

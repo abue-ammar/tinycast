@@ -50,6 +50,25 @@ struct ExtensionCommandScreen: PaletteScreen {
     /// through `ExtensionActionsMenu.content` and draws `ExtensionActionsPanel` instead of the menu.
     func actions(at selection: Int) -> PopoverMenuContent? { nil }
 
+    func menuContent(
+        at selection: Int, selection menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent? {
+        guard
+            let content = ExtensionActionsMenu.content(
+                screen: screen, selection: selection, assetsPath: assetsPath, core: core)
+        else { return nil }
+        return PaletteMenuContent(
+            rowCount: content.items.count,
+            view: AnyView(
+                ExtensionActionsPanel(
+                    header: content.header, items: content.items, selection: menuSelection,
+                    onActivate: onActivate)),
+            activate: { index in
+                guard content.items.indices.contains(index) else { return }
+                content.items[index].action()
+            })
+    }
+
     func activate(at selection: Int) {
         guard let handler = primaryAction(at: selection)?.handler else { return }
         extensions.dispatch(handler: handler)

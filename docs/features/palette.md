@@ -253,9 +253,10 @@ the arrow outside it, and AppKit's own alternation over the field came straight 
 structural instead of a pair of `onChange` handlers pushing each other closed. Three cases today —
 the ⌘K Actions menu (`.bottomTrailing`), the app menu (`.bottomLeading`) and the clipboard type
 filter (`.topTrailing`, hung under its header button). `menuContent` resolves the open case to one
-`PopoverMenuContent`, which is what lets ↑/↓, plain ↵, Esc and the click-away catcher serve every
-menu without knowing which is up. Every open path goes through `open(_:highlighting:)` and states
-where the highlight starts: the first row, except the type filter, which opens on the active filter.
+`PaletteMenuContent`, so each screen owns its menu rendering and row actions while ↑/↓, plain ↵, Esc
+and the click-away catcher stay in the palette. Every open path goes through `open(_:highlighting:)`
+and states where the highlight starts: the first row, except the type filter, which opens on the active
+filter.
 
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
