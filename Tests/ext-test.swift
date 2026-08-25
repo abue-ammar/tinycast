@@ -509,6 +509,12 @@ struct ExtensionTests {
             "a destructive action's own tint wins",
             icon(#"{"source":"circle-16","tintColor":"raycast-yellow"}"#, isDestructive: true).tint
                 == .yellow)
+        // A tint masks artwork rather than colouring it, so a destructive PNG must stay untinted.
+        let destructiveArtwork = icon(#""danger.png""#, isDestructive: true, assets: "/tmp/a")
+        check(
+            "a destructive artwork icon keeps its own colours",
+            destructiveArtwork.source == .file("/tmp/a/danger.png") && destructiveArtwork.tint == nil,
+            String(describing: destructiveArtwork))
     }
 
     private final class MockTokenStore: ExtensionOAuthTokenStore, @unchecked Sendable {
