@@ -82,7 +82,8 @@ The argument screen is the one mode where the search field is not a search field
 argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.
 Its own state lives on `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on
 `UninstallSession`, and leaving the mode cancels the pending open. A bare backspace steps back an
-argument before it falls through to the usual exit-to-launcher.
+argument before it falls through to the usual exit-to-launcher; Escape erases the half-typed answer
+first, and a second press hides the palette, which ends the pending open with it.
 
 ### Inline command arguments
 

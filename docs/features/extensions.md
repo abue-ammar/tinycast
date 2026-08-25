@@ -194,8 +194,10 @@ screens hold (see [palette.md](palette.md)).
   `NaN` for `undefined`, so omitting a blank argument silently corrupts whatever they compute — Coffee's
   "Caffeinate for…" spawned `caffeinate -t NaN`, which exits instantly.
 
-Escape and a bare backspace pop the extension's own navigation stack first, and only leave the command
-once it's at its root. Pushed screens stay mounted, so popping back restores their state.
+Escape clears a non-empty search field first, and dispatches `onSearchTextChange` as any other edit
+would, so a command that took the search text over sees the empty string. Only over an empty field do
+Escape and a bare backspace pop the extension's own navigation stack, and only leave the command once
+it's at its root. Pushed screens stay mounted, so popping back restores their state.
 
 ## Turning it on
 
