@@ -33,7 +33,9 @@ enum ExtensionImage {
         guard let value else { return nil }
         switch value {
         case .string(let text):
-            guard let source = source(from: text, assetsPath: assetsPath) else { return nil }
+            guard let source = source(from: text, assetsPath: assetsPath, isDark: isDark) else {
+                return nil
+            }
             return Resolved(source: source)
         case .object(let fields):
             // Raycast's icon-with-tooltip form; unwrap only when it looks like one, not when themed.
@@ -76,7 +78,7 @@ enum ExtensionImage {
     ) -> Source? {
         switch value {
         case .string(let text):
-            return source(from: text, assetsPath: assetsPath)
+            return source(from: text, assetsPath: assetsPath, isDark: isDark)
         case .object(let fields):
             if let path = fields["fileIcon"]?.stringValue, !path.isEmpty {
                 return .fileIcon((path as NSString).expandingTildeInPath)
@@ -88,7 +90,7 @@ enum ExtensionImage {
         }
     }
 
-    private static func source(from text: String, assetsPath: String?) -> Source? {
+    private static func source(from text: String, assetsPath: String?, isDark: Bool) -> Source? {
         guard !text.isEmpty else { return nil }
         // Icon enum values all carry the `-16` suffix Raycast's generated enum uses.
         if text.hasSuffix("-16") {
@@ -97,7 +99,9 @@ enum ExtensionImage {
         }
         if let url = URL(string: text), let scheme = url.scheme {
             if scheme.hasPrefix("http") { return .remote(url) }
-            if scheme == "data" { return .inline(url) }
+            if scheme == "data" {
+                return URL(string: resolvingPaletteColors(in: text, isDark: isDark)).map { .inline($0) }
+            }
         }
         if text.hasPrefix("/") || text.hasPrefix("~") {
             return .file((text as NSString).expandingTildeInPath)
@@ -108,6 +112,38 @@ enum ExtensionImage {
         }
         // Anything else short enough to be an emoji or a couple of initials is drawn as a glyph.
         return text.count <= 4 ? .glyph(text) : nil
+    }
+
+    /// A Raycast colour name is legal wherever a tint is, so an extension drawing its own SVG writes
+    /// one straight into `stroke`; SVG has no such keyword and the shape silently vanishes.
+    /// Walked as whole names rather than searched for known ones: `raycast-red` sits inside
+    /// `raycast-red-invented`, and substituting it there would corrupt a name this cannot resolve.
+    private static func resolvingPaletteColors(in text: String, isDark: Bool) -> String {
+        guard text.contains("raycast-") else { return text }
+        var resolved = ""
+        var rest = Substring(text)
+        while let match = rest.range(of: "raycast-") {
+            let name = rest[match.lowerBound...].prefix { paletteNameCharacters.contains($0) }
+            resolved += rest[..<match.lowerBound]
+            resolved += cssColor(named: String(name), isDark: isDark) ?? String(name)
+            rest = rest[name.endIndex...]
+        }
+        return resolved + rest
+    }
+
+    private static let paletteNameCharacters = Set("abcdefghijklmnopqrstuvwxyz-")
+
+    /// Resolved against the appearance being drawn, since `.primary` and the ramps are both dynamic.
+    private static func cssColor(named name: String, isDark: Bool) -> String? {
+        guard let color = color(named: name) else { return nil }
+        var css: String?
+        NSAppearance(named: isDark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+            guard let srgb = NSColor(color).usingColorSpace(.sRGB) else { return }
+            css =
+                "rgba(\(Int(srgb.redComponent * 255)),\(Int(srgb.greenComponent * 255)),"
+                + "\(Int(srgb.blueComponent * 255)),\(srgb.alphaComponent))"
+        }
+        return css
     }
 
     static func color(_ value: RenderValue?, isDark: Bool) -> Color? {

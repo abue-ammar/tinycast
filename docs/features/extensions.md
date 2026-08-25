@@ -155,7 +155,10 @@ screens hold (see [palette.md](palette.md)).
 - **List / Grid** — sections and items flattened in render order. When `filtering` is on (Raycast's
   default unless the command supplies `onSearchTextChange`) rows are filtered with the launcher's own
   `FuzzyMatch` over title, subtitle and keywords, and a section whose items all drop loses its header
-  too. `isShowingDetail` splits the screen into rows plus a detail pane. `ExtensionScreen.Item`
+  too. `isShowingDetail` splits the screen into rows plus a detail pane and drops each row's
+  subtitle, but **not its accessories**: the API only advises an extension against sending them in
+  this mode, and Raycast draws the ones it is sent, so suppressing them here would lose a row its
+  whole signal. `ExtensionScreen.Item`
   carries both the flat `selection` index and the scroll id, and is the `ForEach` identity of the row
   and the grid cell alike — see the scroll-id rule in [ui.md](../ui.md#rows-selection-hover).
 - **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, fetched
@@ -171,7 +174,10 @@ screens hold (see [palette.md](palette.md)).
   image file — an `.app` has no bitmap to read. A `data:` URL is a source of its own too: an extension
   that renders its own SVG hands over the bytes, so they are decoded inline rather than fetched. A
   `tintColor` on any of them draws the image as a template, which is what colours an SVG written
-  against `currentColor`. The feature's own fills live in `ExtensionColors` — never in `Theme`.
+  against `currentColor`. A `raycast-*` colour name inside that SVG is rewritten to `rgba(…)` first,
+  resolved against the appearance being drawn: the name is legal wherever a Raycast tint is, so
+  extensions write it straight into `stroke`, and no SVG renderer knows it — left alone the shape
+  draws nothing at all. The feature's own fills live in `ExtensionColors` — never in `Theme`.
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
   edit dispatches `onTinycastChange` and the resulting re-render is what updates the control, so
   `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
@@ -472,7 +478,7 @@ fitted: the extension that drew it has already sized it, and rasterizing would c
 
 Change the number only against a rendered strip of real icons; it means nothing on its own.
 `ext-icon-test` guards the invariant: padding in the source cannot change the drawn size, and a
-`data:` payload decodes in either encoding.
+`data:` payload decodes in either encoding — and one naming a `raycast-*` colour still draws ink.
 
 - `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
   `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance

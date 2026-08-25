@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 
 @main
 @MainActor
@@ -37,6 +38,52 @@ struct ExtensionIconTests {
     static func missingFileFallsBack() {
         let icon = ExtensionIconCache.icon(atPath: "/nonexistent/\(UUID().uuidString).png")
         expect(icon.size.width > 0, "a missing icon falls back to the puzzle-piece tile")
+    }
+
+    /// An extension drawing its own SVG writes a Raycast colour name straight into `stroke`, which
+    /// no SVG renderer understands — left alone the shape draws nothing at all.
+    static func paletteColorsInSVGResolve() async {
+        // The usage-ring shape every quota extension draws: a track and an arc, each named.
+        let ring = """
+            <svg xmlns="http://www.w3.org/2000/svg" width="100px" height="100px"><circle cx="50" \
+            cy="50" r="40" stroke-width="10" stroke="raycast-secondary-text" fill="none" />\
+            <path d="M 50 10 A 40 40 0 0 0 20 25" stroke="raycast-green" stroke-width="10" \
+            fill="none" /></svg>
+            """
+        guard let url = inlineSource(ring, isDark: true) else {
+            return expect(false, "a data: URL resolves to an inline source")
+        }
+        expect(!url.absoluteString.contains("raycast-"), "every colour name is rewritten")
+
+        let image = await ExtensionIconCache.loadInlineAsync(url)
+        expect(image.flatMap(inkExtent) != nil, "the rewritten ring draws ink")
+
+        // A known name occurring inside a longer unknown one may not be substituted there: the
+        // rewrite has to walk whole names rather than search for the ones it knows.
+        let shadowed =
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><circle stroke=\"raycast-green\" "
+            + "fill=\"raycast-green-invented\" /></svg>"
+        let left = inlineSource(shadowed, isDark: true)?.absoluteString.removingPercentEncoding
+        expect(left?.contains("raycast-green-invented") == true, "an unknown name is left whole")
+        expect(left?.contains("\"raycast-green\"") == false, "the known name beside it resolves")
+
+        // Light and dark disagree on every ramp, so the pick has to follow the surface drawn on.
+        let ramp =
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><circle "
+            + "stroke=\"raycast-primary-text\" /></svg>"
+        let dark = inlineSource(ramp, isDark: true)?.absoluteString.removingPercentEncoding
+        let light = inlineSource(ramp, isDark: false)?.absoluteString.removingPercentEncoding
+        expect(dark != nil && dark != light, "a ramp resolves per appearance")
+    }
+
+    /// The `data:` URL an SVG resolves to, as a row would ask for it.
+    static func inlineSource(_ svg: String, isDark: Bool) -> URL? {
+        let allowed = CharacterSet(charactersIn: "<>\"# %{}|\\^~[]`").inverted
+        guard let encoded = svg.addingPercentEncoding(withAllowedCharacters: allowed),
+            case .inline(let url)? = ExtensionImage.resolve(
+                .string("data:image/svg+xml,\(encoded)"), assetsPath: nil, isDark: isDark)?.source
+        else { return nil }
+        return url
     }
 
     /// Extensions that render their own artwork hand it over as a `data:` URL rather than a file,
@@ -125,6 +172,7 @@ struct ExtensionIconTests {
         artworkIsNormalized()
         missingFileFallsBack()
         await inlineDataURLsDecode()
+        await paletteColorsInSVGResolve()
 
         print(failures == 0 ? "Extension icon tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)

@@ -180,10 +180,10 @@ private struct ExtensionItemRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: Theme.Spacing.sm)
-            if !compact {
-                ExtensionAccessoriesView(
-                    accessories: node.array("accessories"), assetsPath: assetsPath)
-            }
+            // The API only advises an extension against accessories here; Raycast still draws the
+            // ones it is given, and a quota row's entire signal is in them.
+            ExtensionAccessoriesView(
+                accessories: node.array("accessories"), assetsPath: assetsPath)
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)

@@ -114,7 +114,20 @@ run entry-icon-test        Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift
 run ext-icon-test          Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionIconCache.swift
+                           Tinycast/Platform/Compression/Zlib.swift \
+                           Tinycast/DesignSystem/Theme.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionBootConfig.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionManifest.swift \
+                           Tinycast/Features/Extensions/Model/RenderNode.swift \
+                           Tinycast/Features/Extensions/Service/ExtensionCatalog.swift \
+                           Tinycast/Features/Extensions/Service/ExtensionFetcher.swift \
+                           Tinycast/Features/Extensions/Service/ExtensionNodeShims.swift \
+                           Tinycast/Features/Extensions/Service/ExtensionOAuthKeychain.swift \
+                           Tinycast/Features/Extensions/Service/ExtensionOAuthSession.swift \
+                           Tinycast/Features/Extensions/Service/ExtensionRuntime.swift \
+                           Tinycast/Features/Extensions/Service/ExtensionIconCache.swift \
+                           Tinycast/Features/Extensions/UI/ExtensionAnimatedImage.swift \
+                           Tinycast/Features/Extensions/UI/ExtensionImage.swift
 run system-action-test     Tinycast/Features/SystemActions/Model/SystemAction.swift
 run volume-test            Tinycast/Features/SystemActions/Model/VolumeLevel.swift
 run window-command-test    Tinycast/Features/WindowManagement/WindowCommand.swift \
