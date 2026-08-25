@@ -342,6 +342,7 @@
 		DDFF8A9F420A4733DFA32A07 /* ReleaseFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = D28281DFC434C75F8A594635 /* ReleaseFeed.swift */; };
 		DEBCF434AB244DAD43DB8A6A /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA9F5F7226AD5A91835AF5C /* LaunchAtLogin.swift */; };
 		DFB25A4CDD35071B745F2EF9 /* DoubleTapModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F0F0DDA5FC1F6ED59E73E9 /* DoubleTapModifier.swift */; };
+		E1A4472391E5AD3EE828202E /* RedactedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEA1E122A8139A21E646FE2 /* RedactedText.swift */; };
 		E268D74F0DEFFA598E2D02AA /* OnboardingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE6972F177922B1EB8831735 /* OnboardingCard.swift */; };
 		E457BC709D195B8F5D0C2A79 /* UninstallSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B6DAC3B9FF387367C3FAB4 /* UninstallSession.swift */; };
 		E4B18EBFFD009B2CAFF4BA9B /* PanelTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E25B87C692D5FEE1FBF994 /* PanelTransition.swift */; };
@@ -362,6 +363,7 @@
 		F44DA0C81285A90138E13A7B /* ChatGPTSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43E5D47E198B86901D75515 /* ChatGPTSubscription.swift */; };
 		F51785CF5A6EC0B87D6802C9 /* ExtensionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCCBDD92DEAD780A1DC423CA /* ExtensionScreen.swift */; };
 		F71FC7195AC8D6626BEE8931 /* NotesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91151402A1A4586B2496BF35 /* NotesPanel.swift */; };
+		F801D00F877421DC7045C5F3 /* RedactedPlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131B15F5EF86A067FA6C36D7 /* RedactedPlaceholder.swift */; };
 		F85CE4CDCF7589ACAEF2CA20 /* AppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90E23F92F4B4DEEE55077C7C /* AppIconView.swift */; };
 		F8D69CE2A8C04DEEC1810A1F /* UninstallRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D134673CB1B563A3758FC37 /* UninstallRunner.swift */; };
 		F8E1B044D84E96FB455155CD /* AIModelDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD4B27ECEB1C09B14C403FC8 /* AIModelDiscoveryService.swift */; };
@@ -409,6 +411,7 @@
 		106F9FEF3F0C36E0C5686DA7 /* AIRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequest.swift; sourceTree = "<group>"; };
 		112551581ECF83B53D405334 /* BackupSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSettingsView.swift; sourceTree = "<group>"; };
 		121A2ACAEC4D2D25D3112634 /* LauncherItemsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherItemsSection.swift; sourceTree = "<group>"; };
+		131B15F5EF86A067FA6C36D7 /* RedactedPlaceholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedactedPlaceholder.swift; sourceTree = "<group>"; };
 		132C5A534C02305C1A29CC74 /* LauncherList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherList.swift; sourceTree = "<group>"; };
 		132FBA3F0A0B4F6C796B901B /* NoteSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteSwitcherView.swift; sourceTree = "<group>"; };
 		14F474B4E9FD7738D97AB65E /* RaycastImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImport.swift; sourceTree = "<group>"; };
@@ -500,6 +503,7 @@
 		474E6D9830E336752C79F461 /* MeetingClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingClock.swift; sourceTree = "<group>"; };
 		4AA61A2FAF4E49E466DA8F37 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
 		4AEBAA9641BC6C279DB0123C /* CameraPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewController.swift; sourceTree = "<group>"; };
+		4BEA1E122A8139A21E646FE2 /* RedactedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedactedText.swift; sourceTree = "<group>"; };
 		4CB0BD36800F3B1AC765F514 /* RegionCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionCurrency.swift; sourceTree = "<group>"; };
 		4D8553E1626E985013046C47 /* EventDraftFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDraftFields.swift; sourceTree = "<group>"; };
 		4DA7B926405DAC632C056418 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -924,6 +928,8 @@
 				08279257B0F5995E86FF2C03 /* EntryIconView.swift */,
 				C5BA06E4CC7E8D40E3285F16 /* KeyCapChip.swift */,
 				4FAE24CC14F7DFECD1BD7FB1 /* PopoverMenu.swift */,
+				131B15F5EF86A067FA6C36D7 /* RedactedPlaceholder.swift */,
+				4BEA1E122A8139A21E646FE2 /* RedactedText.swift */,
 				BEDDA8820165672AF8464E25 /* SettingsComponents.swift */,
 				64EC07E163CE4F3D11FE7225 /* SymbolImage.swift */,
 				A1306524F57602D90FCF153C /* Theme.swift */,
@@ -2276,6 +2282,8 @@
 				478500C6465327947EBD9D61 /* RaycastSnippetImport.swift in Sources */,
 				FE9CFF847072FAA9C7D5B660 /* RaycastV1Decoder.swift in Sources */,
 				05683E4BDBD1FD73FCECACB9 /* RaycastV2Decoder.swift in Sources */,
+				F801D00F877421DC7045C5F3 /* RedactedPlaceholder.swift in Sources */,
+				E1A4472391E5AD3EE828202E /* RedactedText.swift in Sources */,
 				3E2E0C5B564C828D7ECA2759 /* RegionCurrency.swift in Sources */,
 				D6D8169527668572F0073F94 /* RelaunchRunner.swift in Sources */,
 				21812A1B54A4DFDC88604C16 /* ReleaseChannel.swift in Sources */,

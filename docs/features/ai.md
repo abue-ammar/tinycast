@@ -253,6 +253,14 @@ Settings → AI is a normal grouped `Form` inside Tinycast's existing Settings w
 separate settings window or palette overlay. The pane edits multiple API connections, manages the
 ChatGPT login and chooses the one default model shared by future features.
 
+The signed-in ChatGPT address is the one thing on the pane that names a person, and a Settings pane
+is what gets screenshotted into a bug report or left on screen in a recording, so `RedactedText`
+shows it scrambled and blurred until it is clicked. `RedactedPlaceholder` derives the stand-in from
+the address itself — stable across redraws, same length, `@ . - _` left in place — because a blurred
+real address can be recovered from a still frame while a blurred fake one cannot. It hides an
+address from a camera, not a secret from an attacker: the length still shows and one click undoes
+it. The scramble is not selectable, since dragging it out would only ever yield the stand-in.
+
 `aiConnections` and `aiDefaultModel` are deliberately excluded from settings backups. The first is
 meaningless without machine-local Keychain items; the second names an external destination and must
 not silently redirect AI traffic after an import.

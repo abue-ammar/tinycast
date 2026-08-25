@@ -41,6 +41,12 @@ enum Theme {
         static let recorderKeyCap: CGFloat = 4
     }
 
+    enum Blur {
+        /// Enough to make a redacted address unreadable at full size without turning the row into a
+        /// smear; the scramble underneath is what actually hides it.
+        static let redaction: CGFloat = 3
+    }
+
     enum Size {
         static let panelWidth: CGFloat = 750
         static let panelHeight: CGFloat = 475

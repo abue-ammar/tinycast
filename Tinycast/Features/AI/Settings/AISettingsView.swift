@@ -176,7 +176,14 @@ struct AISettingsView: View {
                     Button("Refresh") { subscription.refresh() }
                     Button("Disconnect", role: .destructive) { subscription.logout() }
                 } label: {
-                    Text(account.email ?? "Connected to ChatGPT")
+                    if let email = account.email {
+                        RedactedText(
+                            value: email,
+                            revealHelp: "Click to reveal the signed-in account",
+                            hideHelp: "Click to hide the signed-in account")
+                    } else {
+                        Text("Connected to ChatGPT")
+                    }
                     Text("ChatGPT \(account.planTitle)")
                 }
             }
