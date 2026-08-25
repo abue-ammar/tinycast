@@ -52,7 +52,9 @@ final class AIChatCoordinator {
             let webSearch = core.aiSettings.webSearchEnabled && capabilities.webSearch
             return chat.send(
                 input, using: try core.aiProvider(), webSearch: webSearch,
-                instructions: AIInstructions.compose(userPrompt: core.aiSettings.systemPrompt))
+                instructions: AIInstructions.compose(
+                    userPrompt: core.aiSettings.systemPrompt,
+                    isEnabled: core.aiSettings.systemPromptEnabled))
         } catch {
             chat.report(error.localizedDescription)
             return false

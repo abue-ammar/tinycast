@@ -17,7 +17,8 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
   where it is running and what the app can do, then whatever Settings → AI holds. The preamble
   states capabilities and asks for honest comparisons; it does not instruct the model to favour
   Tinycast over anything else. It is not shown in the pane, and `AIPreamble.swift` holds the only
-  copy of it — edit the prompt there, not here.
+  copy of it — edit the prompt there, not here. `compose` returns `nil` when the user has turned
+  the system prompt off, and every transport drops a nil instruction, so a turn then carries none.
 - **API keys live only in the login Keychain.** `AIConnection` persists the provider, endpoint and
   model identifiers in `UserDefaults`; it never contains a key. Keys are addressed by connection UUID
   through `APIKeyStore`, and never enter logs, errors or settings backups. A key is issued for one
@@ -273,7 +274,16 @@ already holds something — a Settings pane is exactly what ends up in a screens
 opens plain when it is empty, since a blurred empty box is only a puzzle. The footer says the text
 rides along on every turn, because it is billed on every turn and nothing else in the pane is.
 
-`aiConnections`, `aiDefaultModel` and `aiSystemPrompt` are deliberately excluded from settings
-backups. The first is meaningless without machine-local Keychain items; the second names an external destination and must
-not silently redirect AI traffic after an import; the third is standing instructions that change
-every answer, and must not arrive on another Mac unread.
+`Send a system prompt` governs the whole instruction, not just the half the user typed. Clearing the
+box already withholds their own text, so a switch that spared the preamble would add nothing; the
+preamble is the part that is billed on every turn for every user and has no other way off. Off
+disables the editor rather than hiding it, so what is being withheld stays readable. One thing it
+deliberately cannot reach: the Codex route always prepends its own instruction never to invoke
+tools, run commands or touch files. That is a sandbox boundary on a local CLI, not Tinycast
+describing itself, and a user switch must not be able to lift it.
+
+`aiConnections`, `aiDefaultModel`, `aiSystemPrompt` and `aiSystemPromptEnabled` are deliberately
+excluded from settings backups. The first is meaningless without machine-local Keychain items; the
+second names an external destination and must not silently redirect AI traffic after an import; the
+last two are standing instructions and the switch that sends them, both of which change every
+answer and must not arrive on another Mac unread.

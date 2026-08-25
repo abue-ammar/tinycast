@@ -54,4 +54,5 @@ enum AppSettingsKey: String, CaseIterable {
     case aiDefaultModel = "aiDefaultModel"
     case aiWebSearch = "aiWebSearch"
     case aiSystemPrompt = "aiSystemPrompt"
+    case aiSystemPromptEnabled = "aiSystemPromptEnabled"
 }

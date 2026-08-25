@@ -128,12 +128,17 @@ struct AISettingsView: View {
     private var systemPromptSection: some View {
         @Bindable var settings = settings
         return Section {
+            Toggle(isOn: $settings.systemPromptEnabled) {
+                Text("Send a system prompt")
+                Text("Off sends nothing ahead of your message, not even what Tinycast says about itself.")
+            }
             SystemPromptEditor(text: $settings.systemPrompt)
+                .disabled(!settings.systemPromptEnabled)
         } header: {
             Text("System prompt")
         } footer: {
             Text(
-                "Sent ahead of every message in every chat, on top of what Tinycast already tells the model about itself — so it is billed again on each turn."
+                "Your text is sent ahead of every message in every chat, after what Tinycast already tells the model about itself — so both are billed again on each turn."
             )
             .font(.caption)
             .foregroundStyle(.secondary)

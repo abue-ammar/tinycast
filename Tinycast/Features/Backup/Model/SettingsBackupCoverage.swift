@@ -82,6 +82,9 @@ enum SettingsBackupCoverage {
             "Whether prompts may reach a search engine is a choice each Mac makes for itself.",
         AppSettingsKey.aiSystemPrompt.rawValue:
             "Standing instructions to a model are the one AI setting that changes every answer; an "
-            + "import must not carry them onto another Mac unseen."
+            + "import must not carry them onto another Mac unseen.",
+        AppSettingsKey.aiSystemPromptEnabled.rawValue:
+            "Governs whether a turn carries standing instructions at all, so it changes every answer "
+            + "the same way the prompt it gates does."
     ]
 }
