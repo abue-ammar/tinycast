@@ -32,13 +32,17 @@ final class AIChatState {
     }
 
     @discardableResult
-    func send(_ input: String, using provider: any AIProvider, webSearch: Bool = false) -> Bool {
+    func send(
+        _ input: String, using provider: any AIProvider, webSearch: Bool = false,
+        instructions: String? = nil
+    ) -> Bool {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !pendingImages.isEmpty, !isStreaming else { return false }
         notice = nil
         session.append(ChatMessage(role: .user, text: text, images: pendingImages.map(\.image)))
         clearStaging()
-        let request = AIRequest(messages: session.requestMessages, webSearch: webSearch)
+        let request = AIRequest(
+            instructions: instructions, messages: session.requestMessages, webSearch: webSearch)
         session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
         isStreaming = true
         isThinking = false

@@ -116,6 +116,8 @@ run palette-placement-test Tinycast/Platform/Appearance.swift \
                            Tinycast/Palette/PalettePlacement.swift
 run scroll-reveal-test     Tinycast/DesignSystem/Scrolling/SelectionReveal.swift
 run redaction-test         Tinycast/DesignSystem/RedactedPlaceholder.swift
+run ai-instructions-test   Tinycast/Features/AI/Model/AIInstructions.swift \
+                           Tinycast/Features/AI/Model/AIPreamble.swift
 run hover-arming-test      Tinycast/Palette/HoverArming.swift \
                            Tinycast/Palette/PaletteState.swift \
                            Tinycast/Palette/PaletteMode.swift \

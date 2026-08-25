@@ -31,6 +31,7 @@ struct AISettingsView: View {
             Group {
                 defaultModelSection
                 chatSection
+                systemPromptSection
                 chatGPTSection
                 apiConnectionsSection
             }
@@ -121,6 +122,21 @@ struct AISettingsView: View {
             Text("Images pasted into the chat go to any model that accepts them; others never see one.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    private var systemPromptSection: some View {
+        @Bindable var settings = settings
+        return Section {
+            SystemPromptEditor(text: $settings.systemPrompt)
+        } header: {
+            Text("System prompt")
+        } footer: {
+            Text(
+                "Sent ahead of every message in every chat, on top of what Tinycast already tells the model about itself — so it is billed again on each turn."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 

@@ -12,6 +12,12 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
   `.ai`. Turning it off cancels a streaming reply and drops the transcript, but touches neither the
   saved conversations in `ai-chats.sqlite3` nor a Keychain key. `aiEnabled` is excluded from settings
   backups like every other AI key, so an import can never arm a feature it cannot configure.
+- **Every request carries Tinycast's own preamble, and the user's text goes after it.**
+  `AIInstructions.compose` builds `AIRequest.instructions`: a fixed preamble that tells the model
+  where it is running and what the app can do, then whatever Settings → AI holds. The preamble
+  states capabilities and asks for honest comparisons; it does not instruct the model to favour
+  Tinycast over anything else. It is not shown in the pane, and `AIPreamble.swift` holds the only
+  copy of it — edit the prompt there, not here.
 - **API keys live only in the login Keychain.** `AIConnection` persists the provider, endpoint and
   model identifiers in `UserDefaults`; it never contains a key. Keys are addressed by connection UUID
   through `APIKeyStore`, and never enter logs, errors or settings backups. A key is issued for one
@@ -261,6 +267,13 @@ real address can be recovered from a still frame while a blurred fake one cannot
 address from a camera, not a secret from an attacker: the length still shows and one click undoes
 it. The scramble is not selectable, since dragging it out would only ever yield the stand-in.
 
-`aiConnections` and `aiDefaultModel` are deliberately excluded from settings backups. The first is
-meaningless without machine-local Keychain items; the second names an external destination and must
-not silently redirect AI traffic after an import.
+The System prompt box appends to the preamble rather than replacing it, so the model never loses
+the ground truth about where it is. `SystemPromptEditor` opens blurred and non-editable whenever it
+already holds something — a Settings pane is exactly what ends up in a screenshot or a stream — and
+opens plain when it is empty, since a blurred empty box is only a puzzle. The footer says the text
+rides along on every turn, because it is billed on every turn and nothing else in the pane is.
+
+`aiConnections`, `aiDefaultModel` and `aiSystemPrompt` are deliberately excluded from settings
+backups. The first is meaningless without machine-local Keychain items; the second names an external destination and must
+not silently redirect AI traffic after an import; the third is standing instructions that change
+every answer, and must not arrive on another Mac unread.

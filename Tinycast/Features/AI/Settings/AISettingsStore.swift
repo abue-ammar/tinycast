@@ -16,6 +16,10 @@ final class AISettingsStore {
     var webSearchEnabled: Bool {
         didSet { defaults.set(webSearchEnabled, forKey: AppSettingsKey.aiWebSearch.rawValue) }
     }
+    /// Appended to `AIInstructions.preamble` on every turn, so it is billed on every turn.
+    var systemPrompt: String {
+        didSet { defaults.set(systemPrompt, forKey: AppSettingsKey.aiSystemPrompt.rawValue) }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -25,6 +29,7 @@ final class AISettingsStore {
             defaults.data(forKey: AppSettingsKey.aiDefaultModel.rawValue))
         webSearchEnabled =
             defaults.object(forKey: AppSettingsKey.aiWebSearch.rawValue) as? Bool ?? false
+        systemPrompt = defaults.string(forKey: AppSettingsKey.aiSystemPrompt.rawValue) ?? ""
         if case .api(let connection, let model) = defaultModel,
             !connections.contains(where: { $0.id == connection && $0.models.contains(model) })
         {
