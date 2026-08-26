@@ -8,10 +8,11 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
 
 - **AI is off out of the box, and off means fully off.** `AppSettings.aiEnabled` is the flag and
   `AIChatCoordinator.applyEnabled()` is the only place that projects it: no `AI Chat` command in the
-  launcher, no history database opened or created, no Codex helper resident, and the palette leaves
-  `.ai`. Turning it off cancels a streaming reply and drops the transcript, but touches neither the
-  saved conversations in `ai-chats.sqlite3` nor a Keychain key. `aiEnabled` is excluded from settings
-  backups like every other AI key, so an import can never arm a feature it cannot configure.
+  launcher, no history database opened or created, no Codex helper resident, no stop for it on Tab's
+  ring, and the palette leaves `.ai`. Turning it off cancels a streaming reply and drops the
+  transcript, but touches neither the saved conversations in `ai-chats.sqlite3` nor a Keychain key.
+  `aiEnabled` is excluded from settings backups like every other AI key, so an import can never arm
+  a feature it cannot configure.
 - **Every request carries Tinycast's own preamble, and the user's text goes after it.**
   `AIInstructions.compose` builds `AIRequest.instructions`: a fixed preamble that tells the model
   where it is running and what the app can do, then whatever Settings → AI holds. The preamble
@@ -40,9 +41,9 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
   not create a second credential or response cache on disk.
 - **`Model/` stays Foundation-only.** `ai-provider-test` compiles the shipped provider models and pins
   endpoints, stream parsing, persistence repair and Codex protocol framing.
-- **Chat is a palette screen, not another window.** The launcher command enters `.ai`; its search field
-  is the composer, and the shared footer's primary pill is Return's job: Send (`↵`), or Stop (`↵`)
-  while a response streams — followed by Actions (`⌘K`), which owns New Chat.
+- **Chat is a palette screen, not another window.** The launcher command enters `.ai`; its search
+  field is the composer, and the shared footer's primary pill is Return's job: Send (`↵`), or Stop
+  (`↵`) while a response streams — followed by Actions (`⌘K`), which owns New Chat.
 - **History is local and lazy.** Conversation summaries stay in memory while transcripts load from the
   system SQLite database only for the selected preview or opened chat. Empty chats are never saved.
 - **Everything but the newest message is bounded.** `ChatSession.boundedContext` sends that message
@@ -93,15 +94,15 @@ hold neither settings nor credentials itself.
 ## Chat surface
 
 The built-in `AI Chat` launcher command enters `AIScreen`, and carries a bindable global shortcut
-(`HotKeyAction.aiChat`) that does the same thing from any app. Settings → AI holds both the recorder and
-a checkbox for the command's place in launcher search; the shortcut keeps working while the command is
-hidden, and does nothing at all while the feature is off. The palette search field becomes the
-single-line composer. The footer pill and Return are one action, `activate`: Send, or Stop while a
-response streams — an empty composer sends nothing, so the pill never needs a disabled state. The
-header's trailing model switcher uses the same in-window menu control as Clipboard's type filter and
-changes the app-wide default route for the next message. It does not interrupt a response already
-streaming; stopping one is the pill's job, so the header never has to fit a third control beside the
-switcher.
+(`HotKeyAction.aiChat`) that does the same thing from any app; Tab from the launcher is the third
+way in. Settings → AI holds both the recorder and a checkbox for the command's place in launcher
+search; the shortcut keeps working while the command is hidden, and does nothing at all while the
+feature is off. The palette search field becomes the single-line composer. The footer pill and
+Return are one action, `activate`: Send, or Stop while a response streams — an empty composer sends
+nothing, so the pill never needs a disabled state. The header's trailing model switcher uses the
+same in-window menu control as Clipboard's type filter and changes the app-wide default route for
+the next message. It does not interrupt a response already streaming; stopping one is the pill's
+job, so the header never has to fit a third control beside the switcher.
 
 The second footer control is the palette's normal Actions (`⌘K`) menu. It owns New Chat, Chat History
 and AI Settings, plus Stop Response and Copy Last Response when those actions apply. Chat adds no
@@ -247,8 +248,11 @@ chip before it backs out of chat; ⌘K → Remove Attachments clears them all. S
 The switcher's glyph comes from the selection — ChatGPT is OpenAI's mark, an API model resolves
 through its connection — never from `modelOptions`, which for ChatGPT is empty until the app-server
 has answered `model/list`; opening the chat on a ChatGPT model warms that list so the title is the
-display name from the first frame. Tab is a no-op in chat and history: `toggleMode` swaps the mode
-without `prepare`, which would carry the draft into the launcher's field.
+display name from the first frame. Tab hands chat on to the clipboard, and goes through `prepare`,
+so the unsent draft is dropped rather than carried into a field that would search it. History leaves
+by the ordinary sub-screen route — Tab carries its query to the launcher — because there the field
+really is a search. Tab does not touch the conversation: it lives on `AIChatState`, so Tab away and
+back resumes the same transcript.
 
 The model switcher is `fixedSize` with its title shortened in `AIChatCoordinator` (26 characters,
 middle ellipsis) rather than truncated by layout: a flexible label claimed the row up to its max

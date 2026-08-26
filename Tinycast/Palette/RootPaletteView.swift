@@ -487,6 +487,10 @@ struct RootPaletteView: View {
                 accessory.view
                 Spacer(minLength: 0)
             }
+            if tabOpensChat {
+                headerGutter(width: Theme.Spacing.md)
+                aiChatTabHint
+            }
             // Keyed off the mode, which is what says which screen is up; the field just flexes narrower.
             if !isCollapsed, vm.mode == .clipboard {
                 headerGutter(width: Theme.Spacing.md)
@@ -531,6 +535,26 @@ struct RootPaletteView: View {
         guard vm.mode == .launcher || vm.mode == .ai, !isCollapsed else { return nil }
         let screen = screen
         return screen.headerAccessory(at: selection(in: screen), focus: $argumentFocused)
+    }
+
+    /// Nothing else advertises Tab, so the launcher says where it goes — the footer's own pairing
+    /// of a label with its cap, never a click target: the header belongs to the field.
+    private var aiChatTabHint: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Text("AI Chat")
+                .font(Theme.Typography.bar)
+                .foregroundStyle(Theme.Colors.textSecondary)
+            KeyCapChip(text: "⇥", style: .outline)
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// Resolved through `PaletteTabAction` rather than restated, so the hint cannot promise a
+    /// destination the key does not go to — an argument field to walk takes Tab first.
+    private var tabOpensChat: Bool {
+        guard !isCollapsed, headerAccessory?.fieldNames.isEmpty ?? true else { return false }
+        return PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled)
+            == .freshScreen(.ai)
     }
 
     /// Width the search field shrinks to when an accessory sits beside it: the typed text's own
@@ -793,17 +817,21 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Tab flips launcher↔clipboard; Calculator History exits rather than joining. Chat stays put:
-    /// its field is a draft, and a bare mode swap would carry the draft into the launcher.
-    private func toggleMode() {
-        guard vm.mode != .ai, vm.mode != .aiHistory else { return }
-        vm.mode = vm.mode == .launcher ? .clipboard : .launcher
+    /// Tab rings launcher → chat → clipboard; every other mode exits rather than joining. Crossing
+    /// chat's edge opens a fresh screen, so a draft is never handed to a list that would search it.
+    private func cycleMode() {
+        switch PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled) {
+        case .carryQuery(let mode): vm.mode = mode
+        case .freshScreen(let mode): vm.prepare(mode: mode)
+        }
     }
 
-    /// Tab walks the inline argument fields first — search field → each argument → back — and only
-    /// toggles the mode when the selection declares none.
+    /// Tab walks the inline argument fields first — search field → each argument → back — and rings
+    /// on when there are none, chat's staged-image chips included: those declare no fields to walk.
     private func advanceTabFocus() {
-        guard let accessory = headerAccessory else { return toggleMode() }
+        guard let accessory = headerAccessory, !accessory.fieldNames.isEmpty else {
+            return cycleMode()
+        }
         argumentFocused = accessory.fieldAfter(argumentFocused)
         searchFocused = argumentFocused == nil
     }

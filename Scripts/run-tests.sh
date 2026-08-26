@@ -127,6 +127,9 @@ run hover-arming-test      Tinycast/Palette/HoverArming.swift \
 run palette-escape-test    Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Palette/PaletteEscapeAction.swift \
                            Tinycast/Features/Quicklinks/Model/Quicklink.swift
+run palette-tab-test       Tinycast/Palette/PaletteMode.swift \
+                           Tinycast/Palette/PaletteTabAction.swift \
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift
 run hotkey-test            Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
                            Tinycast/Features/HotKeys/Model/DoubleTapDetector.swift \
                            Tinycast/Features/HotKeys/Model/HyperKey.swift \

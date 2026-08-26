@@ -98,6 +98,7 @@
 		3B02D6CE68E0E488955A19B5 /* SnippetTemplateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58E564E6181EB15497E51CD /* SnippetTemplateEngine.swift */; };
 		3B0A75B76B65E651BCB97D71 /* CameraPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEBAA9641BC6C279DB0123C /* CameraPreviewController.swift */; };
 		3BC6CC35889FFC77D640C7CA /* SnippetsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2EF66267B0141279A43613 /* SnippetsSettingsView.swift */; };
+		3C2812B921530D45B802B44C /* PaletteTabAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B107F5E532C8DE74430723B /* PaletteTabAction.swift */; };
 		3C30FB1AD99237898B4401C7 /* MarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EC7DC9AD5E54C26387F29F6 /* MarkdownView.swift */; };
 		3D56F518ABEF5851534A710C /* AISettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C975F928132D3DAB1BB569F0 /* AISettingsStore.swift */; };
 		3DAB1821040DCA295BEB4437 /* AICommandSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5ABB8CDB1469F8755B12567 /* AICommandSection.swift */; };
@@ -620,6 +621,7 @@
 		9A7F606D7F71B6FC0CC6ABC8 /* UninstallScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallScanner.swift; sourceTree = "<group>"; };
 		9AAFBFA70EF62B67F7357E0E /* UninstallCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallCoordinator.swift; sourceTree = "<group>"; };
 		9ADAA05D695590C4B654E5BF /* OnboardingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCoordinator.swift; sourceTree = "<group>"; };
+		9B107F5E532C8DE74430723B /* PaletteTabAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteTabAction.swift; sourceTree = "<group>"; };
 		9B9ADC5C0B42F7EF38F77DE6 /* WindowCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCommand.swift; sourceTree = "<group>"; };
 		9BD81541882CBCC5B06F718F /* UpdateDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateDownloader.swift; sourceTree = "<group>"; };
 		9C37CCD024267EB21876C7E9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -1676,6 +1678,7 @@
 				802BD2F4CC057228F2528217 /* PalettePlacement.swift */,
 				445B0374FD5D74DBE23243CD /* PaletteScreen.swift */,
 				188A6D3C5B6BC67716F15F83 /* PaletteState.swift */,
+				9B107F5E532C8DE74430723B /* PaletteTabAction.swift */,
 				209D951FDD587A040F1F76F3 /* PaletteWindowController.swift */,
 				D23A98172AA46F5C0C89C4AB /* RootPaletteView.swift */,
 			);
@@ -2265,6 +2268,7 @@
 				9F8806D46EBAF7058FC2EAEC /* PaletteRowIndex.swift in Sources */,
 				DB6B294B3D15B0AABCE5427E /* PaletteScreen.swift in Sources */,
 				1BC16048EE05A1FD25739CB4 /* PaletteState.swift in Sources */,
+				3C2812B921530D45B802B44C /* PaletteTabAction.swift in Sources */,
 				52C4F57BB26F420CCD22C1D7 /* PaletteWindowController.swift in Sources */,
 				E4B18EBFFD009B2CAFF4BA9B /* PanelTransition.swift in Sources */,
 				FD4DDDCDC32AF921CDBCFB18 /* Paster.swift in Sources */,
