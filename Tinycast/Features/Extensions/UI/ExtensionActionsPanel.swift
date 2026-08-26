@@ -12,19 +12,13 @@ private enum Metrics {
 }
 
 /// One row of a running command's ⌘K panel. Its own type, not `PopoverMenuItem`: an extension names
-/// any icon and tints it, and the palette's menu row carries neither.
+/// any icon and tints it, and the palette's menu row carries neither. Drawing only — a row's handler
+/// stays on `PaletteMenuContent`, so the panel and the keyboard fire the same one.
 struct ExtensionActionItem {
     let title: String
     let icon: ExtensionImage.Resolved
     var shortcut: String?
     var isDestructive = false
-    let action: () -> Void
-}
-
-/// A panel's header and rows, built once and consumed by render and keyboard alike.
-struct ExtensionActionsContent {
-    var header: String?
-    let items: [ExtensionActionItem]
 }
 
 /// The ⌘K panel of a running command. Not `PopoverMenu`: an extension's panel is long, so it scrolls.

@@ -159,32 +159,26 @@ struct ExtensionFeedbackOverlay: View {
 /// The ⌘K panel's content for the running command's current selection.
 @MainActor
 enum ExtensionActionsMenu {
+    /// What the panel belongs to: the selected row, or the screen when the selection has outrun it.
+    static func header(screen: ExtensionScreen, selection: Int) -> String? {
+        screen.items.indices.contains(selection)
+            ? screen.items[selection].node.string("title") : screen.navigationTitle
+    }
+
     /// Rows carry a resolved `ExtensionImage` rather than a symbol name: an `Action`'s icon is an
     /// `ImageLike`, so it can name any source and tint it, which `PopoverMenuItem` cannot express.
-    static func content(
-        screen: ExtensionScreen, selection: Int, assetsPath: String?, core: AppCore
-    ) -> ExtensionActionsContent? {
-        let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
-        guard !actions.isEmpty else { return nil }
-        let header =
-            screen.items.indices.contains(selection)
-            ? screen.items[selection].node.string("title") : screen.navigationTitle
-        return ExtensionActionsContent(
-            header: header,
-            items: actions.map { action in
-                ExtensionActionItem(
-                    title: action.title,
-                    icon: ExtensionImage.actionIcon(
-                        action.iconValue, assetsPath: assetsPath,
-                        // Read rather than injected: a panel is rebuilt each time it opens.
-                        isDark: NSApp.effectiveAppearance.isDark,
-                        isDestructive: action.isDestructive),
-                    shortcut: action.shortcutCaps?.joined(),
-                    isDestructive: action.isDestructive
-                ) {
-                    guard let handler = action.handler else { return }
-                    core.extensions.dispatch(handler: handler)
-                }
-            })
+    /// Called from the render path alone — resolving an icon per ↑/↓ would probe SF Symbols on main.
+    static func rows(_ actions: [ExtensionAction], assetsPath: String?) -> [ExtensionActionItem] {
+        actions.map { action in
+            ExtensionActionItem(
+                title: action.title,
+                icon: ExtensionImage.actionIcon(
+                    action.iconValue, assetsPath: assetsPath,
+                    // Read rather than injected: a panel is rebuilt each time it opens.
+                    isDark: NSApp.effectiveAppearance.isDark,
+                    isDestructive: action.isDestructive),
+                shortcut: action.shortcutCaps?.joined(),
+                isDestructive: action.isDestructive)
+        }
     }
 }

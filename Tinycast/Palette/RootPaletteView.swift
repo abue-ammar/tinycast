@@ -85,8 +85,7 @@ struct RootPaletteView: View {
                 openActions: openActions)
         case .extensionCommand:
             return ExtensionCommandScreen(
-                screen: extensionScreen, extensions: extensions, core: core, vm: vm,
-                openActions: openActions)
+                screen: extensionScreen, extensions: extensions, vm: vm, openActions: openActions)
         }
     }
 
@@ -152,12 +151,15 @@ struct RootPaletteView: View {
         ])
     }
 
+    /// Whichever menu is open — the one source `moveMenu`, `activateMenuItem` and the overlays
+    /// address rows through, so no two of them can disagree about what a row index means.
     private var menuContent: PaletteMenuContent? {
         switch openMenu {
         case .actions:
             let screen = screen
             return screen.menuContent(
-                at: selection(in: screen), selection: $menuSelection, onActivate: activateMenuItem)
+                at: selection(in: screen), menuSelection: $menuSelection,
+                onActivate: activateMenuItem)
         case .app:
             return PaletteMenuContent(
                 popover: appMenuContent, selection: $menuSelection, onActivate: activateMenuItem)
@@ -210,14 +212,14 @@ struct RootPaletteView: View {
         }
         .overlay(alignment: .bottomLeading) {
             if openMenu == .app, let content = menuContent {
-                content.view
+                content.view()
                     .padding(Self.menuInset)
                     .transition(Self.menuTransition(.bottomLeading))
             }
         }
         .overlay(alignment: .bottomTrailing) {
             if openMenu == .actions, let content = menuContent {
-                content.view
+                content.view()
                     .padding(Self.menuInset)
                     .transition(Self.menuTransition(.bottomTrailing))
             }
@@ -225,7 +227,7 @@ struct RootPaletteView: View {
         // Header menus hang from their buttons rather than a panel corner.
         .overlay(alignment: .topTrailing) {
             if openMenu == .clipboardFilter || openMenu == .aiModel, let content = menuContent {
-                content.view
+                content.view()
                     .padding(.top, Theme.Size.headerPadding + Theme.Size.headerHeight)
                     // Right edges flush with the button's, which sits inside the same trailing gutter.
                     .padding(.trailing, Theme.Spacing.md * 2)
@@ -761,7 +763,7 @@ struct RootPaletteView: View {
 
     /// The one activation path for a menu row: run its action, then close.
     private func activateMenuItem(_ index: Int) {
-        guard let content = menuContent, index >= 0, index < content.rowCount else { return }
+        guard let content = menuContent, (0..<content.rowCount).contains(index) else { return }
         content.activate(index)
         closeMenus()
         // A mouse click on a row takes the caret with it; menus close back into the field.

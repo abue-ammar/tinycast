@@ -181,8 +181,10 @@ screens hold (see [palette.md](palette.md)).
   extension icon and keeps its `tintColor` — which is what makes a palette of `{Icon.Circle, tintColor}`
   rows read as colours rather than a column of grey circles. A destructive action with no tint of its
   own falls back to red. The first action is the primary ↵ action; an action's own `shortcut` is
-  matched against modified keystrokes. The panel is supplied through `PaletteMenuContent`, so the
-  palette does not know the extension's row type or ordering.
+  matched against modified keystrokes. `ExtensionCommandScreen.menuContent` hands the whole panel to
+  the palette as a `PaletteMenuContent`, so the palette never learns the row type — and a row's
+  handler is taken from the flattened `ExtensionAction` list rather than the drawn rows, so ↵ and the
+  panel fire the same one without resolving an icon per arrow key.
 - **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, and `confirmAlert`
   goes through `DialogController` like every other question the app asks. Its dialog sits at
   `.modalPanel`, above the palette's `.floating`, so a view command keeps its screen behind it — and
