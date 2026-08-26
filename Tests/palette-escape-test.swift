@@ -50,7 +50,19 @@ struct PaletteEscapeTests {
         expect(
             PaletteEscapeAction.resolve(menuOpen: false, query: "why is the sky", mode: .ai),
             .clearQuery,
-            "an unsent chat draft clears before the palette hides")
+            "an unsent chat draft clears before chat itself is left")
+        expect(
+            PaletteEscapeAction.resolve(menuOpen: false, query: "", mode: .ai),
+            .exitToLauncher,
+            "an empty composer backs chat out to the launcher rather than hiding the palette")
+        expect(
+            PaletteEscapeAction.resolve(menuOpen: false, query: "", mode: .clipboard),
+            .hidePalette,
+            "only chat backs out; an empty clipboard filter still hides the palette")
+        expect(
+            PaletteEscapeAction.resolve(menuOpen: true, query: "", mode: .ai),
+            .closeMenu,
+            "a menu outranks the chat screen it is drawn over")
         expect(
             PaletteEscapeAction.resolve(menuOpen: true, query: "", mode: .extensionCommand),
             .closeMenu,

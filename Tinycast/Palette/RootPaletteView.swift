@@ -347,6 +347,8 @@ struct RootPaletteView: View {
                 vm.query = ""
             case .exitExtensionScreen:
                 core.extensionCoordinator.exitExtensionScreen()
+            case .exitToLauncher:
+                exitToLauncher()
             case .hidePalette:
                 core.paletteCoordinator.hidePalette()
             }

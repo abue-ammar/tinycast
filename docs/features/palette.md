@@ -77,8 +77,9 @@ surfaces a reader opens directly — launcher → AI chat → clipboard → laun
 row declares arguments, in which case it walks those fields first (see below); every other mode exits
 to the launcher rather than joining the ring, and is reached by a command or a global hotkey, with
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
-`aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced. **Escape clears a non-empty query
-before it hides the palette or exits an extension screen**, so one press clears and the next leaves.
+`aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced. **Escape clears a
+non-empty query before it leaves the screen**, so one press clears and the next leaves: chat backs
+out to the launcher, an extension screen exits itself, and anywhere else the palette hides.
 
 The launcher advertises the first hop in the header — `AI Chat` beside a `⇥` cap, the footer's own
 pairing of a label with its key. It is drawn only when Tab really would open chat, a condition read

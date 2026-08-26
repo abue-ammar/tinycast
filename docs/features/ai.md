@@ -248,11 +248,12 @@ chip before it backs out of chat; ⌘K → Remove Attachments clears them all. S
 The switcher's glyph comes from the selection — ChatGPT is OpenAI's mark, an API model resolves
 through its connection — never from `modelOptions`, which for ChatGPT is empty until the app-server
 has answered `model/list`; opening the chat on a ChatGPT model warms that list so the title is the
-display name from the first frame. Tab hands chat on to the clipboard, and goes through `prepare`,
-so the unsent draft is dropped rather than carried into a field that would search it. History leaves
-by the ordinary sub-screen route — Tab carries its query to the launcher — because there the field
-really is a search. Tab does not touch the conversation: it lives on `AIChatState`, so Tab away and
-back resumes the same transcript.
+display name from the first frame. Tab hands chat on to the clipboard, and Escape on an empty
+composer backs it out to the launcher; both go through `prepare`, so the unsent draft is dropped
+rather than carried into a field that would search it. History leaves by the ordinary sub-screen
+route — Tab carries its query to the launcher — because there the field really is a search. Neither
+exit touches the conversation: it lives on `AIChatState`, so Tab away and back resumes the same
+transcript.
 
 The model switcher is `fixedSize` with its title shortened in `AIChatCoordinator` (26 characters,
 middle ellipsis) rather than truncated by layout: a flexible label claimed the row up to its max
