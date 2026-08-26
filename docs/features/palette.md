@@ -55,6 +55,14 @@ only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 Showing the palette calls `prepare(mode:)`, which resets state and bumps `focusToken` (a UUID) so the
 SwiftUI search field re-focuses.
 
+Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path: the
+palette returns to the launcher *and* chat starts a new conversation, at once or after
+`popToRootTimeout`, unless a re-summon inside that window consumes the pending reset first. An
+unfinished chat is a thing being done, exactly like a typed query, so the screen and the conversation
+are reset together rather than the screen alone. A reply still streaming is the one exception — it was
+asked for, and resetting would throw the answer away. Nothing is lost either way: a conversation is
+written to Chat History as soon as it has a message.
+
 Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the protocol is what keeps the
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
 palette indexes into it. Adding a mode means adding a conformer, not a branch in `RootPaletteView`.

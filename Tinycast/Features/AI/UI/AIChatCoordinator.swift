@@ -66,6 +66,14 @@ final class AIChatCoordinator {
         palette.prepare(mode: .ai)
     }
 
+    /// Pop to Root reaches the conversation too, so a palette that forgets its screen does not
+    /// reopen still holding a thread from before; the transcript is already saved by then.
+    func popToRoot() {
+        // A reply still arriving was asked for, and cancelling it here would throw away the answer.
+        guard settings.aiEnabled, !chat.isStreaming else { return }
+        chat.startNewChat()
+    }
+
     func showHistory() {
         palette.prepare(mode: .aiHistory)
     }

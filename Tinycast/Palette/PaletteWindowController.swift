@@ -99,7 +99,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         popToRootTimer?.invalidate()
         let timeout = core.settings.popToRootTimeout
         guard timeout != .immediately else {
-            core.palette.prepare(mode: .launcher)
+            popToRoot()
             return
         }
         popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
@@ -107,9 +107,16 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             MainActor.assumeIsolated {
                 guard let self, !self.core.extensions.isAuthorizing else { return }
                 self.popToRootTimer = nil
-                self.core.palette.prepare(mode: .launcher)
+                self.popToRoot()
             }
         }
+    }
+
+    /// Both reset paths come through here, so the screen and the conversation cannot disagree about
+    /// whether the palette was left behind — a chat is a thing being done, like a typed query.
+    private func popToRoot() {
+        core.palette.prepare(mode: .launcher)
+        core.aiChatCoordinator.popToRoot()
     }
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.

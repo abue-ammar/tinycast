@@ -41,9 +41,15 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
   not create a second credential or response cache on disk.
 - **`Model/` stays Foundation-only.** `ai-provider-test` compiles the shipped provider models and pins
   endpoints, stream parsing, persistence repair and Codex protocol framing.
-- **Chat is a palette screen, not another window.** The launcher command enters `.ai`; its search
-  field is the composer, and the shared footer's primary pill is Return's job: Send (`↵`), or Stop
-  (`↵`) while a response streams — followed by Actions (`⌘K`), which owns New Chat.
+- **Chat is a palette screen, not another window** — including its lifetime. The launcher command
+  enters `.ai`; its search field is the composer, and the shared footer's primary pill is Return's
+  job: Send (`↵`), or Stop (`↵`) while a response streams — followed by Actions (`⌘K`), which owns
+  New Chat. A conversation lasts exactly as long as the palette remembers anything else: Pop to Root
+  Search resets the screen and starts a new chat in the same breath, through
+  `AIChatCoordinator.popToRoot`, so closing the palette and summoning it again does not reopen on a
+  thread from before. A reply still streaming is never reset out from under the reader — it was
+  asked for — and the transcript is saved regardless, so the old conversation is one ⌘K → Chat
+  History away.
 - **History is local and lazy.** Conversation summaries stay in memory while transcripts load from the
   system SQLite database only for the selected preview or opened chat. Empty chats are never saved.
 - **Everything but the newest message is bounded.** `ChatSession.boundedContext` sends that message
