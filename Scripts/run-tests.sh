@@ -19,7 +19,7 @@ if [ "${1:-}" = "--exec" ]; then
     shift
     name=$1 opt=$2
     shift 2
-    if ! swiftc -swift-version 6 "$opt" "$@" "Tests/$name.swift" -o "$BIN/$name" > "$BIN/$name.log" 2>&1; then
+    if ! swiftc -swift-version 6 "$opt" $* "Tests/$name.swift" -o "$BIN/$name" > "$BIN/$name.log" 2>&1; then
         printf '\033[31mFAIL\033[0m  %-22s did not compile\n' "$name"
         : > "$BIN/$name.failed"
         exit 0
@@ -65,7 +65,7 @@ run() {
     local name=$1
     shift
     if [ -n "$only" ] && [ "$name" != "$only" ]; then return 0; fi
-    ran=$((ran + 1))
+    ran=$((ran + 1))\
 
     # Absolute paths throughout: sourcekit-lsp resolves the command itself and does not apply
     # `directory` to relative arguments, so a relative path there silently yields no index.
@@ -225,13 +225,23 @@ run support-test           Tinycast/Features/Support/Model/*.swift
 run ai-provider-test       Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Settings/AISettingsStore.swift
-run ai-chat-test           Tinycast/Features/AI/Model/AIRequest.swift \
-                           Tinycast/Features/AI/Model/ChatMessage.swift \
-                           Tinycast/Features/AI/Model/ChatSession.swift \
-                           Tinycast/Features/AI/Model/MarkdownBlock.swift \
+run ai-chat-test           Tinycast/Platform/AppPaths.swift \
+                           Tinycast/Features/Calculator/Model/*.swift \
+                           Tinycast/Features/AI/Model/*.swift \
+                           Tinycast/Features/AI/Tools/WebSearch/Model/*.swift \
+                           Tinycast/Features/AI/Tools/WebSearch/Service/*.swift \
+                           Tinycast/Features/AI/Tools/WebSearch/Service/Engines/*.swift \
+                           Tinycast/Features/AI/Tools/WebFetch/Model/*.swift \
+                           Tinycast/Features/AI/Tools/WebFetch/Service/*.swift \
+                           Tinycast/Features/AI/Service/LocationProvider.swift \
+                           Tinycast/Features/AI/Service/WeatherService.swift \
+                           Tinycast/Features/AI/Service/CalculatorToolRunner.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
+                           Tinycast/Features/AI/Service/AIToolRegistry.swift \
                            Tinycast/Features/AI/Service/ChatHistoryStore.swift \
                            Tinycast/Features/AI/UI/AIChatState.swift
+run web-search-test        Tinycast/Features/AI/Tools/WebSearch/Model/*.swift \
+                           Tinycast/Features/AI/Tools/WebFetch/Model/*.swift
 run slow codex-turn-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
@@ -258,25 +268,24 @@ fi
 
 if [ "$ran" -eq 0 ]; then
     echo "No harness named '$only'." >&2
-    exit 2
-fi
-
-# `sort -s` is stable, so the slow harnesses lead and everything else keeps its declaration order.
-JOBS="${TINYCAST_TEST_JOBS:-$(sysctl -n hw.ncpu)}"
-sort -s -k1,1n "$QUEUE" | cut -d' ' -f2- | xargs -P "$JOBS" -L1 "$SELF" --exec
-
-# A compiler diagnostic is far longer than PIPE_BUF, so the workers log it and it is replayed here.
-while read -r _ name _; do
-    if [ -f "$BIN/$name.failed" ]; then failed+=("$name"); fi
-done < "$QUEUE"
-
-if [ ${#failed[@]} -gt 0 ]; then
-    for name in "${failed[@]}"; do
-        printf '\n\033[31m--- %s ---\033[0m\n' "$name"
-        cat "$BIN/$name.log"
-    done
-    printf '\n%d harness(es) failed: %s\n' "${#failed[@]}" "${failed[*]}" >&2
     exit 1
 fi
-echo
-if [ -n "$only" ]; then echo "$only passed."; else echo "All $ran harnesses passed."; fi
+
+sort -n "$QUEUE" | while read -r _pri name opt sources; do
+    printf '%s\0%s\0%s\0' "$name" "$opt" "$sources"
+done | xargs -0 -n 3 -P "$(sysctl -n hw.ncpu 2>/dev/null || nproc || echo 4)" "$SELF" --exec
+
+for f in "$BIN"/*.failed; do
+    [ -f "$f" ] && failed+=("$(basename "$f" .failed)")
+done
+
+if [ ${#failed[@]} -gt 0 ]; then
+    printf '\n\033[31m%d of %d harness(es) failed:\033[0m\n' "${#failed[@]}" "$ran"
+    for name in "${failed[@]}"; do
+        printf '  \033[31m•\033[0m %s\n' "$name"
+        sed 's/^/    /' "$BIN/$name.log"
+    done
+    exit 1
+fi
+
+printf '\n\033[32mAll %d harnesses passed.\033[0m\n' "$ran"

@@ -47,7 +47,13 @@
 	<string>Tinycast reads today's and tomorrow's events so you can join a meeting from the palette.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Tinycast uses Bluetooth access only when you run the Toggle Bluetooth action.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Tinycast uses your location to provide accurate local weather and location-aware AI responses.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Tinycast uses your location to provide accurate local weather and location-aware AI responses.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Tinycast uses your location to provide accurate local weather and location-aware AI responses.</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Tinycast</string>
+	<string>Copyright © 2026. All rights reserved.</string>
 </dict>
 </plist>

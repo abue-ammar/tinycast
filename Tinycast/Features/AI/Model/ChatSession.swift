@@ -37,10 +37,20 @@ struct ChatSession: Equatable, Sendable {
     var requestMessages: [AIMessage] {
         Self.boundedContext(
             messages.compactMap { message in
-                guard message.role == .user || message.state == .complete else { return nil }
+                guard message.role == .user || message.role == .tool || message.state == .complete || !message.toolCalls.isEmpty else { return nil }
+                let role: AIMessage.Role
+                switch message.role {
+                case .user: role = .user
+                case .assistant: role = .assistant
+                case .tool: role = .tool
+                }
                 return AIMessage(
-                    role: message.role == .user ? .user : .assistant,
-                    text: message.text, images: message.images)
+                    role: role,
+                    text: message.text,
+                    images: message.images,
+                    toolCalls: message.toolCalls,
+                    toolCallID: message.toolCallID
+                )
             })
     }
 
@@ -55,20 +65,22 @@ struct ChatSession: Equatable, Sendable {
         var tail: [AIMessage] = []
         for message in messages[(newest + 1)...] {
             remaining -= message.text.utf8.count
-            tail.append(AIMessage(role: message.role, text: message.text))
+            tail.append(AIMessage(role: message.role, text: message.text, toolCalls: message.toolCalls, toolCallID: message.toolCallID))
         }
         var head: [AIMessage] = []
         for message in messages[..<newest].reversed() {
             remaining -= message.text.utf8.count
             guard remaining >= 0 else { break }
-            head.append(AIMessage(role: message.role, text: message.text))
+            head.append(AIMessage(role: message.role, text: message.text, toolCalls: message.toolCalls, toolCallID: message.toolCallID))
         }
         // The slice opens with the user turn that prompted it; an orphaned reply reads as noise.
         while head.last?.role == .assistant { head.removeLast() }
         let prompt = messages[newest]
         let bounded = AIMessage(
             role: prompt.role, text: prompt.text,
-            images: AIAttachmentBudget.bounded(prompt.images))
+            images: AIAttachmentBudget.bounded(prompt.images),
+            toolCalls: prompt.toolCalls,
+            toolCallID: prompt.toolCallID)
         return head.reversed() + [bounded] + tail
     }
 

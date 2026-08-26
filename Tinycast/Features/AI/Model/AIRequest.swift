@@ -1,77 +1,88 @@
 import Foundation
 
-/// An attached picture, already encoded for the wire; every provider takes it as a data URL.
-struct AIImage: Equatable, Hashable, Sendable {
-    let data: Data
-    let mimeType: String
-
-    var dataURL: String { "data:\(mimeType);base64,\(data.base64EncodedString())" }
-}
-
-/// What one turn's pictures may total. Provider requests cap near 25 MB and a data URL costs a third
-/// more than the bytes it carries, so the ceiling lives here rather than on the wire: past it a
-/// picture is refused while the composer can still say why, instead of becoming an opaque 413.
-enum AIAttachmentBudget {
-    static let maxCount = 6
-    static let maxBytes = 10 * 1_048_576
-
-    /// Whether `images` can take `candidate` and stay inside both limits.
-    static func admits(_ images: [AIImage], adding candidate: AIImage) -> Bool {
-        images.count < maxCount
-            && images.reduce(candidate.data.count) { $0 + $1.data.count } <= maxBytes
-    }
-
-    /// The longest leading run that fits. The composer refuses before it ever gets here; this is what
-    /// keeps a turn assembled by any other route inside the same ceiling.
-    static func bounded(_ images: [AIImage]) -> [AIImage] {
-        var total = 0
-        return Array(
-            images.prefix(maxCount).prefix { image in
-                total += image.data.count
-                return total <= maxBytes
-            })
-    }
-}
-
 struct AIMessage: Equatable, Sendable {
-    enum Role: String, Equatable, Sendable {
+    enum Role: String, Sendable {
         case system
         case user
         case assistant
+        case tool
     }
 
     let role: Role
     let text: String
     let images: [AIImage]
+    let toolCalls: [AIToolCall]
+    let toolCallID: String?
 
-    init(role: Role, text: String, images: [AIImage] = []) {
+    init(
+        role: Role, text: String, images: [AIImage] = [],
+        toolCalls: [AIToolCall] = [], toolCallID: String? = nil
+    ) {
         self.role = role
         self.text = text
         self.images = images
+        self.toolCalls = toolCalls
+        self.toolCallID = toolCallID
     }
 }
 
 struct AIRequest: Equatable, Sendable {
-    let instructions: String?
     let messages: [AIMessage]
+    let instructions: String?
     let maxOutputTokens: Int
-    /// Lets the model search the web; each route has its own switch for that, all off by default.
     let webSearch: Bool
+    let tools: [AIToolDefinition]
 
     init(
-        instructions: String? = nil, messages: [AIMessage], maxOutputTokens: Int = 4_096,
-        webSearch: Bool = false
+        messages: [AIMessage], instructions: String? = nil,
+        maxOutputTokens: Int = 4096, webSearch: Bool = false,
+        tools: [AIToolDefinition] = []
     ) {
-        self.instructions = instructions
         self.messages = messages
+        self.instructions = instructions
         self.maxOutputTokens = maxOutputTokens
         self.webSearch = webSearch
+        self.tools = tools
+    }
+}
+
+struct AIImage: Equatable, Hashable, Sendable {
+    let data: Data
+    let mimeType: String
+
+    var dataURL: String {
+        "data:\(mimeType);base64,\(data.base64EncodedString())"
+    }
+}
+
+enum AIAttachmentBudget {
+    static let maxCount = 3
+    static let maxBytes = 12 * 1024 * 1024
+
+    static func admits(_ images: [AIImage], adding next: AIImage) -> Bool {
+        images.count < maxCount && (images.reduce(0) { $0 + $1.data.count } + next.data.count) <= maxBytes
+    }
+
+    static func bounded(_ images: [AIImage]) -> [AIImage] {
+        var totalBytes = 0
+        var kept: [AIImage] = []
+        for image in images.prefix(maxCount) {
+            let nextBytes = totalBytes + image.data.count
+            guard nextBytes <= maxBytes else { break }
+            kept.append(image)
+            totalBytes = nextBytes
+        }
+        return kept
     }
 }
 
 struct AIUsage: Equatable, Sendable {
     var inputTokens: Int?
     var outputTokens: Int?
+
+    var isEmpty: Bool {
+        inputTokens == nil && outputTokens == nil
+    }
 
     var totalTokens: Int? {
         guard let inputTokens, let outputTokens else { return nil }
@@ -84,6 +95,8 @@ enum AIStreamEvent: Equatable, Sendable {
     case thinking
     case searching(String?)
     case searched(String?)
+    case toolCall(AIToolCall)
+    case toolExecuting(name: String, detail: String?)
     case usage(AIUsage)
     case finished
 }
@@ -96,7 +109,7 @@ enum AIProviderError: LocalizedError, Equatable, Sendable {
     var errorDescription: String? {
         switch self {
         case .unavailable(let message), .responseFailed(let message): return message
-        case .malformedResponse: return "The provider returned malformed streaming data."
+        case .malformedResponse: return "The AI provider returned an unreadable response."
         }
     }
 }

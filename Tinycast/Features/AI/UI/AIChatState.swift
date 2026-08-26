@@ -41,8 +41,6 @@ final class AIChatState {
         notice = nil
         session.append(ChatMessage(role: .user, text: text, images: pendingImages.map(\.image)))
         clearStaging()
-        let request = AIRequest(
-            instructions: instructions, messages: session.requestMessages, webSearch: webSearch)
         session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
         isStreaming = true
         isThinking = false
@@ -51,20 +49,119 @@ final class AIChatState {
 
         replyGeneration += 1
         let generation = replyGeneration
-        replyTask = Task { [weak self, provider] in
+        let registry = AIToolRegistry.shared
+        replyTask = Task { [weak self, provider, registry] in
+            guard let self else { return }
             do {
-                for try await event in provider.stream(request) {
-                    guard let self, !Task.isCancelled, self.replyGeneration == generation else {
-                        return
+                var turn = 0
+                let maxTurns = 8
+                while turn < maxTurns {
+                    turn += 1
+                    guard !Task.isCancelled, self.replyGeneration == generation else { return }
+
+                    // On the final turn, omit tools to force the model to synthesize its final text response
+                    let canUseTools = webSearch && (turn < maxTurns - 1)
+                    let tools = canUseTools ? registry.availableTools : []
+                    let request = AIRequest(
+                        messages: self.session.requestMessages,
+                        instructions: instructions,
+                        webSearch: webSearch,
+                        tools: tools
+                    )
+
+                    var receivedToolCalls: [AIToolCall] = []
+
+                    for try await event in provider.stream(request) {
+                        guard !Task.isCancelled, self.replyGeneration == generation else {
+                            return
+                        }
+                        switch event {
+                        case .toolCall(let toolCall):
+                            receivedToolCalls.append(toolCall)
+                        case .finished:
+                            if receivedToolCalls.isEmpty {
+                                self.receive(event)
+                            }
+                        default:
+                            self.receive(event)
+                        }
                     }
-                    self.receive(event)
+
+                    guard !Task.isCancelled, self.replyGeneration == generation else { return }
+
+                    if !receivedToolCalls.isEmpty {
+                        self.discardPendingText()
+                        if var last = self.session.messages.last, last.role == .assistant {
+                            last.state = .complete
+                            last.toolCalls = receivedToolCalls
+                            last.text = ""
+                            self.session.replaceLast(with: last)
+                        }
+
+                        for toolCall in receivedToolCalls {
+                            guard !Task.isCancelled, self.replyGeneration == generation else { return }
+
+                            if toolCall.name == "web_search" {
+                                var queryParam: String?
+                                if let data = toolCall.argumentsJSON.data(using: .utf8),
+                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                   let q = json["query"] as? String {
+                                    queryParam = q
+                                }
+                                self.receive(.searching(queryParam))
+                            } else if toolCall.name == "web_fetch" {
+                                var urlParam: String?
+                                if let data = toolCall.argumentsJSON.data(using: .utf8),
+                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                   let u = json["url"] as? String {
+                                    urlParam = u
+                                }
+                                self.receive(.searching(urlParam))
+                            } else if toolCall.name == "calculate" {
+                                var exprParam: String?
+                                if let data = toolCall.argumentsJSON.data(using: .utf8),
+                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                   let e = json["expression"] as? String {
+                                    exprParam = e
+                                }
+                                self.receive(.searching("calc:" + (exprParam ?? "")))
+                            } else if toolCall.name == "get_location" {
+                                self.receive(.searching("loc:current"))
+                            } else if toolCall.name == "get_weather" {
+                                var locParam = ""
+                                if let data = toolCall.argumentsJSON.data(using: .utf8),
+                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                   let l = json["location"] as? String {
+                                    locParam = l
+                                }
+                                self.receive(.searching("weather:" + locParam))
+                            }
+
+                            let result = await registry.execute(call: toolCall)
+                            self.receive(.searched(nil))
+
+                            self.session.append(ChatMessage(
+                                role: .tool,
+                                text: result.output,
+                                state: .complete,
+                                toolCallID: result.callID
+                            ))
+                        }
+
+                        self.session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
+                        self.history.save(self.session)
+                        continue
+                    } else {
+                        break
+                    }
                 }
-                guard let self, !Task.isCancelled, self.replyGeneration == generation,
+
+                guard !Task.isCancelled, self.replyGeneration == generation,
                     self.isStreaming
                 else { return }
-                self.finishLast(state: .failed, fallback: "The response ended unexpectedly.")
+                self.finishLast(state: .complete, fallback: "I was unable to complete the response. Please try asking again.")
             } catch {
-                guard let self, !Task.isCancelled, self.replyGeneration == generation,
+                guard !Task.isCancelled, self.replyGeneration == generation,
                     self.isStreaming
                 else { return }
                 self.finishLast(state: .failed, fallback: error.localizedDescription)
@@ -115,6 +212,10 @@ final class AIChatState {
             return
         }
         finishLast(state: .failed, fallback: "Cancelled")
+    }
+
+    func stop() {
+        cancel()
     }
 
     func startNewChat() {
@@ -179,7 +280,7 @@ final class AIChatState {
             guard var message = session.messages.last, message.role == .assistant else { return }
             isThinking = false
             message.searches.append(
-                ChatSearch(query: query, isComplete: false, textOffset: message.text.count))
+                ChatSearch(query: query, isComplete: false, textOffset: 0))
             session.replaceLast(with: message)
         case .searched(let query):
             flushPendingText()
@@ -191,6 +292,10 @@ final class AIChatState {
             session.replaceLast(with: message)
         case .usage(let usage):
             self.usage = usage
+        case .toolCall:
+            break
+        case .toolExecuting:
+            break
         case .finished:
             finishLast(state: .complete, fallback: "No response")
         }
@@ -215,8 +320,6 @@ final class AIChatState {
             pendingText = ""
             return
         }
-        // Text after a search means the search is over, whether or not the route says so.
-        message.searches = message.searches.map { Self.completed($0) }
         message.text += pendingText
         pendingText = ""
         session.replaceLast(with: message)
@@ -254,24 +357,4 @@ extension AIChatState {
         search.isComplete = true
         return search
     }
-}
-
-/// Why the composer would not take another picture; both limits are `AIAttachmentBudget`'s.
-enum ChatAttachmentRefusal: Equatable, Sendable {
-    case count
-    case size
-
-    var message: String {
-        switch self {
-        case .count: return "\(AIAttachmentBudget.maxCount) images is all one message can carry."
-        case .size: return "That image is too big for this message — send these first."
-        }
-    }
-}
-
-/// A staged image with the name the chip shows; the name is for the composer only, not the wire.
-struct ChatAttachment: Identifiable, Equatable, Sendable {
-    let id = UUID()
-    let image: AIImage
-    let name: String
 }

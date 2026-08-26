@@ -153,10 +153,14 @@ enum CalcDateTime {
             // Negating Int.min traps; degrade to no card on that edge.
             guard op == "+" || duration.count != .min else { return nil }
             let signed = op == "-" ? -duration.count : duration.count
-            guard
-                let result = calendar.date(
-                    byAdding: duration.component, value: signed, to: base.date)
-            else { return nil }
+            let resultDate: Date?
+            switch duration.kind {
+            case .component(let comp):
+                resultDate = calendar.date(byAdding: comp, value: signed, to: base.date)
+            case .businessDays:
+                resultDate = addBusinessDays(signed, to: base.date, calendar: calendar)
+            }
+            guard let result = resultDate else { return nil }
             let hasTime = base.hasTime || duration.subDay
             let display = momentString(result, hasTime: hasTime, now: now, calendar: calendar)
             let sourceBadge = momentString(
@@ -203,6 +207,8 @@ enum CalcDateTime {
             return parseSingle(atoms[0], now: now, calendar: calendar, bias: bias)
         case 2:
             return parsePair(atoms[0], atoms[1], now: now, calendar: calendar, bias: bias)
+        case 3:
+            return parseTriple(atoms[0], atoms[1], atoms[2], now: now, calendar: calendar)
         default:
             return nil
         }
@@ -267,6 +273,30 @@ enum CalcDateTime {
         return nil
     }
 
+    private static func parseTriple(
+        _ a: String, _ b: String, _ c: String, now: Date, calendar: Calendar
+    ) -> Moment? {
+        // month day year (e.g. august 26 2026)
+        if let month = monthByName[a], let day = Int(b), let year = Int(c), year > 31 {
+            if let date = makeDate(fullYear(year), month, day, calendar) {
+                return Moment(date: date, hasTime: false)
+            }
+        }
+        // day month year (e.g. 26 august 2026)
+        if let day = Int(a), let month = monthByName[b], let year = Int(c), year > 31 {
+            if let date = makeDate(fullYear(year), month, day, calendar) {
+                return Moment(date: date, hasTime: false)
+            }
+        }
+        // year month day (e.g. 2026 august 26)
+        if let year = Int(a), year > 31, let month = monthByName[b], let day = Int(c) {
+            if let date = makeDate(fullYear(year), month, day, calendar) {
+                return Moment(date: date, hasTime: false)
+            }
+        }
+        return nil
+    }
+
     /// A lone numeric atom carrying its own separators: `14:00`, `2027-04-09`, `9/4`, `9/4/2027`.
     private static func parseDateAtom(
         _ atom: String, now: Date, calendar: Calendar, bias: MomentBias
@@ -318,25 +348,30 @@ enum CalcDateTime {
 
     /// The given day of `month`, resolved to the upcoming or most recent year by `bias`.
     private static func monthDayMoment(
-        month: Int, day: Int, now: Date, calendar: Calendar, bias: MomentBias = .future
+        month: Int, day: Int, now: Date, calendar: Calendar, bias: MomentBias
     ) -> Moment? {
-        let year = calendar.component(.year, from: now)
-        guard let thisYear = makeDate(year, month, day, calendar) else { return nil }
-        let sod = calendar.startOfDay(for: now)
+        let currentYear = calendar.component(.year, from: now)
+        guard let current = makeDate(currentYear, month, day, calendar) else { return nil }
         switch bias {
         case .future:
-            if thisYear >= sod { return Moment(date: thisYear, hasTime: false) }
-            guard let nextYear = makeDate(year + 1, month, day, calendar) else { return nil }
-            return Moment(date: nextYear, hasTime: false)
+            if current < calendar.startOfDay(for: now),
+                let next = makeDate(currentYear + 1, month, day, calendar)
+            {
+                return Moment(date: next, hasTime: false)
+            }
+            return Moment(date: current, hasTime: false)
         case .past:
-            if thisYear <= sod { return Moment(date: thisYear, hasTime: false) }
-            guard let lastYear = makeDate(year - 1, month, day, calendar) else { return nil }
-            return Moment(date: lastYear, hasTime: false)
+            if current > calendar.startOfDay(for: now),
+                let prev = makeDate(currentYear - 1, month, day, calendar)
+            {
+                return Moment(date: prev, hasTime: false)
+            }
+            return Moment(date: current, hasTime: false)
         }
     }
 
     private static func nextWeekday(
-        _ weekday: Int, offsetToFuture: Bool, past: Bool = false, now: Date, calendar: Calendar
+        _ weekday: Int, offsetToFuture: Bool, past: Bool, now: Date, calendar: Calendar
     ) -> Moment? {
         let sod = calendar.startOfDay(for: now)
         let today = calendar.component(.weekday, from: sod)
@@ -382,31 +417,67 @@ enum CalcDateTime {
         }
     }
 
+    private enum DurationKind {
+        case component(Calendar.Component)
+        case businessDays
+    }
+
     private struct DurationPhrase {
         let count: Int
-        let component: Calendar.Component
+        let kind: DurationKind
         let subDay: Bool
     }
 
     /// `<n> <unit>` for date arithmetic; weeks fold to days so `date(byAdding:)` stays DST-safe.
     private static func parseDurationPhrase(_ phrase: String) -> DurationPhrase? {
         let atoms = atomize(phrase)
-        guard atoms.count == 2, let count = Int(atoms[0]) else { return nil }
-        switch atoms[1] {
-        case "s", "sec", "secs", "second", "seconds":
-            return DurationPhrase(count: count, component: .second, subDay: true)
-        case "min", "mins", "minute", "minutes":
-            return DurationPhrase(count: count, component: .minute, subDay: true)
-        case "h", "hr", "hrs", "hour", "hours":
-            return DurationPhrase(count: count, component: .hour, subDay: true)
-        case "d", "day", "days":
-            return DurationPhrase(count: count, component: .day, subDay: false)
-        case "wk", "week", "weeks":
-            // Absurd counts overflow the fold to days; degrade to no card rather than trap.
-            let (days, overflow) = count.multipliedReportingOverflow(by: 7)
-            return overflow ? nil : DurationPhrase(count: days, component: .day, subDay: false)
-        default: return nil
+        if atoms.count == 2, let count = Int(atoms[0]) {
+            switch atoms[1] {
+            case "s", "sec", "secs", "second", "seconds":
+                return DurationPhrase(count: count, kind: .component(.second), subDay: true)
+            case "min", "mins", "minute", "minutes":
+                return DurationPhrase(count: count, kind: .component(.minute), subDay: true)
+            case "h", "hr", "hrs", "hour", "hours":
+                return DurationPhrase(count: count, kind: .component(.hour), subDay: true)
+            case "d", "day", "days":
+                return DurationPhrase(count: count, kind: .component(.day), subDay: false)
+            case "wk", "week", "weeks":
+                // Absurd counts overflow the fold to days; degrade to no card rather than trap.
+                let (days, overflow) = count.multipliedReportingOverflow(by: 7)
+                return overflow ? nil : DurationPhrase(count: days, kind: .component(.day), subDay: false)
+            case "weekday", "weekdays", "workday", "workdays":
+                return DurationPhrase(count: count, kind: .businessDays, subDay: false)
+            default: return nil
+            }
+        } else if atoms.count == 3, let count = Int(atoms[0]) {
+            let unit = "\(atoms[1]) \(atoms[2])"
+            if unit == "business day" || unit == "business days" ||
+               unit == "work day" || unit == "work days" {
+                return DurationPhrase(count: count, kind: .businessDays, subDay: false)
+            }
         }
+        return nil
+    }
+
+    private static func addBusinessDays(_ count: Int, to base: Date, calendar: Calendar) -> Date? {
+        guard count != 0 else { return base }
+        let step = count > 0 ? 1 : -1
+        let target = abs(count)
+        var added = 0
+        var current = calendar.startOfDay(for: base)
+
+        var iterations = 0
+        while added < target && iterations < 100_000 {
+            iterations += 1
+            guard let next = calendar.date(byAdding: .day, value: step, to: current) else { return nil }
+            current = next
+            let weekday = calendar.component(.weekday, from: current)
+            // 1 is Sunday, 7 is Saturday
+            if weekday != 1 && weekday != 7 {
+                added += 1
+            }
+        }
+        return current
     }
 
     // MARK: - Formatting

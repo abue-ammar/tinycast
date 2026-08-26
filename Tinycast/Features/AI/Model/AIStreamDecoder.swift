@@ -1,76 +1,154 @@
 import Foundation
 
 struct SSEParser: Sendable {
-    private var buffer = Data()
+    private var buffer = ""
 
     mutating func feed(_ data: Data) -> [String] {
-        buffer.append(data)
-        var payloads: [String] = []
-        while let boundary = nextBoundary() {
-            let frame = buffer[..<boundary.lowerBound]
-            buffer.removeSubrange(buffer.startIndex..<boundary.upperBound)
-            if let payload = Self.payload(in: frame) { payloads.append(payload) }
+        guard let text = String(data: data, encoding: .utf8) else { return [] }
+        buffer += text
+        var events: [String] = []
+
+        while true {
+            let rangeLF = buffer.range(of: "\n\n")
+            let rangeCRLF = buffer.range(of: "\r\n\r\n")
+
+            let range: Range<String.Index>
+            switch (rangeLF, rangeCRLF) {
+            case (.some(let lf), .some(let crlf)):
+                range = lf.lowerBound < crlf.lowerBound ? lf : crlf
+            case (.some(let lf), .none):
+                range = lf
+            case (.none, .some(let crlf)):
+                range = crlf
+            case (.none, .none):
+                return events
+            }
+
+            let frame = String(buffer[..<range.lowerBound])
+            buffer = String(buffer[range.upperBound...])
+            if let payload = parseFrame(frame) {
+                events.append(payload)
+            }
         }
-        return payloads
     }
 
     mutating func finish() -> [String] {
-        guard !buffer.isEmpty else { return [] }
-        defer { buffer.removeAll() }
-        return Self.payload(in: buffer).map { [$0] } ?? []
-    }
-
-    private func nextBoundary() -> Range<Data.Index>? {
-        let lf = buffer.range(of: Data([0x0A, 0x0A]))
-        let crlf = buffer.range(of: Data([0x0D, 0x0A, 0x0D, 0x0A]))
-        switch (lf, crlf) {
-        case (let lhs?, let rhs?): return lhs.lowerBound < rhs.lowerBound ? lhs : rhs
-        case (let range?, nil), (nil, let range?): return range
-        case (nil, nil): return nil
+        let remaining = buffer
+        buffer = ""
+        if let payload = parseFrame(remaining) {
+            return [payload]
         }
+        return []
     }
 
-    private static func payload(in frame: some DataProtocol) -> String? {
-        let text = String(decoding: frame, as: UTF8.self)
-            .replacingOccurrences(of: "\r\n", with: "\n")
+    private func parseFrame(_ frame: String) -> String? {
+        let lines = frame.components(separatedBy: .newlines)
         var dataLines: [String] = []
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-            if line.hasPrefix(":") { continue }
-            if line == "data" {
-                dataLines.append("")
-            } else if line.hasPrefix("data:") {
-                var value = line.dropFirst(5)
-                if value.first == " " { value = value.dropFirst() }
-                dataLines.append(String(value))
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("data:") {
+                let after = trimmed.dropFirst(5).trimmingCharacters(in: .whitespacesAndNewlines)
+                dataLines.append(after)
             }
         }
-        return dataLines.isEmpty ? nil : dataLines.joined(separator: "\n")
+        guard !dataLines.isEmpty else { return nil }
+        return dataLines.joined(separator: "\n")
     }
 }
 
 struct AIStreamDecoder: Sendable {
     private let shape: AIHTTPConfiguration.APIShape
     private var parser = SSEParser()
-    private var usage = AIUsage()
     private(set) var isTerminal = false
+    private var usage = AIUsage()
+
+    private struct InFlightToolCall {
+        var id: String
+        var name: String
+        var arguments: String
+    }
+    private var openAIToolCalls: [Int: InFlightToolCall] = [:]
+    private var anthropicToolCalls: [Int: InFlightToolCall] = [:]
 
     init(shape: AIHTTPConfiguration.APIShape) {
         self.shape = shape
     }
 
-    mutating func feed(_ data: Data) throws -> [AIStreamEvent] {
-        try decode(parser.feed(data))
+    static func parseError(
+        from body: String, status: Int, shape: AIHTTPConfiguration.APIShape
+    ) -> AIProviderError {
+        if let data = body.data(using: .utf8),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        {
+            if let errorObj = json["error"] as? [String: Any],
+                let msg = errorObj["message"] as? String, !msg.isEmpty
+            {
+                return .responseFailed(msg)
+            } else if let errorMsg = json["message"] as? String, !errorMsg.isEmpty {
+                return .responseFailed(errorMsg)
+            }
+        }
+        return .responseFailed("Request failed with status \(status)")
+    }
+
+    mutating func feed(_ chunk: Data) throws -> [AIStreamEvent] {
+        guard !isTerminal else { return [] }
+        let payloads = parser.feed(chunk)
+        return try decode(payloads)
+    }
+
+    mutating func feed(line: String) throws -> [AIStreamEvent] {
+        guard !isTerminal else { return [] }
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return [] }
+        let lineData = Data((trimmed + "\n\n").utf8)
+        return try feed(lineData)
     }
 
     mutating func finish() throws -> [AIStreamEvent] {
-        try decode(parser.finish())
+        guard !isTerminal else { return [] }
+        let payloads = parser.finish()
+        var events = try decode(payloads)
+        events.append(contentsOf: flushTerminal())
+        return events
+    }
+
+    private mutating func flushPendingToolCalls() -> [AIStreamEvent] {
+        var events: [AIStreamEvent] = []
+        for (_, call) in openAIToolCalls.sorted(by: { $0.key < $1.key }) {
+            if !call.name.isEmpty {
+                events.append(.toolCall(AIToolCall(id: call.id, name: call.name, argumentsJSON: call.arguments)))
+            }
+        }
+        openAIToolCalls.removeAll()
+
+        for (_, call) in anthropicToolCalls.sorted(by: { $0.key < $1.key }) {
+            if !call.name.isEmpty {
+                events.append(.toolCall(AIToolCall(id: call.id, name: call.name, argumentsJSON: call.arguments)))
+            }
+        }
+        anthropicToolCalls.removeAll()
+        return events
+    }
+
+    private mutating func flushTerminal() -> [AIStreamEvent] {
+        guard !isTerminal else { return [] }
+        isTerminal = true
+        var events = flushPendingToolCalls()
+        if !usage.isEmpty { events.append(.usage(usage)) }
+        events.append(.finished)
+        return events
     }
 
     private mutating func decode(_ payloads: [String]) throws -> [AIStreamEvent] {
         var events: [AIStreamEvent] = []
-        for payload in payloads where !isTerminal {
+        for rawPayload in payloads where !isTerminal {
+            let payload = rawPayload.trimmingCharacters(in: .whitespacesAndNewlines)
+            if payload.isEmpty { continue }
             if payload == "[DONE]" {
                 isTerminal = true
+                events.append(contentsOf: flushPendingToolCalls())
+                if !usage.isEmpty { events.append(.usage(usage)) }
                 events.append(.finished)
                 continue
             }
@@ -85,70 +163,181 @@ struct AIStreamDecoder: Sendable {
     }
 
     private mutating func decodeOpenAI(_ payload: String) throws -> [AIStreamEvent] {
-        guard let data = payload.data(using: .utf8),
-            let chunk = try? JSONDecoder().decode(OpenAIChunk.self, from: data)
-        else {
+        guard let data = payload.data(using: .utf8) else {
             isTerminal = true
             throw AIProviderError.malformedResponse
         }
 
-        // OpenRouter reports a mid-stream failure as a 200 payload, so it's an event, not a status.
-        if let message = chunk.error?.message {
-            isTerminal = true
-            throw AIProviderError.responseFailed(message)
-        }
-        var events: [AIStreamEvent] = []
-        if let delta = chunk.choices?.first?.delta {
-            if let content = delta.content, !content.isEmpty {
-                events.append(.text(content))
-            } else if delta.hasReasoning {
-                events.append(.thinking)
+        if let chunk = try? JSONDecoder().decode(OpenAIChunk.self, from: data) {
+            // OpenRouter reports a mid-stream failure as a 200 payload, so it's an event, not a status.
+            if let message = chunk.error?.message {
+                isTerminal = true
+                throw AIProviderError.responseFailed(message)
             }
+            var events: [AIStreamEvent] = []
+            if let choice = chunk.choices?.first {
+                if let delta = choice.delta {
+                    if let content = delta.content, !content.isEmpty {
+                        events.append(.text(content))
+                    } else if delta.hasReasoning {
+                        events.append(.thinking)
+                    }
+
+                    if let toolCalls = delta.toolCalls {
+                        for toolChunk in toolCalls {
+                            let index = toolChunk.index ?? 0
+                            var existing = openAIToolCalls[index] ?? InFlightToolCall(id: "", name: "", arguments: "")
+                            if let id = toolChunk.id, !id.isEmpty { existing.id = id }
+                            if let funcName = toolChunk.function?.name, !funcName.isEmpty { existing.name = funcName }
+                            if let args = toolChunk.function?.arguments, !args.isEmpty { existing.arguments += args }
+                            openAIToolCalls[index] = existing
+                        }
+                    }
+                }
+
+                if choice.finishReason == "tool_calls" {
+                    events.append(contentsOf: flushPendingToolCalls())
+                }
+            }
+            if let reported = chunk.usage {
+                usage.inputTokens = reported.promptTokens ?? usage.inputTokens
+                usage.outputTokens = reported.completionTokens ?? usage.outputTokens
+            }
+            return events
         }
-        if let reported = chunk.usage {
-            usage.inputTokens = reported.promptTokens ?? usage.inputTokens
-            usage.outputTokens = reported.completionTokens ?? usage.outputTokens
-            events.append(.usage(usage))
+
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let errorObj = json["error"] as? [String: Any], let msg = errorObj["message"] as? String {
+                isTerminal = true
+                throw AIProviderError.responseFailed(msg)
+            } else if let errorStr = json["error"] as? String {
+                isTerminal = true
+                throw AIProviderError.responseFailed(errorStr)
+            } else if let msg = json["message"] as? String {
+                isTerminal = true
+                throw AIProviderError.responseFailed(msg)
+            }
+
+            var events: [AIStreamEvent] = []
+            if let choices = json["choices"] as? [[String: Any]], let first = choices.first {
+                if let delta = first["delta"] as? [String: Any] {
+                    if let content = delta["content"] as? String, !content.isEmpty {
+                        events.append(.text(content))
+                    } else if (delta["reasoning"] as? String)?.isEmpty == false || (delta["reasoning_content"] as? String)?.isEmpty == false {
+                        events.append(.thinking)
+                    }
+
+                    if let toolCalls = delta["tool_calls"] as? [[String: Any]] {
+                        for toolChunk in toolCalls {
+                            let index = toolChunk["index"] as? Int ?? 0
+                            var existing = openAIToolCalls[index] ?? InFlightToolCall(id: "", name: "", arguments: "")
+                            if let id = toolChunk["id"] as? String, !id.isEmpty { existing.id = id }
+                            if let function = toolChunk["function"] as? [String: Any] {
+                                if let funcName = function["name"] as? String, !funcName.isEmpty { existing.name = funcName }
+                                if let args = function["arguments"] as? String, !args.isEmpty { existing.arguments += args }
+                            }
+                            openAIToolCalls[index] = existing
+                        }
+                    }
+                }
+
+                if let finishReason = first["finish_reason"] as? String, finishReason == "tool_calls" {
+                    events.append(contentsOf: flushPendingToolCalls())
+                }
+            }
+
+            if let usageObj = json["usage"] as? [String: Any] {
+                if let promptTokens = usageObj["prompt_tokens"] as? Int {
+                    usage.inputTokens = promptTokens
+                }
+                if let completionTokens = usageObj["completion_tokens"] as? Int {
+                    usage.outputTokens = completionTokens
+                }
+            }
+
+            return events
         }
-        return events
+
+        isTerminal = true
+        throw AIProviderError.malformedResponse
     }
 
     private mutating func decodeAnthropic(_ payload: String) throws -> [AIStreamEvent] {
-        guard let data = payload.data(using: .utf8),
-            let event = try? JSONDecoder().decode(AnthropicEvent.self, from: data)
-        else {
+        guard let data = payload.data(using: .utf8) else {
             isTerminal = true
             throw AIProviderError.malformedResponse
         }
 
-        switch event.type {
-        case "content_block_delta":
-            if event.delta?.type == "text_delta", let text = event.delta?.text, !text.isEmpty {
-                return [.text(text)]
+        if let event = try? JSONDecoder().decode(AnthropicEvent.self, from: data) {
+            var events: [AIStreamEvent] = []
+            switch event.type {
+            case "content_block_start":
+                if let block = event.contentBlock, block.type == "tool_use", let index = event.index {
+                    anthropicToolCalls[index] = InFlightToolCall(
+                        id: block.id ?? "",
+                        name: block.name ?? "",
+                        arguments: ""
+                    )
+                }
+            case "content_block_delta":
+                if let delta = event.delta {
+                    if let text = delta.text, !text.isEmpty {
+                        events.append(.text(text))
+                    }
+                    if let partial = delta.partialJson, !partial.isEmpty, let index = event.index {
+                        var existing = anthropicToolCalls[index] ?? InFlightToolCall(id: "", name: "", arguments: "")
+                        existing.arguments += partial
+                        anthropicToolCalls[index] = existing
+                    }
+                }
+            case "content_block_stop":
+                break
+            case "message_delta":
+                if let usage = event.usage?.outputTokens { self.usage.outputTokens = usage }
+                if event.delta?.stopReason == "tool_use" {
+                    events.append(contentsOf: flushPendingToolCalls())
+                }
+            case "message_start":
+                if let usage = event.message?.usage?.inputTokens {
+                    self.usage.inputTokens = usage
+                }
+            case "message_stop":
+                events.append(contentsOf: flushPendingToolCalls())
+                if !usage.isEmpty { events.append(.usage(usage)) }
+                events.append(.finished)
+                isTerminal = true
+            case "error":
+                isTerminal = true
+                throw AIProviderError.responseFailed(Self.anthropicErrorMessage(event.error?.type))
+            default:
+                break
             }
-            return event.delta?.type == "thinking_delta" ? [.thinking] : []
-        case "message_start":
-            usage.inputTokens = event.message?.usage?.inputTokens ?? usage.inputTokens
-            return [.usage(usage)]
-        case "message_delta":
-            usage.outputTokens = event.usage?.outputTokens ?? usage.outputTokens
-            return [.usage(usage)]
-        case "message_stop":
-            isTerminal = true
-            return [.finished]
-        case "error":
-            isTerminal = true
-            throw AIProviderError.responseFailed(Self.anthropicErrorMessage(event.error?.type))
-        default:
-            return []
+            return events
         }
+
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let errorObj = json["error"] as? [String: Any], let msg = errorObj["message"] as? String {
+                isTerminal = true
+                throw AIProviderError.responseFailed(msg)
+            } else if let errorStr = json["error"] as? String {
+                isTerminal = true
+                throw AIProviderError.responseFailed(errorStr)
+            }
+        }
+
+        isTerminal = true
+        throw AIProviderError.malformedResponse
     }
 
     private static func anthropicErrorMessage(_ type: String?) -> String {
         switch type {
+        case "invalid_request_error": return "Invalid request sent to Anthropic."
         case "authentication_error": return "API key rejected — check it in Settings."
-        case "rate_limit_error": return "Rate limit reached — try again later."
-        default: return "The provider stopped the response with an error."
+        case "permission_error": return "The provider rejected this key's permissions."
+        case "not_found_error": return "The requested Anthropic model was not found."
+        case "rate_limit_error": return "Rate limit hit. Try again shortly."
+        case "overloaded_error": return "The provider is overloaded. Try again shortly."
+        default: return "The Anthropic request failed."
         }
     }
 }
@@ -157,10 +346,21 @@ private struct OpenAIChunk: Decodable {
     struct Choice: Decodable {
         struct Delta: Decodable {
             struct ReasoningDetail: Decodable { let text: String? }
+            struct ToolCallFunctionChunk: Decodable {
+                let name: String?
+                let arguments: String?
+            }
+            struct ToolCallChunk: Decodable {
+                let index: Int?
+                let id: String?
+                let type: String?
+                let function: ToolCallFunctionChunk?
+            }
 
             let content: String?
             let reasoning: String?
             let reasoningDetails: [ReasoningDetail]?
+            let toolCalls: [ToolCallChunk]?
 
             var hasReasoning: Bool {
                 reasoning?.isEmpty == false
@@ -170,10 +370,18 @@ private struct OpenAIChunk: Decodable {
             enum CodingKeys: String, CodingKey {
                 case content, reasoning
                 case reasoningDetails = "reasoning_details"
+                case toolCalls = "tool_calls"
             }
         }
 
-        let delta: Delta
+        let index: Int?
+        let delta: Delta?
+        let finishReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case index, delta
+            case finishReason = "finish_reason"
+        }
     }
 
     struct Usage: Decodable {
@@ -197,6 +405,20 @@ private struct AnthropicEvent: Decodable {
     struct Delta: Decodable {
         let type: String?
         let text: String?
+        let partialJson: String?
+        let stopReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case type, text
+            case partialJson = "partial_json"
+            case stopReason = "stop_reason"
+        }
+    }
+
+    struct ContentBlock: Decodable {
+        let type: String?
+        let id: String?
+        let name: String?
     }
 
     struct Usage: Decodable {
@@ -213,8 +435,15 @@ private struct AnthropicEvent: Decodable {
     struct ErrorBody: Decodable { let type: String? }
 
     let type: String
+    let index: Int?
     let delta: Delta?
+    let contentBlock: ContentBlock?
     let usage: Usage?
     let message: Message?
     let error: ErrorBody?
+
+    enum CodingKeys: String, CodingKey {
+        case type, index, delta, usage, message, error
+        case contentBlock = "content_block"
+    }
 }

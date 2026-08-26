@@ -49,12 +49,13 @@ final class AIChatCoordinator {
     func send(_ input: String) -> Bool {
         guard settings.aiEnabled else { return false }
         do {
-            let webSearch = core.aiSettings.webSearchEnabled && capabilities.webSearch
+            let webSearch = core.aiSettings.webSearchEnabled
             return chat.send(
                 input, using: try core.aiProvider(), webSearch: webSearch,
                 instructions: AIInstructions.compose(
                     userPrompt: core.aiSettings.systemPrompt,
-                    isEnabled: core.aiSettings.systemPromptEnabled))
+                    isEnabled: core.aiSettings.systemPromptEnabled,
+                    now: Date()))
         } catch {
             chat.report(error.localizedDescription)
             return false
@@ -78,9 +79,15 @@ final class AIChatCoordinator {
         palette.prepare(mode: .aiHistory)
     }
 
-    func openChat(id: UUID) {
+    func showHistory(id: UUID) {
+        guard settings.aiEnabled else { return }
         guard chat.open(id: id) else { return }
         palette.prepare(mode: .ai)
+        paletteCoordinator.showPalette(mode: .ai)
+    }
+
+    func openChat(id: UUID) {
+        showHistory(id: id)
     }
 
     func deleteChat(id: UUID) {
@@ -88,43 +95,40 @@ final class AIChatCoordinator {
     }
 
     func deleteAllChats() async {
-        guard
-            await core.confirm(
-                title: "Delete all chats?",
-                message: "Every saved conversation will be removed. This can't be undone.",
-                symbol: PaletteMode.aiHistory.systemImage, confirmTitle: "Delete All")
-        else { return }
         chat.deleteAll()
     }
 
-    func stopResponse() {
-        chat.cancel()
+    func startNewChatFromHistory() {
+        guard settings.aiEnabled else { return }
+        chat.startNewChat()
+        palette.prepare(mode: .ai)
+        paletteCoordinator.showPalette(mode: .ai)
+    }
+
+    func copyLatest() {
+        guard let text = chat.lastAssistantText else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 
     func copyLastResponse() {
-        guard let text = chat.lastAssistantText else { return }
-        Paster.copyPlainText(text)
+        copyLatest()
     }
 
-    /// What the selected model can take; the footer offers only what applies.
-    var capabilities: AIModelCapabilities {
-        switch core.aiSettings.defaultModel {
-        case .chatGPT?: return .chatGPT
-        case .api(let connection, let model)?:
-            return core.aiSettings.connection(id: connection)?.capabilities(for: model)
-                ?? AIModelCapabilities(images: false, webSearch: false)
-        case nil: return AIModelCapabilities(images: false, webSearch: false)
+    func stopResponse() {
+        chat.stop()
+    }
+
+    func stageClipboardImage() {
+        guard let file = Self.pastedImageFile(on: .general) else {
+            stage(file: nil, pasted: NSPasteboard.general.data(forType: .png))
+            return
         }
+        stage(file: file, pasted: nil)
     }
 
-    /// ⌘V with a picture on the pasteboard — a screenshot, or an image file from Finder — stages
-    /// it; anything with text pastes as text. False lets the field editor have the chord.
-    ///
-    /// The pasteboard is read here and the picture decoded off-main: unpacking, rescaling and
-    /// re-encoding a display-sized screenshot is megabytes of work that has no business on a
-    /// keystroke.
+    @discardableResult
     func attachPastedImage() -> Bool {
-        guard capabilities.images else { return false }
         let pasteboard = NSPasteboard.general
         let file = Self.pastedImageFile(on: pasteboard)
         let pasted =
@@ -136,9 +140,10 @@ final class AIChatCoordinator {
         return true
     }
 
-    /// The file first and the raw pasteboard bytes as the fallback, in the order they were decoded
-    /// inline. A refusal is explained where it happened, and the chord is consumed either way: ⌘V on
-    /// a picture never falls through to the field editor pasting its path as text.
+    func stageFile(_ url: URL) {
+        stage(file: url, pasted: nil)
+    }
+
     private func stage(file: URL?, pasted: Data?) {
         let generation = chat.stagingGeneration
         Task { [weak self] in
