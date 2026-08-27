@@ -28,6 +28,13 @@ enum ExtensionImage {
         var isCircular = false
     }
 
+    /// What a drawn image actually depends on: its source, and — for an SVG naming a palette
+    /// colour — the appearance that palette resolves against.
+    struct LoadKey: Equatable {
+        var source: Source?
+        var isDark: Bool
+    }
+
     /// An `ImageLike`: a string, or `{source, tintColor, mask, fallback}` with a themed `source`.
     static func resolve(_ value: RenderValue?, assetsPath: String?, isDark: Bool) -> Resolved? {
         guard let value else { return nil }
@@ -99,9 +106,7 @@ enum ExtensionImage {
         }
         if let url = URL(string: text), let scheme = url.scheme {
             if scheme.hasPrefix("http") { return .remote(url) }
-            if scheme == "data" {
-                return URL(string: resolvingPaletteColors(in: text, isDark: isDark)).map { .inline($0) }
-            }
+            if scheme == "data" { return .inline(url) }
         }
         if text.hasPrefix("/") || text.hasPrefix("~") {
             return .file((text as NSString).expandingTildeInPath)
@@ -114,37 +119,33 @@ enum ExtensionImage {
         return text.count <= 4 ? .glyph(text) : nil
     }
 
-    /// A Raycast colour name is legal wherever a tint is, so an extension drawing its own SVG writes
-    /// one straight into `stroke`; SVG has no such keyword and the shape silently vanishes.
-    /// Walked as whole names rather than searched for known ones: `raycast-red` sits inside
-    /// `raycast-red-invented`, and substituting it there would corrupt a name this cannot resolve.
-    private static func resolvingPaletteColors(in text: String, isDark: Bool) -> String {
-        guard text.contains("raycast-") else { return text }
-        var resolved = ""
-        var rest = Substring(text)
-        while let match = rest.range(of: "raycast-") {
-            let name = rest[match.lowerBound...].prefix { paletteNameCharacters.contains($0) }
-            resolved += rest[..<match.lowerBound]
-            resolved += cssColor(named: String(name), isDark: isDark) ?? String(name)
-            rest = rest[name.endIndex...]
-        }
-        return resolved + rest
+    /// The palette as CSS, for an extension that writes a colour name straight into its own SVG.
+    /// Resolved once per appearance: the conversion is main-actor work the decode must not do.
+    static func svgPalette(isDark: Bool) -> [String: String] {
+        isDark ? darkSVGPalette : lightSVGPalette
     }
 
-    private static let paletteNameCharacters = Set("abcdefghijklmnopqrstuvwxyz-")
+    private static let darkSVGPalette = svgPalette(from: palette, isDark: true)
+    private static let lightSVGPalette = svgPalette(from: palette, isDark: false)
 
-    /// Resolved against the appearance being drawn, since `.primary` and the ramps are both dynamic.
-    private static func cssColor(named name: String, isDark: Bool) -> String? {
-        guard let color = color(named: name) else { return nil }
+    private static func svgPalette(from palette: [String: Color], isDark: Bool) -> [String: String] {
+        palette.compactMapValues { cssColor($0, isDark: isDark) }
+    }
+
+    /// Resolved against the appearance drawn, since `.primary` and the ramps are both dynamic.
+    private static func cssColor(_ color: Color, isDark: Bool) -> String? {
         var css: String?
         NSAppearance(named: isDark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
             guard let srgb = NSColor(color).usingColorSpace(.sRGB) else { return }
             css =
-                "rgba(\(Int(srgb.redComponent * 255)),\(Int(srgb.greenComponent * 255)),"
-                + "\(Int(srgb.blueComponent * 255)),\(srgb.alphaComponent))"
+                "rgba(\(channel(srgb.redComponent)),\(channel(srgb.greenComponent)),"
+                + "\(channel(srgb.blueComponent)),\((srgb.alphaComponent * 1000).rounded() / 1000))"
         }
         return css
     }
+
+    /// Rounded, not truncated: `* 255` on a stored float lands a channel one low often enough.
+    private static func channel(_ value: CGFloat) -> Int { Int((value * 255).rounded()) }
 
     static func color(_ value: RenderValue?, isDark: Bool) -> Color? {
         guard let value else { return nil }
@@ -155,21 +156,22 @@ enum ExtensionImage {
         return nil
     }
 
+    /// The one source for both a SwiftUI tint and the CSS an SVG's own `stroke` is rewritten to.
+    private static let palette: [String: Color] = [
+        "raycast-blue": .blue,
+        "raycast-green": .green,
+        "raycast-magenta": Color(red: 0.85, green: 0.24, blue: 0.62),
+        "raycast-orange": .orange,
+        "raycast-purple": .purple,
+        "raycast-red": .red,
+        "raycast-yellow": .yellow,
+        "raycast-primary-text": .primary,
+        "raycast-secondary-text": Theme.Colors.textSecondary
+    ]
+
     private static func color(named raw: String) -> Color? {
-        switch raw {
-        case "raycast-blue": return .blue
-        case "raycast-green": return .green
-        case "raycast-magenta": return Color(red: 0.85, green: 0.24, blue: 0.62)
-        case "raycast-orange": return .orange
-        case "raycast-purple": return .purple
-        case "raycast-red": return .red
-        case "raycast-yellow": return .yellow
-        case "raycast-primary-text": return .primary
-        case "raycast-secondary-text": return Theme.Colors.textSecondary
-        default:
-            // Extensions also pass raw hex.
-            return hexColor(raw)
-        }
+        // Extensions also pass raw hex.
+        palette[raw] ?? hexColor(raw)
     }
 
     private static func hexColor(_ raw: String) -> Color? {
@@ -352,6 +354,7 @@ enum ExtensionImage {
 
 /// A resolved icon at row size; an unresolvable one draws the faint tile, so rows never jump.
 struct ExtensionIconView: View {
+    @Environment(\.isDarkAppearance) private var isDark
     let resolved: ExtensionImage.Resolved?
     var size: CGFloat = Theme.Size.rowIcon
     /// Opt-in, and off for row icons: a playing GIF at 24pt is noise, and a list is hundreds of rows.
@@ -362,7 +365,10 @@ struct ExtensionIconView: View {
         content
             .frame(width: size, height: size)
             .clipShape(shape)
-            .task(id: resolved?.source) { await load() }
+            // Keyed on the appearance too: an inline SVG's palette resolves at decode, not in the URL.
+            .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
+                await load()
+            }
     }
 
     @ViewBuilder
@@ -425,7 +431,8 @@ struct ExtensionIconView: View {
         case .remote(let url):
             loaded = await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
         case .inline(let url):
-            loaded = await ExtensionIconCache.loadInlineAsync(url)
+            loaded = await ExtensionIconCache.loadInlineAsync(
+                url, palette: ExtensionImage.svgPalette(isDark: isDark))
         default:
             loaded = nil
         }

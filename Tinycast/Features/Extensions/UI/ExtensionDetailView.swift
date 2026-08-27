@@ -377,6 +377,7 @@ extension String {
 
 /// An image inside a Detail's markdown, capped so a large asset can't push the layout around.
 private struct ExtensionMarkdownImage: View {
+    @Environment(\.isDarkAppearance) private var isDark
     let url: URL
     @State private var image: NSImage?
 
@@ -398,11 +399,17 @@ private struct ExtensionMarkdownImage: View {
                     .frame(height: 120)
             }
         }
-        .task(id: url) {
+        // Keyed on the appearance too: an inline SVG's palette resolves at decode, not in the URL.
+        .task(id: ExtensionImage.LoadKey(source: source, isDark: isDark)) {
             image =
                 url.scheme == "data"
-                ? await ExtensionIconCache.loadInlineAsync(url)
+                ? await ExtensionIconCache.loadInlineAsync(
+                    url, palette: ExtensionImage.svgPalette(isDark: isDark))
                 : await ExtensionIconCache.loadRemoteAsync(url, asIcon: false)
         }
+    }
+
+    private var source: ExtensionImage.Source {
+        url.scheme == "data" ? .inline(url) : .remote(url)
     }
 }

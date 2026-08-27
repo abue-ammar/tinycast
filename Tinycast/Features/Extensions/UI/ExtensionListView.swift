@@ -173,6 +173,8 @@ private struct ExtensionItemRow: View {
             Text(node.string("title") ?? "")
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
+                // A detail list is 290pt wide, and an accessory would otherwise win the squeeze.
+                .layoutPriority(1)
             if !compact, let subtitle = node.string("subtitle"), !subtitle.isEmpty {
                 Text(subtitle)
                     .font(Theme.Typography.rowTrailing)

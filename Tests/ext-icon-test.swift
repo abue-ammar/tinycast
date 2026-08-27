@@ -50,40 +50,68 @@ struct ExtensionIconTests {
             <path d="M 50 10 A 40 40 0 0 0 20 25" stroke="raycast-green" stroke-width="10" \
             fill="none" /></svg>
             """
-        guard let url = inlineSource(ring, isDark: true) else {
-            return expect(false, "a data: URL resolves to an inline source")
-        }
-        expect(!url.absoluteString.contains("raycast-"), "every colour name is rewritten")
-
-        let image = await ExtensionIconCache.loadInlineAsync(url)
-        expect(image.flatMap(inkExtent) != nil, "the rewritten ring draws ink")
+        let drawn = await drawnInk(ring, isDark: true)
+        expect(drawn != nil, "the rewritten ring draws ink")
+        // Both encodings: base64 hides the name from a scan, so the payload has to be decoded.
+        let asBase64 = await drawnInk(ring, isDark: true, base64: true)
+        expect(asBase64 != nil, "a base64 ring draws ink too")
+        // Detail markdown's sizing query trails the payload and is not part of it.
+        let sized = await drawnInk(ring, isDark: true, query: "?raycast-width=32")
+        expect(sized != nil, "a sized payload still draws")
 
         // A known name occurring inside a longer unknown one may not be substituted there: the
         // rewrite has to walk whole names rather than search for the ones it knows.
-        let shadowed =
-            "<svg xmlns=\"http://www.w3.org/2000/svg\"><circle stroke=\"raycast-green\" "
-            + "fill=\"raycast-green-invented\" /></svg>"
-        let left = inlineSource(shadowed, isDark: true)?.absoluteString.removingPercentEncoding
-        expect(left?.contains("raycast-green-invented") == true, "an unknown name is left whole")
-        expect(left?.contains("\"raycast-green\"") == false, "the known name beside it resolves")
+        let unknown = await drawnInk(circle(stroke: "raycast-green-invented"), isDark: true)
+        expect(unknown == nil, "an unknown name is left whole, and draws nothing")
+        let known = await drawnInk(circle(stroke: "raycast-green"), isDark: true)
+        expect(known != nil, "the known name it shadows still resolves")
 
         // Light and dark disagree on every ramp, so the pick has to follow the surface drawn on.
-        let ramp =
-            "<svg xmlns=\"http://www.w3.org/2000/svg\"><circle "
-            + "stroke=\"raycast-primary-text\" /></svg>"
-        let dark = inlineSource(ramp, isDark: true)?.absoluteString.removingPercentEncoding
-        let light = inlineSource(ramp, isDark: false)?.absoluteString.removingPercentEncoding
-        expect(dark != nil && dark != light, "a ramp resolves per appearance")
+        let ramp = circle(stroke: "raycast-primary-text")
+        let dark = await drawnColor(ramp, isDark: true)
+        let light = await drawnColor(ramp, isDark: false)
+        expect(dark?.brightnessComponent ?? 0 > 0.9, "the dark ramp strokes white ink")
+        expect(light?.brightnessComponent ?? 1 < 0.1, "the light ramp strokes black ink")
+
+        // A photo names no colour, and is never decoded as text: its bytes must reach the decoder.
+        let png = writePNG("photo", inset: 0).flatMap { try? Data(contentsOf: $0) }
+        let photo = URL(string: "data:image/png;base64,\(png?.base64EncodedString() ?? "")")!
+        let passed = await ExtensionIconCache.loadInlineAsync(
+            photo, palette: ExtensionImage.svgPalette(isDark: true))
+        expect(passed != nil, "an inline photo is passed through untouched")
     }
 
-    /// The `data:` URL an SVG resolves to, as a row would ask for it.
-    static func inlineSource(_ svg: String, isDark: Bool) -> URL? {
+    /// A stroked ring, thick enough that a 96pt raster samples the colour cleanly.
+    static func circle(stroke: String) -> String {
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100px\" height=\"100px\"><circle "
+            + "cx=\"50\" cy=\"50\" r=\"36\" stroke-width=\"24\" stroke=\"\(stroke)\" "
+            + "fill=\"none\" /></svg>"
+    }
+
+    /// An SVG drawn the way a row draws it: encoded as a `data:` URL, then decoded with the palette.
+    static func drawnImage(
+        _ svg: String, isDark: Bool, base64: Bool = false, query: String = ""
+    ) async -> NSImage? {
         let allowed = CharacterSet(charactersIn: "<>\"# %{}|\\^~[]`").inverted
-        guard let encoded = svg.addingPercentEncoding(withAllowedCharacters: allowed),
-            case .inline(let url)? = ExtensionImage.resolve(
-                .string("data:image/svg+xml,\(encoded)"), assetsPath: nil, isDark: isDark)?.source
-        else { return nil }
-        return url
+        let payload =
+            base64
+            ? Data(svg.utf8).base64EncodedString()
+            : svg.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        let header = base64 ? "data:image/svg+xml;base64," : "data:image/svg+xml,"
+        guard let url = URL(string: header + payload + query) else { return nil }
+        return await ExtensionIconCache.loadInlineAsync(
+            url, palette: ExtensionImage.svgPalette(isDark: isDark))
+    }
+
+    static func drawnInk(
+        _ svg: String, isDark: Bool, base64: Bool = false, query: String = ""
+    ) async -> CGFloat? {
+        await drawnImage(svg, isDark: isDark, base64: base64, query: query).flatMap(inkExtent)
+    }
+
+    /// The colour an unresolved name never produces, since the shape it strokes draws nothing.
+    static func drawnColor(_ svg: String, isDark: Bool) async -> NSColor? {
+        await drawnImage(svg, isDark: isDark).flatMap(inkColor)
     }
 
     /// Extensions that render their own artwork hand it over as a `data:` URL rather than a file,
@@ -100,18 +128,18 @@ struct ExtensionIconTests {
 
         for suffix in ["", "?raycast-width=200&raycast-height=200"] {
             let url = URL(string: "data:image/svg+xml,\(encoded)\(suffix)")!
-            let image = await ExtensionIconCache.loadInlineAsync(url)
+            let image = await ExtensionIconCache.loadInlineAsync(url, palette: [:])
             expect(image?.size == NSSize(width: 24, height: 24), "percent-encoded SVG\(suffix)")
         }
 
         let png = writePNG("inline", inset: 0).flatMap { try? Data(contentsOf: $0) }
         guard let png else { return expect(false, "the PNG fixture writes") }
         let base64 = URL(string: "data:image/png;base64,\(png.base64EncodedString())")!
-        let decoded = await ExtensionIconCache.loadInlineAsync(base64)
+        let decoded = await ExtensionIconCache.loadInlineAsync(base64, palette: [:])
         expect(decoded != nil, "base64 payload decodes")
 
         let broken = URL(string: "data:image/png;base64,not-base-64")!
-        let rejected = await ExtensionIconCache.loadInlineAsync(broken)
+        let rejected = await ExtensionIconCache.loadInlineAsync(broken, palette: [:])
         expect(rejected == nil, "a broken payload is nil")
     }
 
@@ -142,6 +170,41 @@ struct ExtensionIconTests {
 
     /// The larger side of the alpha bounding box, as a share of the canvas.
     static func inkExtent(_ image: NSImage) -> CGFloat? {
+        rasterize(image).flatMap { rep in
+            var minX = 96, maxX = -1, minY = 96, maxY = -1
+            for y in 0..<96 {
+                for x in 0..<96 where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.06 {
+                    minX = min(minX, x)
+                    maxX = max(maxX, x)
+                    minY = min(minY, y)
+                    maxY = max(maxY, y)
+                }
+            }
+            guard maxX >= 0 else { return nil }
+            return CGFloat(max(maxX - minX + 1, maxY - minY + 1)) / 96
+        }
+    }
+
+    /// The most opaque pixel drawn, which for a stroked ring is the stroke's own colour.
+    /// A palette ramp strokes at its own alpha, so the bar sits below opaque.
+    static func inkColor(_ image: NSImage) -> NSColor? {
+        guard let rep = rasterize(image) else { return nil }
+        var best: NSColor?
+        var strongest: CGFloat = 0.5
+        for y in 0..<96 {
+            for x in 0..<96 {
+                guard let color = rep.colorAt(x: x, y: y), color.alphaComponent > strongest else {
+                    continue
+                }
+                strongest = color.alphaComponent
+                best = color.usingColorSpace(.sRGB)
+            }
+        }
+        return best
+    }
+
+    /// The image drawn into a fixed 96pt canvas, which every pixel assertion reads from.
+    static func rasterize(_ image: NSImage) -> NSBitmapImageRep? {
         let side = 96
         guard
             let rep = NSBitmapImageRep(
@@ -154,18 +217,7 @@ struct ExtensionIconTests {
         NSGraphicsContext.current = ctx
         image.draw(in: NSRect(x: 0, y: 0, width: side, height: side))
         NSGraphicsContext.restoreGraphicsState()
-
-        var minX = side, maxX = -1, minY = side, maxY = -1
-        for y in 0..<side {
-            for x in 0..<side where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.06 {
-                minX = min(minX, x)
-                maxX = max(maxX, x)
-                minY = min(minY, y)
-                maxY = max(maxY, y)
-            }
-        }
-        guard maxX >= 0 else { return nil }
-        return CGFloat(max(maxX - minX + 1, maxY - minY + 1)) / CGFloat(side)
+        return rep
     }
 
     static func main() async {

@@ -174,10 +174,16 @@ screens hold (see [palette.md](palette.md)).
   image file — an `.app` has no bitmap to read. A `data:` URL is a source of its own too: an extension
   that renders its own SVG hands over the bytes, so they are decoded inline rather than fetched. A
   `tintColor` on any of them draws the image as a template, which is what colours an SVG written
-  against `currentColor`. A `raycast-*` colour name inside that SVG is rewritten to `rgba(…)` first,
-  resolved against the appearance being drawn: the name is legal wherever a Raycast tint is, so
-  extensions write it straight into `stroke`, and no SVG renderer knows it — left alone the shape
-  draws nothing at all. The feature's own fills live in `ExtensionColors` — never in `Theme`.
+  against `currentColor`. A `raycast-*` colour name **inside** that SVG is rewritten to `rgba(…)`
+  during the decode, in `ExtensionIconCache.loadInlineAsync`: the name is legal wherever a Raycast
+  tint is, so extensions write it straight into `stroke`, and no SVG renderer knows it — left alone
+  the shape draws nothing at all. It happens there rather than in `resolve` because `resolve` runs
+  in a `body` and the decode already runs detached, and because the markdown images a Detail draws
+  never pass through `resolve` at all. The palette is handed in as `[name: css]`, resolved once per
+  appearance by `ExtensionImage.svgPalette(isDark:)` — a `Color` can only be flattened to sRGB on the
+  main actor, which is exactly what the decode must not touch. Anything reading a decoded image keys
+  its `.task` on `ExtensionImage.LoadKey`, since the URL alone no longer says what will be drawn.
+  The feature's own fills live in `ExtensionColors` — never in `Theme`.
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
   edit dispatches `onTinycastChange` and the resulting re-render is what updates the control, so
   `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
@@ -478,7 +484,8 @@ fitted: the extension that drew it has already sized it, and rasterizing would c
 
 Change the number only against a rendered strip of real icons; it means nothing on its own.
 `ext-icon-test` guards the invariant: padding in the source cannot change the drawn size, and a
-`data:` payload decodes in either encoding — and one naming a `raycast-*` colour still draws ink.
+`data:` payload decodes in either encoding — and one naming a `raycast-*` colour draws ink, in the
+stroke that appearance calls for.
 
 - `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
   `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance
