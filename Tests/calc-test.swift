@@ -610,8 +610,12 @@ struct CalcTests {
         expectDisplay("10$", "835.00 INR", region: "INR")
         expectDisplay("1 btc", "5,010,000.00 INR", region: "INR")
         expectCopy("1 usd", "83.50 INR", region: "INR")
-        // Nothing to say: the region names the currency written, one nobody quotes, or none at all
-        expectDisplay("1 usd", "1.00 USD", region: "USD")
+        // The region names the currency written, so the dollar pairs with the euro instead
+        expectDisplay("1 usd", "0.92 EUR", region: "USD")
+        expectBadges("1 usd", source: "US Dollar", target: "Euro", region: "USD")
+        expectDisplay("1 eur", "1.09 USD", region: "EUR")
+        expectBadges("1 eur", source: "Euro", target: "US Dollar", region: "EUR")
+        // Nothing to say: the region names one nobody quotes, or none at all
         expectDisplay("1 usd", "1.00 USD", region: "NPR")
         expectDisplay("1 usd", "1.00 USD", region: "ZZZ")
         expectDisplay("1 usd", "1.00 USD")

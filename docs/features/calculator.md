@@ -368,12 +368,17 @@ reads `122.84 BDT`, badged `US Dollar → Bangladeshi Taka`, and `1 btc` follows
 region comes from `RegionCurrency`, one `Locale.current.currency` read — a preference, so nothing
 ever asks for location, and a `Model/` file never performs it.
 
+Where the region names the currency already written, the amount pairs with the **dollar** instead —
+the **euro** where the dollar is the one that was typed. Converting is the only reason to write a
+lone amount, so `25 eur` on a European Mac answering `25.00 EUR` said nothing at all; it now reads
+`28.95 USD`, which is what Raycast answers for the same query.
+
 The target only applies where there is genuinely nothing else to say. An operator keeps the currency
 written (`$10 + €5` stays euros), an explicit target overrides everything, a trailing operator holds
 the typed currency while the expression is still being written (`$10 +`), and a lone code with no
 amount is still an app search. Where the region names no currency, names one the table doesn't carry,
-names the currency already written, or names one the snapshot doesn't quote, the amount answers in
-the currency written rather than erroring about a code the user never typed.
+or names one the snapshot doesn't quote, the amount answers in the currency written rather than
+erroring about a code the user never typed — an unresolvable region still names no target.
 
 ### Exchange rates
 
