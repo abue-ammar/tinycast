@@ -124,7 +124,8 @@ private struct ExtensionActionRow: View {
             // Fixed, not padded: the height maths above counts rows, so a row is one exact height.
             .frame(
                 maxWidth: .infinity, minHeight: Metrics.rowHeight, maxHeight: Metrics.rowHeight,
-                alignment: .leading)
+                alignment: .leading
+            )
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)

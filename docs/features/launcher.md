@@ -302,6 +302,13 @@ paths; see the command in `development.md`.
 Launcher icons use a persistent 32 MB cost-capped `NSCache`. Fitted file-row icons use a separate
 transient 8 MB cache that is purged when its palette list disappears (`IconCache`).
 
+A file-icon key carries a `FileIconStamp` as well as the path — the bundle's own modification and
+attribute dates plus its `Icon\r` — because pasting a custom icon in Finder leaves the bundle's
+contents alone, so a path-only key served the bitmap decoded first for the rest of the session.
+`AppIndex.scan` reads the stamp off-main into `AppEntry.iconStamp`, `EntryIcon.file` carries it, and
+because it is part of `iconKey` the re-scan on the next palette open re-decodes exactly the apps
+whose icon moved.
+
 ## Favorites
 
 `FavoritesStore.keys` is the order — the array *is* the ranking, and it only shows while the query is

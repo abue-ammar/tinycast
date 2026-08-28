@@ -44,7 +44,8 @@ struct SymbolTint: Hashable, Sendable {
 /// What a row draws. A feature sets one rather than adding a branch to `AppEntry`, and `artwork`
 /// carries its extent because the size is the caller's decision, judged against `appIconExtent`.
 enum EntryIcon: Hashable, Sendable {
-    case file
+    /// The stamp is `FileIconStamp`'s: it moves when the file's icon does, retiring the old bitmap.
+    case file(stamp: Int)
     case symbol(String)
     case tintedSymbol(name: String, tint: SymbolTint)
     case artwork(path: String, extent: CGFloat)
@@ -73,7 +74,9 @@ enum IconCache {
     private static let fittedGeneration = Mutex(IconCacheGeneration())
 
     /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
-    static func cached(forFile path: String) -> NSImage? { cache.object(forKey: fileKey(path)) }
+    static func cached(forFile path: String, stamp: Int = 0) -> NSImage? {
+        cache.object(forKey: fileKey(path, stamp))
+    }
     static func cachedSymbol(named name: String, tint: SymbolTint? = nil) -> NSImage? {
         cache.object(forKey: symbolKey(name, tint))
     }
@@ -150,11 +153,11 @@ enum IconCache {
     }
 
     /// Returns the decode directly, so a purge mid-decode can't strand a placeholder.
-    static func loadAsync(forFile path: String) async -> NSImage? {
-        if let cached = cached(forFile: path) { return cached }
+    static func loadAsync(forFile path: String, stamp: Int = 0) async -> NSImage? {
+        if let cached = cached(forFile: path, stamp: stamp) { return cached }
         return await Task.detached(priority: .userInitiated) { () -> Decoded in
             guard FileManager.default.fileExists(atPath: path) else { return Decoded(image: nil) }
-            return Decoded(image: icon(forFile: path))
+            return Decoded(image: icon(forFile: path, stamp: stamp))
         }.value.image
     }
     static func loadSymbolAsync(named name: String, tint: SymbolTint? = nil) async -> NSImage? {
@@ -164,8 +167,8 @@ enum IconCache {
         }.value.image
     }
 
-    static func icon(forFile path: String) -> NSImage {
-        let key = fileKey(path)
+    static func icon(forFile path: String, stamp: Int = 0) -> NSImage {
+        let key = fileKey(path, stamp)
         if let cached = cache.object(forKey: key) { return cached }
         let (icon, cost) = downsampled(NSWorkspace.shared.icon(forFile: path))
         cache.setObject(icon, forKey: key, cost: cost)
@@ -265,7 +268,7 @@ enum IconCache {
     /// One switch, so a row never has to know which of these paths its entry wants.
     static func icon(for source: EntryIcon, fileURL: URL) -> NSImage {
         switch source {
-        case .file: return icon(forFile: fileURL.path)
+        case .file(let stamp): return icon(forFile: fileURL.path, stamp: stamp)
         case .symbol(let name): return symbolIcon(named: name)
         case .tintedSymbol(let name, let tint): return symbolIcon(named: name, tint: tint)
         case .artwork(let path, let extent): return artwork(atPath: path, extent: extent)
@@ -274,7 +277,7 @@ enum IconCache {
 
     static func cached(_ source: EntryIcon, fileURL: URL) -> NSImage? {
         switch source {
-        case .file: return cached(forFile: fileURL.path)
+        case .file(let stamp): return cached(forFile: fileURL.path, stamp: stamp)
         case .symbol(let name): return cachedSymbol(named: name)
         case .tintedSymbol(let name, let tint): return cachedSymbol(named: name, tint: tint)
         case .artwork(let path, let extent): return cachedArtwork(atPath: path, extent: extent)
@@ -283,7 +286,7 @@ enum IconCache {
 
     static func loadAsync(_ source: EntryIcon, fileURL: URL) async -> NSImage? {
         switch source {
-        case .file: return await loadAsync(forFile: fileURL.path)
+        case .file(let stamp): return await loadAsync(forFile: fileURL.path, stamp: stamp)
         case .symbol(let name): return await loadSymbolAsync(named: name)
         case .tintedSymbol(let name, let tint): return await loadSymbolAsync(named: name, tint: tint)
         case .artwork(let path, let extent):
@@ -324,7 +327,9 @@ enum IconCache {
         }
     }
 
-    private static func fileKey(_ path: String) -> NSString { key("file:" + path) }
+    private static func fileKey(_ path: String, _ stamp: Int) -> NSString {
+        key("file:\(stamp):\(path)")
+    }
     private static func fittedKey(_ path: String) -> NSString { key("fit:" + path) }
 
     private static func fittedIcon(forFile path: String) -> Decoded {

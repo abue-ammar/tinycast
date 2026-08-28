@@ -82,6 +82,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var alternateNames: [String] = []
     /// `CFBundleExecutable`, matched literally as a last resort. Applications only.
     var executableName: String?
+    /// Moves when the bundle's icon changes on disk, retiring the cached bitmap. Applications only.
+    var iconStamp: Int = 0
     /// Set by the feature that produced the entry when its glyph isn't derivable from `kind`.
     var iconOverride: EntryIcon?
     /// What this entry comes from — an extension's title. Labels the row, and matches weakly.
@@ -128,7 +130,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     /// Derived from the kind alone: synthetic entries get a symbol tile, everything else its file.
     private var defaultIcon: EntryIcon {
-        guard kind.descriptor.isSymbolIcon else { return .file }
+        guard kind.descriptor.isSymbolIcon else { return .file(stamp: iconStamp) }
         return .symbol(symbolName ?? kindSymbol)
     }
 
@@ -400,7 +402,7 @@ final class AppIndex {
                         // A binary named after the app adds nothing the display name lacks.
                         executableName: executable.flatMap {
                             $0.caseInsensitiveCompare(name) == .orderedSame ? nil : $0
-                        }))
+                        }, iconStamp: FileIconStamp.value(for: url)))
             }
             // Slice order is section order, so the flat selection maps 1:1 onto rows.
             let apps = result.sorted {

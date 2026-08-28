@@ -92,7 +92,9 @@ enum AppLauncher {
         var pending = Set(apps.map(\.processIdentifier))
         for app in apps { app.terminate() }
 
-        let grace = Task { try? await Task.sleep(for: exitGrace); continuation.finish() }
+        let grace = Task {
+            try? await Task.sleep(for: exitGrace); continuation.finish()
+        }
         defer { grace.cancel() }
         for await pid in exits {
             pending.remove(pid)

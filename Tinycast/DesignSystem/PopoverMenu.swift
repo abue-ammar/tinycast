@@ -174,7 +174,8 @@ private struct PopoverMenuRow: View {
             // Stated, not padded: the height maths above counts rows, so a row is one exact height.
             .frame(
                 maxWidth: .infinity, minHeight: Theme.Size.menuRowHeight,
-                maxHeight: Theme.Size.menuRowHeight, alignment: .leading)
+                maxHeight: Theme.Size.menuRowHeight, alignment: .leading
+            )
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
