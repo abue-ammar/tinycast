@@ -63,7 +63,8 @@ against a fixed clock.
 
 - **A** — duration until a moment: `hrs till 9am`, `days till 9april`
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
-- **C** — a moment ± a duration: `today + 3 weeks`, `now + 90 min`
+- **C** — a moment ± durations: `today + 3 weeks`, `now + 90 min`,
+  `17.2.26 + 100 weekdays - 4 + 2`
 - **D** — difference between two moments: `jul 4 - today`
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
@@ -109,6 +110,11 @@ where the documented forward bias still decides: `jul 4 - today` keeps looking a
 A bare number after a moment takes the unit that moment implies: hours off a clock time
 (`3:45pm + 5` → 8:45 PM), days off a date (`august 5 + 5` → 10 August). It is checked before the
 spelled durations, since `5` names no unit of its own.
+
+Grammar C **chains**: every `± <term>` after the first is applied in written order, so
+`17.2.26 + 100 weekdays - 4 + 2` shifts three times. All of them must be durations — one term that
+is not (`today + 3 weeks - kg`) drops the whole card rather than answering from a prefix, which is
+what leaves a trailing moment to grammar D and keeps `jul 4 - today` a difference.
 
 Grammar F resolves the weekday **inside the landing week** rather than counting forward from the
 landing day, so `monday in 3 weeks` is that week's Monday whichever day you ask on. The week is

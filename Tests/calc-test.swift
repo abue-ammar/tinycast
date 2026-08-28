@@ -853,6 +853,24 @@ struct CalcTests {
         expectNilAt("today")
         expectNilAt("tomorrow")
 
+        // Date arithmetic chains left to right, however many terms it carries
+        expectDisplayAt("17.2.26 + 100 week days - 4 + 2", "5 July")
+        expectDisplayAt("17.2.26 + 100 weekdays", "7 July")
+        expectDisplayAt("17.2.26 + 100 weekdays - 4", "3 July")
+        expectDisplayAt("today + 3 weeks - 2 days", "12 August")
+        expectDisplayAt("today + 5 + 2", "31 July")
+        expectDisplayAt("today + 1 day + 1 day + 1 day", "27 July")
+        expectDisplayAt("now + 90 min + 30 min", "24 July at 2:18 AM")
+        expectDisplayAt("3:45pm + 5 - 2", "24 July at 6:45 PM")
+        expectBadgesAt("17.2.26 + 100 week days - 4 + 2", source: "Tuesday, 17 February", target: "Sunday")
+        // Every term must be a duration, so a unit or a stray word still earns no card
+        expectNilAt("today + 3 weeks - kg")
+        expectNilAt("today + 5 - abc")
+        // Two moments are still a difference, and letter-free operands are still arithmetic
+        expectDisplayAt("jul 4 - today", "345 days")
+        expectDisplay("5 + 3 - 2", "6")
+        expectDisplay("5/2 - 1/2", "2")
+
         // Accented spellings resolve, since the identifiers carry none
         expectDisplayAt("time in são paulo", "9:18 PM (yesterday)")
         expectDisplayAt("time in sao paulo", "9:18 PM (yesterday)")

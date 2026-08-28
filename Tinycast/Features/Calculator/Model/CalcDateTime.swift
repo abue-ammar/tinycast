@@ -364,43 +364,15 @@ enum CalcDateTime {
                 left, now: now, calendar: calendar, bias: shifts ? .nearest : .future)
         else { return nil }
 
-        // A bare number takes the unit the moment implies: hours off a clock, days off a date.
-        if let count = Int(right.trimmingCharacters(in: .whitespaces)) {
-            let component: Calendar.Component = base.hasTime ? .hour : .day
-            guard op == "+" || count != .min else { return nil }
-            guard
-                let result = calendar.date(
-                    byAdding: component, value: op == "-" ? -count : count, to: base.date)
-            else { return nil }
+        // C: moment ± duration, chained left to right — every term after the first shifts again.
+        if let shifted = applyShifts(op, right, to: base, calendar: calendar) {
+            let display = answerString(
+                shifted.date, hasTime: shifted.hasTime, now: now, calendar: calendar)
             return CalcResult(
                 expression: echo,
                 sourceBadge: momentString(
                     base.date, hasTime: base.hasTime, now: now, calendar: calendar),
-                targetBadge: weekdayName(result, calendar: calendar),
-                payload: .value(
-                    display: answerString(
-                        result, hasTime: base.hasTime, now: now, calendar: calendar),
-                    copyText: answerString(
-                        result, hasTime: base.hasTime, now: now, calendar: calendar)))
-        }
-
-        // C: moment ± duration → a new moment.
-        if let duration = parseDurationPhrase(right) {
-            // Negating Int.min traps; degrade to no card on that edge.
-            guard op == "+" || duration.count != .min else { return nil }
-            let signed = op == "-" ? -duration.count : duration.count
-            let shifted =
-                duration.businessDays
-                ? addBusinessDays(signed, to: base.date, calendar: calendar)
-                : calendar.date(byAdding: duration.component, value: signed, to: base.date)
-            guard let result = shifted else { return nil }
-            let hasTime = base.hasTime || duration.subDay
-            let display = answerString(result, hasTime: hasTime, now: now, calendar: calendar)
-            let sourceBadge = momentString(
-                base.date, hasTime: base.hasTime, now: now, calendar: calendar)
-            return CalcResult(
-                expression: echo, sourceBadge: sourceBadge,
-                targetBadge: weekdayName(result, calendar: calendar),
+                targetBadge: weekdayName(shifted.date, calendar: calendar),
                 payload: .value(display: display, copyText: display))
         }
 
@@ -422,6 +394,71 @@ enum CalcDateTime {
             sourceBadge: dateString(base.date, now: now, calendar: calendar),
             targetBadge: dateString(other.date, now: now, calendar: calendar),
             payload: .value(display: "\(days) \(word)", copyText: "\(days) \(word)"))
+    }
+
+    /// Every `± <term>` after the first operator, applied in written order. Nil unless all of them
+    /// are durations, so grammar D still sees a trailing moment as one.
+    private static func applyShifts(
+        _ firstOperator: Character, _ tail: String, to base: Moment, calendar: Calendar
+    ) -> Moment? {
+        var moment = base
+        var op = firstOperator
+        var rest = Substring(tail)
+
+        while true {
+            let (term, nextOperator, remainder) = splitTerm(rest)
+            guard let shifted = shift(moment, by: term, op: op, calendar: calendar) else {
+                return nil
+            }
+            moment = shifted
+            guard let nextOperator else { return moment }
+            op = nextOperator
+            rest = remainder
+        }
+    }
+
+    /// The text up to the next spaced `+` / `-`, that operator, and whatever follows it.
+    private static func splitTerm(
+        _ text: Substring
+    ) -> (term: String, nextOperator: Character?, remainder: Substring) {
+        let plus = text.range(of: " + ")
+        let minus = text.range(of: " - ")
+        let next: (Range<Substring.Index>, Character)?
+        switch (plus, minus) {
+        case (let p?, let m?): next = p.lowerBound < m.lowerBound ? (p, "+") : (m, "-")
+        case (let p?, nil): next = (p, "+")
+        case (nil, let m?): next = (m, "-")
+        default: next = nil
+        }
+        guard let (range, op) = next else { return (String(text), nil, text) }
+        return (String(text[..<range.lowerBound]), op, text[range.upperBound...])
+    }
+
+    /// One term against a moment: a spelled duration, or a bare number in the moment's own unit.
+    private static func shift(
+        _ moment: Moment, by term: String, op: Character, calendar: Calendar
+    ) -> Moment? {
+        let trimmed = term.trimmingCharacters(in: .whitespaces)
+        if let count = Int(trimmed) {
+            // Negating Int.min traps; degrade to no card on that edge.
+            guard op == "+" || count != .min else { return nil }
+            let component: Calendar.Component = moment.hasTime ? .hour : .day
+            guard
+                let date = calendar.date(
+                    byAdding: component, value: op == "-" ? -count : count, to: moment.date)
+            else { return nil }
+            return Moment(date: date, hasTime: moment.hasTime)
+        }
+
+        guard let duration = parseDurationPhrase(trimmed), op == "+" || duration.count != .min
+        else { return nil }
+        let signed = op == "-" ? -duration.count : duration.count
+        let date =
+            duration.businessDays
+            ? addBusinessDays(signed, to: moment.date, calendar: calendar)
+            : calendar.date(byAdding: duration.component, value: signed, to: moment.date)
+        guard let date else { return nil }
+        return Moment(date: date, hasTime: moment.hasTime || duration.subDay)
     }
 
     // MARK: - Moment parsing
