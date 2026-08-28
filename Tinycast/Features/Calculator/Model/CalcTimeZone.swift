@@ -48,7 +48,8 @@ enum CalcTimeZone {
             source = SourceMoment(date: shifted, zone: source.zone)
         }
         if let offset {
-            guard let shifted = calendar.date(byAdding: offset.component, value: offset.count, to: source.date)
+            guard
+                let shifted = calendar.date(byAdding: offset.component, value: offset.count, to: source.date)
             else { return nil }
             source = SourceMoment(date: shifted, zone: source.zone)
         }

@@ -358,7 +358,8 @@ enum CalcDateTime {
         let right = String(query[opRange.upperBound...])
         // Grammar C shifts a moment, so nearest keeps `25. aug` and `25. aug + 3` in one year.
         // Grammar D measures to one, where the documented forward bias still decides the year.
-        let shifts = parseDurationPhrase(right) != nil || Int(right.trimmingCharacters(in: .whitespaces)) != nil
+        let shifts =
+            parseDurationPhrase(right) != nil || Int(right.trimmingCharacters(in: .whitespaces)) != nil
         guard
             let base = parseMoment(
                 left, now: now, calendar: calendar, bias: shifts ? .nearest : .future)
