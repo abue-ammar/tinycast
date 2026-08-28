@@ -155,9 +155,7 @@ final class CalendarStore {
         guard event.status != .canceled, let start = event.startDate, let end = event.endDate,
             let calendar = event.calendar
         else { return nil }
-        let declined =
-            event.attendees?
-            .first { $0.isCurrentUser }?.participantStatus == .declined
+        let me = event.attendees?.first { $0.isCurrentUser }
         return MeetingEvent(
             id: (event.eventIdentifier ?? event.calendarItemIdentifier)
                 + "|\(start.timeIntervalSinceReferenceDate)",
@@ -165,13 +163,23 @@ final class CalendarStore {
             start: start,
             end: end,
             isAllDay: event.isAllDay,
-            isDeclined: declined,
+            isDeclined: me?.participantStatus == .declined,
             calendarID: calendar.calendarIdentifier,
             calendarName: calendar.title,
             calendarItemID: event.calendarItemIdentifier,
-            link: MeetingLink.detect(fields: [
-                event.url?.absoluteString, event.location, event.notes
-            ]))
+            link: MeetingLink.detect(
+                fields: [event.url?.absoluteString, event.location, event.notes],
+                account: accountEmail(of: me ?? event.organizer)))
+    }
+
+    /// The address this Mac's own account carries in the invite — the organizer covers an event
+    /// booked with no guests, where there is no attendee list to read.
+    private static func accountEmail(of participant: EKParticipant?) -> String? {
+        guard let participant, participant.isCurrentUser,
+            participant.url.scheme?.lowercased() == "mailto"
+        else { return nil }
+        let address = participant.url.path(percentEncoded: false)
+        return address.contains("@") ? address : nil
     }
 
     func event(id: String) -> MeetingEvent? {

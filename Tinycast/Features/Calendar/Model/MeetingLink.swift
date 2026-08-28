@@ -4,17 +4,23 @@ import Foundation
 struct MeetingLink: Hashable, Sendable {
     let provider: Provider
     let url: URL
+    /// The address of the account whose calendar carried this link, for a provider that preselects it.
+    let account: String?
 
     /// The desktop app's own URL, where one can be formed without guessing. Nil means open the web.
     var appURL: URL? { provider.appURL(for: url) }
 
+    /// What a browser is handed: the link as written, naming the account where the provider takes one.
+    var webURL: URL { provider.accountURL(for: url, account: account) ?? url }
+
     /// Fields in precedence order; a named provider anywhere beats a bare link found earlier.
-    static func detect(fields: [String?]) -> MeetingLink? {
+    static func detect(fields: [String?], account: String? = nil) -> MeetingLink? {
         var fallback: MeetingLink?
         for field in fields.compactMap({ $0 }) {
             for url in webURLs(in: field) {
-                guard let link = classify(url) else { continue }
-                if link.provider != .generic { return link }
+                guard let provider = classify(url) else { continue }
+                let link = MeetingLink(provider: provider, url: url, account: account)
+                if provider != .generic { return link }
                 if fallback == nil { fallback = link }
             }
         }
@@ -27,14 +33,12 @@ struct MeetingLink: Hashable, Sendable {
 
     /// A URL on a known host that fails that provider's path rule is rejected, never demoted to
     /// `.generic` — `zoom.us/download` sits in half the invites people are sent.
-    private static func classify(_ url: URL) -> MeetingLink? {
+    private static func classify(_ url: URL) -> Provider? {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
             let host = url.host()?.lowercased()
         else { return nil }
-        guard let provider = Provider(host: host) else {
-            return MeetingLink(provider: .generic, url: url)
-        }
-        return provider.admits(path: url.path()) ? MeetingLink(provider: provider, url: url) : nil
+        guard let provider = Provider(host: host) else { return .generic }
+        return provider.admits(path: url.path()) ? provider : nil
     }
 
     private static let terminators: Set<Character> = [
@@ -138,6 +142,26 @@ extension MeetingLink {
             case .webex, .jitsi, .whereby, .chime, .gotoMeeting, .blueJeans, .skype, .generic:
                 return !segments.isEmpty
             }
+        }
+
+        private static let accountQuery = "authuser"
+        /// Meet's own links keep `@` readable; `+` cannot stay, as a server may read it as a space.
+        private static let accountAllowed = CharacterSet.urlQueryAllowed.subtracting(
+            CharacterSet(charactersIn: "+&="))
+
+        /// Google Meet is the only provider whose URL takes an account, and `authuser` is how it
+        /// picks between several signed-in identities rather than asking.
+        func accountURL(for url: URL, account: String?) -> URL? {
+            guard self == .googleMeet, let account,
+                let encoded = account.addingPercentEncoding(withAllowedCharacters: Self.accountAllowed),
+                var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            else { return nil }
+            let items = components.percentEncodedQueryItems ?? []
+            // A link naming its own account was written deliberately, and outranks the calendar's.
+            guard !items.contains(where: { $0.name == Self.accountQuery }) else { return nil }
+            components.percentEncodedQueryItems =
+                items + [URLQueryItem(name: Self.accountQuery, value: encoded)]
+            return components.url
         }
 
         /// Only the two rewrites Apple's URL handlers make unambiguous; anything else opens the web.

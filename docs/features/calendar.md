@@ -44,8 +44,8 @@ events as searchable launcher entries.
 
 `Model/` holds the whole decision, with every clock read injected:
 
-- **`MeetingLink`** — the join link plus its `Provider`. Ten named services, plus `.generic` for any
-  other `http(s)` link the event carries.
+- **`MeetingLink`** — the join link plus its `Provider` and the account whose calendar carried it.
+  Ten named services, plus `.generic` for any other `http(s)` link the event carries.
 - **`MeetingEvent`** — one occurrence, flattened out of `EKEvent`.
 - **`UpcomingWindow`** — `agenda`, `carded`, `joinable` and `countdown`.
 - **`MeetingDay`** — the Today / Tomorrow buckets, mirroring the clipboard's `DateBucket`.
@@ -74,6 +74,14 @@ is a dial-in helper rather than a meeting.
 `msteams:` plus its path and query. Nothing else is rewritten — the rest of the table has no
 unambiguous scheme, and guessing one would open the wrong thing. If no app claims the scheme, the
 plain `https` link opens instead.
+
+**A Google Meet link opens as the account whose calendar carried it.** Someone signed into several
+Google accounts otherwise lands on the account chooser, so `MeetingLink.webURL` appends
+`?authuser=<address>` — the address the current user carries in the invite, taken from their attendee
+entry or, for a meeting booked with no guests, from the organizer. A link that already names an
+`authuser` was written deliberately and is left alone, and no other provider takes an account in its
+URL. **`MeetingLink.url` stays the link as written**: it is what the failure report quotes and what
+`Copy Meeting Link` puts on the pasteboard, so a link shared onwards carries no address of ours.
 
 No brand artwork ships with the app, so every named provider draws `video.fill` and the **name**
 carries the identity; `.generic` draws `link`.

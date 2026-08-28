@@ -10,7 +10,7 @@ enum MeetingLauncher {
         if let appURL = link.appURL, NSWorkspace.shared.urlForApplication(toOpen: appURL) != nil {
             return NSWorkspace.shared.open(appURL)
         }
-        return NSWorkspace.shared.open(link.url)
+        return NSWorkspace.shared.open(link.webURL)
     }
 
     /// Calendar.app's own handle. A recurring occurrence opens its series, which is all `ical://` takes.

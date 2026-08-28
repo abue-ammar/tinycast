@@ -21,6 +21,7 @@ struct CalendarTests {
         fieldPrecedence()
         linkScanning()
         appURLRewrites()
+        accountPrefill()
         agendaFiltering()
         cardWindow()
         chordFallsBackWiderThanTheCard()
@@ -135,6 +136,37 @@ struct CalendarTests {
             link("https://meet.google.com/abc-defg-hij")?.appURL == nil,
             "a provider with no unambiguous scheme opens the web instead")
         expect(link("https://example.com/room")?.appURL == nil, "a bare link opens the web")
+    }
+
+    static func accountPrefill() {
+        expect(
+            hosted("https://meet.google.com/abc-defg-hij", "user@domain.com")?.webURL.absoluteString
+                == "https://meet.google.com/abc-defg-hij?authuser=user@domain.com",
+            "a Meet link opens as the account whose calendar carried it")
+        expect(
+            hosted("https://meet.google.com/abc?hs=1", "user@domain.com")?.webURL.absoluteString
+                == "https://meet.google.com/abc?hs=1&authuser=user@domain.com",
+            "the account joins a query the invite already had")
+        expect(
+            hosted("https://meet.google.com/abc?authuser=1", "user@domain.com")?.webURL
+                .absoluteString == "https://meet.google.com/abc?authuser=1",
+            "a link naming its own account is left alone")
+        expect(
+            hosted("https://meet.google.com/abc", "a+b@domain.com")?.webURL.absoluteString
+                == "https://meet.google.com/abc?authuser=a%2Bb@domain.com",
+            "a plus in the address is encoded, so it cannot be read as a space")
+        expect(
+            hosted("https://us02web.zoom.us/j/89", "user@domain.com")?.webURL.absoluteString
+                == "https://us02web.zoom.us/j/89",
+            "no other provider takes an account in the URL")
+        expect(
+            hosted("https://meet.google.com/abc-defg-hij", nil)?.webURL.absoluteString
+                == "https://meet.google.com/abc-defg-hij",
+            "a calendar with no address of its own leaves the link as written")
+        expect(
+            hosted("https://meet.google.com/abc-defg-hij", "user@domain.com")?.url.absoluteString
+                == "https://meet.google.com/abc-defg-hij",
+            "the link as written is what Copy Meeting Link keeps")
     }
 
     // MARK: - The join window
@@ -415,6 +447,10 @@ struct CalendarTests {
     }
 
     static func link(_ text: String) -> MeetingLink? { MeetingLink.detect(in: text) }
+
+    static func hosted(_ text: String, _ account: String?) -> MeetingLink? {
+        MeetingLink.detect(fields: [text], account: account)
+    }
 
     static func provider(_ text: String) -> MeetingLink.Provider? { link(text)?.provider }
 
