@@ -86,6 +86,9 @@ it, where the slashed form stays month-first. It needs three parts and a two- or
 which is what separates a date from a decimal and from a version number: `1.5 + 3` is 4.5 and
 `1.2.3 + 1` earns no card.
 
+The same convention writes an **ordinal dot** after the day, so `28. aug + 3` reads as 28 August.
+Only a trailing dot is dropped, which is why `28.5 aug` stays silent rather than becoming a date.
+
 Grammar G needs the qualifier. A lone `tomorrow` is an app search, so only `at <time>` or a
 leading `next` / `last` earns a card — the same rule that keeps `today` and `july` silent.
 

@@ -379,9 +379,9 @@ enum CalcDateTime {
         guard let year = Int(c) else { return nil }
         let month: Int
         let day: Int
-        if let named = monthByName[a], let value = Int(b) {
+        if let named = monthByName[a], let value = ordinalDay(b) {
             (month, day) = (named, value)
-        } else if let named = monthByName[b], let value = Int(a) {
+        } else if let named = monthByName[b], let value = ordinalDay(a) {
             (month, day) = (named, value)
         } else {
             return nil
@@ -420,10 +420,10 @@ enum CalcDateTime {
         _ a: String, _ b: String, now: Date, calendar: Calendar, bias: MomentBias
     ) -> Moment? {
         // number + month  /  month + number  →  a day in that month
-        if let month = monthByName[b], let day = Int(a) {
+        if let month = monthByName[b], let day = ordinalDay(a) {
             return monthDayMoment(month: month, day: day, now: now, calendar: calendar, bias: bias)
         }
-        if let month = monthByName[a], let day = Int(b) {
+        if let month = monthByName[a], let day = ordinalDay(b) {
             return monthDayMoment(month: month, day: day, now: now, calendar: calendar, bias: bias)
         }
         // clock + am/pm  →  a time today (or tomorrow if it has passed)
@@ -692,6 +692,11 @@ enum CalcDateTime {
         }
         flush()
         return atoms
+    }
+
+    /// A day number, with the ordinal dot German and Austrian dates write: `28. aug`.
+    private static func ordinalDay(_ atom: String) -> Int? {
+        Int(atom.hasSuffix(".") ? String(atom.dropLast()) : atom)
     }
 
     private static func parseClock(_ atom: String) -> (hour: Int, minute: Int)? {

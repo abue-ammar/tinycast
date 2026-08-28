@@ -808,6 +808,16 @@ struct CalcTests {
         // An impossible day still earns no card
         expectNilAt("30.2.27 + 1")
 
+        // The ordinal dot German and Austrian dates write after the day
+        expectDisplayAt("28. aug + 3", "31 August")
+        expectDisplayAt("28. august + 3", "31 August")
+        expectDisplayAt("28.aug + 3", "31 August")
+        expectDisplayAt("1. jan + 1", "2 January, 2027")
+        expectDisplayAt("28. aug 2027 + 3", "31 August, 2027")
+        expectBadgesAt("28. aug + 3", source: "Friday, 28 August", target: "Monday")
+        // Only a trailing dot is an ordinal, so a decimal day is still not a date
+        expectNilAt("28.5 aug + 1")
+
         // Accented spellings resolve, since the identifiers carry none
         expectDisplayAt("time in são paulo", "9:18 PM (yesterday)")
         expectDisplayAt("time in sao paulo", "9:18 PM (yesterday)")
