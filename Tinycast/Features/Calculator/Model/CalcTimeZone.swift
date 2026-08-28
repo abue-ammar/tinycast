@@ -8,6 +8,10 @@ enum CalcTimeZone {
         guard raw.count <= 128, raw.contains(where: \.isWhitespace), hasConnector(raw) else {
             return nil
         }
+        // `10 km to mi` also carries a connector, so the last word decides before anything else:
+        // a zone name or a duration is the only thing this grammar can end in.
+        guard endsInZoneOrDuration(raw) else { return nil }
+
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !query.isEmpty else { return nil }
 
@@ -99,6 +103,46 @@ enum CalcTimeZone {
         let date: Date
         let zone: TimeZone
     }
+
+    /// The tail names a zone or a duration, checked before the query is trimmed, lowercased and
+    /// split — which is what keeps a unit conversion like `10 km to mi` out of the zone path.
+    private static func endsInZoneOrDuration(_ raw: String) -> Bool {
+        var tail = ""
+        for character in raw.reversed() {
+            if character.isWhitespace {
+                if !tail.isEmpty { break }
+                continue
+            }
+            tail.insert(Character(character.lowercased()), at: tail.startIndex)
+        }
+        guard !tail.isEmpty else { return false }
+        // Folded, because the identifiers carry no accents while `zürich` and `são paulo` do.
+        let folded = tail.folding(options: [.diacriticInsensitive], locale: nil)
+        if cities[folded] != nil || aliases[folded] != nil { return true }
+        // `time in 4 hours` ends in the unit alone, so a bare unit word counts as a duration tail.
+        if durationUnits.contains(folded) || parseDuration(folded, impliesHours: true) != nil {
+            return true
+        }
+        // A multi-word city ("new york") only shows its last word here, so allow a known suffix.
+        return citySuffixes.contains(folded)
+    }
+
+    private static let durationUnits: Set<String> = [
+        "h", "hr", "hrs", "hour", "hours", "m", "min", "mins", "minute", "minutes",
+        "s", "sec", "secs", "second", "seconds"
+    ]
+
+    /// The final word of every multi-word name in either table, so `in new york` still reaches it.
+    private static let citySuffixes: Set<String> = {
+        var tails: Set<String> = []
+        for name in cities.keys where name.contains(" ") {
+            if let last = name.split(separator: " ").last { tails.insert(String(last)) }
+        }
+        for name in aliases.keys where name.contains(" ") {
+            if let last = name.split(separator: " ").last { tails.insert(String(last)) }
+        }
+        return tails
+    }()
 
     /// Scans for a whole-word connector without lowercasing or splitting the whole query first.
     private static func hasConnector(_ raw: String) -> Bool {
