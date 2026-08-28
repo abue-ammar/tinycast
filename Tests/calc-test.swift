@@ -752,6 +752,30 @@ struct CalcTests {
         expectError("10 mad to usd", "No exchange rate for MAD.")
         expectBadgesAt("time in ist", source: "UTC", target: "Kolkata")
 
+        // Business days skip weekends. The clock is Fri 2026-07-24, so every hop crosses one.
+        expectDisplayAt("today + 1 business day", "Monday, 27 July")
+        expectDisplayAt("today + 5 business days", "Friday, 31 July")
+        expectDisplayAt("today - 1 business day", "Thursday, 23 July")
+        expectDisplayAt("today - 3 business days", "Tuesday, 21 July")
+        expectDisplayAt("tomorrow + 10 work days", "Friday, 7 August")
+        expectDisplayAt("today + 15 workdays", "Friday, 14 August")
+        expectDisplayAt("today + 5 weekdays", "Friday, 31 July")
+        // The duration may lead, with `from` naming the anchor or `ago` implying today
+        expectDisplayAt("5 weekdays from now", "Friday, 31 July")
+        expectDisplayAt("10 business days from today", "Friday, 7 August")
+        expectDisplayAt("3 days from today", "Monday, 27 July")
+        expectDisplayAt("2 weeks ago", "Friday, 10 July")
+        expectDisplayAt("3 days ago", "Tuesday, 21 July")
+        // A month name with both a day and a year
+        expectDisplayAt("august 26 2026 + 15 workdays", "Wednesday, 16 September")
+        expectDisplayAt("august 26 2026 + 15 days", "Thursday, 10 September")
+        expectDisplayAt("26 august 2026 + 1 day", "Thursday, 27 August")
+        expectDisplayAt("august 26 2027 + 1 day", "Friday, 27 August, 2027")
+        // The 8-hour unit is a different thing, and keeps answering as one
+        expectDisplay("55h in workdays", "6.875 workdays")
+        expectDisplay("3 workdays in hours", "24 hr")
+        expectNil("5 from 10")
+
         // A conversion mid-expression, which used to need parentheses
         expectDisplay("10kg to lb + 3lb", "25.04622622 lb")
         expectDisplay("10kg to lb - 1lb", "21.04622622 lb")

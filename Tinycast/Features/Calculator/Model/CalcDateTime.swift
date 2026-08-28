@@ -19,7 +19,9 @@ enum CalcDateTime {
             query.contains(" till ") || query.contains(" until ") || query.contains(" til ")
         let hasSince = query.contains(" since ")
         let hasArith = query.contains(" + ") || query.contains(" - ")
-        guard hasUntil || hasSince || hasArith else { return nil }
+        let hasFromAgo =
+            query.contains(" from ") || query.hasSuffix(" ago") || query.contains(" ago ")
+        guard hasUntil || hasSince || hasArith || hasFromAgo else { return nil }
 
         if hasUntil, let result = parseUntil(query, echo: echo, now: now, calendar: calendar) {
             return result
@@ -30,7 +32,51 @@ enum CalcDateTime {
         if hasArith, let result = parseArithmetic(query, echo: echo, now: now, calendar: calendar) {
             return result
         }
+        if hasFromAgo, let result = parseOffset(query, echo: echo, now: now, calendar: calendar) {
+            return result
+        }
         return nil
+    }
+
+    /// `5 weekdays from now`, `3 days from today`, `2 weeks ago` — the duration leads.
+    private static func parseOffset(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        let durationText: String
+        let anchorText: String
+        let sign: Int
+        if let range = query.range(of: " from ") {
+            durationText = String(query[..<range.lowerBound])
+            anchorText = String(query[range.upperBound...])
+            sign = 1
+        } else if query.hasSuffix(" ago") {
+            durationText = String(query.dropLast(4))
+            anchorText = "today"
+            sign = -1
+        } else {
+            return nil
+        }
+
+        guard let duration = parseDurationPhrase(durationText), duration.count != .min,
+            let anchor = parseMoment(anchorText, now: now, calendar: calendar)
+        else { return nil }
+
+        let signed = duration.count * sign
+        let shifted =
+            duration.businessDays
+            ? addBusinessDays(signed, to: anchor.date, calendar: calendar)
+            : calendar.date(byAdding: duration.component, value: signed, to: anchor.date)
+        guard let result = shifted else { return nil }
+
+        let hasTime = anchor.hasTime && duration.subDay
+        let display = momentString(result, hasTime: hasTime, now: now, calendar: calendar)
+        return CalcResult(
+            expression: echo,
+            sourceBadge: momentString(
+                anchor.date, hasTime: hasTime, now: now, calendar: calendar),
+            targetBadge: "Result",
+            payload: .value(
+                display: display, copyText: display))
     }
 
     // MARK: - Grammar A: duration until a moment
@@ -153,10 +199,11 @@ enum CalcDateTime {
             // Negating Int.min traps; degrade to no card on that edge.
             guard op == "+" || duration.count != .min else { return nil }
             let signed = op == "-" ? -duration.count : duration.count
-            guard
-                let result = calendar.date(
-                    byAdding: duration.component, value: signed, to: base.date)
-            else { return nil }
+            let shifted =
+                duration.businessDays
+                ? addBusinessDays(signed, to: base.date, calendar: calendar)
+                : calendar.date(byAdding: duration.component, value: signed, to: base.date)
+            guard let result = shifted else { return nil }
             let hasTime = base.hasTime || duration.subDay
             let display = momentString(result, hasTime: hasTime, now: now, calendar: calendar)
             let sourceBadge = momentString(
@@ -203,9 +250,29 @@ enum CalcDateTime {
             return parseSingle(atoms[0], now: now, calendar: calendar, bias: bias)
         case 2:
             return parsePair(atoms[0], atoms[1], now: now, calendar: calendar, bias: bias)
+        case 3:
+            return parseTriple(atoms[0], atoms[1], atoms[2], calendar: calendar)
         default:
             return nil
         }
+    }
+
+    /// `august 26 2026` / `26 august 2026` — a month name with both a day and a year.
+    private static func parseTriple(
+        _ a: String, _ b: String, _ c: String, calendar: Calendar
+    ) -> Moment? {
+        guard let year = Int(c) else { return nil }
+        let month: Int
+        let day: Int
+        if let named = monthByName[a], let value = Int(b) {
+            (month, day) = (named, value)
+        } else if let named = monthByName[b], let value = Int(a) {
+            (month, day) = (named, value)
+        } else {
+            return nil
+        }
+        guard let date = makeDate(fullYear(year), month, day, calendar) else { return nil }
+        return Moment(date: date, hasTime: false)
     }
 
     private static func parseSingle(
@@ -386,11 +453,19 @@ enum CalcDateTime {
         let count: Int
         let component: Calendar.Component
         let subDay: Bool
+        /// Weekend days are skipped rather than counted, so the result lands Mon–Fri.
+        var businessDays = false
     }
 
     /// `<n> <unit>` for date arithmetic; weeks fold to days so `date(byAdding:)` stays DST-safe.
     private static func parseDurationPhrase(_ phrase: String) -> DurationPhrase? {
         let atoms = atomize(phrase)
+        // "business days" / "work days" are two atoms after the count, one word or two.
+        if atoms.count >= 2, let count = Int(atoms[0]),
+            businessDayPhrases.contains(atoms.dropFirst().joined())
+        {
+            return DurationPhrase(count: count, component: .day, subDay: false, businessDays: true)
+        }
         guard atoms.count == 2, let count = Int(atoms[0]) else { return nil }
         switch atoms[1] {
         case "s", "sec", "secs", "second", "seconds":
@@ -511,6 +586,25 @@ enum CalcDateTime {
         calendar.date(byAdding: .day, value: days, to: date)
     }
 
+    /// Steps day by day, counting only Mon–Fri. Public holidays are deliberately not modelled.
+    private static func addBusinessDays(_ count: Int, to date: Date, calendar: Calendar) -> Date? {
+        guard abs(count) <= 10_000 else { return nil }
+        let step = count < 0 ? -1 : 1
+        var remaining = abs(count)
+        var cursor = date
+        while remaining > 0 {
+            guard let next = shift(cursor, days: step, calendar: calendar) else { return nil }
+            cursor = next
+            if !isWeekend(cursor, calendar: calendar) { remaining -= 1 }
+        }
+        return cursor
+    }
+
+    private static func isWeekend(_ date: Date, calendar: Calendar) -> Bool {
+        let weekday = calendar.component(.weekday, from: date)
+        return weekday == 1 || weekday == 7
+    }
+
     /// Expand a 2-digit year the way date pickers do; 4-digit years pass through.
     private static func fullYear(_ year: Int) -> Int {
         if year >= 100 { return year }
@@ -522,6 +616,11 @@ enum CalcDateTime {
         "apr": 4, "may": 5, "june": 6, "jun": 6, "july": 7, "jul": 7, "august": 8, "aug": 8,
         "september": 9, "sep": 9, "sept": 9, "october": 10, "oct": 10, "november": 11, "nov": 11,
         "december": 12, "dec": 12
+    ]
+
+    private static let businessDayPhrases: Set<String> = [
+        "businessday", "businessdays", "workday", "workdays", "workingday", "workingdays",
+        "weekday", "weekdays"
     ]
 
     /// Gregorian weekday numbers (Sunday = 1).

@@ -65,6 +65,7 @@ against a fixed clock.
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
 - **C** — a moment ± a duration: `today + 3 weeks`, `now + 90 min`
 - **D** — difference between two moments: `jul 4 - today`
+- **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 
 A bare, recurring date or time resolves by _bias_: `till` takes the upcoming occurrence, `since` the
 most recent past one; an absolute date ignores the bias. Grammar D only engages when at least one
@@ -178,9 +179,18 @@ carrying one would make the answer depend on which month you meant. Only a time 
 
 ## Workdays
 
-`workdays` is a time unit of 8 hours, which answers `55h in workdays` and `3 workdays in hours`
-with no calendar involved. Weekends and public holidays are deliberately not modelled — see the
-invariant above.
+`workdays` is two separate things, and both avoid a calendar.
+
+As a **unit** it is 8 hours, which answers `55h in workdays` and `3 workdays in hours`.
+
+As a **duration in date arithmetic** it counts days and skips weekends: `today + 5 business days`,
+`tomorrow + 10 work days`, `5 weekdays from now`, `august 26 2026 + 15 workdays`. `business day`,
+`work day`, `working day` and `weekday` are all the same phrase, written as one word or two.
+`addBusinessDays` steps a day at a time rather than doing arithmetic on weeks, which is what keeps a
+Saturday anchor honest — `saturday + 1 business day` is Monday, not Sunday.
+
+Public holidays are deliberately not modelled in either. The only supported source is EventKit, and a
+calculator must never provoke its Full Calendar Access grant mid-keystroke — see the invariant above.
 
 ## Implicit multiplication
 
