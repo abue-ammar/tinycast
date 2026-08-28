@@ -236,6 +236,13 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 core.palette.selection = 0
                 return true
             }
+            if core.palette.mode == .customCommandArguments,
+                let previous = core.customCommandArguments.retreat()
+            {
+                core.palette.query = previous
+                core.palette.selection = 0
+                return true
+            }
             if core.palette.mode == .aiHistory {
                 core.palette.prepare(mode: .ai)
                 return true

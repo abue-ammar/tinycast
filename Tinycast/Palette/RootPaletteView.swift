@@ -19,6 +19,7 @@ struct RootPaletteView: View {
     @Environment(UninstallSession.self) private var uninstall
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
+    @Environment(CustomCommandArgumentSession.self) private var customCommandArguments
     @Environment(SnippetsStore.self) private var snippets
     @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
@@ -57,6 +58,9 @@ struct RootPaletteView: View {
             return QuicklinkArgumentsScreen(
                 session: quicklinkArguments, core: core, vm: vm,
                 scrollToTop: { scroll = ScrollIntent(kind: .top) })
+        case .customCommandArguments:
+            return CustomCommandArgumentsScreen(
+                session: customCommandArguments, core: core, vm: vm)
         case .quicklinks:
             return QuicklinkListScreen(
                 store: quicklinks, core: core, vm: vm, openActions: openActions)
@@ -190,9 +194,9 @@ struct RootPaletteView: View {
         let screen = screen
         let count = screen.rows.count
         let sel = selection(count: count)
-        // The argument form has no rows to count, but ↵ still does something.
+        // The argument forms have no rows to count, but ↵ still does something.
         let showActionGroup =
-            (count > 0 || vm.mode == .quicklinkArguments) && screen.hasPrimaryAction(at: sel)
+            (count > 0 || vm.mode.isArgumentForm) && screen.hasPrimaryAction(at: sel)
 
         // One header position, so focus survives the swap. See docs/features/palette.md.
         return Group {
@@ -258,8 +262,11 @@ struct RootPaletteView: View {
             if vm.mode != .extensionCommand, extensions.running != nil, !extensions.isAuthorizing {
                 Task { await extensions.stop() }
             }
-            // Same for a half-filled argument form: leaving the screen abandons the pending open.
+            // Same for a half-filled argument form: leaving the screen abandons the pending run.
             if vm.mode != .quicklinkArguments { core.quicklinkCoordinator.cancelQuicklinkArguments() }
+            if vm.mode != .customCommandArguments {
+                core.customCommandCoordinator.cancelCustomCommandArguments()
+            }
         }
         // `prepare` may change nothing, so this intent still snaps the scroll to the origin.
         .onChange(of: vm.resetToken) {
@@ -576,6 +583,9 @@ struct RootPaletteView: View {
         // The field is only wide enough for the caret while argument fields are beside it.
         if headerAccessory != nil, vm.mode != .ai { return "" }
         if vm.mode == .quicklinkArguments { return quicklinkArguments.prompt }
+        if vm.mode == .customCommandArguments {
+            return customCommandArguments.prompt ?? vm.mode.placeholder
+        }
         // Inside a running command the search bar belongs to the extension.
         if vm.mode == .extensionCommand, let placeholder = extensionScreen.searchPlaceholder {
             return placeholder

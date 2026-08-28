@@ -123,13 +123,16 @@ run hover-arming-test      Tinycast/Palette/HoverArming.swift \
                            Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
-                           Tinycast/Features/Quicklinks/Model/Quicklink.swift
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-escape-test    Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Palette/PaletteEscapeAction.swift \
-                           Tinycast/Features/Quicklinks/Model/Quicklink.swift
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-tab-test       Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Palette/PaletteTabAction.swift \
-                           Tinycast/Features/Quicklinks/Model/Quicklink.swift
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/CustomCommands/Model/CustomCommand.swift
 run hotkey-test            Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
                            Tinycast/Features/HotKeys/Model/DoubleTapDetector.swift \
                            Tinycast/Features/HotKeys/Model/HyperKey.swift \
@@ -171,8 +174,10 @@ run window-command-test    Tinycast/Features/WindowManagement/WindowCommand.swif
                            Tinycast/Features/WindowManagement/WindowActionMemory.swift
 run space-gesture-test     Tinycast/Features/WindowManagement/WindowCommand.swift \
                            Tinycast/Features/WindowManagement/SpaceGesture.swift
-run custom-command-test    Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
-                           Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift
+run custom-command-test    Tinycast/Platform/PseudoTerminal.swift \
+                           Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
+                           Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift \
+                           Tinycast/Features/CustomCommands/Service/CustomCommandArgumentSession.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
                            Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
                            Tinycast/Features/Uninstall/Model/UninstallRules.swift \

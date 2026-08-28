@@ -41,6 +41,7 @@ final class AppCore {
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let quicklinkArguments = QuicklinkArgumentSession()
+    let customCommandArguments = CustomCommandArgumentSession()
     let notesStore: NotesStore
     let extensions: ExtensionManager
     let chatHistory: ChatHistoryStore
@@ -91,10 +92,11 @@ final class AppCore {
         settings: settings, paletteCoordinator: paletteCoordinator, windowMover: windowMover,
         spaceSwitcher: spaceSwitcher)
     @ObservationIgnored private(set) lazy var customCommandCoordinator = CustomCommandCoordinator(
-        store: customCommands, settings: settings, appIndex: appIndex,
+        store: customCommands, argumentSession: customCommandArguments, settings: settings,
+        appIndex: appIndex,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         hotKeys: hotKeys, favorites: favorites, visibility: visibility,
-        ranking: launcherRanking, aliases: aliases, core: self)
+        ranking: launcherRanking, aliases: aliases, activationPolicy: activationPolicy, core: self)
     @ObservationIgnored private(set) lazy var notesCoordinator = NotesCoordinator(
         store: notesStore,
         settings: settings,
@@ -467,7 +469,7 @@ final class AppCore {
             isRunningExtension: extensions.running != nil,
             isUninstalling: uninstall.isTrashing,
             isRecordingHotKey: hotKeys.recordingAction != nil,
-            isPromptingForArguments: quicklinkArguments.isActive,
+            isPromptingForArguments: quicklinkArguments.isActive || customCommandArguments.isActive,
             isShowingDialog: isShowingDialog,
             isPaletteVisible: paletteCoordinator.isVisible)
     }
