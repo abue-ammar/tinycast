@@ -122,6 +122,16 @@ enum Theme {
         static let menuWidth: CGFloat = 276
         /// The clipboard type filter's menu; `menuWidth` is far too wide for five short rows.
         static let clipboardFilterMenuWidth: CGFloat = 200
+        /// A menu row, stated rather than padded into being: the cap below counts rows, so a row
+        /// has to be one known height or a capped menu lands mid-row.
+        static let menuRowHeight: CGFloat = menuIcon + Spacing.md * 2
+        static let menuRowSpacing: CGFloat = 1
+        /// Six rows and half of the seventh, so a capped menu reads as scrollable rather than
+        /// clipped — and no ordinary menu length lands a hair over the cap and scrolls by a pixel.
+        static let menuVisibleRows: CGFloat = 6.5
+        /// How tall a menu's rows may grow before they scroll, counted in rows so the cap can
+        /// never fall mid-row, and well inside the panel the menu overlays.
+        static var menuRowsMaxHeight: CGFloat { menuVisibleRows * (menuRowHeight + menuRowSpacing) }
         /// A menu row's glyph slot, sized so symbol and app-icon rows read the same.
         static let menuIcon: CGFloat = 20
         /// A brand mark inside the menu icon slot, sized to the optical weight of a symbol.

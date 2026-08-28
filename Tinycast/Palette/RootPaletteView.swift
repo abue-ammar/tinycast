@@ -31,6 +31,9 @@ struct RootPaletteView: View {
     @State private var selectionIsRunning = false
     /// Highlighted row of whichever menu is open; each open path sets where it starts.
     @State private var menuSelection = 0
+    @State private var menuPanel = MenuPanelController()
+    /// The palette's own window, reported by `WindowReader`; the menu hangs off its frame.
+    @State private var hostWindow: NSWindow?
     /// The pending scroll request; modes are exclusive, so one piece of state serves all.
     @State private var scroll = ScrollIntent(kind: .top)
 
@@ -217,30 +220,8 @@ struct RootPaletteView: View {
                 .gesture(DragGesture(minimumDistance: 0).onEnded { _ in closeMenus() })
                 .allowsHitTesting(menuOpen)
         }
-        .overlay(alignment: .bottomLeading) {
-            if openMenu == .app, let content = menuContent {
-                content.view()
-                    .padding(Self.menuInset)
-                    .transition(Self.menuTransition(.bottomLeading))
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if openMenu == .actions, let content = menuContent {
-                content.view()
-                    .padding(Self.menuInset)
-                    .transition(Self.menuTransition(.bottomTrailing))
-            }
-        }
-        // Header menus hang from their buttons rather than a panel corner.
-        .overlay(alignment: .topTrailing) {
-            if openMenu == .clipboardFilter || openMenu == .aiModel, let content = menuContent {
-                content.view()
-                    .padding(.top, Theme.Size.headerPadding + Theme.Size.headerHeight)
-                    // Right edges flush with the button's, which sits inside the same trailing gutter.
-                    .padding(.trailing, Theme.Spacing.md * 2)
-                    .transition(Self.menuTransition(.topTrailing))
-            }
-        }
+        // The menu lives in its own window; this only reports the one to hang it from.
+        .background(WindowReader { hostWindow = $0 })
         // The window's frame is the size source, so the glass and clip stay matched.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Theme.Colors.panelScrim)
@@ -291,7 +272,11 @@ struct RootPaletteView: View {
         // One optional makes "exactly one menu" structural; this only mirrors it for the panel.
         .onChange(of: openMenu) {
             vm.menuOpen = menuOpen
+            syncMenuPanel(presenting: true)
         }
+        // The hosted tree is its own hierarchy, so the highlight has to be pushed into it.
+        .onChange(of: menuSelection) { syncMenuPanel(presenting: false) }
+        .onDisappear { menuPanel.hide() }
         .onAppear { searchFocused = true }
         // Several paths flip `paletteIsCollapsed`, so resize the window to match.
         .onChange(of: core.paletteCoordinator.paletteIsCollapsed) {
@@ -736,19 +721,34 @@ struct RootPaletteView: View {
     /// Every open path lands here, so the highlight is always stated rather than left behind.
     private func open(_ menu: OpenMenu, highlighting row: Int) {
         menuSelection = row
-        withAnimation(Self.menuAnimation) { openMenu = menu }
+        openMenu = menu
     }
 
     private func closeMenus() {
-        withAnimation(Self.menuAnimation) { openMenu = nil }
+        openMenu = nil
     }
 
-    /// Inset from the bottom corners, so the menu's own corner isn't clipped.
-    private static let menuInset: CGFloat = 8
-    private static let menuAnimation: Animation = .easeOut(duration: 0.14)
+    /// Drives the menu's window from the two pieces of state that decide what it shows.
+    private func syncMenuPanel(presenting: Bool) {
+        guard let content = menuContent, let corner = menuCorner else {
+            menuPanel.hide()
+            return
+        }
+        let view = AnyView(content.view())
+        if presenting, let hostWindow {
+            menuPanel.show(view, corner: corner, parent: hostWindow, core: core)
+        } else {
+            menuPanel.update(view, corner: corner, core: core)
+        }
+    }
 
-    private static func menuTransition(_ anchor: UnitPoint) -> AnyTransition {
-        .opacity.combined(with: .scale(scale: 0.96, anchor: anchor))
+    private var menuCorner: MenuPanelController.Corner? {
+        switch openMenu {
+        case .app: .bottomLeading
+        case .actions: .bottomTrailing
+        case .clipboardFilter, .aiModel: .belowHeaderTrailing
+        case nil: nil
+        }
     }
 
     // MARK: - Actions

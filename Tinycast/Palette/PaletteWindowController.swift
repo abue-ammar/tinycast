@@ -216,29 +216,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     private func ensurePanel() -> PalettePanel {
         if let panel { return panel }
-        let root = RootPaletteView()
-            .environment(core)
-            .environment(core.settings)
-            .environment(core.palette)
-            .environment(core.appIndex)
-            .environment(core.clipboardStore)
-            .environment(core.favorites)
-            .environment(core.visibility)
-            .environment(core.aliases)
-            .environment(core.calcHistory)
-            .environment(core.currencyRates)
-            .environment(core.emojiIndex)
-            .environment(core.frequentEmoji)
-            .environment(core.fileSearch)
-            .environment(core.runningApps)
-            .environment(core.hotKeys)
-            .environment(core.uninstall)
-            .environment(core.quicklinks)
-            .environment(core.quicklinkArguments)
-            .environment(core.snippetsStore)
-            .environment(core.extensions)
-            .environment(core.calendarStore)
-            .environment(core.meetingClock)
+        let root = RootPaletteView().paletteEnvironment(core)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteState = core.palette
