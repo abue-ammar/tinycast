@@ -14,7 +14,11 @@ enum CalcDateTime {
         let query = echo.lowercased()
         guard !query.isEmpty else { return nil }
 
-        // Cheap gate: our grammars always carry a connector, so app searches skip all the parsing.
+        // Cheap gate: every grammar carries a digit or a connector, so an app search stops here
+        // before anything allocates. `namesADay` atomizes, so it runs only past the digit check.
+        let hasDigit = query.contains(where: \.isNumber)
+        guard hasDigit || query.contains(" ") else { return nil }
+
         let hasUntil =
             query.contains(" till ") || query.contains(" until ") || query.contains(" til ")
         let hasSince = query.contains(" since ")
@@ -26,8 +30,8 @@ enum CalcDateTime {
         // A written day is qualifier enough: nobody types `25. aug` looking for an app.
         let isBareMoment =
             query.contains(" at ")
-            || ["next ", "last "].contains { query.hasPrefix($0) }
-            || namesADay(query)
+            || query.hasPrefix("next ") || query.hasPrefix("last ")
+            || (hasDigit && namesADay(query))
         guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment else {
             return nil
         }
@@ -680,13 +684,7 @@ enum CalcDateTime {
     }
 
     private static func format(_ date: Date, calendar: Calendar, pattern: String) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.timeZone = calendar.timeZone
-        // Follow the injected calendar's locale so weekday/month names match the user's language.
-        formatter.locale = calendar.locale ?? Locale(identifier: "en_US")
-        formatter.dateFormat = pattern
-        return formatter.string(from: date)
+        CalcDateFormatters.string(from: date, calendar: calendar, zone: calendar.timeZone, pattern: pattern)
     }
 
     // MARK: - Low-level helpers

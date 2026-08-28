@@ -3,8 +3,10 @@ import Foundation
 /// Clock time in another city. See docs/features/calculator.md.
 enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
+        // Every grammar is at least two words, so a one-word app search stops before allocating.
+        guard raw.count <= 128, raw.contains(" ") else { return nil }
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !query.isEmpty, query.count <= 128 else { return nil }
+        guard !query.isEmpty else { return nil }
 
         if let difference = offsetBetween(query, now: now, calendar: calendar) { return difference }
 
@@ -286,12 +288,7 @@ enum CalcTimeZone {
     }
 
     private static func clockString(_ date: Date, zone: TimeZone, calendar: Calendar) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.timeZone = zone
-        formatter.locale = calendar.locale ?? Locale(identifier: "en_US")
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: date)
+        CalcDateFormatters.string(from: date, calendar: calendar, zone: zone, pattern: "h:mm a")
     }
 
     private static func dayOffsetWord(
