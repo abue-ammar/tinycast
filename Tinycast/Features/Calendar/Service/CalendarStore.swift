@@ -1,14 +1,23 @@
 import AppKit
 import EventKit
 
-/// Today's and tomorrow's meetings, read from EventKit. See docs/features/calendar.md.
+/// The span's meetings, read from EventKit. See docs/features/calendar.md.
 @MainActor
 @Observable
 final class CalendarStore {
-    /// Flattened occurrences over `[startOfToday, endOfTomorrow]`, newest query wins.
+    /// Flattened occurrences over `span`, newest query wins.
     private(set) var events: [MeetingEvent] = []
     private(set) var calendars: [MeetingCalendar] = []
     private(set) var access: CalendarAccess = Permissions.calendarAccess()
+
+    /// The days queried, pushed in by `CalendarCoordinator`. Changing it re-reads: nothing may
+    /// filter a snapshot into a span it was never fetched for, and an empty schedule names it.
+    var span: MeetingSpan = .todayAndTomorrow {
+        didSet {
+            guard span != oldValue, lastReloadAt != nil else { return }
+            reload()
+        }
+    }
 
     /// Fired whenever `events` changes, so the launcher's meeting slice is republished.
     @ObservationIgnored var onChange: (() -> Void)?
@@ -96,14 +105,14 @@ final class CalendarStore {
             return
         }
         let aged = now.timeIntervalSince(lastReloadAt) >= Self.staleAfter
-        // A day boundary invalidates the two-day span itself, however fresh the snapshot is.
+        // A day boundary invalidates the span itself, however fresh the snapshot is.
         let rolled = !Calendar.current.isDate(lastReloadAt, inSameDayAs: now)
         guard aged || rolled else { return }
         reload()
     }
 
-    /// Two days of events is a sub-millisecond query and `EKEventStore` is not `Sendable`, so this
-    /// stays on the main actor; only pure `MeetingEvent` values leave it.
+    /// A day or two of events is a sub-millisecond query and `EKEventStore` is not `Sendable`, so
+    /// this stays on the main actor; only pure `MeetingEvent` values leave it.
     func reload() {
         access = Permissions.calendarAccess()
         guard access == .granted else {
@@ -125,13 +134,15 @@ final class CalendarStore {
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
         let selected = sources.filter { !hiddenCalendarIDs.contains($0.calendarIdentifier) }
-        guard !selected.isEmpty, let span = Self.span(from: Date()) else {
+        guard !selected.isEmpty,
+            let interval = span.interval(from: Date(), calendar: .current)
+        else {
             publish([])
             return
         }
         // The predicate expands recurrence itself; fetching masters and rolling our own never works.
         let predicate = store.predicateForEvents(
-            withStart: span.start, end: span.end, calendars: selected)
+            withStart: interval.start, end: interval.end, calendars: selected)
         publish(store.events(matching: predicate).compactMap(Self.meeting(from:)))
     }
 
@@ -139,15 +150,6 @@ final class CalendarStore {
         guard next != events else { return }
         events = next
         onChange?()
-    }
-
-    /// Midnight today through midnight the day after tomorrow, in the Mac's own zone.
-    private static func span(from now: Date) -> (start: Date, end: Date)? {
-        let calendar = Calendar.current
-        guard let start = calendar.dateInterval(of: .day, for: now)?.start,
-            let end = calendar.date(byAdding: .day, value: 2, to: start)
-        else { return nil }
-        return (start, end)
     }
 
     private static func meeting(from event: EKEvent) -> MeetingEvent? {

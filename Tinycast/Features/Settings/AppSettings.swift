@@ -270,6 +270,13 @@ final class AppSettings {
         }
     }
 
+    /// Narrows the fetch itself rather than what is shown, so every surface reads the same days.
+    var calendarIncludesTomorrow: Bool {
+        didSet {
+            defaults.set(calendarIncludesTomorrow, forKey: Key.calendarIncludesTomorrow.rawValue)
+        }
+    }
+
     var joinWindowMinutes: JoinWindow {
         didSet { defaults.set(joinWindowMinutes.rawValue, forKey: Key.joinWindowMinutes.rawValue) }
     }
@@ -449,6 +456,9 @@ final class AppSettings {
         calendarShowInLauncher =
             defaults.object(forKey: Key.calendarShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.calendarShowInLauncher.rawValue)
+        calendarIncludesTomorrow =
+            defaults.object(forKey: Key.calendarIncludesTomorrow.rawValue) == nil
+            || defaults.bool(forKey: Key.calendarIncludesTomorrow.rawValue)
         joinWindowMinutes =
             JoinWindow(rawValue: defaults.integer(forKey: Key.joinWindowMinutes.rawValue)) ?? .five
         autoJoinMeetings = defaults.bool(forKey: Key.autoJoinMeetings.rawValue)

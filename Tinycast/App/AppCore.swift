@@ -389,6 +389,9 @@ final class AppCore {
                 _ = $0.calendarShowInLauncher
             }, reproject: { $0.calendarCoordinator.applyEnabled() })
         track(
+            { _ = $0.calendarIncludesTomorrow },
+            reproject: { $0.calendarCoordinator.applySpan() })
+        track(
             {
                 _ = $0.autoJoinMeetings
                 _ = $0.menuBarEvents

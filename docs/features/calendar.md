@@ -26,6 +26,10 @@ events as searchable launcher entries.
   everyone joins late; the `min` is why it never outlives a meeting shorter than the lead.
 - **Recurrence comes from `predicateForEvents(withStart:end:calendars:)`**, which expands occurrences
   itself. Masters are never fetched and recurrence is never hand-rolled.
+- **`MeetingSpan` narrows the fetch, never the surfaces.** `calendarIncludesTomorrow` reaches
+  EventKit through `CalendarStore.span`, so dropping tomorrow shortens the query and every surface
+  follows from the one snapshot — no surface filters days out of a snapshot fetched wider. The same
+  type owns the wording, so a sentence naming the days can never outlive the query it describes.
 - **`UpcomingWindow.agenda` is the only place that says which events count** — timed, not declined,
   not over, in start order. The card, the chord, the menu bar, the schedule and the launcher slice all
   go through it, so they cannot drift apart. Because an event ending changes nothing in EventKit,
@@ -49,6 +53,7 @@ events as searchable launcher entries.
 - **`MeetingEvent`** — one occurrence, flattened out of `EKEvent`.
 - **`UpcomingWindow`** — `agenda`, `carded`, `joinable` and `countdown`.
 - **`MeetingDay`** — the Today / Tomorrow buckets, mirroring the clipboard's `DateBucket`.
+- **`MeetingSpan`** — how far ahead the store reads, and the phrasing that names those days.
 - **`MenuBarSummary`** — which event the menu bar carries, and for how long.
 - **`AutoJoinPolicy`** — whether a meeting should open itself, and which one.
 - **`EventDraft`** — what the New Event prompt collects, before anything touches the calendar.
@@ -132,11 +137,13 @@ is nothing to acknowledge.
 
 ## Reading the store
 
-`CalendarStore` queries `[startOfToday, endOfTomorrow + 1 day)` in the Mac's own zone. **The fetch
-stays on the main actor**: two days of events is a sub-millisecond query and `EKEventStore` is not
-`Sendable`, so pushing it off-main would be a fight with no measurable gain. Both the launch-time load
-and the per-summon refresh are deferred into a `Task`, because the first EventKit query pays for its
-XPC warm-up and both of those paths are protected.
+`CalendarStore` queries `MeetingSpan.interval(from:calendar:)` — midnight today through midnight one
+or two days on, in the Mac's own zone — and re-reads whenever `span` changes under it, but only once
+it has read at all, so enabling the feature never fires two queries. **The fetch stays on the main
+actor**: a day or two of events is a sub-millisecond query and `EKEventStore` is not `Sendable`, so
+pushing it off-main would be a fight with no measurable gain. Both the launch-time load and the
+per-summon refresh are deferred into a `Task`, because the first EventKit query pays for its XPC
+warm-up and both of those paths are protected.
 
 The `EKEventStore` itself is built on first use, so a Mac with the feature off never loads EventKit.
 After a grant the store is dropped and rebuilt — one built before the grant does not see the new
@@ -192,8 +199,8 @@ still lands on top of it.
 ## Settings
 
 The Calendar pane carries the master switch (routed through the coordinator so the consent gate cannot
-be bypassed), the `Join Next Meeting` recorder, the join-window picker, and the per-calendar checkbox
-list — `LauncherItemsSection`'s shape, including the one `Form` row holding a `LazyVStack`, because a
+be bypassed), the `Include Tomorrow's Events` switch, the `Join Next Meeting` recorder, the
+join-window picker, and the per-calendar checkbox list — `LauncherItemsSection`'s shape, including the one `Form` row holding a `LazyVStack`, because a
 `Form` realizes every row it is handed.
 
 The hidden-calendar set stores **exclusions**, so a calendar added after the setting was written
@@ -202,7 +209,14 @@ defaults to on. Holidays and Birthdays are what people switch off.
 `autoJoinMeetings` and `cameraPreview` join `calendarEnabled` in
 `SettingsBackupCoverage.deliberatelyExcluded`: one arms the app to open links unattended and the
 other turns on the camera, and an import must grant neither. The menu-bar settings carry over
-normally.
+normally, and so does `calendarIncludesTomorrow`: it narrows what is read rather than widening what
+can be reached.
+
+Because the span is a setting, the two sentences that name the days — the consent dialog and the
+pane's own subtitle — interpolate `MeetingSpan.possessivePhrase` rather than spelling the days out,
+and the empty schedule reads `MeetingSpan.orPhrase` off the store that did the query. The `.schedule`
+placeholder names no days at all: it is a static `PaletteMode` string, and one that advertised a span
+it could not read would be wrong half the time.
 
 Both menu-bar enums put their default at `rawValue == 0`, so `defaults.integer(forKey:)` returning 0
 for an unset key lands on `.never` and `.automatically` rather than fighting them.

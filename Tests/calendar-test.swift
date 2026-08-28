@@ -1,5 +1,5 @@
 // Standalone test for meeting-link detection, the join and menu-bar windows, auto-join,
-// the event draft and the day buckets.
+// the event draft, the day buckets and the read span.
 import Foundation
 
 @main
@@ -27,6 +27,7 @@ struct CalendarTests {
         chordFallsBackWiderThanTheCard()
         countdownStrings()
         dayBuckets()
+        readSpan()
         menuBarWindow()
         menuBarFiltering()
         menuBarTitles()
@@ -431,6 +432,29 @@ struct CalendarTests {
         expect(
             MeetingDay(for: now.addingTimeInterval(-24 * 3600), now: now, calendar: calendar) == nil,
             "yesterday has no bucket")
+    }
+
+    // MARK: - The read span
+
+    static func readSpan() {
+        let now = date(year: 2026, month: 8, day: 23, hour: 22)
+        let midnight = date(year: 2026, month: 8, day: 23, hour: 0)
+        expect(
+            MeetingSpan(includesTomorrow: false) == .today
+                && MeetingSpan(includesTomorrow: true) == .todayAndTomorrow,
+            "the setting names the span")
+        expect(
+            MeetingSpan.today.interval(from: now, calendar: calendar)
+                == DateInterval(start: midnight, end: date(year: 2026, month: 8, day: 24, hour: 0)),
+            "today alone runs midnight to midnight, from an evening `now`")
+        expect(
+            MeetingSpan.todayAndTomorrow.interval(from: now, calendar: calendar)
+                == DateInterval(start: midnight, end: date(year: 2026, month: 8, day: 25, hour: 0)),
+            "tomorrow adds a second day to the same start")
+        expect(
+            MeetingSpan.today.possessivePhrase == "today's"
+                && MeetingSpan.todayAndTomorrow.orPhrase == "today or tomorrow",
+            "the wording follows the span")
     }
 
     // MARK: - Helpers

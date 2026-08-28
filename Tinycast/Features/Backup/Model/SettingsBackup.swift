@@ -53,6 +53,8 @@ struct SettingsBackup: Codable {
         var quicklinkConfirmsBeforeDelete: Bool?
         // `calendarEnabled` is absent: an import must not grant calendar access.
         var calendarShowInLauncher: Bool?
+        // Carried: it narrows what is read rather than widening what may be reached.
+        var calendarIncludesTomorrow: Bool?
         var joinWindowMinutes: Int?
         // `autoJoinMeetings` and `cameraPreview` are absent: an import must arm neither.
         var autoJoinConfirms: Bool?
@@ -137,6 +139,7 @@ extension SettingsBackup {
             quicklinkSelectionFallback: s.quicklinkSelectionFallback.rawValue,
             quicklinkConfirmsBeforeDelete: s.quicklinkConfirmsBeforeDelete,
             calendarShowInLauncher: s.calendarShowInLauncher,
+            calendarIncludesTomorrow: s.calendarIncludesTomorrow,
             joinWindowMinutes: s.joinWindowMinutes.rawValue,
             autoJoinConfirms: s.autoJoinConfirms,
             menuBarEvents: s.menuBarEvents.rawValue,
@@ -358,6 +361,10 @@ extension SettingsBackup {
         }
         if let flag = s.calendarShowInLauncher {
             settings.calendarShowInLauncher = flag
+            count += 1
+        }
+        if let flag = s.calendarIncludesTomorrow {
+            settings.calendarIncludesTomorrow = flag
             count += 1
         }
         if let raw = s.joinWindowMinutes, let window = JoinWindow(rawValue: raw) {

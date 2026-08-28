@@ -12,7 +12,8 @@ struct CalendarSettingsView: View {
                 header: "Calendar",
                 enableTitle: "Join meetings from Tinycast",
                 enableSubtitle:
-                    "Reads today's and tomorrow's events to find join links. Nothing leaves this Mac.",
+                    "Reads \(core.calendarCoordinator.span.possessivePhrase) events to find join "
+                    + "links. Nothing leaves this Mac.",
                 launcherSubtitle: "List individual meetings alongside apps and commands.",
                 isEnabled: enabledBinding,
                 showsInLauncher: $settings.calendarShowInLauncher)
@@ -27,6 +28,16 @@ struct CalendarSettingsView: View {
                     }
                 }
             }
+
+            Section {
+                Toggle(isOn: $settings.calendarIncludesTomorrow) {
+                    Text("Include Tomorrow's Events")
+                    Text("Read tomorrow as well as the rest of today, everywhere meetings appear.")
+                }
+            } header: {
+                Text("Schedule")
+            }
+            .settingsEnabled(settings.calendarEnabled)
 
             Section {
                 Picker(selection: $settings.joinWindowMinutes) {
