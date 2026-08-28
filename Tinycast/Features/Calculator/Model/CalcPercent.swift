@@ -18,7 +18,9 @@ enum CalcPercent {
         else { return nil }
         let result = base * (1 - pct / 100)
         guard result.isFinite else { return nil }
-        return card(query, CalcFormatter.display(result), CalcFormatter.copyText(result))
+        return card(
+            query, CalcFormatter.display(result), CalcFormatter.copyText(result),
+            target: "Discounted")
     }
 
     /// `<x> as % of <y>` → x / y × 100, rendered as a percentage (`50 as % of 200` → 25%).
@@ -30,14 +32,18 @@ enum CalcPercent {
         else { return nil }
         let ratio = x / y * 100
         guard ratio.isFinite else { return nil }
-        return card(query, "\(CalcFormatter.display(ratio))%", "\(CalcFormatter.copyText(ratio))%")
+        return card(
+            query, "\(CalcFormatter.display(ratio))%", "\(CalcFormatter.copyText(ratio))%",
+            target: "Percentage")
     }
 
-    private static func card(_ query: String, _ display: String, _ copy: String) -> CalcResult {
+    private static func card(
+        _ query: String, _ display: String, _ copy: String, target: String = "Result"
+    ) -> CalcResult {
         CalcResult(
             expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
             sourceBadge: "Expression",
-            targetBadge: "Result",
+            targetBadge: target,
             payload: .value(display: display, copyText: copy))
     }
 
@@ -51,7 +57,8 @@ enum CalcPercent {
         else { return nil }
         let amount = bill * pct / 100
         guard amount.isFinite else { return nil }
-        return card(query, CalcFormatter.display(amount), CalcFormatter.copyText(amount))
+        return card(
+            query, CalcFormatter.display(amount), CalcFormatter.copyText(amount), target: "Tip")
     }
 
     private static func parseWhatPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
@@ -63,7 +70,9 @@ enum CalcPercent {
         else { return nil }
         let ratio = x / y * 100
         guard ratio.isFinite else { return nil }
-        return card(query, "\(CalcFormatter.display(ratio))%", "\(CalcFormatter.copyText(ratio))%")
+        return card(
+            query, "\(CalcFormatter.display(ratio))%", "\(CalcFormatter.copyText(ratio))%",
+            target: "Percentage")
     }
 
     private static func parseIsPercentOfWhat(_ tokens: [CalcToken], query: String) -> CalcResult? {
@@ -76,7 +85,8 @@ enum CalcPercent {
         else { return nil }
         let whole = x / (pct / 100)
         guard whole.isFinite else { return nil }
-        return card(query, CalcFormatter.display(whole), CalcFormatter.copyText(whole))
+        return card(
+            query, CalcFormatter.display(whole), CalcFormatter.copyText(whole), target: "Total")
     }
 
     /// Integers only, so the reduced pair stays exact.
@@ -90,7 +100,7 @@ enum CalcPercent {
         let divisor = greatestCommonDivisor(abs(a), abs(b))
         guard divisor > 0 else { return nil }
         let text = "\(CalcFormatter.display(a / divisor)) : \(CalcFormatter.display(b / divisor))"
-        return card(query, text, text)
+        return card(query, text, text, target: "Ratio")
     }
 
     private static func greatestCommonDivisor(_ a: Double, _ b: Double) -> Double {
@@ -101,11 +111,14 @@ enum CalcPercent {
 
     private static func parseAggregate(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard tokens.count >= 3, case .ident(let name) = tokens[0],
-            let reduce = aggregates[name], tokens[1] == .ident("of")
+            let aggregate = aggregates[name], tokens[1] == .ident("of")
         else { return nil }
         let values = splitList(Array(tokens[2...]))
-        guard values.count >= 2, let result = reduce(values), result.isFinite else { return nil }
-        return card(query, CalcFormatter.display(result), CalcFormatter.copyText(result))
+        guard values.count >= 2, let result = aggregate.reduce(values), result.isFinite
+        else { return nil }
+        return card(
+            query, CalcFormatter.display(result), CalcFormatter.copyText(result),
+            target: aggregate.name)
     }
 
     /// Snaps to a step, not to a digit count, so `nearest 5` means multiples of 5.
@@ -117,16 +130,24 @@ enum CalcPercent {
         else { return nil }
         let result = (value / step).rounded() * step
         guard result.isFinite else { return nil }
-        return card(query, CalcFormatter.display(result), CalcFormatter.copyText(result))
+        return card(
+            query, CalcFormatter.display(result), CalcFormatter.copyText(result), target: "Rounded")
     }
 
-    private static let aggregates: [String: @Sendable ([Double]) -> Double?] = [
-        "average": { $0.reduce(0, +) / Double($0.count) },
-        "avg": { $0.reduce(0, +) / Double($0.count) },
-        "mean": { $0.reduce(0, +) / Double($0.count) },
-        "sum": { $0.reduce(0, +) },
-        "total": { $0.reduce(0, +) },
-        "min": { $0.min() }, "max": { $0.max() }
+    /// The badge names which reduction ran, so `min` and `max` are told apart on the card.
+    private struct Aggregate {
+        let name: String
+        let reduce: @Sendable ([Double]) -> Double?
+    }
+
+    private static let aggregates: [String: Aggregate] = [
+        "average": Aggregate(name: "Average") { $0.reduce(0, +) / Double($0.count) },
+        "avg": Aggregate(name: "Average") { $0.reduce(0, +) / Double($0.count) },
+        "mean": Aggregate(name: "Average") { $0.reduce(0, +) / Double($0.count) },
+        "sum": Aggregate(name: "Sum") { $0.reduce(0, +) },
+        "total": Aggregate(name: "Sum") { $0.reduce(0, +) },
+        "min": Aggregate(name: "Minimum") { $0.min() },
+        "max": Aggregate(name: "Maximum") { $0.max() }
     ]
 
     /// Each run is evaluated whole, so `sum of 2*3, 4` stays two operands.

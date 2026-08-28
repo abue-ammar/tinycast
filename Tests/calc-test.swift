@@ -368,8 +368,8 @@ struct CalcTests {
             "days till july", source: "Friday, 24 July", target: "Thursday, 1 July, 2027")
         expectDisplayAt("days until tomorrow", "1 day")
         expectDisplayAt("weeks till 9april", "37 weeks")  // 259 / 7
-        expectDisplayAt("today + 3 weeks", "Friday, 14 August")
-        expectDisplayAt("now + 90 min", "Friday, 24 July at 1:48 AM")
+        expectDisplayAt("today + 3 weeks", "14 August")
+        expectDisplayAt("now + 90 min", "24 July at 1:48 AM")
         expectDisplayAt("jul 4 - today", "345 days")
         expectBadgesAt("jul 4 - today", source: "Sunday, 4 July, 2027", target: "Friday, 24 July")
         // Arithmetic with spaced operators must still be plain math, not date math
@@ -436,7 +436,7 @@ struct CalcTests {
         expectBadges("255 to hex", source: "Decimal", target: "Hexadecimal")
         expectBadges("0xff to decimal", source: "Hexadecimal", target: "Decimal")
         expectBadges("3*3", source: "Expression", target: "Result")
-        expectBadges("20% off 500", source: "Expression", target: "Result")
+        expectBadges("20% off 500", source: "Expression", target: "Discounted")
 
         // days since — past elapsed, against the fixed clock (Fri 2026-07-24)
         expectDisplayAt("days since 9jul", "15 days")
@@ -444,7 +444,8 @@ struct CalcTests {
         expectDisplayAt("weeks since 3jul", "3 weeks")
         expectDisplayAt("days since yesterday", "1 day")
         // Date ± duration now carries the resolved start as a source badge
-        expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Result")
+        // The answer's weekday is the badge, so the date itself does not repeat it
+        expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Friday")
 
         // Currency — against the fixed `fx` table below (1 USD = 0.92 EUR = 0.79 GBP = 157 JPY)
         expectDisplay("1 euro to dollars", "1.09 USD")
@@ -694,7 +695,7 @@ struct CalcTests {
         expectDisplay("ratio of 3 to 5", "3 : 5")
         expectDisplay("ratio of 4 to 6", "2 : 3")
         expectDisplay("ratio of 1920 to 1080", "16 : 9")
-        expectBadges("15% tip on 42", source: "Expression", target: "Result")
+        expectBadges("15% tip on 42", source: "Expression", target: "Tip")
 
         // List aggregates and snapping, both of which need the comma token
         expectDisplay("average of 10, 20, 30", "20")
@@ -753,24 +754,28 @@ struct CalcTests {
         expectBadgesAt("time in ist", source: "UTC", target: "Kolkata")
 
         // Business days skip weekends. The clock is Fri 2026-07-24, so every hop crosses one.
-        expectDisplayAt("today + 1 business day", "Monday, 27 July")
-        expectDisplayAt("today + 5 business days", "Friday, 31 July")
-        expectDisplayAt("today - 1 business day", "Thursday, 23 July")
-        expectDisplayAt("today - 3 business days", "Tuesday, 21 July")
-        expectDisplayAt("tomorrow + 10 work days", "Friday, 7 August")
-        expectDisplayAt("today + 15 workdays", "Friday, 14 August")
-        expectDisplayAt("today + 5 weekdays", "Friday, 31 July")
+        expectDisplayAt("today + 1 business day", "27 July")
+        expectDisplayAt("today + 5 business days", "31 July")
+        expectDisplayAt("today - 1 business day", "23 July")
+        expectDisplayAt("today - 3 business days", "21 July")
+        expectDisplayAt("tomorrow + 10 work days", "7 August")
+        expectDisplayAt("today + 15 workdays", "14 August")
+        expectDisplayAt("today + 5 weekdays", "31 July")
+        // Raycast's own shape: the weekday rides the badge rather than the date
+        expectBadgesAt("today + 5 business days", source: "Friday, 24 July", target: "Friday")
+        expectBadgesAt("today + 1 business day", source: "Friday, 24 July", target: "Monday")
         // The duration may lead, with `from` naming the anchor or `ago` implying today
-        expectDisplayAt("5 weekdays from now", "Friday, 31 July")
-        expectDisplayAt("10 business days from today", "Friday, 7 August")
-        expectDisplayAt("3 days from today", "Monday, 27 July")
-        expectDisplayAt("2 weeks ago", "Friday, 10 July")
-        expectDisplayAt("3 days ago", "Tuesday, 21 July")
+        expectDisplayAt("5 weekdays from now", "31 July")
+        expectDisplayAt("10 business days from today", "7 August")
+        expectDisplayAt("3 days from today", "27 July")
+        expectDisplayAt("2 weeks ago", "10 July")
+        expectDisplayAt("3 days ago", "21 July")
+        expectBadgesAt("5 weekdays from now", source: "Friday, 24 July", target: "Friday")
         // A month name with both a day and a year
-        expectDisplayAt("august 26 2026 + 15 workdays", "Wednesday, 16 September")
-        expectDisplayAt("august 26 2026 + 15 days", "Thursday, 10 September")
-        expectDisplayAt("26 august 2026 + 1 day", "Thursday, 27 August")
-        expectDisplayAt("august 26 2027 + 1 day", "Friday, 27 August, 2027")
+        expectDisplayAt("august 26 2026 + 15 workdays", "16 September")
+        expectDisplayAt("august 26 2026 + 15 days", "10 September")
+        expectDisplayAt("26 august 2026 + 1 day", "27 August")
+        expectDisplayAt("august 26 2027 + 1 day", "27 August, 2027")
         // The 8-hour unit is a different thing, and keeps answering as one
         expectDisplay("55h in workdays", "6.875 workdays")
         expectDisplay("3 workdays in hours", "24 hr")

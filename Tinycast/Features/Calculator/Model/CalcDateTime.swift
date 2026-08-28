@@ -69,12 +69,12 @@ enum CalcDateTime {
         guard let result = shifted else { return nil }
 
         let hasTime = anchor.hasTime && duration.subDay
-        let display = momentString(result, hasTime: hasTime, now: now, calendar: calendar)
+        let display = answerString(result, hasTime: hasTime, now: now, calendar: calendar)
         return CalcResult(
             expression: echo,
             sourceBadge: momentString(
                 anchor.date, hasTime: hasTime, now: now, calendar: calendar),
-            targetBadge: "Result",
+            targetBadge: weekdayName(result, calendar: calendar),
             payload: .value(
                 display: display, copyText: display))
     }
@@ -205,11 +205,12 @@ enum CalcDateTime {
                 : calendar.date(byAdding: duration.component, value: signed, to: base.date)
             guard let result = shifted else { return nil }
             let hasTime = base.hasTime || duration.subDay
-            let display = momentString(result, hasTime: hasTime, now: now, calendar: calendar)
+            let display = answerString(result, hasTime: hasTime, now: now, calendar: calendar)
             let sourceBadge = momentString(
                 base.date, hasTime: base.hasTime, now: now, calendar: calendar)
             return CalcResult(
-                expression: echo, sourceBadge: sourceBadge, targetBadge: "Result",
+                expression: echo, sourceBadge: sourceBadge,
+                targetBadge: weekdayName(result, calendar: calendar),
                 payload: .value(display: display, copyText: display))
         }
 
@@ -495,6 +496,17 @@ enum CalcDateTime {
         return hasTime ? "\(day) at \(timeString(date, calendar: calendar))" : day
     }
 
+    /// The weekday moves to the badge, so an answered moment leads with the date itself.
+    private static func answerString(
+        _ date: Date, hasTime: Bool, now: Date, calendar: Calendar
+    ) -> String {
+        let sameYear =
+            calendar.component(.year, from: date) == calendar.component(.year, from: now)
+        let day = format(
+            date, calendar: calendar, pattern: sameYear ? "d MMMM" : "d MMMM, yyyy")
+        return hasTime ? "\(day) at \(timeString(date, calendar: calendar))" : day
+    }
+
     private static func dateString(_ date: Date, now: Date, calendar: Calendar) -> String {
         let sameYear =
             calendar.component(.year, from: date) == calendar.component(.year, from: now)
@@ -504,6 +516,11 @@ enum CalcDateTime {
 
     private static func timeString(_ date: Date, calendar: Calendar) -> String {
         format(date, calendar: calendar, pattern: "h:mm a")
+    }
+
+    /// The answer's own weekday, which the date itself never spells out.
+    private static func weekdayName(_ date: Date, calendar: Calendar) -> String {
+        format(date, calendar: calendar, pattern: "EEEE")
     }
 
     private static func format(_ date: Date, calendar: Calendar, pattern: String) -> String {

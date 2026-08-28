@@ -67,6 +67,12 @@ against a fixed clock.
 - **D** — difference between two moments: `jul 4 - today`
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 
+**An answered moment badges its weekday.** Grammars C and E resolve to a date, and the day of the
+week is the thing a date does not say out loud — so `5 weekdays from now` reads `4 September` under
+a `Friday` pill rather than repeating the weekday inside the date and badging it `Result`.
+`answerString` is `momentString` without the leading `EEEE` for exactly that reason; the source
+badge keeps its own weekday, since nothing else on the card carries it.
+
 A bare, recurring date or time resolves by _bias_: `till` takes the upcoming occurrence, `since` the
 most recent past one; an absolute date ignores the bias. Grammar D only engages when at least one
 operand contains a letter, because two letter-free operands (`5/2 - 1/2`) are equally valid as
@@ -221,6 +227,10 @@ and currency paths so a spelled-out word never outranks a measurement:
 The list forms are the reason `CalcToken` carries a `comma` case. It is meaningful only here — every
 other path rejects it — and a comma **between digits** is still the grouping separator it always was,
 so `1,000 + 234` is unchanged and a bare `10,5` stays silent.
+
+Each of these badges what its number **is** — `Tip`, `Discounted`, `Percentage`, `Total`, `Ratio`,
+`Average`, `Sum`, `Minimum`, `Maximum`, `Rounded` — rather than the bare `Result` that says nothing
+the card doesn't already show. `min` and `max` are only told apart by it.
 
 ## Modulo
 
