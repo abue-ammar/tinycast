@@ -43,10 +43,16 @@ project settings in `project.yml`, run `xcodegen generate` and commit the result
 
 Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Every
 persisted thing is keyed by bundle id — `~/Library/Preferences/<id>.plist` (settings and hotkey
-bindings), `~/Library/Caches/<id>/` (clipboard history, calculator history, exchange rates, frequent
-emoji), `~/Library/Application Support/<id>/` (the onboarding marker, Notes and snippets), the
-`SMAppService` login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can
-neither read nor clobber an installed app's state, and both run side by side.
+bindings), `~/Library/Application Support/<id>/` (the onboarding marker, Notes, snippets, quicklinks,
+clipboard history, calculator history, launch ranking and frequent emoji),
+`~/Library/Caches/<id>/` (exchange rates, the update check, staged downloads), the `SMAppService`
+login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can neither read
+nor clobber an installed app's state, and both run side by side.
+
+**What earns a place in Caches is refetchable, and nothing else.** Anything the user would notice the
+loss of goes in Application Support: `~/Library/Caches` is excluded from Time Machine and the system
+reclaims it under disk pressure without saying so. `Tinycast/Migration/StorageRelocation.swift` moves
+an older layout across on first launch, and is deleted on 2026-09-05.
 
 Consequences worth knowing:
 

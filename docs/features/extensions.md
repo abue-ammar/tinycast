@@ -448,7 +448,7 @@ never shares with an installed copy.
 | Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |
 | Favorites, hidden items | `UserDefaults` → `favoriteApps`, `hiddenItemKeys` | yes |
 | User alias | `UserDefaults` → `launcherAliases` | yes |
-| Launch ranking | `Caches/<bundle id>/launcher-ranking.json` | yes |
+| Launch ranking | `launcher-ranking.json` | yes |
 
 `ExtensionCatalog.safeName` maps an npm-style name onto one path segment, and is the **only** copy of
 that mapping — a second one that drifts orphans every file the first one wrote.

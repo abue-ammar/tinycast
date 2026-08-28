@@ -150,16 +150,16 @@ and use the system handler, once, without changing what is saved.
 ~/Library/Application Support/<bundle-id>/quicklinks.sqlite3
 ```
 
-Application Support, not Caches: quicklinks are **authored data, not a regenerable cache**. That one
-fact decides the two ways `QuicklinkStore` differs from `ClipboardStore`, which it otherwise mirrors
-(WAL, `PRAGMA table_info` column sniffing plus `ALTER TABLE` for migrations, prepared statements, an
+Quicklinks are **authored data**, which decides the one way `QuicklinkStore` differs from
+`ClipboardStore` — they are neighbours in Application Support, and otherwise mirror each other (WAL,
+`PRAGMA table_info` column sniffing plus `ALTER TABLE` for migrations, prepared statements, an
 `isolated deinit`):
 
-- The database lives beside the snippets library rather than in the cache.
 - **A database that won't open is never deleted.** `ClipboardStore` discards and recreates a corrupt
-  file because history is regenerable; doing that here would destroy the user's library. The store
-  publishes `isAvailable == false`, every mutation refuses with `QuicklinkError.storageUnavailable`,
-  and the pane says so. `Tests/quicklink-test.swift` asserts the file survives byte-for-byte.
+  file because a history is captured rather than authored; doing that here would destroy the user's
+  library. The store publishes `isAvailable == false`, every mutation refuses with
+  `QuicklinkError.storageUnavailable`, and the pane says so. `Tests/quicklink-test.swift` asserts the
+  file survives byte-for-byte.
 
 Editing preserves the UUID, and with it the quicklink's shortcut, favorite slot, visibility and
 learned ranking. Deleting goes through `AppCore`, which unwinds all four before removing the row.

@@ -144,14 +144,14 @@ final class ClipboardStore {
     @ObservationIgnored private var staleImagesStmt: OpaquePointer?
     @ObservationIgnored private var deleteStaleStmt: OpaquePointer?
 
-    /// `directory` defaults to the per-channel cache; the harness passes a throwaway one.
+    /// `directory` defaults to the per-channel store; the harness passes a throwaway one.
     init(directory: URL? = nil) {
         let base = directory ?? Self.defaultDirectory
         imagesDir = base.appendingPathComponent("images", isDirectory: true)
         dbURL = base.appendingPathComponent("clipboard.sqlite3")
         try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
         if !openDatabase() {
-            // A regenerable cache: discard a corrupt or outdated one and start over.
+            // Captured, not authored: discard a corrupt or outdated database and start over.
             closeDatabase()
             for suffix in ["", "-wal", "-shm"] {
                 try? FileManager.default.removeItem(atPath: dbURL.path + suffix)
@@ -160,11 +160,11 @@ final class ClipboardStore {
         }
     }
 
-    /// Under Caches, history being regenerable; "Clear History" is the durable control.
+    /// Application Support, not Caches: a history the OS may reclaim is not a history.
     private static var defaultDirectory: URL {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
         return FileManager.default
-            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(bundleID, isDirectory: true)
     }
 

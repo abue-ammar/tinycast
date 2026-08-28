@@ -9,6 +9,11 @@ struct TinycastApp: App {
     // Channel-aware: "Tinycast", "Tinycast Dev", or "Tinycast Beta".
     private let appName = Bundle.main.appDisplayName
 
+    /// Before `body`, and so before the first `AppCore.shared`: no store may open at the old path.
+    init() {
+        StorageRelocation.run()
+    }
+
     var body: some Scene {
         MenuBarExtra(isInserted: $showInMenuBar) {
             if let meeting = AppCore.shared.calendarCoordinator.menuBarEvent {

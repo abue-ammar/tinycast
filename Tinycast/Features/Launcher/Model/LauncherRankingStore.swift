@@ -8,7 +8,7 @@ struct LauncherRankingRecord: Codable, Hashable, Sendable {
     var lastUsed: Date
 }
 
-/// Learns which result a query leads to, as bounded on-device frecency data in Caches.
+/// Learns which result a query leads to, as bounded on-device frecency data.
 @MainActor
 @Observable
 final class LauncherRankingStore {
@@ -155,10 +155,11 @@ final class LauncherRankingStore {
         }
     }
 
+    /// Application Support, not Caches: relearning a ranking takes the user weeks of use.
     private static func defaultFileURL() -> URL {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
         let base = FileManager.default
-            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(bundleID, isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appendingPathComponent("launcher-ranking.json")

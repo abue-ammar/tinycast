@@ -6,8 +6,10 @@
   If the writer and the poller ever disagree, the app re-captures its own pastes in a loop.
 - **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so
   `clipboard-test` can compile it standalone. It uses `isolated deinit` for its SQLite teardown.
-- A database that cannot be opened is deleted and recreated. That is only sound because history is
-  regenerable — `QuicklinkStore` deliberately does the opposite.
+- A database that cannot be opened is deleted and recreated. That is sound because a history is
+  captured rather than authored, and there is no UI for an unavailable clipboard — `QuicklinkStore`
+  deliberately does the opposite. It is **not** a licence to treat the file as disposable: it lives in
+  Application Support precisely because nothing else can put it back.
 - **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` stays
   `text`/`image` — the two things capture can tell apart — so improving the classifier is a code
   change rather than a database migration plus a backfill.
@@ -21,8 +23,13 @@ pasteboard and the poller skips anything carrying it.
 ## Store
 
 `ClipboardStore` is SQLite-backed: rows plus a trigram FTS5 index in `clipboard.sqlite3`, with image
-blobs as loose PNG files, all under `~/Library/Caches/<bundle-id>/`. The newest 1000 rows are mirrored
-in the observable `items` window; FTS search reaches older rows.
+blobs as loose PNG files, all under `~/Library/Application Support/<bundle-id>/`. The newest 1000 rows
+are mirrored in the observable `items` window; FTS search reaches older rows.
+
+**Application Support, not Caches.** `~/Library/Caches` is excluded from Time Machine and the system
+may reclaim it at any time without telling the app, so a history kept there survives neither a restore
+nor a full disk — while the retention setting offers **Forever** and a pin is an explicit act. The
+store used to live there; `StorageRelocation` moves an existing one across, once.
 
 A database that won't open is deleted and recreated (worst case the store degrades to session-only
 in-memory history).
