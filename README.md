@@ -44,23 +44,31 @@ browser: JavaScriptCore ships with macOS, so that costs no extra binary size.
 
 ## Install
 
+First, add the tap:
+
 ```sh
 brew trust --tap abue-ammar/tinycast   # required for third-party taps
 brew tap abue-ammar/tinycast
-brew install --cask tinycast          # stable
-brew install --cask tinycast@beta     # beta  (installs side-by-side)
-brew install --cask tinycast-sequoia  # stable channel  (macOS 15 Sequoia)
 ```
 
-Tinycast also runs on macOS 15 Sequoia — install the `tinycast-sequoia` cask above.
+Then run the one line that matches your Mac:
 
-Each channel is a separate app (`Tinycast.app`, `Tinycast Beta.app`) with its own settings and
-permissions, so you can run stable next to the beta.
+| Your Mac | Install |
+| --- | --- |
+| Apple silicon, macOS 26 or newer | `brew install --cask tinycast` |
+| Intel, macOS 26 | `brew install --cask tinycast-universal` |
+| macOS 15 Sequoia | `brew install --cask tinycast-sequoia` |
 
-Tinycast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
-automatically on every install and update, so there's nothing to run. (If you download the DMG
-directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
-"/Applications/Tinycast.app"`.)
+Not sure which you have? **Apple menu → About This Mac.** Homebrew checks too, and refuses the
+wrong one.
+
+Want early builds? `brew install --cask tinycast@beta` puts `Tinycast Beta.app` beside the stable
+app, with its own settings and permissions. Apple silicon, macOS 26+.
+
+Homebrew clears the macOS quarantine flag on every install and update, so there is nothing else to
+run. Downloading a DMG from [Releases](https://github.com/abue-ammar/tinycast/releases) instead?
+Tinycast is self-signed, so clear the flag once:
+`xattr -dr com.apple.quarantine "/Applications/Tinycast.app"`.
 
 ## Permissions
 

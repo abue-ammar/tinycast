@@ -16,10 +16,18 @@ enum ReleaseFeed {
     /// Where releases come from, and what every `@handle` and `#304` in their notes points at.
     static let repository = "abue-ammar/tinycast"
 
-    /// The newest release this channel accepts, ignoring drafts and anything without a zip.
-    static func newest(from data: Data, channel: ReleaseChannel) -> AvailableRelease? {
+    /// The filename the release workflow gives the universal artifact — the only one with an
+    /// x86_64 slice, and so the only one an Intel Mac can install.
+    private static let universalMarker = "-Universal-"
+
+    /// The newest release this channel accepts, ignoring drafts and anything without a usable zip.
+    static func newest(
+        from data: Data, channel: ReleaseChannel, architecture: ReleaseArchitecture
+    ) -> AvailableRelease? {
         guard let entries = try? JSONDecoder().decode([Entry].self, from: data) else { return nil }
-        return entries.compactMap { release(from: $0, channel: channel) }.max { $0.version < $1.version }
+        return entries
+            .compactMap { release(from: $0, channel: channel, architecture: architecture) }
+            .max { $0.version < $1.version }
     }
 
     /// The release worth offering: strictly newer than what is running, and not one already skipped.
@@ -31,14 +39,14 @@ enum ReleaseFeed {
         return release
     }
 
-    private static func release(from entry: Entry, channel: ReleaseChannel) -> AvailableRelease? {
+    private static func release(
+        from entry: Entry, channel: ReleaseChannel, architecture: ReleaseArchitecture
+    ) -> AvailableRelease? {
         guard !entry.draft, channel.accepts(prerelease: entry.prerelease),
             let version = AppVersion(entry.tagName),
             // A tag disagreeing with the prerelease flag is a mis-published release, not an update.
             version.isPrerelease == entry.prerelease,
-            // The zip, never the DMG: the updater expands an archive rather than mounting a volume,
-            // so a release published without one is not something this app can install.
-            let asset = entry.assets.first(where: { $0.name.hasSuffix(".zip") })
+            let asset = asset(from: entry.assets, for: architecture)
         else { return nil }
         return AvailableRelease(
             version: version,
@@ -47,6 +55,19 @@ enum ReleaseFeed {
             assetURL: asset.browserDownloadURL,
             assetSize: asset.size,
             publishedAt: entry.publishedAt.flatMap { try? Date($0, strategy: .iso8601) })
+    }
+
+    /// The zip this Mac can install — never the DMG, since the updater expands an archive rather
+    /// than mounting a volume. Intel is offered nothing before a thin build it cannot launch.
+    private static func asset(
+        from assets: [Entry.Asset], for architecture: ReleaseArchitecture
+    ) -> Entry.Asset? {
+        let zips = assets.filter { $0.name.hasSuffix(".zip") }
+        let universal = zips.first { $0.name.contains(universalMarker) }
+        switch architecture {
+        case .intel: return universal
+        case .appleSilicon: return zips.first { !$0.name.contains(universalMarker) } ?? universal
+        }
     }
 
     private struct Entry: Decodable {
