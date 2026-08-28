@@ -793,6 +793,21 @@ struct CalcTests {
         expectNilAt("time in 4")
         expectDisplay("5 + 3", "8")
 
+        // Dotted dates are day-first, the convention that writes them
+        expectDisplayAt("19.2.27 + 3", "22 February, 2027")
+        expectDisplayAt("19.02.2027 + 3", "22 February, 2027")
+        expectDisplayAt("19.2.27 - 3", "16 February, 2027")
+        expectDisplayAt("31.12.26 + 1", "1 January, 2027")
+        expectDisplayAt("19.2.27 + 3 weeks", "12 March, 2027")
+        expectBadgesAt("19.2.27 + 3", source: "Friday, 19 February, 2027", target: "Monday")
+        // A decimal is not a date, and a version number is not one either
+        expectDisplay("1.5 + 3", "4.5")
+        expectDisplay("99.99 + 0.01", "100")
+        expectNilAt("1.2.3 + 1")
+        expectNilAt("1.5.5 + 3")
+        // An impossible day still earns no card
+        expectNilAt("30.2.27 + 1")
+
         // Accented spellings resolve, since the identifiers carry none
         expectDisplayAt("time in são paulo", "9:18 PM (yesterday)")
         expectDisplayAt("time in sao paulo", "9:18 PM (yesterday)")

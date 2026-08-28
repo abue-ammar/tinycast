@@ -81,6 +81,11 @@ operand contains a letter, because two letter-free operands (`5/2 - 1/2`) are eq
 arithmetic and are left to the calculator rather than silently read as dates. Two-digit years expand
 the way date pickers do — 00–68 to the 2000s, 69–99 to the 1900s.
 
+A **dotted** date is day-first (`19.2.27` is 19 February 2027), matching the convention that writes
+it, where the slashed form stays month-first. It needs three parts and a two- or four-digit year,
+which is what separates a date from a decimal and from a version number: `1.5 + 3` is 4.5 and
+`1.2.3 + 1` earns no card.
+
 Grammar G needs the qualifier. A lone `tomorrow` is an app search, so only `at <time>` or a
 leading `next` / `last` earns a card — the same rule that keeps `today` and `july` silent.
 

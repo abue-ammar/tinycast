@@ -477,6 +477,16 @@ enum CalcDateTime {
                 return Moment(date: date, hasTime: false)
             }
         }
+        // Dotted dates are day-first, the convention that writes them: `19.2.27` is 19 February.
+        // A written year is what separates one from a version number, so `1.2.3` stays a search.
+        if atom.contains(".") {
+            let parts = atom.split(separator: ".").map(String.init)
+            guard parts.count == 3, let day = Int(parts[0]), let month = Int(parts[1]),
+                let year = Int(parts[2]), parts[2].count == 2 || parts[2].count == 4,
+                let date = makeDate(fullYear(year), month, day, calendar)
+            else { return nil }
+            return Moment(date: date, hasTime: false)
+        }
         return nil
     }
 
