@@ -174,6 +174,11 @@ A trailing `+ 2h` / `- 30 min` shifts the answer before it is converted, so `5pm
 stays one query rather than needing two. Only sub-day units qualify, since a zone answer is a clock
 time, and `5pm london in sf + 2 kg` is silent rather than wrong.
 
+The offset's unit may be left out — `time in sao paulo + 5` is five hours — because a clock answer
+admits no other reading. The implication is the **offset's alone**: `time in 4` still names no zone
+and stays silent, and a bare `5 + 3` is arithmetic exactly as it was. It mirrors the bare number a
+moment already takes in grammar C.
+
 `diff paris` answers how far a zone runs from the Mac's own, and a duration may stand where a zone
 would (`time in 4 hours`, `time in 4 hours in san francisco`) — the zone table is tried first, so a
 city always outranks a duration. City names are matched **diacritic-folded**, because the identifiers

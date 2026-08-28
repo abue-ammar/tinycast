@@ -66,7 +66,7 @@ enum CalcTimeZone {
         for separator in [" + ", " - "] {
             guard let range = query.range(of: separator, options: .backwards) else { continue }
             let tail = String(query[range.upperBound...])
-            guard let duration = parseDuration(tail) else { continue }
+            guard let duration = parseDuration(tail, impliesHours: true) else { continue }
             let sign = separator == " - " ? -1 : 1
             return (String(query[..<range.lowerBound]), (duration.count * sign, duration.component))
         }
@@ -74,7 +74,9 @@ enum CalcTimeZone {
     }
 
     /// `2h`, `90 min`, `2 hours` — sub-day only, since a zone answer is a clock time.
-    private static func parseDuration(_ text: String) -> (count: Int, component: Calendar.Component)? {
+    private static func parseDuration(
+        _ text: String, impliesHours: Bool = false
+    ) -> (count: Int, component: Calendar.Component)? {
         let compact = text.replacingOccurrences(of: " ", with: "")
         let digits = compact.prefix { $0.isNumber }
         guard let count = Int(digits), count < 100_000 else { return nil }
@@ -82,6 +84,8 @@ enum CalcTimeZone {
         case "h", "hr", "hrs", "hour", "hours": return (count, .hour)
         case "m", "min", "mins", "minute", "minutes": return (count, .minute)
         case "s", "sec", "secs", "second", "seconds": return (count, .second)
+        // A clock answer makes hours the only sensible unit for a bare `+ 5`.
+        case "" where impliesHours: return (count, .hour)
         default: return nil
         }
     }

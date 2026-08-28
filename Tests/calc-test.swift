@@ -785,6 +785,14 @@ struct CalcTests {
         expectDisplayAt("time in 90 min", "1:48 AM")
         expectDisplayAt("time in 4 hours in san francisco", "9:18 PM (yesterday)")
 
+        // A bare offset on a clock answer is hours, the unit the answer already implies
+        expectDisplayAt("time in tokyo + 2", "11:18 AM")
+        expectDisplayAt("time in tokyo - 2", "7:18 AM (tomorrow)")
+        expectDisplayAt("5pm london in sf + 3", "12:00 PM")
+        // Only the offset implies it: a bare number is still no zone, and plain math is untouched
+        expectNilAt("time in 4")
+        expectDisplay("5 + 3", "8")
+
         // Accented spellings resolve, since the identifiers carry none
         expectDisplayAt("time in são paulo", "9:18 PM (yesterday)")
         expectDisplayAt("time in sao paulo", "9:18 PM (yesterday)")
