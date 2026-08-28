@@ -50,7 +50,7 @@ enum CalcPercent {
     /// The tip alone, not the total: it is the number the phrase asks for.
     private static func parseTip(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard let tip = tokens.firstIndex(of: .ident("tip")), tip >= 2,
-            tokens[tip - 1] == .op("%"), tip + 1 < tokens.count,
+            tip + 2 < tokens.count, tokens[tip - 1] == .op("%"),
             tokens[tip + 1] == .ident("on") || tokens[tip + 1] == .ident("of"),
             let pct = CalcParser.evaluate(Array(tokens[0..<(tip - 1)])),
             let bill = CalcParser.evaluate(Array(tokens[(tip + 2)...]))
@@ -62,7 +62,8 @@ enum CalcPercent {
     }
 
     private static func parseWhatPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        guard let isIdx = tokens.firstIndex(of: .ident("is")), isIdx + 3 < tokens.count,
+        guard let isIdx = tokens.firstIndex(of: .ident("is")), isIdx + 4 <= tokens.count,
+            isIdx + 3 < tokens.count,
             tokens[isIdx + 1] == .ident("what"), tokens[isIdx + 2] == .op("%"),
             tokens[isIdx + 3] == .ident("of"),
             let x = CalcParser.evaluate(Array(tokens[0..<isIdx])),
@@ -124,7 +125,8 @@ enum CalcPercent {
     /// Snaps to a step, not to a digit count, so `nearest 5` means multiples of 5.
     private static func parseRoundToNearest(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard tokens.count >= 5, tokens[0] == .ident("round"),
-            let toIdx = tokens.firstIndex(of: .ident("to")), tokens[toIdx + 1] == .ident("nearest"),
+            let toIdx = tokens.firstIndex(of: .ident("to")), toIdx + 2 < tokens.count,
+            tokens[toIdx + 1] == .ident("nearest"),
             let value = CalcParser.evaluate(Array(tokens[1..<toIdx])),
             let step = CalcParser.evaluate(Array(tokens[(toIdx + 2)...])), step != 0
         else { return nil }

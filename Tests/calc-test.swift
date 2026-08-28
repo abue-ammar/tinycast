@@ -812,6 +812,15 @@ struct CalcTests {
         // An impossible day still earns no card
         expectNilAt("30.2.27 + 1")
 
+        // Malformed input a fuzzer found: both of these read past the end of the token array
+        expectNil("round is next round to")
+        expectNilAt(": from to at sf")
+        expectNil("round to")
+        expectNil("round 5 to")
+        expectNilAt(": at sf")
+        expectNil("is what % of")
+        expectNil("tip on")
+
         // The ordinal dot German and Austrian dates write after the day
         expectDisplayAt("28. aug + 3", "31 August")
         expectDisplayAt("28. august + 3", "31 August")

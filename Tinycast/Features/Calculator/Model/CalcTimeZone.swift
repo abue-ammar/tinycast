@@ -182,7 +182,8 @@ enum CalcTimeZone {
         guard !text.isEmpty else { return nil }
 
         let parts = text.split(separator: ":", maxSplits: 1).map(String.init)
-        guard let hour = Int(parts[0]) else { return nil }
+        // A lone ":" splits to nothing, so the first part is not guaranteed to exist.
+        guard let first = parts.first, let hour = Int(first) else { return nil }
         let minute = parts.count > 1 ? Int(parts[1]) : 0
         guard let minute, (0...59).contains(minute) else { return nil }
 
