@@ -214,6 +214,8 @@ enum CalcQuantity {
                 if op == "-" || op == "+" { attachNext = isSign(at: index, tokens) }
             case .arrow:
                 add("→")
+            case .comma:
+                add(",", attached: true)
             }
             index += 1
         }
@@ -280,6 +282,12 @@ private struct QuantityParser {
 
     private mutating func parseExpression(minBindingPower: Int) -> QuantityValue? {
         guard var left = parseOperand() else { return nil }
+        if let target = peekAdditiveConversion() {
+            position += 2
+            operationCount += 1
+            guard let converted = converted(left, to: target) else { return nil }
+            left = converted
+        }
         while let binary = peekBinary(left: left), binary.bindingPower >= minBindingPower {
             if binary.consumesToken { position += 1 }
             operationCount += 1
@@ -291,6 +299,16 @@ private struct QuantityParser {
             left = combined
         }
         return left
+    }
+
+    /// A mid-expression `to` only when `+`/`-` follows it: `to usd * 30` stays genuinely ambiguous.
+    private func peekAdditiveConversion() -> String? {
+        guard position + 2 < tokens.count, CalcUnits.isConnector(tokens[position]),
+            case .ident(let name) = tokens[position + 1],
+            CalcUnits.byName[name] != nil || CalcCurrency.byName[name] != nil,
+            case .op(let next) = tokens[position + 2], next == "+" || next == "-"
+        else { return nil }
+        return name
     }
 
     /// An operator, its binding power, its right operand's minimum, and whether it consumes.

@@ -10,6 +10,8 @@ enum CalcToken: Equatable, Sendable {
     case ident(String)
     case op(Character)  // + - * / ^ ! % ( )
     case arrow  // -> or →
+    /// Only `CalcPercent`'s list forms accept one; every other path rejects it.
+    case comma
 }
 
 enum CalcTokenizer {
@@ -101,6 +103,12 @@ enum CalcTokenizer {
                             continue
                         }
                     }
+                    // A slashed rate ("km/h") is one unit, so it must beat the division operator.
+                    if let rate = slashedUnit(chars, i) {
+                        tokens.append(.ident(rate.name))
+                        i = rate.end
+                        continue
+                    }
                 }
                 var text = ""
                 while i < chars.count {
@@ -137,6 +145,8 @@ enum CalcTokenizer {
             switch ch {
             case "+", "(", ")", "!", "%", "^":
                 tokens.append(.op(ch))
+            case ",":
+                tokens.append(.comma)
             case "*", "×":
                 tokens.append(.op("*"))
             case "/", "÷":
@@ -161,6 +171,19 @@ enum CalcTokenizer {
             i += 1
         }
         return tokens
+    }
+
+    /// Only a spelling the table resolves, so `6/2(1+2)` keeps dividing.
+    private static func slashedUnit(_ chars: [Character], _ start: Int) -> (name: String, end: Int)? {
+        var numeratorEnd = start
+        while numeratorEnd < chars.count, chars[numeratorEnd].isLetter { numeratorEnd += 1 }
+        guard numeratorEnd < chars.count, chars[numeratorEnd] == "/" else { return nil }
+        var denominatorEnd = numeratorEnd + 1
+        while denominatorEnd < chars.count, chars[denominatorEnd].isLetter { denominatorEnd += 1 }
+        guard denominatorEnd > numeratorEnd + 1 else { return nil }
+        let name = String(chars[start..<denominatorEnd]).lowercased()
+        guard CalcUnits.byName[name] != nil else { return nil }
+        return (name, denominatorEnd)
     }
 
     /// Whether the `k` at `index` is a thousands suffix rather than Kelvin or a unit's head.
@@ -203,10 +226,19 @@ enum CalcParser {
     fileprivate static let functions: [String: @Sendable (Double) -> Double] = [
         "sqrt": { sqrt($0) }, "log": { log10($0) }, "ln": { log($0) }, "sin": { sin($0) },
         "cos": { cos($0) }, "tan": { tan($0) }, "abs": { abs($0) }, "floor": { floor($0) },
-        "ceil": { ceil($0) }, "round": { $0.rounded() }
+        "ceil": { ceil($0) }, "round": { $0.rounded() },
+        "cot": { 1 / tan($0) }, "sec": { 1 / cos($0) }, "csc": { 1 / sin($0) },
+        "asin": { asin($0) }, "acos": { acos($0) }, "atan": { atan($0) },
+        "arcsin": { asin($0) }, "arccos": { acos($0) }, "arctan": { atan($0) },
+        "sinh": { sinh($0) }, "cosh": { cosh($0) }, "tanh": { tanh($0) },
+        "asinh": { asinh($0) }, "acosh": { acosh($0) }, "atanh": { atanh($0) },
+        "cbrt": { cbrt($0) }, "exp": { exp($0) }, "log2": { log2($0) },
+        "sign": { $0 > 0 ? 1 : ($0 < 0 ? -1 : 0) }, "trunc": { $0.rounded(.towardZero) }
     ]
 
-    fileprivate static let constants: [String: Double] = ["pi": .pi, "π": .pi, "e": M_E]
+    fileprivate static let constants: [String: Double] = [
+        "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2
+    ]
 
     /// Factorial for non-negative integers; 170! is the last value representable as a Double.
     static func factorial(_ value: Double) -> Double? {

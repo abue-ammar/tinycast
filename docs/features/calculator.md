@@ -15,6 +15,17 @@ in (see Currency below).
 - **`CalcEngine.evaluate` never fetches** — it takes a finished `CurrencyRates?`, nil meaning no
   snapshot has landed yet. `CurrencyRateStore` owns the fetch and the cacheless `.ephemeral` session,
   and `CurrencyFeed` — pure, so the harness covers it — turns the payloads into that snapshot.
+- **The time-zone table is Foundation's, never generated and never hand-listed.**
+  `TimeZone.knownTimeZoneIdentifiers` already carries the whole IANA database, so `CalcTimeZone`
+  builds its city index from that on first use rather than shipping a copy that would rot every time
+  IANA moves a zone. `TimeZone.abbreviationDictionary` stays deliberately unused — it holds 51
+  entries and its `BDT` is the Bangladeshi taka. The home zone is read off the **injected calendar**,
+  never `TimeZone.current`, which is what keeps the path pure and the harness deterministic.
+  `localizedName` needs a `Locale`, so a badge is the identifier's own city component instead.
+- **A workday is 8 hours, and nothing consults a calendar.** Weekends and public holidays would make
+  the same query answer differently on two Macs, and the only supported source for them is EventKit,
+  whose Full Calendar Access grant a calculator must never provoke mid-keystroke. `workdays` is
+  therefore an ordinary time unit, and `calendarEnabled` stays the Calendar feature's own consent.
 - **`CurrencyData.generated.swift` is emitted by `node Scripts/gen-currencies.js`** and never hand-edited.
   Three currency tables are hand-maintained, all in `CalcCurrency`: `contested`, the nouns several
   currencies share (`dollars`, `pounds`); `isoNames`, the standard's own names where CLDR substitutes
@@ -27,18 +38,22 @@ in (see Currency below).
 
 1. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
-2. Numeric reject
-3. Tokenize
-4. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
-5. Base conversion
-6. Explicit unit conversion (`10km to mi`)
-7. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`,
+2. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
+   because a zone phrase is words rather than calculator input
+3. Numeric reject
+4. Tokenize
+5. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
+6. Base conversion
+7. **Timespan** (`145 mins to timespan` → `2 hr 25 min`)
+8. Explicit unit conversion (`10km to mi`)
+9. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`,
    `(20 sgd to usd) * 30`), which also answers a bare amount (`1 usd`, `1 btc`) in the Mac's own
    currency
-8. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
-9. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
+10. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
+11. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
    `CalcUnits.parseBareConversion` + the `autoTargets` map)
-10. Plain arithmetic
+12. Natural-language percent, ratio and list forms (`CalcPercent`)
+13. Plain arithmetic
 
 Date/time depends on the clock, so it takes an injected `now` / `calendar` — the public `evaluate(_:)`
 uses the live clock, and `evaluate(_:now:calendar:)` lets `calc-test.swift` assert exact strings
@@ -63,6 +78,14 @@ trailing `to` / `in` converts the complete expression. A conversion inside paren
 quantity, so `(20 sgd to usd) * 30` converts then multiplies. Percentages keep relative semantics
 for addition (`10kg + 20%` → `12 kg`) and act as fractional scalars for multiplication and division
 (`10kg * 3%` → `0.3 kg`, `10kg / 25%` → `40 kg`).
+
+A conversion may also appear **mid-expression, but only where `+` or `-` follows it**:
+`10kg to lb + 3lb` converts and then adds, without needing the parentheses it used to. The
+restriction is the whole point. `20 eur to usd * 30` has two honest readings — convert then scale,
+or convert into a scaled unit — so it stays silent and keeps asking for `(20 eur to usd) * 30`,
+while `+` and `-` carry no such ambiguity because a conversion target is never an addend.
+A **trailing** `to` is untouched by this and still converts the whole expression, so
+`10kg + 500g to lb` remains the sum in pounds rather than `10kg + (500g to lb)`.
 
 **The last unit typed decides the answer's unit.** `+` / `-` convert the _left_ side into the right
 operand's unit, so `5feet + 1m` is `2.524 m` and `10kg + 500g` is `10,500 g` — the unit you finished
@@ -94,11 +117,70 @@ An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace kee
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
 target makes the intent unambiguous (`273.15K to C`).
 
+A **slashed rate** (`km/h`, `m/s`, `mbit/s`) is one unit rather than a division, but only when the
+table knows the whole spelling: the tokenizer looks ahead from a letter run across a `/` to the next
+one and keeps them together only if `CalcUnits.byName` resolves the result. That is the same
+table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
+`10 m / 2` still divide while `1 km/x` stays silent.
+
+Beyond the core four, `CalcParser.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),
+the inverses (`asin`/`arcsin` through `atan`), the hyperbolics (`sinh`, `acosh`, …) and
+`cbrt`/`exp`/`log2`/`sign`/`trunc`, alongside the `tau` and `phi` constants. `sec` is also the
+abbreviation for seconds, which costs nothing: a unit position resolves through `CalcUnits` long
+before a bare name reaches the function table, so `10 sec to min` stays a duration.
+
 Scientific notation (`1e5` → `100,000`, `5e-3km`, `3e+2`) is read only while the exponent hugs the
 mantissa, which is what keeps `2 e` and `2e` reading as 2 × Euler's _e_ — an exponent needs digits
 after the `e`. Like `10k`, it tokenizes as a shorthand rather than a plain literal, so a lone `1e5`
 still earns a card where a lone `100000` deliberately doesn't. A literal that overflows to infinity
 (`1e400`) is treated as non-calculator input, not as a card.
+
+## Time zones
+
+`CalcTimeZone` answers `time in Tokyo`, `what time is it in London`, `5pm ldn in sf` and
+`9:30am in nyc`. It runs **before the tokenizer** — a zone phrase is words, and `5pm ldn in sf`
+is not calculator input — but its grammar always needs an `in` / `to` / `at` connector, so an
+ordinary app search never reaches the zone table at all.
+
+The source is the Mac's own zone unless the query names one, which is what makes `5pm london in sf`
+work without either side being local. That zone comes from the **injected calendar**, so `Model/`
+performs no environment read and `calc-test` pins UTC exactly as it pins the clock. A result that
+lands on another date is suffixed `(tomorrow)` / `(yesterday)` rather than silently reading as the
+same day — the copyable text stays the bare time.
+
+Two tables back it. `cities` is derived from `TimeZone.knownTimeZoneIdentifiers` on first use: 443
+identifiers keyed by their city component, ~0.8 ms to build and ~18 ns to query, so nothing is
+generated and no copy of tzdata is committed. `aliases` is the hand-written half, and the only place
+judgement lives — the abbreviations (`pst`, `cet`, `jst`), the nicknames a zone name doesn't carry
+(`sf`, `nyc`, `ldn`), and the renamed zones Foundation still resolves but no longer lists
+(`kolkata`, `saigon`). It is deliberately small and deliberately not slang, for the same reason
+`CalcCurrency` refuses `quid`.
+
+`aliases` also carries the **IATA airport codes** (`vie`, `lhr`, `nrt`, `sfo`), which no Foundation
+surface knows: `TimeZone(abbreviation:)` and `TimeZone(identifier:)` both return nil for every one,
+and the whole `abbreviationDictionary` is 51 zone abbreviations rather than airports. They are a
+curated product choice, so the list is the busiest airports rather than an attempt at all ~9,000.
+Two are deliberately absent: `MAD` is the Moroccan dirham, and `IST` is India Standard Time — a
+currency and a zone abbreviation both outrank an airport, the same ordering the rest of the file
+follows. The compiler enforces the rest: a duplicate key in the literal is a warning, which is what
+caught `syd` and `hkg` already being nicknames.
+
+Order settles the collisions. Time zones run **last** among the named paths, after units and
+currency, so `10 cordoba to usd` stays money and `1 cup to ml` stays volume. `cordoba` is the one
+word the zone and currency tables both claim.
+
+## Timespans
+
+`145 mins to timespan` breaks a duration into the units that fit it (`2 hr 25 min`), with zero
+parts dropped. Weeks are the largest step on purpose: a month is not a fixed number of seconds, so
+carrying one would make the answer depend on which month you meant. Only a time unit converts, so
+`10 km to timespan` stays silent.
+
+## Workdays
+
+`workdays` is a time unit of 8 hours, which answers `55h in workdays` and `3 workdays in hours`
+with no calendar involved. Weekends and public holidays are deliberately not modelled — see the
+invariant above.
 
 ## Implicit multiplication
 
@@ -112,6 +194,23 @@ starts an implicit product. Adjacent _numbers_ never do — `5 3` stays an app s
 currency name is a constant or function, so `10km` keeps its own path. `QuantityParser.peekBinary`
 carries the same `(` rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
 `2*(3)kg`); adjacency there still means the composite-quantity `+` described above, never a product.
+
+## Natural-language forms
+
+`CalcPercent` owns the phrasings the arithmetic parser can't see, all of which run after the unit
+and currency paths so a spelled-out word never outranks a measurement:
+
+- `20% off 500` → 400, and `50 as % of 200` → 25%
+- `15% tip on 42` → 6.3 — the tip alone, which is what the phrase asks for
+- `50 is what % of 200` → 25%, the spoken form of `as % of`
+- `30 is 20% of what` → 150, solving for the whole instead of the share
+- `ratio of 1920 to 1080` → `16 : 9`, reduced by GCD; integers only
+- `average|sum|min|max of 10, 20, 30`, separated by `,` or `and`
+- `round 47 to nearest 5` → 45, snapping to a step rather than a digit count
+
+The list forms are the reason `CalcToken` carries a `comma` case. It is meaningful only here — every
+other path rejects it — and a comma **between digits** is still the grouping separator it always was,
+so `1,000 + 234` is unchanged and a bare `10,5` stays silent.
 
 ## Modulo
 

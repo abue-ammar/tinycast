@@ -563,7 +563,10 @@ struct CalcTests {
         // A trailing suffix reports through the same conversion the group uses.
         expectError("($10 + $5) to npr", "No exchange rate for NPR.")
         expectError("(1kg + 500g) to usd", "Cannot convert Weight to Currency.")
-        expectNil("20 eur to usd * 30")  // mid-expression `to` needs parens or a trailing suffix
+        // A mid-expression `to` converts before it adds; `* 30` stays ambiguous, so it needs parens
+        expectNil("20 eur to usd * 30")
+        expectNil("20 eur to usd / 2")
+        expectDisplay("20 eur to usd + 5 usd", "26.74 USD")
         expectDisplay("$10 +", "10.00 USD")
         expectBadges("$10 +", source: "Expression", target: "US Dollar")
         // Juxtaposition multiplies on either side of the amount, same as an explicit "*"
@@ -642,6 +645,126 @@ struct CalcTests {
         expectSnapshotThrows(
             "feed reported failure",
             fiat: Data(#"{"success":false,"source":"USD","quotes":{"USDEUR":0.9}}"#.utf8))
+
+        // Slashed rate spellings — the tokenizer keeps a known `unit/unit` whole
+        expectDisplay("100 km/h to mph", "62.13711922 mph")
+        expectDisplay("60 mph in km/h", "96.56064 km/h")
+        expectDisplay("5 m/s to km/h", "18 km/h")
+        expectDisplay("100 km/h", "62.13711922 mph")
+        expectExpression("100 km/h to mph", "100 km/h")
+        expectBadges("5 m/s to km/h", source: "Meters per Second", target: "Kilometers per Hour")
+        expectDisplay("100 mbit/s to mbps", "100 Mbps")
+        // An unknown pairing leaves the slash as division, so ordinary arithmetic is untouched
+        expectDisplay("10/2", "5")
+        expectDisplay("6/2(1+2)", "9")
+        expectDisplay("10 m / 2", "5 m")
+        expectNil("1 km/x")
+
+        // Workdays are 8 hours; weekends and holidays are a calendar's business, not a unit's
+        expectDisplay("55h in workdays", "6.875 workdays")
+        expectDisplay("3 workdays in hours", "24 hr")
+        expectDisplay("2 businessdays to hours", "16 hr")
+        expectBadges("55h in workdays", source: "Hours", target: "Workdays")
+
+        // The rest of the trig set, plus the constants that come with it
+        expectDisplay("cot(1)", "0.6420926159")
+        expectDisplay("sec(1)", "1.850815718")
+        expectDisplay("csc(1)", "1.188395106")
+        expectDisplay("asin(1)", "1.570796327")
+        expectDisplay("acos(1)", "0")
+        expectDisplay("arctan(1)", "0.7853981634")
+        expectDisplay("sinh(1)", "1.175201194")
+        expectDisplay("tanh(0)", "0")
+        expectDisplay("cbrt(27)", "3")
+        expectDisplay("log2(1024)", "10")
+        expectDisplay("exp(0)", "1")
+        expectDisplay("sign(-5)", "-1")
+        expectDisplay("trunc(3.7)", "3")
+        expectDisplay("2 tau", "12.56637061")
+        expectDisplay("phi * 2", "3.236067977")
+        // `sec` is also seconds, and a unit position still wins
+        expectDisplay("10 sec to min", "0.1666666667 min")
+        expectDisplay("30 sec + 1 min", "1.5 min")
+
+        // Percentage and ratio phrasings
+        expectDisplay("15% tip on 42", "6.3")
+        expectDisplay("20% tip of 80", "16")
+        expectDisplay("50 is what % of 200", "25%")
+        expectDisplay("30 is 20% of what", "150")
+        expectDisplay("ratio of 3 to 5", "3 : 5")
+        expectDisplay("ratio of 4 to 6", "2 : 3")
+        expectDisplay("ratio of 1920 to 1080", "16 : 9")
+        expectBadges("15% tip on 42", source: "Expression", target: "Result")
+
+        // List aggregates and snapping, both of which need the comma token
+        expectDisplay("average of 10, 20, 30", "20")
+        expectDisplay("avg of 1 and 2 and 3", "2")
+        expectDisplay("sum of 10, 20, 30", "60")
+        expectDisplay("max of 4, 9, 2", "9")
+        expectDisplay("min of 4, 9, 2", "2")
+        expectDisplay("sum of 2*3, 4", "10")
+        expectDisplay("round 47 to nearest 5", "45")
+        expectDisplay("round 12.3 to nearest 0.5", "12.5")
+        // A comma between digits is still a grouping separator, and one operand is not a list
+        expectDisplay("1,000 + 234", "1,234")
+        expectNil("average of 5")
+        expectNil("10,5")
+
+        // Timespans break a duration into the units that fit it
+        expectDisplay("145 mins to timespan", "2 hr 25 min")
+        expectDisplay("8700 s to timespan", "2 hr 25 min")
+        expectDisplay("90000 s to timespan", "1 day 1 hr")
+        expectDisplay("55 h to timespan", "2 day 7 hr")
+        expectDisplay("1000000 s to timespan", "1 wk 4 day 13 hr 46 min 40 s")
+        expectBadges("145 mins to timespan", source: "Minutes", target: "Timespan")
+        expectNil("10 km to timespan")
+
+        // Time zones. The clock is UTC-pinned, so every one of these is exact.
+        expectDisplayAt("time in tokyo", "9:18 AM")
+        expectDisplayAt("time in sf", "5:18 PM (yesterday)")
+        expectDisplayAt("what time is it in london", "1:18 AM")
+        expectDisplayAt("time in kolkata", "5:48 AM")
+        expectDisplayAt("time in utc", "12:18 AM")
+        expectBadgesAt("time in tokyo", source: "UTC", target: "Tokyo")
+        expectBadgesAt("time in sf", source: "UTC", target: "Los Angeles")
+        // A named source zone overrides the Mac's own, so neither side has to be local
+        expectDisplayAt("5pm london in sf", "9:00 AM")
+        expectDisplayAt("9:30am in nyc", "5:30 AM")
+        expectDisplayAt("5pm in tokyo", "2:00 AM (tomorrow)")
+        expectBadgesAt("5pm london in sf", source: "London", target: "Los Angeles")
+        // Aliases cover what the identifiers don't spell, and DST is Foundation's own answer
+        expectDisplayAt("time in nyc", "8:18 PM (yesterday)")
+        expectDisplayAt("time in cet", "2:18 AM")
+        // A zone name never outranks a unit or a currency, and a non-zone stays a search
+        expectDisplay("1 cup to ml", "236.5882365 mL")
+        expectNil("time in xyzzy")
+        expectNil("in tokyo")
+        expectNil("time")
+
+        // IATA airport codes, which Foundation has no notion of
+        expectDisplayAt("time in vie", "2:18 AM")
+        expectDisplayAt("time in lhr", "1:18 AM")
+        expectDisplayAt("time in nrt", "9:18 AM")
+        expectDisplayAt("time in sfo", "5:18 PM (yesterday)")
+        expectBadgesAt("time in vie", source: "UTC", target: "Vienna")
+        expectDisplayAt("5pm vie in nrt", "12:00 AM (tomorrow)")
+        // `mad` stays the Moroccan dirham, and `ist` stays India Standard Time
+        expectError("10 mad to usd", "No exchange rate for MAD.")
+        expectBadgesAt("time in ist", source: "UTC", target: "Kolkata")
+
+        // A conversion mid-expression, which used to need parentheses
+        expectDisplay("10kg to lb + 3lb", "25.04622622 lb")
+        expectDisplay("10kg to lb - 1lb", "21.04622622 lb")
+        expectDisplay("100 km/h to mph + 3mph", "65.13711922 mph")
+        expectDisplay("10km to mi + 3mi", "9.213711922 mi")
+        expectDisplay("10kg to lb + 3lb + 1lb", "26.04622622 lb")
+        expectDisplay("10km to mi + 3mi to km", "14.828032 km")
+        expectDisplay("10kg to lb + 3", "25.04622622 lb")
+        expectError("1kg to m + 3", "Cannot convert Weight to Length.")
+        // A trailing `to` still converts the whole expression rather than the last operand
+        expectDisplay("10kg + 500g to lb", "23.14853753 lb")
+        expectDisplay("1kg + 1kg to g", "2,000 g")
+        expectDisplay("2hr + 30min to min", "150 min")
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
