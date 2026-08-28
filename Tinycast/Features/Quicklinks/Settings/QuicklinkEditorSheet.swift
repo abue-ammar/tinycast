@@ -137,6 +137,14 @@ struct QuicklinkEditorSheet: View {
         .fixedSize()
     }
 
+    private static let iconSymbols = [
+        "globe", "folder", "doc.text", "link", "star", "bookmark", "magnifyingglass", "cart",
+        "envelope", "message", "calendar", "clock", "checklist", "chart.bar", "hammer", "wrench",
+        "ladybug", "terminal", "chevron.left.forwardslash.chevron.right", "cloud", "server.rack",
+        "lock", "person.2", "building.2", "graduationcap", "book", "music.note", "play.rectangle",
+        "photo", "paintbrush", "creditcard", "map"
+    ]
+
     private var iconField: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Icon")
@@ -153,7 +161,9 @@ struct QuicklinkEditorSheet: View {
                 .frame(width: 150)
             }
             .popover(isPresented: $showingIconPicker, arrowEdge: .bottom) {
-                QuicklinkIconPicker(selection: $iconSymbol, automatic: automaticSymbol) {
+                SymbolPicker(
+                    selection: $iconSymbol, fallback: automaticSymbol, symbols: Self.iconSymbols
+                ) {
                     showingIconPicker = false
                 }
             }
@@ -241,57 +251,3 @@ struct QuicklinkEditorSheet: View {
 }
 
 /// A small fixed grid, not a symbol browser; "Automatic" is first, being the better default.
-private struct QuicklinkIconPicker: View {
-    @Binding var selection: String?
-    let automatic: String
-    let onPick: () -> Void
-
-    private static let symbols = [
-        "globe", "folder", "doc.text", "link", "star", "bookmark", "magnifyingglass", "cart",
-        "envelope", "message", "calendar", "clock", "checklist", "chart.bar", "hammer", "wrench",
-        "ladybug", "terminal", "chevron.left.forwardslash.chevron.right", "cloud", "server.rack",
-        "lock", "person.2", "building.2", "graduationcap", "book", "music.note", "play.rectangle",
-        "photo", "paintbrush", "creditcard", "map"
-    ]
-
-    private let columns = Array(repeating: GridItem(.fixed(30), spacing: Theme.Spacing.sm), count: 6)
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Button {
-                selection = nil
-                onPick()
-            } label: {
-                HStack(spacing: Theme.Spacing.sm) {
-                    SymbolImage(name: automatic, size: 14)
-                    Text("Automatic")
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            Divider()
-            LazyVGrid(columns: columns, spacing: Theme.Spacing.sm) {
-                ForEach(Self.symbols, id: \.self) { symbol in
-                    Button {
-                        selection = symbol
-                        onPick()
-                    } label: {
-                        SymbolImage(name: symbol, size: 15)
-                            .frame(width: 30, height: 26)
-                            .background(
-                                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                                    .fill(
-                                        selection == symbol
-                                            ? Theme.Colors.selection : Color.clear)
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .padding(Theme.Spacing.md)
-        .frame(width: 244)
-    }
-}

@@ -26,6 +26,8 @@ struct CommandOutputView: View {
 
     private func header(_ run: CommandRun) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
+            SymbolImage(name: run.symbol, size: Self.headerGlyph)
+                .foregroundStyle(Theme.Colors.textSecondary)
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text(run.name)
                     .font(.headline)
@@ -125,6 +127,7 @@ struct CommandOutputView: View {
     }
 
     private static let statusDot: CGFloat = 7
+    private static let headerGlyph: CGFloat = 15
 
     private func statusTint(_ run: CommandRun) -> Color {
         guard let outcome = run.outcome else { return Theme.Colors.progress }

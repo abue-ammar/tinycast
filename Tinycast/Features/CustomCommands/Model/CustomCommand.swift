@@ -39,12 +39,17 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     var arguments: [CustomCommandArgument]
     /// Captures what the command prints and opens the output window once it exits.
     var showsOutput: Bool
+    /// Where the command runs; nil is the home directory. Kept abbreviated, so a `~` path survives
+    /// a home directory that moves.
+    var workingDirectory: String?
+    /// The launcher glyph; nil falls back to the shared terminal symbol.
+    var iconSymbol: String?
 
     init(
         id: UUID = UUID(), name: String, command: String,
         loadsShellEnvironment: Bool = false, requiresConfirmation: Bool = false,
         showsConfirmation: Bool = false, arguments: [CustomCommandArgument] = [],
-        showsOutput: Bool = false
+        showsOutput: Bool = false, workingDirectory: String? = nil, iconSymbol: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -54,7 +59,12 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
         self.showsConfirmation = showsConfirmation
         self.arguments = arguments
         self.showsOutput = showsOutput
+        self.workingDirectory = workingDirectory
+        self.iconSymbol = iconSymbol
     }
+
+    /// The glyph every surface draws for this command.
+    var symbol: String { iconSymbol ?? Self.sfSymbol }
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
@@ -66,7 +76,7 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     // Hand-written, so an added field keeps stored commands and older backups readable.
     private enum CodingKeys: String, CodingKey {
         case id, name, command, loadsShellEnvironment, requiresConfirmation, showsConfirmation
-        case arguments, showsOutput
+        case arguments, showsOutput, workingDirectory, iconSymbol
     }
 
     init(from decoder: Decoder) throws {
@@ -83,6 +93,16 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
         arguments =
             try container.decodeIfPresent([CustomCommandArgument].self, forKey: .arguments) ?? []
         showsOutput = try container.decodeIfPresent(Bool.self, forKey: .showsOutput) ?? false
+        workingDirectory = try container.decodeIfPresent(String.self, forKey: .workingDirectory)
+        iconSymbol = try container.decodeIfPresent(String.self, forKey: .iconSymbol)
+    }
+}
+
+extension String {
+    /// Trimmed, and nil when that leaves nothing — an empty optional field means "unset", not "".
+    fileprivate var cleanedPathComponent: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed.contains("\0") ? nil : trimmed
     }
 }
 
@@ -166,6 +186,8 @@ final class CustomCommandStore {
         value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         value.command = draft.command.trimmingCharacters(in: .whitespacesAndNewlines)
         value.arguments = CustomCommandArgument.sanitized(draft.arguments)
+        value.workingDirectory = draft.workingDirectory?.cleanedPathComponent
+        value.iconSymbol = draft.iconSymbol?.cleanedPathComponent
         guard !value.name.isEmpty else { throw CustomCommandValidationError.emptyName }
         guard !value.command.isEmpty else { throw CustomCommandValidationError.emptyCommand }
         guard !value.name.contains("\0"), !value.command.contains("\0") else {
@@ -202,6 +224,8 @@ final class CustomCommandStore {
             cleaned.name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
             cleaned.command = value.command.trimmingCharacters(in: .whitespacesAndNewlines)
             cleaned.arguments = CustomCommandArgument.sanitized(value.arguments)
+            cleaned.workingDirectory = value.workingDirectory?.cleanedPathComponent
+            cleaned.iconSymbol = value.iconSymbol?.cleanedPathComponent
             let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: .current)
             guard !cleaned.name.isEmpty, !cleaned.command.isEmpty, !cleaned.name.contains("\0"),
                 !cleaned.command.contains("\0"), ids.insert(cleaned.id).inserted,

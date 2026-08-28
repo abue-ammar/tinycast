@@ -137,7 +137,7 @@ final class CustomCommandCoordinator {
                     await core.confirm(
                         title: command.name,
                         message: "Are you sure you want to run this command?\n\n\(command.command)",
-                        symbol: CustomCommand.sfSymbol, confirmTitle: "Run",
+                        symbol: command.symbol, confirmTitle: "Run",
                         tone: .neutral, confirmRole: .standard)
                 else { return }
             }
@@ -147,7 +147,8 @@ final class CustomCommandCoordinator {
             }
             let result = await ShellCommandRunner.run(
                 command.command, arguments: arguments,
-                loadingShellEnvironment: command.loadsShellEnvironment)
+                loadingShellEnvironment: command.loadsShellEnvironment,
+                workingDirectory: command.workingDirectory)
             await report(command, result: result)
         }
     }
@@ -156,9 +157,11 @@ final class CustomCommandCoordinator {
     private func streamOutput(of command: CustomCommand, arguments: [String]) async {
         let session = ShellCommandRunner.stream(
             command.command, arguments: arguments,
-            loadingShellEnvironment: command.loadsShellEnvironment)
+            loadingShellEnvironment: command.loadsShellEnvironment,
+            workingDirectory: command.workingDirectory)
         let runID = outputPresenter.begin(
-            commandID: command.id, name: command.name, commandText: command.command)
+            commandID: command.id, name: command.name, commandText: command.command,
+            symbol: command.symbol)
         liveRun = (runID, session.stop)
         defer { if liveRun?.id == runID { liveRun = nil } }
 
@@ -202,8 +205,11 @@ final class CustomCommandCoordinator {
     /// not also raise a dialog saying it again.
     private func report(_ command: CustomCommand, result: ShellCommandResult) async {
         guard !result.succeeded else {
-            // On finish, not start, so a slow command confirms late rather than early.
-            if command.showsConfirmation { core.showMessage("Ran \(command.name)") }
+            // What the command said about itself beats a bare "it ran"; the name is the fallback
+            // for one that printed nothing. On finish, not start, so a slow one reports late.
+            if command.showsConfirmation {
+                core.showMessage(result.lastOutputLine ?? "Ran \(command.name)")
+            }
             return
         }
         let hint = shellEnvironmentHint(command: command, result: result)
@@ -211,7 +217,7 @@ final class CustomCommandCoordinator {
             await core.reportFailure(
                 title: "“\(command.name)” Failed",
                 message: failureMessage(command: command, result: result),
-                symbol: CustomCommand.sfSymbol, recovery: hint == nil ? nil : "Open Settings…")
+                symbol: command.symbol, recovery: hint == nil ? nil : "Open Settings…")
         else { return }
         settingsCoordinator.showSettings(tab: .commands)
     }

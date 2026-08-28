@@ -25,16 +25,30 @@ struct ShellCommandSession: Sendable {
     let stop: @Sendable () -> Void
 }
 
-/// A finished run. `standardError` is the tail kept for the failure dialog, and only the
-/// non-streaming path fills it — a streamed run reports everything through its events instead.
+/// A finished run. Both tails are filled only by the non-streaming path — a streamed run reports
+/// everything through its events instead.
 struct ShellCommandResult: Sendable, Equatable {
     let termination: ShellCommandTermination
+    /// Kept short: all it feeds is the one-line report a finished command shows.
+    let standardOutput: String?
     let standardError: String?
 
     var succeeded: Bool { termination.succeeded }
 
-    init(termination: ShellCommandTermination, standardError: String? = nil) {
+    /// What a command said about itself, for a report with room for one line.
+    var lastOutputLine: String? {
+        standardOutput?
+            .split(whereSeparator: \.isNewline).last
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    init(
+        termination: ShellCommandTermination, standardOutput: String? = nil,
+        standardError: String? = nil
+    ) {
         self.termination = termination
+        self.standardOutput = standardOutput
         self.standardError = standardError
     }
 }
@@ -42,6 +56,8 @@ struct ShellCommandResult: Sendable, Equatable {
 enum ShellCommandRunner {
     /// Only ever surfaces on failure, where the last few lines are the whole story.
     private static let standardErrorLimit = 8 * 1024
+    /// Only the last line is ever shown, so this is a generous bound on one of them.
+    private static let standardOutputLimit = 4 * 1024
     private static let shell = "/bin/zsh"
     /// Big enough that a chatty command needs few reads, small enough to stay live.
     private static let readSize = 16 * 1024
@@ -58,27 +74,33 @@ enum ShellCommandRunner {
     /// Fire-and-forget: nothing is kept but the error tail a failure dialog needs. A command whose
     /// output is shown goes through `stream` instead.
     nonisolated static func run(
-        _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false
+        _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false,
+        workingDirectory: String? = nil
     ) async -> ShellCommandResult {
         await withCheckedContinuation { continuation in
             queue.async {
                 continuation.resume(
                     returning: execute(
                         command, arguments: arguments,
-                        loadingShellEnvironment: loadingShellEnvironment))
+                        loadingShellEnvironment: loadingShellEnvironment,
+                        workingDirectory: workingDirectory))
             }
         }
     }
 
     nonisolated private static func execute(
-        _ command: String, arguments: [String], loadingShellEnvironment: Bool
+        _ command: String, arguments: [String], loadingShellEnvironment: Bool,
+        workingDirectory: String?
     ) -> ShellCommandResult {
+        guard let directory = resolvedWorkingDirectory(workingDirectory) else {
+            return ShellCommandResult(termination: .launchFailed(missingDirectory(workingDirectory)))
+        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shell)
         process.arguments = shellArguments(
             command: command, arguments: arguments,
             loadingShellEnvironment: loadingShellEnvironment)
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+        process.currentDirectoryURL = URL(fileURLWithPath: directory)
         // Lets a shell config skip slow sections when Tinycast is the caller.
         process.environment = ProcessInfo.processInfo.environment.merging(["TINYCAST": "1"]) { _, new in
             new
@@ -86,10 +108,14 @@ enum ShellCommandRunner {
         // Load-bearing: a config that prompts reads EOF and moves on, never hanging.
         process.standardInput = FileHandle.nullDevice
 
+        let output = StreamCapture.make()
         let errors = StreamCapture.make()
-        process.standardOutput = FileHandle.nullDevice
+        process.standardOutput = output?.handle ?? FileHandle.nullDevice
         process.standardError = errors?.handle ?? FileHandle.nullDevice
-        defer { errors?.remove() }
+        defer {
+            output?.remove()
+            errors?.remove()
+        }
 
         do {
             try process.run()
@@ -100,6 +126,7 @@ enum ShellCommandRunner {
 
         return ShellCommandResult(
             termination: .exited(status: process.terminationStatus),
+            standardOutput: output?.readSuffix(limit: standardOutputLimit),
             standardError: errors?.readSuffix(limit: standardErrorLimit))
     }
 
@@ -108,7 +135,8 @@ enum ShellCommandRunner {
     /// Runs the command under a pseudo-terminal and reports what it prints as it prints it.
     /// See `PseudoTerminal` for why a pipe cannot do this.
     nonisolated static func stream(
-        _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false
+        _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false,
+        workingDirectory: String? = nil
     ) -> ShellCommandSession {
         var environment = ProcessInfo.processInfo.environment
         environment["TINYCAST"] = "1"
@@ -116,21 +144,24 @@ enum ShellCommandRunner {
         // showing them, so this asks for the colour it can draw and nothing fancier.
         environment["TERM"] = "xterm-256color"
 
-        let terminal = PseudoTerminal.spawn(
-            executable: shell,
-            arguments: shellArguments(
-                command: command, arguments: arguments,
-                loadingShellEnvironment: loadingShellEnvironment),
-            environment: environment,
-            workingDirectory: FileManager.default.homeDirectoryForCurrentUser.path)
+        let directory = resolvedWorkingDirectory(workingDirectory)
+        let terminal = directory.flatMap {
+            PseudoTerminal.spawn(
+                executable: shell,
+                arguments: shellArguments(
+                    command: command, arguments: arguments,
+                    loadingShellEnvironment: loadingShellEnvironment),
+                environment: environment, workingDirectory: $0)
+        }
 
         guard let terminal else {
+            let reason =
+                directory == nil
+                ? missingDirectory(workingDirectory) : "The shell could not be started."
             return ShellCommandSession(
                 events: AsyncStream { continuation in
                     continuation.yield(
-                        .finished(
-                            ShellCommandResult(
-                                termination: .launchFailed("The shell could not be started."))))
+                        .finished(ShellCommandResult(termination: .launchFailed(reason))))
                     continuation.finish()
                 },
                 stop: {})
@@ -242,6 +273,25 @@ enum ShellCommandRunner {
             let width = lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1
             return index - boundary + 1 >= width ? index : boundary - 1
         }
+    }
+
+    /// The directory the command starts in: its own when it names one, the home directory
+    /// otherwise. Nil when the named one is gone, which is reported rather than silently ignored —
+    /// running a command somewhere it did not expect is worse than not running it.
+    nonisolated private static func resolvedWorkingDirectory(_ path: String?) -> String? {
+        guard let path, !path.isEmpty else {
+            return FileManager.default.homeDirectoryForCurrentUser.path
+        }
+        let expanded = (path as NSString).expandingTildeInPath
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: expanded, isDirectory: &isDirectory),
+            isDirectory.boolValue
+        else { return nil }
+        return expanded
+    }
+
+    nonisolated private static func missingDirectory(_ path: String?) -> String {
+        "The folder “\(path ?? "")” no longer exists."
     }
 
     /// `$0` names the caller and the user's values follow as `$1`, `$2` — never spliced into the

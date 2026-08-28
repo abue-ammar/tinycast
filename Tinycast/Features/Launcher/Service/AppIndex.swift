@@ -262,7 +262,7 @@ final class AppIndex {
             AppEntry(
                 id: command.entryID, name: command.name,
                 url: URL(string: "tinycast://custom-command/" + command.id.uuidString)!,
-                bundleID: nil, kind: .customCommand)
+                bundleID: nil, kind: .customCommand, symbolName: command.iconSymbol)
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }

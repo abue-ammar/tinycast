@@ -52,7 +52,7 @@ The command text is deliberately not searchable. Only the user-facing name enter
 - `/bin/zsh -lc <command>`, or `/bin/zsh -ilc <command>` when the command's **Load shell
   environment** flag is on
 - `tinycast` as `$0`, then the collected argument values as `$1`, `$2`, …
-- the user's home directory as the working directory
+- the command's own **Run In** folder, or the home directory when it names none
 - standard input reading EOF immediately
 - `TINYCAST=1` added to the inherited environment
 - up to 8 KiB of standard error retained for a failure dialog
@@ -171,6 +171,25 @@ the success pill is skipped for the same reason.
 - **Stop is the one exception** to "Tinycast never kills a running command". Only the button does it;
   a second command superseding the window never touches the first.
 
+### Run In
+
+Each command may name the folder it starts in; empty means the home directory, which is what every
+command did before. The path is stored abbreviated, so a `~` one survives a home directory that
+moves, and expanded at run time.
+
+A folder that has gone is **reported rather than ignored** — `resolvedWorkingDirectory` returns nil
+and the run fails with the path in the message. Falling back to home would run a command somewhere it
+did not expect, which is worse than not running it. A path that exists but is a file is refused the
+same way.
+
+### Icon
+
+A command may carry its own SF Symbol; without one it draws `CustomCommand.sfSymbol`, the shared
+terminal glyph. `CustomCommand.symbol` is the one place that fallback lives, and every surface reads
+it — the launcher row, the Settings list, the confirmation and failure dialogs, and the output
+window's header. The picker is `DesignSystem/SymbolPicker`, shared with the quicklink editor, which
+supplies its own symbol list: what reads as a quicklink is not what reads as a script.
+
 ### Needs confirmation
 
 `CustomCommandCoordinator.runCustomCommand(id:)` is the one funnel both palette activation and the global hotkey reach,
@@ -181,6 +200,13 @@ glyph the command's launcher row uses, and reads neutral rather than destructive
 user wrote themselves wants a deliberate second tap, not a red alarm. The gate is Tinycast's own
 dialog, not an `NSAlert` ([ui.md](../ui.md#dialogs--hud)): presentation is `async` with no nested run loop,
 and the presenter itself refuses a second dialog while one is up, so a held shortcut can't stack them.
+
+### Show confirmation
+
+The pill shows the command's **last line of output**, falling back to `Ran <name>` for one that
+printed nothing — a command that says "3 files cleaned" is worth more than one that says it ran. Only
+the non-streaming path fills this: `run` keeps a 4 KiB stdout tail purely to find that line, and a
+command showing its output reports through the window instead.
 
 ### Reporting
 

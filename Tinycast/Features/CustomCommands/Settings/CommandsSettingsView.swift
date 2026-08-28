@@ -80,7 +80,7 @@ private struct CustomCommandSettingsRow: View {
 
     var body: some View {
         SettingsRow(title: command.name, subtitle: command.command) {
-            Image(systemName: CustomCommand.sfSymbol)
+            Image(systemName: command.symbol)
         } trailing: {
             ShortcutRecorder(action: .customCommand(id: command.id))
 

@@ -17,6 +17,7 @@ struct CommandRun: Identifiable, Sendable {
     let name: String
     /// The shell text, shown under the name — "brew" alone says nothing about what ran.
     let commandText: String
+    let symbol: String
     let startedAt: Date
     /// Everything printed so far, for copying and for a redraw from scratch.
     var log = ""
@@ -63,9 +64,10 @@ final class CommandOutputPresenter {
 
     /// Opens the window on an empty, running command and returns the id the run reports against.
     @discardableResult
-    func begin(commandID: UUID, name: String, commandText: String) -> UUID {
+    func begin(commandID: UUID, name: String, commandText: String, symbol: String) -> UUID {
         let run = CommandRun(
-            commandID: commandID, name: name, commandText: commandText, startedAt: Date())
+            commandID: commandID, name: name, commandText: commandText, symbol: symbol,
+            startedAt: Date())
         self.run = run
         window.show { CommandOutputView(presenter: self) }
         return run.id

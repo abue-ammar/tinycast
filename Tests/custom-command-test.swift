@@ -133,7 +133,11 @@ struct CustomCommandTests {
                 case .finished(let value): result = value
                 }
             }
-            return (log.replacingOccurrences(of: "\r", with: ""), result)
+            // A pty ends every line with CR LF, and the trailing newline is never part of the
+            // thing under test.
+            return (
+                log.replacingOccurrences(of: "\r", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines), result)
         }
 
         let simple = await collect(ShellCommandRunner.stream("echo captured"))
@@ -188,6 +192,65 @@ struct CustomCommandTests {
         check(
             "stopping kills the whole command tree, not just the shell",
             survivors.log.trimmingCharacters(in: .whitespacesAndNewlines) == "0")
+
+        // MARK: Working directory
+
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let atHome = await collect(ShellCommandRunner.stream("pwd"))
+        check("a command with no folder starts at home", atHome.log.hasSuffix(home))
+
+        let elsewhere = await collect(
+            ShellCommandRunner.stream("pwd", workingDirectory: "/usr/lib"))
+        check("a command runs in the folder it names", elsewhere.log.hasSuffix("/usr/lib"))
+
+        let tilde = await collect(ShellCommandRunner.stream("pwd", workingDirectory: "~/"))
+        check("a tilde path is expanded", tilde.log.hasSuffix(home))
+
+        // Silently running somewhere else would be worse than not running at all.
+        let gone = await collect(
+            ShellCommandRunner.stream("pwd", workingDirectory: "/nope/does/not/exist"))
+        var reportedMissing = false
+        if case .launchFailed(let reason) = gone.result?.termination {
+            reportedMissing = reason.contains("no longer exists")
+        }
+        check("a folder that has gone is reported, not ignored", reportedMissing)
+
+        let notADirectory = await ShellCommandRunner.run("pwd", workingDirectory: "/etc/hosts")
+        var rejectedFile = false
+        if case .launchFailed = notADirectory.termination { rejectedFile = true }
+        check("a file is not accepted as a working folder", rejectedFile)
+
+        // MARK: One-line report
+
+        let spoke = await ShellCommandRunner.run("echo first; echo 'all done'")
+        check("the report shows the command's last line", spoke.lastOutputLine == "all done")
+
+        let trailing = await ShellCommandRunner.run("printf 'only line\\n\\n\\n'")
+        check("trailing blank lines are skipped", trailing.lastOutputLine == "only line")
+
+        let mute = await ShellCommandRunner.run("true")
+        check("a silent command offers no line to report", mute.lastOutputLine == nil)
+
+        // MARK: Icon and folder round-trip
+
+        store.replace(with: [
+            CustomCommand(
+                name: "Iconned", command: "/usr/bin/true",
+                workingDirectory: "  ~/Developer  ", iconSymbol: "  hammer  ")
+        ])
+        check(
+            "an icon and a folder are trimmed and kept",
+            store.commands.first?.iconSymbol == "hammer"
+                && store.commands.first?.workingDirectory == "~/Developer")
+
+        store.replace(with: [
+            CustomCommand(name: "Bare", command: "/usr/bin/true", workingDirectory: "   ")
+        ])
+        check(
+            "a blank folder means home rather than an empty path",
+            store.commands.first?.workingDirectory == nil)
+        check("a command with no icon falls back to the shared glyph",
+            store.commands.first?.symbol == CustomCommand.sfSymbol)
 
         // MARK: Arguments
 
