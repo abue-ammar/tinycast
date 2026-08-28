@@ -7,7 +7,8 @@ struct LauncherScreen: PaletteScreen {
     let visibility: VisibilityStore
     let core: AppCore
     let vm: PaletteState
-    /// Sampled by `openActions`, so the Quit row can't appear or vanish while the menu is up.
+    /// Sampled by `openActions`, so the Restart and Quit rows can't appear or vanish while the
+    /// menu is up.
     let running: Bool
     /// The join card's meeting, resolved by the coordinator; nil unless one is due.
     let meeting: MeetingEvent?
@@ -194,12 +195,26 @@ struct LauncherScreen: PaletteScreen {
         return true
     }
 
-    /// ⌃⇧Q — the screen owns the chord, but only a running application has anything to quit.
-    func quit(at selection: Int) -> Bool {
+    /// The one guard both power chords share, so neither can drift from the rows it mirrors: they
+    /// are offered only for an `.application` entry `RunningAppsMonitor` reports running.
+    private func runningApplication(at selection: Int) -> AppEntry? {
         guard let app = entry(at: selection), app.kind == .application,
             core.runningApps.isRunning(app)
-        else { return false }
+        else { return nil }
+        return app
+    }
+
+    /// ⌃⇧Q — the screen owns the chord, but only a running application has anything to quit.
+    func quit(at selection: Int) -> Bool {
+        guard let app = runningApplication(at: selection) else { return false }
         core.launcherCoordinator.quit(app)
+        return true
+    }
+
+    /// ⌘R — mirrors the Restart Application row.
+    func restart(at selection: Int) -> Bool {
+        guard let app = runningApplication(at: selection) else { return false }
+        core.launcherCoordinator.restart(app)
         return true
     }
 
@@ -280,7 +295,7 @@ struct LauncherScreen: PaletteScreen {
         scrollToFollow()
     }
 
-    /// The sample `openActions` takes; only an app row can ever carry a Quit action.
+    /// The sample `openActions` takes; only an app row can ever carry the running-only actions.
     func isRunning(at selection: Int) -> Bool {
         guard let app = entry(at: selection) else { return false }
         return core.runningApps.isRunning(app)

@@ -27,7 +27,7 @@ struct RootPaletteView: View {
     @FocusState private var argumentFocused: String?
     /// Which in-window menu is open; at most one, so the state cannot disagree with itself.
     @State private var openMenu: OpenMenu?
-    /// Sampled once by `openActions`, so the Quit row can't appear while the menu is up.
+    /// Sampled once by `openActions`, so the running-only rows can't appear while the menu is up.
     @State private var selectionIsRunning = false
     /// Highlighted row of whichever menu is open; each open path sets where it starts.
     @State private var menuSelection = 0
@@ -445,6 +445,13 @@ struct RootPaletteView: View {
                 !isCollapsed, let launcher = screen as? LauncherScreen
             else { return .ignored }
             return launcher.quit(at: selection(in: launcher)) ? .handled : .ignored
+        }
+        // ⌘R mirrors the Restart Application row, on the same guard and the same compact-bar skip.
+        .onKeyPress(keys: ["r"], phases: .down) { press in
+            guard press.modifiers.contains(.command), !isCollapsed,
+                let launcher = screen as? LauncherScreen
+            else { return .ignored }
+            return launcher.restart(at: selection(in: launcher)) ? .handled : .ignored
         }
     }
 

@@ -66,6 +66,41 @@ enum AppLauncher {
         return !running.isEmpty
     }
 
+    /// Long enough for any app to exit, short enough that a quit the user is still deciding on
+    /// can't relaunch under them much later.
+    private static let exitGrace = Duration.seconds(5)
+
+    /// Quits every instance and reopens the bundle once they are all gone; a refused quit — a save
+    /// sheet the user cancels or leaves standing — relaunches nothing and leaves the app running.
+    @MainActor
+    static func restart(bundleID: String, url: URL) async {
+        let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        guard !running.isEmpty, await quitAwaitingExit(running) else { return }
+        launch(url)
+    }
+
+    /// Observes before it terminates, so an instance that exits at once can't outrun the wait.
+    @MainActor
+    private static func quitAwaitingExit(_ apps: [NSRunningApplication]) async -> Bool {
+        let center = NSWorkspace.shared.notificationCenter
+        let (exits, continuation) = AsyncStream.makeStream(of: pid_t.self)
+        let observer = center.addObserver(
+            of: NSWorkspace.shared, for: NSWorkspace.DidTerminateApplicationMessage.self
+        ) { continuation.yield($0.application.processIdentifier) }
+        defer { center.removeObserver(observer) }
+
+        var pending = Set(apps.map(\.processIdentifier))
+        for app in apps { app.terminate() }
+
+        let grace = Task { try? await Task.sleep(for: exitGrace); continuation.finish() }
+        defer { grace.cancel() }
+        for await pid in exits {
+            pending.remove(pid)
+            if pending.isEmpty { return true }
+        }
+        return false
+    }
+
     /// Finder is never a Quit All target: `terminate()` only makes it relaunch.
     private static let quitAllExclusions: Set<String> = ["com.apple.finder"]
 

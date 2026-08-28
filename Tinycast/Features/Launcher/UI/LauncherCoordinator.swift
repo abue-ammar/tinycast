@@ -207,6 +207,14 @@ final class LauncherCoordinator {
         AppLauncher.showInFinder(app.url)
     }
 
+    /// Restarts the app behind an entry. Focus is never handed back: either the relaunch takes it,
+    /// or the quit was refused and the app that refused it is the one asking for it.
+    func restart(_ app: AppEntry) {
+        guard app.kind == .application, let bundleID = app.bundleID else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Task { await AppLauncher.restart(bundleID: bundleID, url: app.url) }
+    }
+
     /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.
     func quit(_ app: AppEntry) {
         guard app.kind == .application, let bundleID = app.bundleID else { return }

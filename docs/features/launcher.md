@@ -358,18 +358,27 @@ Application and System Settings results expose **Show in Finder** in their ⌘K 
 shortcut is available for them. `AppEntry.canRevealInFinder` is the one rule both the menu row and
 the key handler read, so the advertised chord can't drift from the behavior.
 
-## Quitting apps
+## Quitting and restarting apps
 
 `RunningAppsMonitor` (live from `NSWorkspace` launch/terminate notifications) drives both the row's
-running dot and the availability of the quit actions:
+running dot and the availability of the running-only actions:
 
-- **Quit Application** — the last row of an app's ⌘K Actions menu, shown only while that app is
+- **Quit Application** — a row of an app's ⌘K Actions menu, shown only while that app is
   running, also bound to **⌃⇧Q** on the selected row. The chord guard mirrors the menu row's
   condition (an `.application` entry that `RunningAppsMonitor` reports running) so the key never
   swallows a press it won't act on, and it's skipped in the compact bar, which shows no selection.
   `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
   anything was running; the palette only dismisses when something was, and it restores focus unless
   the app it just quit _was_ `previousApp`.
+- **Restart Application** — the row above it and **⌘R**, on the same guard: both chords resolve
+  their target through `LauncherScreen.runningApplication(at:)`, the single place that condition
+  lives. `AppLauncher.restart(bundleID:url:)` snapshots the running instances, subscribes to
+  `NSWorkspace.DidTerminateApplicationMessage` _before_ terminating so an instance that exits at
+  once can't outrun the wait, then reopens the bundle once every snapshotted PID has gone. The wait
+  is bounded by a five-second grace: a quit an app refuses, or one sitting behind a save sheet the
+  user leaves standing, relaunches nothing and leaves that app running. The palette dismisses the
+  moment the quit is asked for and never restores focus — either the relaunch takes it, or the app
+  that refused the quit is the one asking for it.
 - **Quit All Applications** a system action. `AppLauncher.quitAllTargets()` is the
   policy (every `.regular` app except Finder — `terminate()` only relaunches it — and Tinycast,
   excluded by PID because About/Settings temporarily flips it to `.regular`). `SystemActionCoordinator.quitAllApps()`
@@ -380,6 +389,6 @@ Both quits are graceful `NSRunningApplication.terminate()`, so an app with unsav
 its own save sheet.
 
 The ⌘K menu samples `isRunning` **once, when it opens** (`RootPaletteView.openActions()`), so an app
-launching or quitting elsewhere can't add or drop the Quit row while the menu is up — the same freeze
+launching or quitting elsewhere can't add or drop those two rows while the menu is up — the same freeze
 the rest of the menu already has ([palette.md](palette.md)). Only `LauncherList` observes
 `RunningAppsMonitor` live, for the running dot.
