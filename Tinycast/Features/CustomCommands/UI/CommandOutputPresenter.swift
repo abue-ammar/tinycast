@@ -105,4 +105,9 @@ final class CommandOutputPresenter {
     func showCommandSettings() {
         openSettings()
     }
+
+    /// Re-raise an open output window; false when none is up, so a reopen falls through.
+    func focusExisting() -> Bool {
+        window.focus()
+    }
 }

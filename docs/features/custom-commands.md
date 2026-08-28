@@ -206,6 +206,7 @@ Foundation-only harness. Verify by hand:
 8. Running a second output-showing command reuses the one window and does **not** kill the first.
 9. A long command's output appears while it runs, not at the end; scrolling up stops the follow.
 10. Stop during `brew update` leaves nothing behind — check with `pgrep -f brew`.
-11. **Run Again clears the log before the new run prints.** The view draws deltas, so it keys what
+11. Clicking the Dock icon while a command runs raises the output window, not the launcher.
+12. **Run Again clears the log before the new run prints.** The view draws deltas, so it keys what
     it has drawn on the run's id as well as the trim counter — a fresh run starts back at revision
     zero, and keying on the counter alone left the previous run's output on screen.

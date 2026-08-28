@@ -16,7 +16,7 @@ final class CustomCommandCoordinator {
     private let aliases: AliasStore
     /// Dialog and message-HUD presentation only — never for state this type owns.
     private unowned let core: AppCore
-    /// Built on first use: most installs never turn output on, and it holds a window.
+    /// Built on first use; the window inside it waits for a run that actually shows output.
     private lazy var outputPresenter = CommandOutputPresenter(
         activation: activationPolicy,
         rerun: { [unowned self] in self.runCustomCommand(id: $0) },
@@ -120,6 +120,11 @@ final class CustomCommandCoordinator {
 
     func cancelCustomCommandArguments() {
         argumentSession.cancel()
+    }
+
+    /// A Dock click while a command is running belongs to its window, not to a fresh launcher.
+    func focusOutputWindow() -> Bool {
+        outputPresenter.focusExisting()
     }
 
     private func perform(_ command: CustomCommand, arguments: [String]) {
