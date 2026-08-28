@@ -309,6 +309,9 @@ A global shortcut binds to a **command**, not to an extension — a shortcut has
 run, and an extension is a set of commands. `HotKeyAction.extensionCommand` is keyed by the launcher
 entry id (`extension:<extension>/<command>`).
 
+A view command summons the palette when the shortcut fires while it is hidden, or it would load
+behind a closed window. A no-view command still hides it and reports through its HUD.
+
 Its index is not pruned at launch the way the UUID-keyed ones are: the installed set is scanned
 asynchronously and only while extensions are on, so at launch "not installed yet" and "gone" look
 identical, and pruning there would quietly drop a working binding. Uninstalling clears its own instead,

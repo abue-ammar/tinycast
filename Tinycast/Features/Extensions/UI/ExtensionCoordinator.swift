@@ -147,6 +147,10 @@ final class ExtensionCoordinator {
         case .view:
             // Switch the palette over first, so the launching state is what the user sees.
             palette.prepare(mode: .extensionCommand)
+            // A shortcut fires while hidden, where a view command has nowhere to render.
+            if !paletteCoordinator.isVisible {
+                paletteCoordinator.showPalette(mode: .extensionCommand)
+            }
             Task { await extensions.run(owner, command: command, arguments: arguments) }
         case .noView, .menuBar:
             // A no-view command's own HUD is the feedback, so the palette gets out of the way.
