@@ -8,7 +8,13 @@ private enum Metrics {
     static let rowSpacing: CGFloat = 1
     /// Six rows and half of the seventh, so a long panel reads as scrollable rather than clipped.
     static let visibleRows: CGFloat = 6.5
-    static var maxHeight: CGFloat { visibleRows * (rowHeight + rowSpacing) }
+    /// Rounded: a fractional window height lands the glass edge on a half pixel and doubles the hairline.
+    static var maxHeight: CGFloat { (visibleRows * (rowHeight + rowSpacing)).rounded() }
+
+    /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
+    static func height(rows: Int) -> CGFloat {
+        min(CGFloat(rows) * (rowHeight + rowSpacing) - rowSpacing, maxHeight)
+    }
 }
 
 /// One row of a running command's ⌘K panel. Its own type, not `PopoverMenuItem`: an extension names
@@ -28,6 +34,8 @@ struct ExtensionActionsPanel: View {
     @Binding var selection: Int
     let onActivate: (Int) -> Void
 
+    /// The palette arms this only once the pointer has moved of its own accord.
+    @Environment(PaletteState.self) private var palette
     /// A hovered row is already visible, so scrolling to it would drag the list from under the cursor.
     @State private var hoverSelection: Int?
 
@@ -52,21 +60,19 @@ struct ExtensionActionsPanel: View {
                             ExtensionActionRow(
                                 item: items[index],
                                 selected: index == selection,
-                                onHover: {
-                                    hoverSelection = index
-                                    selection = index
-                                },
                                 onActivate: { onActivate(index) }
                             )
                             .id(index)
+                            .onContinuousHover { if case .active = $0 { hover(index) } }
                         }
                     }
                 }
-                .frame(maxHeight: Metrics.maxHeight)
+                .frame(height: Metrics.height(rows: items.count))
                 // Without this a panel shorter than the cap rubber-bands against nothing.
                 .scrollBounceBehavior(.basedOnSize)
-                // None, like a real menu: `thinScrollbar` wants floating bars, the native one cuts glass.
-                .scrollIndicators(.hidden)
+                // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
+                .scrollIndicators(.never)
+                .overflowFade()
                 .onChange(of: selection) {
                     let movedByPointer = hoverSelection == selection
                     hoverSelection = nil
@@ -78,10 +84,16 @@ struct ExtensionActionsPanel: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(width: Metrics.width)
-        // Glass carries its own elevation, so a drop shadow on top reads heavy.
         .glassEffect(
             .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
         )
+    }
+
+    /// Armed only once the pointer has moved of its own accord, so a scroll past it lights nothing.
+    private func hover(_ index: Int) {
+        guard palette.hoverHighlightArmed, index != selection else { return }
+        hoverSelection = index
+        selection = index
     }
 }
 
@@ -89,8 +101,6 @@ struct ExtensionActionsPanel: View {
 private struct ExtensionActionRow: View {
     let item: ExtensionActionItem
     let selected: Bool
-    /// Fired on enter, so the owner can move selection and share one highlight.
-    let onHover: () -> Void
     let onActivate: () -> Void
 
     var body: some View {
@@ -111,8 +121,10 @@ private struct ExtensionActionRow: View {
                 }
             }
             .padding(.horizontal, Theme.Spacing.md)
-            // Fixed, not padded: the cap above counts rows, so a row has to be one known height.
-            .frame(maxWidth: .infinity, minHeight: Metrics.rowHeight, alignment: .leading)
+            // Fixed, not padded: the height maths above counts rows, so a row is one exact height.
+            .frame(
+                maxWidth: .infinity, minHeight: Metrics.rowHeight, maxHeight: Metrics.rowHeight,
+                alignment: .leading)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
@@ -120,7 +132,6 @@ private struct ExtensionActionRow: View {
             )
         }
         .buttonStyle(.plain)
-        .onHover { if $0 { onHover() } }
     }
 
     /// A symbol is drawn here rather than handed to `ExtensionIconView`: the row's glyph is sized to

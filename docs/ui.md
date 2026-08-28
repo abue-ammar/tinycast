@@ -84,6 +84,36 @@ Notes has no corner of its own: it clips to `panel`, so the two floating surface
 
 Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corners everywhere, never `.circular`.
 
+#### Concentric corners
+
+**Where two rounded corners sit adjacent and are seen together, the inner radius is the outer radius
+minus the gap between them.** Miss it and the curves stop being parallel: the inner corner reads
+tight or slack against the one behind it, which is visible long before anyone can name it.
+
+Inside a menu the rule holds exactly, and `menuRow` exists to keep it holding:
+
+| Outer | Gap | Inner |
+| --- | --- | --- |
+| `menuPanel 16` | `Spacing.sm 6` | `menuRow 10` |
+
+**Alignment to a control outranks it.** Every palette menu hangs off a button, and its edge lines up
+with that button's — `MenuPanel.inset` is `Spacing.md`, which is `bottomBar`'s own horizontal padding,
+and the header menus use `Spacing.md * 2` to meet the header button in its wider gutter. The buttons
+sit directly under the menus, so a 2pt disagreement there reads as broken padding, while the same 2pt
+against the panel's corner reads as almost nothing. Anchor to the control, then let the corner fall
+where it does: `panel 26` against an 8pt gap would want `menuPanel 18`, and it stays 16.
+
+**It applies only where corners actually meet.** A list row sits mid-panel with the header above and
+the bottom bar below, so it shares no corner with `panel` and has nothing to be concentric with —
+`row 10` is chosen for the row's own size and stays on the shared scale. Forcing the rule there would
+round every row to 18 for no reason.
+
+If a pair ever does need closing, **move the gap, not the curve** — but only once you have checked
+what else is anchored to that gap. A radius is shared by surfaces across several features, a
+placement constant is not: `Radius.menuPanel` alone dresses the ⌘K menu, the extensions actions
+panel, the shortcut-recorder callout and the Notes switcher, and `menuRow` is deliberately equal to
+`row` so a row pill is one shape everywhere.
+
 ### Size (`Theme.Size`)
 
 `panelWidth 750` · `panelHeight 475` · `headerHeight 44` · `bottomBarHeight 52` · `barButtonHeight 28` ·

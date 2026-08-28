@@ -46,8 +46,8 @@ final class MenuPanelController {
     private var hosting: NSHostingView<AnyView>?
     private weak var parent: NSWindow?
 
-    /// Inset from the palette's corners, so the menu's own corner isn't flush with the panel's.
-    private static let inset: CGFloat = 8
+    /// `bottomBar`'s own padding: a menu's edge must line up with the button it hangs off.
+    private static let inset: CGFloat = Theme.Spacing.md
 
     var isOpen: Bool { panel?.isVisible ?? false }
 
