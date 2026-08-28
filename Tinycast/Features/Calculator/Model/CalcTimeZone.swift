@@ -6,6 +6,8 @@ enum CalcTimeZone {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !query.isEmpty, query.count <= 128 else { return nil }
 
+        if let difference = offsetBetween(query, now: now, calendar: calendar) { return difference }
+
         // A trailing `± <n> <unit>` shifts the answer, so `5pm ldn in sf + 2h` is still one query.
         let (zoneQuery, offset) = splitOffset(query)
         let words = zoneQuery.split(whereSeparator: \.isWhitespace).map(String.init)
@@ -15,10 +17,27 @@ enum CalcTimeZone {
         guard let connector = words.lastIndex(where: { $0 == "in" || $0 == "to" || $0 == "at" })
         else { return nil }
         let targetWords = Array(words[(connector + 1)...])
-        guard !targetWords.isEmpty, let target = zone(named: targetWords) else { return nil }
+        guard !targetWords.isEmpty else { return nil }
+
+        // `time in 4 hours` names a duration where a zone would go, so the home zone answers.
+        let target: TimeZone
+        var ahead: (count: Int, component: Calendar.Component)?
+        if let zone = zone(named: targetWords) {
+            target = zone
+        } else if let duration = parseDuration(targetWords.joined(separator: " ")) {
+            target = calendar.timeZone
+            ahead = duration
+        } else {
+            return nil
+        }
 
         let leading = Array(words[0..<connector])
         guard var source = sourceMoment(leading, now: now, calendar: calendar) else { return nil }
+        if let ahead {
+            guard let shifted = calendar.date(byAdding: ahead.component, value: ahead.count, to: source.date)
+            else { return nil }
+            source = SourceMoment(date: shifted, zone: source.zone)
+        }
         if let offset {
             guard let shifted = calendar.date(byAdding: offset.component, value: offset.count, to: source.date)
             else { return nil }
@@ -72,10 +91,48 @@ enum CalcTimeZone {
         let zone: TimeZone
     }
 
+    /// `diff paris`, `time diff paris` — how far a zone runs from the Mac's own.
+    private static func offsetBetween(
+        _ query: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        var words = query.split(whereSeparator: \.isWhitespace).map(String.init)
+        if words.first == "time" { words.removeFirst() }
+        guard words.count >= 2, words[0] == "diff" || words[0] == "difference",
+            let target = zone(named: Array(words.dropFirst()))
+        else { return nil }
+
+        let home = calendar.timeZone
+        let minutes =
+            (target.secondsFromGMT(for: now) - home.secondsFromGMT(for: now)) / 60
+        let sign = minutes < 0 ? "-" : "+"
+        let whole = abs(minutes) / 60
+        let part = abs(minutes) % 60
+        let text = part == 0 ? "\(sign)\(whole)h" : "\(sign)\(whole)h \(part)m"
+
+        return CalcResult(
+            expression: clockString(now, zone: home, calendar: calendar),
+            sourceBadge: label(for: home),
+            targetBadge: label(for: target),
+            payload: .value(
+                display: "\(clockString(now, zone: target, calendar: calendar)) (\(text))",
+                copyText: text))
+    }
+
     private static func sourceMoment(
         _ words: [String], now: Date, calendar: Calendar
     ) -> SourceMoment? {
-        let words = words.filter { !["what", "whats", "the", "is", "it", "current"].contains($0) }
+        var words = words.filter { !["what", "whats", "the", "is", "it", "current"].contains($0) }
+
+        // `time in 4 hours in sf`: the leading half carries its own `in <duration>`.
+        var ahead: (count: Int, component: Calendar.Component)?
+        if let connector = words.lastIndex(where: { $0 == "in" || $0 == "at" }),
+            connector + 1 < words.count,
+            let duration = parseDuration(words[(connector + 1)...].joined(separator: " "))
+        {
+            ahead = duration
+            words = Array(words[0..<connector])
+        }
+
         guard let head = words.first else { return nil }
         guard head == "time" || head == "now" || head == "clock" || parseClock(head) != nil else {
             return nil
@@ -85,7 +142,10 @@ enum CalcTimeZone {
         let zone = rest.isEmpty ? calendar.timeZone : (self.zone(named: rest) ?? calendar.timeZone)
         if head == "time" || head == "now" || head == "clock" {
             guard rest.isEmpty || self.zone(named: rest) != nil else { return nil }
-            return SourceMoment(date: now, zone: zone)
+            guard let ahead else { return SourceMoment(date: now, zone: zone) }
+            guard let shifted = calendar.date(byAdding: ahead.component, value: ahead.count, to: now)
+            else { return nil }
+            return SourceMoment(date: shifted, zone: zone)
         }
 
         guard let clock = parseClock(head) else { return nil }
@@ -100,7 +160,10 @@ enum CalcTimeZone {
         components.minute = clock.minute
         components.timeZone = zone
         guard let date = source.date(from: components) else { return nil }
-        return SourceMoment(date: date, zone: zone)
+        guard let ahead else { return SourceMoment(date: date, zone: zone) }
+        guard let shifted = source.date(byAdding: ahead.component, value: ahead.count, to: date)
+        else { return nil }
+        return SourceMoment(date: shifted, zone: zone)
     }
 
     private static func parseClock(_ word: String) -> (hour: Int, minute: Int)? {
@@ -127,7 +190,9 @@ enum CalcTimeZone {
     }
 
     private static func zone(named words: [String]) -> TimeZone? {
+        // `são paulo` and `zürich` are how the cities are spelled; the identifiers are not.
         let phrase = words.joined(separator: " ")
+            .folding(options: [.diacriticInsensitive], locale: nil)
         if let identifier = aliases[phrase] { return TimeZone(identifier: identifier) }
         guard let identifier = cities[phrase] else { return nil }
         return TimeZone(identifier: identifier)

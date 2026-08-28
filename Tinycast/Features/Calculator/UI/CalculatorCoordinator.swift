@@ -35,6 +35,14 @@ final class CalculatorCoordinator {
         Paster.copyPlainText(copyText)
     }
 
+    /// `⇧⌘↵` on the card: the whole calculation, for pasting into a note or a message.
+    func copyCalculationWithExpression(_ result: CalcResult) {
+        guard case .value(let display, let copyText) = result.payload else { return }
+        calcHistory.record(expression: result.expression, result: display)
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Paster.copyPlainText("\(result.expression) = \(copyText)")
+    }
+
     /// Enter on a Calculator History row: re-copy the stored answer (no re-record).
     func copyHistoryEntry(_ entry: CalcHistoryEntry) {
         paletteCoordinator.hidePalette(restoreFocus: false)

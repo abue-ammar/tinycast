@@ -773,6 +773,45 @@ struct CalcTests {
         expectNil("monday in 3 kg")
         expectDisplay("10 in in cm", "25.4 cm")
 
+        // A zone's offset from the Mac's own
+        expectDisplayAt("diff paris", "2:18 AM (+2h)")
+        expectDisplayAt("time diff tokyo", "9:18 AM (+9h)")
+        expectDisplayAt("diff kolkata", "5:48 AM (+5h 30m)")
+        expectBadgesAt("diff paris", source: "UTC", target: "Paris")
+        expectNil("diff xyzzy")
+
+        // A duration where a zone would go, and both at once
+        expectDisplayAt("time in 4 hours", "4:18 AM")
+        expectDisplayAt("time in 90 min", "1:48 AM")
+        expectDisplayAt("time in 4 hours in san francisco", "9:18 PM (yesterday)")
+
+        // Accented spellings resolve, since the identifiers carry none
+        expectDisplayAt("time in são paulo", "9:18 PM (yesterday)")
+        expectDisplayAt("time in sao paulo", "9:18 PM (yesterday)")
+        expectDisplayAt("time in zürich", "2:18 AM")
+
+        // A bare number takes the unit its moment implies
+        expectDisplayAt("3:45pm + 5", "24 July at 8:45 PM")
+        expectDisplayAt("3:45pm - 2", "24 July at 1:45 PM")
+        expectDisplayAt("august 5 + 5", "10 August")
+        expectDisplayAt("august 5 - 5", "31 July")
+
+        // A named moment earns a card once it carries a time or a qualifier
+        expectDisplayAt("tomorrow at 9am", "25 July at 9:00 AM")
+        expectDisplayAt("next monday", "27 July")
+        expectDisplayAt("last friday", "17 July")
+        expectBadgesAt("tomorrow at 9am", source: "Friday, 24 July", target: "Saturday")
+        // A lone date word is still an app search
+        expectNilAt("tomorrow")
+        expectNilAt("today")
+
+        // Spoken function and operator names
+        expectDisplay("square root of 625", "25")
+        expectDisplay("square root of 64", "8")
+        expectDisplay("cube root of 27", "3")
+        expectDisplay("2 power 10", "1,024")
+        expectDisplay("2 power 3 power 2", "512")
+
         // Business days skip weekends. The clock is Fri 2026-07-24, so every hop crosses one.
         expectDisplayAt("today + 1 business day", "27 July")
         expectDisplayAt("today + 5 business days", "31 July")

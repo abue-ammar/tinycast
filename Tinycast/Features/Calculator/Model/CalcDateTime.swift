@@ -22,7 +22,13 @@ enum CalcDateTime {
         let hasFromAgo =
             query.contains(" from ") || query.hasSuffix(" ago") || query.contains(" ago ")
         let hasIn = query.contains(" in ")
-        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn else { return nil }
+        // A lone `tomorrow` is an app search, so a named moment needs a qualifier to earn a card.
+        let isBareMoment =
+            query.contains(" at ")
+            || ["next ", "last "].contains { query.hasPrefix($0) }
+        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment else {
+            return nil
+        }
 
         if hasUntil, let result = parseUntil(query, echo: echo, now: now, calendar: calendar) {
             return result
@@ -39,7 +45,62 @@ enum CalcDateTime {
         if hasIn, let result = parseWeekdayIn(query, echo: echo, now: now, calendar: calendar) {
             return result
         }
+        if isBareMoment, let result = bareMoment(query, echo: echo, now: now, calendar: calendar) {
+            return result
+        }
         return nil
+    }
+
+    /// `next monday`, `tomorrow`, `tomorrow at 9am` — a moment named without any arithmetic.
+    private static func bareMoment(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        var phrase = query
+        var clock: (hour: Int, minute: Int)?
+        // `at 9am` rides along, so the answer keeps the time it was given.
+        if let range = phrase.range(of: " at ") {
+            let tail = String(phrase[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+            guard let parsed = parseMeridiemClock(tail) else { return nil }
+            clock = parsed
+            phrase = String(phrase[..<range.lowerBound])
+        }
+        guard let moment = parseMoment(phrase, now: now, calendar: calendar) else { return nil }
+
+        var date = moment.date
+        var hasTime = moment.hasTime
+        if let clock {
+            guard
+                let set = calendar.date(
+                    bySettingHour: clock.hour, minute: clock.minute, second: 0, of: date)
+            else { return nil }
+            date = set
+            hasTime = true
+        }
+
+        return CalcResult(
+            expression: echo,
+            sourceBadge: dateString(now, now: now, calendar: calendar),
+            targetBadge: weekdayName(date, calendar: calendar),
+            payload: .value(
+                display: answerString(date, hasTime: hasTime, now: now, calendar: calendar),
+                copyText: answerString(date, hasTime: hasTime, now: now, calendar: calendar)))
+    }
+
+    /// `9am`, `5:30pm`, `14:00` as a wall clock, with no bias applied.
+    private static func parseMeridiemClock(_ text: String) -> (hour: Int, minute: Int)? {
+        var body = text
+        var meridiem: String?
+        for suffix in ["am", "pm"] where body.hasSuffix(suffix) {
+            meridiem = suffix
+            body.removeLast(2)
+        }
+        body = body.trimmingCharacters(in: .whitespaces)
+        guard let (hour, minute) = parseClock(body) else { return nil }
+        guard let meridiem else {
+            return (0...23).contains(hour) ? (hour, minute) : nil
+        }
+        guard (1...12).contains(hour) else { return nil }
+        return (meridiem == "pm" ? (hour % 12) + 12 : hour % 12, minute)
     }
 
     /// `monday in 3 weeks` — that weekday, in the week the duration lands in.
@@ -226,6 +287,26 @@ enum CalcDateTime {
         let left = String(query[..<opRange.lowerBound])
         let right = String(query[opRange.upperBound...])
         guard let base = parseMoment(left, now: now, calendar: calendar) else { return nil }
+
+        // A bare number takes the unit the moment implies: hours off a clock, days off a date.
+        if let count = Int(right.trimmingCharacters(in: .whitespaces)) {
+            let component: Calendar.Component = base.hasTime ? .hour : .day
+            guard op == "+" || count != .min else { return nil }
+            guard
+                let result = calendar.date(
+                    byAdding: component, value: op == "-" ? -count : count, to: base.date)
+            else { return nil }
+            return CalcResult(
+                expression: echo,
+                sourceBadge: momentString(
+                    base.date, hasTime: base.hasTime, now: now, calendar: calendar),
+                targetBadge: weekdayName(result, calendar: calendar),
+                payload: .value(
+                    display: answerString(
+                        result, hasTime: base.hasTime, now: now, calendar: calendar),
+                    copyText: answerString(
+                        result, hasTime: base.hasTime, now: now, calendar: calendar)))
+        }
 
         // C: moment ± duration → a new moment.
         if let duration = parseDurationPhrase(right) {

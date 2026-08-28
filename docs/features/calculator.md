@@ -67,6 +67,7 @@ against a fixed clock.
 - **D** — difference between two moments: `jul 4 - today`
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
+- **G** — a named moment, once qualified: `tomorrow at 9am`, `next monday`, `last friday`
 
 **An answered moment badges its weekday.** Grammars C and E resolve to a date, and the day of the
 week is the thing a date does not say out loud — so `5 weekdays from now` reads `4 September` under
@@ -79,6 +80,13 @@ most recent past one; an absolute date ignores the bias. Grammar D only engages 
 operand contains a letter, because two letter-free operands (`5/2 - 1/2`) are equally valid as
 arithmetic and are left to the calculator rather than silently read as dates. Two-digit years expand
 the way date pickers do — 00–68 to the 2000s, 69–99 to the 1900s.
+
+Grammar G needs the qualifier. A lone `tomorrow` is an app search, so only `at <time>` or a
+leading `next` / `last` earns a card — the same rule that keeps `today` and `july` silent.
+
+A bare number after a moment takes the unit that moment implies: hours off a clock time
+(`3:45pm + 5` → 8:45 PM), days off a date (`august 5 + 5` → 10 August). It is checked before the
+spelled durations, since `5` names no unit of its own.
 
 Grammar F resolves the weekday **inside the landing week** rather than counting forward from the
 landing day, so `monday in 3 weeks` is that week's Monday whichever day you ask on. The week is
@@ -161,6 +169,16 @@ work without either side being local. That zone comes from the **injected calend
 performs no environment read and `calc-test` pins UTC exactly as it pins the clock. A result that
 lands on another date is suffixed `(tomorrow)` / `(yesterday)` rather than silently reading as the
 same day — the copyable text stays the bare time.
+
+A trailing `+ 2h` / `- 30 min` shifts the answer before it is converted, so `5pm ldn in sf + 2h`
+stays one query rather than needing two. Only sub-day units qualify, since a zone answer is a clock
+time, and `5pm london in sf + 2 kg` is silent rather than wrong.
+
+`diff paris` answers how far a zone runs from the Mac's own, and a duration may stand where a zone
+would (`time in 4 hours`, `time in 4 hours in san francisco`) — the zone table is tried first, so a
+city always outranks a duration. City names are matched **diacritic-folded**, because the identifiers
+carry no accents while the cities do: `são paulo` and `zürich` resolve alongside their bare
+spellings, the same folding `CalcCurrency` already applies to its nouns.
 
 Two tables back it. `cities` is derived from `TimeZone.knownTimeZoneIdentifiers` on first use: 443
 identifiers keyed by their city component, ~0.8 ms to build and ~18 ns to query, so nothing is

@@ -215,11 +215,39 @@ enum CalcTokenizer {
 /// Precedence-climbing evaluator, no AST; nil for anything malformed or non-finite.
 enum CalcParser {
     static func evaluate(_ tokens: [CalcToken]) -> Double? {
-        var parser = Parser(tokens: tokens)
+        var parser = Parser(tokens: spelledFunctions(tokens))
         guard let result = parser.parseExpression(minBP: 0), parser.isAtEnd,
             result.effective.isFinite
         else { return nil }
         return result.effective
+    }
+
+    /// Folds the spoken function names into the symbol ones before any parsing sees them.
+    private static func spelledFunctions(_ tokens: [CalcToken]) -> [CalcToken] {
+        var folded: [CalcToken] = []
+        var index = 0
+        while index < tokens.count {
+            // `square root of 625` is `sqrt 625`; the trailing `of` would otherwise multiply.
+            if index + 1 < tokens.count, tokens[index] == .ident("square"),
+                tokens[index + 1] == .ident("root")
+            {
+                folded.append(.ident("sqrt"))
+                index += 2
+                if index < tokens.count, tokens[index] == .ident("of") { index += 1 }
+                continue
+            }
+            if index + 1 < tokens.count, tokens[index] == .ident("cube"),
+                tokens[index + 1] == .ident("root")
+            {
+                folded.append(.ident("cbrt"))
+                index += 2
+                if index < tokens.count, tokens[index] == .ident("of") { index += 1 }
+                continue
+            }
+            folded.append(tokens[index])
+            index += 1
+        }
+        return folded
     }
 
     // Capture-free closures, not C function refs, so every entry infers `@Sendable` in Swift 5.
@@ -322,6 +350,9 @@ private struct Parser {
         // Spelled-out only: "%" is already percent, and "20% - 5" gives no local signal.
         case .ident("mod"):
             return BinaryOp(op: "%", bindingPower: Self.mulBP, rightBindingPower: Self.mulBP + 1)
+        // Spoken form of `^`, right-associative like the symbol it spells.
+        case .ident("power"):
+            return BinaryOp(op: "^", bindingPower: 30, rightBindingPower: 30)
         case .op("^"):
             return BinaryOp(op: "^", bindingPower: 30, rightBindingPower: 30)  // right-associative: 2^3^2 = 512
         default: return nil
