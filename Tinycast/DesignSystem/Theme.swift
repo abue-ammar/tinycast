@@ -129,9 +129,11 @@ enum Theme {
         /// Six rows and half of the seventh, so a capped menu reads as scrollable rather than
         /// clipped — and no ordinary menu length lands a hair over the cap and scrolls by a pixel.
         static let menuVisibleRows: CGFloat = 6.5
-        /// How tall a menu's rows may grow before they scroll, counted in rows so the cap can
-        /// never fall mid-row, and well inside the panel the menu overlays.
-        static var menuRowsMaxHeight: CGFloat { menuVisibleRows * (menuRowHeight + menuRowSpacing) }
+        /// Counted in rows so the cap never falls mid-row, rounded because a half-row of an odd
+        /// pitch gives a fractional window height and lands the glass edge on a half pixel.
+        static var menuRowsMaxHeight: CGFloat {
+            (menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()
+        }
         /// A menu row's glyph slot, sized so symbol and app-icon rows read the same.
         static let menuIcon: CGFloat = 20
         /// A brand mark inside the menu icon slot, sized to the optical weight of a symbol.
