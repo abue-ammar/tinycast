@@ -123,7 +123,8 @@ Tinycast's own dialog and leaves no partial state.
 Quicklinks are their own `AppEntry.Kind`, their own `AppIndex` slice and their own launcher section,
 between System Settings and Snippets. Only the **name** is indexed; the destination is not searchable
 (a URL is a subsequence of almost any query). Per-quicklink "Show in root search" filters the slice;
-the pane's "Show in launcher" hides the whole section.
+the pane's "Show in launcher" takes the section and the four Quicklink commands out of the
+launcher together, leaving shortcuts and the pane itself working.
 
 `Quicklink.precedes` is the one display order — pinned first in the order they were pinned, then the
 rest by name — and both the store and the launcher slice sort through it, so the two can never

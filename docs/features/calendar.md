@@ -118,8 +118,9 @@ nothing ticking.
 
 ## Commands
 
-All five leave the launcher when the feature is off, through `CalendarCoordinator.applyEnabled`,
-the `applyQuicklinksPresence` twin.
+All five leave the launcher when the feature is off **or** when "Show in launcher" is, through
+`CalendarCoordinator.applyEnabled`, the `applyQuicklinksPresence` twin. Their shortcuts, the join
+card and the menu bar are unaffected: only launcher search is.
 
 | Command | Does | Bindable |
 | --- | --- | --- |

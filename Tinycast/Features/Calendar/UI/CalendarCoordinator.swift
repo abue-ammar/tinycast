@@ -96,7 +96,7 @@ final class CalendarCoordinator {
         let enabled = settings.calendarEnabled
         appIndex.setCommandsVisible(
             [.joinNextMeeting, .copyMeetingLink, .mySchedule, .openInCalendar, .createEvent],
-            enabled)
+            enabled && settings.calendarShowInLauncher)
         guard enabled else {
             store.stop()
             clock.stop()

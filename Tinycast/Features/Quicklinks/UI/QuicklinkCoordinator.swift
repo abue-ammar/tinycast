@@ -60,14 +60,12 @@ final class QuicklinkCoordinator {
 
     // MARK: - Feature presence
 
-    /// The switch moves section and commands together; "show in launcher" hides only the section.
+    /// Either switch off means the feature reaches the launcher not at all — rows and commands.
     func applyQuicklinksPresence() {
-        let enabled = settings.quicklinksEnabled
-        appIndex.setQuicklinks(
-            enabled && settings.quicklinksShowInLauncher ? store.quicklinks : [])
+        let visible = settings.quicklinksEnabled && settings.quicklinksShowInLauncher
+        appIndex.setQuicklinks(visible ? store.quicklinks : [])
         appIndex.setCommandsVisible(
-            [.createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks],
-            enabled)
+            [.createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks], visible)
     }
 
     // MARK: - Opening
