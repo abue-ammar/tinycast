@@ -812,11 +812,27 @@ struct CalcTests {
         expectDisplayAt("28. aug + 3", "31 August")
         expectDisplayAt("28. august + 3", "31 August")
         expectDisplayAt("28.aug + 3", "31 August")
-        expectDisplayAt("1. jan + 1", "2 January, 2027")
+        // Nearest, not next: from July, January is six months back rather than six ahead
+        expectDisplayAt("1. jan + 1", "2 January")
         expectDisplayAt("28. aug 2027 + 3", "31 August, 2027")
         expectBadgesAt("28. aug + 3", source: "Friday, 28 August", target: "Monday")
         // Only a trailing dot is an ordinal, so a decimal day is still not a date
         expectNilAt("28.5 aug + 1")
+
+        // A written day is its own reason for a card: the weekday is why you typed it
+        expectDisplayAt("25. aug", "25 August")
+        expectDisplayAt("25 aug", "25 August")
+        expectDisplayAt("aug 25", "25 August")
+        expectDisplayAt("25.8.27", "25 August, 2027")
+        expectDisplayAt("1. jan", "1 January")
+        expectBadgesAt("25. aug", source: "Friday, 24 July", target: "Tuesday")
+        // A bare date takes the year it is nearest, so it agrees with the same date plus a shift
+        expectDisplayAt("25. aug + 3", "28 August")
+        // A month or a relative word alone is still an app search
+        expectNilAt("july")
+        expectNilAt("aug")
+        expectNilAt("today")
+        expectNilAt("tomorrow")
 
         // Accented spellings resolve, since the identifiers carry none
         expectDisplayAt("time in são paulo", "9:18 PM (yesterday)")

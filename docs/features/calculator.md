@@ -89,8 +89,16 @@ which is what separates a date from a decimal and from a version number: `1.5 + 
 The same convention writes an **ordinal dot** after the day, so `28. aug + 3` reads as 28 August.
 Only a trailing dot is dropped, which is why `28.5 aug` stays silent rather than becoming a date.
 
-Grammar G needs the qualifier. A lone `tomorrow` is an app search, so only `at <time>` or a
-leading `next` / `last` earns a card — the same rule that keeps `today` and `july` silent.
+Grammar G needs the qualifier. A lone `tomorrow` is an app search, so `at <time>` or a leading
+`next` / `last` earns a card — the same rule that keeps `today` and `july` silent. **A written day
+is qualifier enough**: `25. aug`, `aug 25` and `25.8.27` all answer, badged with their weekday,
+because nobody types a day-and-month pair looking for an app. A month alone still names no day, so
+`july` stays a search.
+
+A bare date takes the year it is **nearest**, not the next one — three days behind is likelier the
+date meant than the same day twelve months out. Grammar C shifts a moment, so it reads the year the
+same way and `25. aug` and `25. aug + 3` can never disagree. Grammar D measures _to_ a moment,
+where the documented forward bias still decides: `jul 4 - today` keeps looking ahead.
 
 A bare number after a moment takes the unit that moment implies: hours off a clock time
 (`3:45pm + 5` → 8:45 PM), days off a date (`august 5 + 5` → 10 August). It is checked before the

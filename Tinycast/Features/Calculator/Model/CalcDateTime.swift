@@ -3,7 +3,7 @@ import Foundation
 /// Natural-language date/time for the card. Four grammars; see docs/features/calculator.md.
 enum CalcDateTime {
     /// Which occurrence of a bare, recurring date/time a phrase resolves to.
-    private enum MomentBias { case future, past }
+    private enum MomentBias { case future, past, nearest }
 
     static func evaluate(
         _ raw: String, now: Date = Date(), calendar: Calendar = .current
@@ -23,9 +23,11 @@ enum CalcDateTime {
             query.contains(" from ") || query.hasSuffix(" ago") || query.contains(" ago ")
         let hasIn = query.contains(" in ")
         // A lone `tomorrow` is an app search, so a named moment needs a qualifier to earn a card.
+        // A written day is qualifier enough: nobody types `25. aug` looking for an app.
         let isBareMoment =
             query.contains(" at ")
             || ["next ", "last "].contains { query.hasPrefix($0) }
+            || namesADay(query)
         guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment else {
             return nil
         }
@@ -51,6 +53,23 @@ enum CalcDateTime {
         return nil
     }
 
+    /// A day number beside a month, which no app search looks like — `25. aug`, `aug 25`, `25.8.27`.
+    private static func namesADay(_ query: String) -> Bool {
+        let atoms = atomize(query)
+        guard atoms.count == 2 || atoms.count == 3 else { return atoms.count == 1 && isDottedDate(atoms) }
+        let months = atoms.filter { monthByName[$0] != nil }.count
+        let days = atoms.filter { ordinalDay($0) != nil }.count
+        return months == 1 && days == atoms.count - 1
+    }
+
+    /// `25.8.27` on its own: three dotted parts, which cannot be read as one number.
+    private static func isDottedDate(_ atoms: [String]) -> Bool {
+        guard let only = atoms.first else { return false }
+        let parts = only.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 3, parts[2].count == 2 || parts[2].count == 4 else { return false }
+        return parts.allSatisfy { Int($0) != nil }
+    }
+
     /// `next monday`, `tomorrow`, `tomorrow at 9am` — a moment named without any arithmetic.
     private static func bareMoment(
         _ query: String, echo: String, now: Date, calendar: Calendar
@@ -64,7 +83,9 @@ enum CalcDateTime {
             clock = parsed
             phrase = String(phrase[..<range.lowerBound])
         }
-        guard let moment = parseMoment(phrase, now: now, calendar: calendar) else { return nil }
+        // No `till` or `since` to lean on, so a bare date takes the year it is nearest.
+        guard let moment = parseMoment(phrase, now: now, calendar: calendar, bias: .nearest)
+        else { return nil }
 
         var date = moment.date
         var hasTime = moment.hasTime
@@ -286,7 +307,13 @@ enum CalcDateTime {
 
         let left = String(query[..<opRange.lowerBound])
         let right = String(query[opRange.upperBound...])
-        guard let base = parseMoment(left, now: now, calendar: calendar) else { return nil }
+        // Grammar C shifts a moment, so nearest keeps `25. aug` and `25. aug + 3` in one year.
+        // Grammar D measures to one, where the documented forward bias still decides the year.
+        let shifts = parseDurationPhrase(right) != nil || Int(right.trimmingCharacters(in: .whitespaces)) != nil
+        guard
+            let base = parseMoment(
+                left, now: now, calendar: calendar, bias: shifts ? .nearest : .future)
+        else { return nil }
 
         // A bare number takes the unit the moment implies: hours off a clock, days off a date.
         if let count = Int(right.trimmingCharacters(in: .whitespaces)) {
@@ -504,11 +531,13 @@ enum CalcDateTime {
             if date <= now, let next = shift(date, days: 1, calendar: calendar) { date = next }
         case .past:
             if date > now, let prev = shift(date, days: -1, calendar: calendar) { date = prev }
+        case .nearest:
+            break
         }
         return Moment(date: date, hasTime: true)
     }
 
-    /// The given day of `month`, resolved to the upcoming or most recent year by `bias`.
+    /// The given day of `month`, resolved to the upcoming, most recent, or nearest year by `bias`.
     private static func monthDayMoment(
         month: Int, day: Int, now: Date, calendar: Calendar, bias: MomentBias = .future
     ) -> Moment? {
@@ -524,6 +553,9 @@ enum CalcDateTime {
             if thisYear <= sod { return Moment(date: thisYear, hasTime: false) }
             guard let lastYear = makeDate(year - 1, month, day, calendar) else { return nil }
             return Moment(date: lastYear, hasTime: false)
+        // A date days behind is likelier the one meant than the same date a year out.
+        case .nearest:
+            return Moment(date: thisYear, hasTime: false)
         }
     }
 
