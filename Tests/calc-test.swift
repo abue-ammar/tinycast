@@ -753,6 +753,26 @@ struct CalcTests {
         expectError("10 mad to usd", "No exchange rate for MAD.")
         expectBadgesAt("time in ist", source: "UTC", target: "Kolkata")
 
+        // A trailing offset shifts a zone answer, so the whole thing stays one query
+        expectDisplayAt("5pm london in sf", "9:00 AM")
+        expectDisplayAt("5pm london in sf + 2h", "11:00 AM")
+        expectDisplayAt("5pm london in sf - 1 hour", "8:00 AM")
+        expectDisplayAt("5pm london in sf + 30 min", "9:30 AM")
+        expectBadgesAt("5pm london in sf + 2h", source: "London", target: "Los Angeles")
+        // A unit conversion is not a zone offset, and neither is a bare sum
+        expectDisplay("1 cup to ml", "236.5882365 mL")
+        expectNil("5pm london in sf + 2 kg")
+
+        // `<weekday> in <n> weeks` answers that weekday inside the week it lands in
+        expectDisplayAt("monday in 3 weeks", "10 August")
+        expectDisplayAt("monday in 1 week", "27 July")
+        expectDisplayAt("tuesday in 2 weeks", "4 August")
+        expectDisplayAt("friday in 2 weeks", "7 August")
+        expectBadgesAt("monday in 3 weeks", source: "Friday, 24 July", target: "Monday")
+        // A month is not a weekday, and `in` still reaches the unit path
+        expectNil("monday in 3 kg")
+        expectDisplay("10 in in cm", "25.4 cm")
+
         // Business days skip weekends. The clock is Fri 2026-07-24, so every hop crosses one.
         expectDisplayAt("today + 1 business day", "27 July")
         expectDisplayAt("today + 5 business days", "31 July")

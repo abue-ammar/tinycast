@@ -66,6 +66,7 @@ against a fixed clock.
 - **C** — a moment ± a duration: `today + 3 weeks`, `now + 90 min`
 - **D** — difference between two moments: `jul 4 - today`
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
+- **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
 
 **An answered moment badges its weekday.** Grammars C and E resolve to a date, and the day of the
 week is the thing a date does not say out loud — so `5 weekdays from now` reads `4 September` under
@@ -78,6 +79,12 @@ most recent past one; an absolute date ignores the bias. Grammar D only engages 
 operand contains a letter, because two letter-free operands (`5/2 - 1/2`) are equally valid as
 arithmetic and are left to the calculator rather than silently read as dates. Two-digit years expand
 the way date pickers do — 00–68 to the 2000s, 69–99 to the 1900s.
+
+Grammar F resolves the weekday **inside the landing week** rather than counting forward from the
+landing day, so `monday in 3 weeks` is that week's Monday whichever day you ask on. The week is
+`Calendar`'s own, so it follows the user's first-weekday preference — on a Monday-first calendar
+`sunday in 1 week` lands at the end of that week rather than its start. It runs after every other
+grammar because `in` is also the unit connector, which is what keeps `10 in in cm` a conversion.
 
 `CalcQuantity` is a separate typed precedence parser rather than a mode added to the scalar
 `CalcParser`. Scalar `*` / `/` preserve the unit, compatible quantity division returns a scalar, and a

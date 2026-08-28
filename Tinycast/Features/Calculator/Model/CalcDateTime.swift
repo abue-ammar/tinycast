@@ -21,7 +21,8 @@ enum CalcDateTime {
         let hasArith = query.contains(" + ") || query.contains(" - ")
         let hasFromAgo =
             query.contains(" from ") || query.hasSuffix(" ago") || query.contains(" ago ")
-        guard hasUntil || hasSince || hasArith || hasFromAgo else { return nil }
+        let hasIn = query.contains(" in ")
+        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn else { return nil }
 
         if hasUntil, let result = parseUntil(query, echo: echo, now: now, calendar: calendar) {
             return result
@@ -35,7 +36,39 @@ enum CalcDateTime {
         if hasFromAgo, let result = parseOffset(query, echo: echo, now: now, calendar: calendar) {
             return result
         }
+        if hasIn, let result = parseWeekdayIn(query, echo: echo, now: now, calendar: calendar) {
+            return result
+        }
         return nil
+    }
+
+    /// `monday in 3 weeks` — that weekday, in the week the duration lands in.
+    private static func parseWeekdayIn(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        guard let range = query.range(of: " in ") else { return nil }
+        let head = String(query[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
+        guard let weekday = weekdayByName[head],
+            let duration = parseDurationPhrase(String(query[range.upperBound...])),
+            !duration.subDay, !duration.businessDays,
+            let landing = calendar.date(
+                byAdding: duration.component, value: duration.count,
+                to: calendar.startOfDay(for: now))
+        else { return nil }
+
+        // The weekday inside the landing week, so `monday in 3 weeks` is that week's Monday.
+        guard let week = calendar.dateInterval(of: .weekOfYear, for: landing),
+            let result = shift(
+                week.start, days: (weekday - calendar.firstWeekday + 7) % 7, calendar: calendar)
+        else { return nil }
+
+        return CalcResult(
+            expression: echo,
+            sourceBadge: dateString(now, now: now, calendar: calendar),
+            targetBadge: weekdayName(result, calendar: calendar),
+            payload: .value(
+                display: answerString(result, hasTime: false, now: now, calendar: calendar),
+                copyText: answerString(result, hasTime: false, now: now, calendar: calendar)))
     }
 
     /// `5 weekdays from now`, `3 days from today`, `2 weeks ago` — the duration leads.

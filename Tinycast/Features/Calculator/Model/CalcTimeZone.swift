@@ -6,7 +6,9 @@ enum CalcTimeZone {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !query.isEmpty, query.count <= 128 else { return nil }
 
-        let words = query.split(whereSeparator: \.isWhitespace).map(String.init)
+        // A trailing `± <n> <unit>` shifts the answer, so `5pm ldn in sf + 2h` is still one query.
+        let (zoneQuery, offset) = splitOffset(query)
+        let words = zoneQuery.split(whereSeparator: \.isWhitespace).map(String.init)
         guard words.count >= 2 else { return nil }
 
         // Every grammar needs a connector, so an app search never touches the zone table.
@@ -16,7 +18,12 @@ enum CalcTimeZone {
         guard !targetWords.isEmpty, let target = zone(named: targetWords) else { return nil }
 
         let leading = Array(words[0..<connector])
-        guard let source = sourceMoment(leading, now: now, calendar: calendar) else { return nil }
+        guard var source = sourceMoment(leading, now: now, calendar: calendar) else { return nil }
+        if let offset {
+            guard let shifted = calendar.date(byAdding: offset.component, value: offset.count, to: source.date)
+            else { return nil }
+            source = SourceMoment(date: shifted, zone: source.zone)
+        }
 
         var display = calendar
         display.timeZone = target
@@ -31,6 +38,33 @@ enum CalcTimeZone {
             sourceBadge: label(for: source.zone),
             targetBadge: label(for: target),
             payload: .value(display: time + dayNote, copyText: time))
+    }
+
+    /// Splits a trailing `+ 2h` / `- 30 min` off the zone phrase it shifts.
+    private static func splitOffset(
+        _ query: String
+    ) -> (String, (count: Int, component: Calendar.Component)?) {
+        for separator in [" + ", " - "] {
+            guard let range = query.range(of: separator, options: .backwards) else { continue }
+            let tail = String(query[range.upperBound...])
+            guard let duration = parseDuration(tail) else { continue }
+            let sign = separator == " - " ? -1 : 1
+            return (String(query[..<range.lowerBound]), (duration.count * sign, duration.component))
+        }
+        return (query, nil)
+    }
+
+    /// `2h`, `90 min`, `2 hours` — sub-day only, since a zone answer is a clock time.
+    private static func parseDuration(_ text: String) -> (count: Int, component: Calendar.Component)? {
+        let compact = text.replacingOccurrences(of: " ", with: "")
+        let digits = compact.prefix { $0.isNumber }
+        guard let count = Int(digits), count < 100_000 else { return nil }
+        switch String(compact.dropFirst(digits.count)) {
+        case "h", "hr", "hrs", "hour", "hours": return (count, .hour)
+        case "m", "min", "mins", "minute", "minutes": return (count, .minute)
+        case "s", "sec", "secs", "second", "seconds": return (count, .second)
+        default: return nil
+        }
     }
 
     private struct SourceMoment {
