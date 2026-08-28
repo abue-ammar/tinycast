@@ -126,7 +126,7 @@ struct CustomCommandEditorSheet: View {
         "arrow.up.circle", "arrow.down.circle", "doc.text", "folder", "magnifyingglass",
         "ladybug", "chevron.left.forwardslash.chevron.right", "network", "lock", "key",
         "display", "speaker.wave.2", "moon", "sun.max", "power", "clock", "calendar",
-        "chart.bar", "flame",
+        "chart.bar", "flame"
     ]
 
     private var iconField: some View {

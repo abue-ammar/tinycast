@@ -137,7 +137,8 @@ struct CustomCommandTests {
             // thing under test.
             return (
                 log.replacingOccurrences(of: "\r", with: "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines), result)
+                    .trimmingCharacters(in: .whitespacesAndNewlines), result
+            )
         }
 
         let simple = await collect(ShellCommandRunner.stream("echo captured"))
@@ -249,7 +250,8 @@ struct CustomCommandTests {
         check(
             "a blank folder means home rather than an empty path",
             store.commands.first?.workingDirectory == nil)
-        check("a command with no icon falls back to the shared glyph",
+        check(
+            "a command with no icon falls back to the shared glyph",
             store.commands.first?.symbol == CustomCommand.sfSymbol)
 
         // MARK: Arguments
