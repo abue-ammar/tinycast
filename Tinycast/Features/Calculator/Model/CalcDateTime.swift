@@ -14,23 +14,19 @@ enum CalcDateTime {
         let query = echo.lowercased()
         guard !query.isEmpty else { return nil }
 
-        // Cheap gate: every grammar carries a digit or a connector, so an app search stops here
-        // before anything allocates. `namesADay` atomizes, so it runs only past the digit check.
-        let hasDigit = query.contains(where: \.isNumber)
-        guard hasDigit || query.contains(" ") else { return nil }
-
-        let hasUntil =
-            query.contains(" till ") || query.contains(" until ") || query.contains(" til ")
-        let hasSince = query.contains(" since ")
-        let hasArith = query.contains(" + ") || query.contains(" - ")
-        let hasFromAgo =
-            query.contains(" from ") || query.hasSuffix(" ago") || query.contains(" ago ")
-        let hasIn = query.contains(" in ")
+        // Cheap gate: one pass over the words rather than a scan per keyword, since an app search
+        // pays this on every keystroke. `namesADay` atomizes, so a digit has to earn it first.
+        let signals = keywordSignals(query)
+        let hasDigit = signals.contains(.digit)
+        let hasUntil = signals.contains(.until)
+        let hasSince = signals.contains(.since)
+        let hasArith = signals.contains(.arithmetic)
+        let hasFromAgo = signals.contains(.fromAgo)
+        let hasIn = signals.contains(.inWord)
         // A lone `tomorrow` is an app search, so a named moment needs a qualifier to earn a card.
         // A written day is qualifier enough: nobody types `25. aug` looking for an app.
         let isBareMoment =
-            query.contains(" at ")
-            || query.hasPrefix("next ") || query.hasPrefix("last ")
+            signals.contains(.at) || signals.contains(.nextOrLast)
             || (hasDigit && namesADay(query))
         guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment else {
             return nil
@@ -55,6 +51,55 @@ enum CalcDateTime {
             return result
         }
         return nil
+    }
+
+    private struct Signals: OptionSet {
+        let rawValue: Int
+        static let digit = Signals(rawValue: 1 << 0)
+        static let until = Signals(rawValue: 1 << 1)
+        static let since = Signals(rawValue: 1 << 2)
+        static let arithmetic = Signals(rawValue: 1 << 3)
+        static let fromAgo = Signals(rawValue: 1 << 4)
+        static let inWord = Signals(rawValue: 1 << 5)
+        static let at = Signals(rawValue: 1 << 6)
+        static let nextOrLast = Signals(rawValue: 1 << 7)
+    }
+
+    /// One walk of the query, so the gate costs a single pass rather than ten substring scans.
+    private static func keywordSignals(_ query: String) -> Signals {
+        var signals: Signals = []
+        var word = ""
+        var index = 0
+        var isFirst = true
+
+        func classify(_ word: String, isFirst: Bool, isLast: Bool) {
+            switch word {
+            case "till", "until", "til": if !isFirst, !isLast { signals.insert(.until) }
+            case "since": if !isFirst, !isLast { signals.insert(.since) }
+            case "+", "-": if !isFirst, !isLast { signals.insert(.arithmetic) }
+            case "from": if !isFirst, !isLast { signals.insert(.fromAgo) }
+            case "ago": if !isFirst { signals.insert(.fromAgo) }
+            case "in": if !isFirst, !isLast { signals.insert(.inWord) }
+            case "at": if !isFirst, !isLast { signals.insert(.at) }
+            case "next", "last": if isFirst { signals.insert(.nextOrLast) }
+            default: break
+            }
+        }
+
+        for character in query {
+            if character.isNumber { signals.insert(.digit) }
+            if character.isWhitespace {
+                classify(word, isFirst: isFirst, isLast: false)
+                isFirst = isFirst && word.isEmpty
+                if !word.isEmpty { isFirst = false }
+                word = ""
+            } else {
+                word.append(character)
+            }
+            index += 1
+        }
+        classify(word, isFirst: isFirst, isLast: true)
+        return signals
     }
 
     /// A day number beside a month, which no app search looks like — `25. aug`, `aug 25`, `25.8.27`.
@@ -509,7 +554,7 @@ enum CalcDateTime {
             }
         }
         // Dotted dates are day-first, the convention that writes them: `19.2.27` is 19 February.
-        // A written year is what separates one from a version number, so `1.2.3` stays a search.
+        // A 2- or 4-digit tail rejects most version numbers; `1.2.24` is genuinely both.
         if atom.contains(".") {
             let parts = atom.split(separator: ".").map(String.init)
             guard parts.count == 3, let day = Int(parts[0]), let month = Int(parts[1]),

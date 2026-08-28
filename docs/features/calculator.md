@@ -86,6 +86,12 @@ it, where the slashed form stays month-first. It needs three parts and a two- or
 which is what separates a date from a decimal and from a version number: `1.5 + 3` is 4.5 and
 `1.2.3 + 1` earns no card.
 
+The version-number overlap is only **partly** closed, and irreducibly so: `1.2.24` is both a
+plausible semver and a valid 1 February 2024, with nothing in the text to tell them apart. A
+one-digit or three-digit tail is rejected (`1.2.3`, `10.15.7`), which covers the common shapes, but
+a two-digit patch reads as a date. Requiring a four-digit year would close it and cost `19.2.27`,
+which is the more common thing to type.
+
 The same convention writes an **ordinal dot** after the day, so `28. aug + 3` reads as 28 August.
 Only a trailing dot is dropped, which is why `28.5 aug` stays silent rather than becoming a date.
 

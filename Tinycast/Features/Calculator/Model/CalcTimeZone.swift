@@ -3,8 +3,11 @@ import Foundation
 /// Clock time in another city. See docs/features/calculator.md.
 enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
-        // Every grammar is at least two words, so a one-word app search stops before allocating.
-        guard raw.count <= 128, raw.contains(" ") else { return nil }
+        // Every grammar carries a connector or `diff`, so an app search stops before allocating.
+        // Any whitespace, not just a space: a pasted NBSP still separates the words downstream.
+        guard raw.count <= 128, raw.contains(where: \.isWhitespace), hasConnector(raw) else {
+            return nil
+        }
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !query.isEmpty else { return nil }
 
@@ -96,6 +99,22 @@ enum CalcTimeZone {
         let date: Date
         let zone: TimeZone
     }
+
+    /// Scans for a whole-word connector without lowercasing or splitting the whole query first.
+    private static func hasConnector(_ raw: String) -> Bool {
+        var word = ""
+        for character in raw {
+            if character.isWhitespace {
+                if Self.connectors.contains(word.lowercased()) { return true }
+                word = ""
+            } else {
+                word.append(character)
+            }
+        }
+        return Self.connectors.contains(word.lowercased())
+    }
+
+    private static let connectors: Set<String> = ["in", "to", "at", "diff", "difference"]
 
     /// `diff paris`, `time diff paris` — how far a zone runs from the Mac's own.
     private static func offsetBetween(

@@ -821,6 +821,12 @@ struct CalcTests {
         expectNil("is what % of")
         expectNil("tip on")
 
+        // A pasted non-breaking space still reaches the zone table, since the gate scans for
+        // whitespace rather than a literal space. Arithmetic splits on " + " and never did.
+        expectDisplayAt("time\u{a0}in\u{a0}tokyo", "9:18 AM")
+        expectDisplayAt("time\u{9}in\u{9}tokyo", "9:18 AM")
+        expectDisplayAt("time\u{2009}in\u{2009}tokyo", "9:18 AM")
+
         // The ordinal dot German and Austrian dates write after the day
         expectDisplayAt("28. aug + 3", "31 August")
         expectDisplayAt("28. august + 3", "31 August")
