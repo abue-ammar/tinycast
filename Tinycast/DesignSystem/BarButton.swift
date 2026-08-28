@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A bar control's hover chrome. The footer's buttons are capsules; a header control takes the
-/// menu row's own corner instead, so every control along that row reads as one family.
+/// A bar control's hover chrome. `rounded` is the palette's own: footer pills and header pop-ups
+/// share `barControl`, so every control along either row reads as one family.
 enum BarButtonChrome {
     case capsule
     case rounded
@@ -12,7 +12,7 @@ enum BarButtonChrome {
             return AnyShape(Capsule())
         case .rounded:
             return AnyShape(
-                RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous))
+                RoundedRectangle(cornerRadius: Theme.Radius.barControl, style: .continuous))
         }
     }
 }

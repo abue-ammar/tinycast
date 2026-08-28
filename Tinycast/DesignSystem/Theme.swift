@@ -31,6 +31,8 @@ enum Theme {
         static let menu: CGFloat = 6
         /// Hover highlight behind a popover menu row.
         static let menuRow: CGFloat = 10
+        /// A header pop-up button; the footer's action pills stay capsules.
+        static let barControl: CGFloat = 8
         static let menuPanel: CGFloat = 16
         /// The dialog and HUD surface, so a dialog reads as a sibling of the palette.
         static let dialog: CGFloat = 20

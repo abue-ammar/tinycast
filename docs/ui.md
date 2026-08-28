@@ -74,7 +74,15 @@ section's closing padding). See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `barControl 8` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+
+`barControl` dresses the header pop-ups (type filter, AI model), which state a value and drop a menu
+the way a native pop-up button does — a rectangle, not a pill.
+
+**The footer action group stays a `Capsule`, and so do the buttons inside it.** It is the primary
+action, and the pill is the affordance saying so; squaring it off reads as a toolbar. The capsule
+also keeps the pair concentric for free — a capsule's radius is half its height, so the inner
+buttons land exactly `Spacing.xs` inside the wrapper without either radius being written down.
 
 Notes has no corner of its own: it clips to `panel`, so the two floating surfaces read as siblings.
 
