@@ -11,6 +11,7 @@ final class HotKeyManager {
     var onCreateNote: (() -> Void)?
     var onSearchNotes: (() -> Void)?
     var onSearchFiles: (() -> Void)?
+    var onSearchSnippets: (() -> Void)?
     var onJoinNextMeeting: (() -> Void)?
     var onShowSchedule: (() -> Void)?
     var onCreateEvent: (() -> Void)?
@@ -145,8 +146,8 @@ final class HotKeyManager {
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
             UserDefaults.standard.set(Array(set), forKey: boundExtensionCommandKey)
         case .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .joinNextMeeting, .mySchedule, .createEvent, .aiChat, .systemAction,
-            .windowCommand, .quickAction:
+            .searchFiles, .searchSnippets, .joinNextMeeting, .mySchedule, .createEvent, .aiChat,
+            .systemAction, .windowCommand, .quickAction:
             break
         }
         candidateActionsCache = nil
@@ -209,6 +210,8 @@ final class HotKeyManager {
             return CommandID.searchNotes.name
         case .searchFiles:
             return CommandID.searchFiles.name
+        case .searchSnippets:
+            return CommandID.searchSnippets.name
         case .joinNextMeeting:
             return CommandID.joinNextMeeting.name
         case .mySchedule:
@@ -263,6 +266,7 @@ final class HotKeyManager {
         case .createNote: onCreateNote?()
         case .searchNotes: onSearchNotes?()
         case .searchFiles: onSearchFiles?()
+        case .searchSnippets: onSearchSnippets?()
         case .joinNextMeeting: onJoinNextMeeting?()
         case .mySchedule: onShowSchedule?()
         case .createEvent: onCreateEvent?()

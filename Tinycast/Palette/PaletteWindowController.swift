@@ -235,6 +235,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environment(core.uninstall)
             .environment(core.quicklinks)
             .environment(core.quicklinkArguments)
+            .environment(core.snippetsStore)
             .environment(core.extensions)
             .environment(core.calendarStore)
             .environment(core.meetingClock)

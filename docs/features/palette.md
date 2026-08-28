@@ -77,6 +77,7 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
+| `.snippets` | `SnippetsScreen` | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets)) |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
 

@@ -73,7 +73,7 @@ final class VisibilityStore {
         case .settingsPane: isKindEnabled(.systemSettings)
         case .systemAction: isKindEnabled(.systemAction)
         case .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes, .searchFiles,
-            .joinNextMeeting, .mySchedule, .createEvent, .aiChat, .quickAction:
+            .searchSnippets, .joinNextMeeting, .mySchedule, .createEvent, .aiChat, .quickAction:
             isKindEnabled(.command)
         case .togglePalette, .customCommand, .windowCommand, .quicklink, .extensionCommand:
             true

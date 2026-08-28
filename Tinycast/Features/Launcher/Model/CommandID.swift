@@ -21,6 +21,8 @@ enum CommandID: String, CaseIterable, Sendable {
     case searchNotes = "command:search-notes"
     case createQuicklink = "command:create-quicklink"
     case searchQuicklinks = "command:search-quicklinks"
+    case searchSnippets = "command:search-snippets"
+    case createSnippet = "command:create-snippet"
     case importQuicklinks = "command:import-quicklinks"
     case exportQuicklinks = "command:export-quicklinks"
     case exportSettings = "command:export-settings"
@@ -53,6 +55,8 @@ enum CommandID: String, CaseIterable, Sendable {
         case .searchNotes: return "Search Notes"
         case .createQuicklink: return "Create Quicklink"
         case .searchQuicklinks: return "Search Quicklinks"
+        case .searchSnippets: return "Search Snippets"
+        case .createSnippet: return "Create Snippet"
         case .importQuicklinks: return "Import Quicklinks"
         case .exportQuicklinks: return "Export Quicklinks"
         case .exportSettings: return "Export Settings"
@@ -87,6 +91,8 @@ enum CommandID: String, CaseIterable, Sendable {
         case .searchNotes: return "text.magnifyingglass"
         case .createQuicklink: return "link.badge.plus"
         case .searchQuicklinks: return Quicklink.sfSymbol
+        case .searchSnippets: return "curlybraces"
+        case .createSnippet: return "plus.rectangle.on.rectangle"
         case .importQuicklinks: return "square.and.arrow.down"
         case .exportQuicklinks: return "square.and.arrow.up"
         case .exportSettings: return "square.and.arrow.up"
@@ -114,6 +120,7 @@ enum CommandID: String, CaseIterable, Sendable {
     var hotKeyAction: HotKeyAction? {
         switch self {
         case .searchFiles: return .searchFiles
+        case .searchSnippets: return .searchSnippets
         case .clipboardHistory: return .toggleClipboard
         case .searchEmoji: return .toggleEmoji
         case .showNotes: return .showNotes

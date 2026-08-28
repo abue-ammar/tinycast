@@ -19,6 +19,7 @@ struct RootPaletteView: View {
     @Environment(UninstallSession.self) private var uninstall
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
+    @Environment(SnippetsStore.self) private var snippets
     @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
     @FocusState private var searchFocused: Bool
@@ -56,6 +57,9 @@ struct RootPaletteView: View {
         case .quicklinks:
             return QuicklinkListScreen(
                 store: quicklinks, core: core, vm: vm, openActions: openActions)
+        case .snippets:
+            return SnippetsScreen(
+                store: snippets, core: core, vm: vm, openActions: openActions)
         case .emoji:
             return EmojiScreen(
                 index: emojiIndex, frequent: frequentEmoji, core: core, vm: vm,

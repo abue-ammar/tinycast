@@ -9,6 +9,7 @@ enum HotKeyAction: Hashable, Sendable {
     case createNote
     case searchNotes
     case searchFiles
+    case searchSnippets
     case joinNextMeeting
     case mySchedule
     case createEvent
@@ -35,6 +36,7 @@ enum HotKeyAction: Hashable, Sendable {
         case .createNote: "hotkey.createNote"
         case .searchNotes: "hotkey.searchNotes"
         case .searchFiles: "hotkey.searchFiles"
+        case .searchSnippets: "hotkey.searchSnippets"
         case .joinNextMeeting: "hotkey.joinNextMeeting"
         case .mySchedule: "hotkey.mySchedule"
         case .createEvent: "hotkey.createEvent"
@@ -54,6 +56,6 @@ enum HotKeyAction: Hashable, Sendable {
     static let builtInActions: [HotKeyAction] =
         [
             .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .joinNextMeeting, .mySchedule, .createEvent, .aiChat
+            .searchFiles, .searchSnippets, .joinNextMeeting, .mySchedule, .createEvent, .aiChat
         ] + QuickAction.allCases.map(HotKeyAction.quickAction)
 }

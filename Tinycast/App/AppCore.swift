@@ -52,10 +52,14 @@ final class AppCore {
 
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
+    /// Set when a snippet editor should open with Settings; the pane consumes it.
+    var pendingSnippetEdit: SnippetEditRequest?
 
-    @ObservationIgnored private(set) lazy var snippetExpansion = SnippetExpansionCoordinator(
+    @ObservationIgnored private(set) lazy var snippetCoordinator = SnippetCoordinator(
         store: snippetsStore, listener: snippetListener, injector: textInjector,
         clipboardStore: clipboardStore, appIndex: appIndex, settings: settings,
+        windowController: windowController, paletteCoordinator: paletteCoordinator,
+        settingsCoordinator: settingsCoordinator,
         showMessage: { [unowned self] in self.showMessage($0) }, core: self)
     @ObservationIgnored private(set) lazy var quicklinkCoordinator = QuicklinkCoordinator(
         store: quicklinks, argumentSession: quicklinkArguments, settings: settings,
@@ -63,7 +67,7 @@ final class AppCore {
         visibility: visibility, ranking: launcherRanking, aliases: aliases,
         windowController: windowController,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
-        clipboardHistory: { [unowned self] in self.snippetExpansion.clipboardHistoryForExpansion() },
+        clipboardHistory: { [unowned self] in self.snippetCoordinator.clipboardHistoryForExpansion() },
         core: self)
 
     @ObservationIgnored private(set) lazy var paletteCoordinator = PaletteCoordinator(
@@ -105,7 +109,7 @@ final class AppCore {
         systemActionCoordinator: systemActionCoordinator,
         quicklinkCoordinator: quicklinkCoordinator,
         windowCommandCoordinator: windowCommandCoordinator,
-        snippetExpansion: snippetExpansion, fileSearchCoordinator: fileSearchCoordinator,
+        snippetCoordinator: snippetCoordinator, fileSearchCoordinator: fileSearchCoordinator,
         notesCoordinator: notesCoordinator, extensionCoordinator: extensionCoordinator,
         calendarCoordinator: calendarCoordinator,
         core: self)
@@ -223,6 +227,7 @@ final class AppCore {
             hotKeys.onCreateNote = { [weak self] in self?.notesCoordinator.createNote() }
             hotKeys.onSearchNotes = { [weak self] in self?.notesCoordinator.searchNotes() }
             hotKeys.onSearchFiles = { [weak self] in self?.fileSearchCoordinator.show() }
+            hotKeys.onSearchSnippets = { [weak self] in self?.snippetCoordinator.showSnippets() }
             hotKeys.onShowAIChat = { [weak self] in self?.aiChatCoordinator.showChat() }
             hotKeys.onQuickAction = { [weak self] in self?.quickActionCoordinator.run($0) }
             hotKeys.onJoinNextMeeting = { [weak self] in
@@ -267,14 +272,16 @@ final class AppCore {
 
             snippetsStore.onSnapshot = { [weak self] snapshot in
                 guard let self else { return }
-                self.snippetExpansion.applySnippetsLauncherPresence()
+                self.snippetCoordinator.applySnippetsLauncherPresence()
                 self.snippetListener.update(snapshot.records)
             }
             // Off out of the box, so an unused feature costs no load, watcher or tap.
             if settings.snippetsEnabled {
                 Task { await snippetsStore.start() }
-                snippetExpansion.startSnippetKeywordListener()
+                snippetCoordinator.startSnippetKeywordListener()
             }
+            // Unconditional: a disabled feature has to take its command rows down with it.
+            snippetCoordinator.applySnippetsLauncherPresence()
 
             observeFeatureSwitches()
 
@@ -320,9 +327,9 @@ final class AppCore {
             return quicklinks.quicklink(id: id)?.name
         case .extensionCommand(let entryID):
             return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
-            .showNotes, .createNote, .searchNotes, .windowCommand, .joinNextMeeting, .mySchedule,
-            .createEvent, .aiChat, .quickAction:
+        case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .searchSnippets,
+            .systemAction, .showNotes, .createNote, .searchNotes, .windowCommand, .joinNextMeeting,
+            .mySchedule, .createEvent, .aiChat, .quickAction:
             return nil
         }
     }
@@ -401,12 +408,12 @@ final class AppCore {
                 _ = $0.fileSearchScopes
                 _ = $0.fileSearchIgnorePatterns
             }, reproject: { $0.fileSearchCoordinator.applyPolicy() })
-        track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetExpansion.applySnippetsEnabled() })
+        track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetCoordinator.applySnippetsEnabled() })
         // Not a feature switch, but the same re-projection: a combo has the chord's ⇧ bit baked in.
         track({ _ = $0.hyperKeyIncludesShift }, reproject: { $0.applyHyperChord() })
         track(
             { _ = $0.snippetsShowInLauncher },
-            reproject: { $0.snippetExpansion.applySnippetsLauncherPresence() })
+            reproject: { $0.snippetCoordinator.applySnippetsLauncherPresence() })
         track({ _ = $0.appearance }, reproject: { $0.applyAppearance() })
     }
 

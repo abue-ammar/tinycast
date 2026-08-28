@@ -11,7 +11,7 @@ final class LauncherCoordinator {
     private let systemActionCoordinator: SystemActionCoordinator
     private let quicklinkCoordinator: QuicklinkCoordinator
     private let windowCommandCoordinator: WindowCommandCoordinator
-    private let snippetExpansion: SnippetExpansionCoordinator
+    private let snippetCoordinator: SnippetCoordinator
     private let fileSearchCoordinator: FileSearchCoordinator
     private let notesCoordinator: NotesCoordinator
     private let extensionCoordinator: ExtensionCoordinator
@@ -28,7 +28,7 @@ final class LauncherCoordinator {
         systemActionCoordinator: SystemActionCoordinator,
         quicklinkCoordinator: QuicklinkCoordinator,
         windowCommandCoordinator: WindowCommandCoordinator,
-        snippetExpansion: SnippetExpansionCoordinator,
+        snippetCoordinator: SnippetCoordinator,
         fileSearchCoordinator: FileSearchCoordinator,
         notesCoordinator: NotesCoordinator,
         extensionCoordinator: ExtensionCoordinator,
@@ -43,7 +43,7 @@ final class LauncherCoordinator {
         self.systemActionCoordinator = systemActionCoordinator
         self.quicklinkCoordinator = quicklinkCoordinator
         self.windowCommandCoordinator = windowCommandCoordinator
-        self.snippetExpansion = snippetExpansion
+        self.snippetCoordinator = snippetCoordinator
         self.fileSearchCoordinator = fileSearchCoordinator
         self.notesCoordinator = notesCoordinator
         self.extensionCoordinator = extensionCoordinator
@@ -106,7 +106,7 @@ final class LauncherCoordinator {
             AppLauncher.openSettingsPane(bundleID: bundleID)
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
-            snippetExpansion.expandSnippet(id: snippetID, targetApp: previous)
+            snippetCoordinator.expandSnippet(id: snippetID, targetApp: previous)
         case .command, .customCommand, .systemAction, .windowCommand, .quicklink,
             .extensionCommand, .meeting:
             break  // handled above
@@ -154,6 +154,11 @@ final class LauncherCoordinator {
             notesCoordinator.searchNotes()
         case .searchQuicklinks:
             paletteCoordinator.showPalette(mode: .quicklinks)
+        case .searchSnippets:
+            snippetCoordinator.showSnippets()
+        case .createSnippet:
+            paletteCoordinator.hidePalette(restoreFocus: false)
+            snippetCoordinator.editSnippet(nil)
         case .createQuicklink:
             paletteCoordinator.hidePalette(restoreFocus: false)
             quicklinkCoordinator.editQuicklink(nil)

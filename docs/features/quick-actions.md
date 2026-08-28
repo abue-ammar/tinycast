@@ -24,7 +24,7 @@ provider protocol and the connections behind it.
   own window. Hiding there rather than at each caller is what keeps the two paths identical.
 - **Enabling is consent, and it is the only place Accessibility is requested.** The toggle confirms
   through `DialogController` first and then calls `Permissions.ensureAccessibility()`, the pattern
-  `SnippetExpansionCoordinator.setSnippetsEnabled` established. Everything else — a shortcut press, a
+  `SnippetCoordinator.setSnippetsEnabled` established. Everything else — a shortcut press, a
   delivery — uses `isAccessibilityTrusted()` and degrades to a HUD.
 - **Tinycast is never the target.** `QuickActionRunner.selection(in:using:)` refuses our own bundle
   identifier, and `TextInjector.targetAcceptsInjection` refuses it again before every event post,
