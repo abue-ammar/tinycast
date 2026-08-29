@@ -134,7 +134,7 @@ struct SearchFields: Sendable {
     var names: [String]
     /// The user's own alias for the entry; deliberate, so it outranks every vendor field.
     var userAlias: String?
-    /// Spotlight's `kMDItemAlternateNames`: `iBooks`, `Codex`, `浏览器`.
+    /// What Spotlight knows the entry by: `iBooks`, `Codex`, `浏览器`, and the system-language name.
     var alternateNames: [String] = []
     /// What provides the entry rather than what it is — the extension a command came from.
     var ownerName: String?
@@ -231,7 +231,7 @@ extension SearchFields {
         }
     }
 
-    private static func strippingAppExtension(_ name: String) -> String {
+    static func strippingAppExtension(_ name: String) -> String {
         name.hasSuffix(".app") ? String(name.dropLast(4)) : name
     }
 

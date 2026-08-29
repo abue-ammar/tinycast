@@ -164,7 +164,22 @@ with the entry's other per-entry preferences.
 `SpotlightNames` reads `kMDItemAlternateNames` — the aliases macOS itself knows an app by, which no
 Info.plist key exposes: `iBooks` for Books, `iCal` for Calendar, `Address Book` for Contacts,
 `System Preferences` for System Settings, `browser` / `浏览器` / `사파리` for Safari. `MDItem.h` exports
-no constant for the attribute, so it is named directly.
+no constant for either attribute it reads, so both are named directly.
+
+It also reads `kMDItemDisplayName`, the app's name in the system language, because nothing else
+supplies it (#371). Every app under `/System/Applications` keeps its translations in one
+`Contents/Resources/InfoPlist.loctable` and none ships an `InfoPlist.strings`, so `CFBundle` resolves
+all 65 of them to `en` whatever the system language is — which is why the row label reads English
+without being pinned there, and why without this a Portuguese Mac finds Find My as `Find My` and never
+as `Buscar`. It measures 12 bundles carrying alternates under `en` against 49 under `pt-BR`. The value
+is a file name, so its `.app` comes off first; on an English Mac it then equals the display name and
+`usableAlternateNames` drops it, so nothing is indexed twice. Both attributes ride the one `MDItem`
+the pass already creates, so the cost below is unchanged.
+
+Leave `Bundle.installedAppName` on `object(forInfoDictionaryKey:)`. Reading `infoDictionary` to force
+an English label looks equivalent and is not: FindMy's raw `Info.plist` names it `FindMy`, and
+`Find My` lives only in the loctable, so the raw dictionary spells three Apple apps worse — `FindMy`,
+`VoiceMemos`, `Siri AI` — and changes nothing else.
 
 Spotlight mixes junk in with the real aliases, and `SearchFields.usableAlternateNames` (pure, covered
 by the harness) drops it: every bundle lists its own `<Name>.app` file name, several system apps ship

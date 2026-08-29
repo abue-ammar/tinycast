@@ -357,6 +357,13 @@ struct FuzzTest {
         check(
             "a multi-word name with an underscore is kept",
             sanitize(["My_App Pro"], "X", "X.app") == ["My_App Pro"])
+        // Find My on a Portuguese Mac: the system-language name arrives beside the file name.
+        check(
+            "a system-language name survives when it differs",
+            sanitize(["FindMy.app", "Buscar"], "Find My", "FindMy.app") == ["Buscar"])
+        check(
+            "a system-language name equal to the display name is dropped",
+            sanitize(["FindMy.app", "Find My"], "Find My", "FindMy.app").isEmpty)
     }
 
     // MARK: - Identifier fields
