@@ -239,8 +239,11 @@ is TCC-protected, so an unprivileged read fails in a way indistinguishable from 
 silently skip a real empty. Eject All Disks, Dismiss Notifications and Unhide All Apps report the same
 way when there is nothing to act on. Volume and mute fall back to the output's preferred stereo channels when the device exposes
 no master element (common on HDMI), and Toggle Mute parks the level at zero when there is no mute
-control at all. Multi-disk ejection excludes internal and network volumes, treats a sibling volume
-that the same physical eject already unmounted as done, and reports remaining failures together.
+control at all. Multi-disk ejection takes every external or ejectable volume — a dock's fixed-media
+HDD reports as neither ejectable nor removable, so external alone qualifies — while excluding
+internal, network and root volumes, treats a sibling volume that the same physical eject already
+unmounted as done, counts a volume whose eject errored but whose mount is gone as ejected, and
+reports remaining failures together.
 Preference-backed toggles refuse to write when the current value can't be read, and notification
 dismissal matches Accessibility subroles rather than English labels.
 
