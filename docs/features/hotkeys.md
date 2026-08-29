@@ -152,6 +152,12 @@ Caps Lock's alpha-shift bit, or — for a key modifier outside the Hyper set —
 device bits. Events the tap posts carry a `"TYCT"` marker in `.eventSourceUserData`, the same FourCC
 `HotKeyCenter` uses, so the tap never reacts to its own synthetics.
 
+A Quick Press key is posted with **`flags` cleared explicitly**, like every other synthetic in the app.
+A keyboard event built from `.combinedSessionState` inherits the source's modifiers, and the release
+that ended the hold is still in flight a runloop turn later — so the Escape went out as ⌃⌥⇧⌘Escape.
+Terminals read the raw `0x1B` and did not care; a focused field editor and any exact-match keymap
+swallowed it, which is why Quick Press worked in Ghostty but never in Zed or the palette itself.
+
 ### ✦ is the notation, not a preference
 
 Any combo whose modifiers are a superset of the chord renders with the Hyper set replaced by a single
