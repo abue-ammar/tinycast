@@ -205,8 +205,13 @@ final class ExtensionCoordinator {
     /// True while an OAuth authorization flow is actively awaiting callback.
     var isAuthorizing: Bool { extensions.isAuthorizing }
 
-    func closeMainWindow() {
-        paletteCoordinator.hidePalette(restoreFocus: false)
+    /// `popToRootType` outranks the user's delay, and `clearRootSearch` empties the root query.
+    func closeMainWindow(clearRootSearch: Bool, popToRoot request: PopToRootRequest) {
+        if clearRootSearch { palette.query = "" }
+        paletteCoordinator.hidePalette(restoreFocus: false, popToRoot: request)
+        // A reset root has nothing to restore, so the engine behind it is a leak, not a resume.
+        guard request == .immediate, !extensions.isAuthorizing else { return }
+        Task { await extensions.stop() }
     }
 
     func reopenPalette(hasRunningCommand: Bool) {
@@ -220,6 +225,14 @@ final class ExtensionCoordinator {
 
     /// Its own window: a no-view command closes the palette before the pill is done.
     func showHUD(_ message: String) {
+        core.showMessage(message)
+    }
+
+    /// A HUD dismisses the palette in Raycast, so it carries the same close options as a close.
+    func showHUD(_ message: String, clearRootSearch: Bool, popToRoot request: PopToRootRequest) {
+        if paletteCoordinator.isVisible {
+            closeMainWindow(clearRootSearch: clearRootSearch, popToRoot: request)
+        }
         core.showMessage(message)
     }
 

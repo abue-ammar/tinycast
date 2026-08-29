@@ -219,6 +219,11 @@ would, so a command that took the search text over sees the empty string. Only o
 Escape and a bare backspace pop the extension's own navigation stack, and only leave the command once
 it's at its root. Pushed screens stay mounted, so popping back restores their state.
 
+`closeMainWindow` and `showHUD` carry `clearRootSearch` and `popToRootType`, and both reach the palette
+as a `PopToRootRequest`. `Immediate` is the one that also stops the command: it resets the root now, so
+the engine it would otherwise hold has nothing left to be restored into. `Suspended` is the opposite
+bargain — the screen is held whatever the delay says. See [palette.md](palette.md#screens).
+
 ## Turning it on
 
 Extensions are **off until asked for**, and the switch is a real one rather than a filter: while it is
@@ -349,8 +354,8 @@ along with the extension's stored preferences and its chosen icon.
 `Form.DropdownItem`, `CopyToClipboardAction`, …) are present too — shipped bundles still use them.
 
 **APIs** — `Clipboard`, `LocalStorage`, `Cache`, `environment`, `getPreferenceValues`, `showToast`,
-`showHUD`, `confirmAlert`, `closeMainWindow`, `popToRoot`, `clearSearchBar`, `open`, `trash`,
-`showInFinder`, `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
+`showHUD`, `confirmAlert`, `closeMainWindow`, `popToRoot`, `PopToRootType`, `clearSearchBar`, `open`,
+`trash`, `showInFinder`, `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `openExtensionPreferences`,
 `useNavigation`, `OAuth`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
 

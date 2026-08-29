@@ -25,10 +25,13 @@ struct ExtensionTests {
         var toasts: [String] = []
         var huds: [String] = []
         var oauthTokens: [String: String] = [:]
+        /// The raw options a window call carried, so a dropped one fails here rather than in the UI.
+        var windowOptions: [String: [String: RenderValue]] = [:]
         private let fetcher = ExtensionFetcher()
 
         func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String {
             calls.append("\(api).\(method)")
+            if api == "window" { windowOptions[method] = arguments.first?.objectValue ?? [:] }
             if api == "proc", method == "run" {
                 if ProcessInfo.processInfo.environment["EXT_TEST_VERBOSE"] != nil {
                     let spec = arguments.first?.objectValue ?? [:]
@@ -187,6 +190,7 @@ struct ExtensionTests {
         screenChecks()
         actionIconChecks()
         oauthUnitChecks()
+        popToRootChecks()
         await runtimeChecks()
 
         print("\n\(passes) passed, \(failures) failed")
@@ -578,6 +582,15 @@ struct ExtensionTests {
             ExtensionOAuthSession.handleCallbackURL(strayURL) == .expired)
     }
 
+    static func popToRootChecks() {
+        check("an absent option respects the user's delay", PopToRootRequest(raw: nil) == .standard)
+        check("an unknown option is not a capability", PopToRootRequest(raw: "later") == .standard)
+        check("immediate parses", PopToRootRequest(raw: "immediate") == .immediate)
+        check("suspended parses", PopToRootRequest(raw: "suspended") == .suspended)
+        // The raw values are the JS enum's, so a rename there must fail here rather than silently.
+        check("default matches PopToRootType.Default", PopToRootRequest.standard.rawValue == "default")
+    }
+
     // MARK: - End-to-end through JavaScriptCore
 
     @MainActor
@@ -743,6 +756,33 @@ struct ExtensionTests {
             "launch arguments reach props.arguments", argumentMarkdown == "0|5|2|userInitiated",
             argumentMarkdown)
         await withArguments.stop(session: "sA")
+
+        // The close options an extension passes must survive the hop into Swift, not just exist in JS.
+        let (closing, closeHost, closeRecorder) = makeRuntime()
+        try? await closing.boot(
+            config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        let closingCommand = #"""
+            "use strict";
+            const { closeMainWindow, PopToRootType } = require("@raycast/api");
+            module.exports.default = async function () {
+              await closeMainWindow({ clearRootSearch: true, popToRootType: PopToRootType.Immediate });
+            };
+            """#
+        await closing.start(
+            session: "sClose", code: closingCommand, file: URL(fileURLWithPath: "/tmp/close.js"),
+            mode: .noView, context: launchContext(mode: .noView))
+        await settle()
+        check("close command finished", closeRecorder.finished, closeRecorder.failures.joined())
+        let closeOptions = closeHost.windowOptions["close"] ?? [:]
+        check(
+            "closeMainWindow carries popToRootType",
+            PopToRootRequest(raw: closeOptions["popToRootType"]?.stringValue) == .immediate,
+            String(describing: closeOptions["popToRootType"]))
+        check(
+            "closeMainWindow carries clearRootSearch",
+            closeOptions["clearRootSearch"]?.boolValue == true,
+            String(describing: closeOptions["clearRootSearch"]))
+        await closing.stop(session: "sClose")
 
         // React's scheduler drives commits through `setTimeout`, shared across sessions.
         let (pending, _, pendingRecorder) = makeRuntime()

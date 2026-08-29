@@ -12,7 +12,7 @@ protocol ExtensionHostContext: AnyObject {
     /// Every app bundle `getApplications()` reports, from the user's own search scopes.
     var applicationURLs: [URL] { get }
 
-    func closeMainWindow(clearRootSearch: Bool)
+    func closeMainWindow(clearRootSearch: Bool, popToRoot: PopToRootRequest)
     /// Bring the palette back after a command hid it — what `raycast://` means to an extension.
     func reopenPalette()
     func popToRoot()
@@ -21,7 +21,7 @@ protocol ExtensionHostContext: AnyObject {
     func present(toast: ExtensionToast) -> Int
     func update(toast id: Int, with toast: ExtensionToast)
     func hide(toast id: Int)
-    func showHUD(_ text: String)
+    func showHUD(_ text: String, clearRootSearch: Bool, popToRoot: PopToRootRequest)
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool
     func openWithPicker(path: String) async
     func launch(command: String, extensionName: String?, arguments: [String: String]) throws
@@ -265,7 +265,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         switch method {
         case "close":
             let options = arguments.first?.objectValue ?? [:]
-            context?.closeMainWindow(clearRootSearch: options["clearRootSearch"]?.boolValue ?? false)
+            context?.closeMainWindow(
+                clearRootSearch: options["clearRootSearch"]?.boolValue ?? false,
+                popToRoot: PopToRootRequest(raw: options["popToRootType"]?.stringValue))
         case "popToRoot":
             context?.popToRoot()
         case "clearSearchBar":
@@ -299,7 +301,11 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             return nil
 
         case "showHUD":
-            context.showHUD(arguments.first?.stringValue ?? "")
+            let options = arguments[safe: 1]?.objectValue ?? [:]
+            context.showHUD(
+                arguments.first?.stringValue ?? "",
+                clearRootSearch: options["clearRootSearch"]?.boolValue ?? false,
+                popToRoot: PopToRootRequest(raw: options["popToRootType"]?.stringValue))
             return nil
 
         case "confirmAlert":

@@ -9,7 +9,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private(set) var previousApp: NSRunningApplication?
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
-    private var popToRootTimer: Timer?
+    private var pendingReset = PendingReset.none
     /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
@@ -23,6 +23,13 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         var armed = false
         /// The guides wait for this, so a click that never moves the panel doesn't flash them.
         var moved = false
+    }
+
+    /// What a hidden palette owes its screen: nothing, a countdown, or a hold nothing may expire.
+    private enum PendingReset {
+        case none
+        case scheduled(Timer)
+        case suspended
     }
 
     init(core: AppCore) {
@@ -69,7 +76,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide(restoreFocus: Bool) {
+    func hide(restoreFocus: Bool, popToRoot request: PopToRootRequest = .standard) {
         panel?.orderOut(nil)
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
@@ -81,7 +88,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         // Drop the multi-MB preview bitmaps, so idle RAM returns near baseline.
         ImageThumbnail.purgePreviews()
         IconCache.purgeFitted()
-        schedulePopToRoot()
+        schedulePopToRoot(request)
         guard restoreFocus else { return }
         // Our own window first: it is still open, and activating another app would bury it.
         if let own = previousOwnWindow, own.isVisible {
@@ -92,23 +99,28 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it.
-    private func schedulePopToRoot() {
-        // Don't pop to root if an extension is waiting for OAuth authorization in the browser.
-        guard !core.extensions.isAuthorizing else { return }
-        popToRootTimer?.invalidate()
+    private func schedulePopToRoot(_ request: PopToRootRequest) {
+        cancelPendingReset()
+        // An extension mid-OAuth is the app's own suspension: the browser round-trip must survive.
+        let resolved: PopToRootRequest = core.extensions.isAuthorizing ? .suspended : request
+        guard resolved != .suspended else {
+            pendingReset = .suspended
+            return
+        }
         let timeout = core.settings.popToRootTimeout
-        guard timeout != .immediately else {
+        guard resolved != .immediate, timeout != .immediately else {
             popToRoot()
             return
         }
-        popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
-            [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, !self.core.extensions.isAuthorizing else { return }
-                self.popToRootTimer = nil
-                self.popToRoot()
-            }
-        }
+        pendingReset = .scheduled(
+            Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
+                [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, !self.core.extensions.isAuthorizing else { return }
+                    self.pendingReset = .none
+                    self.popToRoot()
+                }
+            })
     }
 
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
@@ -118,10 +130,18 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
     func consumePreservedState() -> Bool {
-        guard let timer = popToRootTimer else { return false }
-        timer.invalidate()
-        popToRootTimer = nil
-        return true
+        switch pendingReset {
+        case .none:
+            return false
+        case .scheduled, .suspended:
+            cancelPendingReset()
+            return true
+        }
+    }
+
+    private func cancelPendingReset() {
+        if case .scheduled(let timer) = pendingReset { timer.invalidate() }
+        pendingReset = .none
     }
 
     /// Paste into the previous app while the palette stays frontmost.

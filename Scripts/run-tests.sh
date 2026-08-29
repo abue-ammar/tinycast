@@ -244,6 +244,7 @@ run slow ext-test          -parse-as-library \
                            $E/Model/ExtensionBootConfig.swift \
                            $E/Model/ExtensionManifest.swift \
                            $E/Model/RenderNode.swift \
+                           $E/Model/PopToRootRequest.swift \
                            $E/Service/ExtensionCatalog.swift \
                            $E/Service/ExtensionFetcher.swift \
                            $E/Service/ExtensionIconCache.swift \

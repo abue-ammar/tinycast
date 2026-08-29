@@ -63,6 +63,12 @@ are reset together rather than the screen alone. A reply still streaming is the 
 asked for, and resetting would throw the answer away. Nothing is lost either way: a conversation is
 written to Chat History as soon as it has a message.
 
+What a hide owes its screen is a `PendingReset`: nothing, a countdown, or a hold. An extension picks
+between them with `PopToRootType`, so `.immediate` resets past the user's delay and `.suspended` holds
+the screen until the next summon restores it — an OAuth round-trip resolves to `.suspended` rather
+than reading the flag itself. `consumePreservedState()` treats a countdown and a hold alike, since
+both mean a screen is still owed to whoever comes back.
+
 Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the protocol is what keeps the
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
 palette indexes into it. Adding a mode means adding a conformer, not a branch in `RootPaletteView`.

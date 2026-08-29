@@ -73,9 +73,9 @@ final class PaletteCoordinator {
         if palette.mode == .launcher { Task { await appIndex.refresh() } }
     }
 
-    func hidePalette(restoreFocus: Bool = true) {
+    func hidePalette(restoreFocus: Bool = true, popToRoot request: PopToRootRequest = .standard) {
         fileSearch.cancel()
-        windowController.hide(restoreFocus: restoreFocus)
+        windowController.hide(restoreFocus: restoreFocus, popToRoot: request)
     }
 
     /// True for the slim compact bar: compact on, launcher root, empty, not overflowed.
