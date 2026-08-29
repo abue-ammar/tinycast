@@ -73,7 +73,9 @@ struct QuickActionsSettingsView: View {
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
                     if !action.usesTranslationFramework {
-                        Button { editingAction = action } label: {
+                        Button {
+                            editingAction = action
+                        } label: {
                             SymbolImage(
                                 name: "pencil", size: Theme.Size.quickActionHeaderIcon)
                         }
