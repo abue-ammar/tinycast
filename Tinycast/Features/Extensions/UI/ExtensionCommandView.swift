@@ -94,7 +94,7 @@ struct ExtensionFailureView: View {
     }
 }
 
-/// `showHUD` is a separate window: a no-view command closes the palette first.
+/// `showHUD` is a separate window, and showing one closes the palette whatever the command's mode.
 struct ExtensionFeedbackOverlay: View {
     let toasts: [ExtensionToast]
     let onToastAction: (String) -> Void

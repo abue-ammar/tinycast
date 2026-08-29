@@ -12,7 +12,7 @@ protocol ExtensionHostContext: AnyObject {
     /// Every app bundle `getApplications()` reports, from the user's own search scopes.
     var applicationURLs: [URL] { get }
 
-    func closeMainWindow(clearRootSearch: Bool, popToRoot: PopToRootRequest)
+    func closeMainWindow(clearRootSearch: Bool, popToRoot: PaletteReset)
     /// Bring the palette back after a command hid it — what `raycast://` means to an extension.
     func reopenPalette()
     func popToRoot()
@@ -21,7 +21,7 @@ protocol ExtensionHostContext: AnyObject {
     func present(toast: ExtensionToast) -> Int
     func update(toast id: Int, with toast: ExtensionToast)
     func hide(toast id: Int)
-    func showHUD(_ text: String, clearRootSearch: Bool, popToRoot: PopToRootRequest)
+    func showHUD(_ text: String, clearRootSearch: Bool, popToRoot: PaletteReset)
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool
     func openWithPicker(path: String) async
     func launch(command: String, extensionName: String?, arguments: [String: String]) throws
@@ -261,13 +261,22 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     // MARK: - Window
 
+    /// `PopToRootType` is an extension's wire format, so it is read here and never carried inward.
+    private func paletteReset(_ options: [String: RenderValue]) -> PaletteReset {
+        switch options["popToRootType"]?.stringValue {
+        case "immediate": return .immediate
+        case "suspended": return .suspended
+        default: return .standard
+        }
+    }
+
     private func window(method: String, arguments: [RenderValue]) -> Any? {
         switch method {
         case "close":
             let options = arguments.first?.objectValue ?? [:]
             context?.closeMainWindow(
                 clearRootSearch: options["clearRootSearch"]?.boolValue ?? false,
-                popToRoot: PopToRootRequest(raw: options["popToRootType"]?.stringValue))
+                popToRoot: paletteReset(options))
         case "popToRoot":
             context?.popToRoot()
         case "clearSearchBar":
@@ -305,7 +314,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             context.showHUD(
                 arguments.first?.stringValue ?? "",
                 clearRootSearch: options["clearRootSearch"]?.boolValue ?? false,
-                popToRoot: PopToRootRequest(raw: options["popToRootType"]?.stringValue))
+                popToRoot: paletteReset(options))
             return nil
 
         case "confirmAlert":

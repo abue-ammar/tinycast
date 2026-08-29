@@ -105,6 +105,7 @@ to the launcher: **Immediately** (default), or after 5, 15, 30, 60 or 90 seconds
 
 Raise it if you often dismiss the palette and come straight back to the same screen.
 
-An extension command can override the delay for its own actions. One that finishes by opening
-something usually asks to reset the root immediately, so the palette is ready for a fresh search the
-next time you summon it — that is the extension's choice, not the setting being ignored.
+The delay covers dismissing the palette yourself. An extension command that closes the window as it
+finishes — opening a project, say — resets to the root immediately whatever the delay says, so you
+come back to a fresh search rather than a command you are done with. An extension can also ask to
+keep its screen, and that request is honoured.

@@ -219,10 +219,20 @@ would, so a command that took the search text over sees the empty string. Only o
 Escape and a bare backspace pop the extension's own navigation stack, and only leave the command once
 it's at its root. Pushed screens stay mounted, so popping back restores their state.
 
-`closeMainWindow` and `showHUD` carry `clearRootSearch` and `popToRootType`, and both reach the palette
-as a `PopToRootRequest`. `Immediate` is the one that also stops the command: it resets the root now, so
-the engine it would otherwise hold has nothing left to be restored into. `Suspended` is the opposite
-bargain — the screen is held whatever the delay says. See [palette.md](palette.md#screens).
+`closeMainWindow` and `showHUD` carry `clearRootSearch` and `popToRootType`, read in
+`ExtensionHostBridge` and passed inward as a `PaletteReset` — the wire format never travels past the
+bridge. `Suspended` holds the screen whatever the delay says.
+
+`clearRootSearch` only decides the query on a hide that keeps the screen: a reset runs
+`prepare(mode:)`, which clears it either way, so `clearRootSearch: false` cannot survive one.
+
+**`Default` from a view command is treated as `Immediate`, which is a deliberate divergence from
+Raycast.** A command that closes its own window has finished, so honouring the delay would restore a
+screen the user is done with — the symptom that motivated it was picking a project in Zed Recent
+Projects and landing back in the list. Nothing stops the engine here: leaving `.extensionCommand`
+already does that, and doing it from inside a call the command is still awaiting would drop the work
+after `await closeMainWindow()`. A no-view command hides the palette before it runs, so its close is
+not a command's own close and the delay stands. See [palette.md](palette.md#screens).
 
 ## Turning it on
 

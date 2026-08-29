@@ -73,7 +73,7 @@ final class PaletteCoordinator {
         if palette.mode == .launcher { Task { await appIndex.refresh() } }
     }
 
-    func hidePalette(restoreFocus: Bool = true, popToRoot request: PopToRootRequest = .standard) {
+    func hidePalette(restoreFocus: Bool = true, popToRoot request: PaletteReset = .standard) {
         fileSearch.cancel()
         windowController.hide(restoreFocus: restoreFocus, popToRoot: request)
     }

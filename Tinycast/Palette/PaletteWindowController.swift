@@ -30,6 +30,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         case none
         case scheduled(Timer)
         case suspended
+        /// An OAuth hold, which stops being one the moment the round-trip is no longer in flight.
+        case authorizing
     }
 
     init(core: AppCore) {
@@ -76,7 +78,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide(restoreFocus: Bool, popToRoot request: PopToRootRequest = .standard) {
+    func hide(restoreFocus: Bool, popToRoot request: PaletteReset = .standard) {
         panel?.orderOut(nil)
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
@@ -99,16 +101,19 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it.
-    private func schedulePopToRoot(_ request: PopToRootRequest) {
+    private func schedulePopToRoot(_ request: PaletteReset) {
         cancelPendingReset()
-        // An extension mid-OAuth is the app's own suspension: the browser round-trip must survive.
-        let resolved: PopToRootRequest = core.extensions.isAuthorizing ? .suspended : request
-        guard resolved != .suspended else {
+        // The app's own hold, not an extension's: only a live round-trip may redeem it.
+        guard !core.extensions.isAuthorizing else {
+            pendingReset = .authorizing
+            return
+        }
+        guard request != .suspended else {
             pendingReset = .suspended
             return
         }
         let timeout = core.settings.popToRootTimeout
-        guard resolved != .immediate, timeout != .immediately else {
+        guard request != .immediate, timeout != .immediately else {
             popToRoot()
             return
         }
@@ -136,6 +141,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         case .scheduled, .suspended:
             cancelPendingReset()
             return true
+        case .authorizing:
+            // An abandoned authorization leaves a screen no command is behind, so don't restore it.
+            let live = core.extensions.isAuthorizing
+            cancelPendingReset()
+            return live
         }
     }
 

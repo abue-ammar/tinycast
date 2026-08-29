@@ -583,12 +583,23 @@ struct ExtensionTests {
     }
 
     static func popToRootChecks() {
-        check("an absent option respects the user's delay", PopToRootRequest(raw: nil) == .standard)
-        check("an unknown option is not a capability", PopToRootRequest(raw: "later") == .standard)
-        check("immediate parses", PopToRootRequest(raw: "immediate") == .immediate)
-        check("suspended parses", PopToRootRequest(raw: "suspended") == .suspended)
-        // The raw values are the JS enum's, so a rename there must fail here rather than silently.
-        check("default matches PopToRootType.Default", PopToRootRequest.standard.rawValue == "default")
+        // A command closing its own window has finished, so Default resets past the user's delay.
+        check(
+            "a command's own close outranks the delay",
+            PaletteResetPolicy.resolve(.standard, commandOwnsScreen: true) == .immediate)
+        check(
+            "a hide that is not a command's own close keeps the delay",
+            PaletteResetPolicy.resolve(.standard, commandOwnsScreen: false) == .standard)
+        // The one that matters: the divergence must never silently eat an explicit request.
+        check(
+            "an explicit hold survives a command's own close",
+            PaletteResetPolicy.resolve(.suspended, commandOwnsScreen: true) == .suspended)
+        check(
+            "an explicit hold survives elsewhere",
+            PaletteResetPolicy.resolve(.suspended, commandOwnsScreen: false) == .suspended)
+        check(
+            "an explicit immediate passes through",
+            PaletteResetPolicy.resolve(.immediate, commandOwnsScreen: false) == .immediate)
     }
 
     // MARK: - End-to-end through JavaScriptCore
@@ -776,7 +787,7 @@ struct ExtensionTests {
         let closeOptions = closeHost.windowOptions["close"] ?? [:]
         check(
             "closeMainWindow carries popToRootType",
-            PopToRootRequest(raw: closeOptions["popToRootType"]?.stringValue) == .immediate,
+            closeOptions["popToRootType"]?.stringValue == "immediate",
             String(describing: closeOptions["popToRootType"]))
         check(
             "closeMainWindow carries clearRootSearch",

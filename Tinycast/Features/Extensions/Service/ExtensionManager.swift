@@ -411,7 +411,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     var pasteTarget: NSRunningApplication? { coordinator?.pasteTarget }
     var applicationURLs: [URL] { coordinator?.applicationURLs ?? [] }
 
-    func closeMainWindow(clearRootSearch: Bool, popToRoot request: PopToRootRequest) {
+    func closeMainWindow(clearRootSearch: Bool, popToRoot request: PaletteReset) {
         coordinator?.closeMainWindow(clearRootSearch: clearRootSearch, popToRoot: request)
     }
 
@@ -467,7 +467,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
     }
 
-    func showHUD(_ text: String, clearRootSearch: Bool, popToRoot request: PopToRootRequest) {
+    func showHUD(_ text: String, clearRootSearch: Bool, popToRoot request: PaletteReset) {
         coordinator?.showHUD(text, clearRootSearch: clearRootSearch, popToRoot: request)
     }
 

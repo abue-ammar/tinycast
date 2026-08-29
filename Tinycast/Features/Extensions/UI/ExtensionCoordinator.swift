@@ -206,18 +206,13 @@ final class ExtensionCoordinator {
     var isAuthorizing: Bool { extensions.isAuthorizing }
 
     /// `popToRootType` outranks the user's delay, and `clearRootSearch` empties the root query.
-    func closeMainWindow(clearRootSearch: Bool, popToRoot request: PopToRootRequest) {
+    func closeMainWindow(clearRootSearch: Bool, popToRoot request: PaletteReset) {
         if clearRootSearch { palette.query = "" }
-        let resolved = resolvedRequest(request)
-        paletteCoordinator.hidePalette(restoreFocus: false, popToRoot: resolved)
-        // A reset root has nothing to restore, so the engine behind it is a leak, not a resume.
-        guard resolved == .immediate, !extensions.isAuthorizing else { return }
-        Task { await extensions.stop() }
-    }
-
-    /// A command closing its own window has finished, so the delay has no screen left to hold.
-    private func resolvedRequest(_ request: PopToRootRequest) -> PopToRootRequest {
-        request == .standard && palette.mode == .extensionCommand ? .immediate : request
+        // Leaving `.extensionCommand` stops the engine, once this call has settled.
+        paletteCoordinator.hidePalette(
+            restoreFocus: false,
+            popToRoot: PaletteResetPolicy.resolve(
+                request, commandOwnsScreen: palette.mode == .extensionCommand))
     }
 
     func reopenPalette(hasRunningCommand: Bool) {
@@ -235,7 +230,7 @@ final class ExtensionCoordinator {
     }
 
     /// A HUD dismisses the palette in Raycast, so it carries the same close options as a close.
-    func showHUD(_ message: String, clearRootSearch: Bool, popToRoot request: PopToRootRequest) {
+    func showHUD(_ message: String, clearRootSearch: Bool, popToRoot request: PaletteReset) {
         if paletteCoordinator.isVisible {
             closeMainWindow(clearRootSearch: clearRootSearch, popToRoot: request)
         }

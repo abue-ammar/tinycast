@@ -63,11 +63,14 @@ are reset together rather than the screen alone. A reply still streaming is the 
 asked for, and resetting would throw the answer away. Nothing is lost either way: a conversation is
 written to Chat History as soon as it has a message.
 
-What a hide owes its screen is a `PendingReset`: nothing, a countdown, or a hold. An extension picks
-between them with `PopToRootType`, so `.immediate` resets past the user's delay and `.suspended` holds
-the screen until the next summon restores it — an OAuth round-trip resolves to `.suspended` rather
-than reading the flag itself. `consumePreservedState()` treats a countdown and a hold alike, since
-both mean a screen is still owed to whoever comes back.
+What a hide owes its screen is a `PendingReset`: nothing, a countdown, a hold, or an OAuth hold. A
+`PaletteReset` picks between them, and `PaletteResetPolicy` is the only place that decides — a hide a
+command asked for itself resolves `.standard` to `.immediate`, since a finished command leaves the
+delay no screen to hold. An explicit `.suspended` or `.immediate` always passes through untouched.
+
+The OAuth hold is its own case rather than a `.suspended`, because the two expire differently: an
+abandoned authorization leaves a screen with no command behind it, so `consumePreservedState()` only
+preserves it while the round-trip is still in flight.
 
 Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the protocol is what keeps the
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
