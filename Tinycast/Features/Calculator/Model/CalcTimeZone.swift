@@ -276,37 +276,86 @@ enum CalcTimeZone {
         return table
     }()
 
-    /// Zone to the names that reach it, inverted into `aliases` once. Written this way because
-    /// a zone is repeated up to 28 times the other way round, and the grouping is what is edited.
+    /// Curated: `abbreviationDictionary` is unusable, its `BDT` being the Bangladeshi taka.
     private static let aliasGroups: [String: [String]] = [
         "UTC": ["utc", "zulu"],
         "GMT": ["gmt"],
-        "America/New_York": ["est", "edt", "et", "nyc", "new york city", "boston", "washington", "dc", "miami", "atlanta", "philadelphia", "jfk", "atl", "bos", "mia", "ewr", "iad"],
-        "America/Chicago": ["cst", "cdt", "ct", "austin", "dallas", "houston", "ord", "dfw", "iah"],
-        "America/Denver": ["mst", "mdt", "mt", "den"],
-        "America/Los_Angeles": ["pst", "pdt", "pt", "la", "sf", "san francisco", "silicon valley", "seattle", "las vegas", "sfo", "lax", "sea"],
-        "Europe/Paris": ["cet", "cest", "cdg", "ory", "lyon", "marseille", "toulouse", "nice", "bordeaux", "nantes", "lille", "strasbourg"],
-        "Europe/London": ["bst", "ldn", "lhr", "lgw", "manchester", "birmingham", "liverpool", "leeds", "glasgow", "edinburgh", "bristol", "cardiff", "cambridge", "oxford", "belfast"],
-        "Asia/Kolkata": ["ist", "kolkata", "bengaluru", "bangalore", "mumbai", "delhi", "new delhi", "chennai", "hyderabad", "bom", "del", "blr"],
-        "Asia/Tokyo": ["jst", "osaka", "kyoto", "nrt", "hnd", "kix"],
-        "Asia/Seoul": ["kst", "icn"],
-        "Australia/Sydney": ["aest", "aedt", "syd"],
+        "America/New_York": [
+            "est", "edt", "et", "nyc", "new york city", "boston", "washington", "dc", "miami", "atlanta",
+            "philadelphia", "jfk", "atl", "bos", "mia", "ewr", "iad", "charlotte", "nashville", "orlando",
+            "tampa", "pittsburgh", "cleveland", "cincinnati", "columbus", "baltimore", "raleigh",
+            "indianapolis", "louisville"
+        ],
+        "America/Chicago": [
+            "cst", "cdt", "ct", "austin", "dallas", "houston", "ord", "dfw", "iah", "minneapolis", "st louis",
+            "kansas city", "milwaukee", "new orleans", "memphis", "oklahoma city", "san antonio"
+        ],
+        "America/Denver": ["mst", "mdt", "mt", "den", "salt lake city", "albuquerque", "boise"],
+        "America/Los_Angeles": [
+            "pst", "pdt", "pt", "la", "sf", "san francisco", "silicon valley", "seattle", "las vegas", "sfo",
+            "lax", "sea", "san diego", "san jose", "portland", "sacramento", "fresno", "oakland"
+        ],
+        "Europe/Paris": [
+            "cet", "cest", "cdg", "ory", "lyon", "marseille", "toulouse", "nice", "bordeaux", "nantes",
+            "lille", "strasbourg"
+        ],
+        "Europe/London": [
+            "bst", "ldn", "lhr", "lgw", "manchester", "birmingham", "liverpool", "leeds", "glasgow",
+            "edinburgh", "bristol", "cardiff", "cambridge", "oxford", "belfast"
+        ],
+        "Asia/Kolkata": [
+            "ist", "kolkata", "bengaluru", "bangalore", "mumbai", "delhi", "new delhi", "chennai",
+            "hyderabad", "bom", "del", "blr", "pune", "ahmedabad", "jaipur", "surat", "lucknow", "kanpur",
+            "nagpur", "goa", "kochi", "indore", "thane", "bhopal", "visakhapatnam", "vizag", "patna",
+            "vadodara", "ghaziabad", "ludhiana", "agra", "nashik", "faridabad", "meerut", "rajkot",
+            "varanasi", "srinagar", "aurangabad", "amritsar", "navi mumbai", "allahabad", "prayagraj",
+            "ranchi", "howrah", "coimbatore", "jabalpur", "gwalior", "vijayawada", "jodhpur", "madurai",
+            "raipur", "chandigarh", "guwahati", "mysore", "mysuru", "gurgaon", "gurugram", "noida", "cochin",
+            "trivandrum", "thiruvananthapuram", "panaji", "dehradun", "udaipur", "pondicherry", "puducherry",
+            "jamshedpur", "bhubaneswar", "cuttack", "siliguri", "dhanbad", "kota", "shimla", "tirupati"
+        ],
+        "Asia/Tokyo": [
+            "jst", "osaka", "kyoto", "nrt", "hnd", "kix", "yokohama", "nagoya", "sapporo", "fukuoka", "kobe",
+            "hiroshima", "sendai", "okinawa", "nara"
+        ],
+        "Asia/Seoul": ["kst", "icn", "busan", "incheon", "daegu"],
+        "Australia/Sydney": ["aest", "aedt", "syd", "canberra", "newcastle"],
         "Asia/Singapore": ["sgp", "sin"],
-        "Asia/Ho_Chi_Minh": ["saigon", "hcmc", "hanoi", "haiphong"],
-        "Europe/Berlin": ["munich", "frankfurt", "hamburg", "cologne", "fra", "muc", "txl", "ber", "hannover", "hanover", "stuttgart", "dusseldorf", "dortmund", "essen", "leipzig", "dresden", "bremen", "nuremberg", "nurnberg", "bonn", "mannheim", "karlsruhe", "freiburg", "munster", "augsburg", "kiel", "koln", "munchen"],
-        "Europe/Rome": ["milan", "fco", "mxp", "naples", "turin", "florence", "venice", "bologna", "genoa", "palermo", "verona"],
+        "Asia/Ho_Chi_Minh": ["saigon", "hcmc", "hanoi", "haiphong", "hue", "da nang"],
+        "Europe/Berlin": [
+            "munich", "frankfurt", "hamburg", "cologne", "fra", "muc", "txl", "ber", "hannover", "hanover",
+            "stuttgart", "dusseldorf", "dortmund", "essen", "leipzig", "dresden", "bremen", "nuremberg",
+            "nurnberg", "bonn", "mannheim", "karlsruhe", "freiburg", "munster", "augsburg", "kiel", "koln",
+            "munchen"
+        ],
+        "Europe/Rome": [
+            "milan", "fco", "mxp", "naples", "turin", "florence", "venice", "bologna", "genoa", "palermo",
+            "verona"
+        ],
         "Europe/Madrid": ["barcelona", "bcn", "valencia", "seville", "malaga", "bilbao", "zaragoza"],
-        "Europe/Zurich": ["geneva", "zrh", "gva", "basel", "bern", "lausanne", "lucerne", "luzern", "winterthur", "st gallen", "lugano"],
+        "Europe/Zurich": [
+            "geneva", "zrh", "gva", "basel", "bern", "lausanne", "lucerne", "luzern", "winterthur",
+            "st gallen", "lugano"
+        ],
         "Europe/Moscow": ["st petersburg", "svo", "led"],
         "Europe/Kyiv": ["kyiv", "lviv", "odesa"],
         "Asia/Tel_Aviv": ["tel aviv", "tlv"],
-        "Asia/Shanghai": ["shenzhen", "beijing", "guangzhou", "pvg", "pek"],
+        "Asia/Shanghai": [
+            "shenzhen", "beijing", "guangzhou", "pvg", "pek", "chengdu", "tianjin", "wuhan", "xian",
+            "hangzhou", "nanjing", "qingdao", "suzhou", "shenyang", "kunming", "xiamen"
+        ],
         "Australia/Melbourne": ["melbourne", "mel"],
-        "Australia/Brisbane": ["brisbane", "bne"],
+        "Australia/Brisbane": ["brisbane", "bne", "gold coast"],
         "Australia/Perth": ["perth", "per"],
-        "America/Sao_Paulo": ["rio", "rio de janeiro", "gru"],
-        "America/Mexico_City": ["cdmx", "mexico city", "mex"],
-        "Europe/Vienna": ["vie", "graz", "salzburg", "linz", "innsbruck", "klagenfurt", "villach", "wels", "st polten", "dornbirn", "bregenz", "wien"],
+        "America/Sao_Paulo": [
+            "rio", "rio de janeiro", "gru", "brasilia", "salvador", "curitiba", "porto alegre",
+            "belo horizonte", "recife"
+        ],
+        "America/Mexico_City": ["cdmx", "mexico city", "mex", "guadalajara", "puebla"],
+        "Europe/Vienna": [
+            "vie", "graz", "salzburg", "linz", "innsbruck", "klagenfurt", "villach", "wels", "st polten",
+            "dornbirn", "bregenz", "wien"
+        ],
         "Europe/Amsterdam": ["ams", "rotterdam", "the hague", "den haag", "eindhoven", "utrecht"],
         "Europe/Copenhagen": ["cph", "aarhus", "odense"],
         "Europe/Oslo": ["osl", "bergen", "trondheim"],
@@ -319,36 +368,40 @@ enum CalcTimeZone {
         "Europe/Warsaw": ["waw", "krakow", "gdansk", "wroclaw", "poznan", "lodz"],
         "Europe/Budapest": ["bud"],
         "Europe/Brussels": ["bru", "antwerp", "ghent", "bruges"],
-        "Asia/Dubai": ["dxb", "auh"],
-        "Asia/Qatar": ["doh"],
+        "Asia/Dubai": ["dxb", "auh", "sharjah"],
+        "Asia/Qatar": ["doh", "doha"],
         "Asia/Hong_Kong": ["hkg"],
-        "Asia/Bangkok": ["bkk"],
-        "Asia/Kuala_Lumpur": ["kul"],
-        "Asia/Jakarta": ["cgk"],
-        "Asia/Manila": ["mnl"],
-        "Pacific/Auckland": ["akl"],
-        "America/Toronto": ["yyz", "yul"],
-        "America/Vancouver": ["yvr"],
+        "Asia/Bangkok": ["bkk", "phuket", "chiang mai"],
+        "Asia/Kuala_Lumpur": ["kul", "penang", "johor bahru"],
+        "Asia/Jakarta": ["cgk", "surabaya", "medan", "bandung", "denpasar", "bali"],
+        "Asia/Manila": ["mnl", "cebu", "davao"],
+        "Pacific/Auckland": ["akl", "wellington", "christchurch"],
+        "America/Toronto": ["yyz", "yul", "ottawa", "quebec", "montreal"],
+        "America/Vancouver": ["yvr", "victoria"],
         "America/Phoenix": ["phx"],
-        "America/Argentina/Buenos_Aires": ["eze"],
-        "America/Santiago": ["scl"],
-        "America/Bogota": ["bog"],
-        "America/Lima": ["lim"],
-        "Africa/Johannesburg": ["jnb", "cpt"],
-        "Africa/Cairo": ["cai"],
-        "Africa/Nairobi": ["nbo"],
-        "Africa/Lagos": ["los"],
-        "Africa/Casablanca": ["cmn"],
+        "America/Argentina/Buenos_Aires": ["eze", "rosario", "mendoza"],
+        "America/Santiago": ["scl", "valparaiso"],
+        "America/Bogota": ["bog", "medellin", "cali", "cartagena"],
+        "America/Lima": ["lim", "arequipa"],
+        "Africa/Johannesburg": ["jnb", "cpt", "durban", "pretoria", "soweto"],
+        "Africa/Cairo": ["cai", "alexandria", "giza"],
+        "Africa/Nairobi": ["nbo", "mombasa"],
+        "Africa/Lagos": ["los", "abuja", "kano", "ibadan"],
+        "Africa/Casablanca": ["cmn", "marrakech", "rabat", "fes", "tangier"],
         "Europe/Istanbul": ["ankara", "izmir"],
-        "Asia/Karachi": ["lahore", "islamabad", "faisalabad", "rawalpindi"],
+        "Asia/Karachi": ["lahore", "islamabad", "faisalabad", "rawalpindi", "multan", "peshawar"],
         "America/Guayaquil": ["quito"],
         "Europe/Malta": ["valletta"],
         "Asia/Dhaka": ["chittagong", "chattogram"],
+        "Asia/Riyadh": ["jeddah", "mecca", "medina", "dammam"],
+        "Asia/Taipei": ["kaohsiung", "taichung"],
+        "Asia/Kuwait": ["kuwait city"],
+        "Asia/Bahrain": ["manama"],
+        "Asia/Jerusalem": ["haifa"],
+        "America/Edmonton": ["calgary"]
     ]
 
-    /// Flattened on first use. `TimeZone.abbreviationDictionary` is unusable here: its `BDT` is the
-    /// Bangladeshi taka. IATA codes are Foundation-less by nature, and the cities IANA never names
-    /// are a curated product choice — see docs/features/calculator.md.
+    /// Flattened once from the grouping above, which is the form that gets edited.
     private static let aliases: [String: String] = {
         var table: [String: String] = [:]
         table.reserveCapacity(aliasGroups.values.reduce(0) { $0 + $1.count })
@@ -357,7 +410,6 @@ enum CalcTimeZone {
         }
         return table
     }()
-
 
     /// Not `localizedName`, which needs a `Locale` — banned in `Model/`.
     private static func label(for zone: TimeZone) -> String {
