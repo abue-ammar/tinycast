@@ -11,8 +11,7 @@ struct ChatTranscriptView: View {
     /// Below this a backward move is momentum settling, not the reader asking for the wheel.
     private static let deliberateScroll: CGFloat = 2
 
-    /// Where the reader sits, and whether that is the end. A reply growing moves the end away
-    /// without the reader moving, so the two have to be read together.
+    /// Where the reader sits and whether that is the end; a growing reply moves the end on its own.
     private struct ScrollMark: Equatable {
         var offset: CGFloat
         var atEnd: Bool
@@ -21,8 +20,7 @@ struct ChatTranscriptView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                // Not lazy: a transcript is a few tall rows, and an estimated height is what every
-                // anchored jump and the end test are measured against.
+                // Not lazy: every anchored jump and the end test measure an estimated height
                 VStack(spacing: Theme.Spacing.xl) {
                     ForEach(messages) { message in
                         ChatMessageView(
@@ -52,15 +50,12 @@ struct ChatTranscriptView: View {
             .onScrollGeometryChange(for: ScrollMark.self) { geometry in
                 ScrollMark(
                     offset: geometry.contentOffset.y,
-                    // The offset rests at `-insetTop`, so the end sits that much past a raw
-                    // offset plus the band — without it the true bottom never reads as the end.
+                    // The offset rests at `-insetTop`, so the end is that far past offset plus band
                     atEnd: geometry.contentOffset.y + geometry.containerSize.height
                         + geometry.contentInsets.top
                         >= geometry.contentSize.height - Theme.Spacing.chatFollowTailSlack)
             } action: { old, new in
-                // A plain wheel reports no ScrollPhase, so the offset is the only signal every
-                // input device gives. Reaching the end is tested first and wins: a wheel settling
-                // back a pixel off the end would otherwise hand control straight back again.
+                // The offset is the only signal every device gives; the end wins, tested first
                 if new.atEnd {
                     followsTail = true
                 } else if new.offset < old.offset - Self.deliberateScroll {
@@ -90,8 +85,7 @@ struct ChatTranscriptView: View {
     }
 }
 
-/// A fast reply grows the transcript quicker than a reader can scroll toward it, so arriving at
-/// the end cannot be the only way to resume: this asks for the tail rather than chasing it.
+/// A fast reply outruns a reader scrolling toward it, so this asks for the tail, not chases it.
 private struct ResumeFollowingButton: View {
     let action: () -> Void
 
@@ -136,7 +130,7 @@ private struct ChatMessageView: View {
         }
     }
 
-    /// Laid out at rest and only faded in, so a hover can't reflow the transcript under the pointer.
+    /// Laid out at rest and only faded in, so a hover cannot reflow the transcript
     private var footer: some View {
         HStack(spacing: Theme.Spacing.sm) {
             if message.role == .user { timestamp }
@@ -166,8 +160,7 @@ private struct ChatMessageView: View {
                 .font(Theme.Typography.rowTitle)
                 .foregroundStyle(message.state == .failed ? Theme.Colors.destructive : .primary)
                 .textSelection(.enabled)
-                // Only the user bubble is inset: it carries a fill. A reply's `sm` is just enough
-                // to put its first pixel under the header's back chevron.
+                // The user bubble is inset because it carries a fill; a reply clears the chevron
                 .padding(.horizontal, message.role == .user ? Theme.Spacing.xl : Theme.Spacing.sm)
                 .padding(.vertical, Theme.Spacing.md)
                 .background(

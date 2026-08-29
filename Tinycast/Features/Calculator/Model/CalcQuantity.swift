@@ -78,9 +78,7 @@ enum CalcQuantity {
         }
     }
 
-    /// The Mac's own currency, except where that is the one written: converting is the only reason
-    /// to type a lone amount, so it pairs with the dollar there — the euro when the dollar is typed.
-    /// A region that resolves to nothing still names no target, which keeps the amount as written.
+    /// Converting is the only reason to type a lone amount, so it pairs with the region's own.
     private static func regionTarget(_ region: String?, from: CurrencyDef) -> CurrencyDef? {
         guard let regional = region.flatMap({ CalcCurrency.byName[$0.lowercased()] })
         else { return nil }

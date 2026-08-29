@@ -1,7 +1,6 @@
 import Foundation
 
-/// Where Tab goes next. Launcher, chat and clipboard are the three surfaces a reader opens directly,
-/// so Tab rings those; every other mode is a sub-screen, which Tab leaves for the launcher.
+/// Tab rings the three surfaces a reader opens directly; a sub-screen exits to the launcher.
 enum PaletteTabAction: Equatable {
     /// The typed text rides along, because both ends narrow their own list by the same query.
     case carryQuery(PaletteMode)

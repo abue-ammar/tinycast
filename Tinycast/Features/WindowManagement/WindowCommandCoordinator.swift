@@ -22,7 +22,7 @@ final class WindowCommandCoordinator {
     func runWindowCommand(id: WindowCommand.ID) {
         guard settings.windowManagementEnabled else { return }
         if let direction = SpaceDirection(id) {
-            // Restoring focus reactivates an app that may live elsewhere, pulling its Space forward.
+            // Restoring focus reactivates an app elsewhere, pulling its Space forward.
             if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
             spaceSwitcher.perform(direction)
             return

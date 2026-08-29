@@ -1,7 +1,6 @@
 import Foundation
 
-/// Reuses `DateFormatter`s across calls: building one costs ~160 µs against ~0.5 µs to reuse it,
-/// and a date card formats up to four times. Keyed by everything a formatter is configured with.
+/// Reused across calls: building one costs ~160 µs against ~0.5 µs to reuse it.
 enum CalcDateFormatters {
     private struct Key: Hashable {
         let pattern: String

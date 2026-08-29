@@ -1,7 +1,6 @@
 import Foundation
 
-/// Runs one macOS command-line tool to completion. Output is drained as it arrives rather than at
-/// exit, so a tool that writes more than a pipe buffer holds cannot wedge waiting for a reader.
+/// Drained as it arrives, so a tool outwriting the pipe buffer cannot wedge.
 enum ToolRunner {
     struct Result: Sendable {
         let status: Int32
@@ -55,8 +54,7 @@ enum ToolRunner {
     }
 }
 
-/// Output arrives on the pipe's own queue and is read again from the termination handler, so the
-/// lock is load-bearing; nothing outside this type touches the buffer.
+/// Read from the pipe's queue and the termination handler, so the lock is load-bearing.
 private final class OutputCollector: @unchecked Sendable {
     private let lock = NSLock()
     private var buffer = Data()
@@ -64,13 +62,12 @@ private final class OutputCollector: @unchecked Sendable {
     var text: String {
         lock.lock()
         defer { lock.unlock() }
-        // Latin-1 cannot fail, so output a tool wrote in some other encoding still reaches the user.
+        // Latin-1 cannot fail, so other encodings still reach the user.
         return String(bytes: buffer, encoding: .utf8)
             ?? String(bytes: buffer, encoding: .isoLatin1) ?? ""
     }
 
-    /// Buffers bytes, not text: a read can land mid-character, and decoding the halves separately
-    /// would put a replacement character into the middle of a word.
+    /// Buffers bytes, not text: a read landing mid-character would decode to a replacement.
     func absorb(_ data: Data) {
         guard !data.isEmpty else { return }
         lock.lock()

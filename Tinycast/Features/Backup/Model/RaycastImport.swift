@@ -1,6 +1,25 @@
 import Foundation
 
-/// Reads a `.rayconfig`, dispatching on format. See docs/features/raycast-import.md.
+/// The independently importable categories in a Raycast export, so the user can pick a subset.
+struct RaycastImportOptions: OptionSet, Sendable {
+    let rawValue: Int
+    static let shortcuts = RaycastImportOptions(rawValue: 1 << 0)
+    static let favorites = RaycastImportOptions(rawValue: 1 << 1)
+    static let emojiSkinTone = RaycastImportOptions(rawValue: 1 << 2)
+    static let launchAtLogin = RaycastImportOptions(rawValue: 1 << 3)
+    static let menuBarVisibility = RaycastImportOptions(rawValue: 1 << 4)
+    static let clipboardHistory = RaycastImportOptions(rawValue: 1 << 5)
+    static let popToRoot = RaycastImportOptions(rawValue: 1 << 6)
+    static let compactMode = RaycastImportOptions(rawValue: 1 << 7)
+    static let snippets = RaycastImportOptions(rawValue: 1 << 8)
+    static let aliases = RaycastImportOptions(rawValue: 1 << 9)
+    static let all: RaycastImportOptions = [
+        .shortcuts, .favorites, .emojiSkinTone, .launchAtLogin, .menuBarVisibility, .clipboardHistory,
+        .popToRoot, .compactMode, .snippets, .aliases
+    ]
+}
+
+/// What a `.rayconfig` yields, before it reaches the app. See docs/features/raycast-import.md.
 enum RaycastImport {
     struct Result {
         var backup: SettingsBackup
@@ -68,14 +87,6 @@ enum RaycastImport {
                 clipboard: keepClipboard ? clipboard : [],
                 snippets: options.contains(.snippets) ? snippets : [],
                 missingImages: keepClipboard ? missingImages : 0)
-        }
-    }
-
-    static func read(file: URL, passphrase: String) throws -> Result {
-        let raw = try Data(contentsOf: file)
-        switch try RaycastFormat.detect(raw) {
-        case .v1: return try RaycastImportV1.read(raw, passphrase: passphrase)
-        case .v2: return try RaycastImportV2.read(raw, passphrase: passphrase)
         }
     }
 }

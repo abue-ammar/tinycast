@@ -1,6 +1,6 @@
 import Foundation
 
-// Spawns real `/bin/zsh`. The shell-environment cases point `ZDOTDIR` at a throwaway fixture so a run can never read or write the developer's own dotfiles; `/etc/zshrc` is still sourced for interactive shells, so every assertion is relative (the probe resolves with `-i`, not without) rather than absolute.
+// Spawns real `/bin/zsh`; `ZDOTDIR` is a fixture, so every assertion is relative.
 @main
 struct CustomCommandTests {
     @MainActor
@@ -95,7 +95,7 @@ struct CustomCommandTests {
             "a blank argument is dropped without losing the command",
             store.commands.first?.arguments == [CustomCommandArgument(name: "Kept")])
 
-        // A command stored before arguments existed must still decode, not vanish with the whole set.
+        // A command stored before arguments existed must still decode.
         let legacy = Data(
             """
             [{"id":"\(UUID().uuidString)","name":"Legacy","command":"/usr/bin/true"}]
@@ -133,8 +133,7 @@ struct CustomCommandTests {
                 case .finished(let value): result = value
                 }
             }
-            // A pty ends every line with CR LF, and the trailing newline is never part of the
-            // thing under test.
+            // A pty ends every line with CR LF, never part of the thing under test.
             return (
                 log.replacingOccurrences(of: "\r", with: "")
                     .trimmingCharacters(in: .whitespacesAndNewlines), result
@@ -145,7 +144,7 @@ struct CustomCommandTests {
         check("a streamed run reports what it printed", simple.log.contains("captured"))
         check("a streamed run reports a clean exit", simple.result?.succeeded == true)
 
-        // The reported bug: brew writes `==>` to stderr, and it must not be reordered behind stdout.
+        // The reported bug: brew writes `==>` to stderr, which must not reorder.
         let ordered = await collect(
             ShellCommandRunner.stream("printf 'one\\n'; printf 'two\\n' >&2; printf 'three\\n'"))
         let places = ["one", "two", "three"].map { ordered.log.range(of: $0)?.lowerBound }
@@ -305,14 +304,14 @@ struct CustomCommandTests {
 
         // MARK: Shell environment
 
-        // A throwaway ZDOTDIR proves interactive mode sources an rc file without depending on the developer's own dotfiles.
+        // A throwaway ZDOTDIR proves interactive mode sources an rc file.
         let zdotdir = FileManager.default.temporaryDirectory
             .appendingPathComponent("tinycast-zdotdir-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: zdotdir, withIntermediateDirectories: true)
         try? Data("alias tinycast_probe=true\n".utf8).write(
             to: zdotdir.appendingPathComponent(".zshrc"))
         setenv("ZDOTDIR", zdotdir.path, 1)
-        // `/etc/zshrc` sources `/etc/zshrc_$TERM_PROGRAM`, which starts Terminal's session save/restore and writes to the real home.
+        // `/etc/zshrc` sources `zshrc_$TERM_PROGRAM`, which writes to the real home.
         unsetenv("TERM_PROGRAM")
 
         let withEnvironment = await ShellCommandRunner.run(
@@ -321,13 +320,13 @@ struct CustomCommandTests {
             "loading the shell environment resolves an rc-file alias",
             withEnvironment.succeeded)
 
-        // The exact symptom users reported: an alias that only exists in `.zshrc` is command-not-found.
+        // The reported symptom: an alias only in `.zshrc` is command-not-found.
         let withoutEnvironment = await ShellCommandRunner.run("tinycast_probe")
         check(
             "the default shell exits 127 on an rc-file alias",
             withoutEnvironment.termination == .exited(status: 127))
 
-        // The whole "an interactive shell can't block" argument rests on this: a config or command that prompts reads EOF.
+        // The interactive-shell argument rests on this: a prompt reads EOF.
         let prompted = await ShellCommandRunner.run(
             "read -r answer", loadingShellEnvironment: true)
         check("a command reading stdin fails instead of hanging", !prompted.succeeded)
@@ -351,7 +350,7 @@ private func discardSuite(_ name: String, _ defaults: UserDefaults) {
             .appendingPathComponent("Library/Preferences/\(name).plist"))
 }
 
-/// A fixed suite name stops cfprefsd accumulating a plist per run; the domain is cleared at both ends.
+/// A fixed suite name stops cfprefsd accumulating a plist per run.
 private func isolatedDefaults(_ name: String) -> UserDefaults {
     let defaults = UserDefaults(suiteName: name)!
     defaults.removePersistentDomain(forName: name)

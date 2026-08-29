@@ -2,8 +2,7 @@ import AppKit
 // `@preconcurrency` downgrades AX diagnostics: the attribute keys are constant C globals.
 @preconcurrency import ApplicationServices
 
-/// Reads text out of another app over Accessibility, always against a named process: the system-wide
-/// focused element follows whichever window holds key, so it answers with ours while a panel is up.
+/// Always against a named process: the system-wide focus answers with ours.
 enum AccessibilityText {
     /// Generous for a responsive app, short enough that a wedged one can't stall the main actor.
     private static let timeout: Float = 1

@@ -55,7 +55,7 @@ struct AppVersion: Comparable, Hashable, Sendable, CustomStringConvertible {
         }
     }
 
-    /// Rejects a signed or padded field, which `Int` would otherwise accept and silently reinterpret.
+    /// Rejects a signed or padded field, which `Int` would silently reinterpret.
     private static func number(_ text: Substring) -> Int? {
         guard !text.isEmpty, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
         return Int(text)

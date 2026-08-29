@@ -20,8 +20,7 @@ struct EntryIconTests {
 
     // MARK: - Identity
 
-    /// `AppEntry.iconKey` interpolates an `EntryIcon` into a string, and a row's async load is keyed
-    /// on it. Two icons that render differently but print the same would serve each other's bitmap.
+    /// Two icons that render differently but print the same would share a bitmap.
     static func everyCasePrintsDistinctly() {
         let icons: [EntryIcon] = [
             .file(stamp: 0),
@@ -126,8 +125,7 @@ struct EntryIconTests {
 
     // MARK: - Restamping
 
-    /// The reported bug: an app whose icon changed on disk kept painting whatever was decoded first,
-    /// because the cache key was the path alone. Pasting an icon in Finder is this `Icon\r` write.
+    /// The reported bug: a path-only cache key kept painting the first decode.
     static func aChangedIconRetiresTheCachedBitmap() {
         guard let bundle = makeBundle() else { return expect(false, "the fixture bundle writes") }
         defer { try? FileManager.default.removeItem(at: bundle) }
@@ -150,7 +148,7 @@ struct EntryIconTests {
 
     static func bitmap(_ image: NSImage) -> Data? { image.tiffRepresentation }
 
-    /// A directory shaped like an app bundle, which is all `NSWorkspace` needs to hand back an icon.
+    /// A directory shaped like an app bundle is all `NSWorkspace` needs.
     static func makeBundle() -> URL? {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("entry-icon-test-\(UUID().uuidString).app")

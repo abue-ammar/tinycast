@@ -150,12 +150,7 @@ final class AIChatCoordinator {
             ? AppleIntelligence.contextBudget : ChatSession.defaultTextBudget
     }
 
-    /// ⌘V with a picture on the pasteboard — a screenshot, or an image file from Finder — stages
-    /// it; anything with text pastes as text. False lets the field editor have the chord.
-    ///
-    /// The pasteboard is read here and the picture decoded off-main: unpacking, rescaling and
-    /// re-encoding a display-sized screenshot is megabytes of work that has no business on a
-    /// keystroke.
+    /// ⌘V stages a picture, decoded off-main; false hands the chord back to the field editor.
     func attachPastedImage() -> Bool {
         guard capabilities.images else { return false }
         let pasteboard = NSPasteboard.general
@@ -169,9 +164,7 @@ final class AIChatCoordinator {
         return true
     }
 
-    /// The file first and the raw pasteboard bytes as the fallback, in the order they were decoded
-    /// inline. A refusal is explained where it happened, and the chord is consumed either way: ⌘V on
-    /// a picture never falls through to the field editor pasting its path as text.
+    /// The file first, raw bytes as fallback; the chord is consumed, never pasting a path
     private func stage(file: URL?, pasted: Data?) {
         let generation = chat.stagingGeneration
         Task { [weak self] in
@@ -279,9 +272,7 @@ final class AIChatCoordinator {
         }
     }
 
-    /// Opening the chat on a ChatGPT model fetches its list, so the title is the display name
-    /// rather than the raw id until the first send would have loaded it. With nothing stored, that
-    /// same fetch is what lets the app resolve a default rather than send the reader to Settings.
+    /// Fetches the list so the title is a name, and a default can resolve without Settings.
     func warmUpModelList() {
         let stored = core.aiSettings.defaultModel
         if stored == nil {
@@ -295,16 +286,14 @@ final class AIChatCoordinator {
         prepareModelSwitcher()
     }
 
-    /// Resolving a first default used to live only in the settings pane, so a signed-in
-    /// subscription still asked the reader to go there and pick what the app already knew about.
+    /// Not only in Settings: a signed-in subscription must not send the reader there to pick.
     func resolveDefaultModel() {
         core.aiSettings.resolveDefaultModel()
         guard core.aiSettings.defaultModel == nil, let first = modelOptions.first else { return }
         core.aiSettings.select(first.selection)
     }
 
-    /// A subscription signs in after the screen is already up, so its model list arrives late;
-    /// without this the empty state sits there until the reader leaves and comes back.
+    /// A subscription's model list arrives after the screen is up, so the empty state waits
     private func awaitModelList() {
         withObservationTracking {
             _ = core.chatGPTSubscription.models

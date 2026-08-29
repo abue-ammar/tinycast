@@ -1,14 +1,11 @@
 import Foundation
 
-/// A release body as the update window reads it: the changelog CI generates, split into the handful
-/// of block shapes it actually emits.
+/// A release body as the window reads it: the block shapes CI actually emits.
 enum ReleaseNotes {
-    /// CI writes the install instructions below this line for the download page — a window that
-    /// updates itself has no use for them.
+    /// CI writes install instructions below this for the download page; a window skips them.
     static let installMarker = "<!-- tinycast:install -->"
 
-    /// The app-facing half of a release body. A body published before the marker existed has no
-    /// marker, and comes back whole.
+    /// A body published before the marker existed has none, and comes back whole.
     static func summary(of body: String) -> String {
         let head = body.range(of: installMarker).map { String(body[..<$0.lowerBound]) } ?? body
         return head.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -60,8 +57,7 @@ enum ReleaseNotes {
         return .heading(level: hashes.count, text: text)
     }
 
-    /// GitHub autolinks a mention and a PR reference on the web; in the window they are plain text
-    /// until they are spelled as Markdown links.
+    /// GitHub autolinks a mention on the web; here they must be spelled as Markdown.
     private static func linkified(_ text: String) -> String {
         var output = ""
         var index = text.startIndex

@@ -42,14 +42,13 @@ final class CalendarCoordinator {
     /// The days the store reads, and the wording every sentence that names them uses.
     var span: MeetingSpan { MeetingSpan(includesTomorrow: settings.calendarIncludesTomorrow) }
 
-    /// The meeting the join card shows, or nil when none is due. `now` comes from the ticking clock.
+    /// The meeting the join card shows; `now` comes from the ticking clock.
     var cardedMeeting: MeetingEvent? {
         guard settings.calendarEnabled else { return nil }
         return window.carded(from: store.events, now: clock.now)
     }
 
-    /// The span's events, timed, accepted and not over yet, in start order. Live rather than
-    /// clock-driven: this publishes a snapshot, and a chord reads it with nothing ticking.
+    /// Live rather than clock-driven: a chord reads this with nothing ticking.
     var agenda: [MeetingEvent] { UpcomingWindow.agenda(from: store.events, now: Date()) }
 
     /// The event the menu bar carries, or nil for the plain icon.
@@ -111,7 +110,7 @@ final class CalendarCoordinator {
         applyClock()
     }
 
-    /// Changing which days are read re-queries EventKit, so it runs through the store, not a filter.
+    /// Changing which days are read re-queries EventKit, so it goes through the store.
     func applySpan() {
         store.span = span
     }
@@ -137,7 +136,6 @@ final class CalendarCoordinator {
         if armedAt == .distantFuture { armedAt = Date() }
     }
 
-    /// One minute's worth of work: keep the snapshot honest, then see if anything should open.
     /// An event ending changes nothing in EventKit, so the republish is what drops it.
     private func minuteDidPass() {
         store.reloadIfStale(now: clock.now)
@@ -181,8 +179,7 @@ final class CalendarCoordinator {
 
     // MARK: - Palette lifecycle
 
-    /// Both hooks the palette needs: events go stale while it is closed, and the countdown only
-    /// has to tick while someone can see it.
+    /// Events go stale while the palette is closed, and the countdown ticks only when seen.
     func paletteDidShow() {
         paletteVisible = true
         applyClock()
@@ -258,8 +255,7 @@ final class CalendarCoordinator {
         join(meeting)
     }
 
-    /// The one funnel every path uses. `uninvited` marks an auto join, which is the only case
-    /// that may have to ask before it acts.
+    /// `uninvited` marks an auto join, the only case that may have to ask before it acts.
     func join(_ meeting: MeetingEvent, uninvited: Bool = false) {
         guard let link = meeting.link else {
             openInCalendar(meeting)

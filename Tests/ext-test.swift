@@ -1,15 +1,4 @@
-// Standalone test for the Raycast-extension runtime — compiles the *real* engine sources (no copy to
-// sync) and runs them against JavaScriptCore, exactly as the app does:
-//
-//   swiftc -parse-as-library \
-//     Tinycast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,RenderNode}.swift \
-//     via Scripts/run-tests.sh ext-test
-//     -o /tmp/ext-test && /tmp/ext-test
-//
-// With no arguments it runs the built-in checks (manifest parsing, tree decoding, screen flattening,
-// and a synthetic command end-to-end through JSC). Pass a directory to run a real extension:
-//
-//   /tmp/ext-test ~/.config/raycast/extensions/<uuid> [command-name]
+// Compiles the real engine sources against JavaScriptCore; pass a directory to run one.
 
 import AppKit
 import Foundation
@@ -29,9 +18,7 @@ struct ExtensionTests {
 
     // MARK: - Harness plumbing
 
-    /// Records every host call and answers it. `proc` and `fetch` go through the app's real
-    /// implementations, so an extension that shells out or hits the network behaves as it would in the
-    /// app; everything main-actor-shaped (clipboard, window, storage) gets a canned answer.
+    /// `proc` and `fetch` are the app's real ones; main-actor calls get canned answers.
     @MainActor
     final class StubHost: ExtensionHostAPI {
         var calls: [String] = []
@@ -160,7 +147,7 @@ struct ExtensionTests {
         return arguments
     }
 
-    /// `EXT_TEST_PREFS` as JSON — strings and bools only, which is what a manifest preference holds.
+    /// `EXT_TEST_PREFS` as JSON — strings and bools, what a manifest preference holds.
     static func environmentPreferences() -> [String: ExtensionPreferenceValue] {
         guard let raw = ProcessInfo.processInfo.environment["EXT_TEST_PREFS"],
             let json = try? JSONSerialization.jsonObject(with: Data(raw.utf8)) as? [String: Any]
@@ -255,8 +242,7 @@ struct ExtensionTests {
         check("keywords", manifest.commands[0].keywords == ["find"])
         check("arguments", manifest.commands[3].arguments.first?.name == "q")
         check("argument required", manifest.commands[3].arguments.first?.required == true)
-        // A blank optional argument must arrive as "", never absent: extensions do `Number(args.x)`,
-        // which is 0 for "" but NaN for undefined.
+        // A blank optional argument arrives as "": `Number(args.x)` is NaN for undefined.
         check(
             "unfilled arguments are completed to empty strings",
             manifest.commands[3].completeArguments([:]) == ["q": ""],
@@ -440,7 +426,7 @@ struct ExtensionTests {
         check("form has no selectable rows", form.items.isEmpty)
 
         let detail = ExtensionScreen(
-            // Doubled delimiters: the markdown heading contains `"#`, which closes a single-# raw string.
+            // Doubled delimiters: the heading contains `"#`, which closes a single-# string.
             tree: tree(##"{"id":2,"type":"Detail","props":{"markdown":"# Hi"},"children":[]}"##),
             query: "")
         check("kind is detail", detail.kind == .detail)
@@ -464,8 +450,7 @@ struct ExtensionTests {
         check("out-of-range selection falls back", panels.actionPanel(forItemAt: 99)?.id == 8)
     }
 
-    /// An `Action`'s icon is a full `ImageLike`, so the ⌘K panel has to keep its tint: a picker built
-    /// from `{Icon.Circle, tintColor}` rows is one grey column without it. See docs/features/extensions.md.
+    /// An `Action`'s icon is a full `ImageLike`, so the ⌘K panel has to keep its tint.
     @MainActor
     static func actionIconChecks() {
         func icon(
@@ -630,8 +615,7 @@ struct ExtensionTests {
                 return () => clearTimeout(timer);
               }, []);
               const digest = crypto.createHash("sha256").update("abc").digest("hex").slice(0, 8);
-              // AbortSignal's statics, not just its instance shape: an extension reaching for
-              // `AbortSignal.timeout` used to get "is not a function" at runtime.
+              // AbortSignal's statics too: `AbortSignal.timeout` used to be "not a function".
               const abortable = [
                 typeof AbortSignal.timeout, typeof AbortSignal.abort, typeof AbortSignal.any,
                 String(AbortSignal.timeout(5e3).aborted), AbortSignal.abort().reason.name,
@@ -760,11 +744,7 @@ struct ExtensionTests {
             argumentMarkdown)
         await withArguments.stop(session: "sA")
 
-        // Running a second command in the same runtime must work exactly like the first — the JSContext
-        // and React's scheduler are shared across sessions.
-        // Stop while a timer is still pending — what closing the palette mid-refresh does. React's
-        // scheduler drives commits through `setTimeout`, so anything that kills timers it doesn't own
-        // can wedge every later session.
+        // React's scheduler drives commits through `setTimeout`, shared across sessions.
         let (pending, _, pendingRecorder) = makeRuntime()
         try? await pending.boot(
             config: .current(supportDirectory: FileManager.default.temporaryDirectory))
@@ -911,8 +891,7 @@ struct ExtensionTests {
         for schema in manifest.preferences + target.preferences {
             preferences[schema.name] = schema.effectiveDefault
         }
-        // `EXT_TEST_PREFS={"version":"v8"}` stands in for what the user set in Settings — plenty of
-        // extensions branch on a preference that has no manifest default.
+        // `EXT_TEST_PREFS` stands in for Settings: many extensions have no manifest default.
         for (key, value) in environmentPreferences() { preferences[key] = value }
         let context = launchContext(
             extensionName: manifest.name, command: target.name, mode: target.mode,
@@ -921,8 +900,7 @@ struct ExtensionTests {
         let settleMS = UInt64(
             ProcessInfo.processInfo.environment["EXT_TEST_SETTLE_MS"].flatMap(UInt64.init) ?? 1500)
 
-        // `EXT_TEST_RERUN=1` runs the command, tears it down the way the palette does, and runs it
-        // again in the same runtime — the "works once, then hangs" case.
+        // `EXT_TEST_RERUN=1` runs, tears down and runs again: the works-once-then-hangs case.
         if ProcessInfo.processInfo.environment["EXT_TEST_RERUN"] != nil {
             await runtime.start(
                 session: "r1", code: code, file: bundle, mode: target.mode, context: context)

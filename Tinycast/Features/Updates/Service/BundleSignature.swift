@@ -1,9 +1,7 @@
 import Foundation
 import Security
 
-/// Pins an update to the identity the running copy was signed with. Tinycast is self-signed and
-/// never notarized, so a matching leaf certificate is the only integrity guarantee there is — and
-/// that same match is what keeps the Accessibility grant alive across the swap.
+/// Self-signed and never notarized, so a matching leaf certificate is the only guarantee.
 enum BundleSignature {
     static func matchesRunningApp(_ bundleURL: URL) -> Bool {
         guard let running = runningLeaf(), let candidate = leaf(ofBundleAt: bundleURL) else {
@@ -27,8 +25,7 @@ enum BundleSignature {
         guard SecStaticCodeCreateWithPath(bundleURL as CFURL, [], &staticCode) == errSecSuccess,
             let staticCode
         else { return nil }
-        // Check the seal before reading the certificate out of it: an unsealed bundle can claim
-        // any identity, and a nested helper is exactly where a swapped binary would hide.
+        // An unsealed bundle can claim any identity, and a nested helper is where one hides.
         let flags = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode)
         guard SecStaticCodeCheckValidity(staticCode, flags, nil) == errSecSuccess else { return nil }
         return leaf(of: staticCode)

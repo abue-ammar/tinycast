@@ -77,9 +77,7 @@ final class HotKeyManager {
         syncDoubleTaps()
     }
 
-    /// Entry ids holding an extension-command hotkey. Not pruned in `start()` like the UUID-keyed
-    /// indexes are: the installed set is scanned asynchronously and only when extensions are on, so
-    /// "not installed yet" is indistinguishable from "gone" at launch. Uninstalling clears its own.
+    /// Never pruned at launch: not-installed-yet and gone are indistinguishable there.
     var boundExtensionCommandEntryIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundExtensionCommandKey) ?? []
     }

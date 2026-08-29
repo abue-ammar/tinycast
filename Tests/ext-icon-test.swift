@@ -14,8 +14,7 @@ struct ExtensionIconTests {
         }
     }
 
-    /// Extension artwork is normalized, so how much transparent margin a source ships cannot change
-    /// the size it draws at — and it lands below an app icon on purpose. See docs/features/extensions.md.
+    /// Artwork is normalized, so a source's transparent margin cannot change its size.
     static func artworkIsNormalized() {
         guard let bleed = writePNG("bleed", inset: 0), let padded = writePNG("padded", inset: 96)
         else { return expect(false, "the fixtures write") }
@@ -40,8 +39,7 @@ struct ExtensionIconTests {
         expect(icon.size.width > 0, "a missing icon falls back to the puzzle-piece tile")
     }
 
-    /// An extension drawing its own SVG writes a Raycast colour name straight into `stroke`, which
-    /// no SVG renderer understands — left alone the shape draws nothing at all.
+    /// No SVG renderer knows a Raycast colour name, so the shape draws nothing.
     static func paletteColorsInSVGResolve() async {
         // The usage-ring shape every quota extension draws: a track and an arc, each named.
         let ring = """
@@ -59,8 +57,7 @@ struct ExtensionIconTests {
         let sized = await drawnInk(ring, isDark: true, query: "?raycast-width=32")
         expect(sized != nil, "a sized payload still draws")
 
-        // A known name occurring inside a longer unknown one may not be substituted there: the
-        // rewrite has to walk whole names rather than search for the ones it knows.
+        // The rewrite walks whole names: a known one inside a longer unknown must not match.
         let unknown = await drawnInk(circle(stroke: "raycast-green-invented"), isDark: true)
         expect(unknown == nil, "an unknown name is left whole, and draws nothing")
         let known = await drawnInk(circle(stroke: "raycast-green"), isDark: true)
@@ -88,7 +85,7 @@ struct ExtensionIconTests {
             + "fill=\"none\" /></svg>"
     }
 
-    /// An SVG drawn the way a row draws it: encoded as a `data:` URL, then decoded with the palette.
+    /// An SVG as a row draws it: a `data:` URL decoded with the palette.
     static func drawnImage(
         _ svg: String, isDark: Bool, base64: Bool = false, query: String = ""
     ) async -> NSImage? {
@@ -114,8 +111,7 @@ struct ExtensionIconTests {
         await drawnImage(svg, isDark: isDark).flatMap(inkColor)
     }
 
-    /// Extensions that render their own artwork hand it over as a `data:` URL rather than a file,
-    /// in either encoding, and Detail markdown appends Raycast's sizing query to it.
+    /// A `data:` URL in either encoding, with Detail markdown's sizing query appended.
     static func inlineDataURLsDecode() async {
         let svg = """
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" \
@@ -187,8 +183,7 @@ struct ExtensionIconTests {
         }
     }
 
-    /// The most opaque pixel drawn, which for a stroked ring is the stroke's own colour.
-    /// A palette ramp strokes at its own alpha, so the bar sits below opaque.
+    /// The most opaque pixel drawn; a palette ramp strokes below opaque.
     static func inkColor(_ image: NSImage) -> NSColor? {
         guard let rep = rasterize(image) else { return nil }
         var best: NSColor?

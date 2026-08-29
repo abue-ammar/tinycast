@@ -1,6 +1,6 @@
 import Foundation
 
-/// One block of a reply. Inline spans stay as source, so the view parses them with `AttributedString`.
+/// One block of a reply; inline spans stay as source for `AttributedString` in the view.
 enum MarkdownBlock: Equatable, Sendable {
     case heading(level: Int, text: String)
     case paragraph(String)

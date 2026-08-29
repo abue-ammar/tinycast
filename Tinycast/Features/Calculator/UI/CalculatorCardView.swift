@@ -121,8 +121,7 @@ private enum CalcSyntax {
         return attributed
     }
 
-    /// `in` joins two units and follows one, which is what separates it from the inch it spells.
-    /// In `10 in in cm` only the second joins, so the first stays a unit.
+    /// `in` joins two units and follows one; in `10 in in cm` only the second joins.
     private static func isConnector(
         _ word: Substring, at index: Int, of words: [Substring]
     ) -> Bool {

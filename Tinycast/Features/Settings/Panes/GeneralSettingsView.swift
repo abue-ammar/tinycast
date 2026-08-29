@@ -161,7 +161,7 @@ struct GeneralSettingsView: View {
                     Text("Pop to Root Search")
                     Text("Reset to the launcher this long after the window closes.")
                 }
-                // Empty only when TIS fails; one layout still lists, so the row does not come and go.
+                // Empty only when TIS fails; one layout still lists, so the row stays put.
                 if !inputSources.isEmpty {
                     Picker(selection: $settings.autoSwitchInputSourceID) {
                         Text("None").tag(nil as String?)

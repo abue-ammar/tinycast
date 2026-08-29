@@ -306,8 +306,7 @@ struct CalcTests {
         expectBadges("(1kg + 500g) to lb", source: "Expression", target: "Pounds")
         expectError("(1kg + 500g) to m", "Cannot convert Weight to Length.")
 
-        // Adjacent compatible quantities are additive, matching common composite-unit notation.
-        // Composite reads as one quantity in its leading unit; an explicit operator answers in the last.
+        // Composite reads as one quantity in its leading unit; an operator answers in the last.
         expectDisplay("5 feet 3 inches to cm", "160.02 cm")
         expectDisplay("5 feet 3 inches", "5.25 ft")
         expectDisplay("1hr 30min", "1.5 hr")
@@ -335,7 +334,7 @@ struct CalcTests {
         expectDisplay("$10 + 5", "15.00 USD")
         expectBadges("5kg+5", source: "Expression", target: "Kilograms")
         expectDisplay("10kg + -20%", "9.8 kg")  // unary minus drops percent, as in `450 + -20%`
-        // Adjacency is different: there a bare number is a unit still being typed, so it stays silent
+        // Adjacency differs: a bare number there is a unit still being typed.
         expectNil("1hr 30")  // mid-way through "1hr 30min"
         expectNil("5 feet 3")  // mid-way through "5 feet 3 inches"
         expectError(
@@ -375,7 +374,7 @@ struct CalcTests {
         // Arithmetic with spaced operators must still be plain math, not date math
         expectDisplayAt("10 - 3", "7")
         expectDisplayAt("450 + 20%", "540")
-        // Letter-free `m/d - m/d` is fraction math, not a date difference (both operands are valid arithmetic)
+        // Letter-free `m/d - m/d` is fraction math, not a date difference.
         expectDisplayAt("5/2 - 1/2", "2")
         expectDisplayAt("3/4 - 1/4", "0.5")
         expectDisplayAt("1/2 - 1/4", "0.25")
@@ -414,8 +413,7 @@ struct CalcTests {
         expectDisplay("100 mbps to kbps", "100,000 Kbps")
         expectBadges("100 kmh to mph", source: "Kilometers per Hour", target: "Miles per Hour")
 
-        // Bare-unit auto-conversion coverage gaps: bar/psi/atm/Mbps/Gbps/Kbps had it, their
-        // neighbors didn't — same category, same treatment.
+        // Bare-unit auto-conversion gaps: same category, same treatment.
         expectDisplay("5 mbar", "0.07251886887 psi")
         expectDisplay("5 kPa", "0.7251886887 psi")
         expectDisplay("5 hPa", "0.07251886887 psi")
@@ -424,7 +422,7 @@ struct CalcTests {
         expectDisplay("100 bps", "0.1 Kbps")
         expectDisplay("1 Tbps", "1,000 Gbps")
 
-        // Base conversion accepts an expression on the value side, like unit conversion already does
+        // Base conversion accepts an expression on the value side, as unit conversion does.
         expectDisplay("2*128 to hex", "0x100")
         expectDisplay("10*5 to hex", "0x32")
 
@@ -443,8 +441,7 @@ struct CalcTests {
         expectBadgesAt("days since 9jul", source: "Thursday, 9 July", target: "Friday, 24 July")
         expectDisplayAt("weeks since 3jul", "3 weeks")
         expectDisplayAt("days since yesterday", "1 day")
-        // Date ± duration now carries the resolved start as a source badge
-        // The answer's weekday is the badge, so the date itself does not repeat it
+        // The answer's weekday is the badge, so the date itself does not repeat it.
         expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Friday")
 
         // Currency — against the fixed `fx` table below (1 USD = 0.92 EUR = 0.79 GBP = 157 JPY)
@@ -484,8 +481,7 @@ struct CalcTests {
         expectNil("10 usd to nonsense")
         expectNil("usd")  // a lone code is still an app search
         expectNil("btc")  // …and a lone ticker no more than a lone code
-        // The table is generated from the feed's own currency list, so codes nobody hand-typed still
-        // resolve — reaching "no rate" (not "no card") is what proves recognition.
+        // The table is generated from the feed, so "no rate" is what proves recognition.
         expectError("5 usd to zmw", "No exchange rate for ZMW.")
         expectError("5 usd to afn", "No exchange rate for AFN.")
         check(
@@ -518,7 +514,7 @@ struct CalcTests {
         // Slang is no longer carried: CLDR has no "quid", and we don't hand-maintain synonyms
         expectNil("50 quid to usd")
         expectNil("100 bucks to eur")
-        // The last word of a name isn't always its noun — "Special Drawing Rights" is not a "rights"
+        // The last word of a name isn't always its noun — Special Drawing Rights.
         expectNil("1 rights to usd")
         // A result too small to show at all reads as a clean zero, never "-0.00"
         expectDisplay("-0.0000000000001 usd to eur", "0.00 EUR")
@@ -821,8 +817,7 @@ struct CalcTests {
         expectNil("is what % of")
         expectNil("tip on")
 
-        // A pasted non-breaking space still reaches the zone table, since the gate scans for
-        // whitespace rather than a literal space. Arithmetic splits on " + " and never did.
+        // The gate scans for whitespace, not a literal space, so a pasted NBSP still lands.
         expectDisplayAt("time\u{a0}in\u{a0}tokyo", "9:18 AM")
         expectDisplayAt("time\u{9}in\u{9}tokyo", "9:18 AM")
         expectDisplayAt("time\u{2009}in\u{2009}tokyo", "9:18 AM")
@@ -962,8 +957,7 @@ struct CalcTests {
 
     // MARK: - Fixed exchange rates so currency answers are deterministic
 
-    /// NPR, ZMW, AFN and SHIB are deliberately absent: the table recognizes them, so a query for one
-    /// must reach "no exchange rate" rather than no card. Coins are inverted, as the store stores them.
+    /// Absent on purpose: a recognized code must reach "no exchange rate", not no card.
     static let fx = CurrencyRates(
         base: "USD",
         rates: [
@@ -1010,7 +1004,7 @@ struct CalcTests {
         }
     }
 
-    /// The Mac's region currency, injected rather than read, so the suite ignores the host's region.
+    /// The region currency is injected, so the suite ignores the host's region.
     static func label(_ query: String, _ region: String?) -> String {
         region.map { "\(query) [region \($0)]" } ?? query
     }

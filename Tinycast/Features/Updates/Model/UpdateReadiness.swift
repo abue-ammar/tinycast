@@ -35,7 +35,7 @@ enum UpdateReadiness {
         }
     }
 
-    /// Ordered by consequence: an interrupted expansion or install loses work, an open panel does not.
+    /// Ordered by consequence: an interrupted install loses work, an open panel does not.
     static func evaluate(_ activity: UpdateActivity) -> Blocker? {
         if activity.isExpandingSnippet { return .expandingSnippet }
         if activity.isRunningExtension { return .runningExtension }

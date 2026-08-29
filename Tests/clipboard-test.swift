@@ -90,7 +90,7 @@ struct ClipboardTests {
     /// Retention sweeps everything around a pin but never the pin itself.
     static func pinsSurvivePruningAndTheWindow() {
         withStore { store, dir in
-            // Older than the 1-day retention the case sets below, but inside the default the import prunes against.
+            // Older than the case's 1-day retention, inside the default the import prunes against.
             let old = Date().addingTimeInterval(-2 * 86_400)
             _ = store.importEntries([
                 entry("ancient-pinned", at: old),

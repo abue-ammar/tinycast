@@ -1,8 +1,7 @@
 import SwiftUI
 
 extension View {
-    /// Every store a palette surface reads. Shared so a second hosted hierarchy — the ⌘K menu's
-    /// own window — cannot drift from the palette's own.
+    /// Shared, so the ⌘K menu's own hosted hierarchy cannot drift from the palette's.
     func paletteEnvironment(_ core: AppCore) -> some View {
         self
             .environment(core)

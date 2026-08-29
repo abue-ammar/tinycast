@@ -1,7 +1,6 @@
 import Foundation
 
-/// One value asked for before the command runs. Values are passed positionally — the first arrives
-/// as `$1` — so what the user types is never spliced into the command text and re-parsed by zsh.
+/// Values are passed positionally, so what the user types is never re-parsed by zsh.
 struct CustomCommandArgument: Codable, Hashable, Sendable {
     var name: String
     /// An optional argument may be submitted empty; a required one holds ↵ until it has a value.
@@ -39,8 +38,7 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     var arguments: [CustomCommandArgument]
     /// Captures what the command prints and opens the output window once it exits.
     var showsOutput: Bool
-    /// Where the command runs; nil is the home directory. Kept abbreviated, so a `~` path survives
-    /// a home directory that moves.
+    /// Kept abbreviated, so a `~` path survives a home directory that moves.
     var workingDirectory: String?
     /// The launcher glyph; nil falls back to the shared terminal symbol.
     var iconSymbol: String?

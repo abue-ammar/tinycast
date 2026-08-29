@@ -12,16 +12,13 @@ struct ExtensionOAuthAuthorizeResult: Sendable {
     let state: String?
 }
 
-/// Manages an OAuth 2.0 PKCE authorization session for extensions.
-/// Opens authorization URLs in the default browser and captures `raycast://oauth`, `com.raycast:/oauth`, and `tinycast://oauth`
-/// redirect callbacks to complete the authentication flow.
+/// An OAuth 2.0 PKCE session: the browser authorizes and an `oauth` callback completes it.
 @MainActor
 final class ExtensionOAuthSession {
     private var continuation: CheckedContinuation<[String: String], Error>?
     private var expectedState: String?
     private var timeoutTimer: Timer?
 
-    // Active session registry for callback dispatch.
     private static weak var activeSession: ExtensionOAuthSession?
 
     /// True while this session is waiting for the browser to come back.
@@ -50,7 +47,7 @@ final class ExtensionOAuthSession {
         case ignored
     }
 
-    /// Handle deep links coming from NSApplicationDelegate (e.g. raycast://oauth?code=… or tinycast://oauth?code=…)
+    /// Deep links from the app delegate, such as `raycast://oauth?code=…`.
     static func handleCallbackURL(_ url: URL) -> Callback {
         guard let scheme = url.scheme?.lowercased(),
             scheme == "raycast" || scheme == "tinycast" || scheme == "com.raycast"
@@ -94,7 +91,6 @@ final class ExtensionOAuthSession {
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
 
-            // Timeout after 5 minutes of inactivity
             self.timeoutTimer?.invalidate()
             self.timeoutTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: false) { [weak self] _ in
                 Task { @MainActor [weak self] in
@@ -163,7 +159,7 @@ final class ExtensionOAuthSession {
                 result[item.name] = item.value ?? ""
             }
         }
-        // Handle fragment for implicit / hash callbacks: raycast://oauth#code=...
+        // Implicit and hash callbacks arrive as `raycast://oauth#code=…`.
         if let fragment = components.fragment, !fragment.isEmpty {
             let pairs = fragment.split(separator: "&")
             for pair in pairs {

@@ -16,8 +16,7 @@ struct LauncherList: View {
     let onActions: (AppEntry) -> Void
     @Environment(RunningAppsMonitor.self) private var runningApps
 
-    /// The calculator answers a typed query and the join card an empty one, so they cannot both
-    /// lead — which is what keeps the flat selection index a single-row offset.
+    /// Calc answers a typed query and the card an empty one, so only one ever leads.
     enum LeadCard: Equatable {
         case calc(CalcResult)
         case meeting(MeetingEvent, now: Date)
@@ -40,7 +39,7 @@ struct LauncherList: View {
     private enum Row: Identifiable {
         case header(String)
         case card(LeadCard)
-        /// `slot` is the row's ⌘-digit, carried from the section build so no row has to search for it.
+        /// `slot` is the row's ⌘-digit, carried from the section build rather than searched.
         case app(AppEntry, slot: Character?)
         var id: String {
             switch self {
@@ -90,8 +89,7 @@ struct LauncherList: View {
             rows.append(.header(kind.descriptor.sectionTitle))
             rows.append(contentsOf: group.map { .app($0, slot: nil) })
         }
-        // A kind missing from `kinds` doesn't just hide its rows — every row after it in the flat
-        // index would then activate its neighbour. Cheap to assert, silent and confusing to debug.
+        // A missing kind would make every later row activate its neighbour: assert instead.
         assert(
             grouped.keys.allSatisfy(kinds.contains),
             "kind missing from the launcher's section order: "

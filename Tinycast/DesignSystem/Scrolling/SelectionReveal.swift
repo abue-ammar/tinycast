@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Whether the selected row still needs moving, and to which edge. Pure: the row's frame and the
-/// band both arrive measured, in the scroll view's own space where the band is `0…height` — the
-/// region between the palette's floating bars, with the strip behind them already excluded.
+/// Whether the selected row still needs moving, and to which edge; both arrive measured.
 enum SelectionReveal {
     enum Edge {
         case top

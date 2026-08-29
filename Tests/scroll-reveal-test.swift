@@ -1,10 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Drives `SelectionReveal`, the rule that decides whether keyboard nav still has to move the list.
-/// Both halves matter: a row inside the band must not provoke a scroll (the list has to stay put as
-/// the selection walks it), and a row in the strip behind the floating bottom bar must, because
-/// SwiftUI's own scroll-to-visible reads that strip as visible and leaves the highlight under it.
+/// A row inside the band may not scroll; one behind the bottom bar must.
 @main
 @MainActor
 struct SelectionRevealTests {
@@ -65,8 +62,7 @@ struct SelectionRevealTests {
     // MARK: - The strip the bug lived in
 
     static func theStripBehindTheBottomBar() {
-        // Measured from the running app: the band ends at 369, and the row that walked into the
-        // strip behind the pill reported 369…405 — visible to SwiftUI, hidden to the eye.
+        // Measured from the app: the band ends at 369, and 369…405 is visible but hidden.
         expect(edge(rowTop: 369), .bottom, "the row that lands in the strip is moved into the band")
         expect(edge(rowTop: 333), nil, "while the row flush above the strip is left alone")
     }

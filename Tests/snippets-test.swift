@@ -60,7 +60,7 @@ struct SnippetsTests {
         check(
             "Raycast import keeps valid entries and source order",
             imported.map(\.name) == ["Email", "Multiline 雪", "Blank Keyword"])
-        // The remaining assertions index into the result, so a wrong count has to fail rather than trap.
+        // The assertions index the result, so a wrong count must fail rather than trap.
         guard imported.count == 3 else { return }
         check("Raycast import preserves text and Unicode", imported[1].text == "First\nSecond")
         check(
@@ -174,7 +174,7 @@ struct SnippetsTests {
         expectParseError(
             "unknown frontmatter key is rejected", content: "---\nunknown: \"value\"\n---\n", fileURL: fileURL
         )
-        // These keys were removed or renamed; a file still carrying one is reported, not silently half-loaded.
+        // A file still carrying a removed key is reported, not silently half-loaded.
         expectParseError(
             "the removed category key is rejected", content: "---\ncategory: \"Work\"\n---\n",
             fileURL: fileURL)
@@ -337,7 +337,7 @@ struct SnippetsTests {
         } catch SnippetRepository.RepositoryError.conflict {
             check("stale deletes report a revision conflict", true)
         }
-        // Everything below needs the reloaded record; report the loss instead of trapping, and keep the later contracts running.
+        // Report the loss instead of trapping, and keep the later contracts running.
         if let currentSaved = try crudRepository.load().records.first(where: { $0.id == saved.id }) {
             try crudRepository.delete(
                 fileURL: currentSaved.fileURL,
@@ -1038,7 +1038,7 @@ struct SnippetsTests {
         check("reference depth limit leaves the unexpanded token visible", depthResult.text == "{snippet:S6}")
     }
 
-    /// The Raycast-compatible placeholder set: every token, parameter and modifier, against an injected clock, locale, clipboard history and UUID source.
+    /// Every token, parameter and modifier, against injected clock, locale and UUIDs.
     private static func testDynamicPlaceholders() {
         var calendar = Calendar(identifier: .gregorian)
         let timeZone = TimeZone(secondsFromGMT: 0)!
@@ -1222,8 +1222,7 @@ struct SnippetsTests {
             ).text == "[]")
     }
 
-    /// The engine is shared with Quicklinks: it also expands a bare string, can percent-encode every
-    /// value it produces, and accepts Raycast's `{selectedText}` spelling of `{selection}`.
+    /// Shared with Quicklinks: bare strings, encoding, and Raycast's `{selectedText}`.
     private static func testTemplateEncodingAndSelectionAlias() {
         var calendar = Calendar(identifier: .gregorian)
         let timeZone = TimeZone(secondsFromGMT: 0)!
@@ -1709,7 +1708,7 @@ enum Paster {
     @MainActor static func postCommandC(toPid pid: pid_t? = nil) {}
 }
 
-/// Deterministic `{uuid}` source. `@unchecked Sendable` with a lock because `makeUUID` is a `@Sendable` closure.
+/// Deterministic `{uuid}` source; the lock is why it is `@unchecked Sendable`.
 private final class UUIDSequence: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0

@@ -1,6 +1,6 @@
 import AppKit
 
-/// Owns the snippet flow: the keyword listener, the browser, the editor handoff, delivery, presence.
+/// Owns the snippet flow: listener, browser, editor handoff, delivery, presence.
 @MainActor
 final class SnippetCoordinator {
     private let store: SnippetsStore

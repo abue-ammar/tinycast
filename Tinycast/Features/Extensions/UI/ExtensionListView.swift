@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The List / Grid screen of a running extension command. Row order comes from `ExtensionScreen` so the
-/// flat selection index the palette owns always matches what's drawn.
+/// Row order comes from `ExtensionScreen`, so the palette's flat index matches the draw.
 struct ExtensionListView: View {
     @Environment(\.isDarkAppearance) private var isDark
     let screen: ExtensionScreen
@@ -182,8 +181,7 @@ private struct ExtensionItemRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: Theme.Spacing.sm)
-            // The API only advises an extension against accessories here; Raycast still draws the
-            // ones it is given, and a quota row's entire signal is in them.
+            // Raycast draws the accessories it is given, and a quota row's signal is all in them.
             ExtensionAccessoriesView(
                 accessories: node.array("accessories"), assetsPath: assetsPath)
         }
@@ -287,8 +285,7 @@ private struct ExtensionGridCell: View {
     let assetsPath: String?
     @State private var hovered = false
 
-    /// `content` is an `ImageLike`, or `{value, tooltip}` wrapping one, or `{color}` — all three are
-    /// `ExtensionImage.resolve`'s job.
+    /// `content` is an `ImageLike`, `{value, tooltip}` or `{color}` — all `resolve`'s job.
     private var resolved: ExtensionImage.Resolved? {
         ExtensionImage.resolve(node.props["content"], assetsPath: assetsPath, isDark: isDark)
     }

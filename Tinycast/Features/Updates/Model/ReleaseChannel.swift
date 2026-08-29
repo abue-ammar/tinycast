@@ -1,7 +1,6 @@
 import Foundation
 
-/// Which stream of releases a build follows. The channels are side-by-side apps with their own
-/// bundle ids, so a build only ever updates within its own — crossing would mean a different app.
+/// Side-by-side apps with their own bundle ids, so a build updates within its own.
 enum ReleaseChannel: Sendable {
     case stable
     case beta

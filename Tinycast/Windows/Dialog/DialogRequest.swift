@@ -22,8 +22,7 @@ enum DialogTone: Sendable {
 struct DialogRequest {
     let title: String
     var message: String?
-    /// The subject's own glyph, resolved through `SymbolImage` so a bundled asset name works too.
-    /// Nil where the title already names the subject and a glyph would only repeat it.
+    /// Nil where the title already names the subject and a glyph would repeat it.
     let symbol: String?
     var tone: DialogTone = .neutral
     var actions: [DialogAction]
@@ -31,8 +30,7 @@ struct DialogRequest {
     var defaultIndex: Int
     /// Resolved when the dialog goes without a choice: Esc, or losing key status.
     var cancelIndex: Int
-    /// The one control a dialog may carry beyond its buttons; the caller reads the result back
-    /// out of the state object it passed in.
+    /// The caller reads the result back out of the state object it passed in.
     var accessory: DialogAccessory?
 }
 

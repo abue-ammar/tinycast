@@ -10,8 +10,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
-    /// The session anchor — the panel's top-left, resolved once per show, the top edge being the
-    /// one that must not drift. See docs/features/palette.md#window-placement.
+    /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
     private var drag: DragSession?
@@ -138,9 +137,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch). One of our own
-    /// dialogs is none of those: hiding would pop to root, which tears down an extension command
-    /// while its `confirmAlert` is still waiting for the answer.
+    /// Not for one of our own dialogs: hiding would tear down a command mid-`confirmAlert`.
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, !core.isShowingDialog else { return }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
@@ -307,13 +304,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.setFrame(frame, display: true)
     }
 
-    /// The display to anchor to; never `NSScreen.main`, which follows the focused window either way.
+    /// The display to anchor to; never `NSScreen.main`, which follows the focused window.
     private func targetScreen() -> NSScreen? {
         core.settings.openOnCursorScreen ? NSScreen.underCursor : NSScreen.primary
     }
 
-    /// The session anchor, cached until hide so both placements read one `visibleFrame`. A
-    /// remembered drag outranks the display setting; the default is what it falls back to.
+    /// Cached until hide, so both placements read one `visibleFrame`; a drag outranks the setting.
     private func resolveAnchor() -> CGPoint? {
         if let anchor { return anchor }
         let resolved = restoredAnchor() ?? targetScreen().map(defaultAnchor(on:))

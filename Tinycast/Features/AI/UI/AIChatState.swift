@@ -12,9 +12,7 @@ final class AIChatState {
     /// Images staged for the next message; they go out with whatever is typed next.
     private(set) var pendingImages: [ChatAttachment] = []
 
-    /// Staging outlives the keystroke that began it, so a decode still in flight has to be able to
-    /// tell that the message it was picked for has gone. Every path that consumes or drops the
-    /// staged images moves this on; the counter lives beside them so a new one cannot forget to.
+    /// Every path that consumes or drops the staged images moves this on, so a late decode knows
     @ObservationIgnored private(set) var stagingGeneration = 0
 
     private let history: ChatHistoryStore
@@ -78,8 +76,7 @@ final class AIChatState {
         notice = message
     }
 
-    /// Refused rather than truncated: the composer is the last place an oversized turn can be
-    /// explained, and dropping a picture at send time reads as the app having lost it.
+    /// Refused, not truncated: the composer is the last place an oversized turn can be explained.
     @discardableResult
     func attach(_ attachment: ChatAttachment) -> ChatAttachmentRefusal? {
         guard !pendingImages.contains(where: { $0.image == attachment.image }) else { return nil }
@@ -126,8 +123,7 @@ final class AIChatState {
         clearStaging()
     }
 
-    /// Staged images belong to the composer of the conversation they were picked in, so leaving one
-    /// for another drops them rather than letting them go out with whatever is typed there next.
+    /// Staged images belong to the conversation they were picked in; leaving it drops them.
     @discardableResult
     func open(id: UUID) -> Bool {
         if session.id == id, !session.messages.isEmpty { return true }

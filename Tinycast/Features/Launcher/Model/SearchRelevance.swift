@@ -10,7 +10,7 @@ enum FuzzyMatch {
         case subsequence
 
         var isLiteral: Bool { self != .subsequence }
-        /// Anchored at the candidate's start: what a short, deliberate field must match to win its band.
+        /// Anchored at the candidate's start: what a short, deliberate field must match.
         var isAnchored: Bool { self == .exact || self == .prefix }
     }
 
@@ -149,7 +149,7 @@ enum SearchRelevance {
         case bundleID = 1
         case alternateNameSubsequence = 2
         case nameSubsequence = 3
-        /// Shared by every entry it owns, so a fuzzy hit floods: literal only, under every real name.
+        /// Shared by every entry it owns, so a fuzzy hit floods: literal only.
         case ownerName = 4
         case alternateNameLiteral = 5
         case nameLiteral = 6
@@ -166,7 +166,7 @@ enum SearchRelevance {
         score(FuzzyMatch.Query(query), fields: fields)
     }
 
-    /// The folded form: an index ranking every entry against one query folds it once, not per entry.
+    /// The folded form: an index folds one query once, not once per entry.
     static func score(_ query: FuzzyMatch.Query, fields: SearchFields) -> Int? {
         // Every entry is equally relevant to an empty query, so no field claims a band.
         guard !query.isEmpty else { return 0 }
@@ -179,7 +179,7 @@ enum SearchRelevance {
             best = max(best ?? Int.min, band.offset + match.score)
         }
 
-        // Only a hit from the alias's start earns the top band; one inside it ranks like a vendor alias.
+        // Only a hit from the alias's start earns the top band; inside it ranks as a vendor alias.
         if let alias = fields.userAlias, let match = FuzzyMatch.match(query, candidate: alias),
             match.tier.isLiteral
         {

@@ -1,8 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The log itself. An `NSTextView` rather than a `Text`: a quarter-megabyte of output re-laid-out
-/// on every append is seconds of work, and only the text system appends in place.
+/// An `NSTextView`, not `Text`: only the text system appends without re-laying out.
 struct TerminalLogView: NSViewRepresentable {
     let run: CommandRun
 
@@ -14,8 +13,7 @@ struct TerminalLogView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     final class Coordinator {
-        /// What is on screen. A new run and a trimmed log both make the drawn text wrong, and
-        /// neither is visible from the revision alone — Run Again starts a fresh run back at zero.
+        /// A new run and a trimmed log both make the drawn text wrong, invisibly to the revision.
         var runID: UUID?
         var generation = -1
         var revision = 0
@@ -46,8 +44,7 @@ struct TerminalLogView: NSViewRepresentable {
         let isSameRun = coordinator.runID == run.id && coordinator.generation == run.generation
         guard !isSameRun || run.revision != coordinator.revision else { return }
 
-        // One step on is the streaming case and costs only the new text. Anything else — Run Again
-        // starting a fresh run, a trim, a window reopened onto a finished one — is drawn whole.
+        // One step on is streaming and costs only the new text; anything else is drawn whole.
         let isAppend = isSameRun && run.revision == coordinator.revision + 1
         if !isAppend {
             coordinator.interpreter = ANSIInterpreter()
@@ -68,8 +65,7 @@ struct TerminalLogView: NSViewRepresentable {
     }
 }
 
-/// Turns a terminal's byte stream into attributed text: SGR colour carried across chunks, a
-/// carriage return rewinding the line it lands on, and everything else it emits dropped.
+/// SGR colour carried across chunks, a CR rewinding its line, everything else dropped.
 struct ANSIInterpreter {
     private var colour: NSColor = .labelColor
     private var isBold = false
@@ -171,8 +167,7 @@ struct ANSIInterpreter {
         storage.deleteCharacters(in: NSRange(location: start, length: text.length - start))
     }
 
-    /// System colours so the log stays legible in both appearances, unlike raw terminal values —
-    /// orange stands in for yellow, which is unreadable on a light background.
+    /// System colours, so the log reads in both appearances; orange stands in for yellow.
     private static let palette: [NSColor] = [
         .secondaryLabelColor, .systemRed, .systemGreen, .systemOrange,
         .systemBlue, .systemPurple, .systemTeal, .labelColor

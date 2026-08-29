@@ -1,11 +1,7 @@
 import CryptoKit
 import Foundation
 
-/// Services the JS Node shims call *synchronously*. Safe to answer inline because none of this needs
-/// the main actor: it all runs on `ExtensionRuntime`'s private JS queue, so a blocking answer can
-/// never deadlock against the UI. Binary payloads cross as base64.
-///
-/// `@unchecked Sendable`: stateless apart from `FileManager.default`, which is thread-safe.
+/// Answered inline on the JS queue, so a blocking answer can never deadlock the UI.
 final class ExtensionNodeShims: @unchecked Sendable {
     private let fileManager = FileManager.default
 

@@ -1,8 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Drives `CalloutPlacement` against the real `Theme` (compiled in, not copied) so a retuned token
-/// can't leave these assertions describing a layout that no longer exists.
+/// Drives `CalloutPlacement` against the real `Theme`, so a retuned token fails here.
 @main
 @MainActor
 struct CalloutPlacementTests {
@@ -16,8 +15,7 @@ struct CalloutPlacementTests {
     static let cornerRadius = Theme.Radius.menuPanel
     static let caretWidth = Theme.Size.calloutCaretWidth
 
-    /// A recorder's centre, measured in from the pane's trailing edge: SettingsPane's `xxl`
-    /// padding, SettingsRow's `xl` padding, then half the field.
+    /// Pane `xxl` padding, row `xl` padding, then half the field.
     static let fieldInsetFromPaneEdge =
         Theme.Spacing.xxl + Theme.Spacing.xl + Theme.Size.shortcutRecorder / 2
     /// The nearest the tip may sit to an edge before it would grow out of a corner arc.
@@ -56,9 +54,7 @@ struct CalloutPlacementTests {
 
     // MARK: - The case that actually ships
 
-    /// The callout must centre on the recorder, caret dead centre — which only holds while it stays
-    /// narrow enough to fit beside a field that sits `fieldInsetFromPaneEdge` in. Widen
-    /// `shortcutPopover` past that and the clamp kicks in and skews the caret, so pin it here.
+    /// Only holds while the callout stays narrow enough to fit beside the field.
     static func centredOnARealRow() {
         for paneWidth in [Theme.Size.settingsSidebar + 320, 720, 1100] as [CGFloat] {
             let field = CGRect(
@@ -123,7 +119,7 @@ struct CalloutPlacementTests {
             field: CGRect(x: 260, y: 400, width: 80, height: 24), container: container)
         expect(centered.center.x, 300, "a field mid-pane centres the callout on it")
 
-        // A recorder sits at the trailing edge of a settings row, which is the case that actually happens.
+        // A recorder sits at a settings row's trailing edge, the case that happens.
         let trailing = resolve(
             field: CGRect(x: 500, y: 400, width: 80, height: 24), container: container)
         expect(
@@ -150,7 +146,7 @@ struct CalloutPlacementTests {
             field: CGRect(x: 260, y: 400, width: 80, height: 24), container: container)
         expect(centered.caretX, size.width / 2, "an unclamped callout points from its middle")
 
-        // Once the body is clamped, the tip has to walk toward the edge to keep aiming at the field.
+        // Once the body is clamped, the tip walks toward the edge to keep aiming.
         let trailing = CGRect(x: 500, y: 400, width: 80, height: 24)
         let clamped = resolve(field: trailing, container: container)
         expect(
@@ -172,10 +168,7 @@ struct CalloutPlacementTests {
     }
 
     // MARK: - Shared row grammar
-    //
-    // Lives here because this is the only harness that compiles `Theme.swift`. Every palette list
-    // puts its leading glyph in one `rowIcon` slot so titles line up at the same x and switching
-    // modes doesn't shift the column sideways; a glyph that outgrew the slot would break that.
+    // Here because this is the only harness compiling `Theme.swift`: one `rowIcon` slot.
 
     static func rowGrammar() {
         expect(
@@ -187,7 +180,7 @@ struct CalloutPlacementTests {
     // MARK: - Containers smaller than the callout
 
     static func degenerateContainers() {
-        // A pane narrower than the callout has no valid inset range; the bounds cross and `max` must win.
+        // A pane narrower than the callout has no valid inset range; `max` must win.
         let narrow = resolve(
             field: CGRect(x: 10, y: 400, width: 80, height: 24),
             container: CGSize(width: 200, height: 800))

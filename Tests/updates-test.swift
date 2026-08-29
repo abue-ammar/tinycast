@@ -214,8 +214,7 @@ struct UpdatesTests {
             "one bad entry does not discard the whole feed")
     }
 
-    /// macOS 26 is the last release to boot on Intel, so a stable release carries a thin arm64 zip
-    /// and a universal one, and each Mac must be handed a build it can actually launch.
+    /// Stable carries a thin arm64 zip and a universal one; each Mac gets what it runs.
     static func picksTheZipThisMacCanRun() {
         let both = feed(
             entry(

@@ -601,7 +601,7 @@ private func discardSuite(_ name: String, _ defaults: UserDefaults) {
             .appendingPathComponent("Library/Preferences/\(name).plist"))
 }
 
-/// A fixed suite name stops cfprefsd accumulating a plist per run; the domain is cleared at both ends.
+/// A fixed suite name stops cfprefsd accumulating a plist per run.
 private func isolatedDefaults(_ name: String) -> UserDefaults {
     let defaults = UserDefaults(suiteName: name)!
     defaults.removePersistentDomain(forName: name)

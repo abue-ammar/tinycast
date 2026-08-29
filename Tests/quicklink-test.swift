@@ -261,8 +261,7 @@ struct QuicklinkTests {
         expect(restored.isPinned, "the pin stamp survives")
     }
 
-    /// Proves the column order the store binds matches the column order it reads, independently of
-    /// its own writer.
+    /// The column order the store binds must match the order it reads.
     static func readsADatabaseWrittenElsewhere() {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -292,8 +291,7 @@ struct QuicklinkTests {
         expect(!row.isPinned, "a null pin stamp reads as unpinned")
     }
 
-    /// The invariant that separates this store from `ClipboardStore`: quicklinks are authored data,
-    /// so an unreadable database is reported, never deleted and recreated.
+    /// Quicklinks are authored data, so an unreadable database is reported, never recreated.
     static func corruptDatabaseIsPreserved() {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -315,8 +313,7 @@ struct QuicklinkTests {
     // MARK: - Archive
 
     static func archiveRoundTrip() {
-        // Whole seconds throughout: the archive is ISO 8601 so a reader can hand-edit it, which
-        // means sub-second precision is deliberately not part of the format.
+        // Whole seconds: the archive is ISO 8601 so a reader can hand-edit it.
         let stamp = Date(timeIntervalSince1970: 500)
         let pinned = Quicklink(
             name: "Pinned", link: "~/Downloads", openWithBundleID: "com.apple.finder",

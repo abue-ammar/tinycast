@@ -6,7 +6,7 @@ struct FileSearchPerformance {
         let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
         let arguments = Array(CommandLine.arguments.dropFirst())
         let queries = arguments.isEmpty ? ["a", "e", "swift", "pdf", "project"] : arguments
-        // The second list is deliberately heavy, so the run says what pattern matching itself costs.
+        // The second list is deliberately heavy, so the run prices pattern matching.
         let policies = [
             (
                 "shipped",

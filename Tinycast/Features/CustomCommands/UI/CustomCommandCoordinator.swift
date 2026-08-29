@@ -23,8 +23,7 @@ final class CustomCommandCoordinator {
         stop: { [unowned self] in self.stopOutputRun(id: $0) },
         openSettings: { [unowned self] in self.settingsCoordinator.showSettings(tab: .commands) })
     private let activationPolicy: ActivationPolicy
-    /// The live streaming run, so Stop has something to signal. Superseding never touches it — only
-    /// the button ends a command.
+    /// Superseding never touches it — only the button ends a command.
     private var liveRun: (id: UUID, stop: @Sendable () -> Void)?
 
     init(
@@ -94,8 +93,7 @@ final class CustomCommandCoordinator {
 
     // MARK: - Running
 
-    /// The one funnel for palette and hotkey, so neither the argument form nor the confirmation
-    /// can be bypassed.
+    /// The one funnel for palette and hotkey, so neither form nor confirmation is bypassed.
     func runCustomCommand(id: UUID) {
         // Also the feature switch: with it off a registered hotkey must run nothing.
         guard settings.customCommandsEnabled else { return }
@@ -201,12 +199,10 @@ final class CustomCommandCoordinator {
 
     // MARK: - Reporting
 
-    /// Only the non-streaming path reaches here: a window that already says how the run ended must
-    /// not also raise a dialog saying it again.
+    /// A window that already says how the run ended must not raise a dialog saying it again.
     private func report(_ command: CustomCommand, result: ShellCommandResult) async {
         guard !result.succeeded else {
-            // What the command said about itself beats a bare "it ran"; the name is the fallback
-            // for one that printed nothing. On finish, not start, so a slow one reports late.
+            // What the command said beats a bare "it ran"; on finish, so a slow one reports late.
             if command.showsConfirmation {
                 core.showMessage(result.lastOutputLine ?? "Ran \(command.name)")
             }
@@ -239,8 +235,7 @@ final class CustomCommandCoordinator {
         return parts.joined(separator: "\n\n")
     }
 
-    /// `127` is "command not found", where a config-only alias lands — but equally a plain typo, so
-    /// this is gated on the status alone rather than on grepping stderr.
+    /// `127` is also a plain typo, so this is gated on the status rather than on stderr.
     private func shellEnvironmentHint(
         command: CustomCommand, result: ShellCommandResult
     ) -> String? {

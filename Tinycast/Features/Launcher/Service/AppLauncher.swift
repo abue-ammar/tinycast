@@ -66,12 +66,10 @@ enum AppLauncher {
         return !running.isEmpty
     }
 
-    /// Long enough for any app to exit, short enough that a quit the user is still deciding on
-    /// can't relaunch under them much later.
+    /// Long enough for any app to exit, short enough not to relaunch under the user.
     private static let exitGrace = Duration.seconds(5)
 
-    /// Quits every instance and reopens the bundle once they are all gone; a refused quit — a save
-    /// sheet the user cancels or leaves standing — relaunches nothing and leaves the app running.
+    /// A refused quit — a save sheet left standing — relaunches nothing.
     @MainActor
     static func restart(bundleID: String, url: URL) async {
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)

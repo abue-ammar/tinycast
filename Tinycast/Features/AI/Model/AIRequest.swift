@@ -8,9 +8,7 @@ struct AIImage: Equatable, Hashable, Sendable {
     var dataURL: String { "data:\(mimeType);base64,\(data.base64EncodedString())" }
 }
 
-/// What one turn's pictures may total. Provider requests cap near 25 MB and a data URL costs a third
-/// more than the bytes it carries, so the ceiling lives here rather than on the wire: past it a
-/// picture is refused while the composer can still say why, instead of becoming an opaque 413.
+/// Requests cap near 25 MB and a data URL costs a third more, so the ceiling lives here.
 enum AIAttachmentBudget {
     static let maxCount = 6
     static let maxBytes = 10 * 1_048_576
@@ -21,8 +19,7 @@ enum AIAttachmentBudget {
             && images.reduce(candidate.data.count) { $0 + $1.data.count } <= maxBytes
     }
 
-    /// The longest leading run that fits. The composer refuses before it ever gets here; this is what
-    /// keeps a turn assembled by any other route inside the same ceiling.
+    /// The longest leading run that fits, for a turn assembled by any route but the composer.
     static func bounded(_ images: [AIImage]) -> [AIImage] {
         var total = 0
         return Array(

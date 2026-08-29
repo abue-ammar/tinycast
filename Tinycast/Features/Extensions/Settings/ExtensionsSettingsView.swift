@@ -27,7 +27,7 @@ struct ExtensionsSettingsView: View {
                     "Run Raycast extensions natively. A running command holds a JavaScript engine "
                     + "in memory until you leave it.",
                 launcherSubtitle: "List every extension's commands in launcher search.",
-                // Enabling is also consent to run third-party code, so it uses the confirming setter.
+                // Enabling is consent to run third-party code, so the setter confirms.
                 isEnabled: Binding(
                     get: { settings.extensionsEnabled },
                     set: { core.extensionCoordinator.setExtensionsEnabled($0) }),
@@ -51,7 +51,7 @@ struct ExtensionsSettingsView: View {
         .onChange(of: settings.extensionsShowInLauncher) {
             core.extensionCoordinator.applyExtensionsLauncherPresence()
         }
-        // By item, not a flag: `isPresented` builds the sheet from a snapshot taken before the write.
+        // By item: `isPresented` builds the sheet from a snapshot taken before the write.
         .sheet(item: $importCandidates) { candidates in
             ExtensionImportSheet(
                 candidates: candidates.entries,
@@ -109,7 +109,7 @@ struct ExtensionsSettingsView: View {
 
     // MARK: - The library
 
-    /// `LauncherItemsSection`'s shape, so a long list reads as a list rather than a run of settings.
+    /// `LauncherItemsSection`'s shape, so a long list reads as a list.
     private var library: some View {
         Section {
             if core.extensions.installed.isEmpty {
@@ -170,7 +170,7 @@ struct ExtensionsSettingsView: View {
         }
     }
 
-    /// Three rows rather than a menu: a search, a copy and a folder behave differently enough to say so.
+    /// Three rows rather than a menu: search, copy and folder behave differently.
     private var install: some View {
         Section {
             SettingsRow(title: "Search extensions", subtitle: searchSubtitle) {
@@ -181,7 +181,7 @@ struct ExtensionsSettingsView: View {
                 Button("Registries…") { editingRegistries = true }
                 Button("Search…") { browsingStore = true }
             }
-            // A state of this row, not a card above the pane: it is the same job as the button beside it.
+            // A state of this row, not a card: the same job as the button beside it.
             SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
                 Image(systemName: "arrow.down.doc")
                     .foregroundStyle(pending.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
@@ -377,14 +377,14 @@ private struct ExtensionDisclosure: View {
             isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
     }
 
-    /// One `Grid` for every run: separate grids size their columns apart, stranding controls mid-row.
+    /// One `Grid` for every run: separate grids size columns apart, stranding controls.
     private var settings: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             Grid(
                 alignment: .leading, horizontalSpacing: Theme.Spacing.lg,
                 verticalSpacing: Theme.Spacing.md
             ) {
-                // No heading: these two are one idea, and first so a 19-command extension can't bury them.
+                // No heading: these two are one idea, and first so 19 commands can't bury them.
                 ExtensionLauncherRow(installed: installed)
                 ExtensionIconRow(installed: installed)
 
@@ -419,7 +419,7 @@ private struct ExtensionDisclosure: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// A step below the pane's section headers, by size and colour: nothing here sets a heading in caps.
+    /// A step below the pane's section headers; nothing here sets a heading in caps.
     private func heading(_ title: String) -> some View {
         GridRow {
             Text(title)
@@ -484,7 +484,7 @@ private struct SettingsCardRow<Control: View>: View {
             .padding(.leading, indent)
             .frame(maxWidth: .infinity, alignment: .leading)
             .gridColumnAlignment(.leading)
-            // One width for every control: left alone a toggle, a pop-up and a field end on three edges.
+            // One width for every control: else a toggle, a pop-up and a field end apart.
             control
                 .frame(width: SettingsCardRow.controlWidth, alignment: .trailing)
                 .gridColumnAlignment(.trailing)
@@ -512,7 +512,7 @@ private struct CommandRows: View {
                     isQuiet: true)
             }
         }
-        // Indented under its command: at the same inset the association rests on reading order alone.
+        // Indented under its command: at the same inset the association is reading order.
         ForEach(command.preferences, id: \.name) { schema in
             ExtensionPreferenceRow(
                 extensionName: installed.manifest.name, schema: schema, indent: Theme.Spacing.lg)
@@ -566,7 +566,7 @@ private struct ExtensionIconRow: View {
     @Environment(AppCore.self) private var core
     @State private var picking = false
 
-    /// From the store, not the manager: picking publishes there, so preview and popover both observe it.
+    /// From the store, not the manager: picking publishes there, so both observe it.
     private var appearance: ExtensionAppearance? {
         core.extensions.appearances.appearance(for: installed.manifest.name)
     }
@@ -711,7 +711,7 @@ private struct ImportCandidates: Identifiable {
     let entries: [RaycastImportCandidate]
 }
 
-/// What a local Raycast has built. Anything not here starts selected, so the common case is one press.
+/// Anything not already built starts selected, so the common case is one press.
 private struct ExtensionImportSheet: View {
     let candidates: [RaycastImportCandidate]
     let onImport: ([InstalledExtension]) -> Void
@@ -722,8 +722,7 @@ private struct ExtensionImportSheet: View {
 
     private var fresh: [RaycastImportCandidate] { candidates.filter { !$0.isInstalled } }
 
-    /// Thirty-odd rows is past the point where scanning beats filtering — the same field the pane
-    /// puts above its own list.
+    /// Thirty-odd rows is past the point where scanning beats filtering.
     private var matching: [RaycastImportCandidate] {
         guard !filter.isEmpty else { return candidates }
         return candidates.filter {
@@ -747,8 +746,7 @@ private struct ExtensionImportSheet: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(matching) { candidate in
-                        // The checkbox sits outside the Toggle's label: an AppKit checkbox aligns to
-                        // its label's first baseline, which reads off-centre next to a two-line row.
+                        // AppKit aligns a checkbox to its label's first baseline.
                         HStack(spacing: Theme.Spacing.md) {
                             Toggle("", isOn: binding(for: candidate))
                                 .labelsHidden()
@@ -776,7 +774,7 @@ private struct ExtensionImportSheet: View {
             .frame(minHeight: 220)
 
             HStack {
-                // Reads against what is actually selected, so it is never a button that does nothing.
+                // Reads against what is selected, so it is never a button that does nothing.
                 Button(allChosen ? "Deselect All" : "Select All") {
                     chosen = allChosen ? [] : Set(candidates.map(\.installed.manifest.name))
                 }
@@ -836,8 +834,7 @@ private struct ExtensionImportSheet: View {
 }
 
 extension String {
-    /// Sorts on the first letter that is one: a name like "(Basic) Bookmarks" otherwise leads every
-    /// list on the strength of its bracket.
+    /// Sorts on the first letter: "(Basic) Bookmarks" otherwise leads on its bracket.
     fileprivate var sortKey: String {
         String(drop { !$0.isLetter && !$0.isNumber })
     }

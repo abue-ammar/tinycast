@@ -1,5 +1,4 @@
-// Standalone test for meeting-link detection, the join and menu-bar windows, auto-join,
-// the event draft, the day buckets and the read span.
+// Meeting links, the join and menu-bar windows, auto-join, drafts, buckets and span.
 import Foundation
 
 @main

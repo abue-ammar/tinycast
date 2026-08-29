@@ -1,7 +1,6 @@
 import Foundation
 
-/// Drives Tab's ring, so the three surfaces stay reachable in one direction and a chat draft never
-/// arrives in a list that would search it. Chat is skipped whole when the feature is turned off.
+/// The three surfaces stay reachable one way, and chat is skipped when off.
 @main
 @MainActor
 struct PaletteTabTests {

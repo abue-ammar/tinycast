@@ -22,8 +22,7 @@ final class HUDPresenter {
         self.screen = screen
     }
 
-    /// Replaces whatever is up; a nil `size` lets SwiftUI measure, as the pill needs. Progress has
-    /// no natural dwell, so `dwells: false` leaves it up until it is replaced or dismissed.
+    /// A nil `size` lets SwiftUI measure; progress has no dwell, so it waits to be replaced.
     func show(_ view: some View, size: CGSize? = nil, dwells: Bool = true) {
         let panel = panel ?? make()
         let host = NSHostingView(rootView: view)

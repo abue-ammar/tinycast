@@ -25,7 +25,7 @@ enum MeetingSpan: Sendable {
         }
     }
 
-    /// "today or tomorrow", for a sentence saying nothing falls in the span, where "and" reads wrong.
+    /// "today or tomorrow", for a sentence where "and" would read wrong.
     var orPhrase: String {
         switch self {
         case .today: return "today"

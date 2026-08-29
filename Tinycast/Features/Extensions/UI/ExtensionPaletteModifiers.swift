@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// An action's own shortcut, matched against the running panel before the palette's bindings see it.
+/// An action's own shortcut, matched before the palette's bindings see it.
 struct ExtensionShortcutKeys: ViewModifier {
     let screen: ExtensionCommandScreen?
     let selection: Int

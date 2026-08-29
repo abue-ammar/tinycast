@@ -24,7 +24,7 @@ struct ExtensionInstaller: Sendable {
 
     let client: ExtensionStoreClient
     let packageManager: ExtensionPackageManager
-    /// From `extensionCustomSearchPaths`, checked before the built-in list — a mise or Nix shim folder.
+    /// From `extensionCustomSearchPaths`, checked before the built-in list.
     let additionalSearchPaths: [String]
 
     init(
@@ -36,7 +36,7 @@ struct ExtensionInstaller: Sendable {
         self.additionalSearchPaths = additionalSearchPaths
     }
 
-    /// Copies into place before the workspace goes, which is why it hands back the install, not a path.
+    /// Copies into place before the workspace goes, so it hands back the install.
     @discardableResult
     func install(
         _ listing: ExtensionListing, onProgress: @Sendable @escaping (Progress) -> Void
@@ -123,7 +123,7 @@ struct ExtensionInstaller: Sendable {
         onProgress(.building)
         let ray = source.appendingPathComponent("node_modules/.bin/ray")
         guard FileManager.default.isExecutableFile(atPath: ray.path) else {
-            // Not a Raycast build. Its own script is the only contract there is, and it emits in place.
+            // Not a Raycast build: its own script is the only contract, and it emits in place.
             let build = try await run(
                 resolved.url, arguments: resolved.manager.buildArguments, in: source, node: node)
             guard build.status == 0 else {
@@ -132,7 +132,7 @@ struct ExtensionInstaller: Sendable {
             return try validated(source)
         }
 
-        // `ray` directly, `-e dist`, `-o` never the source: dev installs into Raycast, and `-o` clears.
+        // `ray` directly, `-e dist`, `-o` never the source: a dev install would clear it.
         let build = try await run(
             ray, arguments: ["build", "-e", "dist", "-o", output.path, "--non-interactive"],
             in: source, node: node)

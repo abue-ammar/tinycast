@@ -208,7 +208,7 @@ struct PaletteRowIndexTests {
         expect(launcherSections.index(section: 9, offset: 0), nil, "there is no tenth section")
         expectRoundTrip(launcherSections, "launcher nine sections")
 
-        // No favourites set: Applications leads, and every later section shifts up by the same amount.
+        // No favourites: Applications leads and every later section shifts up.
         let launcherNoFavorites = PaletteRowIndex(sectionCounts: [0, 12, 5, 2, 4, 6, 8, 1, 7])
         expect(
             launcherNoFavorites.row(at: 0), .element(section: 1, offset: 0),
@@ -226,7 +226,7 @@ struct PaletteRowIndexTests {
             "Quicklinks follows Applications directly once System Settings is hidden")
         expectRoundTrip(launcherHidden, "launcher with hidden categories")
 
-        // A typed query collapses the nine sections into one Results list, led by the calculator card.
+        // A typed query collapses nine sections into one list, led by the card.
         let launcherQuery = PaletteRowIndex(hasCalculator: true, sectionCounts: [9])
         expect(launcherQuery.count == 10, "the card plus nine ranked matches")
         expect(launcherQuery.row(at: 0), .calculator, "a typed calculation leads the results")
@@ -294,7 +294,7 @@ struct PaletteRowIndexTests {
         expect(sections.index(section: 0, offset: 2), nil, "an offset past a section's rows is nothing")
         expect(sections.index(section: 0, offset: -1), nil, "a negative offset is nothing")
 
-        // The uninstall screen: one flat section, no calculator card, a summary header taking no index.
+        // The uninstall screen: one flat section, no card, a header taking no index.
         let uninstall = PaletteRowIndex(sectionCounts: [4])
         expect(uninstall.count == 4, "the uninstall screen indexes its candidates alone")
         expect(uninstall.row(at: 0), .element(section: 0, offset: 0), "the first candidate leads")

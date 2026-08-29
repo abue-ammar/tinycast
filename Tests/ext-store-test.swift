@@ -1,7 +1,6 @@
 import Foundation
 
-/// Guards the registry model and the two response parsers — the parts of installing from a registry
-/// that can be checked without a network. Payloads are trimmed captures of the real responses.
+/// The parts of installing from a registry that can be checked without a network.
 @main
 @MainActor
 struct ExtensionStoreTests {
@@ -233,7 +232,7 @@ struct ExtensionStoreTests {
             "every real manager runs the build script",
             ExtensionPackageManager.allCases.filter { $0 != .automatic }
                 .allSatisfy { $0.buildArguments == ["run", "build"] })
-        // An extension's postinstall is code we never asked to run; the build script is the contract.
+        // An extension's postinstall is code we never asked to run.
         check(
             "installs skip lifecycle scripts",
             ExtensionPackageManager.allCases.filter { $0 != .automatic }

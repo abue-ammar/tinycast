@@ -49,7 +49,7 @@ struct NotesRepository: Sendable {
                 includingPropertiesForKeys: Array(keys),
                 options: [.skipsHiddenFiles]
             )
-            // An entry that can't be read is skipped, never fatal: one bad file must not hide the rest.
+            // An unreadable entry is skipped: one bad file must not hide the rest.
             .compactMap { candidate -> NoteSummary? in
                 guard candidate.pathExtension.caseInsensitiveCompare("md") == .orderedSame,
                     let values = try? candidate.resourceValues(forKeys: keys),

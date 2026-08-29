@@ -9,8 +9,7 @@ enum PaletteAxis {
 /// A menu supplied by a palette screen, including its rendering and row activation.
 @MainActor struct PaletteMenuContent {
     let rowCount: Int
-    /// Built on demand: `moveMenu` resolves the open menu on every arrow key, and only the render
-    /// path needs a view out of it.
+    /// Built on demand: `moveMenu` resolves the open menu on every arrow key.
     let view: () -> AnyView
     /// Bounds-checked by the caller against `rowCount`, so a row index is always one this menu has.
     let activate: (Int) -> Void
@@ -46,10 +45,9 @@ enum PaletteAxis {
 
     /// False when the selection can't be acted on, which hides the footer pill and swallows ⌘K.
     func hasPrimaryAction(at selection: Int) -> Bool
-    /// The ⌘K rows as the palette's own menu, which is every screen but one; nil when there are none.
+    /// The ⌘K rows as the palette's own menu; nil when there are none.
     func actions(at selection: Int) -> PopoverMenuContent?
-    /// The ⌘K menu whole, for a screen whose rows the palette's menu can't express. Defaults to
-    /// wrapping `actions(at:)`, so a screen implements one or the other, never both.
+    /// Defaults to wrapping `actions(at:)`, so a screen implements one or the other.
     func menuContent(
         at selection: Int, menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
     ) -> PaletteMenuContent?
@@ -60,7 +58,7 @@ enum PaletteAxis {
     func pasteKeepingWindowOpen(at selection: Int) -> Bool
     /// The selection an arrow key lands on, or nil to leave the key to the palette's own default.
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int?
-    /// Controls the row wants beside the search field. `focus` is lent: the palette owns it either way.
+    /// Controls the row wants beside the search field; `focus` is lent, never owned.
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
     )

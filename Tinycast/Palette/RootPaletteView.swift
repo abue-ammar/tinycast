@@ -165,8 +165,7 @@ struct RootPaletteView: View {
         ])
     }
 
-    /// Whichever menu is open — the one source `moveMenu`, `activateMenuItem` and the overlays
-    /// address rows through, so no two of them can disagree about what a row index means.
+    /// The one source every menu path addresses rows through, so none can disagree.
     private var menuContent: PaletteMenuContent? {
         switch openMenu {
         case .actions:
@@ -289,7 +288,7 @@ struct RootPaletteView: View {
         .onChange(of: core.paletteCoordinator.paletteIsCollapsed) {
             core.paletteCoordinator.syncPaletteSize()
         }
-        // Repeat included: holding the key must keep stepping, as the bare-key form does by default.
+        // Repeat included: holding the key keeps stepping, as the bare-key form does.
         .onKeyPress(keys: [.downArrow], phases: [.down, .repeat]) { press in
             if let reorder = moveFavorite(1, modifiers: press.modifiers) { return reorder }
             if isCollapsed {
@@ -415,7 +414,7 @@ struct RootPaletteView: View {
             if menuOpen { closeMenus() }
             return .handled
         }
-        // Never gated on the rows: an over-narrow filter empties them, and this is the way back out.
+        // Never gated on the rows: an over-narrow filter empties them, and this is the way out.
         .onKeyPress(keys: ["p"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             guard !isCollapsed, vm.mode == .clipboard else { return .ignored }
@@ -487,9 +486,7 @@ struct RootPaletteView: View {
                     .frame(width: Theme.Size.headerIconSlot)
             }
             headerGutter(width: Theme.Spacing.md)
-            // One structural position, always: putting the field inside a branch tears down its
-            // field editor when the branch flips, which drops first responder mid-navigation.
-            // The width shrinks to the typed text so argument fields sit right after it, as in Raycast.
+            // One structural position: a field inside a branch loses first responder when it flips.
             searchField.frame(width: headerAccessory.map(searchFieldWidth))
             if let accessory = headerAccessory {
                 accessory.view
@@ -499,7 +496,7 @@ struct RootPaletteView: View {
                 headerGutter(width: Theme.Spacing.md)
                 aiChatTabHint
             }
-            // Keyed off the mode, which is what says which screen is up; the field just flexes narrower.
+            // Keyed off the mode, which says which screen is up; the field just flexes narrower.
             if !isCollapsed, vm.mode == .clipboard {
                 headerGutter(width: Theme.Spacing.md)
                 ClipboardFilterButton(
@@ -537,16 +534,14 @@ struct RootPaletteView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Controls the selected row wants beside the search field. Only the expanded launcher offers
-    /// them — inside a sub-screen the search bar belongs to that screen.
+    /// Only the expanded launcher offers them: a sub-screen owns its own search bar.
     private var headerAccessory: PaletteHeaderAccessory? {
         guard vm.mode == .launcher || vm.mode == .ai, !isCollapsed else { return nil }
         let screen = screen
         return screen.headerAccessory(at: selection(in: screen), focus: $argumentFocused)
     }
 
-    /// Nothing else advertises Tab, so the launcher says where it goes — the footer's own pairing
-    /// of a label with its cap, and the click does exactly what the key it names does.
+    /// Nothing else advertises Tab, so the launcher says where it goes.
     private var aiChatTabHint: some View {
         BarButton(chrome: .rounded, action: cycleMode) {
             HStack(spacing: Theme.Spacing.sm) {
@@ -559,16 +554,14 @@ struct RootPaletteView: View {
         .help("Open AI Chat  ⇥")
     }
 
-    /// Resolved through `PaletteTabAction` rather than restated, so the hint cannot promise a
-    /// destination the key does not go to — an argument field to walk takes Tab first.
+    /// Resolved through `PaletteTabAction`, so the hint cannot promise the wrong destination.
     private var tabOpensChat: Bool {
         guard !isCollapsed, headerAccessory?.fieldNames.isEmpty ?? true else { return false }
         return PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled)
             == .freshScreen(.ai)
     }
 
-    /// Width the search field shrinks to when an accessory sits beside it: the typed text's own
-    /// width, floored so the caret always has room and capped so the strip can't be pushed off-screen.
+    /// The typed text's width, floored for the caret and capped so the strip stays on screen.
     private func searchFieldWidth(for accessory: PaletteHeaderAccessory) -> CGFloat {
         let font = Theme.Typography.searchFieldNSFont
         let typed = (vm.query as NSString).size(withAttributes: [.font: font]).width
@@ -797,8 +790,7 @@ struct RootPaletteView: View {
         return true
     }
 
-    /// ⌥⌘↑/↓ — reorder the Favorites section, mirroring its rows. Claimed whole on the launcher, so
-    /// a press at an end of the section can't fall through to the caret; nil leaves ↑/↓ their own.
+    /// Claimed whole on the launcher, so a press at an end cannot fall through to the caret.
     private func moveFavorite(_ delta: Int, modifiers: EventModifiers) -> KeyPress.Result? {
         guard modifiers.contains(.command), modifiers.contains(.option), !isCollapsed,
             let launcher = screen as? LauncherScreen
@@ -845,8 +837,7 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Tab rings launcher → chat → clipboard; every other mode exits rather than joining. Crossing
-    /// chat's edge opens a fresh screen, so a draft is never handed to a list that would search it.
+    /// Crossing chat's edge opens a fresh screen, so a draft never lands in a list.
     private func cycleMode() {
         switch PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled) {
         case .carryQuery(let mode): vm.mode = mode
@@ -854,8 +845,7 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Tab walks the inline argument fields first — search field → each argument → back — and rings
-    /// on when there are none, chat's staged-image chips included: those declare no fields to walk.
+    /// Tab walks the inline argument fields first, then rings on when there are none.
     private func advanceTabFocus() {
         guard let accessory = headerAccessory, !accessory.fieldNames.isEmpty else {
             return cycleMode()
@@ -962,8 +952,7 @@ struct EmptyResults: View {
     }
 }
 
-/// The compact bar's favorites strip: up to 5 buttons carrying their chord in the tooltip, then the
-/// overflow, which is a button rather than a slot so no favorite loses its digit to it.
+/// Overflow is a button rather than a slot, so no favorite loses its digit to it.
 private struct CompactFavoritesRow: View {
     let favorites: [AppEntry]
     let showsOverflow: Bool
@@ -972,7 +961,7 @@ private struct CompactFavoritesRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
-            // Identified by the app, so a reorder moves an icon with its app rather than by position.
+            // Identified by the app, so a reorder moves an icon with its app, not by position.
             ForEach(Array(favorites.enumerated()), id: \.element.id) { index, app in
                 CompactFavoriteButton(help: help(for: app, at: index)) {
                     onLaunch(app)

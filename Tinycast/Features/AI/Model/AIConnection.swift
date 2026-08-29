@@ -146,8 +146,7 @@ enum AIEndpointPolicy {
 
     static func validate(_ value: String) throws -> URL {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Any scheme with a loopback host used to pass here, so `ftp://localhost` was a valid
-        // provider. Only the two schemes the transport can actually speak get that far.
+        // Only the two schemes the transport speaks: `ftp://localhost` was once a valid provider.
         guard let url = URL(string: value), let host = url.host(),
             url.scheme == "https" || url.scheme == "http"
         else {
@@ -159,8 +158,7 @@ enum AIEndpointPolicy {
         return url
     }
 
-    /// A stored key is issued for one endpoint, so it may not follow a connection retargeted at
-    /// another: a changed provider or base URL leaves the saved secret behind rather than send it.
+    /// A key is issued for one endpoint, so a changed provider or base URL leaves it behind.
     static func sameDestination(_ connection: AIConnection, _ other: AIConnection) -> Bool {
         connection.provider == other.provider && connection.baseURL == other.baseURL
     }

@@ -156,8 +156,7 @@ private struct CalendarCommandsSection: View {
     }
 }
 
-/// The per-calendar switches. Machine-local by nature, so they live on the store rather than
-/// `AppSettings`, and never travel in a settings backup.
+/// Machine-local by nature, so these live on the store and never travel in a backup.
 private struct CalendarPickerSection: View {
     @Environment(CalendarStore.self) private var store
     @State private var query = ""

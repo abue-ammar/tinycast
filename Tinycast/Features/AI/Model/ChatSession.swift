@@ -47,9 +47,7 @@ struct ChatSession: Equatable, Sendable {
 
     static let defaultTextBudget = 100_000
 
-    /// Provider requests cap near 25 MB; resending every turn whole walks into an opaque 413. Older
-    /// turns come back as text inside `textBudget`, and the prompt keeps its own pictures up to
-    /// `AIAttachmentBudget` — so a request stops growing with the chat. Its own text is never cut.
+    /// Older turns come back as text inside `textBudget`, so a request stops growing with the chat.
     static func boundedContext(
         _ messages: [AIMessage], textBudget: Int = Self.defaultTextBudget
     ) -> [AIMessage] {

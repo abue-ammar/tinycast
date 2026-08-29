@@ -489,9 +489,7 @@ struct AIChatTests {
             "a search at the start or past the end never produces an empty text segment")
     }
 
-    /// A staged picture belongs to the composer of the conversation it was picked in. Leaving that
-    /// conversation drops it, and moves `stagingGeneration` so a ⌘V decode still in flight is
-    /// disowned rather than landing on whatever conversation is on screen when it finishes.
+    /// Leaving a conversation drops its staged images and disowns a decode in flight.
     static func leavingAConversationDropsItsStagedImages() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("tinycast-ai-staging-\(UUID().uuidString)", isDirectory: true)

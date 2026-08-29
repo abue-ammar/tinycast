@@ -19,8 +19,7 @@ struct CustomCommandEditorSheet: View {
     @State private var showingIconPicker = false
     @State private var errorMessage: String?
 
-    /// Identity the persisted argument has no need for, so removing a row above one being typed
-    /// into doesn't move its field editor.
+    /// Identity the persisted argument lacks, so removing a row keeps the field editor put.
     private struct ArgumentDraft: Identifiable {
         let id = UUID()
         var name: String

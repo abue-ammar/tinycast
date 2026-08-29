@@ -822,8 +822,7 @@ private struct AIConnectionEditorSheet: View {
         }
     }
 
-    /// Discovery reaches the endpoint before Save does, so it honours the same rule: retarget the
-    /// connection and it must ask for a key rather than introduce the old one to a new host.
+    /// Discovery honours the Save rule: a retarget asks for a key rather than reuse the old host's.
     private var storedKeyMatchesTarget: Bool {
         target.hasStoredKey && AIEndpointPolicy.sameDestination(connection, target.connection)
     }

@@ -44,7 +44,7 @@ struct ScopesTest {
             "a deeply nested folder works as its own scope",
             SearchScopes.appBundles(in: [deep.path]).map(\.lastPathComponent) == ["TooDeep.app"])
 
-        // A scope may be a single bundle rather than a directory — that's how Finder ships as a default.
+        // A scope may be a single bundle: that is how Finder ships as a default.
         check(
             "an .app scope is indexed directly",
             SearchScopes.appBundles(in: [apps.appendingPathComponent("Alpha.app").path])

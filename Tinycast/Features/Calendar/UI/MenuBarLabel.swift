@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The menu-bar item's face: the next meeting when one is due, the app's own glyph otherwise.
-/// Reading the coordinator here is what scopes Observation to the label rather than the scene.
+/// Reading the coordinator here scopes Observation to the label rather than the scene.
 struct MenuBarLabel: View {
     let appName: String
 

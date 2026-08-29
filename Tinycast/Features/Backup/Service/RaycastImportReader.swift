@@ -1,10 +1,10 @@
 import AppKit
 import Foundation
 
-/// Maps a Raycast 2.x payload onto Tinycast's fields. See docs/features/raycast-import.md.
-enum RaycastImportV2 {
-    static func read(_ raw: Data, passphrase: String) throws -> RaycastImport.Result {
-        try map(RaycastV2Decoder.decrypt(raw, passphrase: passphrase))
+/// Maps a decrypted Raycast payload onto Tinycast's fields. See docs/features/raycast-import.md.
+enum RaycastImportReader {
+    static func read(file: URL, passphrase: String) throws -> RaycastImport.Result {
+        try map(RaycastDecoder.decrypt(try Data(contentsOf: file), passphrase: passphrase))
     }
 
     private static func map(_ decrypted: Data) throws -> RaycastImport.Result {

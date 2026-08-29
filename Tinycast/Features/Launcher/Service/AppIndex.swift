@@ -48,7 +48,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                     label: "Quicklink", sectionTitle: "Quicklinks",
                     openVerb: "Open Quicklink", canRevealInFinder: false, isSymbolIcon: true)
             case .extensionCommand:
-                // The label is per-entry (the owning extension's title), so this is only the fallback.
+                // The label is per-entry, the owning extension's title; this is the fallback.
                 return KindDescriptor(
                     label: "Extension", sectionTitle: "Extensions",
                     openVerb: "Run Command", canRevealInFinder: false, isSymbolIcon: true)
@@ -248,7 +248,7 @@ final class AppIndex {
         }
     }
 
-    /// A feature's commands leave the Commands slice when the feature is off; `visible` restores them.
+    /// A feature's commands leave the Commands slice when it is off; `visible` restores them.
     func setCommandsVisible(_ commands: Set<CommandID>, _ visible: Bool) {
         let updated = visible ? hiddenCommands.subtracting(commands) : hiddenCommands.union(commands)
         guard updated != hiddenCommands else { return }
@@ -289,16 +289,14 @@ final class AppIndex {
         publishEntries()
     }
 
-    /// Replaces the meeting slice. Events move on their own, so this is called from the store's
-    /// change hook rather than from a user edit.
+    /// Events move on their own, so this comes from the store's change hook, not an edit.
     func setMeetings(_ entries: [AppEntry]) {
         guard entries != meetingEntries else { return }
         meetingEntries = entries
         publishEntries()
     }
 
-    /// Replaces the extension-command slice. Called by `ExtensionManager` whenever the installed set,
-    /// or an extension's chosen appearance, changes.
+    /// Called by `ExtensionManager` when the installed set or a chosen appearance changes.
     func setExtensionCommands(_ entries: [AppEntry]) {
         guard entries != extensionEntries else { return }
         extensionEntries = entries
@@ -438,8 +436,7 @@ final class AppIndex {
         }
     }
 
-    /// A whole category, plus any entry the query names outright — `System Settings` is both. Slice
-    /// order is section order, so filtering alone keeps the sections and the flat selection aligned.
+    /// Slice order is section order, so filtering keeps sections and selection aligned.
     private func categoryListing(_ kind: AppEntry.Kind, query: String) -> [AppEntry] {
         apps.filter { $0.kind == kind || $0.name.caseInsensitiveCompare(query) == .orderedSame }
     }

@@ -35,8 +35,7 @@ enum Permissions {
         }
     }
 
-    /// The one prompt for the calendar, raised from the gesture that asked for it. The store is
-    /// built and dropped here: a grant is process-wide, so nothing non-`Sendable` has to travel.
+    /// The store is built and dropped here: a grant is process-wide, so nothing travels.
     nonisolated static func requestCalendarAccess() async -> Bool {
         (try? await EKEventStore().requestFullAccessToEvents()) ?? false
     }

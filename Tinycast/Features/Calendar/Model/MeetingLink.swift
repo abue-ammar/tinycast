@@ -4,13 +4,13 @@ import Foundation
 struct MeetingLink: Hashable, Sendable {
     let provider: Provider
     let url: URL
-    /// The address of the account whose calendar carried this link, for a provider that preselects it.
+    /// The account whose calendar carried this link, for a provider that preselects it.
     let account: String?
 
     /// The desktop app's own URL, where one can be formed without guessing. Nil means open the web.
     var appURL: URL? { provider.appURL(for: url) }
 
-    /// What a browser is handed: the link as written, naming the account where the provider takes one.
+    /// The link as written, naming the account where the provider takes one.
     var webURL: URL { provider.accountURL(for: url, account: account) ?? url }
 
     /// Fields in precedence order; a named provider anywhere beats a bare link found earlier.
@@ -31,8 +31,7 @@ struct MeetingLink: Hashable, Sendable {
         detect(fields: [text])
     }
 
-    /// A URL on a known host that fails that provider's path rule is rejected, never demoted to
-    /// `.generic` — `zoom.us/download` sits in half the invites people are sent.
+    /// A known host failing its path rule is rejected, never demoted to `.generic`.
     private static func classify(_ url: URL) -> Provider? {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
             let host = url.host()?.lowercased()
@@ -46,8 +45,7 @@ struct MeetingLink: Hashable, Sendable {
     ]
     private static let trailingNoise: Set<Character> = [".", ",", ";", ":", ")", "]", "}", "!", "?"]
 
-    /// Hand-rolled rather than `NSDataDetector`: a detector is not `Sendable`, and rebuilding one
-    /// per event costs more than the scan it replaces.
+    /// Hand-rolled: `NSDataDetector` is not `Sendable` and costs more than the scan.
     private static func webURLs(in text: String) -> [URL] {
         var found: [URL] = []
         var cursor = text.startIndex
@@ -103,11 +101,10 @@ extension MeetingLink {
             }
         }
 
-        /// No brand artwork ships with the app, so the name carries the identity and the glyph only
-        /// says what kind of thing this is.
+        /// No brand artwork ships, so the glyph says only what kind of thing this is.
         var sfSymbol: String { self == .generic ? "link" : "video.fill" }
 
-        /// Host suffixes, matched as the whole host or as a subdomain of it. Disjoint by construction.
+        /// Host suffixes, matched whole or as a subdomain. Disjoint by construction.
         private static let hostSuffixes: [Provider: [String]] = [
             .zoom: ["zoom.us", "zoom.com", "zoomgov.com"],
             .googleMeet: ["meet.google.com"],
@@ -149,8 +146,7 @@ extension MeetingLink {
         private static let accountAllowed = CharacterSet.urlQueryAllowed.subtracting(
             CharacterSet(charactersIn: "+&="))
 
-        /// Google Meet is the only provider whose URL takes an account, and `authuser` is how it
-        /// picks between several signed-in identities rather than asking.
+        /// Only Google Meet takes an account; `authuser` picks between signed-in identities.
         func accountURL(for url: URL, account: String?) -> URL? {
             guard self == .googleMeet, let account,
                 let encoded = account.addingPercentEncoding(withAllowedCharacters: Self.accountAllowed),
@@ -164,7 +160,7 @@ extension MeetingLink {
             return components.url
         }
 
-        /// Only the two rewrites Apple's URL handlers make unambiguous; anything else opens the web.
+        /// Only the two rewrites Apple's handlers make unambiguous; anything else opens the web.
         func appURL(for url: URL) -> URL? {
             switch self {
             case .zoom: return zoomAppURL(for: url)

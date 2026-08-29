@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import Foundation
 
-/// Drives `DoubleTapDetector` on a virtual clock, so every window boundary is exact rather than timed.
+/// Drives `DoubleTapDetector` on a virtual clock, so every boundary is exact.
 @MainActor
 private struct Keyboard {
     var detector = DoubleTapDetector()
@@ -323,7 +323,7 @@ struct DoubleTapDetectorTests {
         withFn.release(other: true, at: 0.05)
         withFn.press([.command], other: true, at: 0.10)
         withFn.release(other: true, at: 0.15)
-        // Only momentary keys may map to `hasOtherModifiers`: a latched bit (Caps Lock's `maskAlphaShift`) would disqualify every press for as long as it stays set, exactly as fn does here.
+        // A latched bit like Caps Lock would disqualify every press while it stays set.
         expect(withFn.fired, [], "fn held alongside disqualifies the press")
 
         // The poison clears once the extra modifier is gone.

@@ -57,7 +57,7 @@ enum FileSearchQuery {
         }
     }
 
-    /// Hidden paths and bundle contents are structural: they are what keeps File Search permission-free.
+    /// Hidden paths and bundle contents are what keep File Search permission-free.
     static func isExcludedPath(_ path: String, ignoring ignore: FileSearchIgnoreList) -> Bool {
         let structural = path.split(separator: "/").contains { component in
             (component.hasPrefix(".") && component != "." && component != "..")

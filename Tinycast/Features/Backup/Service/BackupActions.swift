@@ -75,7 +75,7 @@ enum BackupActions {
         // Off-main in an autoreleasepool, so the large JSON tree drains at once.
         let result = try await Task.detached(priority: .userInitiated) {
             try autoreleasepool {
-                try RaycastImport.read(file: file, passphrase: passphrase).selecting(options)
+                try RaycastImportReader.read(file: file, passphrase: passphrase).selecting(options)
             }
         }.value
         // Reported, not thrown: it must not abort the rest of what was asked for.
@@ -129,10 +129,10 @@ enum BackupActions {
         return panel.runModal() == .OK ? panel.url : nil
     }
 
-    /// Nil when the file isn't a Raycast export; reads only the leading bytes, mapped.
-    static func detectRaycastFormat(of file: URL) -> RaycastFormat? {
-        guard let raw = try? Data(contentsOf: file, options: .mappedIfSafe) else { return nil }
-        return try? RaycastFormat.detect(raw)
+    /// Reads only the leading bytes, mapped, so a file is labelled before a passphrase is typed.
+    static func isRaycastExport(_ file: URL) -> Bool {
+        guard let raw = try? Data(contentsOf: file, options: .mappedIfSafe) else { return false }
+        return RaycastDecoder.isExport(raw)
     }
 
     // MARK: - Helpers

@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The `Form` screen. Field values live in the extension (React owns them); every edit dispatches back
-/// through the field's `onTinycastChange`, and the re-render is what updates what's drawn here.
+/// React owns the values; every edit dispatches back and the re-render draws it.
 struct ExtensionFormView: View {
     let screen: ExtensionScreen
     let assetsPath: String?
@@ -163,8 +162,7 @@ struct ExtensionFormView: View {
     }
 }
 
-/// A text field whose value is owned by the extension: local state absorbs typing so the caret never
-/// jumps, and a render carrying a different value (a programmatic reset) wins.
+/// Local state absorbs typing so the caret never jumps; a programmatic reset wins.
 private struct ExtensionTextField: View {
     let node: RenderNode
     let secure: Bool

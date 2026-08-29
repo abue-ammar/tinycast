@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// The user's own addition to every request. Hidden behind a blur when it already has content, so
-/// opening Settings on a stream or in a screenshot does not spill whatever someone told the model
-/// to do; an empty one opens plain, because there is nothing yet to give away and a blurred empty
-/// box is only a puzzle. The card keeps its edges — only the text goes soft.
+/// Blurred once it has content, so opening Settings on a stream cannot spill it; empty opens plain.
 struct SystemPromptEditor: View {
     @Binding var text: String
 
@@ -15,8 +12,7 @@ struct SystemPromptEditor: View {
         _isRevealed = State(initialValue: text.wrappedValue.isBlank)
     }
 
-    /// A macOS `TextEditor` keeps its caret, its keyboard and its selection through `.disabled` —
-    /// an ancestor's as much as its own — so the editor itself has to go rather than dim.
+    /// A `TextEditor` keeps caret, keyboard and selection through `.disabled`, so it goes
     private var isEditable: Bool { isEnabled && isRevealed }
 
     var body: some View {

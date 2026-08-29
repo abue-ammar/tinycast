@@ -1,8 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Drives `PalettePlacement` against the real `Theme` (compiled in, not copied), so retuning a token
-/// can't leave the palette restoring to a position no display still shows.
+/// Against the real `Theme`, so retuning cannot restore the palette off-display.
 @main
 @MainActor
 struct PalettePlacementTests {

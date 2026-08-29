@@ -25,12 +25,10 @@ feature lives in `Features/Backup/`.
 | --- | --- |
 | `Model/SettingsBackup.swift` | The settings, fixed/per-item hotkey payloads, and their `Codable` shape |
 | `Model/SettingsBackupCoverage.swift` | The coverage declaration the harness checks |
-| `Model/RaycastFormat.swift` | Detects v1 vs v2 — the only branch between the two |
-| `Model/RaycastV1Decoder.swift` | v1 decrypt and decode |
-| `Model/RaycastImportV1.swift` | v1 → Tinycast field mapping and validation |
-| `Model/RaycastImport.swift` | The shared `Result` and dispatcher |
-| `Service/RaycastV2Decoder.swift` | v2 container decrypt and decode |
-| `Service/RaycastImportV2.swift` | v2 → Tinycast field mapping |
+| `Model/RaycastImport.swift` | The importable categories, the `Result` and its per-category trim |
+| `Model/RaycastImportError.swift` | The three failures an import reports |
+| `Service/RaycastDecoder.swift` | Container recognition, decrypt and decode |
+| `Service/RaycastImportReader.swift` | Raycast → Tinycast field mapping |
 | `Service/Scrypt.swift`, `Platform/Compression/Zlib.swift` | The crypto and decompression primitives |
 | `Service/BackupActions.swift` | The effectful half: file pickers, writes, applying an import |
 | `Settings/BackupSettingsView.swift` | The pane |
@@ -57,5 +55,4 @@ Applying an import writes through `AppSettings` like any other change, so featur
 the launcher through the normal observation path. An import reports a summary of what it applied — it is
 not silent, because a settings file that quietly changes hotkeys is hostile.
 
-Raycast import is documented separately in [raycast-import.md](raycast-import.md); the two formats share
-no mapper, which is what makes a wrong passphrase report a wrong passphrase.
+Raycast import is documented separately in [raycast-import.md](raycast-import.md).

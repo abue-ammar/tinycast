@@ -265,7 +265,7 @@ enum CalcUnits {
         add(UnitDef("arcsec", "Arcseconds", .angle, .pi / 648000), ["arcsec", "arcsecond", "arcseconds"])
         add(UnitDef("turn", "Turns", .angle, 2 * .pi), ["turn", "turns", "rev", "revolution", "revolutions"])
 
-        // Speed (base: meter/second) — the tokenizer keeps a slashed spelling whole, so it's a name.
+        // Speed (base: meter/second) — a slashed spelling stays whole, so it is a name.
         add(UnitDef("m/s", "Meters per Second", .speed, 1), ["mps", "m/s", "m/sec"])
         add(
             UnitDef("km/h", "Kilometers per Hour", .speed, 1000.0 / 3600),

@@ -1,8 +1,8 @@
 import CryptoKit
 import Foundation
 
-/// Unwraps the v2 container down to its payload JSON. See docs/features/raycast-import.md.
-enum RaycastV2Decoder {
+/// Unwraps the `RAYCFG3` container down to its payload JSON. See docs/features/raycast-import.md.
+enum RaycastDecoder {
     private struct Header: Decodable {
         struct Encryption: Decodable {
             let iv: String
@@ -13,10 +13,11 @@ enum RaycastV2Decoder {
         let encryption: Encryption
     }
 
+    /// From the leading bytes alone, so a file is labelled before a passphrase is typed.
+    static func isExport(_ raw: Data) -> Bool { raw.starts(with: magic) }
+
     static func decrypt(_ raw: Data, passphrase: String) throws -> Data {
-        guard raw.starts(with: RaycastFormat.v2Magic) else {
-            throw RaycastImportError.notRaycastFile
-        }
+        guard isExport(raw) else { throw RaycastImportError.notRaycastFile }
         // `raw` can be a slice, so every offset below is measured from its own start.
         let base = raw.startIndex
         guard raw.count >= fixedHeaderLength else { throw RaycastImportError.corrupt }
@@ -58,7 +59,7 @@ enum RaycastV2Decoder {
         return payload
     }
 
-    /// Raycast's own container number, unrelated to the v1/v2 split above it.
+    private static let magic = Data("RAYCFG3\n".utf8)
     private static let containerSchemaVersion = 3
     private static let fixedHeaderLength = 12
     private static let maximumHeaderLength = 1024 * 1024

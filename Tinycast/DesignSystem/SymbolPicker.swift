@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A grid of SF Symbols with an "Automatic" escape hatch, for any editor that lets a row carry its
-/// own glyph. The symbols are the caller's: what reads as a quicklink is not what reads as a script.
+/// A grid of SF Symbols with an Automatic escape hatch; the symbols are the caller's.
 struct SymbolPicker: View {
     @Binding var selection: String?
     /// Drawn on the Automatic row, and what the row falls back to when nothing is picked.

@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Renders parsed markdown. The body is erased on purpose: a list or quote nests another
-/// `MarkdownView`, and an opaque `Body` would make that a circular type.
+/// Renders parsed markdown; the body is erased so a nested list cannot make `Body` circular.
 struct MarkdownView: View {
     let blocks: [MarkdownBlock]
     var spacing = Theme.Spacing.lg
@@ -77,8 +76,7 @@ private struct MarkdownListView: View {
             Image(systemName: checked ? "checkmark.square.fill" : "square")
                 .foregroundStyle(checked ? Theme.Colors.success : Theme.Colors.textTertiary)
         } else if start != nil {
-            // Never wrapped: a marker past the column's width used to break "10." into "10" and a
-            // "." on the next line. Padding to the list's widest number keeps the column straight.
+            // Padding to the list's widest number keeps a marker from wrapping mid-number.
             Text(orderedMarker(at: offset))
                 .monospacedDigit()
                 .foregroundStyle(Theme.Colors.textSecondary)

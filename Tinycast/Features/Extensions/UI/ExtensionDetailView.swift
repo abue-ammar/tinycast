@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The `Detail` screen, and the detail pane a `List` shows beside its rows when `isShowingDetail` is on.
+/// The `Detail` screen, and the pane a `List` shows when `isShowingDetail` is on.
 struct ExtensionDetailBody: View {
     let markdown: String?
     let metadata: RenderNode?
@@ -176,9 +176,7 @@ struct FlowLayout: Layout {
     }
 }
 
-/// Renders an extension's markdown. `AttributedString`'s markdown parser handles inline styling; block
-/// structure (headings, lists, code fences, rules) is laid out here so a Detail reads like a document
-/// rather than one run-on paragraph.
+/// Inline styling comes from `AttributedString`; block structure is laid out here.
 struct ExtensionMarkdownView: View {
     let markdown: String
 

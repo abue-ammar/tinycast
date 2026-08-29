@@ -37,8 +37,7 @@ enum JoinWindow: Int, CaseIterable, Identifiable, Sendable {
     var title: String { rawValue == 1 ? "1 minute" : "\(rawValue) minutes" }
 }
 
-/// How early an event reaches the menu bar. Zero is the default, which `integer(forKey:)` also
-/// returns for an unset key — so absence and Never agree without a presence check.
+/// Zero is the default `integer(forKey:)` also returns unset, so absence reads as Never.
 enum MenuBarEvents: Int, CaseIterable, Identifiable, Sendable {
     case never = 0
     case two = 2
@@ -158,7 +157,7 @@ final class AppSettings {
         didSet { defaults.set(paletteDraggable, forKey: Key.paletteDraggable.rawValue) }
     }
 
-    /// Where a drag left the panel's top-left, in screen coordinates; nil means the default placement.
+    /// Where a drag left the panel's top-left; nil means the default placement.
     var palettePosition: CGPoint? {
         didSet {
             guard let palettePosition else {
@@ -221,8 +220,7 @@ final class AppSettings {
         didSet { defaults.set(snippetsShowInLauncher, forKey: Key.snippetsShowInLauncher.rawValue) }
     }
 
-    /// Also consent to run third-party JavaScript, and the one feature with a standing memory cost,
-    /// so it confirms first, defaults off and never rides a backup.
+    /// Consent to run third-party JavaScript: it confirms, defaults off, rides no backup.
     var extensionsEnabled: Bool {
         didSet { defaults.set(extensionsEnabled, forKey: Key.extensionsEnabled.rawValue) }
     }
@@ -241,8 +239,7 @@ final class AppSettings {
         }
     }
 
-    /// Where extensions are searched for. Seeded with the store and the official repository; a user
-    /// can add their own, which is the point of it being a list rather than a flag.
+    /// Seeded with the store and the official repository; a user can add their own.
     var extensionRegistries: [ExtensionRegistry] {
         didSet {
             guard let data = try? JSONEncoder().encode(extensionRegistries) else { return }
@@ -250,8 +247,7 @@ final class AppSettings {
         }
     }
 
-    /// Extra PATH folders searched before the built-in list, for a toolchain in a place Tinycast
-    /// doesn't already know — mise or Nix shims are the common case. Empty means nothing extra.
+    /// For a toolchain Tinycast doesn't know — mise or Nix shims are the common case.
     var extensionCustomSearchPaths: [String] {
         didSet {
             defaults.set(
@@ -419,7 +415,7 @@ final class AppSettings {
         palettePosition = (defaults.array(forKey: Key.palettePosition.rawValue) as? [Double])
             .flatMap { $0.count == 2 ? CGPoint(x: $0[0], y: $0[1]) : nil }
         fileSearchEnabled = defaults.bool(forKey: Key.fileSearchEnabled.rawValue)
-        // Unset seeds home; a stored empty array is a deliberately cleared list that searches nothing.
+        // Unset seeds home; a stored empty array is a cleared list that searches nothing.
         fileSearchScopes =
             defaults.stringArray(forKey: Key.fileSearchScopes.rawValue)
             ?? FileSearchScope.defaultScopes

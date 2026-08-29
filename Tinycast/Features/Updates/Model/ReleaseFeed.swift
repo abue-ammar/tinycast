@@ -10,14 +10,12 @@ struct AvailableRelease: Codable, Hashable, Sendable {
     let publishedAt: Date?
 }
 
-/// Reads GitHub's releases list. Nothing throws: an unusable body is indistinguishable from
-/// "nothing to install", and both mean the pump simply retries later.
+/// Nothing throws: an unusable body means nothing to install, and the pump retries.
 enum ReleaseFeed {
     /// Where releases come from, and what every `@handle` and `#304` in their notes points at.
     static let repository = "abue-ammar/tinycast"
 
-    /// The filename the release workflow gives the universal artifact — the only one with an
-    /// x86_64 slice, and so the only one an Intel Mac can install.
+    /// The only artifact with an x86_64 slice, so the only one an Intel Mac can install.
     private static let universalMarker = "-Universal-"
 
     /// The newest release this channel accepts, ignoring drafts and anything without a usable zip.
@@ -31,7 +29,7 @@ enum ReleaseFeed {
             .max { $0.version < $1.version }
     }
 
-    /// The release worth offering: strictly newer than what is running, and not one already skipped.
+    /// The release worth offering: strictly newer than what runs, and not skipped.
     static func offer(
         _ release: AvailableRelease?, running: AppVersion, skipped: AppVersion?
     ) -> AvailableRelease? {
@@ -58,8 +56,7 @@ enum ReleaseFeed {
             publishedAt: entry.publishedAt.flatMap { try? Date($0, strategy: .iso8601) })
     }
 
-    /// The zip this Mac can install — never the DMG, since the updater expands an archive rather
-    /// than mounting a volume. Intel is offered nothing before a thin build it cannot launch.
+    /// Never the DMG: the updater expands an archive rather than mounting a volume.
     private static func asset(
         from assets: [Entry.Asset], for architecture: ReleaseArchitecture
     ) -> Entry.Asset? {

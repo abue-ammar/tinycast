@@ -31,7 +31,7 @@ final class QuickActionCoordinator {
         self.core = core
     }
 
-    /// The launcher rows come and go with the switch; the Carbon bindings stay registered either way.
+    /// Launcher rows come and go with the switch; the Carbon bindings stay registered.
     func applyEnabled() {
         appIndex.setCommandsVisible(Self.launcherCommands, settings.quickActionsEnabled)
         guard settings.quickActionsEnabled else {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// File-scoped so a row and the cap that counts rows read one number, and can't drift into half a row.
+/// File-scoped so a row and the cap that counts rows read one number.
 private enum Metrics {
     static let width: CGFloat = 300
     /// The glyph slot plus its breathing room — the tallest thing a row contains.
@@ -8,7 +8,7 @@ private enum Metrics {
     static let rowSpacing: CGFloat = 1
     /// Six rows and half of the seventh, so a long panel reads as scrollable rather than clipped.
     static let visibleRows: CGFloat = 6.5
-    /// Rounded: a fractional window height lands the glass edge on a half pixel and doubles the hairline.
+    /// Rounded: a fractional height lands the glass edge on a half pixel.
     static var maxHeight: CGFloat { (visibleRows * (rowHeight + rowSpacing)).rounded() }
 
     /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
@@ -17,9 +17,7 @@ private enum Metrics {
     }
 }
 
-/// One row of a running command's ⌘K panel. Its own type, not `PopoverMenuItem`: an extension names
-/// any icon and tints it, and the palette's menu row carries neither. Drawing only — a row's handler
-/// stays on `PaletteMenuContent`, so the panel and the keyboard fire the same one.
+/// Its own type, not `PopoverMenuItem`: an extension names any icon and tints it.
 struct ExtensionActionItem {
     let title: String
     let icon: ExtensionImage.Resolved
@@ -27,7 +25,7 @@ struct ExtensionActionItem {
     var isDestructive = false
 }
 
-/// The ⌘K panel of a running command. Not `PopoverMenu`: an extension's panel is long, so it scrolls.
+/// The ⌘K panel of a running command; not `PopoverMenu`, because it scrolls.
 struct ExtensionActionsPanel: View {
     var header: String?
     let items: [ExtensionActionItem]
@@ -36,7 +34,7 @@ struct ExtensionActionsPanel: View {
 
     /// The palette arms this only once the pointer has moved of its own accord.
     @Environment(PaletteState.self) private var palette
-    /// A hovered row is already visible, so scrolling to it would drag the list from under the cursor.
+    /// A hovered row is already visible, so scrolling would drag the list under it.
     @State private var hoverSelection: Int?
 
     var body: some View {
@@ -51,7 +49,7 @@ struct ExtensionActionsPanel: View {
                     .padding(.top, Theme.Spacing.xs)
                     .padding(.bottom, Theme.Spacing.xs / 2)
             }
-            // The header stays put while rows move under it, so what the panel belongs to stays read.
+            // The header stays put while rows move under it.
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: Metrics.rowSpacing) {
@@ -97,7 +95,7 @@ struct ExtensionActionsPanel: View {
     }
 }
 
-/// Its own row, not the palette's: that one is file-private, and this one may grow its own trimmings.
+/// Its own row, not the palette's: that one is file-private.
 private struct ExtensionActionRow: View {
     let item: ExtensionActionItem
     let selected: Bool
@@ -135,8 +133,7 @@ private struct ExtensionActionRow: View {
         .buttonStyle(.plain)
     }
 
-    /// A symbol is drawn here rather than handed to `ExtensionIconView`: the row's glyph is sized to
-    /// the menu's 20pt slot, which that view's own scale would shrink. Everything else it draws better.
+    /// Drawn here, not by `ExtensionIconView`, whose scale would shrink the 20pt slot.
     @ViewBuilder
     private var icon: some View {
         if case .symbol(let name) = item.icon.source {

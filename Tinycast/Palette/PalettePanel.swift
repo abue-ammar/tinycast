@@ -99,9 +99,7 @@ final class PalettePanel: NSPanel {
         .leftMouseDown, .leftMouseUp, .leftMouseDragged
     ]
 
-    /// Two AppKit mechanisms disagree over the field — SwiftUI's clip view claims the arrow for
-    /// the whole window as a cursor rect, the field editor claims the I-beam from its tracking
-    /// area — so the panel settles it from the field's own frame, after `super` has had its say.
+    /// Clip view and field editor both claim a cursor, so the panel settles it after `super`.
     private func applyCursorPolicy(for event: NSEvent) {
         guard Self.cursorEvents.contains(event.type) else { return }
         // Outset: the field editor AppKit installs is a point taller than the field it serves.

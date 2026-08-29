@@ -3,13 +3,11 @@ import Foundation
 /// Clock time in another city. See docs/features/calculator.md.
 enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
-        // Every grammar carries a connector or `diff`, so an app search stops before allocating.
-        // Any whitespace, not just a space: a pasted NBSP still separates the words downstream.
+        // Every grammar carries a connector, so an app search stops before allocating.
         guard raw.count <= 128, raw.contains(where: \.isWhitespace), hasConnector(raw) else {
             return nil
         }
-        // `10 km to mi` also carries a connector, so the last word decides before anything else:
-        // a zone name or a duration is the only thing this grammar can end in.
+        // The last word decides: `10 km to mi` carries a connector too.
         guard endsInZoneOrDuration(raw) else { return nil }
 
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -105,8 +103,7 @@ enum CalcTimeZone {
         let zone: TimeZone
     }
 
-    /// The tail names a zone or a duration, checked before the query is trimmed, lowercased and
-    /// split — which is what keeps a unit conversion like `10 km to mi` out of the zone path.
+    /// Checked before the query is split, which keeps `10 km to mi` out of the zone path.
     private static func endsInZoneOrDuration(_ raw: String) -> Bool {
         var tail = ""
         for character in raw.reversed() {
@@ -279,8 +276,7 @@ enum CalcTimeZone {
         return table
     }()
 
-    /// `TimeZone.abbreviationDictionary` is unusable here: its `BDT` is the Bangladeshi taka.
-    /// IATA codes are Foundation-less by nature, so the airport half is a curated product choice.
+    /// `abbreviationDictionary` is unusable: its `BDT` is the Bangladeshi taka.
     private static let aliases: [String: String] = [
         "utc": "UTC", "gmt": "GMT", "zulu": "UTC",
         "est": "America/New_York", "edt": "America/New_York", "et": "America/New_York",

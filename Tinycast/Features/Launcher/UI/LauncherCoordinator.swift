@@ -56,7 +56,7 @@ final class LauncherCoordinator {
     func launch(
         _ app: AppEntry, searchQuery: String? = nil, arguments: [String: String] = [:]
     ) {
-        // A category listing is not a search for the row that ran; learning it would rank it under "s".
+        // A category listing is no search: learning it would rank the row under "s".
         if let searchQuery, AppEntry.Kind.named(by: searchQuery) == nil {
             ranking.record(itemKey: app.preferenceKey, query: searchQuery)
         }
@@ -207,8 +207,7 @@ final class LauncherCoordinator {
         AppLauncher.showInFinder(app.url)
     }
 
-    /// Restarts the app behind an entry. Focus is never handed back: either the relaunch takes it,
-    /// or the quit was refused and the app that refused it is the one asking for it.
+    /// Focus is never handed back: the relaunch takes it, or the app that refused has it.
     func restart(_ app: AppEntry) {
         guard app.kind == .application, let bundleID = app.bundleID else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)

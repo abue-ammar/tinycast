@@ -1,5 +1,4 @@
-// Standalone test for the one-time move out of Caches, and the tripwire that retires it.
-// It drives the real `ClipboardStore` on both sides of the move: a hand-copied schema would drift.
+// Drives the real `ClipboardStore` on both sides: a copied schema would drift.
 import Foundation
 
 @main

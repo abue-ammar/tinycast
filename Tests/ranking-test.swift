@@ -20,7 +20,7 @@ struct RankingTest {
             }
         }
 
-        // Mirrors how AppIndex.rank reads the table: one boosts(query:) pass, then a per-item lookup.
+        // Mirrors AppIndex.rank: one boosts(query:) pass, then a per-item lookup.
         func boost(_ store: LauncherRankingStore, _ itemKey: String, _ query: String) -> Int {
             store.boosts(query: query)[itemKey] ?? 0
         }
@@ -34,7 +34,7 @@ struct RankingTest {
             LauncherRankingStore.normalize(" wha \n") == "wha")
         check("query key folds case", LauncherRankingStore.normalize("WhA") == "wha")
         check("query key folds diacritics", LauncherRankingStore.normalize("Café") == "cafe")
-        // A Turkish fold maps "I" to "ı"; asserting the difference keeps this from going vacuous if that ever stops being true.
+        // A Turkish fold maps "I" to "ı"; asserting the difference keeps this honest.
         check(
             "query key is locale-independent",
             LauncherRankingStore.normalize("I") == "i"
@@ -58,7 +58,7 @@ struct RankingTest {
         check("visit teaches full normalized query", boost(store, whatsApp, "WHA") > 0)
         check("visit does not teach a different query", boost(store, whatsApp, "wa") == 0)
 
-        // Golden values: these pin the frecency curve, so a change to the scoring has to be deliberate rather than incidental.
+        // Golden values: these pin the frecency curve, so a change has to be deliberate.
         check("one visit, same day, scores 2100", firstBoost == 2_100)
         for _ in 0..<9 { store.record(itemKey: whatsApp, query: "Wha") }
         check("ten visits, same day, score 3576", boost(store, whatsApp, "w") == 3_576)

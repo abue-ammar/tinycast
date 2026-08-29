@@ -22,8 +22,7 @@ enum HotKeyAction: Hashable, Sendable {
     case systemAction(id: SystemAction.ID)
     case windowCommand(id: WindowCommand.ID)
     case quicklink(id: UUID)
-    /// Keyed by `AppEntry.id` (`extension:<extension>/<command>`), which is what survives a
-    /// reinstall — an extension carries no id of its own beyond its name.
+    /// Keyed by `AppEntry.id`, which is what survives a reinstall of the extension.
     case extensionCommand(entryID: String)
 
     /// The UserDefaults key, and the `HotKeyCenter` registration id: one per action.

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The form shown before a custom command with arguments runs.
 struct CustomCommandArgumentsScreen: PaletteScreen {
     /// The form has no list of its own: every value is typed into the palette's search field.
     struct Row: Identifiable { let id: Int }

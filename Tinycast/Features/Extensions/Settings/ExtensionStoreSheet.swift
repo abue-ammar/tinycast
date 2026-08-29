@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Search every configured registry and install from any of them, through one list.
-///
-/// Where a result comes from changes only two things a person can see: the badge on its row, and
-/// whether installing it has to build first. Everything else is deliberately identical.
+/// One list over every registry; where a result comes from changes only its badge.
 struct ExtensionStoreSheet: View {
     let onClose: () -> Void
     @Environment(AppCore.self) private var core
@@ -21,8 +18,7 @@ struct ExtensionStoreSheet: View {
 
     private var registries: [ExtensionRegistry] { core.settings.extensionRegistries }
 
-    /// Which registries this will actually cover, by name — the sheet can't reach the pane's registry
-    /// settings, so at least it says what they are.
+    /// The sheet cannot reach the pane's registry settings, so it at least names them.
     private var searchingSummary: String {
         let on = registries.filter(\.isEnabled)
         guard !on.isEmpty else {
@@ -38,7 +34,7 @@ struct ExtensionStoreSheet: View {
             // The same borderless field the panes use, rather than a bordered capsule of its own.
             SettingsFilterField(prompt: "Search extensions…", query: $query)
             content
-            // The list scrolls right up to the footer without it, cutting the last row mid-sentence.
+            // The list scrolls right up to the footer without it, cutting the last row.
             Divider()
             footer
         }
@@ -55,7 +51,7 @@ struct ExtensionStoreSheet: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            // Named for the row that opens it, and it names the registries rather than counting them.
+            // Named for the row that opens it, and it names the registries, not their count.
             HStack(alignment: .firstTextBaseline) {
                 Text("Search Extensions").font(.title2.weight(.bold))
                 Spacer()
@@ -172,8 +168,7 @@ struct ExtensionStoreSheet: View {
 
     // MARK: - Searching
 
-    /// Debounced, because every keystroke is a request to someone else's API — and, for a GitHub
-    /// registry, a handful of manifest reads against an anonymous rate limit of sixty an hour.
+    /// Every keystroke is a request to someone else's API, on a limit of sixty an hour.
     private func scheduleSearch(_ value: String) {
         searchTask?.cancel()
         let trimmed = value.trimmingCharacters(in: .whitespaces)

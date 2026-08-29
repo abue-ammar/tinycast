@@ -44,9 +44,7 @@ struct ExtensionCommandView: View {
                     onSubmit: { onActivate(selection) })
             case .unsupported(let type):
                 if type.isEmpty {
-                    // A commit arrived but the command rendered nothing — it returned null, usually
-                    // because it has no data to show. Saying "Starting…" here would claim it is still
-                    // launching, which is how a permanently-null command looked like a hang.
+                    // A commit rendered null; "Starting…" here would look like a hang.
                     EmptyResults(text: "Nothing to show")
                 } else {
                     ExtensionFailureView(
@@ -59,8 +57,7 @@ struct ExtensionCommandView: View {
     }
 }
 
-/// A command that threw, or one Tinycast can't render. The stack trace is kept — it's the only debugging
-/// signal an extension author gets.
+/// The stack trace is kept: it is the only debugging signal an author gets.
 struct ExtensionFailureView: View {
     let message: String
 
@@ -97,8 +94,7 @@ struct ExtensionFailureView: View {
     }
 }
 
-/// Toasts a running view command raised, stacked above the footer. `showHUD` is a separate floating
-/// window (`HUDWindowController`) because a no-view command closes the palette before it finishes.
+/// `showHUD` is a separate window: a no-view command closes the palette first.
 struct ExtensionFeedbackOverlay: View {
     let toasts: [ExtensionToast]
     let onToastAction: (String) -> Void
@@ -165,9 +161,7 @@ enum ExtensionActionsMenu {
             ? screen.items[selection].node.string("title") : screen.navigationTitle
     }
 
-    /// Rows carry a resolved `ExtensionImage` rather than a symbol name: an `Action`'s icon is an
-    /// `ImageLike`, so it can name any source and tint it, which `PopoverMenuItem` cannot express.
-    /// Called from the render path alone — resolving an icon per ↑/↓ would probe SF Symbols on main.
+    /// Rows carry a resolved `ExtensionImage`; resolving per ↑/↓ would probe symbols on main.
     static func rows(_ actions: [ExtensionAction], assetsPath: String?) -> [ExtensionActionItem] {
         actions.map { action in
             ExtensionActionItem(

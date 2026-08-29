@@ -17,8 +17,7 @@ protocol ExtensionRuntimeDelegate: AnyObject {
     func runtime(_ runtime: ExtensionRuntime, log level: String, message: String)
 }
 
-/// The one `JSContext` a command runs in. `@unchecked Sendable` is narrow: every touch is on `queue`,
-/// and only plain values cross. Why JavaScriptCore, and why one context, is in docs/features/extensions.md.
+/// The one `JSContext` a command runs in; every touch is on `queue`, only values cross.
 final class ExtensionRuntime: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.tinycast.extensions.js", qos: .userInitiated)
     private var context: JSContext?
@@ -30,7 +29,7 @@ final class ExtensionRuntime: @unchecked Sendable {
     private let hostAPI: ExtensionHostAPI
     private let runtimeOverride: URL?
 
-    /// `runtimeURL` overrides the bundled runtime; only the harness passes it, having no app bundle.
+    /// `runtimeURL` overrides the bundled runtime; only the harness passes it.
     init(hostAPI: ExtensionHostAPI, runtimeURL: URL? = nil) {
         self.hostAPI = hostAPI
         self.runtimeOverride = runtimeURL
@@ -91,7 +90,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         // Stored only once it is known good: a half-built one would make every later boot a no-op.
         self.context = context
 
-        // From here on an exception is a bug in a command, not in the runtime: report it and keep going.
+        // From here on an exception is a bug in a command: report it and keep going.
         context.exceptionHandler = { [weak self] _, exception in
             self?.report(level: "error", message: ExtensionRuntime.describe(exception))
         }
@@ -126,7 +125,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         }
     }
 
-    /// Escape / the back chevron inside a pushed screen. Returns true when a screen was actually popped.
+    /// Escape or the back chevron inside a pushed screen; true when one was popped.
     func popNavigation(session: String) async -> Bool {
         await withCheckedContinuation { continuation in
             queue.async {
@@ -258,7 +257,7 @@ final class ExtensionRuntime: @unchecked Sendable {
 
     private func deliverRender(session: String, json: String) {
         guard let delegate else { return }
-        // Decode here: parsing a large list is the expensive part, and it belongs off the main actor.
+        // Parsing a large list is the expensive part, and it belongs off the main actor.
         guard let tree = RenderTree(json: json) else {
             report(level: "error", message: "Could not decode the render tree for \(session).")
             return
@@ -297,8 +296,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         timers[id] = nil
     }
 
-    /// The whole context goes; the next `boot` builds a fresh one (~7 ms warm). Timers are global and
-    /// React's scheduler rides them, so reuse either cancels its commits or leaks an extension's.
+    /// Timers are global and React's scheduler rides them, so a context is never reused.
     func shutdown() {
         queue.async {
             for timer in self.timers.values { timer.cancel() }

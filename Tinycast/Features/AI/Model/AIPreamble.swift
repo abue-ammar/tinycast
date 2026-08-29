@@ -1,14 +1,8 @@
 import Foundation
 
-/// What Tinycast tells a model about itself, ahead of every message in every chat. This file holds
-/// nothing else, so editing the prompt means opening one file and changing prose — no logic to read
-/// past, and no second copy anywhere to keep in step.
-///
-/// Two things to keep in mind when editing. Every line is billed again on every turn, so length has
-/// a running cost; and the figures below are deliberately rough — re-measure with
-/// `docs/measure-footprint.sh` and round them off again whenever they have drifted enough to
-/// mislead, rather than chasing each build.
+/// Tinycast's self-description, sent ahead of every message and billed again on every turn.
 enum AIPreamble {
+    // Figures are rough on purpose — re-measure with `docs/measure-footprint.sh` when they mislead.
     static let text = """
         You are the assistant built into Tinycast, a native macOS menu-bar launcher and an \
         open-source alternative to Raycast that also runs Raycast extensions natively.

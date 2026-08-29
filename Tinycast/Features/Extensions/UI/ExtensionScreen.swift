@@ -12,9 +12,7 @@ struct ExtensionScreen: Equatable {
         case unsupported(String)
     }
 
-    /// One selectable row. `index` is the flat `selection` index, and `id` is what a `LazyVStack` or
-    /// `LazyVGrid` registers as its scroll target — an `.id()` applied inside a row only exists once
-    /// the row has been realized, which is exactly when scrolling to it isn't needed.
+    /// `id` is the scroll target: an `.id()` inside a row exists only once it is realized.
     struct Item: Equatable, Identifiable {
         let node: RenderNode
         let index: Int
@@ -118,8 +116,7 @@ struct ExtensionScreen: Equatable {
                 filtersLocally ? query.trimmingCharacters(in: .whitespaces) : "")
             var rows: [Row] = []
             var items: [Item] = []
-            // Numbering as the rows are built is what keeps `selection` and the drawn order in step;
-            // a row that has to search `items` for its own place can only get that wrong.
+            // Numbering as rows are built keeps `selection` and the drawn order in step.
             func append(_ node: RenderNode) {
                 let item = Item(node: node, index: items.count)
                 items.append(item)
@@ -181,8 +178,7 @@ struct ExtensionScreen: Equatable {
         self.emptyView = emptyView
     }
 
-    /// Local filtering mirrors Raycast: title, subtitle and keywords, ranked by the launcher's matcher
-    /// so an extension list feels like the rest of the palette.
+    /// Title, subtitle and keywords, ranked by the launcher's matcher, as Raycast does.
     static func matches(_ item: RenderNode, _ needle: FuzzyMatch.Query) -> Bool {
         guard !needle.isEmpty else { return true }
         var haystack = [item.string("title") ?? ""]
@@ -209,8 +205,7 @@ struct ExtensionScreen: Equatable {
         return screenActions
     }
 
-    /// Flatten an `ActionPanel` into the actions the palette offers, sections included. Submenus are
-    /// flattened one level with their title prefixed — the palette's menu is single-level.
+    /// Submenus flatten one level with their title prefixed: the palette's menu is flat.
     static func actions(in panel: RenderNode?) -> [ExtensionAction] {
         guard let panel else { return [] }
         var result: [ExtensionAction] = []
@@ -264,8 +259,7 @@ struct ExtensionAction: Equatable, Identifiable {
         return caps
     }
 
-    /// Does a keystroke match this action's declared shortcut? Modifiers must match exactly, so ⌘⇧C
-    /// never fires a plain ⌘C action.
+    /// Modifiers must match exactly, so ⌘⇧C never fires a plain ⌘C action.
     func matches(key: KeyEquivalent, modifiers: EventModifiers) -> Bool {
         guard let shortcut = node.object("shortcut") else { return false }
         let resolved = shortcut["macOS"]?.objectValue ?? shortcut

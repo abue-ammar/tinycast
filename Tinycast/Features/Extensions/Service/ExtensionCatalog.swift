@@ -94,7 +94,7 @@ enum ExtensionCatalog {
         }
     }
 
-    /// The first root holding anything, so the other channel's empty one never reads as "not installed".
+    /// The first root holding anything, so an empty channel never reads as not installed.
     static func raycastExtensionsDirectory() -> URL? {
         raycastExtensionRoots().first { root in
             let entries = try? FileManager.default.contentsOfDirectory(
@@ -145,7 +145,7 @@ enum ExtensionCatalog {
         }
     }
 
-    /// Manifest, built commands and `assets/` only — never `node_modules` or the multi-MB `.js.map`s.
+    /// Manifest, built commands and `assets/` only — never `node_modules` or `.js.map`s.
     @discardableResult
     static func install(from source: URL) throws -> InstalledExtension {
         guard let manifest = try? ExtensionManifest.load(directory: source) else {
@@ -192,7 +192,7 @@ enum ExtensionCatalog {
         try FileManager.default.removeItem(at: installed.directory)
     }
 
-    /// Raycast keys installs by UUID, so the manifest is the only way to know what a directory holds.
+    /// Raycast keys installs by UUID, so only the manifest says what a directory holds.
     nonisolated static func importableFromRaycast() -> [InstalledExtension] {
         let fm = FileManager.default
         let entries = raycastExtensionRoots().flatMap { root in
@@ -211,7 +211,7 @@ enum ExtensionCatalog {
                 else { return nil }
                 return InstalledExtension(manifest: manifest, directory: directory)
             }
-            // Both channels can hold the same extension; the earlier root wins, so it is offered once.
+            // Both channels can hold one extension; the earlier root wins, so it is offered once.
             .reduce(into: [InstalledExtension]()) { unique, candidate in
                 guard !unique.contains(where: { $0.manifest.name == candidate.manifest.name }) else {
                     return

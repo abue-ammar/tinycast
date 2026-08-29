@@ -3,10 +3,7 @@ import SwiftUI
 /// Deliberately not a focusable control. See docs/features/hotkeys.md#recorder.
 struct ShortcutRecorder: View {
     let action: HotKeyAction
-    /// Drops the empty well's *fill* when nothing is bound, for a recorder that repeats once per
-    /// row: a column of identical filled pills reads louder than the commands it belongs to. The
-    /// border stays either way — without it the control reads as dead text — and the fill returns on
-    /// hover, while recording, and whenever there is a shortcut to show.
+    /// Drops the empty well's fill: a column of identical pills reads louder than its rows.
     var isQuiet = false
 
     @Environment(HotKeyManager.self) private var hotKeys
@@ -16,8 +13,7 @@ struct ShortcutRecorder: View {
 
     private var isRecording: Bool { hotKeys.recordingAction == action }
 
-    /// A quiet recorder sits back a shade until it is pointed at, without going so faint that it
-    /// stops reading as something you can press.
+    /// Sits back a shade until pointed at, without reading as something you cannot press.
     private var unsetInk: Color {
         isRecording || !isQuiet || hovered
             ? Theme.Colors.textSecondary : Theme.Colors.textTertiary

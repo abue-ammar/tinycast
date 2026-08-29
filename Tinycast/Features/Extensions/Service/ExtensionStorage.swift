@@ -1,10 +1,6 @@
 import Foundation
 
-/// Per-extension `LocalStorage`, `Cache` and preference values, persisted as one JSON file per
-/// extension under the app-support directory.
-///
-/// A file rather than SQLite on purpose: an extension's store is small, read whole at launch (the
-/// `Cache` API is synchronous, so its contents must be handed over up front) and written rarely.
+/// One JSON file per extension: small, read whole at launch and written rarely.
 @MainActor
 final class ExtensionStorage {
     private struct Store: Codable {
@@ -55,8 +51,7 @@ final class ExtensionStorage {
 
     private let directory: URL
     private var stores: [String: Store] = [:]
-    /// Extensions whose store changed and hasn't been written yet — writes are coalesced so a busy
-    /// `Cache` doesn't hit the disk per key.
+    /// Writes are coalesced, so a busy `Cache` doesn't hit the disk per key.
     private var dirty: Set<String> = []
     private var flushTask: Task<Void, Never>?
 
@@ -126,8 +121,7 @@ final class ExtensionStorage {
         }
     }
 
-    /// Manifest defaults overlaid with whatever the user has set — what a command sees from
-    /// `getPreferenceValues()`.
+    /// Manifest defaults overlaid with the user's — what `getPreferenceValues()` sees.
     func resolvedPreferences(
         extension name: String, schemas: [ExtensionPreferenceSchema]
     ) -> [String: ExtensionPreferenceValue] {
@@ -138,8 +132,7 @@ final class ExtensionStorage {
         return resolved
     }
 
-    /// True when every required preference has a non-empty value — a command with an unset required
-    /// preference must not run, exactly as in Raycast.
+    /// A command with an unset required preference must not run, exactly as in Raycast.
     func missingRequiredPreferences(
         extension name: String, schemas: [ExtensionPreferenceSchema]
     ) -> [ExtensionPreferenceSchema] {

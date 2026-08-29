@@ -1,7 +1,6 @@
 import Foundation
 
-/// Whether a meeting should open itself, and which one. It answers what the join card is already
-/// showing, so the card, the chord and auto-join can never offer different meetings.
+/// Whether a meeting should open itself, and which one — the same one the card shows.
 struct AutoJoinPolicy: Sendable {
     /// Only a meeting starting at or after this instant qualifies, so arming mid-call is inert.
     let armedAt: Date

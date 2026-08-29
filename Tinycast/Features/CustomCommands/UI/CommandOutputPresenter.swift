@@ -21,8 +21,7 @@ struct CommandRun: Identifiable, Sendable {
     let startedAt: Date
     /// Everything printed so far, for copying and for a redraw from scratch.
     var log = ""
-    /// The most recent append, and a counter for it: one step on means the view can add just this
-    /// rather than walk the whole log to work out what changed.
+    /// One step on means the view appends this rather than walking the whole log.
     var delta = ""
     var revision = 0
     /// Bumped when the head of `log` is dropped, which is the text view's cue to redraw whole.
@@ -33,9 +32,7 @@ struct CommandRun: Identifiable, Sendable {
     var isRunning: Bool { outcome == nil }
 }
 
-/// The window a command's output lands in, from launch to exit. One window, reused: a second run
-/// replaces what it shows rather than stacking another, so a held-down hotkey can't paper the
-/// screen. A superseded run is not cancelled — only the Stop button ends a command.
+/// One window, reused: a second run replaces what it shows and never cancels the first.
 @MainActor
 @Observable
 final class CommandOutputPresenter {

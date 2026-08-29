@@ -1,6 +1,6 @@
 import Foundation
 
-/// Searches every enabled registry and merges the results, the store's winning because it is prebuilt.
+/// Merges every enabled registry; the store wins, because it is prebuilt.
 struct ExtensionStoreClient: Sendable {
     /// Kept small: a GitHub registry reads one manifest per candidate.
     private static let githubCandidateLimit = 12
@@ -122,7 +122,7 @@ struct ExtensionStoreClient: Sendable {
             data, folder: folder, registry: registry)
     }
 
-    /// Trees, not contents: contents caps a directory at 1000 silently, and this repo is three times that.
+    /// Trees, not contents: contents caps a directory at 1000 silently.
     private func folderNames(in registry: ExtensionRegistry) async throws -> [String] {
         if let cached = await FolderCache.shared.names(for: registry.id) { return cached }
 
@@ -153,7 +153,7 @@ struct ExtensionStoreClient: Sendable {
 
     // MARK: - Fetching
 
-    /// One folder, walked breadth-first: a registry repository is gigabytes, and cloning it is absurd.
+    /// One folder, breadth-first: a registry repository is gigabytes.
     func downloadFolder(
         owner: String, repository: String, path: String, ref: String, to destination: URL
     ) async throws {
@@ -208,7 +208,7 @@ struct ExtensionStoreClient: Sendable {
     }
 }
 
-/// Listings for the session: re-fetching per keystroke spends GitHub's anonymous limit in a few searches.
+/// Per session: re-fetching per keystroke spends GitHub's anonymous limit fast.
 private actor FolderCache {
     static let shared = FolderCache()
 

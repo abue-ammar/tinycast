@@ -41,8 +41,7 @@ struct SymbolTint: Hashable, Sendable {
     let color: NSColor
 }
 
-/// What a row draws. A feature sets one rather than adding a branch to `AppEntry`, and `artwork`
-/// carries its extent because the size is the caller's decision, judged against `appIconExtent`.
+/// A feature sets one rather than branching `AppEntry`; `artwork` carries its extent.
 enum EntryIcon: Hashable, Sendable {
     /// The stamp is `FileIconStamp`'s: it moves when the file's icon does, retiring the old bitmap.
     case file(stamp: Int)
@@ -225,10 +224,10 @@ enum IconCache {
         }
     }
 
-    /// What an app icon paints: the reference for every other artwork, and the guess when unmeasurable.
+    /// What an app icon paints: the reference for every other artwork.
     static let appIconExtent: CGFloat = 0.83
 
-    /// The caller chooses the extent; this only measures and rasterizes, so `Platform` learns no why.
+    /// The caller chooses the extent; this only measures and rasterizes.
     static func fitted(_ source: NSImage, to extent: CGFloat) -> (NSImage, Int) {
         let painted = paintedExtent(source) ?? appIconExtent
         let side = displayPixel * extent / painted
@@ -294,7 +293,6 @@ enum IconCache {
         }
     }
 
-    /// Cache-only lookup for `loadFittedAsync`.
     static func cachedFitted(forFile path: String) -> NSImage? {
         fittedCache.object(forKey: fittedKey(path))
     }

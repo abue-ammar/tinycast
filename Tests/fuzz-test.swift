@@ -1,4 +1,4 @@
-// Standalone test for the launcher matcher, compiling the real scorer so a scoring change is caught.
+// Compiles the real scorer, so a scoring change is caught here.
 import Foundation
 
 @main
@@ -74,7 +74,7 @@ struct FuzzTest {
         SearchRelevance.score(query: query, fields: app(name).fields)
     }
 
-    /// Mirrors AppIndex.rank: strongest field, plus the learned boost, then the alphabetical tiebreak.
+    /// Mirrors AppIndex.rank: strongest field, learned boost, alphabetical tiebreak.
     static func rank(_ query: String, boosts: [String: Int] = [:]) -> [String] {
         apps.compactMap { app -> (String, Int)? in
             guard let s = SearchRelevance.score(query: query, fields: app.fields) else { return nil }
@@ -323,7 +323,7 @@ struct FuzzTest {
 
         let app = rank("app")
         check("'app' still finds App Store", app.first == "App Store", "got \(app)")
-        // The tail here is `com.apple.*` bundle ids, which the identifier band keeps below every name hit.
+        // The tail is `com.apple.*` ids, which the identifier band keeps below name hits.
         check(
             "'app' matches nothing by display name that isn't a real hit",
             app.filter { score("app", $0)! >= 5 * SearchRelevance.bandStride }
@@ -373,7 +373,7 @@ struct FuzzTest {
         check(
             "a short query does not drag in every reverse-DNS id",
             !rank("cml").contains("Photos"), "got \(rank("cml"))")
-        // These queries still hit display names, so the check is that nothing lands in the identifier band.
+        // These still hit display names, so nothing may land in the identifier band.
         func identifierHits(_ query: String) -> [String] {
             rank(query).filter { score(query, $0)! < 2 * SearchRelevance.bandStride }
         }
@@ -474,7 +474,7 @@ struct FuzzTest {
         let iterations = 100_000
 
         for i in 0..<iterations {
-            // Three query shapes: a real slice of some field, a scrambled subsequence of one, and junk.
+            // Three query shapes: a real slice, a scrambled subsequence, and junk.
             let query: String
             switch i % 3 {
             case 0:
@@ -539,8 +539,7 @@ struct FuzzTest {
             let owner = SearchRelevance.score(query: query, fields: asOwner)
             let bundleID = SearchRelevance.score(query: query, fields: asBundleID)
             let executable = SearchRelevance.score(query: query, fields: asExecutable)
-            // Same text, weaker field: the score must drop, and identifier fields may drop out entirely.
-            // An anchored alias hit outranks the name; an inside hit ranks below with vendor aliases.
+            // Same text, weaker field: an anchored alias outranks the name, an inside hit does not.
             if let userAlias, let tier = FuzzyMatch.match(query: query, candidate: text)?.tier,
                 tier.isAnchored ? userAlias <= name : userAlias >= name
             {

@@ -16,8 +16,7 @@ struct ExtensionCleanupTests {
 
     // MARK: - Fixtures
 
-    /// Roots under one throwaway directory. Nothing here can reach the real install: `Roots` is
-    /// injected, so `Bundle.main` is never consulted.
+    /// `Roots` is injected, so `Bundle.main` — the real install — is never consulted.
     static func makeRoots() -> (ExtensionCleanup.Roots, URL) {
         let base = FileManager.default.temporaryDirectory
             .appendingPathComponent("ext-cleanup-test-\(UUID().uuidString)", isDirectory: true)
@@ -146,8 +145,7 @@ struct ExtensionCleanupTests {
             "a workspace the installer would make is one the sweep finds")
     }
 
-    /// Raycast Beta v2 keeps its extensions under `raycast-x`. Checking only `raycast` is why an
-    /// install of the Beta reported that no Raycast was present at all.
+    /// Raycast Beta keeps extensions under `raycast-x`; checking only `raycast` missed it.
     static func bothRaycastChannelsAreSearched() {
         let roots = ExtensionCatalog.raycastExtensionRoots().map(\.path)
         expect(roots.count == 2, "both channels are searched: \(roots.count)")

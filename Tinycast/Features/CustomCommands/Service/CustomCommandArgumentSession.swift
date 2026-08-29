@@ -1,7 +1,6 @@
 import Foundation
 
-/// The custom command waiting on its argument values, filled one at a time in the palette's own
-/// search field. docs/features/custom-commands.md
+/// The command waiting on its values, filled one at a time in the palette's search field.
 @MainActor
 @Observable
 final class CustomCommandArgumentSession {

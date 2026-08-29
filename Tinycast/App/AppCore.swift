@@ -420,13 +420,12 @@ final class AppCore {
         track({ _ = $0.appearance }, reproject: { $0.applyAppearance() })
     }
 
-    /// `.system` resolves to `nil`, which is what makes AppKit follow macOS without anything polling.
+    /// `.system` resolves to `nil`, so AppKit follows macOS with nothing polling.
     private func applyAppearance() {
         NSApp.appearance = settings.appearance.nsAppearance
     }
 
-    /// Covers our own assignment and a macOS change alike, which is why `IconCache` is told here
-    /// rather than from `applyAppearance()` — under `.system` that one never fires.
+    /// IconCache is told here, not from `applyAppearance()`, which never fires under `.system`.
     private func observeEffectiveAppearance() {
         // Synchronous on main, so no row can cache a tile under the outgoing appearance's key.
         appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.initial]) { app, _ in

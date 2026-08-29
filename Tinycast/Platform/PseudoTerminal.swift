@@ -1,14 +1,7 @@
 import Darwin
 import Foundation
 
-/// A command running under its own pseudo-terminal, as its own session leader.
-///
-/// A pipe is not enough for either half of what the output window promises. libc block-buffers
-/// stdout the moment it is not a terminal, so a chatty command delivers nothing until it exits, and
-/// stderr — which stays unbuffered — overtakes the stdout it followed. A pty restores line
-/// buffering, and with it both live output and the order a terminal would show. Being a session
-/// leader is separately what lets one signal reach the whole `a && b && c` chain rather than only
-/// the shell in front of it.
+/// libc block-buffers a pipe, so a pty is what makes output live and correctly ordered.
 final class PseudoTerminal: @unchecked Sendable {
     /// Everything the command writes to any of its three descriptors arrives here.
     let parentEnd: Int32
@@ -31,7 +24,7 @@ final class PseudoTerminal: @unchecked Sendable {
 
         var attributes: posix_spawnattr_t?
         posix_spawnattr_init(&attributes)
-        // The whole point: the child leads its own session, so `kill(-pid)` reaches every descendant.
+        // The whole point: the child leads its session, so `kill(-pid)` reaches it all.
         posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETSID))
 
         var actions: posix_spawn_file_actions_t?
@@ -58,8 +51,7 @@ final class PseudoTerminal: @unchecked Sendable {
             Darwin.close(parentEnd)
             return nil
         }
-        // Stands in for the `/dev/null` stdin a pipe run gets: a command that prompts reads EOF and
-        // moves on instead of waiting on a terminal that will never answer.
+        // Stands in for `/dev/null` stdin: a prompting command reads EOF and moves on.
         var endOfTransmission: UInt8 = 0x04
         _ = write(parentEnd, &endOfTransmission, 1)
         return PseudoTerminal(parentEnd: parentEnd, processID: processID)
@@ -83,8 +75,7 @@ final class PseudoTerminal: @unchecked Sendable {
         Darwin.close(parentEnd)
     }
 
-    /// Canonical so the kernel hands us whole lines, echo off so the EOF byte never comes back as
-    /// text, and no output post-processing beyond the CR the window strips anyway.
+    /// Canonical for whole lines, echo off so the EOF byte never comes back as text.
     private static func terminalSettings() -> termios {
         var settings = termios()
         cfmakeraw(&settings)
@@ -94,8 +85,7 @@ final class PseudoTerminal: @unchecked Sendable {
     }
 }
 
-/// Owns the `strdup`ed argv/envp for one spawn. The array has to outlive the `posix_spawn` call, so
-/// it is a real allocation rather than a Swift array's temporary buffer.
+/// The argv/envp arrays must outlive `posix_spawn`, so this is a real allocation.
 private final class CStringArray {
     let pointers: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
     private let count: Int

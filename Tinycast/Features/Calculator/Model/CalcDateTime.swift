@@ -14,8 +14,7 @@ enum CalcDateTime {
         let query = echo.lowercased()
         guard !query.isEmpty else { return nil }
 
-        // Cheap gate: one pass over the words rather than a scan per keyword, since an app search
-        // pays this on every keystroke. `namesADay` atomizes, so a digit has to earn it first.
+        // One pass over the words, since an app search pays this on every keystroke.
         let signals = keywordSignals(query)
         let hasDigit = signals.contains(.digit)
         let hasUntil = signals.contains(.until)
@@ -23,8 +22,7 @@ enum CalcDateTime {
         let hasArith = signals.contains(.arithmetic)
         let hasFromAgo = signals.contains(.fromAgo)
         let hasIn = signals.contains(.inWord)
-        // A lone `tomorrow` is an app search, so a named moment needs a qualifier to earn a card.
-        // A written day is qualifier enough: nobody types `25. aug` looking for an app.
+        // A named moment needs a qualifier: a lone `tomorrow` is an app search.
         let isBareMoment =
             signals.contains(.at) || signals.contains(.nextOrLast)
             || (hasDigit && namesADay(query))
@@ -102,7 +100,7 @@ enum CalcDateTime {
         return signals
     }
 
-    /// A day number beside a month, which no app search looks like — `25. aug`, `aug 25`, `25.8.27`.
+    /// A day number beside a month, which no app search looks like — `25. aug`, `aug 25`.
     private static func namesADay(_ query: String) -> Bool {
         let atoms = atomize(query)
         guard atoms.count == 2 || atoms.count == 3 else { return atoms.count == 1 && isDottedDate(atoms) }
@@ -356,8 +354,7 @@ enum CalcDateTime {
 
         let left = String(query[..<opRange.lowerBound])
         let right = String(query[opRange.upperBound...])
-        // Grammar C shifts a moment, so nearest keeps `25. aug` and `25. aug + 3` in one year.
-        // Grammar D measures to one, where the documented forward bias still decides the year.
+        // Nearest year for a shifted moment; a measured one keeps the forward bias.
         let shifts =
             parseDurationPhrase(right) != nil || Int(right.trimmingCharacters(in: .whitespaces)) != nil
         guard
@@ -397,8 +394,7 @@ enum CalcDateTime {
             payload: .value(display: "\(days) \(word)", copyText: "\(days) \(word)"))
     }
 
-    /// Every `± <term>` after the first operator, applied in written order. Nil unless all of them
-    /// are durations, so grammar D still sees a trailing moment as one.
+    /// Nil unless every term is a duration, so grammar D still sees a trailing moment.
     private static func applyShifts(
         _ firstOperator: Character, _ tail: String, to base: Moment, calendar: Calendar
     ) -> Moment? {
@@ -591,8 +587,7 @@ enum CalcDateTime {
                 return Moment(date: date, hasTime: false)
             }
         }
-        // Dotted dates are day-first, the convention that writes them: `19.2.27` is 19 February.
-        // A 2- or 4-digit tail rejects most version numbers; `1.2.24` is genuinely both.
+        // Dotted dates are day-first: `19.2.27` is 19 February, and the tail rejects versions.
         if atom.contains(".") {
             let parts = atom.split(separator: ".").map(String.init)
             guard parts.count == 3, let day = Int(parts[0]), let month = Int(parts[1]),

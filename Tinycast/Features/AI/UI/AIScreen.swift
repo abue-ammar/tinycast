@@ -146,8 +146,7 @@ private struct AIEmptyState: View {
     }
 }
 
-/// Staged images sit after the typed text as named pills — the row is too thin for a thumbnail
-/// to read, so a photo glyph marks the kind instead.
+/// Staged images sit after the typed text as named pills; the row is too thin for a thumbnail.
 private struct PendingAttachmentsChips: View {
     let attachments: [ChatAttachment]
 

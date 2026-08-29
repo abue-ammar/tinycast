@@ -1,8 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The output window: what ran, what it is printing, and how it ended. One flat surface with no
-/// rules — the log is the page, and the chrome is separated by space and weight rather than lines.
+/// One flat surface: the log is the page, separated by space and weight, not by rules.
 struct CommandOutputView: View {
     let presenter: CommandOutputPresenter
 
@@ -46,8 +45,7 @@ struct CommandOutputView: View {
         .padding(.bottom, Theme.Spacing.lg)
     }
 
-    /// Copy always; the second slot is Stop while it runs and Run Again once it has — one control
-    /// for one job, so the header never has to fit both.
+    /// One control for one job: Stop while it runs, Run Again once it has.
     private func actions(_ run: CommandRun) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
             CopyLogButton(log: run.log)

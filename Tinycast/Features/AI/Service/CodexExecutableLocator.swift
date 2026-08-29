@@ -1,7 +1,6 @@
 import Foundation
 
-/// Finds the user's `codex` the way their Terminal would: the app's own PATH is Finder's, which
-/// knows nothing about Homebrew, npm or a Node version manager.
+/// Finds the user's `codex` the way their Terminal would; the app's own PATH is Finder's.
 enum CodexExecutableLocator {
     nonisolated static func locate(
         environment: [String: String] = ProcessInfo.processInfo.environment
@@ -41,8 +40,7 @@ enum CodexExecutableLocator {
         FileManager.default.isExecutableFile(atPath: url.path)
     }
 
-    /// `-i` so the rc file that puts a version manager on PATH is read; a watchdog bounds a rc
-    /// file that hangs, and `/dev/null` stdin answers any prompt with EOF.
+    /// `-i` reads the rc file that puts a version manager on PATH; a watchdog bounds a hang.
     nonisolated private static func loginShellLookup() async -> String? {
         await Task.detached {
             let process = Process()

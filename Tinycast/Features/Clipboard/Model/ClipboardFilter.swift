@@ -123,8 +123,7 @@ extension ClipboardItem {
         return commonTopLevelDomains.contains(String(tld))
     }
 
-    /// The last label of a host, or nil unless every label is one — which is what rejects
-    /// an address-shaped token like `@apple.com` before it can read as a bare domain.
+    /// Nil unless every label is one, which rejects `@apple.com` before it reads as a domain.
     private static func topLevelLabel(of host: Substring) -> Substring? {
         let labels = host.split(separator: ".", omittingEmptySubsequences: false)
         guard labels.count >= 2, labels.allSatisfy(isHostLabel), let tld = labels.last,

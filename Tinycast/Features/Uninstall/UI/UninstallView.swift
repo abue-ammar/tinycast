@@ -120,7 +120,6 @@ private struct UninstallRow: View {
     }
 }
 
-/// The Finder icon for any path.
 private struct FileIconView: View {
     let path: String
     @State private var image: NSImage?

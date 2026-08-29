@@ -54,7 +54,7 @@ struct PopoverMenu: View {
     var header: String?
     let items: [PopoverMenuItem]
     @Binding var selection: Int
-    /// Fixed, never intrinsic: a menu whose width tracked its longest row would jitter as it changes.
+    /// Fixed, never intrinsic: a width tracking the longest row would jitter as rows change.
     var width: CGFloat = Theme.Size.menuWidth
     let onActivate: (Int) -> Void
 

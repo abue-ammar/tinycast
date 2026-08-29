@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// What the argument form shows: the command it will run, and one row per value it still wants.
-/// docs/features/custom-commands.md
+/// The command it will run, and one row per value it still wants.
 struct CustomCommandArgumentsView: View {
     let session: CustomCommandArgumentSession
 
@@ -37,7 +36,7 @@ struct CustomCommandArgumentsView: View {
         }
     }
 
-    /// `position` is the shell variable the value lands in, so the row explains the script it feeds.
+    /// `position` is the shell variable the value lands in, so the row explains the script.
     private func row(
         _ argument: CustomCommandArgument, value: String?, position: Int
     ) -> some View {

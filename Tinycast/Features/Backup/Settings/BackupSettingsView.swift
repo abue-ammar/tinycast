@@ -9,7 +9,7 @@ struct BackupSettingsView: View {
     @State private var importing = false
     @State private var status: Status?
     @State private var selection: RaycastImportOptions = .all
-    @State private var format: RaycastFormat?
+    @State private var isRaycastExport = false
 
     private enum Status {
         case success(String)
@@ -24,7 +24,7 @@ struct BackupSettingsView: View {
         guard let name = raycastFile?.lastPathComponent else {
             return "Choose a .rayconfig file exported from Raycast."
         }
-        return "\(name) — \(format?.title ?? "not a Raycast export")"
+        return "\(name) — \(isRaycastExport ? "Raycast export" : "not a Raycast export")"
     }
 
     var body: some View {
@@ -66,13 +66,13 @@ struct BackupSettingsView: View {
                         ProgressView().controlSize(.small)
                     } else {
                         Button("Import") { runRaycastImport() }
-                            .disabled(format == nil || passphrase.isEmpty || selection.isEmpty)
+                            .disabled(!isRaycastExport || passphrase.isEmpty || selection.isEmpty)
                     }
                 } label: {
                     Text("Import")
                     Text("Choose what to bring over, then import.")
                 }
-                RaycastImportSelection(selection: $selection, format: format)
+                RaycastImportSelection(selection: $selection)
                 conflictNotice
                 if let status { statusRow(status) }
             } header: {
@@ -118,12 +118,12 @@ struct BackupSettingsView: View {
     private func chooseRaycastFile() {
         guard let url = BackupActions.pickRaycastFile() else { return }
         raycastFile = url
-        format = BackupActions.detectRaycastFormat(of: url)
+        isRaycastExport = BackupActions.isRaycastExport(url)
         status = nil
     }
 
     private func runRaycastImport() {
-        guard let file = raycastFile, format != nil, !passphrase.isEmpty, !selection.isEmpty,
+        guard let file = raycastFile, isRaycastExport, !passphrase.isEmpty, !selection.isEmpty,
             !importing
         else { return }
         importing = true

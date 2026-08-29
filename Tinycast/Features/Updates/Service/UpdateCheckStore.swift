@@ -29,7 +29,7 @@ final class UpdateCheckStore {
 
     private let fileURL: URL
     private var skippedVersion: AppVersion?
-    /// At most one uninvited appearance per version per launch; after that the window is the user's.
+    /// At most one uninvited appearance per version per launch.
     @ObservationIgnored private var announcedVersion: AppVersion?
     @ObservationIgnored private var withheldRetries = 0
     @ObservationIgnored private var pump: Task<Void, Never>?

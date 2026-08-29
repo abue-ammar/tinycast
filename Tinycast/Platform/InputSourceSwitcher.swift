@@ -22,7 +22,7 @@ final class InputSourceSwitcher {
 
     private var session: Session?
 
-    /// Every enabled keyboard source; a `selected` one that is gone stays listed, so Settings keeps it.
+    /// A `selected` source that is gone stays listed, so Settings keeps showing it.
     func options(selecting selected: String?) -> [Option] {
         var options = Self.enabledKeyboardSources().compactMap(Self.option(for:))
         if let selected, !options.contains(where: { $0.id == selected }) {
@@ -87,7 +87,7 @@ final class InputSourceSwitcher {
             && property(kTISPropertyInputSourceIsSelectCapable, of: source) == true
     }
 
-    /// TIS vends properties as untyped pointers, so an unexpected type must read as absent, not trap.
+    /// TIS vends untyped pointers, so an unexpected type reads as absent, not a trap.
     private static func property<Value>(_ key: CFString, of source: TISInputSource) -> Value? {
         guard let value = TISGetInputSourceProperty(source, key) else { return nil }
         return Unmanaged<AnyObject>.fromOpaque(value).takeUnretainedValue() as? Value

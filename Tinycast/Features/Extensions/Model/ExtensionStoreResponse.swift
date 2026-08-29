@@ -1,8 +1,6 @@
 import Foundation
 
-/// Decoding for the two registry APIs, kept apart from the networking so a harness can feed it
-/// recorded payloads. Both are other people's endpoints: every field beyond the few an install
-/// actually needs is optional, so a response that grows or loses a key still parses.
+/// Both are other people's endpoints, so every field an install doesn't need is optional.
 enum ExtensionStoreResponse {
 
     // MARK: - Raycast's store
@@ -58,8 +56,7 @@ enum ExtensionStoreResponse {
         }
     }
 
-    /// Parses a store search into listings. An entry without a usable download is dropped rather than
-    /// listed as something that can't be installed.
+    /// An entry without a usable download is dropped, not listed as uninstallable.
     static func parseStore(_ data: Data, registry: ExtensionRegistry) throws -> [ExtensionListing] {
         let payload = try JSONDecoder().decode(StorePayload.self, from: data)
         return payload.data.compactMap { entry -> ExtensionListing? in
@@ -144,8 +141,7 @@ enum ExtensionStoreResponse {
         }
     }
 
-    /// A directory listing, or a thrown message when GitHub answered with one instead — a bad ref and
-    /// a rate limit both arrive as a JSON object where an array was expected.
+    /// A bad ref and a rate limit both arrive as a JSON object where an array was expected.
     static func parseContents(_ data: Data) throws -> [GitHubEntry] {
         if let entries = try? JSONDecoder().decode([GitHubEntry].self, from: data) { return entries }
         struct Message: Decodable { let message: String }
@@ -155,7 +151,7 @@ enum ExtensionStoreResponse {
         throw ExtensionStoreError.malformedResponse
     }
 
-    /// The parts of an extension's `package.json` a listing shows, read straight from the repository.
+    /// The parts of `package.json` a listing shows, read from the repository.
     static func parseManifestSummary(
         _ data: Data, folder: String, registry: ExtensionRegistry
     ) -> ExtensionListing? {

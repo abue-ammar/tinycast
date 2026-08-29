@@ -2,22 +2,19 @@ import SwiftUI
 
 /// Maps Raycast's `Icon` / `Color` / `Image.ImageLike` values onto what the palette can draw.
 extension EnvironmentValues {
-    /// Derived rather than stored, so a view that reads it re-renders when the appearance flips —
-    /// which is what keeps a `{light, dark}` icon following the surface it is drawn on.
+    /// Derived, not stored, so a `{light, dark}` icon follows the surface it is drawn on.
     var isDarkAppearance: Bool { colorScheme == .dark }
 }
 
 enum ExtensionImage {
-    /// A resolved icon: an SF Symbol, an image file, the Finder icon of a path, a URL — fetched or
-    /// carrying its own bytes — or a bare emoji/text glyph.
+    /// A resolved icon: a symbol, an image file, a Finder icon, a URL, or a bare glyph.
     enum Source: Equatable {
         case symbol(String)
         case file(String)
-        /// Raycast's `{ fileIcon }` — the path names a bundle or document to ask `NSWorkspace` about,
-        /// not an image to decode.
+        /// Raycast's `{ fileIcon }`: the path names a bundle to ask `NSWorkspace` about.
         case fileIcon(String)
         case remote(URL)
-        /// A `data:` URL — an extension that renders its own SVG hands over bytes rather than a path.
+        /// A `data:` URL — an extension rendering its own SVG hands over bytes.
         case inline(URL)
         case glyph(String)
     }
@@ -28,8 +25,7 @@ enum ExtensionImage {
         var isCircular = false
     }
 
-    /// What a drawn image actually depends on: its source, and — for an SVG naming a palette
-    /// colour — the appearance that palette resolves against.
+    /// Source, plus the appearance an SVG's palette colour resolves against.
     struct LoadKey: Equatable {
         var source: Source?
         var isDark: Bool
@@ -45,14 +41,13 @@ enum ExtensionImage {
             }
             return Resolved(source: source)
         case .object(let fields):
-            // Raycast's icon-with-tooltip form; unwrap only when it looks like one, not when themed.
+            // Raycast's icon-with-tooltip form; unwrap only when it looks like one.
             if let wrapped = fields["value"]?.objectValue,
                 wrapped["source"] != nil || wrapped["value"] != nil || wrapped["fileIcon"] != nil
             {
                 return resolve(.object(wrapped), assetsPath: assetsPath, isDark: isDark)
             }
-            // Falling back to the object itself covers the two forms that are a source rather than
-            // carry one: `{fileIcon}` and a bare `{light, dark}` pair.
+            // `{fileIcon}` and a bare `{light, dark}` pair are a source rather than carry one.
             let raw = fields["source"] ?? fields["value"] ?? .object(fields)
             guard let source = source(from: raw, assetsPath: assetsPath, isDark: isDark) else {
                 // A tinted icon with no usable source still deserves the fallback tile.
@@ -67,9 +62,7 @@ enum ExtensionImage {
         }
     }
 
-    /// An action row's glyph. Unlike a list row's, it always resolves to something: an action with no
-    /// usable icon draws a generic one rather than an empty slot, and a destructive action that named
-    /// no tint of its own takes red — the convention a native menu's delete row is drawn with.
+    /// Always resolves: a destructive action with no tint takes red, as a native menu does.
     static func actionIcon(
         _ value: RenderValue?, assetsPath: String?, isDark: Bool, isDestructive: Bool
     ) -> Resolved {
@@ -81,8 +74,7 @@ enum ExtensionImage {
         return icon
     }
 
-    /// A `{light, dark}` themed source picks the side the host is rendering, falling back to the
-    /// other when an extension supplies only one.
+    /// Falls back to the other side when an extension supplies only one.
     private static func string(from value: RenderValue?, isDark: Bool) -> String? {
         switch value {
         case .string(let text): return text
@@ -133,8 +125,7 @@ enum ExtensionImage {
         return text.count <= 4 ? .glyph(text) : nil
     }
 
-    /// The palette as CSS, for an extension that writes a colour name straight into its own SVG.
-    /// Resolved once per appearance: the conversion is main-actor work the decode must not do.
+    /// Resolved once per appearance: the conversion is main-actor work a decode must skip.
     static func svgPalette(isDark: Bool) -> [String: String] {
         isDark ? darkSVGPalette : lightSVGPalette
     }
@@ -284,7 +275,7 @@ enum ExtensionImage {
         "window": "macwindow", "wrench-screwdriver": "wrench.and.screwdriver", "xmark": "xmark",
         "xmark-circle": "xmark.circle", "xmark-circle-filled": "xmark.circle.fill",
         "xmark-top-right-square": "xmark.square",
-        // No plausible transform; every value was checked, since an unknown name draws a placeholder.
+        // Every value was checked: an unknown name draws a placeholder.
         "airplane-filled": "airplane", "airplane-landing": "airplane.arrival",
         "airplane-takeoff": "airplane.departure",
         "alarm-ringing": "bell.and.waves.left.and.right.fill", "align-centre": "text.aligncenter",
@@ -371,7 +362,7 @@ struct ExtensionIconView: View {
     @Environment(\.isDarkAppearance) private var isDark
     let resolved: ExtensionImage.Resolved?
     var size: CGFloat = Theme.Size.rowIcon
-    /// Opt-in, and off for row icons: a playing GIF at 24pt is noise, and a list is hundreds of rows.
+    /// Opt-in, and off for row icons: a playing GIF at 24pt is noise in a long list.
     var animates = false
     @State private var loaded: NSImage?
 
@@ -379,7 +370,7 @@ struct ExtensionIconView: View {
         content
             .frame(width: size, height: size)
             .clipShape(shape)
-            // Keyed on the appearance too: an inline SVG's palette resolves at decode, not in the URL.
+            // Keyed on appearance too: an inline SVG's palette resolves at decode.
             .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
                 await load()
             }
@@ -439,8 +430,7 @@ struct ExtensionIconView: View {
                 ? await ExtensionIconCache.loadOriginalAsync(atPath: path)
                 : await ExtensionIconCache.loadAsync(atPath: path)
         case .fileIcon(let path):
-            // Fitted rather than raw: a `fileIcon` list mixes app bundles with documents and folders,
-            // and only the normalized draw keeps them the same optical size down the column.
+            // Fitted, not raw: only the normalized draw keeps bundles and documents one size.
             loaded = await IconCache.loadFittedAsync(forFile: path)
         case .remote(let url):
             loaded = await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
