@@ -2,10 +2,11 @@ import Foundation
 
 /// Chat's `AIPreamble` is not sent here: it describes a launcher nobody is asking the model about.
 enum QuickActionPrompt {
-    static func instructions(for action: QuickAction) -> String {
-        switch action {
+    static func instructions(for action: QuickAction, override: String? = nil) -> String {
+        if !action.usesTranslationFramework, let override { return override }
+        return switch action {
         case .fixGrammar:
-            return boundary + """
+            boundary + """
 
 
                 Correct spelling, grammar and punctuation in the text. Preserve the writer's \
@@ -13,7 +14,7 @@ enum QuickActionPrompt {
                 is wrong, return the text unchanged.
                 """
         case .rewrite:
-            return boundary + """
+            boundary + """
 
 
                 Rewrite the text so it reads more clearly. Keep the writer's meaning, register and \
@@ -21,7 +22,7 @@ enum QuickActionPrompt {
                 there.
                 """
         case .summarize:
-            return """
+            """
                 You summarize text for a reader who has already seen it.
 
                 Write a short summary of the text that follows. Lead with the single most important \
@@ -32,7 +33,7 @@ enum QuickActionPrompt {
                 """
         case .translate:
             // Apple's translator does this one; exhaustive so a new action cannot forget a prompt.
-            return boundary
+            boundary
         }
     }
 

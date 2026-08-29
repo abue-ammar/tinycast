@@ -11,6 +11,7 @@ struct QuickActionsSettingsView: View {
 
     /// Polled like the Permissions pane: the grant lands in System Settings, which sends nothing.
     @State private var isTrusted = Permissions.isAccessibilityTrusted()
+    @State private var editingAction: QuickAction?
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -48,6 +49,14 @@ struct QuickActionsSettingsView: View {
         }
         .formStyle(.grouped)
         .onReceive(refreshTimer) { _ in isTrusted = Permissions.isAccessibilityTrusted() }
+        .sheet(item: $editingAction) { action in
+            InstructionsEditorSheet(
+                action: action,
+                instructionOverride: store.settings.instructionOverride(for: action)
+            ) { instructionOverride in
+                store.settings.setInstructionOverride(instructionOverride, for: action)
+            }
+        }
         .onAppear {
             core.quickActionCoordinator.loadLanguages()
             store.resolveModel(
@@ -63,6 +72,15 @@ struct QuickActionsSettingsView: View {
                     Image(systemName: action.symbol)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
+                    if !action.usesTranslationFramework {
+                        Button { editingAction = action } label: {
+                            SymbolImage(
+                                name: "pencil", size: Theme.Size.quickActionHeaderIcon)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit \(action.title) instructions")
+                        .accessibilityLabel("Edit \(action.title) instructions")
+                    }
                     ShortcutRecorder(action: .quickAction(action), isQuiet: true)
                     Picker("", selection: previewBinding(action)) {
                         Text("Replace").tag(false)
@@ -181,5 +199,64 @@ struct QuickActionsSettingsView: View {
             appleIntelligence: aiSettings.isAppleIntelligenceAvailable(),
             chatGPT: core.chatGPTSubscription.models,
             connections: aiSettings.connections)
+    }
+
+    private struct InstructionsEditorSheet: View {
+        @Environment(\.dismiss) private var dismiss
+        @State private var instructions: String
+
+        let action: QuickAction
+        let builtIn: String
+        let onSave: (String?) -> Void
+
+        init(
+            action: QuickAction, instructionOverride: String?,
+            onSave: @escaping (String?) -> Void
+        ) {
+            self.action = action
+            let builtIn = QuickActionPrompt.instructions(for: action)
+            _instructions = State(initialValue: instructionOverride ?? builtIn)
+            self.builtIn = builtIn
+            self.onSave = onSave
+        }
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                Text("Customize \(action.title)")
+                    .font(.title2.weight(.bold))
+
+                Text("Tell Tinycast how you want \(action.title) to handle your selected text.")
+                    .foregroundStyle(.secondary)
+
+                TextEditor(text: $instructions)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(Theme.Spacing.sm)
+                    .frame(height: Theme.Size.editorTextHeight * 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                            .fill(Theme.Colors.cardFill)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+                    )
+
+                HStack {
+                    Button("Use Default") { instructions = builtIn }
+                        .disabled(instructions == builtIn)
+                    Spacer()
+                    Button("Cancel") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    Button("Save") {
+                        onSave(instructions == builtIn ? nil : instructions)
+                        dismiss()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding(Theme.Spacing.xxl)
+            .frame(width: Theme.Size.editorSheetWidth)
+        }
     }
 }

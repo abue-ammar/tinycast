@@ -43,9 +43,13 @@ provider protocol and the connections behind it.
   `SystemLanguageModel.Guardrails.permissiveContentTransformations`. The default filter is tuned for
   a model writing fresh prose and refuses to transform text somebody already wrote, which is the
   whole feature.
-- **The selection is untrusted input.** `QuickActionPrompt` tells every model that the text is
-  material to work on and never instructions to follow, and that only the transformed text may come
-  back — no preamble, no fences. The output is pasted into somebody's document.
+- **Built-in instructions treat the selection as untrusted input.** `QuickActionPrompt` tells the
+  model that the text is material to work on and never instructions to follow, and that only the
+  transformed text may come back — no preamble, no fences. Custom instructions replace these rules
+  too. The output is pasted into somebody's document.
+- **Each model action owns its instructions.** The pencil on Fix Grammar, Rewrite and Summarize opens
+  a sheet prefilled with the exact built-in prompt. Saving replaces that prompt for only that action;
+  Use Default restores it. Translate has no editor because no model handles translation.
 
 ## The actions
 
@@ -61,6 +65,9 @@ a fifth cannot compile without a launcher command of its own.
 | Rewrite | provider | panel | yes |
 | Translate | Apple Translation | panel | no |
 | Summarize | provider | panel, always | no |
+
+Custom instructions stay on this Mac and are excluded from settings backups, like chat's system
+prompt, because importing them would change results without the reader seeing them first.
 
 Only Fix Grammar applies unseen: it changes what was wrong, where a rewrite changes the voice.
 Summarize can never be told to replace text unseen — it answers a question *about* the text, so
@@ -178,6 +185,8 @@ behaviour rather than something Tinycast asserts, so it is the part worth checki
 - Press one in a password field: refused.
 - Summarize a long selection: the panel streams, grows without the title drifting, and scrolls past
   `quickActionPanelBody`.
+- Replace Rewrite's instructions, confirm only Rewrite follows them after relaunch, then use the
+  modal's default and confirm the shipped behaviour returns.
 - Translate into a language that has not been downloaded: the panel offers the download, then
   translates.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.

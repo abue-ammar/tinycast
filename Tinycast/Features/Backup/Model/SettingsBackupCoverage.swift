@@ -106,6 +106,8 @@ enum SettingsBackupCoverage {
         AppSettingsKey.quickActionPreviews.rawValue:
             "Says which actions may rewrite a document without showing the result first, which is a "
             + "decision each Mac makes about its own text.",
+        AppSettingsKey.quickActionInstructions.rawValue:
+            "Custom model instructions change transformed results and must not move unseen.",
         AppSettingsKey.quickActionLanguage.rawValue:
             "Follows the language the person at this Mac reads, not the one who wrote the backup."
     ]

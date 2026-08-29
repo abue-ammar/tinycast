@@ -173,6 +173,7 @@ final class QuickActionCoordinator {
         let provider = try core.quickActionProvider()
         return try await QuickActionRunner.run(
             state.action, selection: state.original, using: provider,
+            instructionOverride: store.settings.instructionOverride(for: state.action),
             onDelta: { delta in
                 guard streaming else { return }
                 state.append(delta)

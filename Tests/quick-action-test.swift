@@ -78,6 +78,7 @@ struct QuickActionTests {
 
         store.settings.setPreviewsResult(true, for: .fixGrammar)
         store.settings.targetLanguage = "de"
+        store.settings.setInstructionOverride("Use British English.", for: .fixGrammar)
 
         let reopened = QuickActionSettingsStore(defaults: defaults)
         expect(
@@ -85,6 +86,9 @@ struct QuickActionTests {
             "the route survives a relaunch")
         expect(reopened.settings.previewsResult(.fixGrammar), "a preview choice survives a relaunch")
         expect(reopened.settings.targetLanguage == "de", "the target language survives a relaunch")
+        expect(
+            reopened.settings.instructionOverride(for: .fixGrammar) == "Use British English.",
+            "an action's instructions survive a relaunch")
 
         // A removed connection must not leave this pointing at a route that cannot answer.
         reopened.repairModel(against: [], fallback: .appleIntelligence)
@@ -158,6 +162,31 @@ struct QuickActionTests {
         expect(
             QuickActionPrompt.message(for: .rewrite, selection: "hi").hasPrefix("Text:"),
             "an action whose instructions already say what to do adds no second request")
+
+        expect(
+            QuickActionPrompt.instructions(for: .rewrite, override: "My instructions")
+                == "My instructions",
+            "an override replaces the complete built-in prompt")
+        expect(
+            QuickActionPrompt.instructions(for: .rewrite, override: "").isEmpty,
+            "an empty override deliberately sends no instructions")
+        expect(
+            QuickActionPrompt.instructions(for: .translate, override: "My instructions")
+                == QuickActionPrompt.instructions(for: .translate),
+            "Translate never accepts model instructions")
+
+        var settings = QuickActionSettings()
+        settings.setInstructionOverride("Custom", for: .rewrite)
+        settings.setInstructionOverride("Ignored", for: .translate)
+        expect(
+            settings.instructionOverride(for: .rewrite) == "Custom",
+            "each model-backed action keeps its own instructions")
+        expect(
+            settings.instructionOverride(for: .fixGrammar) == nil,
+            "customizing one action leaves the others on their defaults")
+        expect(
+            settings.instructionOverride(for: .translate) == nil,
+            "Translate cannot persist model instructions")
     }
 
     static func previewChoicesRememberOnlyWhatWasChosen() {

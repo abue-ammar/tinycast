@@ -6,6 +6,7 @@ struct QuickActionSettings: Equatable, Sendable {
 
     /// BCP-47, e.g. `es-419`. Empty means the Mac's own language.
     var targetLanguage: String = ""
+    private(set) var instructionOverrides: [QuickAction: String] = [:]
 
     func previewsResult(_ action: QuickAction) -> Bool {
         if action.alwaysPreviews { return true }
@@ -17,6 +18,15 @@ struct QuickActionSettings: Equatable, Sendable {
         previewChoices[action] = previews
     }
 
+    func instructionOverride(for action: QuickAction) -> String? {
+        instructionOverrides[action]
+    }
+
+    mutating func setInstructionOverride(_ instructions: String?, for action: QuickAction) {
+        guard !action.usesTranslationFramework else { return }
+        instructionOverrides[action] = instructions
+    }
+
     /// Round-trips through `UserDefaults`; an unknown key is an action that no longer exists.
     var storedPreviewChoices: [String: Bool] {
         get { Dictionary(uniqueKeysWithValues: previewChoices.map { ($0.rawValue, $1) }) }
@@ -24,6 +34,18 @@ struct QuickActionSettings: Equatable, Sendable {
             previewChoices = Dictionary(
                 uniqueKeysWithValues: newValue.compactMap { key, value in
                     QuickAction(rawValue: key).map { ($0, value) }
+                })
+        }
+    }
+
+    var storedInstructionOverrides: [String: String] {
+        get { Dictionary(uniqueKeysWithValues: instructionOverrides.map { ($0.rawValue, $1) }) }
+        set {
+            instructionOverrides = Dictionary(
+                uniqueKeysWithValues: newValue.compactMap { key, value in
+                    guard let action = QuickAction(rawValue: key), !action.usesTranslationFramework
+                    else { return nil }
+                    return (action, value)
                 })
         }
     }

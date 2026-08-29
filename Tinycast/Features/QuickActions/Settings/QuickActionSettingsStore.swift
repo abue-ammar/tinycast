@@ -23,6 +23,9 @@ final class QuickActionSettingsStore {
             as? [String: Bool] ?? [:]
         loaded.targetLanguage =
             defaults.string(forKey: AppSettingsKey.quickActionLanguage.rawValue) ?? ""
+        loaded.storedInstructionOverrides =
+            defaults.dictionary(forKey: AppSettingsKey.quickActionInstructions.rawValue)
+            as? [String: String] ?? [:]
         settings = loaded
         model = Self.decodeModel(
             defaults.data(forKey: AppSettingsKey.quickActionModel.rawValue))
@@ -50,6 +53,9 @@ final class QuickActionSettingsStore {
         defaults.set(
             settings.storedPreviewChoices, forKey: AppSettingsKey.quickActionPreviews.rawValue)
         defaults.set(settings.targetLanguage, forKey: AppSettingsKey.quickActionLanguage.rawValue)
+        defaults.set(
+            settings.storedInstructionOverrides,
+            forKey: AppSettingsKey.quickActionInstructions.rawValue)
     }
 
     private func persistModel() {
