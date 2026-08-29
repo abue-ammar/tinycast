@@ -83,7 +83,7 @@ struct QuicklinksSettingsView: View {
             }
             Button("Add Quicklink…") { core.quicklinkCoordinator.editQuicklink(nil) }
         } footer: {
-            Text("Name it, paste a link, then give it a shortcut if you want one.")
+            Text("Name it, paste a link, then add an alias or a shortcut if you want one.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -165,6 +165,10 @@ private struct QuicklinkSettingsRow: View {
                     .foregroundStyle(.secondary)
                     .help("Hidden from root search")
             }
+
+            // An alias only reaches the ranker through the root-search slice, so it dims with it.
+            AliasField(key: quicklink.entryID, name: quicklink.name)
+                .settingsEnabled(quicklink.showsInRootSearch)
 
             ShortcutRecorder(action: .quicklink(id: quicklink.id))
 

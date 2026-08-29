@@ -105,7 +105,9 @@ struct SettingsFilterField: View {
 
 /// Dressed like `ShortcutRecorder`; a persistent `TextField` — swapping views broke repeat focus.
 struct AliasField: View {
-    let entry: AppEntry
+    /// The owner's `preferenceKey`, taken raw so a row without an `AppEntry` can carry one too.
+    let key: String
+    let name: String
     @Environment(AliasStore.self) private var aliases
     @State private var draft = ""
     @FocusState private var focused: Bool
@@ -134,13 +136,13 @@ struct AliasField: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear alias for \(entry.name)")
+                .accessibilityLabel("Clear alias for \(name)")
             }
         }
-        .onAppear { draft = aliases.alias(for: entry.preferenceKey) ?? "" }
+        .onAppear { draft = aliases.alias(for: key) ?? "" }
         // A backup import replaces the table out from under an unfocused row.
         .onChange(of: aliases.revision) { _, _ in
-            if !focused { draft = aliases.alias(for: entry.preferenceKey) ?? "" }
+            if !focused { draft = aliases.alias(for: key) ?? "" }
         }
         .padding(.horizontal, Theme.Spacing.sm)
         .frame(width: Theme.Size.shortcutRecorder, height: 24)
@@ -150,22 +152,28 @@ struct AliasField: View {
                 focused ? Color.accentColor : Theme.Colors.cardStroke, lineWidth: 1)
         )
         .clipShape(shape)
-        .accessibilityLabel("Alias for \(entry.name)")
+        .accessibilityLabel("Alias for \(name)")
     }
 
     /// The one commit path — ↵ or focus landing elsewhere; a blank draft removes the alias.
     private func commit() {
-        aliases.setAlias(draft, for: entry.preferenceKey)
-        draft = aliases.alias(for: entry.preferenceKey) ?? ""
+        aliases.setAlias(draft, for: key)
+        draft = aliases.alias(for: key) ?? ""
     }
 
     private func revert() {
-        draft = aliases.alias(for: entry.preferenceKey) ?? ""
+        draft = aliases.alias(for: key) ?? ""
         focused = false
     }
 
     private func clear() {
         draft = ""
         commit()
+    }
+}
+
+extension AliasField {
+    init(entry: AppEntry) {
+        self.init(key: entry.preferenceKey, name: entry.name)
     }
 }

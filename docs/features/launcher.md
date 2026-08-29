@@ -151,7 +151,9 @@ visibility checkbox, not a per-invocation action, so the ⌘K menu stays out of 
 on `LauncherItemsSection` puts an `AliasField` on each row, dressed like the `ShortcutRecorder`
 beside it; edits store as typed and trim when the field loses focus, and a blank means none. That
 list filters by **membership only**, keeping the index's name order — re-ranking it per keystroke
-would move the row being edited out from under its own field editor.
+would move the row being edited out from under its own field editor. A pane with a hand-written row
+hands `AliasField` the key itself: Settings ▸ Quicklinks passes `Quicklink.entryID`, and dims the
+field on a quicklink hidden from root search, whose entry the ranker never sees.
 
 Aliases ride along in a settings backup (`launcherAliases`), and deleting what an alias points at —
 uninstalling an app, deleting a quicklink or custom command, uninstalling an extension — removes it
