@@ -17,8 +17,8 @@ That number is measured, not estimated, and it moves as gaps close.
 `ActionPanel` and `Action` with all the convenience variants, plus the deprecated aliases.
 
 **APIs** — `Clipboard`, `LocalStorage`, `Cache`, `environment`, `getPreferenceValues`, `showToast`,
-`showHUD`, `confirmAlert`, `closeMainWindow`, `popToRoot`, `clearSearchBar`, `open`, `trash`,
-`showInFinder`, `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
+`showHUD`, `confirmAlert`, `closeMainWindow`, `popToRoot`, `PopToRootType`, `clearSearchBar`, `open`,
+`trash`, `showInFinder`, `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `openExtensionPreferences`,
 `useNavigation`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
 
