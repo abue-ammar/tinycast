@@ -221,6 +221,19 @@ judgement lives — the abbreviations (`pst`, `cet`, `jst`), the nicknames a zon
 (`kolkata`, `saigon`). It is deliberately small and deliberately not slang, for the same reason
 `CalcCurrency` refuses `quid`.
 
+It also carries the **cities IANA never names**. The database ships one representative city per
+distinct clock history, not one per city, so Graz, Salzburg, Hannover and Basel simply do not exist
+in it — their clocks have never differed from Vienna's, Berlin's or Zurich's by a second. Roughly a
+hundred are listed, chosen as the ones people actually type. Accented spellings need no entry of
+their own, since the lookup folds diacritics before it reaches the table.
+
+Apple can resolve any city: `MKGeocodingRequest` returns a `TimeZone` directly, needs no
+entitlement and prompts for nothing. It is deliberately **not** used. It is asynchronous and
+network-backed at ~150 ms a call, where `CalcEngine.evaluate` is synchronous and runs against every
+keystroke behind a one-deep memo — so `time in salzburg` would issue a request per prefix typed, and
+answer nothing at all offline. A launcher that answers `time in vienna` on a plane but not
+`time in salzburg` is worse than one with a known edge.
+
 `aliases` also carries the **IATA airport codes** (`vie`, `lhr`, `nrt`, `sfo`), which no Foundation
 surface knows: `TimeZone(abbreviation:)` and `TimeZone(identifier:)` both return nil for every one,
 and the whole `abbreviationDictionary` is 51 zone abbreviations rather than airports. They are a

@@ -871,6 +871,23 @@ struct CalcTests {
         expectDisplayAt("time in sao paulo", "9:18 PM (yesterday)")
         expectDisplayAt("time in zürich", "2:18 AM")
 
+        // Cities IANA never names, because their clocks never differed from the zone's own
+        expectBadgesAt("time in graz", source: "UTC", target: "Vienna")
+        expectBadgesAt("time in salzburg", source: "UTC", target: "Vienna")
+        expectBadgesAt("time in klagenfurt", source: "UTC", target: "Vienna")
+        expectBadgesAt("time in hannover", source: "UTC", target: "Berlin")
+        expectBadgesAt("time in stuttgart", source: "UTC", target: "Berlin")
+        expectBadgesAt("time in basel", source: "UTC", target: "Zurich")
+        expectBadgesAt("time in manchester", source: "UTC", target: "London")
+        expectBadgesAt("time in florence", source: "UTC", target: "Rome")
+        expectBadgesAt("time in lyon", source: "UTC", target: "Paris")
+        expectBadgesAt("time in krakow", source: "UTC", target: "Warsaw")
+        // Their accented spellings fold onto the same entry
+        expectBadgesAt("time in düsseldorf", source: "UTC", target: "Berlin")
+        expectBadgesAt("time in kraków", source: "UTC", target: "Warsaw")
+        expectBadgesAt("time in malmö", source: "UTC", target: "Stockholm")
+        expectBadgesAt("5pm graz in basel", source: "Vienna", target: "Zurich")
+
         // A bare number takes the unit its moment implies
         expectDisplayAt("3:45pm + 5", "24 July at 8:45 PM")
         expectDisplayAt("3:45pm - 2", "24 July at 1:45 PM")
