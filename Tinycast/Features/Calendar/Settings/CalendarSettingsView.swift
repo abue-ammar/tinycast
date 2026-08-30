@@ -18,6 +18,18 @@ struct CalendarSettingsView: View {
                 isEnabled: enabledBinding,
                 showsInLauncher: $settings.calendarShowInLauncher)
 
+            Section {
+                Picker(selection: $settings.calendarLauncherLimit) {
+                    ForEach(CalendarLauncherLimit.allCases) { limit in
+                        Text(limit.title).tag(limit)
+                    }
+                } label: {
+                    Text("Upcoming meetings in launcher")
+                    Text("Choose how many upcoming meetings appear alongside apps and commands.")
+                }
+            }
+            .settingsEnabled(settings.calendarEnabled && settings.calendarShowInLauncher)
+
             if store.access == .denied {
                 Section {
                     SettingsRow(
@@ -95,7 +107,7 @@ struct CalendarSettingsView: View {
                     }
                 } label: {
                     Text("Hide Current Event")
-                    Text("Hide a started event automatically, or after the time you choose.")
+                    Text("Choose whether to hide a started event or show its time left.")
                 }
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
             } header: {
