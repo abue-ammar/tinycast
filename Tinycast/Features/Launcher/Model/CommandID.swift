@@ -127,8 +127,8 @@ enum CommandID: String, CaseIterable, Sendable {
         self == .openInBrowser || self == .runShellCommand
     }
 
-    /// A shortcut carries no query, so the query-driven pair is the one thing it cannot run.
+    /// A chord carries no query, and none should be able to terminate the app outright.
     var hotKeyAction: HotKeyAction? {
-        isQueryDriven ? nil : .command(self)
+        isQueryDriven || self == .quit ? nil : .command(self)
     }
 }

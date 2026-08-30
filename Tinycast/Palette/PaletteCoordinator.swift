@@ -33,17 +33,21 @@ final class PaletteCoordinator {
             ? windowController.previousApp : NSWorkspace.shared.frontmostApplication
     }
 
+    /// Up and pointed at `mode`, which is the state a mode command's second invocation closes.
+    func isShowing(_ mode: PaletteMode) -> Bool {
+        windowController.isVisible && palette.mode == mode
+    }
+
     func togglePalette() {
-        if windowController.isVisible, palette.mode == .launcher {
+        if isShowing(.launcher) {
             hidePalette()
         } else {
             showPalette(mode: .launcher, restoreAnyMode: true)
         }
     }
 
-    /// A mode command's shortcut closes what it opened; from a launcher row it always re-points.
     func togglePalette(mode: PaletteMode) {
-        if windowController.isVisible, palette.mode == mode {
+        if isShowing(mode) {
             hidePalette()
         } else {
             showPalette(mode: mode)

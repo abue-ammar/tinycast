@@ -105,16 +105,18 @@ struct DoubleTapDetectorTests {
     // MARK: - Built-in command mappings
 
     static func commandActions() {
-        let unbindable = CommandID.allCases.filter { $0.hotKeyAction == nil }
+        let unbindable = Set(CommandID.allCases.filter { $0.hotKeyAction == nil })
         expect(
-            unbindable == [.openInBrowser, .runShellCommand],
-            "only the query-driven pair is unbindable — got \(unbindable.map(\.name))")
+            unbindable == [.openInBrowser, .runShellCommand, .quit],
+            "only the query-driven pair and Quit are unbindable — got \(unbindable.map(\.name))")
         expect(
-            CommandID.allCases.allSatisfy { $0.isQueryDriven || $0.hotKeyAction == .command($0) },
+            CommandID.allCases.allSatisfy {
+                unbindable.contains($0) || $0.hotKeyAction == .command($0)
+            },
             "every other command binds to its own action, so every row gets a recorder")
 
         // Keyed on the raw value, not the position, so reordering the enum cannot move a binding.
-        for id in CommandID.allCases where !id.isQueryDriven {
+        for id in CommandID.allCases where !unbindable.contains(id) {
             expect(
                 id.hotKeyAction?.defaultsKey == "hotkey.\(id.rawValue)",
                 "\(id.name) persists under hotkey.\(id.rawValue)")

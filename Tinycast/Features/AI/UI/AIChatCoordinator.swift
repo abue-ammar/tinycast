@@ -53,6 +53,11 @@ final class AIChatCoordinator {
 
     func showChat() {
         guard settings.aiEnabled else { return }
+        // Not `togglePalette`: the open policy decides a chat only on the way in.
+        guard !paletteCoordinator.isShowing(.ai) else {
+            paletteCoordinator.hidePalette()
+            return
+        }
         applyOpenPolicy()
         paletteCoordinator.showPalette(mode: .ai)
     }

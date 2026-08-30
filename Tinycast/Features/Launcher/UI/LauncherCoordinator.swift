@@ -65,7 +65,13 @@ final class LauncherCoordinator {
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
             guard let id = CommandCatalog.command(for: app) else { return }
-            runCommand(id, url: app.url)
+            // Query-driven: only this row knows the URL the typed text resolved to.
+            if id == .openInBrowser {
+                paletteCoordinator.hidePalette(restoreFocus: false)
+                AppLauncher.open(app.url)
+                return
+            }
+            runCommand(id)
             return
         }
         if app.kind == .customCommand {
@@ -117,7 +123,7 @@ final class LauncherCoordinator {
     }
 
     /// The one funnel a built-in command runs through, from a palette row or its global shortcut.
-    func runCommand(_ id: CommandID, url: URL? = nil) {
+    func runCommand(_ id: CommandID) {
         switch id {
         case .aiChat:
             core.aiChatCoordinator.showChat()
@@ -137,13 +143,8 @@ final class LauncherCoordinator {
             paletteCoordinator.togglePalette(mode: .emoji)
         case .searchFiles:
             fileSearchCoordinator.show()
-        case .openInBrowser:
-            // Query-driven, so the row it came from carries the URL nothing else here knows.
-            guard let url else { return }
-            dismissPalette()
-            AppLauncher.open(url)
-        case .runShellCommand:
-            break  // Only ever a fallback row, which carries the query this funnel does not have.
+        case .openInBrowser, .runShellCommand:
+            break  // Query-driven: each runs where the typed text is, never through this funnel.
         case .joinNextMeeting:
             calendarCoordinator.joinNextMeeting()
         case .copyMeetingLink:

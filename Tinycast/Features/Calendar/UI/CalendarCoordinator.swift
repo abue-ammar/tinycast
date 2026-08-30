@@ -305,7 +305,7 @@ final class CalendarCoordinator {
     }
 
     func showSchedule() {
-        paletteCoordinator.showPalette(mode: .schedule)
+        paletteCoordinator.togglePalette(mode: .schedule)
     }
 
     /// A miss is transient, so it reports through the HUD rather than a dialog needing dismissal.
