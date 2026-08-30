@@ -38,7 +38,8 @@ regular `.md` children are sorted by modification date, then localized title. Su
 files, and symbolic links are ignored.
 
 Create uses `Untitled.md`, then `Untitled 2.md`, and so on, and rename claims a free name by the same
-rule. Collisions with *another* note are case- and diacritic-insensitive, so `plán` beside `Plan`
+rule. `importNotes` claims one the same way, so a note restored from a backup lands beside the note it
+shares a title with rather than over it. Collisions with *another* note are case- and diacritic-insensitive, so `plán` beside `Plan`
 becomes `plán 2.md`. A note never collides with itself: only an exact filename match is a no-op, which
 is what lets a rename change nothing but the case or the accents. The active filename is local UI state
 in UserDefaults and does not ride settings backups.

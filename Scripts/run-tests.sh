@@ -222,6 +222,13 @@ run slow -O raycast-test   Tinycast/Features/Backup/Model/RaycastImportError.swi
                            Tinycast/Platform/Compression/Zlib.swift
 run settings-backup-test   Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/Backup/Model/SettingsBackupCoverage.swift
+run backup-archive-test    Tinycast/Platform/AppPaths.swift \
+                           Tinycast/Features/Backup/Model/BackupArchive.swift \
+                           Tinycast/Features/Backup/Model/BackupBundle.swift \
+                           Tinycast/Features/Backup/Model/BackupCategory.swift \
+                           Tinycast/Features/Backup/Model/BackupClipboardItem.swift \
+                           Tinycast/Features/Backup/Model/BackupManifest.swift \
+                           Tinycast/Features/Backup/Service/BackupStaging.swift
 E=Tinycast/Features/Extensions
 run symbols-test           $E/Service/SymbolCatalog.swift
 run ext-cleanup-test       $E/Service/ExtensionCleanup.swift \

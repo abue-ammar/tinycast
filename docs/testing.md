@@ -101,6 +101,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `ext-icon-test` | `Extensions/Service/ExtensionIconCache.swift` — artwork sizing and its fallback |
 | `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |
 | `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
+| `backup-archive-test` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
 | `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
 | `support-test` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
 
@@ -407,8 +408,14 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - Every pane renders and the sidebar switches without flicker
 - A feature switch takes effect in the launcher immediately; every setting survives relaunch
-- Export produces a file; import applies it and reports a sensible summary
+- Export produces a `.tinycast`; import applies it and reports a per-category summary
+- Untick a category on export, and the import picker greys that row out rather than offering it
+- Untick a category on **import** and confirm it did not arrive, while the ticked ones did
+- An image clip round-trips and still renders; the archive can then be deleted without breaking it
+- A file whose `manifest.json` `format` was hand-edited is refused **with a message naming it**
+- Cancelling the save panel leaves nothing in `~/Library/Caches/com.tinycast.app.dev/backup-staging/`
 - **`snippetsEnabled` is not in the exported file**, and importing does not enable snippets
+- Nothing in the extracted tree names a Keychain item, an extension, or an AI conversation
 
 ### Clean install
 

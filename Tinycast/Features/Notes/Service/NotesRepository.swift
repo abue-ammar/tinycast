@@ -97,6 +97,27 @@ struct NotesRepository: Sendable {
         }
     }
 
+    /// One note as a backup carries it, before it has a file to live in.
+    struct Incoming: Sendable, Equatable {
+        let title: String
+        let source: String
+    }
+
+    /// Beside the existing notes, never over them; an unusable title is skipped, not fatal.
+    func importNotes(_ notes: [Incoming]) throws(Failure) -> Int {
+        try mappedError(at: notesDirectory) {
+            var imported = 0
+            for note in notes {
+                guard let base = try? validatedTitle(note.title) else { continue }
+                _ = try claimUniqueURL(base: base) {
+                    try writeNewFileAtomically(Data(note.source.utf8), to: $0)
+                }
+                imported += 1
+            }
+            return imported
+        }
+    }
+
     func save(id: NoteID, source: String) throws(Failure) {
         let candidate = fileURL(for: id)
         try mappedError(at: candidate) {

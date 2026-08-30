@@ -132,8 +132,9 @@ final class ClipboardStore {
         END;
         """
 
-    private let imagesDir: URL
-    private let dbURL: URL
+    /// Internal, not private: a backup names both to stream the table and adopt its blobs.
+    let imagesDir: URL
+    let dbURL: URL
     @ObservationIgnored private var db: OpaquePointer?
     @ObservationIgnored private var insertStmt: OpaquePointer?
     @ObservationIgnored private var loadStmt: OpaquePointer?
@@ -216,6 +217,16 @@ final class ClipboardStore {
             guard (try? data.write(to: url, options: .atomic)) != nil else { return }
             await self?.insert(item)
         }
+    }
+
+    /// Into `imagesDir`, so `owns` is true and retention can reclaim the blob later.
+    func adoptImage(from url: URL) -> String? {
+        let destination = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
+        let moved = (try? FileManager.default.moveItem(at: url, to: destination)) != nil
+        guard moved || (try? FileManager.default.copyItem(at: url, to: destination)) != nil else {
+            return nil
+        }
+        return destination.path
     }
 
     /// Bulk-insert from an import: original timestamps, external image paths, deduped.
@@ -558,7 +569,29 @@ final class ClipboardStore {
         db = nil
     }
 
-    private static func row(_ stmt: OpaquePointer?) -> ClipboardItem? {
+    /// Past the memory window, off-main. `READWRITE` because a WAL reader still writes `-shm`.
+    nonisolated static func forEachStoredItem(
+        inDatabaseAt url: URL, _ body: (ClipboardItem) -> Void
+    ) {
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
+            sqlite3_close_v2(db)
+            return
+        }
+        defer { sqlite3_close_v2(db) }
+        var stmt: OpaquePointer?
+        let sql = """
+            SELECT id, kind, text, image_path, created_at, source_app, pinned_at
+            FROM items ORDER BY rowid DESC
+            """
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let item = row(stmt) { body(item) }
+        }
+    }
+
+    nonisolated private static func row(_ stmt: OpaquePointer?) -> ClipboardItem? {
         guard let idString = columnString(stmt, 0), let id = UUID(uuidString: idString),
             let kindString = columnString(stmt, 1),
             let kind = ClipboardItem.Kind(rawValue: kindString)
@@ -569,12 +602,12 @@ final class ClipboardStore {
             sourceBundleID: columnString(stmt, 5), pinnedAt: columnDate(stmt, 6))
     }
 
-    private static func columnDate(_ stmt: OpaquePointer?, _ index: Int32) -> Date? {
+    nonisolated private static func columnDate(_ stmt: OpaquePointer?, _ index: Int32) -> Date? {
         guard sqlite3_column_type(stmt, index) != SQLITE_NULL else { return nil }
         return Date(timeIntervalSince1970: sqlite3_column_double(stmt, index))
     }
 
-    private static func columnString(_ stmt: OpaquePointer?, _ index: Int32) -> String? {
+    nonisolated private static func columnString(_ stmt: OpaquePointer?, _ index: Int32) -> String? {
         guard let ptr = sqlite3_column_text(stmt, index) else { return nil }
         let count = Int(sqlite3_column_bytes(stmt, index))
         return String(decoding: UnsafeBufferPointer(start: ptr, count: count), as: UTF8.self)

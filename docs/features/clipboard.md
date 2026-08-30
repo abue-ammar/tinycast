@@ -37,6 +37,13 @@ in-memory history).
 Image capture (TIFF→PNG re-encode + blob write) runs off the main actor via detached tasks; row
 inserts, search, and pruning stay on the main actor.
 
+**A backup reads the whole table, not `items`.** `forEachStoredItem(inDatabaseAt:)` is `nonisolated`
+and opens a second connection, because the resident window stops at 1000 rows while the table is
+capped only by age — an export that read `items` would silently drop the rest of someone's history,
+and walking an uncapped table is not main-actor work. That connection is `SQLITE_OPEN_READWRITE`, as
+`StorageRelocation`'s is: a read-only connection to a WAL database still has to create its `-shm`
+file, and fails confusingly when it cannot.
+
 **The load query is deliberately two indexed branches**, not one `pinned_at IS NOT NULL OR rowid >= ?`.
 It fetches every pinned row plus the newest `memoryWindow` unpinned ones, keyed off the floor rowid
 that `windowFloor` looks up. The planner cannot drive an `OR` from an index while preserving row

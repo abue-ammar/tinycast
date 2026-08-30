@@ -18,6 +18,7 @@ struct ClipboardTests {
         typeFilterSplitsTheHistory()
         typeFilterJoinsTheSearchMemo()
         persistence()
+        exportSeesPastTheMemoryWindow()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -277,6 +278,30 @@ struct ClipboardTests {
 
             reopened.clearAll()
             expect(reopened.items.isEmpty, "Clear History takes pins too")
+        }
+    }
+
+    /// A backup reads the whole table, not `items` — which stops at the memory window.
+    static func exportSeesPastTheMemoryWindow() {
+        withStore { store, _ in
+            let total = 1_200
+            store.importEntries(
+                (0..<total).map {
+                    ClipboardItem(
+                        id: UUID(), kind: .text, text: "entry \($0)", imagePath: nil,
+                        createdAt: Date().addingTimeInterval(TimeInterval($0 - total)),
+                        sourceBundleID: nil)
+                })
+            expect(store.items.count < total, "the resident window holds back some of the history")
+
+            var streamed = 0
+            var seen = Set<String>()
+            ClipboardStore.forEachStoredItem(inDatabaseAt: store.dbURL) { item in
+                streamed += 1
+                if let text = item.text { seen.insert(text) }
+            }
+            expect(streamed == total, "the export streams every row, not just the window")
+            expect(seen.count == total, "every row arrives exactly once")
         }
     }
 

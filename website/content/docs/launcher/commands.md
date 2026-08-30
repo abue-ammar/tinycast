@@ -12,7 +12,7 @@ These are Tinycast's own screens and operations, reachable by name from the laun
 
 Calculator History · Clipboard History · Search Emoji & Symbols · Search Files · Show Notes ·
 Create Note · Search Notes · Create Quicklink · Search Quicklinks · Import Quicklinks ·
-Export Quicklinks · Export Settings · Import Settings · Import from Raycast · Settings ·
+Export Quicklinks · Export Backup · Import Backup · Import from Raycast · Settings ·
 About Tinycast · Quit Tinycast
 
 Six of them also carry their own global shortcut: Search Files, Clipboard History,

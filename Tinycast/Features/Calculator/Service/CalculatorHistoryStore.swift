@@ -62,6 +62,12 @@ final class CalculatorHistoryStore {
         persist()
     }
 
+    /// Replaces the history wholesale from a backup, newest first and under the same cap.
+    func replace(_ imported: [CalcHistoryEntry]) {
+        entries = Array(imported.sorted { $0.createdAt > $1.createdAt }.prefix(Self.cap))
+        persist()
+    }
+
     /// Case-insensitive substring match over both sides of each calculation.
     func search(_ query: String) -> [CalcHistoryEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)

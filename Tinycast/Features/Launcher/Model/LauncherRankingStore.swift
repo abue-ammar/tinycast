@@ -111,6 +111,15 @@ final class LauncherRankingStore {
         didMutate()
     }
 
+    /// Replaces the table wholesale from a backup; the same filter and cap the initialiser applies.
+    func replace(_ imported: [LauncherRankingRecord]) {
+        records = Array(
+            imported
+                .filter { !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0 }
+                .prefix(Self.cap))
+        didMutate()
+    }
+
     /// Locale-independent: a Turkish fold maps "I" to "ı" and orphans every stored key.
     static func normalize(_ query: String) -> String {
         query

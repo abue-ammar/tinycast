@@ -2,7 +2,7 @@ import Foundation
 
 /// A readable configuration snapshot; every field is optional, so an import merges.
 struct SettingsBackup: Codable {
-    var version = 4
+
     var settings: SettingsData?
     var hotkeys: HotkeyBackup?
     var customCommands: [CustomCommand]?

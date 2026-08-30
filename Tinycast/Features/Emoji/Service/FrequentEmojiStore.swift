@@ -49,6 +49,17 @@ final class FrequentEmojiStore {
         persist()
     }
 
+    /// Replaces the tallies wholesale from a backup, under the same cap `record` enforces.
+    func replace(_ imported: [FrequentEmoji]) {
+        revision &+= 1
+        records = Array(
+            imported
+                .filter { !$0.glyph.isEmpty && $0.count > 0 }
+                .sorted { $0.count != $1.count ? $0.count > $1.count : $0.lastUsed > $1.lastUsed }
+                .prefix(Self.cap))
+        persist()
+    }
+
     /// Most-used glyphs (recency breaks ties), newest habits first.
     func top(_ n: Int = 16) -> [String] {
         let sorted = sortedMemo.value(for: revision) {
