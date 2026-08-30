@@ -51,6 +51,12 @@ final class CalendarCoordinator {
     /// Live rather than clock-driven: a chord reads this with nothing ticking.
     var agenda: [MeetingEvent] { UpcomingWindow.agenda(from: store.events, now: Date()) }
 
+    /// The calendar label keeps its plain icon until today's events are exhausted, with a small
+    /// grace across midnight for a meeting that starts imminently.
+    var hasUpcomingMenuBarEvent: Bool {
+        MenuBarSummary.hasUpcomingEvent(from: store.events, now: clock.now)
+    }
+
     /// The event the menu bar carries, or nil for the plain icon.
     var menuBarEvent: MeetingEvent? {
         guard
@@ -58,7 +64,7 @@ final class CalendarCoordinator {
             settings.menuBarEvents != .never
         else { return nil }
         let summary = MenuBarSummary(
-            leadMinutes: settings.menuBarEvents.rawValue,
+            leadMinutes: settings.menuBarEvents == .today ? nil : settings.menuBarEvents.rawValue,
             hideAfterMinutes: settings.hideCurrentEvent.minutes,
             linkedOnly: settings.menuBarLinkedEventsOnly)
         return summary.event(from: store.events, now: clock.now)

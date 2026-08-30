@@ -29,6 +29,7 @@ struct CalendarTests {
         readSpan()
         menuBarWindow()
         menuBarFiltering()
+        menuBarToday()
         menuBarTitles()
         autoJoinFiresOnce()
         autoJoinRespectsArming()
@@ -325,6 +326,34 @@ struct CalendarTests {
             "the menu bar reads the same agenda as everything else, so all-day events are out")
     }
 
+    static func menuBarToday() {
+        let summary = MenuBarSummary(
+            leadMinutes: nil, hideAfterMinutes: nil, linkedOnly: false, calendar: calendar)
+        let morning = date(year: 2026, month: 8, day: 23, hour: 10)
+        let laterToday = event(id: "later", starting: date(year: 2026, month: 8, day: 23, hour: 15))
+        expect(
+            summary.event(from: [laterToday], now: morning)?.id == "later",
+            "Today carries an event later on the same day")
+
+        let justBeforeMidnight = date(year: 2026, month: 8, day: 23, hour: 23, minute: 30)
+        let midnight = event(id: "midnight", starting: date(year: 2026, month: 8, day: 24, hour: 0))
+        expect(
+            summary.event(from: [midnight], now: justBeforeMidnight)?.id == "midnight",
+            "Today keeps a meeting that starts exactly thirty minutes after midnight")
+        expect(
+            MenuBarSummary.hasUpcomingEvent(from: [midnight], now: justBeforeMidnight, calendar: calendar),
+            "the empty label agrees with the midnight grace")
+
+        let thirtyOneMinutesOut = date(year: 2026, month: 8, day: 23, hour: 23, minute: 29)
+        expect(
+            summary.event(from: [midnight], now: thirtyOneMinutesOut) == nil,
+            "Today does not keep tomorrow's event more than thirty minutes away")
+        expect(
+            !MenuBarSummary.hasUpcomingEvent(
+                from: [midnight], now: thirtyOneMinutesOut, calendar: calendar),
+            "the empty label appears once today is over and tomorrow is not imminent")
+    }
+
     static func menuBarTitles() {
         expect(MenuBarSummary.title("Standup") == "Standup", "a short title is untouched")
         let long = String(repeating: "a", count: MenuBarSummary.titleCap + 5)
@@ -464,9 +493,9 @@ struct CalendarTests {
         epoch.addingTimeInterval(TimeInterval(minutes * 60))
     }
 
-    static func date(year: Int, month: Int, day: Int, hour: Int) -> Date {
+    static func date(year: Int, month: Int, day: Int, hour: Int, minute: Int = 0) -> Date {
         calendar.date(
-            from: DateComponents(year: year, month: month, day: day, hour: hour))!
+            from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 
     static func link(_ text: String) -> MeetingLink? { MeetingLink.detect(in: text) }
@@ -485,6 +514,17 @@ struct CalendarTests {
             id: id, title: id, start: at(minutes),
             end: at(minutes).addingTimeInterval(TimeInterval(duration * 60)),
             isAllDay: isAllDay, isDeclined: isDeclined, calendarID: "cal", calendarName: "Work",
+            calendarItemID: id, link: link)
+    }
+
+    static func event(
+        id: String, starting start: Date, minutes duration: Int = 30,
+        link: MeetingLink? = MeetingLink.detect(in: "https://example.com/x")
+    ) -> MeetingEvent {
+        MeetingEvent(
+            id: id, title: id, start: start,
+            end: start.addingTimeInterval(TimeInterval(duration * 60)),
+            isAllDay: false, isDeclined: false, calendarID: "cal", calendarName: "Work",
             calendarItemID: id, link: link)
     }
 

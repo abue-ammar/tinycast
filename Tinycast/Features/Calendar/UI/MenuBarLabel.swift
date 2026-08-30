@@ -30,7 +30,7 @@ struct CalendarMenuBarLabel: View {
             }
         } else {
             if AppCore.shared.settings.calendarMenuBarDisplay == .meetingTitle,
-                hasUpcomingEventToday
+                hasUpcomingEvent
             {
                 Image(systemName: "calendar")
                     .accessibilityLabel("\(appName) calendar")
@@ -44,8 +44,8 @@ struct CalendarMenuBarLabel: View {
         }
     }
 
-    private var hasUpcomingEventToday: Bool {
-        AppCore.shared.calendarCoordinator.agenda.contains { Calendar.current.isDateInToday($0.start) }
+    private var hasUpcomingEvent: Bool {
+        AppCore.shared.calendarCoordinator.hasUpcomingMenuBarEvent
     }
 
     private func text(for meeting: MeetingEvent) -> String {

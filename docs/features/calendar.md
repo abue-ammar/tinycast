@@ -35,6 +35,9 @@ events as searchable launcher entries.
   go through it, so they cannot drift apart. Because an event ending changes nothing in EventKit,
   the filter alone is not enough for the launcher slice: `CalendarCoordinator` republishes it on the
   minute boundary and on every summon.
+- **The menu bar's `Today` horizon follows the same empty-state rule.** It carries any remaining
+  event that starts today, plus an event within 30 minutes after midnight; only then does the title
+  mode read `No upcoming events`.
 - **`calendarEnabled` doubles as consent**, so it is in `SettingsBackupCoverage.deliberatelyExcluded`
   and only `CalendarCoordinator.setCalendarEnabled` may write it. Tinycast's own dialog comes first,
   the macOS prompt second, and only from the gesture that asked.

@@ -17,7 +17,7 @@ struct TinycastApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra(isInserted: $showInMenuBar) {
+        MenuBarExtra(isInserted: launcherMenuBarInsertion) {
             MenuBarMenu(appName: appName)
         } label: {
             MenuBarLabel(appName: appName)
@@ -42,6 +42,25 @@ struct TinycastApp: App {
                 } else {
                     calendarMenuBarDisplay = CalendarMenuBarDisplay.disabled.rawValue
                 }
+            })
+    }
+
+    /// The calendar item replaces the launcher item while it is enabled, so the menu bar has one
+    /// Tinycast entry instead of two. Turning the calendar display off restores the user's
+    /// launcher preference immediately.
+    private var launcherMenuBarInsertion: Binding<Bool> {
+        Binding(
+            get: {
+                showInMenuBar
+                    && calendarMenuBarDisplay == CalendarMenuBarDisplay.disabled.rawValue
+            },
+            set: { inserted in
+                // SwiftUI may write `false` when the calendar takes this slot. That is not a user
+                // request to hide the launcher permanently.
+                guard calendarMenuBarDisplay == CalendarMenuBarDisplay.disabled.rawValue else {
+                    return
+                }
+                showInMenuBar = inserted
             })
     }
 
