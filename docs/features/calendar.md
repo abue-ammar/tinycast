@@ -170,7 +170,8 @@ never hides an enabled calendar display. The display choice is **Disabled**, **M
 characters — a hard cap is the only thing that bounds a menu bar. `CalendarMenuBarLabel` reads the
 coordinator rather than the stores, which scopes Observation to the label instead of re-running either
 scene. It falls back to a calendar glyph when nothing is due, so the calendar item never disappears
-out from under the user.
+out from under the user. In **Meeting Title** mode, once no event remains today it instead reads
+`No upcoming events`.
 
 A click opens the usual menu, with `Join <title>` added on top. **A bare click never joins**: the
 menu bar is not a button, and a mis-click there would open a call.

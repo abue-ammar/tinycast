@@ -29,9 +29,23 @@ struct CalendarMenuBarLabel: View {
                     .accessibilityLabel("\(appName): \(text(for: meeting))")
             }
         } else {
-            Image(systemName: "calendar")
-                .accessibilityLabel("\(appName) calendar")
+            if AppCore.shared.settings.calendarMenuBarDisplay == .meetingTitle,
+                hasUpcomingEventToday
+            {
+                Image(systemName: "calendar")
+                    .accessibilityLabel("\(appName) calendar")
+            } else if AppCore.shared.settings.calendarMenuBarDisplay == .meetingTitle {
+                Text("No upcoming events")
+                    .accessibilityLabel("\(appName): No upcoming events")
+            } else {
+                Image(systemName: "calendar")
+                    .accessibilityLabel("\(appName) calendar")
+            }
         }
+    }
+
+    private var hasUpcomingEventToday: Bool {
+        AppCore.shared.calendarCoordinator.agenda.contains { Calendar.current.isDateInToday($0.start) }
     }
 
     private func text(for meeting: MeetingEvent) -> String {
