@@ -232,7 +232,8 @@ screen the user is done with — the symptom that motivated it was picking a pro
 Projects and landing back in the list. Nothing stops the engine here: leaving `.extensionCommand`
 already does that, and doing it from inside a call the command is still awaiting would drop the work
 after `await closeMainWindow()`. A no-view command hides the palette before it runs, so its close is
-not a command's own close and the delay stands. See [palette.md](palette.md#screens).
+not a command's own close and the delay stands — its `showHUD` still applies an explicit request,
+which is the only way it can reach a palette that is already gone. See [palette.md](palette.md#screens).
 
 ## Turning it on
 

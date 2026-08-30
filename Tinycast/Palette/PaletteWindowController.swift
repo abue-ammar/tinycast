@@ -25,7 +25,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         var moved = false
     }
 
-    /// What a hidden palette owes its screen: nothing, a countdown, or a hold nothing may expire.
+    /// What a hidden palette owes its screen: nothing, a countdown, a hold, or an OAuth hold.
     private enum PendingReset {
         case none
         case scheduled(Timer)
@@ -131,6 +131,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
     private func popToRoot() {
         core.palette.prepare(mode: .launcher)
+    }
+
+    /// A reset asked for after the hide: only an explicit one outranks the countdown already set.
+    func applyReset(_ request: PaletteReset) {
+        guard request != .standard else { return }
+        schedulePopToRoot(request)
     }
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.

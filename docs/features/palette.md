@@ -66,7 +66,8 @@ written to Chat History as soon as it has a message.
 What a hide owes its screen is a `PendingReset`: nothing, a countdown, a hold, or an OAuth hold. A
 `PaletteReset` picks between them, and `PaletteResetPolicy` is the only place that decides — a hide a
 command asked for itself resolves `.standard` to `.immediate`, since a finished command leaves the
-delay no screen to hold. An explicit `.suspended` or `.immediate` always passes through untouched.
+delay no screen to hold. The policy passes an explicit `.suspended` or `.immediate` through untouched;
+an authorization in flight is the one thing that outranks either, since the round-trip must survive.
 
 The OAuth hold is its own case rather than a `.suspended`, because the two expire differently: an
 abandoned authorization leaves a screen with no command behind it, so `consumePreservedState()` only

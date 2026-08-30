@@ -78,6 +78,12 @@ final class PaletteCoordinator {
         windowController.hide(restoreFocus: restoreFocus, popToRoot: request)
     }
 
+    /// For a surface reaching the palette after it is hidden, like a no-view command's HUD.
+    func applyReset(_ request: PaletteReset) {
+        guard !windowController.isVisible else { return }
+        windowController.applyReset(request)
+    }
+
     /// True for the slim compact bar: compact on, launcher root, empty, not overflowed.
     var paletteIsCollapsed: Bool {
         settings.compactMode

@@ -583,6 +583,11 @@ struct ExtensionTests {
     }
 
     static func popToRootChecks() {
+        // The wire strings are the JS enum's, so a rename there fails here rather than silently.
+        check("immediate maps from the wire", PaletteReset(wire: "immediate") == .immediate)
+        check("suspended maps from the wire", PaletteReset(wire: "suspended") == .suspended)
+        check("an absent option respects the user's delay", PaletteReset(wire: nil) == .standard)
+        check("an unknown option is not a capability", PaletteReset(wire: "later") == .standard)
         // A command closing its own window has finished, so Default resets past the user's delay.
         check(
             "a command's own close outranks the delay",

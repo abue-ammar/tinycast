@@ -105,7 +105,7 @@ to the launcher: **Immediately** (default), or after 5, 15, 30, 60 or 90 seconds
 
 Raise it if you often dismiss the palette and come straight back to the same screen.
 
-The delay covers dismissing the palette yourself. An extension command that closes the window as it
-finishes — opening a project, say — resets to the root immediately whatever the delay says, so you
-come back to a fresh search rather than a command you are done with. An extension can also ask to
-keep its screen, and that request is honoured.
+The delay covers dismissing the palette yourself. A command with its own screen — a project list, say
+— that closes the window as it finishes resets to the root immediately whatever the delay says, so you
+come back to a fresh search rather than something you are done with. A command can also ask to keep
+its screen instead, and asking outranks the delay either way.

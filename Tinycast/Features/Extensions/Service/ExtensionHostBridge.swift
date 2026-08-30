@@ -261,22 +261,13 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     // MARK: - Window
 
-    /// `PopToRootType` is an extension's wire format, so it is read here and never carried inward.
-    private func paletteReset(_ options: [String: RenderValue]) -> PaletteReset {
-        switch options["popToRootType"]?.stringValue {
-        case "immediate": return .immediate
-        case "suspended": return .suspended
-        default: return .standard
-        }
-    }
-
     private func window(method: String, arguments: [RenderValue]) -> Any? {
         switch method {
         case "close":
             let options = arguments.first?.objectValue ?? [:]
             context?.closeMainWindow(
                 clearRootSearch: options["clearRootSearch"]?.boolValue ?? false,
-                popToRoot: paletteReset(options))
+                popToRoot: PaletteReset(wire: options["popToRootType"]?.stringValue))
         case "popToRoot":
             context?.popToRoot()
         case "clearSearchBar":
@@ -314,7 +305,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             context.showHUD(
                 arguments.first?.stringValue ?? "",
                 clearRootSearch: options["clearRootSearch"]?.boolValue ?? false,
-                popToRoot: paletteReset(options))
+                popToRoot: PaletteReset(wire: options["popToRootType"]?.stringValue))
             return nil
 
         case "confirmAlert":

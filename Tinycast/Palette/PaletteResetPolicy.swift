@@ -8,6 +8,15 @@ enum PaletteReset: Sendable, Equatable {
     case immediate
     /// Hold the screen until the next summon restores it.
     case suspended
+
+    /// `PopToRootType` as an extension spells it; an unrecognised string is never a capability.
+    init(wire: String?) {
+        switch wire {
+        case "immediate": self = .immediate
+        case "suspended": self = .suspended
+        default: self = .standard
+        }
+    }
 }
 
 /// The one place deciding whether a hide outranks the user's delay.
