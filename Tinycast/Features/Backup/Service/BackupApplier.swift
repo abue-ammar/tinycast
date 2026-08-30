@@ -23,7 +23,8 @@ enum BackupApplier {
             summary.settings = backup.apply(to: core)
         }
         if categories.contains(.clipboard) {
-            summary.clipboard = applyClipboard(bundle, to: core)
+            summary.clipboard = await importClipboard(bundle, into: core.clipboardStore)
+            if summary.clipboard > 0 { core.clipboardStore.load() }
         }
         if categories.contains(.snippets) {
             do {
@@ -43,31 +44,34 @@ enum BackupApplier {
 
     // MARK: - Parts
 
-    private static func applyClipboard(_ bundle: BackupBundle, to core: AppCore) -> Int {
-        let store = core.clipboardStore
-        var entries: [ClipboardItem] = []
-        bundle.forEachClipboardItem { item in
-            switch item.kind {
-            case .text:
-                guard let text = item.text else { return }
-                entries.append(
-                    ClipboardItem(
-                        id: UUID(), kind: .text, text: text, imagePath: nil,
-                        createdAt: item.createdAt, sourceBundleID: item.sourceBundleID,
-                        pinnedAt: item.pinnedAt))
-            case .image:
-                // Adopted into the store's own directory: staging is gone the moment we return.
-                guard let name = item.imageName, let staged = bundle.clipboardImageURL(named: name),
-                    let path = store.adoptImage(from: staged)
-                else { return }
-                entries.append(
-                    ClipboardItem(
-                        id: UUID(), kind: .image, text: nil, imagePath: path,
-                        createdAt: item.createdAt, sourceBundleID: item.sourceBundleID,
-                        pinnedAt: item.pinnedAt))
+    /// Off-main and streamed: a restored history runs to hundreds of thousands of clips.
+    private nonisolated static func importClipboard(
+        _ bundle: BackupBundle, into store: ClipboardStore
+    ) async -> Int {
+        ClipboardStore.importStoredItems(
+            inDatabaseAt: store.dbURL, adoptingImagesInto: store.imagesDir,
+            bundle.clipboardItems().lazy.compactMap { staged($0, in: bundle) })
+    }
+
+    /// The row still points into staging; the store adopts the blob once it accepts the clip.
+    private nonisolated static func staged(
+        _ item: BackupClipboardItem, in bundle: BackupBundle
+    ) -> ClipboardItem? {
+        switch item.kind {
+        case .text:
+            guard let text = item.text else { return nil }
+            return ClipboardItem(
+                id: UUID(), kind: .text, text: text, imagePath: nil, createdAt: item.createdAt,
+                sourceBundleID: item.sourceBundleID, pinnedAt: item.pinnedAt)
+        case .image:
+            guard let name = item.imageName, let url = bundle.clipboardImageURL(named: name) else {
+                return nil
             }
+            return ClipboardItem(
+                id: UUID(), kind: .image, text: nil, imagePath: url.path,
+                createdAt: item.createdAt, sourceBundleID: item.sourceBundleID,
+                pinnedAt: item.pinnedAt)
         }
-        return entries.isEmpty ? 0 : store.importEntries(entries)
     }
 
     private static func applySnippets(_ bundle: BackupBundle, to core: AppCore) async throws -> Int {

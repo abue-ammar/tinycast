@@ -115,6 +115,7 @@ struct BackupSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .onDisappear { if !importingBackup { discardStagedBackup() } }
     }
 
     @ViewBuilder
@@ -185,9 +186,7 @@ struct BackupSettingsView: View {
 
     private func chooseBackupFile() {
         guard let url = BackupActions.chooseBackupFile() else { return }
-        openedStaging?.discard()
-        openedStaging = nil
-        openedManifest = nil
+        discardStagedBackup()
         backupFile = url
         backupStatus = nil
         Task {
@@ -213,12 +212,17 @@ struct BackupSettingsView: View {
             let summary = await BackupActions.applyBackup(
                 categories, from: staging, to: core)
             // Staged files are adopted by the stores during apply, so the tree goes either way.
-            staging.discard()
-            openedStaging = nil
-            openedManifest = nil
+            discardStagedBackup()
             backupFile = nil
             if let summary { backupStatus = .success(BackupActions.summaryText(summary)) }
         }
+    }
+
+    /// The extracted tree can run to gigabytes, so leaving the pane must not strand it.
+    private func discardStagedBackup() {
+        openedStaging?.discard()
+        openedStaging = nil
+        openedManifest = nil
     }
 
     private func chooseRaycastFile() {

@@ -120,8 +120,15 @@ enum BackupComposer {
                 FileManager.default.fileExists(atPath: path)
             else { return nil }
             let source = URL(fileURLWithPath: path)
-            let name = UUID().uuidString + ".png"
-            let destination = bundle.clipboardImagesDirectory.appendingPathComponent(name)
+            // The stored blob's own name, so exporting twice names the same clip the same way.
+            var name = source.lastPathComponent
+            var destination = bundle.clipboardImagesDirectory.appendingPathComponent(name)
+            if !BackupBundle.isSafeName(name)
+                || FileManager.default.fileExists(atPath: destination.path)
+            {
+                name = UUID().uuidString + ".png"
+                destination = bundle.clipboardImagesDirectory.appendingPathComponent(name)
+            }
             if (try? FileManager.default.linkItem(at: source, to: destination)) == nil {
                 try FileManager.default.copyItem(at: source, to: destination)
             }
@@ -143,8 +150,9 @@ enum BackupComposer {
         var copied = 0
         for name in names.sorted() where (name as NSString).pathExtension == "md" {
             guard BackupBundle.isSafeName(name) else { continue }
+            // Resolved: a symlinked note must travel as a file, since the reader refuses links.
             try FileManager.default.copyItem(
-                at: source.appendingPathComponent(name),
+                at: source.appendingPathComponent(name).resolvingSymlinksInPath(),
                 to: destination.appendingPathComponent(name))
             copied += 1
         }

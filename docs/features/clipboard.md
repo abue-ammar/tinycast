@@ -42,7 +42,14 @@ and opens a second connection, because the resident window stops at 1000 rows wh
 capped only by age — an export that read `items` would silently drop the rest of someone's history,
 and walking an uncapped table is not main-actor work. That connection is `SQLITE_OPEN_READWRITE`, as
 `StorageRelocation`'s is: a read-only connection to a WAL database still has to create its `-shm`
-file, and fails confusingly when it cannot.
+file, and fails confusingly when it cannot. It reads in `rowid` order, oldest first, so a streaming
+import rebuilds the same order it exported.
+
+**A restore streams back the same way.** `importStoredItems(inDatabaseAt:adoptingImagesInto:_:)` is the
+one insert path a bulk import takes, `importEntries` included: it hashes the existing rows once into a
+dedupe set rather than scanning the table per candidate, holds one transaction, and moves a staged blob
+into `imagesDir` only once the row is known to be new. `adoptingImagesInto` is nil where the paths
+handed in are already the ones to keep, as the Raycast import's are.
 
 **The load query is deliberately two indexed branches**, not one `pinned_at IS NOT NULL OR rowid >= ?`.
 It fetches every pinned row plus the newest `memoryWindow` unpinned ones, keyed off the floor rowid

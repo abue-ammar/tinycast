@@ -109,6 +109,11 @@ final class ClipboardStore {
 
     private static let memoryWindow = 1000
 
+    nonisolated private static let insertSQL = """
+        INSERT INTO items(id, kind, text, image_path, created_at, source_app, pinned_at)
+        VALUES(?,?,?,?,?,?,?)
+        """
+
     private static let schema = """
         CREATE TABLE IF NOT EXISTS items(
           id TEXT NOT NULL UNIQUE,
@@ -219,41 +224,12 @@ final class ClipboardStore {
         }
     }
 
-    /// Into `imagesDir`, so `owns` is true and retention can reclaim the blob later.
-    func adoptImage(from url: URL) -> String? {
-        let destination = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
-        let moved = (try? FileManager.default.moveItem(at: url, to: destination)) != nil
-        guard moved || (try? FileManager.default.copyItem(at: url, to: destination)) != nil else {
-            return nil
-        }
-        return destination.path
-    }
-
     /// Bulk-insert from an import: original timestamps, external image paths, deduped.
+    @discardableResult
     func importEntries(_ entries: [ClipboardItem]) -> Int {
-        guard let stmt = insertStmt else { return 0 }
-        var seenText = Set<String>()
-        var seenPath = Set<String>()
-        var inserted = 0
-        // One transaction for the batch: ~1 WAL commit rather than one per row.
-        sqlite3_exec(db, "BEGIN", nil, nil, nil)
         // Oldest first so newest ends up with the highest rowid (load orders by rowid DESC).
-        for item in entries.sorted(by: { $0.createdAt < $1.createdAt }) {
-            switch item.kind {
-            case .text:
-                guard let text = item.text, !seenText.contains(text), !textExists(text) else {
-                    continue
-                }
-                seenText.insert(text)
-            case .image:
-                guard let path = item.imagePath, !seenPath.contains(path), !imagePathExists(path)
-                else { continue }
-                seenPath.insert(path)
-            }
-            bindAndInsert(stmt, item)
-            inserted += 1
-        }
-        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        let inserted = Self.importStoredItems(
+            inDatabaseAt: dbURL, entries.sorted { $0.createdAt < $1.createdAt })
         load()
         return inserted
     }
@@ -393,7 +369,7 @@ final class ClipboardStore {
             sqlite3_step(deleteStmt)
             sqlite3_reset(deleteStmt)
             sqlite3_clear_bindings(deleteStmt)
-            bindAndInsert(insertStmt, updated)
+            Self.bindAndInsert(insertStmt, updated)
             sqlite3_exec(db, "COMMIT", nil, nil, nil)
         }
         // Array ops also cover items surfaced by FTS from beyond the in-memory window.
@@ -410,13 +386,13 @@ final class ClipboardStore {
     }
 
     private func insert(_ item: ClipboardItem) {
-        if let stmt = insertStmt { bindAndInsert(stmt, item) }
+        if let stmt = insertStmt { Self.bindAndInsert(stmt, item) }
         items.insert(item, at: 0)
         trimWindow()
         prune()
     }
 
-    private func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) {
+    nonisolated private static func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) {
         sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 2, item.kind.rawValue, -1, SQLITE_TRANSIENT)
         if let text = item.text {
@@ -443,20 +419,6 @@ final class ClipboardStore {
         sqlite3_step(stmt)
         sqlite3_reset(stmt)
         sqlite3_clear_bindings(stmt)
-    }
-
-    private func textExists(_ text: String) -> Bool { exists(column: "text", value: text) }
-    private func imagePathExists(_ path: String) -> Bool {
-        exists(column: "image_path", value: path)
-    }
-
-    private func exists(column: String, value: String) -> Bool {
-        guard let stmt = prepare("SELECT 1 FROM items WHERE \(column) = ? LIMIT 1") else {
-            return false
-        }
-        defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_text(stmt, 1, value, -1, SQLITE_TRANSIENT)
-        return sqlite3_step(stmt) == SQLITE_ROW
     }
 
     /// Whether a path is inside our images directory; only those are ours to delete.
@@ -509,12 +471,7 @@ final class ClipboardStore {
                 == SQLITE_OK,
             sqlite3_exec(db, Self.schema, nil, nil, nil) == SQLITE_OK
         else { return false }
-        insertStmt = prepare(
-            """
-            INSERT INTO items(id, kind, text, image_path, created_at, source_app, pinned_at)
-            VALUES(?,?,?,?,?,?,?)
-            """
-        )
+        insertStmt = prepare(Self.insertSQL)
         // Two indexed branches, deliberately not one OR. See docs/features/clipboard.md#store.
         loadStmt = prepare(
             """
@@ -569,6 +526,76 @@ final class ClipboardStore {
         db = nil
     }
 
+    /// Streams an import into the file off-main; a staged blob moves into `imagesDirectory`,
+    /// which is what makes `owns` true and lets retention reclaim it later.
+    nonisolated static func importStoredItems(
+        inDatabaseAt url: URL, adoptingImagesInto imagesDirectory: URL? = nil,
+        _ items: some Sequence<ClipboardItem>
+    ) -> Int {
+        var keys: Set<Int> = []
+        forEachStoredItem(inDatabaseAt: url) { keys.insert(importKey($0)) }
+
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
+            sqlite3_close_v2(db)
+            return 0
+        }
+        defer { sqlite3_close_v2(db) }
+        // A capture from the poller can hold the write lock; without this the import truncates.
+        sqlite3_busy_timeout(db, 5_000)
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK, let stmt else {
+            return 0
+        }
+        defer { sqlite3_finalize(stmt) }
+        var inserted = 0
+        // One transaction for the batch: ~1 WAL commit rather than one per row.
+        sqlite3_exec(db, "BEGIN", nil, nil, nil)
+        for staged in items {
+            let item = adoptionTarget(staged, in: imagesDirectory)
+            guard keys.insert(importKey(item)).inserted else { continue }
+            if item.imagePath != staged.imagePath,
+                !moveBlob(from: staged.imagePath, to: item.imagePath)
+            {
+                continue
+            }
+            bindAndInsert(stmt, item)
+            inserted += 1
+        }
+        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        return inserted
+    }
+
+    /// Hashed, never held: a whole history's text must not sit in memory to dedupe an import.
+    nonisolated private static func importKey(_ item: ClipboardItem) -> Int {
+        var hasher = Hasher()
+        hasher.combine(item.kind)
+        hasher.combine(item.kind == .text ? item.text : item.imagePath)
+        return hasher.finalize()
+    }
+
+    /// Keeps the staged blob's name, so importing one backup twice lands on the same path — and
+    /// the row dedupes on it rather than minting a second copy of every image.
+    nonisolated private static func adoptionTarget(
+        _ item: ClipboardItem, in directory: URL?
+    ) -> ClipboardItem {
+        guard let directory, item.kind == .image, let path = item.imagePath else { return item }
+        let name = URL(fileURLWithPath: path).lastPathComponent
+        return ClipboardItem(
+            id: item.id, kind: .image, text: nil,
+            imagePath: directory.appendingPathComponent(name).path, createdAt: item.createdAt,
+            sourceBundleID: item.sourceBundleID, pinnedAt: item.pinnedAt)
+    }
+
+    /// false leaves the row out, so none ever points into a staging tree about to be discarded.
+    nonisolated private static func moveBlob(from source: String?, to destination: String?) -> Bool {
+        guard let source, let destination else { return false }
+        let from = URL(fileURLWithPath: source)
+        let to = URL(fileURLWithPath: destination)
+        return (try? FileManager.default.moveItem(at: from, to: to)) != nil
+            || (try? FileManager.default.copyItem(at: from, to: to)) != nil
+    }
+
     /// Past the memory window, off-main. `READWRITE` because a WAL reader still writes `-shm`.
     nonisolated static func forEachStoredItem(
         inDatabaseAt url: URL, _ body: (ClipboardItem) -> Void
@@ -582,7 +609,7 @@ final class ClipboardStore {
         var stmt: OpaquePointer?
         let sql = """
             SELECT id, kind, text, image_path, created_at, source_app, pinned_at
-            FROM items ORDER BY rowid DESC
+            FROM items ORDER BY rowid
             """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }

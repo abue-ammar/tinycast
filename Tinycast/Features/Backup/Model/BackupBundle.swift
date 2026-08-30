@@ -100,16 +100,12 @@ struct BackupBundle: Sendable {
         try ClipboardWriter(url: clipboardItemsURL)
     }
 
-    /// Mapped and split by line, so a gigabyte of history costs one clip of resident memory.
-    func forEachClipboardItem(_ body: (BackupClipboardItem) -> Void) {
-        guard let data = try? Data(contentsOf: clipboardItemsURL, options: .mappedIfSafe) else {
-            return
-        }
-        for line in data.split(separator: 0x0A, omittingEmptySubsequences: true) {
-            if let item = try? Self.decoder.decode(BackupClipboardItem.self, from: Data(line)) {
-                body(item)
-            }
-        }
+    /// Mapped and decoded lazily, so a gigabyte of history costs one clip of resident memory.
+    func clipboardItems() -> some Sequence<BackupClipboardItem> {
+        let data = (try? Data(contentsOf: clipboardItemsURL, options: .mappedIfSafe)) ?? Data()
+        return data.split(separator: 0x0A, omittingEmptySubsequences: true)
+            .lazy
+            .compactMap { try? Self.decoder.decode(BackupClipboardItem.self, from: Data($0)) }
     }
 
     // MARK: - Reading

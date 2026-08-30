@@ -87,13 +87,16 @@ note list sorts on modification date. LZFSE rather than LZMA because clipboard P
 payload and are already compressed.
 
 **Extraction is filtered, not trusted.** `BackupArchive.open` passes an `ArchiveHeader.EntryFilter`
-that returns `.skip` for any entry whose path is absolute or contains `..`, so a hostile archive cannot
-write outside the directory the caller chose. `backup-archive-test` builds exactly such an archive
-header-by-header and asserts nothing escapes.
+that returns `.skip` for any entry whose path is absolute or contains `..`, and then refuses an extract
+holding a symbolic link — a link entry names no `..` at all, so the path filter passes it, and reading
+through one would leave the tree the caller chose. Composing resolves a link for the same reason, so a
+symlinked note travels as a file. `backup-archive-test` builds both hostile archives header-by-header
+and asserts nothing escapes.
 
 **Staging lives in `Caches`, not `temporaryDirectory`.** It has to sit on the same volume as
-Application Support for a clipboard PNG to cross into the bundle as a hardlink rather than a copy, and
-`Caches` is where an orphan left by a crash belongs — so nothing sweeps at launch.
+Application Support for a clipboard PNG to cross into the bundle as a hardlink rather than a copy.
+Leaving the Settings pane discards a tree the user opened but never imported; `BackupStaging` sweeps
+anything a day old on the next run, since a run killed mid-flight leaves its tree behind.
 
 ## Coverage, and why it is spelled out
 
@@ -122,9 +125,11 @@ Per category:
 
 - **Settings** merge field by field, and a file carrying custom commands or their shortcuts still hits
   `confirmExecutableImport` first.
-- **Clipboard** merges through `importEntries`, which dedupes. Each image is adopted into the store's
-  own `images/` directory — staging is gone the moment the import returns, and only a file inside
-  `imagesDir` is one retention can ever reclaim.
+- **Clipboard** streams through `ClipboardStore.importStoredItems`, off the main actor and on its own
+  connection: a restored history runs past the memory window and must never sit in memory or freeze the
+  UI. A row is deduped on its text, or on the path its image takes; the blob keeps the name the bundle
+  gave it, so importing one file twice lands on the same path and adds nothing. Only a file inside
+  `imagesDir` is one retention can ever reclaim, which is why the blob moves there before the row lands.
 - **Snippets** merge through `importSnippets`, deduped on name and body so importing the same file
   twice doesn't leave a second copy of everything. Importing snippets does not enable snippets.
 - **Notes** land as new files through `NotesRepository.importNotes`, which suffixes a title that is

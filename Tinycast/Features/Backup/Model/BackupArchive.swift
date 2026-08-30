@@ -73,6 +73,21 @@ enum BackupArchive {
         } catch {
             throw ArchiveError.cannotRead
         }
+        guard !containsSymbolicLink(directory) else { throw ArchiveError.cannotRead }
+    }
+
+    /// A link entry passes the path filter, and reading through one would leave the extract.
+    private static func containsSymbolicLink(_ directory: URL) -> Bool {
+        let keys: Set<URLResourceKey> = [.isSymbolicLinkKey]
+        guard
+            let entries = FileManager.default.enumerator(
+                at: directory, includingPropertiesForKeys: Array(keys))
+        else { return true }
+        for case let url as URL in entries
+        where (try? url.resourceValues(forKeys: keys))?.isSymbolicLink == true {
+            return true
+        }
+        return false
     }
 
     /// Skips any entry naming an absolute path or `..`, so a hostile archive cannot escape.

@@ -35,6 +35,7 @@ struct BackupArchiveTest {
         formatGuard(in: root)
         rejectsGarbage(in: root)
         refusesTraversal(in: root)
+        refusesSymbolicLinks(in: root)
         categoriesAreComplete()
         staging()
 
@@ -123,9 +124,7 @@ struct BackupArchiveTest {
             for item in items { try? writer.write(item) }
         }
 
-        var read: [BackupClipboardItem] = []
-        bundle.forEachClipboardItem { read.append($0) }
-        check("every clip round trips through JSONL", read == items)
+        check("every clip round trips through JSONL", Array(bundle.clipboardItems()) == items)
 
         // The invariant the line splitting rests on: a newline in a clip is escaped, never raw.
         let raw = (try? Data(contentsOf: bundle.clipboardItemsURL)) ?? Data()
@@ -237,6 +236,48 @@ struct BackupArchiveTest {
         check(
             "an entry naming `..` never lands outside the destination",
             !FileManager.default.fileExists(atPath: escaped.path))
+    }
+
+    /// A link entry names no `..` at all, and reading through it would leave the extract.
+    static func refusesSymbolicLinks(in root: URL) {
+        let archive = root.appendingPathComponent("linked.tinycast")
+        guard
+            let destination = ArchiveByteStream.fileStream(
+                path: FilePath(archive.path), mode: .writeOnly, options: [.create, .truncate],
+                permissions: FilePermissions(rawValue: 0o600)),
+            let compressor = ArchiveByteStream.compressionStream(
+                using: .lzfse, writingTo: destination)
+        else {
+            check("the symlink fixture can be built", false)
+            return
+        }
+        do {
+            try ArchiveStream.withEncodeStream(writingTo: compressor) { encoder in
+                let header = ArchiveHeader()
+                // 76 is `L`; the Swift overlay names no symbolic-link case to spell it with.
+                header.append(.uint(key: ArchiveHeader.FieldKey("TYP"), value: 76))
+                header.append(.string(key: ArchiveHeader.FieldKey("PAT"), value: "notes"))
+                header.append(
+                    .string(key: ArchiveHeader.FieldKey("LNK"), value: root.path))
+                header.append(.uint(key: ArchiveHeader.FieldKey("MOD"), value: 0o777))
+                try encoder.writeHeader(header)
+            }
+            try compressor.close()
+            try destination.close()
+        } catch {
+            check("the symlink fixture can be built (\(error))", false)
+            return
+        }
+
+        let into = root.appendingPathComponent("linked-out", isDirectory: true)
+        do {
+            try BackupArchive.open(file: archive, into: into)
+            check("an archive carrying a symlink is refused", false)
+        } catch {
+            check(
+                "an archive carrying a symlink is refused",
+                error as? BackupArchive.ArchiveError == .cannotRead)
+        }
     }
 
     // MARK: - Declarations
