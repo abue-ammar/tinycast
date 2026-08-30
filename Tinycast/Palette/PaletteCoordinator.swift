@@ -46,11 +46,12 @@ final class PaletteCoordinator {
         }
     }
 
-    func togglePalette(mode: PaletteMode) {
-        if isShowing(mode) {
+    /// A carried query always opens: it is new input, not the second press that would close.
+    func togglePalette(mode: PaletteMode, seeding query: String? = nil) {
+        if isShowing(mode), query == nil {
             hidePalette()
         } else {
-            showPalette(mode: mode)
+            showPalette(mode: mode, seeding: query)
         }
     }
 

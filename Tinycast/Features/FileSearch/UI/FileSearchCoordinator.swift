@@ -36,11 +36,7 @@ final class FileSearchCoordinator {
     /// `query` is the fallback row's: the screen opens already narrowed to what was typed.
     func show(query: String = "") {
         guard settings.fileSearchEnabled else { return }
-        guard query.isEmpty else {
-            paletteCoordinator.showPalette(mode: .fileSearch, seeding: query)
-            return
-        }
-        paletteCoordinator.togglePalette(mode: .fileSearch)
+        paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query.isEmpty ? nil : query)
     }
 
     func open(_ result: FileSearchResult) {
