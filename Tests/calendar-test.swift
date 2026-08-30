@@ -259,13 +259,25 @@ struct CalendarTests {
         expect(
             UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(-1)) == "in 1 min",
             "a partial minute rounds up rather than reading as now")
-        expect(UpcomingWindow.countdown(to: start, now: start) == "now", "the start reads as now")
+        expect(UpcomingWindow.countdown(to: start, now: start) == "Now", "the start reads as Now")
         expect(
-            UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(59)) == "now",
-            "the first minute after the start still reads as now")
+            UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(299)) == "Now",
+            "the first five minutes after the start still read as Now")
         expect(
-            UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(120)) == "2 min ago",
-            "past the start it counts up")
+            UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(301)) == "Now",
+            "a started event stays Now outside the menu-bar-specific timer")
+        expect(
+            UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(-619 * 60)) == "in 10 hr",
+            "a long wait rounds to hours")
+
+        let meeting = event(id: "standup", start: 60, minutes: 30)
+        expect(
+            UpcomingWindow.menuBarCountdown(for: meeting, now: start.addingTimeInterval(299)) == "Now",
+            "the menu bar says Now during the first five minutes")
+        expect(
+            UpcomingWindow.menuBarCountdown(for: meeting, now: start.addingTimeInterval(301))
+                == "24 min left",
+            "the menu bar switches to time left after five minutes")
     }
 
     // MARK: - The menu bar
