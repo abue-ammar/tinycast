@@ -53,7 +53,10 @@ final class CalendarCoordinator {
 
     /// The event the menu bar carries, or nil for the plain icon.
     var menuBarEvent: MeetingEvent? {
-        guard settings.calendarEnabled, settings.menuBarEvents != .never else { return nil }
+        guard
+            settings.calendarEnabled, settings.calendarMenuBarDisplay != .disabled,
+            settings.menuBarEvents != .never
+        else { return nil }
         let summary = MenuBarSummary(
             leadMinutes: settings.menuBarEvents.rawValue,
             hideAfterMinutes: settings.hideCurrentEvent.minutes,
@@ -119,7 +122,8 @@ final class CalendarCoordinator {
     func applyClock() {
         armAutoJoin()
         let watched =
-            paletteVisible || settings.menuBarEvents != .never || settings.autoJoinMeetings
+            paletteVisible || settings.calendarMenuBarDisplay != .disabled
+            || settings.autoJoinMeetings
         guard settings.calendarEnabled, watched else {
             clock.stop()
             return

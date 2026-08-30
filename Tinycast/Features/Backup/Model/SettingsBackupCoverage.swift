@@ -39,6 +39,7 @@ enum SettingsBackupCoverage {
         "joinWindowMinutes": .joinWindowMinutes,
         "autoJoinConfirms": .autoJoinConfirms,
         "menuBarEvents": .menuBarEvents,
+        "calendarMenuBarDisplay": .calendarMenuBarDisplay,
         "menuBarLinkedEventsOnly": .menuBarLinkedEventsOnly,
         "hideCurrentEvent": .hideCurrentEvent,
         "supportReminders": .supportReminders

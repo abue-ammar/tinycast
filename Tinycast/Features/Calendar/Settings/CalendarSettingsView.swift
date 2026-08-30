@@ -67,19 +67,28 @@ struct CalendarSettingsView: View {
             .settingsEnabled(settings.calendarEnabled)
 
             Section {
+                Picker(selection: $settings.calendarMenuBarDisplay) {
+                    ForEach(CalendarMenuBarDisplay.allCases) { display in
+                        Text(display.title).tag(display)
+                    }
+                } label: {
+                    Text("Calendar in Menu Bar")
+                    Text("Show a meeting icon or its title and countdown independently of Tinycast's icon.")
+                }
                 Picker(selection: $settings.menuBarEvents) {
-                    ForEach(MenuBarEvents.allCases) { lead in
+                    ForEach(MenuBarEvents.allCases.dropFirst()) { lead in
                         Text(lead.title).tag(lead)
                     }
                 } label: {
-                    Text("Show Events in Menu Bar")
-                    Text("Show current or upcoming events in the menu bar.")
+                    Text("Show Upcoming Events")
+                    Text("How early an event reaches the menu bar.")
                 }
+                .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
                 Toggle(isOn: $settings.menuBarLinkedEventsOnly) {
                     Text("Only show events with meetings")
                 }
                 .toggleStyle(.checkbox)
-                .settingsEnabled(settings.menuBarEvents != .never)
+                .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
                 Picker(selection: $settings.hideCurrentEvent) {
                     ForEach(HideCurrentEvent.allCases) { hide in
                         Text(hide.title).tag(hide)
@@ -88,7 +97,7 @@ struct CalendarSettingsView: View {
                     Text("Hide Current Event")
                     Text("Hide a started event automatically, or after the time you choose.")
                 }
-                .settingsEnabled(settings.menuBarEvents != .never)
+                .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
             } header: {
                 Text("Menu Bar")
             }

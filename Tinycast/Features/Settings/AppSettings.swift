@@ -2,8 +2,9 @@ import SwiftUI
 
 /// Keys shared between `@AppStorage` sites, so app and Settings bind to the same one.
 enum SettingsKey {
-    /// Menu-bar icon visibility — read by `MenuBarExtra(isInserted:)` and the Settings toggle.
+    /// The launcher icon's visibility — read by its `MenuBarExtra` and the General toggle.
     static let showInMenuBar = "showInMenuBar"
+    static let calendarMenuBarDisplay = "calendarMenuBarDisplay"
 }
 
 /// Delay before a closed palette pops to root; an unset key reads as `.immediately`.
@@ -48,6 +49,23 @@ enum MenuBarEvents: Int, CaseIterable, Identifiable, Sendable {
     var id: Int { rawValue }
 
     var title: String { self == .never ? "Never" : "\(rawValue) minutes before" }
+}
+
+/// The calendar's independent menu-bar presence. Zero matches an unset preference.
+enum CalendarMenuBarDisplay: Int, CaseIterable, Identifiable, Sendable {
+    case disabled = 0
+    case meetingIcon = 1
+    case meetingTitle = 2
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .disabled: "Disabled"
+        case .meetingIcon: "Meeting Icon"
+        case .meetingTitle: "Meeting Title"
+        }
+    }
 }
 
 /// How long a started event holds the menu bar. Zero, the default, means it goes as it starts.
@@ -299,6 +317,12 @@ final class AppSettings {
         didSet { defaults.set(menuBarEvents.rawValue, forKey: Key.menuBarEvents.rawValue) }
     }
 
+    var calendarMenuBarDisplay: CalendarMenuBarDisplay {
+        didSet {
+            defaults.set(calendarMenuBarDisplay.rawValue, forKey: Key.calendarMenuBarDisplay.rawValue)
+        }
+    }
+
     var menuBarLinkedEventsOnly: Bool {
         didSet {
             defaults.set(
@@ -468,8 +492,14 @@ final class AppSettings {
             || defaults.bool(forKey: Key.autoJoinConfirms.rawValue)
         cameraPreview = defaults.bool(forKey: Key.cameraPreview.rawValue)
         // Both default to their zero case, so an unset key needs no presence check.
-        menuBarEvents =
+        let savedMenuBarEvents =
             MenuBarEvents(rawValue: defaults.integer(forKey: Key.menuBarEvents.rawValue)) ?? .never
+        menuBarEvents = savedMenuBarEvents
+        calendarMenuBarDisplay =
+            defaults.object(forKey: Key.calendarMenuBarDisplay.rawValue)
+            .flatMap { $0 as? Int }
+            .flatMap(CalendarMenuBarDisplay.init(rawValue:))
+            ?? (savedMenuBarEvents == .never ? .disabled : .meetingIcon)
         menuBarLinkedEventsOnly =
             defaults.object(forKey: Key.menuBarLinkedEventsOnly.rawValue) == nil
             || defaults.bool(forKey: Key.menuBarLinkedEventsOnly.rawValue)

@@ -407,6 +407,7 @@ final class AppCore {
             {
                 _ = $0.autoJoinMeetings
                 _ = $0.menuBarEvents
+                _ = $0.calendarMenuBarDisplay
             }, reproject: { $0.calendarCoordinator.applyClock() })
         track(
             {
