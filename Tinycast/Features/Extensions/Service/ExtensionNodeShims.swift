@@ -144,6 +144,17 @@ final class ExtensionNodeShims: @unchecked Sendable {
             }
             return URL(fileURLWithPath: target).resolvingSymlinksInPath().path
 
+        case "chmod":
+            let target = try path(0)
+            guard let mode = arguments[safe: 1] as? NSNumber else {
+                throw ShimError.failed("fs.chmod needs a mode.", "EINVAL")
+            }
+            guard fileManager.fileExists(atPath: target) else {
+                throw ShimError.noEntry(target, "chmod")
+            }
+            try fileManager.setAttributes([.posixPermissions: mode], ofItemAtPath: target)
+            return nil
+
         case "mkdtemp":
             // Node's contract: the prefix already includes the parent directory.
             let prefix = try path(0)

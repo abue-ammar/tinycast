@@ -290,6 +290,14 @@ extension arrived with no icon. Building into its own directory leaves the sourc
 exactly the layout `ExtensionCatalog.install` expects: `package.json`, one `<command>.js` each, and
 `assets/`. What it installs from is that directory, not the source.
 
+**An extension carrying a Rust package builds `-e dev` instead.** A `rust:` helper is Raycast's
+Windows counterpart to `swift:`, and `dist` cross-compiles it with `cargo xwin` for
+`x86_64-pc-windows-msvc` — a toolchain nobody on macOS has, so Color Picker failed its whole build on
+a binary it would never load. `dev` is the environment whose Rust plugin skips it and emits the stub
+that throws on use; the Swift helper still compiles. `ExtensionInstaller.environment(for:)` picks the
+environment by looking for a `Cargo.toml`, so every other extension keeps `dist`'s minification,
+external source maps and type check.
+
 `-e dist` also type-checks, so an extension that does not compile now fails at the build rather than
 at the copy. An extension without `ray` falls back to its own build script and installs from the
 source, which is the only contract such an extension offers. Lifecycle scripts are skipped on purpose: the
@@ -368,6 +376,11 @@ would launch Raycast itself.
 UUID), `zlib` (gzip/zlib/raw deflate, both directions), `util`, `events`, `buffer`, `url`,
 `querystring`, `punycode`, `assert`, `string_decoder`, `timers`. Every other built-in resolves to a
 stub that throws only when used, so a bundle that merely references `dgram` or `http2` still loads.
+
+**Bundled Swift helpers** — an extension that imports `swift:../swift/<package>` ships the compiled
+Mach-O in `assets/`, and the wrapper Raycast generates chmods it to `755` before spawning it. Store
+zips ship that binary `644`, so the chmod is what makes it runnable at all; the buffered `spawn`
+covers the rest of the wrapper. Color Picker is the reference case.
 
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`.

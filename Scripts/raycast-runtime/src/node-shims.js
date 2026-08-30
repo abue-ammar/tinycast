@@ -295,6 +295,13 @@ function fsPath(input) {
   return String(input);
 }
 
+// Node takes a mode as a number or as an octal string, and Raycast's Swift wrapper passes "755".
+function fsMode(mode) {
+  const parsed = typeof mode === "string" ? Number.parseInt(mode, 8) : Math.trunc(Number(mode));
+  if (!Number.isFinite(parsed)) throw new TypeError(`Invalid file mode: ${mode}`);
+  return parsed & 0o7777;
+}
+
 const fs = {
   constants: { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1 },
 
@@ -366,7 +373,9 @@ const fs = {
   mkdtempSync(prefix) {
     return hostCallSync("fs", "mkdtemp", [String(prefix)]);
   },
-  chmodSync() {},
+  chmodSync(file, mode) {
+    hostCallSync("fs", "chmod", [fsPath(file), fsMode(mode)]);
+  },
   utimesSync() {},
   watch() {
     throw new Error("fs.watch is not supported in Tinycast extensions.");

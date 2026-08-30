@@ -837,7 +837,54 @@ struct ExtensionTests {
             failingRecorder.failures.joined(separator: "|"))
         await failing.stop(session: "s3")
 
+        await swiftHelperChecks()
         zlibChecks()
+    }
+
+    /// Raycast's `swift:` wrapper chmods its bundled helper before spawning it: store zips ship it 644.
+    @MainActor
+    static func swiftHelperChecks() async {
+        let helper = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-helper-\(UUID().uuidString)")
+        try? Data("#!/bin/sh\necho '{\"hex\":\"#FF0000\"}'\n".utf8).write(to: helper)
+        defer { try? FileManager.default.removeItem(at: helper) }
+
+        let (runtime, _, recorder) = makeRuntime()
+        try? await runtime.boot(
+            config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        let command = """
+            "use strict";
+            const { Detail } = require("@raycast/api");
+            const React = require("react");
+            const { chmod } = require("fs/promises");
+            const { spawn } = require("child_process");
+            module.exports.default = function Command() {
+              const [state, setState] = React.useState("pending");
+              React.useEffect(() => {
+                (async () => {
+                  await chmod("\(helper.path)", "755");
+                  const child = spawn("\(helper.path)", ["pick"]);
+                  const out = [];
+                  child.stdout.on("data", (chunk) => out.push(chunk.toString()));
+                  child.on("exit", (code) => setState(code + ":" + JSON.parse(out.join("")).hex));
+                })().catch((error) => setState("threw:" + error.message));
+              }, []);
+              return React.createElement(Detail, { markdown: state });
+            };
+            """
+        await runtime.start(
+            session: "sSwift", code: command, file: URL(fileURLWithPath: "/tmp/swift-helper.js"),
+            mode: .view, context: launchContext())
+        await settle(1200)
+
+        let mode = (try? FileManager.default.attributesOfItem(atPath: helper.path))
+            .flatMap { $0[.posixPermissions] as? NSNumber }
+        check("chmod applies the requested mode", mode?.intValue == 0o755, String(describing: mode))
+        check(
+            "a chmodded helper is spawnable",
+            recorder.trees.last?.activeRoot?.string("markdown") == "0:#FF0000",
+            recorder.trees.last?.activeRoot?.string("markdown") ?? "no tree")
+        await runtime.stop(session: "sSwift")
     }
 
     /// `zlib` is the one node shim with no JS-side implementation to lean on.

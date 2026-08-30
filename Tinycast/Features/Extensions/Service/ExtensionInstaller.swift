@@ -132,14 +132,29 @@ struct ExtensionInstaller: Sendable {
             return try validated(source)
         }
 
-        // `ray` directly, `-e dist`, `-o` never the source: a dev install would clear it.
+        // `ray` directly, `-o` never the source: a dev install would clear it.
         let build = try await run(
-            ray, arguments: ["build", "-e", "dist", "-o", output.path, "--non-interactive"],
+            ray,
+            arguments: [
+                "build", "-e", environment(for: source), "-o", output.path, "--non-interactive"
+            ],
             in: source, node: node)
         guard build.status == 0 else {
             throw ExtensionStoreError.buildFailed(build.trimmedOutput)
         }
         return try validated(output)
+    }
+
+    /// `dist` builds a `rust:` helper for Windows, which is dead code here and needs a toolchain
+    /// nobody on macOS has; `dev` is the environment whose Rust plugin stubs it out instead.
+    private func environment(for source: URL) -> String {
+        let enumerator = FileManager.default.enumerator(
+            at: source, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+        while let candidate = enumerator?.nextObject() as? URL {
+            if candidate.lastPathComponent == "node_modules" { enumerator?.skipDescendants() }
+            if candidate.lastPathComponent == "Cargo.toml" { return "dev" }
+        }
+        return "dist"
     }
 
     private func validated(_ directory: URL) throws -> URL {
