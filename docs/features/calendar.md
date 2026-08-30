@@ -164,10 +164,13 @@ which is `[start - lead, start)` for **Automatically** and `[start - lead, min(s
 for the timed options. Because the earliest qualifying event wins, one hiding hands the space to the
 next with no extra logic.
 
-`MenuBarLabel` reads the coordinator rather than the stores, which is what scopes Observation to the
-label instead of re-running the whole `MenuBarExtra` scene. It falls back to the app's own glyph when
-nothing is due, so the item never disappears out from under the user, and the title is capped at
-`MenuBarSummary.titleCap` characters — a hard cap is the only thing that bounds a menu bar.
+The calendar has its own `MenuBarExtra`, separate from Tinycast's launcher icon, so hiding the latter
+never hides an enabled calendar display. The display choice is **Disabled**, **Meeting Icon**, or
+**Meeting Title**; the title reads `title • in X min` and is capped at `MenuBarSummary.titleCap`
+characters — a hard cap is the only thing that bounds a menu bar. `CalendarMenuBarLabel` reads the
+coordinator rather than the stores, which scopes Observation to the label instead of re-running either
+scene. It falls back to a calendar glyph when nothing is due, so the calendar item never disappears
+out from under the user.
 
 A click opens the usual menu, with `Join <title>` added on top. **A bare click never joins**: the
 menu bar is not a button, and a mis-click there would open a call.
@@ -219,8 +222,9 @@ and the empty schedule reads `MeetingSpan.orPhrase` off the store that did the q
 placeholder names no days at all: it is a static `PaletteMode` string, and one that advertised a span
 it could not read would be wrong half the time.
 
-Both menu-bar enums put their default at `rawValue == 0`, so `defaults.integer(forKey:)` returning 0
-for an unset key lands on `.never` and `.automatically` rather than fighting them.
+The calendar display and both timing enums put their default at `rawValue == 0`, so an unset preference
+lands on disabled, `.never`, or `.automatically` rather than fighting them. Existing menu-bar users
+are migrated to the meeting-icon display.
 
 The Permissions pane shows calendar access alongside Accessibility, but only ever opens System
 Settings: the Calendar pane's own switch is the one place that may prompt.
