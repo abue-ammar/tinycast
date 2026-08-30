@@ -81,7 +81,7 @@ struct CalendarSettingsView: View {
                     }
                 } label: {
                     Text("Show Upcoming Events")
-                    Text("How early an event reaches the menu bar.")
+                    Text("When the next event reaches the menu bar. Today includes the next 30 minutes after midnight.")
                 }
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
                 Toggle(isOn: $settings.menuBarLinkedEventsOnly) {

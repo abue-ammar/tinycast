@@ -45,10 +45,17 @@ enum MenuBarEvents: Int, CaseIterable, Identifiable, Sendable {
     case five = 5
     case ten = 10
     case thirty = 30
+    case today = -1
 
     var id: Int { rawValue }
 
-    var title: String { self == .never ? "Never" : "\(rawValue) minutes before" }
+    var title: String {
+        switch self {
+        case .never: "Never"
+        case .today: "Today"
+        default: "\(rawValue) minutes before"
+        }
+    }
 }
 
 /// The calendar's independent menu-bar presence. Zero matches an unset preference.
