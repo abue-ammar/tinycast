@@ -126,61 +126,76 @@ struct ExtensionStoreClient: Sendable {
     private func folderNames(in registry: ExtensionRegistry) async throws -> [String] {
         if let cached = await FolderCache.shared.names(for: registry.id) { return cached }
 
-        var sha = registry.ref
-        for segment in registry.path.split(separator: "/").map(String.init) {
-            guard
-                let url = ExtensionStoreResponse.treeURL(
-                    owner: registry.owner, repository: registry.repository, sha: sha)
-            else { throw ExtensionStoreError.malformedResponse }
-            let tree = try ExtensionStoreResponse.parseTree(try await get(url))
-            guard let next = tree.directorySHA(named: segment) else {
-                throw ExtensionStoreError.registryRejected(
-                    "\(registry.owner)/\(registry.repository) has no \(registry.path) directory "
-                        + "on \(registry.ref).")
-            }
-            sha = next
-        }
-
+        let sha = try await treeSHA(
+            owner: registry.owner, repository: registry.repository, path: registry.path,
+            ref: registry.ref)
         guard
             let url = ExtensionStoreResponse.treeURL(
                 owner: registry.owner, repository: registry.repository, sha: sha)
         else { throw ExtensionStoreError.malformedResponse }
-        let tree = try ExtensionStoreResponse.parseTree(try await get(url))
-        let names = tree.directoryNames
+        let names = try ExtensionStoreResponse.parseTree(try await get(url)).directoryNames
         await FolderCache.shared.store(names, for: registry.id)
         return names
     }
 
     // MARK: - Fetching
 
-    /// One folder, breadth-first: a registry repository is gigabytes.
+    /// Never needed to build, and the heaviest thing in some extension folders.
+    private static let skippedDirectories: Set<String> = ["node_modules", "metadata"]
+
+    /// One recursive tree, then raw blobs: `contents` costs an API call per directory, and the
+    /// anonymous budget is 60 an hour — an extension with 17 of them used to spend a third of it.
     func downloadFolder(
         owner: String, repository: String, path: String, ref: String, to destination: URL
     ) async throws {
+        let root = try await treeSHA(owner: owner, repository: repository, path: path, ref: ref)
+        guard
+            let url = ExtensionStoreResponse.treeURL(
+                owner: owner, repository: repository, sha: root, recursive: true)
+        else { throw ExtensionStoreError.malformedResponse }
+        let tree = try ExtensionStoreResponse.parseTree(try await get(url))
+        guard tree.truncated != true else {
+            throw ExtensionStoreError.downloadFailed("\(path) is too large to download in one listing.")
+        }
+
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
-
-        guard
-            let url = ExtensionStoreResponse.contentsURL(
-                owner: owner, repository: repository, path: path, ref: ref)
-        else { throw ExtensionStoreError.malformedResponse }
-        let entries = try ExtensionStoreResponse.parseContents(try await get(url))
-
-        for entry in entries {
-            // Never needed to build, and the heaviest thing in some extension folders.
-            if entry.isDirectory, entry.name == "node_modules" || entry.name == "metadata" {
+        for entry in tree.tree where entry.isFile {
+            let components = entry.path.split(separator: "/").map(String.init)
+            guard !components.contains(where: Self.skippedDirectories.contains) else { continue }
+            let escaped =
+                "\(owner)/\(repository)/\(ref)/\(path)/\(entry.path)"
+                .addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
+            guard let raw = URL(string: "https://raw.githubusercontent.com/\(escaped)") else {
                 continue
             }
-            let target = destination.appendingPathComponent(entry.name)
-            if entry.isDirectory {
-                try await downloadFolder(
-                    owner: owner, repository: repository, path: entry.path, ref: ref, to: target)
-            } else {
-                guard let raw = entry.downloadURL, let fileURL = URL(string: raw) else { continue }
-                let data = try await get(fileURL)
-                try data.write(to: target, options: .atomic)
-            }
+            let target = components.reduce(destination) { $0.appendingPathComponent($1) }
+            try fileManager.createDirectory(
+                at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try await get(raw).write(to: target, options: .atomic)
         }
+    }
+
+    /// Walks a path to the tree it names: the trees API takes a sha, and a ref only for the root.
+    private func treeSHA(
+        owner: String, repository: String, path: String, ref: String
+    ) async throws -> String {
+        var sha = ref
+        for segment in path.split(separator: "/").map(String.init) {
+            guard
+                let url = ExtensionStoreResponse.treeURL(
+                    owner: owner, repository: repository, sha: sha)
+            else { throw ExtensionStoreError.malformedResponse }
+            guard
+                let next = try ExtensionStoreResponse.parseTree(try await get(url))
+                    .directorySHA(named: segment)
+            else {
+                throw ExtensionStoreError.registryRejected(
+                    "\(owner)/\(repository) has no \(path) directory on \(ref).")
+            }
+            sha = next
+        }
+        return sha
     }
 
     func download(_ url: URL) async throws -> Data {

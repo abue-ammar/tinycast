@@ -277,6 +277,14 @@ install one extension would be absurd.
 entries and says nothing about having done so, and `raycast/extensions` holds over three thousand —
 under contents, everything alphabetically past the cap was simply unfindable.
 
+**Downloading one is a walk to the folder's tree, then one recursive listing.** Contents costs an API
+call per directory, and GitHub's anonymous budget is 60 an hour per IP — Color Picker has 17
+directories, so an install used to spend 18 calls and three of them exhausted the hour. Walking
+`extensions/<folder>` to its sha and asking for that tree with `recursive=1` costs 3 calls whatever
+the folder holds, and the file bodies come from `raw.githubusercontent.com`, which the API budget
+does not count. A `truncated` listing is a prefix, so it throws rather than install part of an
+extension.
+
 Installing from a source registry runs `<package manager> install --ignore-scripts`, then
 **`node_modules/.bin/ray build -e dist -o <build dir>` directly — never the manifest's `build`
 script.** That script is `ray build`, whose default environment is `dev`, and dev mode *installs into

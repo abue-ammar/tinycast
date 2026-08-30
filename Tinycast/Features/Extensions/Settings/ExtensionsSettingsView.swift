@@ -88,15 +88,15 @@ struct ExtensionsSettingsView: View {
                 Label("What works", systemImage: "checkmark.circle")
                 Text(
                     "List, detail, form and grid commands, and ones that just run. Preferences, "
-                        + "arguments, storage, the clipboard, toasts and HUDs.")
+                        + "arguments, storage, the clipboard, toasts, HUDs and OAuth sign-in.")
             }
             LabeledContent {
                 EmptyView()
             } label: {
                 Label("What doesn't, yet", systemImage: "xmark.circle")
                 Text(
-                    "Raycast's OAuth sign-in, menu-bar commands, and Raycast's own AI, browser and "
-                        + "window-management services.")
+                    "Menu-bar commands, sign-ins routed through Raycast's own OAuth proxy, and "
+                        + "Raycast's AI, browser and window-management services.")
             }
         } header: {
             Text("Compatibility")
