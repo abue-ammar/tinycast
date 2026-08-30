@@ -66,7 +66,8 @@ final class CalendarCoordinator {
         let summary = MenuBarSummary(
             leadMinutes: settings.menuBarEvents == .today ? nil : settings.menuBarEvents.rawValue,
             hideAfterMinutes: settings.hideCurrentEvent.minutes,
-            linkedOnly: settings.menuBarLinkedEventsOnly)
+            linkedOnly: settings.menuBarLinkedEventsOnly,
+            hideCurrentAtStart: settings.hideCurrentEvent.hidesAtStart)
         return summary.event(from: store.events, now: clock.now)
     }
 
@@ -172,7 +173,8 @@ final class CalendarCoordinator {
             appIndex.setMeetings([])
             return
         }
-        appIndex.setMeetings(agenda.map(Self.entry(for:)))
+        let meetings = settings.calendarLauncherLimit.maximum.map { Array(agenda.prefix($0)) } ?? agenda
+        appIndex.setMeetings(meetings.map(Self.entry(for:)))
     }
 
     private static func entry(for meeting: MeetingEvent) -> AppEntry {

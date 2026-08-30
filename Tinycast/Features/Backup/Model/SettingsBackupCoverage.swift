@@ -35,6 +35,7 @@ enum SettingsBackupCoverage {
         "quicklinkConfirmsBeforeDelete": .quicklinkConfirmsBeforeDelete,
         "extensionsShowInLauncher": .extensionsShowInLauncher,
         "calendarShowInLauncher": .calendarShowInLauncher,
+        "calendarLauncherLimit": .calendarLauncherLimit,
         "calendarIncludesTomorrow": .calendarIncludesTomorrow,
         "joinWindowMinutes": .joinWindowMinutes,
         "autoJoinConfirms": .autoJoinConfirms,

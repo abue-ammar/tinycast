@@ -4,10 +4,10 @@ import Foundation
 struct MenuBarSummary: Sendable {
     /// Nil means to keep the next event visible for the rest of today.
     let leadMinutes: Int?
-    /// How long past the start the event stays. Nil is "Automatically" — it goes as it starts.
-    let hideAfterMinutes: Int?
     /// Only events Tinycast could actually join; the rest are appointments, not meetings.
     let linkedOnly: Bool
+    private let hideCurrentAtStart: Bool
+    private let hideAfterMinutes: Int?
     private let calendar: Calendar
 
     /// Long enough to recognise a meeting, short enough to leave the menu bar usable.
@@ -17,12 +17,14 @@ struct MenuBarSummary: Sendable {
     static let nextDayGrace: TimeInterval = 30 * 60
 
     init(
-        leadMinutes: Int?, hideAfterMinutes: Int?, linkedOnly: Bool,
+        leadMinutes: Int?, hideAfterMinutes: Int? = nil, linkedOnly: Bool,
+        hideCurrentAtStart: Bool = false,
         calendar: Calendar = .current
     ) {
         self.leadMinutes = leadMinutes
-        self.hideAfterMinutes = hideAfterMinutes
         self.linkedOnly = linkedOnly
+        self.hideCurrentAtStart = hideCurrentAtStart
+        self.hideAfterMinutes = hideAfterMinutes
         self.calendar = calendar
     }
 
@@ -56,9 +58,9 @@ struct MenuBarSummary: Sendable {
         return now >= event.start - TimeInterval(leadMinutes * 60)
     }
 
-    /// The grace never outlives the meeting, the way the join card's own window does not.
     private func hidesAt(_ event: MeetingEvent) -> Date {
-        guard let hideAfterMinutes else { return event.start }
+        if hideCurrentAtStart { return event.start }
+        guard let hideAfterMinutes else { return event.end }
         return min(event.start + TimeInterval(hideAfterMinutes * 60), event.end)
     }
 }

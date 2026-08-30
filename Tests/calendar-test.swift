@@ -282,7 +282,8 @@ struct CalendarTests {
 
     // MARK: - The menu bar
 
-    static let automatic = MenuBarSummary(leadMinutes: 5, hideAfterMinutes: nil, linkedOnly: false)
+    static let automatic = MenuBarSummary(
+        leadMinutes: 5, hideAfterMinutes: nil, linkedOnly: false, hideCurrentAtStart: true)
 
     static func menuBarWindow() {
         let meeting = event(id: "standup", start: 60, minutes: 30)
@@ -299,6 +300,11 @@ struct CalendarTests {
         expect(
             automatic.event(from: [meeting], now: start) == nil,
             "Automatically clears it exactly at the start")
+
+        let showTimeLeft = MenuBarSummary(leadMinutes: 5, linkedOnly: false)
+        expect(
+            showTimeLeft.event(from: [meeting], now: start)?.id == "standup",
+            "Keep visible leaves the current event available for its time left")
 
         let lingering = MenuBarSummary(leadMinutes: 5, hideAfterMinutes: 5, linkedOnly: false)
         expect(

@@ -76,7 +76,29 @@ enum CalendarMenuBarDisplay: Int, CaseIterable, Identifiable, Sendable {
 }
 
 /// How long a started event holds the menu bar. Zero, the default, means it goes as it starts.
+enum CalendarLauncherLimit: Int, CaseIterable, Identifiable, Sendable {
+    case one = 1
+    case three = 3
+    case five = 5
+    case all = 0
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .one: "1 next"
+        case .three: "3 next"
+        case .five: "5 next"
+        case .all: "All"
+        }
+    }
+
+    var maximum: Int? { self == .all ? nil : rawValue }
+}
+
+/// Whether a started event remains in the menu bar long enough to show its time left.
 enum HideCurrentEvent: Int, CaseIterable, Identifiable, Sendable {
+    case dontHide = -1
     case automatically = 0
     case afterFive = 5
     case afterTen = 10
@@ -85,11 +107,15 @@ enum HideCurrentEvent: Int, CaseIterable, Identifiable, Sendable {
     var id: Int { rawValue }
 
     var title: String {
-        self == .automatically ? "Automatically" : "After \(rawValue) minutes"
+        switch self {
+        case .dontHide: "Keep visible — show time left"
+        case .automatically: "Automatically"
+        default: "After \(rawValue) minutes"
+        }
     }
 
-    /// Nil is "hide at the start"; `MenuBarSummary` reads it that way.
-    var minutes: Int? { self == .automatically ? nil : rawValue }
+    var hidesAtStart: Bool { self == .automatically }
+    var minutes: Int? { rawValue > 0 ? rawValue : nil }
 }
 
 @MainActor
@@ -295,6 +321,10 @@ final class AppSettings {
         }
     }
 
+    var calendarLauncherLimit: CalendarLauncherLimit {
+        didSet { defaults.set(calendarLauncherLimit.rawValue, forKey: Key.calendarLauncherLimit.rawValue) }
+    }
+
     /// Narrows the fetch itself rather than what is shown, so every surface reads the same days.
     var calendarIncludesTomorrow: Bool {
         didSet {
@@ -488,6 +518,10 @@ final class AppSettings {
         calendarShowInLauncher =
             defaults.object(forKey: Key.calendarShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.calendarShowInLauncher.rawValue)
+        calendarLauncherLimit =
+            defaults.object(forKey: Key.calendarLauncherLimit.rawValue)
+            .flatMap { $0 as? Int }
+            .flatMap(CalendarLauncherLimit.init(rawValue:)) ?? .three
         calendarIncludesTomorrow =
             defaults.object(forKey: Key.calendarIncludesTomorrow.rawValue) == nil
             || defaults.bool(forKey: Key.calendarIncludesTomorrow.rawValue)
@@ -511,8 +545,9 @@ final class AppSettings {
             defaults.object(forKey: Key.menuBarLinkedEventsOnly.rawValue) == nil
             || defaults.bool(forKey: Key.menuBarLinkedEventsOnly.rawValue)
         hideCurrentEvent =
-            HideCurrentEvent(rawValue: defaults.integer(forKey: Key.hideCurrentEvent.rawValue))
-            ?? .automatically
+            defaults.object(forKey: Key.hideCurrentEvent.rawValue)
+            .flatMap { $0 as? Int }
+            .flatMap(HideCurrentEvent.init(rawValue:)) ?? .dontHide
         windowManagementEnabled = defaults.bool(forKey: Key.windowManagementEnabled.rawValue)
         windowManagementShowInLauncher =
             defaults.object(forKey: Key.windowManagementShowInLauncher.rawValue) == nil

@@ -125,6 +125,14 @@ All five leave the launcher when the feature is off **or** when "Show in launche
 `CalendarCoordinator.applyEnabled`, the `applyQuicklinksPresence` twin. Their shortcuts, the join
 card and the menu bar are unaffected: only launcher search is.
 
+The Calendar settings can limit the individual meeting entries in launcher search to the next 1, 3,
+or 5 meetings, or leave them all visible. New installations default to the next 3 meetings so a busy
+calendar does not crowd out apps and commands.
+
+For the menu bar, **Keep visible — show time left** leaves a started meeting up until it ends: it
+changes from `Now` during the first five minutes to its remaining time. The other choices preserve
+the option to hide a current event immediately or after a chosen delay.
+
 | Command | Does | Bindable |
 | --- | --- | --- |
 | Join Next Meeting | Opens the link for the carded, running, or next meeting. | yes |
