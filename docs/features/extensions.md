@@ -233,7 +233,9 @@ Projects and landing back in the list. Nothing stops the engine here: leaving `.
 already does that, and doing it from inside a call the command is still awaiting would drop the work
 after `await closeMainWindow()`. A no-view command hides the palette before it runs, so its close is
 not a command's own close and the delay stands — its `showHUD` still applies an explicit request,
-which is the only way it can reach a palette that is already gone. See [palette.md](palette.md#screens).
+which is the only way it can reach a palette that is already gone. A HUD never closes a palette that
+is not the command's own screen: a headless command can finish long after the user summoned one.
+See [palette.md](palette.md#screens).
 
 ## Turning it on
 

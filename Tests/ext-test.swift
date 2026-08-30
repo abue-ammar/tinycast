@@ -605,6 +605,16 @@ struct ExtensionTests {
         check(
             "an explicit immediate passes through",
             PaletteResetPolicy.resolve(.immediate, commandOwnsScreen: false) == .immediate)
+        // A headless command finishing late must not close a palette summoned in the meantime.
+        check(
+            "a late HUD leaves a palette the user is using alone",
+            PaletteResetPolicy.hudEffect(paletteVisible: true, commandOwnsScreen: false) == .none)
+        check(
+            "a HUD over the command's own screen closes it",
+            PaletteResetPolicy.hudEffect(paletteVisible: true, commandOwnsScreen: true) == .close)
+        check(
+            "a HUD with no palette up answers the pending reset",
+            PaletteResetPolicy.hudEffect(paletteVisible: false, commandOwnsScreen: false) == .reset)
     }
 
     // MARK: - End-to-end through JavaScriptCore

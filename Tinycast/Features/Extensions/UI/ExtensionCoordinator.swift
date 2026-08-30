@@ -231,12 +231,18 @@ final class ExtensionCoordinator {
 
     /// A HUD dismisses the palette in Raycast, so it carries the same close options as a close.
     func showHUD(_ message: String, clearRootSearch: Bool, popToRoot request: PaletteReset) {
-        // A no-view command is already hidden, so its HUD still has a pending reset to answer.
-        if paletteCoordinator.isVisible {
+        switch PaletteResetPolicy.hudEffect(
+            paletteVisible: paletteCoordinator.isVisible,
+            commandOwnsScreen: palette.mode == .extensionCommand)
+        {
+        case .close:
             closeMainWindow(clearRootSearch: clearRootSearch, popToRoot: request)
-        } else {
+        case .reset:
+            // A no-view command is already hidden, so its HUD still has a pending reset to answer.
             if clearRootSearch { palette.query = "" }
             paletteCoordinator.applyReset(request)
+        case .none:
+            break
         }
         core.showMessage(message)
     }

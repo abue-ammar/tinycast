@@ -25,4 +25,17 @@ enum PaletteResetPolicy {
     static func resolve(_ request: PaletteReset, commandOwnsScreen: Bool) -> PaletteReset {
         request == .standard && commandOwnsScreen ? .immediate : request
     }
+
+    /// What a command's HUD may do to the palette, which is nothing unless the screen is its own.
+    enum HUDEffect: Sendable, Equatable {
+        case close
+        case reset
+        case none
+    }
+
+    /// A headless command finishing late must not close a palette the user summoned meanwhile.
+    static func hudEffect(paletteVisible: Bool, commandOwnsScreen: Bool) -> HUDEffect {
+        guard paletteVisible else { return .reset }
+        return commandOwnsScreen ? .close : .none
+    }
 }
