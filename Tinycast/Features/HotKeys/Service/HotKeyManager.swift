@@ -5,18 +5,8 @@ import Foundation
 @Observable
 final class HotKeyManager {
     var onTogglePalette: (() -> Void)?
-    var onToggleClipboard: (() -> Void)?
-    var onToggleEmoji: (() -> Void)?
-    var onShowNotes: (() -> Void)?
-    var onCreateNote: (() -> Void)?
-    var onSearchNotes: (() -> Void)?
-    var onSearchFiles: (() -> Void)?
-    var onSearchSnippets: (() -> Void)?
-    var onJoinNextMeeting: (() -> Void)?
-    var onShowSchedule: (() -> Void)?
-    var onCreateEvent: (() -> Void)?
-    var onShowAIChat: (() -> Void)?
-    var onQuickAction: ((QuickAction) -> Void)?
+    /// The launcher's own command funnel, so a shortcut and a palette row run the same thing.
+    var onRunCommand: ((CommandID) -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
@@ -143,9 +133,7 @@ final class HotKeyManager {
             var set = Set(boundExtensionCommandEntryIDs)
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
             UserDefaults.standard.set(Array(set), forKey: boundExtensionCommandKey)
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .searchSnippets, .joinNextMeeting, .mySchedule, .createEvent, .aiChat,
-            .systemAction, .windowCommand, .quickAction:
+        case .togglePalette, .command, .systemAction, .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -196,30 +184,8 @@ final class HotKeyManager {
         switch action {
         case .togglePalette:
             return "App Launcher"
-        case .toggleClipboard:
-            return CommandID.clipboardHistory.name
-        case .toggleEmoji:
-            return CommandID.searchEmoji.name
-        case .showNotes:
-            return CommandID.showNotes.name
-        case .createNote:
-            return CommandID.createNote.name
-        case .searchNotes:
-            return CommandID.searchNotes.name
-        case .searchFiles:
-            return CommandID.searchFiles.name
-        case .searchSnippets:
-            return CommandID.searchSnippets.name
-        case .joinNextMeeting:
-            return CommandID.joinNextMeeting.name
-        case .mySchedule:
-            return CommandID.mySchedule.name
-        case .createEvent:
-            return CommandID.createEvent.name
-        case .aiChat:
-            return CommandID.aiChat.name
-        case .quickAction(let action):
-            return action.title
+        case .command(let id):
+            return id.name
         case .app(let bundleID), .settingsPane(let bundleID):
             return displayName?(action) ?? bundleID
         case .customCommand:
@@ -258,18 +224,7 @@ final class HotKeyManager {
         guard allowsAction?(action) ?? true else { return }
         switch action {
         case .togglePalette: onTogglePalette?()
-        case .toggleClipboard: onToggleClipboard?()
-        case .toggleEmoji: onToggleEmoji?()
-        case .showNotes: onShowNotes?()
-        case .createNote: onCreateNote?()
-        case .searchNotes: onSearchNotes?()
-        case .searchFiles: onSearchFiles?()
-        case .searchSnippets: onSearchSnippets?()
-        case .joinNextMeeting: onJoinNextMeeting?()
-        case .mySchedule: onShowSchedule?()
-        case .createEvent: onCreateEvent?()
-        case .aiChat: onShowAIChat?()
-        case .quickAction(let action): onQuickAction?(action)
+        case .command(let id): onRunCommand?(id)
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)

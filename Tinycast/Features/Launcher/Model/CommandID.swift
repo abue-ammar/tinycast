@@ -122,25 +122,13 @@ enum CommandID: String, CaseIterable, Sendable {
         }
     }
 
-    /// The built-ins with a global shortcut of their own; the rest open from the launcher.
+    /// Query-driven: the typed text is their input, so they are built where offered, never listed.
+    var isQueryDriven: Bool {
+        self == .openInBrowser || self == .runShellCommand
+    }
+
+    /// A shortcut carries no query, so the query-driven pair is the one thing it cannot run.
     var hotKeyAction: HotKeyAction? {
-        switch self {
-        case .searchFiles: return .searchFiles
-        case .searchSnippets: return .searchSnippets
-        case .clipboardHistory: return .toggleClipboard
-        case .searchEmoji: return .toggleEmoji
-        case .showNotes: return .showNotes
-        case .createNote: return .createNote
-        case .searchNotes: return .searchNotes
-        case .joinNextMeeting: return .joinNextMeeting
-        case .mySchedule: return .mySchedule
-        case .createEvent: return .createEvent
-        case .aiChat: return .aiChat
-        case .fixGrammar: return .quickAction(.fixGrammar)
-        case .rewrite: return .quickAction(.rewrite)
-        case .translate: return .quickAction(.translate)
-        case .summarize: return .quickAction(.summarize)
-        default: return nil
-        }
+        isQueryDriven ? nil : .command(self)
     }
 }

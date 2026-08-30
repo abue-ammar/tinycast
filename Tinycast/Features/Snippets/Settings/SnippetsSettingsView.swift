@@ -65,7 +65,7 @@ struct SnippetsSettingsView: View {
 
     private var shortcuts: some View {
         Section {
-            SettingsRow(title: "Search Snippets") { ShortcutRecorder(action: .searchSnippets) }
+            SettingsRow(title: "Search Snippets") { ShortcutRecorder(action: .command(.searchSnippets)) }
         } header: {
             Text("Global Shortcut")
         } footer: {

@@ -8,7 +8,7 @@ struct EmojiSettingsView: View {
         return Form {
             Section {
                 SettingsRow(title: "Emoji & Symbols") {
-                    ShortcutRecorder(action: .toggleEmoji)
+                    ShortcutRecorder(action: .command(.searchEmoji))
                 }
             } header: {
                 Text("Global Shortcuts")

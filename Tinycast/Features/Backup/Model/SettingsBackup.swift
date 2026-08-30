@@ -65,19 +65,11 @@ struct SettingsBackup: Codable {
         var supportReminders: Bool?
     }
 
-    /// Combos keep the legacy shape, so older files import. docs/features/hotkeys.md#persistence
+    /// One entry per bindable action. docs/features/hotkeys.md#persistence
     struct HotkeyBackup: Codable {
+        /// Named apart from `commands`: the launcher toggle is the one action with no command row.
         var togglePalette: HotKeyBinding?
-        var toggleClipboard: HotKeyBinding?
-        var toggleEmoji: HotKeyBinding?
-        var showNotes: HotKeyBinding?
-        var createNote: HotKeyBinding?
-        var searchNotes: HotKeyBinding?
-        var searchFiles: HotKeyBinding?
-        var searchSnippets: HotKeyBinding?
-        var joinNextMeeting: HotKeyBinding?
-        var mySchedule: HotKeyBinding?
-        var createEvent: HotKeyBinding?
+        var commands: [String: HotKeyBinding]?
         var apps: [String: HotKeyBinding]?
         var panes: [String: HotKeyBinding]?
         var customCommands: [String: HotKeyBinding]?
@@ -151,16 +143,10 @@ extension SettingsBackup {
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
         hotkeys.togglePalette = hk.binding(for: .togglePalette)
-        hotkeys.toggleClipboard = hk.binding(for: .toggleClipboard)
-        hotkeys.toggleEmoji = hk.binding(for: .toggleEmoji)
-        hotkeys.showNotes = hk.binding(for: .showNotes)
-        hotkeys.createNote = hk.binding(for: .createNote)
-        hotkeys.searchNotes = hk.binding(for: .searchNotes)
-        hotkeys.searchFiles = hk.binding(for: .searchFiles)
-        hotkeys.searchSnippets = hk.binding(for: .searchSnippets)
-        hotkeys.joinNextMeeting = hk.binding(for: .joinNextMeeting)
-        hotkeys.mySchedule = hk.binding(for: .mySchedule)
-        hotkeys.createEvent = hk.binding(for: .createEvent)
+        hotkeys.commands = Dictionary(
+            uniqueKeysWithValues: CommandID.allCases.compactMap { id in
+                id.hotKeyAction.flatMap(hk.binding(for:)).map { (id.rawValue, $0) }
+            })
         hotkeys.apps = Dictionary(
             uniqueKeysWithValues: hk.boundBundleIDs.compactMap { id in
                 hk.binding(for: .app(bundleID: id)).map { (id, $0) }
@@ -406,16 +392,10 @@ extension SettingsBackup {
             count += 1
         }
         if let b = hotkeys.togglePalette { apply(b, .togglePalette) }
-        if let b = hotkeys.toggleClipboard { apply(b, .toggleClipboard) }
-        if let b = hotkeys.toggleEmoji { apply(b, .toggleEmoji) }
-        if let b = hotkeys.showNotes { apply(b, .showNotes) }
-        if let b = hotkeys.createNote { apply(b, .createNote) }
-        if let b = hotkeys.searchNotes { apply(b, .searchNotes) }
-        if let b = hotkeys.searchFiles { apply(b, .searchFiles) }
-        if let b = hotkeys.searchSnippets { apply(b, .searchSnippets) }
-        if let b = hotkeys.joinNextMeeting { apply(b, .joinNextMeeting) }
-        if let b = hotkeys.mySchedule { apply(b, .mySchedule) }
-        if let b = hotkeys.createEvent { apply(b, .createEvent) }
+        for (rawID, b) in hotkeys.commands ?? [:] {
+            guard let action = CommandID(rawValue: rawID)?.hotKeyAction else { continue }
+            apply(b, action)
+        }
         for (id, b) in hotkeys.apps ?? [:] { apply(b, .app(bundleID: id)) }
         for (id, b) in hotkeys.panes ?? [:] { apply(b, .settingsPane(bundleID: id)) }
         for (rawID, b) in hotkeys.customCommands ?? [:] {

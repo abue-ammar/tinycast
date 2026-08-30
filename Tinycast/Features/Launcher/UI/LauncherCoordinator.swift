@@ -64,7 +64,8 @@ final class LauncherCoordinator {
         }
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
-            runCommand(app)
+            guard let id = CommandCatalog.command(for: app) else { return }
+            runCommand(id, url: app.url)
             return
         }
         if app.kind == .customCommand {
@@ -115,8 +116,9 @@ final class LauncherCoordinator {
         }
     }
 
-    private func runCommand(_ entry: AppEntry) {
-        switch CommandCatalog.command(for: entry) {
+    /// The one funnel a built-in command runs through, from a palette row or its global shortcut.
+    func runCommand(_ id: CommandID, url: URL? = nil) {
+        switch id {
         case .aiChat:
             core.aiChatCoordinator.showChat()
         case .fixGrammar:
@@ -128,16 +130,18 @@ final class LauncherCoordinator {
         case .summarize:
             core.quickActionCoordinator.run(.summarize)
         case .calculatorHistory:
-            paletteCoordinator.showPalette(mode: .calculatorHistory)
+            paletteCoordinator.togglePalette(mode: .calculatorHistory)
         case .clipboardHistory:
-            paletteCoordinator.showPalette(mode: .clipboard)
+            paletteCoordinator.togglePalette(mode: .clipboard)
         case .searchEmoji:
-            paletteCoordinator.showPalette(mode: .emoji)
+            paletteCoordinator.togglePalette(mode: .emoji)
         case .searchFiles:
             fileSearchCoordinator.show()
         case .openInBrowser:
-            paletteCoordinator.hidePalette(restoreFocus: false)
-            AppLauncher.open(entry.url)
+            // Query-driven, so the row it came from carries the URL nothing else here knows.
+            guard let url else { return }
+            dismissPalette()
+            AppLauncher.open(url)
         case .runShellCommand:
             break  // Only ever a fallback row, which carries the query this funnel does not have.
         case .joinNextMeeting:
@@ -151,56 +155,60 @@ final class LauncherCoordinator {
         case .createEvent:
             calendarCoordinator.createEvent()
         case .showNotes:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             notesCoordinator.show()
         case .createNote:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             notesCoordinator.createNote()
         case .searchNotes:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             notesCoordinator.searchNotes()
         case .searchQuicklinks:
-            paletteCoordinator.showPalette(mode: .quicklinks)
+            paletteCoordinator.togglePalette(mode: .quicklinks)
         case .searchSnippets:
             snippetCoordinator.showSnippets()
         case .createSnippet:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             snippetCoordinator.editSnippet(nil)
         case .createQuicklink:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             quicklinkCoordinator.editQuicklink(nil)
         case .importQuicklinks:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             Task { await quicklinkCoordinator.importQuicklinks() }
         case .exportQuicklinks:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             Task { await quicklinkCoordinator.exportQuicklinks() }
         case .exportSettings:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             Task { await BackupActions.exportSettings(core: core) }
         case .importSettings:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             Task { await BackupActions.importSettings(core: core) }
         case .importFromRaycast:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             settingsCoordinator.showBackupSettings()
         case .checkForUpdates:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             core.updateCoordinator.checkForUpdates()
         case .settings:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             settingsCoordinator.showSettings()
         case .about:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             settingsCoordinator.showAbout()
         case .support:
-            paletteCoordinator.hidePalette(restoreFocus: false)
+            dismissPalette()
             core.supportCoordinator.showSupport()
         case .quit:
             NSApp.terminate(nil)
-        case nil:
-            break
         }
+    }
+
+    /// A shortcut runs these with nothing open, where a plain hide would still reset palette state.
+    private func dismissPalette() {
+        guard paletteCoordinator.isVisible else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
     }
 
     // MARK: - Row actions

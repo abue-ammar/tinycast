@@ -13,7 +13,7 @@ struct AICommandSection: View {
                     Image(systemName: CommandID.aiChat.sfSymbol)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
-                    ShortcutRecorder(action: .aiChat)
+                    ShortcutRecorder(action: .command(.aiChat))
                     Toggle("", isOn: visibilityBinding(entry))
                         .labelsHidden()
                         .toggleStyle(.checkbox)

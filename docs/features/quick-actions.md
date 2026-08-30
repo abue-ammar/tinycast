@@ -55,8 +55,8 @@ provider protocol and the connections behind it.
 
 `QuickAction` is the extensibility story: a fifth action is one case there, its prompt in
 `QuickActionPrompt`, and one `CommandID` case for its launcher row. The shortcut, the settings row
-and the panel all read `allCases`, `HotKeyAction.quickAction(QuickAction)` is parameterised so the
-hotkey enum never changes again, and `CommandID.init(_ action:)` is exhaustive over `QuickAction`, so
+and the panel all read `allCases`, its shortcut is the `HotKeyAction.command(CommandID)` its launcher
+row already has, and `CommandID.init(_ action:)` is exhaustive over `QuickAction`, so
 a fifth cannot compile without a launcher command of its own.
 
 | Action | Engine | Default result | Diff |

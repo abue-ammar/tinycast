@@ -134,11 +134,10 @@ guards entry into `.fileSearch`, so neither a stale selected command nor the glo
 the screen after the feature is disabled. Disabling cancels the session and returns an open File Search
 screen to the launcher without changing palette visibility.
 
-Search Files, Clipboard History, Search Emoji & Symbols and the three Notes commands are the built-in
-commands with a `HotKeyAction` of their own, so `AppEntry.hotKeyAction` answers for all of them. Two
-consequences follow: their launcher rows print a bound chord as a keycap, and each row in
-Settings ▸ Commands carries the same recorder as its feature pane — one binding reachable from two
-places, not two settings.
+Search Files is bindable like every other built-in command — `AppEntry.hotKeyAction` answers
+`.command(.searchFiles)`. Two consequences follow: its launcher row prints a bound chord as a keycap,
+and its row in Settings ▸ Commands carries the same recorder as this pane — one binding reachable from
+two places, not two settings.
 
 Launcher visibility is `VisibilityStore`'s, keyed on the entry's `preferenceKey`, which is why the
 pane's checkbox and the one in Settings ▸ Commands move together. The entry behind it comes from

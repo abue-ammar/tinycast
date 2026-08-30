@@ -41,19 +41,12 @@ final class PaletteCoordinator {
         }
     }
 
-    func toggleClipboard() {
-        if windowController.isVisible, palette.mode == .clipboard {
+    /// A mode command's shortcut closes what it opened; from a launcher row it always re-points.
+    func togglePalette(mode: PaletteMode) {
+        if windowController.isVisible, palette.mode == mode {
             hidePalette()
         } else {
-            showPalette(mode: .clipboard)
-        }
-    }
-
-    func toggleEmoji() {
-        if windowController.isVisible, palette.mode == .emoji {
-            hidePalette()
-        } else {
-            showPalette(mode: .emoji)
+            showPalette(mode: mode)
         }
     }
 

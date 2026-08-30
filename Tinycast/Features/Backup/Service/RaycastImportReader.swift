@@ -84,6 +84,7 @@ enum RaycastImportReader {
         let settings = json["settings"] as? [String: Any]
         var hotkeys = SettingsBackup.HotkeyBackup()
         var apps: [String: HotKeyBinding] = [:]
+        var commands: [String: HotKeyBinding] = [:]
         var mapped = false
 
         if let general = settings?["general"] as? [String: Any],
@@ -97,10 +98,10 @@ enum RaycastImportReader {
             guard let binding = binding(from: command["macosHotkey"]) else { continue }
             switch command["extensionId"] as? String {
             case "e:r:clipboard-history":
-                hotkeys.toggleClipboard = binding
+                commands[CommandID.clipboardHistory.rawValue] = binding
                 mapped = true
             case "e:r:emoji-picker":
-                hotkeys.toggleEmoji = binding
+                commands[CommandID.searchEmoji.rawValue] = binding
                 mapped = true
             case "e:r:applications":
                 if let path = appPath(fromCommandID: command["id"] as? String),
@@ -114,6 +115,7 @@ enum RaycastImportReader {
             }
         }
         if !apps.isEmpty { hotkeys.apps = apps }
+        if !commands.isEmpty { hotkeys.commands = commands }
         return mapped ? hotkeys : nil
     }
 

@@ -226,20 +226,7 @@ final class AppCore {
             snippetListener.healthTicker = healthTicker
 
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
-            hotKeys.onToggleClipboard = { [weak self] in self?.paletteCoordinator.toggleClipboard() }
-            hotKeys.onToggleEmoji = { [weak self] in self?.paletteCoordinator.toggleEmoji() }
-            hotKeys.onShowNotes = { [weak self] in self?.notesCoordinator.show() }
-            hotKeys.onCreateNote = { [weak self] in self?.notesCoordinator.createNote() }
-            hotKeys.onSearchNotes = { [weak self] in self?.notesCoordinator.searchNotes() }
-            hotKeys.onSearchFiles = { [weak self] in self?.fileSearchCoordinator.show() }
-            hotKeys.onSearchSnippets = { [weak self] in self?.snippetCoordinator.showSnippets() }
-            hotKeys.onShowAIChat = { [weak self] in self?.aiChatCoordinator.showChat() }
-            hotKeys.onQuickAction = { [weak self] in self?.quickActionCoordinator.run($0) }
-            hotKeys.onJoinNextMeeting = { [weak self] in
-                self?.calendarCoordinator.joinNextMeeting()
-            }
-            hotKeys.onShowSchedule = { [weak self] in self?.calendarCoordinator.showSchedule() }
-            hotKeys.onCreateEvent = { [weak self] in self?.calendarCoordinator.createEvent() }
+            hotKeys.onRunCommand = { [weak self] id in self?.launcherCoordinator.runCommand(id) }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
             }
@@ -260,7 +247,10 @@ final class AppCore {
             }
             hotKeys.displayName = { [weak self] action in self?.hotKeyDisplayName(for: action) }
             hotKeys.allowsAction = { [weak self] action in
-                self?.visibility.allowsHotKey(action) ?? false
+                guard let self, visibility.allowsHotKey(action) else { return false }
+                // A disabled feature drops its commands from the launcher; their shortcuts go too.
+                guard case .command(let id) = action else { return true }
+                return appIndex.isCommandEnabled(id)
             }
             KeyShortcut.displayedHyperChord = { [settings] in
                 guard settings.hyperKey != .none else { return nil }
@@ -333,9 +323,7 @@ final class AppCore {
             return quicklinks.quicklink(id: id)?.name
         case .extensionCommand(let entryID):
             return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .searchSnippets,
-            .systemAction, .showNotes, .createNote, .searchNotes, .windowCommand, .joinNextMeeting,
-            .mySchedule, .createEvent, .aiChat, .quickAction:
+        case .togglePalette, .command, .systemAction, .windowCommand:
             return nil
         }
     }

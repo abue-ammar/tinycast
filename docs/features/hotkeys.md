@@ -17,6 +17,10 @@ the keycap rendering — only the _engine_ differs.
 - **Hotkeys persist as JSON strings under `hotkey.<action>` UserDefaults keys**, and
   `HotKeyAction.defaultsKey` is the one place that computes a key — it is also the `HotKeyCenter`
   registration id, so the two cannot drift.
+- **A command's shortcut and its launcher row run the same funnel.** `HotKeyAction.command(CommandID)`
+  is parameterised over the whole catalog and dispatches through `LauncherCoordinator.runCommand`, so a
+  new built-in command arrives bindable with no hotkey plumbing of its own, and there is one behaviour
+  per command rather than one per invocation route.
 - **`HotKeyBinding` is the one thing an action is bound to, and it has two cases with two engines.** A
   `.combo` is a Carbon registration; a `.doubleTap` is recognized by `DoubleTapMonitor`, because Carbon
   cannot see a lone modifier at all. Its `Codable` is the synthesised one.
@@ -49,18 +53,20 @@ but the guarantee that every decode runs through the initializer that masks devi
 `SettingsBackup.HotkeyBackup` stores the same values, so the backup file carries this shape too; only
 export → import within one build is guaranteed to round-trip.
 
-`hotkey.searchFiles`, `hotkey.searchSnippets`, `hotkey.toggleClipboard`, `hotkey.toggleEmoji`,
-`hotkey.showNotes`, `hotkey.createNote`, `hotkey.searchNotes`, `hotkey.joinNextMeeting`,
-`hotkey.mySchedule` and `hotkey.createEvent` are the built-in launcher commands with an action of their own, alongside `hotkey.togglePalette`, which has no command row. They are the only `CommandID`s whose
-`hotKeyAction` is non-nil — which is what puts a recorder on their rows in Settings ▸ Commands, and a
-keycap on their launcher rows. Each is also reachable from its own feature pane, so it is one binding
-from two places, not two settings. `HotKeyManager` names them all through `CommandID`, so a conflict
-callout spells an action exactly as its command row does.
+Every built-in command is bindable: `CommandID.hotKeyAction` answers `.command(self)` for all but the
+query-driven pair — Open in Browser and Run Shell Command, whose input is the typed text a shortcut has
+none of. A binding therefore persists under `hotkey.<command raw value>`, as in
+`hotkey.command:clipboard-history`, which is also what puts a recorder on every row in
+Settings ▸ Commands and a keycap on every launcher row. `hotkey.togglePalette` is the one fixed action
+with no command row. A command reachable from its own feature pane is one binding shown in two places,
+not two settings, and `HotKeyManager` names them all through `CommandID`, so a conflict callout spells
+an action exactly as its command row does.
 
 Like a window command, the chord registers regardless of the launcher row. Search Files and Notes both
 re-check their feature switches before opening; see [file-search.md](file-search.md#invocation) and
 [notes.md](notes.md#ownership-and-enablement). A hidden launcher row does not disable its shortcut, but
-disabling the feature does. `SettingsBackup.HotkeyBackup` carries every fixed feature binding.
+disabling the feature does. `SettingsBackup.HotkeyBackup` carries them as one `commands` map keyed by
+`CommandID` raw value.
 
 System actions and window commands are the fixed-catalog case: they persist under
 `hotkey.systemAction.<raw-id>` and `hotkey.windowCommand.<raw-id>`

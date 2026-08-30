@@ -262,6 +262,11 @@ final class AppIndex {
         }
     }
 
+    /// Whether the feature behind a command is on, which is what its shortcut has to obey too.
+    func isCommandEnabled(_ command: CommandID) -> Bool {
+        !hiddenCommands.contains(command)
+    }
+
     /// A feature's commands leave the Commands slice when it is off; `visible` restores them.
     func setCommandsVisible(_ commands: Set<CommandID>, _ visible: Bool) {
         let updated = visible ? hiddenCommands.subtracting(commands) : hiddenCommands.union(commands)

@@ -1,13 +1,10 @@
 import Foundation
 
 enum CommandCatalog {
-    /// Query-driven: the typed text is their input, so they are built where offered, never listed.
-    nonisolated private static let queryDriven: Set<CommandID> = [.openInBrowser, .runShellCommand]
-
     /// Sorted by name for the `AppIndex` invariant; the URL is a placeholder.
     nonisolated static let all: [AppEntry] =
         CommandID.allCases
-        .filter { !queryDriven.contains($0) }
+        .filter { !$0.isQueryDriven }
         .map { makeEntry($0) }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
@@ -22,7 +19,7 @@ enum CommandCatalog {
 
     /// A query-driven row answers one query, so learning or pinning it would misrank a URL.
     static func isQueryDriven(_ entry: AppEntry) -> Bool {
-        command(for: entry).map(queryDriven.contains) ?? false
+        command(for: entry)?.isQueryDriven ?? false
     }
 
     /// The row a typed web address earns; unlike a catalog entry, its URL is the real destination.

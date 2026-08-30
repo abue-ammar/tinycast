@@ -39,7 +39,7 @@ private struct SearchFilesCommandSection: View {
                     Image(systemName: CommandID.searchFiles.sfSymbol)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
-                    ShortcutRecorder(action: .searchFiles)
+                    ShortcutRecorder(action: .command(.searchFiles))
                     Toggle("", isOn: visibilityBinding(entry))
                         .labelsHidden()
                         .toggleStyle(.checkbox)

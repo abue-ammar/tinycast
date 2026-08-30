@@ -83,7 +83,7 @@ struct QuickActionsSettingsView: View {
                         .help("Edit \(action.title) instructions")
                         .accessibilityLabel("Edit \(action.title) instructions")
                     }
-                    ShortcutRecorder(action: .quickAction(action), isQuiet: true)
+                    ShortcutRecorder(action: .command(CommandID(action)), isQuiet: true)
                     Picker("", selection: previewBinding(action)) {
                         Text("Replace").tag(false)
                         Text("Preview").tag(true)

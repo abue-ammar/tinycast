@@ -105,36 +105,26 @@ struct DoubleTapDetectorTests {
     // MARK: - Built-in command mappings
 
     static func commandActions() {
-        let expected: [(CommandID, HotKeyAction, String)] =
-            [
-                (.clipboardHistory, .toggleClipboard, "hotkey.toggleClipboard"),
-                (.searchEmoji, .toggleEmoji, "hotkey.toggleEmoji"),
-                (.searchFiles, .searchFiles, "hotkey.searchFiles"),
-                (.searchSnippets, .searchSnippets, "hotkey.searchSnippets"),
-                (.joinNextMeeting, .joinNextMeeting, "hotkey.joinNextMeeting"),
-                (.mySchedule, .mySchedule, "hotkey.mySchedule"),
-                (.createEvent, .createEvent, "hotkey.createEvent"),
-                (.showNotes, .showNotes, "hotkey.showNotes"),
-                (.createNote, .createNote, "hotkey.createNote"),
-                (.searchNotes, .searchNotes, "hotkey.searchNotes"),
-                (.aiChat, .aiChat, "hotkey.aiChat")
-            ]
-            + QuickAction.allCases.map {
-                (CommandID($0), .quickAction($0), "hotkey.quickAction.\($0.rawValue)")
-            }
-        let answers = CommandID.allCases.compactMap { id in id.hotKeyAction.map { (id, $0) } }
+        let unbindable = CommandID.allCases.filter { $0.hotKeyAction == nil }
         expect(
-            answers.count == expected.count,
-            "exactly the bindable commands answer — got \(answers.map(\.0.name))")
-        for (id, action, key) in expected {
+            unbindable == [.openInBrowser, .runShellCommand],
+            "only the query-driven pair is unbindable — got \(unbindable.map(\.name))")
+        expect(
+            CommandID.allCases.allSatisfy { $0.isQueryDriven || $0.hotKeyAction == .command($0) },
+            "every other command binds to its own action, so every row gets a recorder")
+
+        // Keyed on the raw value, not the position, so reordering the enum cannot move a binding.
+        for id in CommandID.allCases where !id.isQueryDriven {
             expect(
-                id.hotKeyAction == action && action.defaultsKey == key,
-                "\(id.name) maps to \(key)")
+                id.hotKeyAction?.defaultsKey == "hotkey.\(id.rawValue)",
+                "\(id.name) persists under hotkey.\(id.rawValue)")
+            expect(
+                HotKeyAction.builtInActions.contains(.command(id)),
+                "\(id.name) is registered at launch like every other fixed action")
         }
         expect(
-            Set(HotKeyAction.builtInActions)
-                .isSuperset(of: Set(CommandID.allCases.compactMap(\.hotKeyAction))),
-            "every bindable command appears among the built-in hotkey actions")
+            HotKeyAction.builtInActions.contains(.togglePalette),
+            "the launcher toggle is bindable without a command row of its own")
 
         // Every action reaches the launcher as well as a shortcut; `CommandID.init` is exhaustive.
         expect(
@@ -143,17 +133,6 @@ struct DoubleTapDetectorTests {
         expect(
             Set(QuickAction.allCases.map(CommandID.init)).count == QuickAction.allCases.count,
             "no two Quick Actions share a launcher command")
-
-        // Parameterised, so a new Quick Action must arrive bindable without editing this enum.
-        for action in QuickAction.allCases {
-            let hotKey = HotKeyAction.quickAction(action)
-            expect(
-                hotKey.defaultsKey == "hotkey.quickAction.\(action.rawValue)",
-                "\(action.title) keys its binding on its raw value, not its position")
-            expect(
-                HotKeyAction.builtInActions.contains(hotKey),
-                "\(action.title) is registered at launch like every other fixed action")
-        }
         expect(
             Set(HotKeyAction.builtInActions.map(\.defaultsKey)).count
                 == HotKeyAction.builtInActions.count,

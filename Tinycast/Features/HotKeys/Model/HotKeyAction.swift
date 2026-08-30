@@ -2,20 +2,10 @@ import Foundation
 
 /// Everything in Tinycast a global shortcut can be bound to.
 enum HotKeyAction: Hashable, Sendable {
+    /// The one fixed action with no command row of its own.
     case togglePalette
-    case toggleClipboard
-    case toggleEmoji
-    case showNotes
-    case createNote
-    case searchNotes
-    case searchFiles
-    case searchSnippets
-    case joinNextMeeting
-    case mySchedule
-    case createEvent
-    case aiChat
-    /// Parameterised, so a fifth action is a `QuickAction` case and nothing here.
-    case quickAction(QuickAction)
+    /// Parameterised over the catalog, so a new built-in command is bindable with no case here.
+    case command(CommandID)
     case app(bundleID: String)
     case settingsPane(bundleID: String)
     case customCommand(id: UUID)
@@ -29,18 +19,7 @@ enum HotKeyAction: Hashable, Sendable {
     var defaultsKey: String {
         switch self {
         case .togglePalette: "hotkey.togglePalette"
-        case .toggleClipboard: "hotkey.toggleClipboard"
-        case .toggleEmoji: "hotkey.toggleEmoji"
-        case .showNotes: "hotkey.showNotes"
-        case .createNote: "hotkey.createNote"
-        case .searchNotes: "hotkey.searchNotes"
-        case .searchFiles: "hotkey.searchFiles"
-        case .searchSnippets: "hotkey.searchSnippets"
-        case .joinNextMeeting: "hotkey.joinNextMeeting"
-        case .mySchedule: "hotkey.mySchedule"
-        case .createEvent: "hotkey.createEvent"
-        case .aiChat: "hotkey.aiChat"
-        case .quickAction(let action): "hotkey.quickAction." + action.rawValue
+        case .command(let id): "hotkey." + id.rawValue
         case .app(let bundleID): "hotkey.app." + bundleID
         case .settingsPane(let bundleID): "hotkey.pane." + bundleID
         case .customCommand(let id): "hotkey.customCommand." + id.uuidString.lowercased()
@@ -53,8 +32,5 @@ enum HotKeyAction: Hashable, Sendable {
 
     /// The fixed actions every install can bind; the per-item catalogs extend them at launch.
     static let builtInActions: [HotKeyAction] =
-        [
-            .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .searchSnippets, .joinNextMeeting, .mySchedule, .createEvent, .aiChat
-        ] + QuickAction.allCases.map(HotKeyAction.quickAction)
+        [.togglePalette] + CommandID.allCases.compactMap(\.hotKeyAction)
 }

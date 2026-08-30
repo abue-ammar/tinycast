@@ -149,7 +149,7 @@ a debug description written for a log, so each case maps to a plain sentence ins
 ## Chat surface
 
 The built-in `AI Chat` launcher command enters `AIScreen`, and carries a bindable global shortcut
-(`HotKeyAction.aiChat`) that does the same thing from any app; Tab from the launcher is the third
+(`HotKeyAction.command(.aiChat)`) that does the same thing from any app; Tab from the launcher is the third
 way in. Settings → AI holds both the recorder and a checkbox for the command's place in launcher
 search; the shortcut keeps working while the command is hidden, and does nothing at all while the
 feature is off. The palette search field becomes the single-line composer. The footer pill and
