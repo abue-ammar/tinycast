@@ -560,14 +560,13 @@ struct RootPaletteView: View {
                 KeyCapChip(text: "⇥", style: .outline)
             }
         }
-        .help("Open AI Chat  ⇥")
+        .help("Ask AI Chat what you typed  ⇥")
     }
 
     /// Resolved through `PaletteTabAction`, so the hint cannot promise the wrong destination.
     private var tabOpensChat: Bool {
         guard !isCollapsed, headerAccessory?.fieldNames.isEmpty ?? true else { return false }
-        return PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled)
-            == .freshScreen(.ai)
+        return PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled) == .ask
     }
 
     /// The typed text's width, floored for the caret and capped so the strip stays on screen.
@@ -851,6 +850,7 @@ struct RootPaletteView: View {
         switch PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled) {
         case .carryQuery(let mode): vm.mode = mode
         case .freshScreen(let mode): vm.prepare(mode: mode)
+        case .ask: core.aiChatCoordinator.ask(vm.query)
         }
     }
 

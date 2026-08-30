@@ -96,10 +96,13 @@ pairing of a label with its key. It is drawn only when Tab really would open cha
 back out of `PaletteTabAction` rather than restated, so a hint can never promise a destination the
 key does not go to: an argument field to walk takes Tab first, and the hint steps aside for it.
 
-`PaletteTabAction` decides where Tab goes *and* whether the typed text travels with it. Launcher and
-clipboard hand the query over, since one search narrows either list; crossing chat's edge opens a
-fresh screen in both directions, because that field holds a half-written message rather than a query
-— seeding a composer from a search reads as noise, and a draft dropped into a filter matches nothing.
+`PaletteTabAction` decides where Tab goes *and* what happens to the typed text. The clipboard hands
+the query over, since one search narrows either list. **From the launcher, Tab `.ask`s** — chat opens
+fresh with the typed text already sent, so one key turns a search into a question. Leaving chat is
+still a `.freshScreen`: that field holds a half-written message rather than a query, and a draft
+dropped into a filter matches nothing. `.ask` is its own case rather than a `carryQuery(.ai)` because
+the text is submitted, not seeded, and the hint reads the case back out (`== .ask`) instead of
+restating the rule.
 
 The two argument screens — `.quicklinkArguments` and `.customCommandArguments`, together
 `PaletteMode.isArgumentForm` — are the modes where the search field is not a search field: it _is_ the

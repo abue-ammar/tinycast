@@ -133,6 +133,78 @@ draws the headers, `pinsFavorites` pins the Favorites prefix and hands out the �
 listing takes the first only. Opening a row from one also records nothing in `LauncherRankingStore` — a
 category word is not a search for the row that ran, and learning it would rank that row under `s`.
 
+### Contextual commands
+
+A **contextual** command is one the query itself supplies the target for, so it exists only while a
+query resolves and never sits in the index. `CommandCatalog.contextual` names them, `all` filters
+them out, and `LauncherScreen` offers the row per keystroke — ahead of the ranked matches, because
+nothing the index holds answers a typed address better. There is one today: typing a web address or
+a bare host puts **Open in Browser** on top, and activating it hands the URL to the system's default
+handler through `AppLauncher.open`.
+
+The shape a query has to have is `QuicklinkDestination.detect` returning `.web`, reused rather than
+re-written so `github.com` and `https://…` mean the same thing here as they do in a quicklink. The
+entry is an ordinary `.command`, so `VisibilityStore` still gates it — Commands off hides the row —
+and its `url` carries the destination instead of the catalog's `tinycast://` placeholder. Nothing
+learns from it and nothing pins it: `LauncherCoordinator.launch` skips `LauncherRankingStore` for a
+contextual row, the way it already skips a category listing, since a pasted URL is not a term any
+row should rank under; and ⇧⌘F is refused, because a favorite the empty query can never resolve is
+dead state a backup would then carry.
+
+The row prints `AppEntry.subtitle` beside its name — the one field for an entry whose name alone
+can't say what it acts on.
+
+### Fallbacks
+
+A **fallback** is the other half of the query-driven idea: a command the query is the input for,
+offered under a `Use “…” with…` header **below every result**, whatever the query says. A contextual
+row leads because it recognised the query; a fallback trails because nothing did.
+
+`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the three shipped
+destinations and `.quicklink(UUID)` for a user's own. `Builtin` exists rather than a bare `CommandID`
+so `FallbackCoordinator.run` is **exhaustive**: a fourth built-in cannot compile without saying where
+its query goes. `Fallback.id` is deliberately the row's own `AppEntry.id`, which is what lets a stored
+order name a live row across a rename or a reinstall.
+
+| Fallback | Where the query goes | Offered when |
+| --- | --- | --- |
+| AI Chat | a fresh chat, question already sent (`AIChatCoordinator.ask`) | `aiEnabled` |
+| Search Files | the file-search screen, already narrowed | `fileSearchEnabled` |
+| Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
+| a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |
+
+**A quicklink earns a fallback row by declaring a placeholder**, nothing else —
+`QuicklinkDestination.containsPlaceholder`. `openQuicklink(id:filling:)` assigns the query to the
+first *real* missing argument and leaves the rest to the argument form, which opens pre-filled
+through `QuicklinkArgumentSession.begin(values:)`. The seed never fills the **selection** prompt:
+that one is not an `{argument}` and is resolved by replacing the context, so seeding it through
+`userArguments` would silently do nothing.
+
+**Run Shell Command carries its own switch, not the custom-command library's.** Turning off Custom
+Commands hides a library of saved commands; it says nothing about a shell line someone types
+deliberately. The fallback's checkbox is the switch. The run is an ad-hoc `CustomCommand` that is
+never stored — same streaming window, same Stop button — so `CustomCommandCoordinator` keeps
+`lastShellCommand` for the window's Rerun, which has no library entry to look up. It sources the
+shell config (`ll` should mean the reader's own alias) and takes the runner's default home directory.
+
+**The order and the checkboxes are not in a settings backup.** The fallback list is where an import
+could arm shell execution from the launcher, which is the line `snippetsEnabled` already draws:
+a flag that grants a capability is never carried by a backup.
+
+`FallbackStore` is a thin persistence shell over `Fallback.ordered(_:by:)`, which is pure and covered
+by `fallback-test`: stored ids first, then anything the order has never seen, and a stored id with
+nothing behind it — a deleted quicklink — is skipped rather than resurrected. Settings ▸ Fallbacks
+lists exactly `FallbackCoordinator.available`, so a fallback whose feature is off is absent from the
+pane as well as from the launcher, and reorders through ↑/↓ buttons like a favorite rather than
+introducing this codebase's first drag-reorder.
+
+**A fallback row is not a result, and `LauncherScreen.Row` says so.** `.fallback` is its own case
+with a `fallback-` prefixed id, because AI Chat can be a ranked hit *and* a fallback in the same
+list, and two rows sharing one id would collapse in `ForEach`. That is also why `LauncherList` takes
+a `selectedRowID` rather than an entry id. Nothing about a fallback row is learned, pinned or
+revealed: `activate` routes to `FallbackCoordinator.run` instead of `LauncherCoordinator.launch`, and
+`FallbackActionsMenu` offers only running it and opening the pane.
+
 ### User aliases
 
 `AliasStore` (`Launcher/Service/`) keeps one user-chosen alias per entry, keyed by `preferenceKey`

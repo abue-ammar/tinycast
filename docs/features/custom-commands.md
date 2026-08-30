@@ -177,6 +177,15 @@ the success pill is skipped for the same reason.
 - **Stop is the one exception** to "Tinycast never kills a running command". Only the button does it;
   a second command superseding the window never touches the first.
 
+#### The ad-hoc run
+
+The launcher's **Run Shell Command** fallback (see [launcher.md](launcher.md#fallbacks)) is a
+`CustomCommand` that is built, run and thrown away — same `streamOutput`, same window, same Stop
+button. It is not gated on `customCommandsEnabled`: that switch governs a library of saved commands,
+not a line someone types on purpose, and the fallback's own checkbox is its switch. Because it has no
+library entry, `rerunOutput` checks `lastShellCommand` before falling through to `runCustomCommand`,
+or the window's Rerun would look up an id the store has never held and do nothing.
+
 ### Run In
 
 Each command may name the folder it starts in; empty means the home directory, which is what every

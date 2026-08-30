@@ -74,6 +74,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let url: URL
     let bundleID: String?
     let kind: Kind
+    /// Secondary label beside the name, for an entry whose name alone can't say what it acts on.
+    var subtitle: String?
     /// Extra strings matching as strongly as the name; empty for every kind but snippets.
     var matchAliases: [String] = []
     /// Per-item symbol, for the one kind whose glyph is the user's choice. Nil elsewhere.
@@ -156,6 +158,18 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     /// Icon identity for a row's async load: re-skinning changes the glyph while `id` stays put.
     var iconKey: String { "\(id)|\(iconSource)" }
+}
+
+extension AppEntry {
+    /// The one row a quicklink draws, wherever it is offered from.
+    init(_ quicklink: Quicklink) {
+        self.init(
+            id: quicklink.entryID, name: quicklink.name,
+            url: URL(string: "tinycast://quicklink/" + quicklink.id.uuidString)!,
+            bundleID: nil, kind: .quicklink,
+            symbolName: quicklink.iconSymbol
+                ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
+    }
 }
 
 extension AppEntry.Kind {
@@ -276,14 +290,7 @@ final class AppIndex {
             quicklinks
             .filter { $0.isEnabled && $0.showsInRootSearch }
             .sorted(by: Quicklink.precedes)
-            .map { quicklink in
-                AppEntry(
-                    id: quicklink.entryID, name: quicklink.name,
-                    url: URL(string: "tinycast://quicklink/" + quicklink.id.uuidString)!,
-                    bundleID: nil, kind: .quicklink,
-                    symbolName: quicklink.iconSymbol
-                        ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
-            }
+            .map(AppEntry.init)
         guard entries != quicklinkEntries else { return }
         quicklinkEntries = entries
         publishEntries()

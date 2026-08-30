@@ -7,6 +7,12 @@ enum AppLauncher {
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
+    /// Hands the URL to whatever the system registers for its scheme — the default browser, for web.
+    @MainActor
+    static func open(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
+
     @MainActor
     static func showInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])

@@ -66,6 +66,10 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   racing over the same state, and a verdict that still holds after a relaunch. A reply still
   streaming is never reset out from under the reader — it was asked for — and the transcript is
   saved regardless, so the old conversation is one ⌘K → Chat History away.
+- **Arriving with a question skips the open policy entirely.** `ask(_:)` — ⇥ from the launcher, and
+  the AI fallback row — always starts a new chat and submits the text, because a question asked
+  outright is not a summon: resuming a transcript to append an unrelated line to it would be the one
+  reading of `Opens to` nobody wants. It is `showPalette(mode: .ai)` and `send`, never `showChat`.
 - **`AIConversationOpenPolicy` is the whole rule, and it is pure.** `Recent Conversation` resumes the
   resident transcript, or reopens the newest saved one when nothing is resident, unless it has been
   idle past `Start a new conversation after`; `A New Conversation` always starts fresh. There is no

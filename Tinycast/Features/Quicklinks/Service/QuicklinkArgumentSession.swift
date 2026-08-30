@@ -40,15 +40,17 @@ final class QuicklinkArgumentSession {
         return request.arguments.map { ($0.name, request.values[$0.name]) }
     }
 
+    /// `values` holds what a caller filled in already; the form asks only for `arguments`.
     func begin(
         quicklink: Quicklink,
         context: SnippetTemplateEngine.ExpansionContext,
         encoding: SnippetTemplateEngine.ValueEncoding,
-        arguments: [SnippetTemplateEngine.MissingArgument]
+        arguments: [SnippetTemplateEngine.MissingArgument],
+        values: [String: String] = [:]
     ) {
         request = Request(
             quicklink: quicklink, context: context, encoding: encoding, arguments: arguments,
-            values: [:], index: 0)
+            values: values, index: 0)
     }
 
     /// Records `value`, returning the complete set once the last argument is filled.

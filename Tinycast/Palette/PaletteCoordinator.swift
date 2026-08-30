@@ -58,9 +58,15 @@ final class PaletteCoordinator {
     }
 
     /// Shows the palette, honoring Pop to Root Search. See docs/features/palette.md#state-flow.
-    func showPalette(mode: PaletteMode, restoreAnyMode: Bool = false) {
+    func showPalette(
+        mode: PaletteMode, restoreAnyMode: Bool = false, seeding query: String? = nil
+    ) {
         let preserved = windowController.consumePreservedState()
-        if !(preserved && (restoreAnyMode || palette.mode == mode)) {
+        // A carried query always opens fresh: restoring the previous screen would drop it.
+        if let query {
+            palette.prepare(mode: mode)
+            palette.query = query
+        } else if !(preserved && (restoreAnyMode || palette.mode == mode)) {
             palette.prepare(mode: mode)
         }
         windowController.show()

@@ -71,7 +71,8 @@ final class QuicklinkCoordinator {
     // MARK: - Opening
 
     /// The one funnel for every open, so neither the switch nor the prompt can be bypassed.
-    func openQuicklink(id: UUID, forcingDefaultApp: Bool = false) {
+    /// `seed` is the fallback row's query, which fills the first `{argument}` the link declares.
+    func openQuicklink(id: UUID, forcingDefaultApp: Bool = false, filling seed: String? = nil) {
         guard settings.quicklinksEnabled, let quicklink = store.quicklink(id: id),
             quicklink.isEnabled
         else { return }
@@ -97,17 +98,26 @@ final class QuicklinkCoordinator {
 
         let expansion = SnippetTemplateEngine.expand(
             text: quicklink.link, context: context, encoding: encoding)
-        arguments += expansion.missingArguments
+        var missing = expansion.missingArguments
+        // The seed is a value, not a selection, so it fills a real `{argument}` and never the prompt.
+        var seeded: [String: String] = [:]
+        if let seed, !missing.isEmpty { seeded[missing.removeFirst().name] = seed }
+        arguments += missing
         guard arguments.isEmpty else {
             argumentSession.begin(
-                quicklink: quicklink, context: context, encoding: encoding, arguments: arguments)
+                quicklink: quicklink, context: context, encoding: encoding, arguments: arguments,
+                values: seeded)
             pendingQuicklinkForcesDefaultApp = forcingDefaultApp
             // Never `restoreAnyMode`: this screen is always a fresh prompt, never a restored one.
             paletteCoordinator.showPalette(mode: .quicklinkArguments)
             return
         }
-        performQuicklinkOpen(
-            quicklink, link: expansion.text, forcingDefaultApp: forcingDefaultApp)
+        let filled =
+            seeded.isEmpty
+            ? expansion
+            : SnippetTemplateEngine.expand(
+                text: quicklink.link, context: context, userArguments: seeded, encoding: encoding)
+        performQuicklinkOpen(quicklink, link: filled.text, forcingDefaultApp: forcingDefaultApp)
     }
 
     /// `{selection}` promoted to an argument when unreadable and the setting says ask.

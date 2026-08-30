@@ -23,11 +23,14 @@ enum AppActionsMenu {
                 shortcut: "↵"
             ) { core.launcherCoordinator.launch(app, searchQuery: searchQuery) }
         ]
-        items.append(
-            PopoverMenuItem(
-                title: favorites.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                systemImage: favorites.isFavorite ? "star.slash" : "star", shortcut: "⇧⌘F",
-                action: favorites.toggle))
+        // A query-driven row lives only for its query, so pinning it would favorite nothing.
+        if !CommandCatalog.isQueryDriven(app) {
+            items.append(
+                PopoverMenuItem(
+                    title: favorites.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                    systemImage: favorites.isFavorite ? "star.slash" : "star", shortcut: "⇧⌘F",
+                    action: favorites.toggle))
+        }
         if favorites.canMoveUp {
             items.append(
                 PopoverMenuItem(

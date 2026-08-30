@@ -15,7 +15,9 @@ feature lives in `Features/Backup/`.
   answer: neither can be read to check what is covered.
 - **A flag that grants a capability is never carried by a backup**, whether it is excluded from
   `SettingsBackupCoverage` like `snippetsEnabled` or kept out of `AppSettings` entirely. Importing a
-  config must not be able to grant something the user never granted.
+  config must not be able to grant something the user never granted. `FallbackStore` is the second
+  case: its order and checkboxes live on their own `UserDefaults` keys precisely so an import cannot
+  arm **Run Shell Command** in someone's launcher.
 - The format is internal and may change freely. The only requirement is that **export → import
   round-trips within one build** — there is no version field and no migration.
 

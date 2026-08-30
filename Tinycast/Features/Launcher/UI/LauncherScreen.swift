@@ -25,6 +25,8 @@ struct LauncherScreen: PaletteScreen {
     private let pinsFavorites: Bool
     /// How many of `results` are pinned favorites; zero unless the section shows.
     private let favoriteCount: Int
+    /// The `Use "…" with` section, below every result; empty unless something is typed.
+    private let fallbacks: [(fallback: Fallback, entry: AppEntry)]
     /// Resolved in `init`: the palette indexes this several times per event, so it can't recompute.
     let rows: [Row]
 
@@ -44,16 +46,22 @@ struct LauncherScreen: PaletteScreen {
         self.openActions = openActions
         self.scrollToFollow = scrollToFollow
 
-        let results = appIndex.orderedResults(
+        var results = appIndex.orderedResults(
             query: vm.query, visibility: visibility, favorites: favorites)
+        // A typed web address leads: nothing the index holds answers it better.
+        if let browser = CommandCatalog.openInBrowser(for: vm.query), visibility.isVisible(browser) {
+            results.insert(browser, at: 0)
+        }
         let calc = CalcMemo.evaluate(vm.query, rates: currencyRates.rates)
-        let entries = results.map(Row.entry)
+        let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
+        let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespaces).isEmpty
         // At most one of them leads, so the flat index keeps a single-row offset.
         let meeting = pinsFavorites ? meeting : nil
         self.meeting = meeting
         self.results = results
         self.calc = calc
+        self.fallbacks = fallbacks
         self.showSections = pinsFavorites || AppEntry.Kind.named(by: vm.query) != nil
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? results.prefix(while: favorites.isFavorite).count : 0
@@ -71,12 +79,15 @@ struct LauncherScreen: PaletteScreen {
         case calc(CalcResult)
         case meeting(MeetingEvent)
         case entry(AppEntry)
+        /// Prefixed, because the same command can also be a ranked hit above its own fallback row.
+        case fallback(Fallback, AppEntry)
 
         var id: String {
             switch self {
             case .calc: return "calc-card"
             case .meeting: return "meeting-card"
             case .entry(let app): return app.id
+            case .fallback(let fallback, _): return "fallback-" + fallback.id
             }
         }
     }
@@ -93,6 +104,7 @@ struct LauncherScreen: PaletteScreen {
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
+        case .fallback(let fallback, _): return fallback.openVerb
         case nil: return "Open Application"
         }
     }
@@ -137,7 +149,7 @@ struct LauncherScreen: PaletteScreen {
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
         case .calc, .meeting: return true
-        case .entry, nil: return false
+        case .entry, .fallback, nil: return false
         }
     }
 
@@ -168,6 +180,9 @@ struct LauncherScreen: PaletteScreen {
                     // Reset can move the item; keep the highlight on the item whose action ran.
                     if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }
                 })
+        case .fallback(let fallback, let app):
+            return FallbackActionsMenu.content(
+                fallback: fallback, entry: app, query: vm.query, core: core)
         case nil:
             return nil
         }
@@ -181,6 +196,8 @@ struct LauncherScreen: PaletteScreen {
         case .entry(let app):
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))
+        case .fallback(let fallback, _):
+            core.fallbackCoordinator.run(fallback, query: vm.query)
         case nil: break
         }
     }
@@ -216,7 +233,7 @@ struct LauncherScreen: PaletteScreen {
 
     /// The highlight stays in Favorites: the top on add, the neighbour above on remove.
     func toggleFavorite(at selection: Int) -> Bool {
-        guard let app = entry(at: selection) else { return false }
+        guard let app = entry(at: selection), !CommandCatalog.isQueryDriven(app) else { return false }
         let removed = favoriteIndex(of: app)
         favorites.toggle(app)
         // A typed query pins no favorites, so nothing moved and the highlight stays.
@@ -308,7 +325,7 @@ struct LauncherScreen: PaletteScreen {
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         LauncherList(
             results: results,
-            selectedID: entry(at: selection)?.id,
+            selectedRowID: row(at: selection)?.id,
             favoriteCount: favoriteCount,
             showSections: showSections,
             scroll: scroll,
@@ -327,7 +344,25 @@ struct LauncherScreen: PaletteScreen {
             onActions: { app in
                 if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }
                 openActions()
-            }
+            },
+            fallbacks: fallbackSection
         )
     }
+
+    /// Nil when nothing is typed, which is the one state the section has no input for.
+    private var fallbackSection: LauncherList.FallbackSection? {
+        guard !fallbacks.isEmpty else { return nil }
+        return LauncherList.FallbackSection(
+            title: Fallback.sectionTitle(query: vm.query),
+            entries: fallbacks.map(\.entry),
+            onActivate: { activate(at: fallbackRow(at: $0)) },
+            onActions: {
+                vm.selection = fallbackRow(at: $0)
+                openActions()
+            },
+            onConfigure: core.fallbackCoordinator.showSettings)
+    }
+
+    /// Fallbacks are the tail of `rows`, so a click maps to its flat index without a search.
+    private func fallbackRow(at index: Int) -> Int { rows.count - fallbacks.count + index }
 }

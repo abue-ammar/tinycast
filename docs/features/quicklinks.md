@@ -97,6 +97,13 @@ previous argument and restores what was typed there, so a typo in the second of 
 one keypress rather than the whole flow. An argument declaring `options=` renders its choices as
 ordinary selectable rows, so the flat selection index behaves exactly as it does in every other list.
 
+**A launcher fallback fills the first argument before the prompt opens.** Declaring a placeholder is
+exactly what puts a quicklink in the `Use “…” with…` section (see
+[launcher.md](launcher.md#fallbacks)); `openQuicklink(id:filling:)` assigns the query to the first
+real missing argument and hands only the rest to the form, pre-filled through `begin(values:)`. It is
+never the "Selected Text" prompt: that one is not an `{argument}` and is resolved by replacing the
+context, so seeding it as a user argument would expand to nothing.
+
 `QuicklinkArgumentSession` captures the expansion context **once**, before the first prompt — the
 same rule snippet expansion follows — so `{clipboard}`, `{selection}` and `{date}` cannot drift while
 the form is open. Reached from a global shortcut with the palette closed too: `AppCore` records the

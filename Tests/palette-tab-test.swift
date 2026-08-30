@@ -19,8 +19,8 @@ struct PaletteTabTests {
     static func main() {
         expect(
             PaletteTabAction.resolve(mode: .launcher, aiEnabled: true),
-            .freshScreen(.ai),
-            "the launcher opens chat, and a search query is not seeded as a draft")
+            .ask,
+            "the launcher hands the typed text to chat as the question, not as a draft")
         expect(
             PaletteTabAction.resolve(mode: .ai, aiEnabled: true),
             .freshScreen(.clipboard),
@@ -61,6 +61,8 @@ struct PaletteTabTests {
         for _ in 0..<3 {
             switch PaletteTabAction.resolve(mode: mode, aiEnabled: true) {
             case .carryQuery(let next), .freshScreen(let next): mode = next
+            // Asking opens chat, so the ring still steps onto it.
+            case .ask: mode = .ai
             }
             visited.append(mode)
         }
@@ -76,6 +78,7 @@ struct PaletteTabTests {
         for _ in 0..<2 {
             switch PaletteTabAction.resolve(mode: offMode, aiEnabled: false) {
             case .carryQuery(let next), .freshScreen(let next): offMode = next
+            case .ask: offMode = .ai
             }
             offVisited.append(offMode)
         }

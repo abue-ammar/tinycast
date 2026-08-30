@@ -57,6 +57,15 @@ final class AIChatCoordinator {
         paletteCoordinator.showPalette(mode: .ai)
     }
 
+    /// ⇥ and the AI fallback: a fresh chat that carries the question, already asked.
+    func ask(_ prompt: String) {
+        guard settings.aiEnabled else { return }
+        // Never the open policy: a question resumes nothing, and an empty one just opens a chat.
+        chat.startNewChat()
+        paletteCoordinator.showPalette(mode: .ai)
+        send(prompt)
+    }
+
     /// The one place deciding whether summoning resumes; Pop to Root only forgets the screen.
     private func applyOpenPolicy() {
         // A reply still arriving was asked for; resetting would discard the answer.

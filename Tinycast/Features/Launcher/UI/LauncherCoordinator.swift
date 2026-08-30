@@ -57,7 +57,9 @@ final class LauncherCoordinator {
         _ app: AppEntry, searchQuery: String? = nil, arguments: [String: String] = [:]
     ) {
         // A category listing is no search: learning it would rank the row under "s".
-        if let searchQuery, AppEntry.Kind.named(by: searchQuery) == nil {
+        if let searchQuery, AppEntry.Kind.named(by: searchQuery) == nil,
+            !CommandCatalog.isQueryDriven(app)
+        {
             ranking.record(itemKey: app.preferenceKey, query: searchQuery)
         }
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
@@ -133,6 +135,11 @@ final class LauncherCoordinator {
             paletteCoordinator.showPalette(mode: .emoji)
         case .searchFiles:
             fileSearchCoordinator.show()
+        case .openInBrowser:
+            paletteCoordinator.hidePalette(restoreFocus: false)
+            AppLauncher.open(entry.url)
+        case .runShellCommand:
+            break  // Only ever a fallback row, which carries the query this funnel does not have.
         case .joinNextMeeting:
             calendarCoordinator.joinNextMeeting()
         case .copyMeetingLink:
