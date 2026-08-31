@@ -17,15 +17,19 @@ struct ChatTranscriptView: View {
         var atEnd: Bool
     }
 
+    private var visibleMessages: [ChatMessage] {
+        messages.filter { $0.role != .tool && (!$0.text.isEmpty || !$0.images.isEmpty || $0.state == .streaming) }
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 // Not lazy: every anchored jump and the end test measure an estimated height
                 VStack(spacing: Theme.Spacing.xl) {
-                    ForEach(messages) { message in
+                    ForEach(visibleMessages) { message in
                         ChatMessageView(
                             message: message,
-                            status: message.id == messages.last?.id ? status : nil
+                            status: message.id == visibleMessages.last?.id ? status : nil
                         )
                         .id(message.id)
                     }
@@ -62,8 +66,8 @@ struct ChatTranscriptView: View {
                     followsTail = false
                 }
             }
-            .onChange(of: messages.count) { follow(proxy, always: true) }
-            .onChange(of: messages) { follow(proxy, always: false) }
+            .onChange(of: visibleMessages.count) { follow(proxy, always: true) }
+            .onChange(of: visibleMessages) { follow(proxy, always: false) }
             .onChange(of: usage) { follow(proxy, always: false) }
             .overlay(alignment: .bottom) {
                 ResumeFollowingButton {
@@ -224,22 +228,59 @@ struct ChatImageThumbnail: View {
     }
 }
 
-/// A web search inside a reply: live while it runs, a record of what it looked up once done.
+/// A web search or tool execution inside a reply: live while it runs, a record of what it looked up once done.
 private struct ChatSearchRow: View {
     let search: ChatSearch
+
+    private var iconName: String {
+        guard let query = search.query?.lowercased() else { return "globe" }
+        if query.hasPrefix("calc:") { return "function" }
+        if query.hasPrefix("weather:") { return "cloud.sun" }
+        if query.hasPrefix("location:") { return "location" }
+        if query.hasPrefix("fetch:") || query.hasPrefix("http") { return "doc.text" }
+        return "globe"
+    }
+
+    private var displayTitle: String {
+        guard let raw = search.query else {
+            return search.isComplete ? "Searched web" : "Searching web"
+        }
+        if raw.hasPrefix("calc:") {
+            return search.isComplete ? "Calculated" : "Calculating"
+        }
+        if raw.hasPrefix("weather:") {
+            return search.isComplete ? "Checked weather" : "Checking weather"
+        }
+        if raw.hasPrefix("location:") {
+            return search.isComplete ? "Checked location" : "Finding location"
+        }
+        if raw.hasPrefix("fetch:") {
+            return search.isComplete ? "Fetched page" : "Fetching page"
+        }
+        return search.isComplete ? "Searched web" : "Searching web"
+    }
+
+    private var displayQuery: String? {
+        guard let raw = search.query else { return nil }
+        if let colonIndex = raw.firstIndex(of: ":") {
+            let after = String(raw[raw.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
+            return after.isEmpty ? nil : after
+        }
+        return raw.isEmpty ? nil : raw
+    }
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             if search.isComplete {
-                Image(systemName: "globe")
+                Image(systemName: iconName)
                     .font(Theme.Typography.rowTrailing)
                     .symbolRenderingMode(.hierarchical)
             } else {
                 ProgressView().controlSize(.small)
             }
-            Text(search.isComplete ? "Searched web" : "Searching web")
+            Text(displayTitle)
                 .font(Theme.Typography.rowTrailing)
-            if let query = search.query, !query.isEmpty {
+            if let query = displayQuery {
                 Text("· \(query)")
                     .font(Theme.Typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textTertiary)

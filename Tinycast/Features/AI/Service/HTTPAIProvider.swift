@@ -156,9 +156,10 @@ struct HTTPAIProvider: AIProvider {
     /// Plain text stays a string; tool responses take role "tool".
     private static func openAIMessage(_ message: AIMessage) -> [String: Any]? {
         if message.role == .tool {
+            let callID = AIToolCall.sanitizeID(message.toolCallID ?? "")
             return [
                 "role": "tool",
-                "tool_call_id": message.toolCallID ?? "",
+                "tool_call_id": callID,
                 "content": message.text
             ]
         }
@@ -202,12 +203,13 @@ struct HTTPAIProvider: AIProvider {
     private static func anthropicMessage(_ message: AIMessage) -> [String: Any]? {
         if message.role == .system { return nil }
         if message.role == .tool {
+            let callID = AIToolCall.sanitizeID(message.toolCallID ?? "")
             return [
                 "role": "user",
                 "content": [
                     [
                         "type": "tool_result",
-                        "tool_use_id": message.toolCallID ?? "",
+                        "tool_use_id": callID,
                         "content": message.text
                     ]
                 ]

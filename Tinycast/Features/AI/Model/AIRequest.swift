@@ -55,7 +55,7 @@ struct AIMessage: Equatable, Sendable {
         self.text = text
         self.images = images
         self.toolCalls = toolCalls
-        self.toolCallID = toolCallID
+        self.toolCallID = toolCallID.map { AIToolCall.sanitizeID($0) }
     }
 }
 
@@ -83,12 +83,13 @@ struct AIRequest: Equatable, Sendable {
     init(
         instructions: String?,
         messages: [AIMessage],
+        maxOutputTokens: Int = 4096,
         webSearch: Bool = false,
         tools: [AIToolDefinition] = []
     ) {
         self.messages = messages
         self.instructions = instructions
-        self.maxOutputTokens = 4096
+        self.maxOutputTokens = maxOutputTokens
         self.webSearch = webSearch
         self.tools = tools
     }
@@ -159,6 +160,37 @@ public struct AIToolDefinition: Equatable, Sendable {
     public let description: String
     public let parameters: [AIToolParameter]
 
+    public var parametersJSON: String {
+        var properties: [String: Any] = [:]
+        var requiredList: [String] = []
+
+        for p in parameters {
+            var prop: [String: Any] = [
+                "type": p.type,
+                "description": p.description
+            ]
+            if let enums = p.enumValues, !enums.isEmpty {
+                prop["enum"] = enums
+            }
+            properties[p.name] = prop
+            if p.isRequired {
+                requiredList.append(p.name)
+            }
+        }
+
+        let schema: [String: Any] = [
+            "type": "object",
+            "properties": properties,
+            "required": requiredList
+        ]
+
+        if let data = try? JSONSerialization.data(withJSONObject: schema, options: []),
+           let str = String(data: data, encoding: .utf8) {
+            return str
+        }
+        return "{\"type\":\"object\",\"properties\":{}}"
+    }
+
     public init(
         name: String,
         description: String,
@@ -178,15 +210,32 @@ public struct AIToolCall: Equatable, Sendable {
     public var argumentsJSON: String { arguments }
 
     public init(id: String, name: String, arguments: String) {
-        self.id = id
+        self.id = Self.sanitizeID(id)
         self.name = name
         self.arguments = arguments
     }
 
     public init(id: String, name: String, argumentsJSON: String) {
-        self.id = id
+        self.id = Self.sanitizeID(id)
         self.name = name
         self.arguments = argumentsJSON
+    }
+
+    public static func sanitizeID(_ rawID: String) -> String {
+        let trimmed = rawID.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "call_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
+        var result = ""
+        for scalar in trimmed.unicodeScalars {
+            if allowed.contains(scalar) {
+                result.append(Character(scalar))
+            } else {
+                result.append("_")
+            }
+        }
+        return result.isEmpty ? ("call_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")) : result
     }
 }
 
@@ -240,14 +289,14 @@ public struct AIToolResult: Equatable, Sendable {
     public let isError: Bool
 
     public init(callID: String, toolName: String, output: String, isError: Bool = false) {
-        self.callID = callID
+        self.callID = AIToolCall.sanitizeID(callID)
         self.toolName = toolName
         self.output = output
         self.isError = isError
     }
 
     public init(callID: String, name: String, output: String, isError: Bool = false) {
-        self.callID = callID
+        self.callID = AIToolCall.sanitizeID(callID)
         self.toolName = name
         self.output = output
         self.isError = isError

@@ -52,6 +52,7 @@ final class AIChatState {
                 var turn = 0
                 let maxTurns = 8
                 let registry = AIToolRegistry.shared
+                var accumulatedSearches: [ChatSearch] = []
 
                 while turn < maxTurns {
                     turn += 1
@@ -84,9 +85,15 @@ final class AIChatState {
                         self.flushPendingText()
                         if var last = self.session.messages.last, last.role == .assistant {
                             last.toolCalls = receivedToolCalls
+                            last.state = .complete
                             self.session.replaceLast(with: last)
                         }
                         for toolCall in receivedToolCalls {
+                            let (searchQuery, statusDesc) = Self.searchInfo(for: toolCall)
+                            let searchItem = ChatSearch(query: searchQuery, isComplete: false, textOffset: 0)
+                            accumulatedSearches.append(searchItem)
+                            self.toolStatus = statusDesc
+
                             let result = await registry.execute(call: toolCall)
                             self.session.append(
                                 ChatMessage(
@@ -96,11 +103,30 @@ final class AIChatState {
                                     toolCallID: result.callID
                                 )
                             )
+
+                            if let idx = accumulatedSearches.indices.last {
+                                accumulatedSearches[idx].isComplete = true
+                            }
                         }
-                        self.session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
+                        self.toolStatus = nil
+                        self.session.append(
+                            ChatMessage(
+                                role: .assistant,
+                                text: "",
+                                state: .streaming,
+                                searches: accumulatedSearches
+                            )
+                        )
                         self.history.save(self.session)
                         continue
                     } else {
+                        if var last = self.session.messages.last, last.role == .assistant {
+                            if last.searches.isEmpty && !accumulatedSearches.isEmpty {
+                                last.searches = accumulatedSearches
+                                self.session.replaceLast(with: last)
+                            }
+                        }
+                        self.finishLast(state: .complete, fallback: "No response")
                         break
                     }
                 }
@@ -203,8 +229,13 @@ final class AIChatState {
         clearStaging()
     }
 
+    private var toolStatus: String? = nil
+
     /// The line shown in the empty streaming bubble while nothing has arrived yet.
-    var liveStatus: String? { isThinking ? "Thinking…" : nil }
+    var liveStatus: String? {
+        if let toolStatus { return toolStatus }
+        return isThinking ? "Thinking…" : nil
+    }
 
     var lastAssistantText: String? {
         session.messages.last(where: { $0.role == .assistant && !$0.text.isEmpty })?.text
@@ -238,7 +269,7 @@ final class AIChatState {
         case .toolCall, .toolExecuting:
             break
         case .finished:
-            finishLast(state: .complete, fallback: "No response")
+            break
         }
     }
 
@@ -299,6 +330,34 @@ extension AIChatState {
         var search = search
         search.isComplete = true
         return search
+    }
+
+    fileprivate static func searchInfo(for call: AIToolCall) -> (query: String, status: String) {
+        var queryParam = ""
+        if let data = call.argumentsJSON.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let q = json["query"] as? String { queryParam = q }
+            else if let u = json["url"] as? String { queryParam = u }
+            else if let e = json["expression"] as? String { queryParam = e }
+            else if let l = json["location"] as? String { queryParam = l }
+        }
+        if queryParam.isEmpty { queryParam = call.argumentsJSON }
+
+        switch call.name {
+        case "web_search":
+            return (query: queryParam, status: "Searching the web…")
+        case "web_fetch":
+            return (query: "fetch: \(queryParam)", status: "Reading webpage…")
+        case "calculate":
+            return (query: "calc: \(queryParam)", status: "Calculating…")
+        case "get_weather":
+            let loc = queryParam.isEmpty ? "Current Location" : queryParam
+            return (query: "weather: \(loc)", status: "Checking weather…")
+        case "get_location":
+            return (query: "location: Current Location", status: "Locating…")
+        default:
+            return (query: "\(call.name): \(queryParam)", status: "Using \(call.name)…")
+        }
     }
 }
 

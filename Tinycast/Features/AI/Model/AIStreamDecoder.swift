@@ -115,16 +115,18 @@ struct AIStreamDecoder: Sendable {
 
     private mutating func flushPendingToolCalls() -> [AIStreamEvent] {
         var events: [AIStreamEvent] = []
-        for (_, call) in openAIToolCalls.sorted(by: { $0.key < $1.key }) {
+        for (index, call) in openAIToolCalls.sorted(by: { $0.key < $1.key }) {
             if !call.name.isEmpty {
-                events.append(.toolCall(AIToolCall(id: call.id, name: call.name, argumentsJSON: call.arguments)))
+                let callID = call.id.isEmpty ? "call_\(index)_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8))" : call.id
+                events.append(.toolCall(AIToolCall(id: callID, name: call.name, argumentsJSON: call.arguments)))
             }
         }
         openAIToolCalls.removeAll()
 
-        for (_, call) in anthropicToolCalls.sorted(by: { $0.key < $1.key }) {
+        for (index, call) in anthropicToolCalls.sorted(by: { $0.key < $1.key }) {
             if !call.name.isEmpty {
-                events.append(.toolCall(AIToolCall(id: call.id, name: call.name, argumentsJSON: call.arguments)))
+                let callID = call.id.isEmpty ? "toolu_\(index)_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8))" : call.id
+                events.append(.toolCall(AIToolCall(id: callID, name: call.name, argumentsJSON: call.arguments)))
             }
         }
         anthropicToolCalls.removeAll()
