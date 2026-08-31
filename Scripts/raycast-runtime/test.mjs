@@ -24,7 +24,7 @@ const runtimePath = [
 
 const runtime = readFileSync(runtimePath, "utf8");
 
-export function createHarness({ onRender, onFail, verbose = false } = {}) {
+export function createHarness({ onRender, onFail, verbose = false, stubs = {} } = {}) {
   const context = createContext({});
   const timers = new Map();
   const state = { trees: [], failures: [], logs: [], finished: false, hostCalls: [] };
@@ -63,9 +63,11 @@ export function createHarness({ onRender, onFail, verbose = false } = {}) {
       }
     },
     invoke(callId, api, method, argsJson) {
-      state.hostCalls.push(`${api}.${method}`);
+      const name = `${api}.${method}`;
+      state.hostCalls.push(name);
+      const args = JSON.parse(argsJson);
       Promise.resolve()
-        .then(() => stubHostCall(api, method, JSON.parse(argsJson)))
+        .then(() => (stubs[name] ? stubs[name](args) : stubHostCall(api, method, args)))
         .then(
           (value) => settle(callId, true, value),
           (error) => settle(callId, false, String(error?.message ?? error)),

@@ -703,57 +703,14 @@ EventEmitter.defaultMaxListeners = 10;
 EventEmitter.once = (emitter, event) =>
   new Promise((resolve) => emitter.once(event, (...args) => resolve(args)));
 
-class BufferedStream extends EventEmitter {
-  constructor() {
-    super();
-    this.readable = true;
-    this.readableEnded = false;
-    this.encoding = null;
-    // `get-stream` (and therefore execa) consumes stdout by async iteration, not by `data` events.
-    this._delivered = new Promise((resolve) => {
-      this._resolveDelivered = resolve;
-    });
-  }
-
-  async *[Symbol.asyncIterator]() {
-    const bytes = await this._delivered;
-    if (bytes.length) yield this.encoding ? bytes.toString(this.encoding) : bytes;
-  }
-  setEncoding(encoding) {
-    this.encoding = encoding;
-    return this;
-  }
-  pipe(destination) {
-    this.on("data", (chunk) => destination.write?.(chunk));
-    this.on("end", () => destination.end?.());
-    return destination;
-  }
-  resume() {
-    return this;
-  }
-  pause() {
-    return this;
-  }
-  destroy() {
-    return this;
-  }
-  _deliver(bytes) {
-    this._resolveDelivered(bytes);
-    if (bytes.length) this.emit("data", this.encoding ? bytes.toString(this.encoding) : bytes);
-    this.readableEnded = true;
-    this.emit("end");
-    this.emit("close");
-  }
-}
-
 class BufferedChildProcess extends EventEmitter {
   constructor(file, args, options) {
     super();
     this.pid = 0;
     this.killed = false;
     this.exitCode = null;
-    this.stdout = new BufferedStream();
-    this.stderr = new BufferedStream();
+    this.stdout = new PassThrough();
+    this.stderr = new PassThrough();
     this._input = [];
     this._started = false;
 
@@ -801,19 +758,22 @@ class BufferedChildProcess extends EventEmitter {
     ]).then(
       (raw) => {
         this.exitCode = raw.status;
-        this.stdout._deliver(Buffer.from(base64ToBytes(raw.stdout)));
-        this.stderr._deliver(Buffer.from(base64ToBytes(raw.stderr)));
-        this.emit("exit", raw.status, raw.signal ?? null);
-        this.emit("close", raw.status, raw.signal ?? null);
+        this.stdout.end(Buffer.from(base64ToBytes(raw.stdout)));
+        this.stderr.end(Buffer.from(base64ToBytes(raw.stderr)));
+        // One host reply carries both, but a reader still expects the output before the exit code.
+        queueMicrotask(() => {
+          this.emit("exit", raw.status, raw.signal ?? null);
+          this.emit("close", raw.status, raw.signal ?? null);
+        });
       },
       (error) => {
         // Close the streams even on failure: a consumer that awaits stdout (execa does) would
         // otherwise see `undefined` where Node guarantees an empty string.
         this.exitCode = 1;
-        this.stdout._deliver(Buffer.alloc(0));
-        this.stderr._deliver(Buffer.from(String(error?.message ?? error), "utf8"));
+        this.stdout.end();
+        this.stderr.end(Buffer.from(String(error?.message ?? error), "utf8"));
         this.emit("error", error);
-        this.emit("close", 1, null);
+        queueMicrotask(() => this.emit("close", 1, null));
       },
     );
   }
@@ -901,18 +861,31 @@ function runAsync(spec, options, callback, label) {
 
 // ─── stream ─────────────────────────────────────────────────────────
 
-// Only what `@raycast/utils`' `useExec` needs: it pipes a child's stdout into a `PassThrough` and
-// reads back the buffered value, so `stream` cannot stay a stub or every `useExec` extension fails.
-// Worse, it fails opaquely — the thrown "not supported" never reaches the extension, which reports
-// the TypeError that follows from an undefined stdout instead. Everything else on the module still
-// refuses to run.
-class PassThrough extends EventEmitter {
+// Two consumers, one class: `@raycast/utils`' `useExec` pipes a child's stdout through a
+// `PassThrough`, and a bundled HTTP client reads a response body with `for await`. Both attach
+// late, so chunks queue until someone asks — emitting eagerly drops the whole body on the floor.
+//
+// The module *is* `Stream`, because Node does `module.exports = Stream` and bundles lean on it:
+// node-fetch tests `body instanceof stream.default` on every Request it builds. The rest of the
+// module still refuses to run.
+class Stream extends EventEmitter {
   constructor() {
     super();
     this.readable = true;
     this.writable = true;
     this.writableEnded = false;
     this.encoding = null;
+    this._queue = [];
+    this._ended = false;
+    this._endEmitted = false;
+    this._flowing = false;
+    this._scheduled = false;
+    this._wake = null;
+  }
+
+  /// node-fetch decides a body was fully read by this flag before it trusts what it collected.
+  get readableEnded() {
+    return this._ended && this._queue.length === 0;
   }
 
   setEncoding(encoding) {
@@ -921,17 +894,27 @@ class PassThrough extends EventEmitter {
   }
 
   write(chunk) {
+    // Node never surfaces an empty chunk as `data`; queueing one would fake a read that never was.
+    if (chunk?.length === 0) return true;
     const decode = this.encoding && typeof chunk !== "string";
-    this.emit("data", decode ? Buffer.from(chunk).toString(this.encoding) : chunk);
+    this._queue.push(decode ? Buffer.from(chunk).toString(this.encoding) : chunk);
+    this._drain();
     return true;
   }
 
   end(chunk) {
     if (chunk !== undefined && chunk !== null) this.write(chunk);
     this.writableEnded = true;
-    this.emit("end");
+    this._ended = true;
     this.emit("finish");
-    this.emit("close");
+    this._drain();
+    return this;
+  }
+
+  on(event, listener) {
+    super.on(event, listener);
+    if (event === "data") this.resume();
+    return this;
   }
 
   pipe(destination) {
@@ -940,21 +923,59 @@ class PassThrough extends EventEmitter {
     return destination;
   }
 
+  async *[Symbol.asyncIterator]() {
+    for (;;) {
+      if (this._queue.length) yield this._queue.shift();
+      else if (this._ended) return;
+      else await new Promise((resolve) => (this._wake = resolve));
+    }
+  }
+
   resume() {
+    this._flowing = true;
+    this._drain();
     return this;
   }
 
   pause() {
+    this._flowing = false;
     return this;
   }
 
-  destroy() {
+  destroy(error) {
+    this._ended = true;
+    if (error) this.emit("error", error);
+    this._drain();
     return this;
+  }
+
+  /// A waiting async iterator owns the queue; otherwise nothing moves until the stream flows.
+  _drain() {
+    if (this._wake) {
+      const wake = this._wake;
+      this._wake = null;
+      wake();
+      return;
+    }
+    // Flow a tick late, as Node does: a consumer that adds `data` then `end` must not miss the end.
+    if (!this._flowing || this._scheduled) return;
+    this._scheduled = true;
+    queueMicrotask(() => {
+      this._scheduled = false;
+      while (this._flowing && this._queue.length) this.emit("data", this._queue.shift());
+      if (this._ended && !this._queue.length && !this._endEmitted) {
+        this._endEmitted = true;
+        this.emit("end");
+        this.emit("close");
+      }
+    });
   }
 }
 
+class PassThrough extends Stream {}
+
 /// Callback form, so `util.promisify(stream.pipeline)` works. Completion comes from the last stage:
-/// a source ends its destination when it ends, which is what `BufferedStream.pipe` wires up.
+/// a source ends its destination when it ends, which is what `Stream.pipe` wires up.
 function pipeline(...stages) {
   const callback = typeof stages[stages.length - 1] === "function" ? stages.pop() : null;
   let settled = false;
@@ -971,6 +992,159 @@ function pipeline(...stages) {
   last.on("finish", () => finish());
   last.on("end", () => finish());
   return last;
+}
+
+// ─── http / https ───────────────────────────────────────────────────
+
+// Bundles ship their own HTTP client — node-fetch travels inside `@raycast/utils` — and drive
+// `http.request` instead of global `fetch`. One request, buffered both ways, over the same
+// URLSession bridge `fetch` uses: no sockets, no streaming, no keep-alive.
+class IncomingMessage extends Stream {
+  constructor(raw) {
+    super();
+    this.statusCode = raw.status ?? 200;
+    this.statusMessage = raw.statusText ?? "";
+    this.httpVersion = "1.1";
+    this.url = raw.url ?? "";
+    this.complete = true;
+    // The bridge decodes the body itself, so keeping these would have the client gunzip plaintext.
+    this.headers = Object.fromEntries(
+      Object.entries(raw.headers ?? {}).filter(
+        ([name]) => name !== "content-encoding" && name !== "content-length",
+      ),
+    );
+    this.rawHeaders = Object.entries(this.headers).flat();
+  }
+}
+
+const HEADER_TOKEN = /^[\^`\-\w!#$%&'*+.|~]+$/;
+const HEADER_VALUE = /[^\t\u0020-\u007e\u0080-\u00ff]/;
+
+function headerError(message, code) {
+  const error = new TypeError(message);
+  error.code = code;
+  return error;
+}
+
+function validateHeaderName(name) {
+  if (typeof name !== "string" || !HEADER_TOKEN.test(name)) {
+    throw headerError(`Header name must be a valid HTTP token ["${name}"]`, "ERR_INVALID_HTTP_TOKEN");
+  }
+}
+
+function validateHeaderValue(name, value) {
+  if (value === undefined) {
+    throw headerError(`Invalid value "undefined" for header "${name}"`, "ERR_HTTP_INVALID_HEADER_VALUE");
+  }
+  if (HEADER_VALUE.test(String(value))) {
+    throw headerError(`Invalid character in header content ["${name}"]`, "ERR_INVALID_CHAR");
+  }
+}
+
+class ClientRequest extends EventEmitter {
+  constructor(url, options, callback) {
+    super();
+    this.url = url;
+    this.method = String(options.method ?? "GET").toUpperCase();
+    this.writable = true;
+    this.writableEnded = false;
+    this._headers = new Map();
+    this._chunks = [];
+    this._destroyed = false;
+    for (const [name, value] of Object.entries(options.headers ?? {})) this.setHeader(name, value);
+    if (callback) this.once("response", callback);
+  }
+
+  setHeader(name, value) {
+    this._headers.set(String(name).toLowerCase(), Array.isArray(value) ? value.join(", ") : String(value));
+    return this;
+  }
+
+  getHeader(name) {
+    return this._headers.get(String(name).toLowerCase());
+  }
+
+  getHeaders() {
+    return Object.fromEntries(this._headers);
+  }
+
+  removeHeader(name) {
+    this._headers.delete(String(name).toLowerCase());
+  }
+
+  write(chunk) {
+    this._chunks.push(Buffer.from(chunk));
+    return true;
+  }
+
+  end(chunk) {
+    if (chunk !== undefined && chunk !== null) this.write(chunk);
+    this.writableEnded = true;
+    this._send();
+    return this;
+  }
+
+  abort() {
+    return this.destroy();
+  }
+
+  destroy(error) {
+    this._destroyed = true;
+    if (error) this.emit("error", error);
+    return this;
+  }
+
+  setTimeout() {
+    return this;
+  }
+
+  setNoDelay() {
+    return this;
+  }
+
+  setSocketKeepAlive() {
+    return this;
+  }
+
+  flushHeaders() {}
+
+  async _send() {
+    // Content negotiation belongs to the transport, which decodes for us and reports the result.
+    this.removeHeader("accept-encoding");
+    const body = this._chunks.length ? Buffer.concat(this._chunks) : null;
+    try {
+      const raw = await hostCall("fetch", "request", [
+        {
+          url: this.url,
+          method: this.method,
+          headers: this.getHeaders(),
+          bodyBase64: body === null ? null : body.toString("base64"),
+        },
+      ]);
+      if (this._destroyed) return;
+      const response = new IncomingMessage(raw);
+      this.emit("response", response);
+      response.end(Buffer.from(raw.bodyBase64 ?? "", "base64"));
+      this.emit("close");
+    } catch (error) {
+      if (!this._destroyed) this.emit("error", error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+}
+
+function httpRequest(input, options, callback) {
+  if (typeof options === "function") return httpRequest(input, {}, options);
+  if (typeof input === "string" || input instanceof URL) {
+    return new ClientRequest(String(input), options ?? {}, callback);
+  }
+  const spec = input ?? {};
+  const host = spec.hostname ?? spec.host ?? "localhost";
+  const port = spec.port ? `:${spec.port}` : "";
+  return new ClientRequest(`${spec.protocol ?? "http:"}//${host}${port}${spec.path ?? "/"}`, spec, callback);
+}
+
+function httpGet(input, options, callback) {
+  return httpRequest(input, options, callback).end();
 }
 
 // ─── util ───────────────────────────────────────────────────────────
@@ -1012,6 +1186,44 @@ function format(first, ...rest) {
   return [text, ...rest.slice(index).map((value) => inspect(value))].join(" ");
 }
 
+const TYPED_ARRAYS = [Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array, BigInt64Array, BigUint64Array];
+const BOXED_TAGS = ["Boolean", "Number", "String", "Symbol", "BigInt"];
+
+const tagOf = (value) => Object.prototype.toString.call(value).slice(8, -1);
+const isBoxed = (value) => typeof value === "object" && value !== null && BOXED_TAGS.includes(tagOf(value));
+
+/// Node's whole `util.types` table, because a bundle that reaches an absent member gets a TypeError
+/// where the predicate would simply have answered `false` — node-fetch calls `isBoxedPrimitive` on
+/// every request body it normalises.
+const types = {
+  isDate: (value) => value instanceof Date,
+  isRegExp: (value) => value instanceof RegExp,
+  isPromise: (value) => !!value && typeof value.then === "function",
+  isMap: (value) => value instanceof Map,
+  isSet: (value) => value instanceof Set,
+  isWeakMap: (value) => value instanceof WeakMap,
+  isWeakSet: (value) => value instanceof WeakSet,
+  isNativeError: (value) => value instanceof Error,
+  isArgumentsObject: (value) => tagOf(value) === "Arguments",
+  isAsyncFunction: (value) => tagOf(value) === "AsyncFunction",
+  isGeneratorFunction: (value) => tagOf(value) === "GeneratorFunction",
+  isGeneratorObject: (value) => tagOf(value) === "Generator",
+  isModuleNamespaceObject: (value) => tagOf(value) === "Module",
+  isArrayBuffer: (value) => value instanceof ArrayBuffer,
+  isSharedArrayBuffer: (value) => tagOf(value) === "SharedArrayBuffer",
+  isAnyArrayBuffer: (value) => value instanceof ArrayBuffer || tagOf(value) === "SharedArrayBuffer",
+  isArrayBufferView: (value) => ArrayBuffer.isView(value),
+  isDataView: (value) => value instanceof DataView,
+  isTypedArray: (value) => ArrayBuffer.isView(value) && !(value instanceof DataView),
+  isBoxedPrimitive: isBoxed,
+  isProxy: () => false,
+  isExternal: () => false,
+  isKeyObject: () => false,
+  isCryptoKey: () => false,
+  ...Object.fromEntries(TYPED_ARRAYS.map((Type) => [`is${Type.name}`, (value) => value instanceof Type])),
+  ...Object.fromEntries(BOXED_TAGS.map((tag) => [`is${tag}Object`, (value) => isBoxed(value) && tagOf(value) === tag])),
+};
+
 const promisifyCustom = Symbol.for("nodejs.util.promisify.custom");
 
 const util = {
@@ -1042,14 +1254,7 @@ const util = {
   isDeepStrictEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
   TextEncoder: globalThis.TextEncoder,
   TextDecoder: globalThis.TextDecoder,
-  types: {
-    isDate: (value) => value instanceof Date,
-    isRegExp: (value) => value instanceof RegExp,
-    isPromise: (value) => !!value && typeof value.then === "function",
-    isTypedArray: (value) => ArrayBuffer.isView(value),
-    isUint8Array: (value) => value instanceof Uint8Array,
-    isArrayBuffer: (value) => value instanceof ArrayBuffer,
-  },
+  types,
 };
 util.promisify.custom = promisifyCustom;
 
@@ -1147,9 +1352,19 @@ function makeUnsupported(label) {
 }
 
 const httpLike = (name) =>
-  unsupportedModule(name, { globalAgent: {}, STATUS_CODES: {}, METHODS: [] });
+  unsupportedModule(name, {
+    request: httpRequest,
+    get: httpGet,
+    validateHeaderName,
+    validateHeaderValue,
+    IncomingMessage,
+    ClientRequest,
+    globalAgent: {},
+    STATUS_CODES: {},
+    METHODS: [],
+  });
 
-const streamStub = unsupportedModule("stream", { PassThrough, pipeline });
+const streamStub = unsupportedModule("stream", Object.assign(Stream, { Stream, PassThrough, pipeline }));
 
 // ─── Registry ───────────────────────────────────────────────────────
 
