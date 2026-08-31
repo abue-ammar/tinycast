@@ -308,7 +308,7 @@ public final class AIToolRegistry: Sendable {
 }
 
 // MARK: - CalculatorToolRunner.swift
-/// Fast on-device evaluator using Tinycast's native math, unit, currency, and date engines.
+/// Fast on-device mathematical expression evaluator using NSExpression.
 public final class CalculatorToolRunner: Sendable {
     public init() {}
 
@@ -318,30 +318,24 @@ public final class CalculatorToolRunner: Sendable {
             return "Error: Expression cannot be empty."
         }
 
-        // Load cached currency rates if available
-        var rates: CurrencyRates?
-        let cacheURL = AppPaths.caches().appendingPathComponent("currency-rates.json")
-        if let data = try? Data(contentsOf: cacheURL) {
-            rates = try? JSONDecoder().decode(CurrencyRates.self, from: data)
-        }
+        let exprString = trimmed
+            .replacingOccurrences(of: "×", with: "*")
+            .replacingOccurrences(of: "÷", with: "/")
+            .replacingOccurrences(of: "^", with: "**")
 
-        if let result = CalcEngine.evaluate(trimmed, rates: rates) {
-            switch result.payload {
-            case .value(let display, let copyText):
-                var response = "Result: \(display)"
-                if display != copyText && !copyText.isEmpty {
-                    response += " (Exact: \(copyText))"
-                }
-                if let src = result.sourceBadge, let tgt = result.targetBadge {
-                    response += " [\(src) → \(tgt)]"
-                }
-                return response
-            case .error(let message):
-                return "Calculation Error: \(message)"
+        let mathExpr = NSExpression(format: exprString)
+        if let mathVal = mathExpr.expressionValue(with: nil, context: nil) as? NSNumber {
+            let formatter = NumberFormatter()
+            formatter.maximumFractionDigits = 8
+            formatter.minimumFractionDigits = 0
+            formatter.numberStyle = .decimal
+            if let formatted = formatter.string(from: mathVal) {
+                return "Result: \(formatted)"
             }
+            return "Result: \(mathVal)"
         }
 
-        return "Could not evaluate expression: '\(trimmed)'. Ensure it is a valid math expression, unit conversion, currency exchange, or date calculation."
+        return "Calculation Error: Unable to evaluate expression."
     }
 }
 
@@ -957,10 +951,10 @@ public final class WebPageReader: Sendable {
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
-            throw AIProviderError.responseFailed("No HTTP response from \(url.host ?? url.absoluteString)")
+            throw NSError(domain: "WebPageReader", code: -1, userInfo: [NSLocalizedDescriptionKey: "No HTTP response from \(url.host ?? url.absoluteString)"])
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw AIProviderError.responseFailed("Failed to fetch webpage (HTTP \(http.statusCode))")
+            throw NSError(domain: "WebPageReader", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch webpage (HTTP \(http.statusCode))"])
         }
 
         let contentType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
