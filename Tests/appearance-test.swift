@@ -1,9 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Pins the rule in `AGENTS.md`: a token's dark branch is the literal the forced-dark build shipped.
-/// Each `expected` is written as it stood before `Theme.Colors` became appearance-resolved, against
-/// the real `Theme` — so retuning a light branch is free and changing a dark one fails here.
+/// Pins `AGENTS.md`: a token's dark branch is the literal the forced-dark build shipped.
 @main
 @MainActor
 struct AppearanceTests {
@@ -19,8 +17,7 @@ struct AppearanceTests {
         }
     }
 
-    /// Quantized to the 8 bits that reach the framebuffer: raw `CGFloat`s would fail on
-    /// `Color(nsColor:).opacity(0.85)`, whose Float error a literal `Color.white.opacity` lacks.
+    /// Quantized to the 8 bits that reach the framebuffer: `CGFloat`s carry Float error.
     static func components(_ color: Color, _ name: NSAppearance.Name) -> [Int] {
         var out: [Int] = []
         NSAppearance(named: name)!.performAsCurrentDrawingAppearance {

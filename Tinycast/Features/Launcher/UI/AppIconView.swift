@@ -10,8 +10,7 @@ struct AppIconView: View {
         _image = State(initialValue: Self.cached(app))
     }
 
-    /// Cache-only, so a warm icon paints on the same frame. Which of the four kinds of glyph an entry
-    /// wants is `iconSource`'s answer, not this view's.
+    /// Cache-only, so a warm icon paints on the same frame; the kind is `iconSource`'s answer.
     private static func cached(_ app: AppEntry) -> NSImage? {
         IconCache.cached(app.iconSource, fileURL: app.url)
     }

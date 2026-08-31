@@ -147,6 +147,10 @@ final class ExtensionCoordinator {
         case .view:
             // Switch the palette over first, so the launching state is what the user sees.
             palette.prepare(mode: .extensionCommand)
+            // A shortcut fires while hidden, where a view command has nowhere to render.
+            if !paletteCoordinator.isVisible {
+                paletteCoordinator.showPalette(mode: .extensionCommand)
+            }
             Task { await extensions.run(owner, command: command, arguments: arguments) }
         case .noView, .menuBar:
             // A no-view command's own HUD is the feedback, so the palette gets out of the way.
@@ -189,8 +193,7 @@ final class ExtensionCoordinator {
 
     // MARK: - Host callbacks, routed here so the manager never touches a window itself
 
-    /// The app a paste from an extension should land in — the same recorded target the clipboard and
-    /// emoji paste paths use.
+    /// The same recorded target the clipboard and emoji paste paths use.
     var pasteTarget: NSRunningApplication? { paletteCoordinator.targetApp }
 
     /// `getApplications()` reports what the launcher itself indexes, so the two never disagree.
@@ -215,14 +218,12 @@ final class ExtensionCoordinator {
         palette.query = ""
     }
 
-    /// `showHUD` from an extension. Its own window, because a no-view command closes the palette
-    /// before it finishes — the pill has to outlive it.
+    /// Its own window: a no-view command closes the palette before the pill is done.
     func showHUD(_ message: String) {
         core.showMessage(message)
     }
 
-    /// `confirmAlert` from an extension. The dialog outranks the palette's level, so a view command
-    /// keeps its screen behind the question.
+    /// The dialog outranks the palette, so a view command keeps its screen behind it.
     func confirmExtensionAlert(_ alert: ExtensionAlert) async -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         return await core.confirm(

@@ -115,12 +115,22 @@ enum Paster {
     /// Synthesize ⌘V, to `pid` alone when given, else through the system tap.
     @MainActor
     static func postCommandV(toPid pid: pid_t? = nil) {
+        postCommand(key: CGKeyCode(kVK_ANSI_V), toPid: pid)
+    }
+
+    /// Synthesize ⌘C, for reading a selection an app will not surface over Accessibility.
+    @MainActor
+    static func postCommandC(toPid pid: pid_t? = nil) {
+        postCommand(key: CGKeyCode(kVK_ANSI_C), toPid: pid)
+    }
+
+    @MainActor
+    private static func postCommand(key: CGKeyCode, toPid pid: pid_t?) {
         guard Permissions.ensureAccessibility() else { return }
         let source = CGEventSource(stateID: .combinedSessionState)
 
-        let v = CGKeyCode(kVK_ANSI_V)
-        guard let down = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: true),
-            let up = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: false)
+        guard let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
+            let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false)
         else { return }
 
         down.flags = .maskCommand

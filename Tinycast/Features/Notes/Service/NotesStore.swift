@@ -124,6 +124,25 @@ final class NotesStore {
         }
     }
 
+    /// Writes imported notes as new files and re-lists, leaving the open draft where it was.
+    func importNotes(_ notes: [NotesRepository.Incoming]) async -> Int {
+        guard !notes.isEmpty else { return 0 }
+        let repository = repository
+        let result = await detached {
+            (try repository.importNotes(notes), try repository.list())
+        } recover: {
+            repository.notesDirectory
+        }
+        switch result {
+        case .success(let payload):
+            summaries = payload.1
+            return payload.0
+        case .failure(let failure):
+            publish(.operation(failure))
+            return 0
+        }
+    }
+
     @discardableResult
     func select(
         _ id: NoteID,

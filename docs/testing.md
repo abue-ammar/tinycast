@@ -83,6 +83,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
+| `fallback-test` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
 | `system-action-test` | `SystemActions/Model/SystemAction.swift` |
 | `volume-test` | `SystemActions/Model/VolumeLevel.swift` |
@@ -93,13 +94,14 @@ If a change touches anything in the right column, the harness on the left is man
 | `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
 | `notes-test` | all of `Notes/Model/` and `Notes/Service/`, plus the real fuzzy matcher and signposts |
 | `notes-editor-test` | the literal Notes editor with real TextKit 2 and AppKit editing objects |
-| `raycast-test` | `Backup/Model/RaycastFormat.swift`, `RaycastV1Decoder.swift`, `Platform/Compression/Zlib.swift` |
+| `raycast-test` | `Backup/Service/RaycastDecoder.swift`, `Scrypt.swift`, `Platform/Compression/Zlib.swift` |
 | `symbols-test` | `Extensions/Service/SymbolCatalog.swift`, against this machine's CoreGlyphs |
 | `ext-store-test` | `Extensions/Model/` — the registry model and both registry APIs' parsers |
 | `ext-test` | the extension runtime end to end — boots a real bundle in JavaScriptCore and renders it |
 | `ext-icon-test` | `Extensions/Service/ExtensionIconCache.swift` — artwork sizing and its fallback |
-| `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others |
+| `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |
 | `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
+| `backup-archive-test` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
 | `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
 | `support-test` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
 
@@ -229,7 +231,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - With a calculation typed, the calculator card is first and is selected first
 - Section headers appear in order: Favorites, Applications, System Settings, Quicklinks, Snippets,
   System Actions, Window Management, Custom Commands, Commands
-- ⌘K opens the Actions menu; ↑/↓ move it, ↵ activates, Escape closes the menu rather than the palette
+- With a non-ASCII input source active, ⌘K opens Actions; ↑/↓ move it, ↵ activates, Escape closes it
 - While a menu is open, typing does **not** change the query and the caret is hidden
 - Tab toggles launcher ↔ clipboard; bare Backspace on an empty query backs out of a sub-screen
 - Launching an app focuses it; escaping the palette returns focus to the app you came from
@@ -406,8 +408,14 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - Every pane renders and the sidebar switches without flicker
 - A feature switch takes effect in the launcher immediately; every setting survives relaunch
-- Export produces a file; import applies it and reports a sensible summary
+- Export produces a `.tinycast`; import applies it and reports a per-category summary
+- Untick a category on export, and the import picker greys that row out rather than offering it
+- Untick a category on **import** and confirm it did not arrive, while the ticked ones did
+- An image clip round-trips and still renders; the archive can then be deleted without breaking it
+- A file whose `manifest.json` `format` was hand-edited is refused **with a message naming it**
+- Cancelling the save panel leaves nothing in `~/Library/Caches/com.tinycast.app.dev/backup-staging/`
 - **`snippetsEnabled` is not in the exported file**, and importing does not enable snippets
+- Nothing in the extracted tree names a Keychain item, an extension, or an AI conversation
 
 ### Clean install
 

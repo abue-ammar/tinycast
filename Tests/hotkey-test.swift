@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import Foundation
 
-/// Drives `DoubleTapDetector` on a virtual clock, so every window boundary is exact rather than timed.
+/// Drives `DoubleTapDetector` on a virtual clock, so every boundary is exact.
 @MainActor
 private struct Keyboard {
     var detector = DoubleTapDetector()
@@ -56,6 +56,7 @@ struct DoubleTapDetectorTests {
     static func main() {
         modifierGlyphs()
         commandActions()
+        layoutCharacters()
         hyperChord()
         hyperRetargeting()
         firing()
@@ -85,34 +86,59 @@ struct DoubleTapDetectorTests {
             "raw values are the persisted spelling and stay in canonical ⌃⌥⇧⌘ order")
     }
 
+    static func layoutCharacters() {
+        let keyCodes = [kVK_ANSI_K, kVK_ANSI_X, kVK_ANSI_Q, kVK_ANSI_Comma, kVK_ANSI_Period]
+        let characters = keyCodes.compactMap { ASCIIKeyboardLayout.character(for: $0) }
+        expect(
+            characters.count == keyCodes.count,
+            "the ASCII-capable layout translates every ANSI key a palette chord uses")
+        expect(
+            characters.allSatisfy { $0.unicodeScalars.allSatisfy(\.isASCII) },
+            "the shortcut character stays ASCII while a non-ASCII input source is active")
+        expect(
+            keyCodes.allSatisfy {
+                ASCIIKeyboardLayout.character(for: $0, modifiers: UInt32(cmdKey >> 8)) != nil
+            },
+            "a layout's Command table resolves the same keys, so ⌘ chords never lose their letter")
+    }
+
     // MARK: - Built-in command mappings
 
     static func commandActions() {
-        let expected: [(CommandID, HotKeyAction, String)] = [
-            (.clipboardHistory, .toggleClipboard, "hotkey.toggleClipboard"),
-            (.searchEmoji, .toggleEmoji, "hotkey.toggleEmoji"),
-            (.searchFiles, .searchFiles, "hotkey.searchFiles"),
-            (.joinNextMeeting, .joinNextMeeting, "hotkey.joinNextMeeting"),
-            (.mySchedule, .mySchedule, "hotkey.mySchedule"),
-            (.createEvent, .createEvent, "hotkey.createEvent"),
-            (.showNotes, .showNotes, "hotkey.showNotes"),
-            (.createNote, .createNote, "hotkey.createNote"),
-            (.searchNotes, .searchNotes, "hotkey.searchNotes"),
-            (.aiChat, .aiChat, "hotkey.aiChat")
-        ]
-        let answers = CommandID.allCases.compactMap { id in id.hotKeyAction.map { (id, $0) } }
+        let unbindable = Set(CommandID.allCases.filter { $0.hotKeyAction == nil })
         expect(
-            answers.count == expected.count,
-            "exactly the bindable commands answer — got \(answers.map(\.0.name))")
-        for (id, action, key) in expected {
+            unbindable == [.openInBrowser, .runShellCommand, .quit],
+            "only the query-driven pair and Quit are unbindable — got \(unbindable.map(\.name))")
+        expect(
+            CommandID.allCases.allSatisfy {
+                unbindable.contains($0) || $0.hotKeyAction == .command($0)
+            },
+            "every other command binds to its own action, so every row gets a recorder")
+
+        // Keyed on the raw value, not the position, so reordering the enum cannot move a binding.
+        for id in CommandID.allCases where !unbindable.contains(id) {
             expect(
-                id.hotKeyAction == action && action.defaultsKey == key,
-                "\(id.name) maps to \(key)")
+                id.hotKeyAction?.defaultsKey == "hotkey.\(id.rawValue)",
+                "\(id.name) persists under hotkey.\(id.rawValue)")
+            expect(
+                HotKeyAction.builtInActions.contains(.command(id)),
+                "\(id.name) is registered at launch like every other fixed action")
         }
         expect(
-            Set(HotKeyAction.builtInActions)
-                .isSuperset(of: Set(CommandID.allCases.compactMap(\.hotKeyAction))),
-            "every bindable command appears among the built-in hotkey actions")
+            HotKeyAction.builtInActions.contains(.togglePalette),
+            "the launcher toggle is bindable without a command row of its own")
+
+        // Every action reaches the launcher as well as a shortcut; `CommandID.init` is exhaustive.
+        expect(
+            QuickAction.allCases.allSatisfy { CommandID($0).name == $0.title },
+            "each Quick Action's command carries the action's own title")
+        expect(
+            Set(QuickAction.allCases.map(CommandID.init)).count == QuickAction.allCases.count,
+            "no two Quick Actions share a launcher command")
+        expect(
+            Set(HotKeyAction.builtInActions.map(\.defaultsKey)).count
+                == HotKeyAction.builtInActions.count,
+            "no two built-in actions share a defaults key, which would bind them together")
     }
 
     // MARK: - The Hyper chord
@@ -295,7 +321,7 @@ struct DoubleTapDetectorTests {
         withFn.release(other: true, at: 0.05)
         withFn.press([.command], other: true, at: 0.10)
         withFn.release(other: true, at: 0.15)
-        // Only momentary keys may map to `hasOtherModifiers`: a latched bit (Caps Lock's `maskAlphaShift`) would disqualify every press for as long as it stays set, exactly as fn does here.
+        // A latched bit like Caps Lock would disqualify every press while it stays set.
         expect(withFn.fired, [], "fn held alongside disqualifies the press")
 
         // The poison clears once the extra modifier is gone.

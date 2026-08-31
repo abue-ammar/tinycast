@@ -10,8 +10,7 @@ final class CameraPreviewController: NSObject, NSWindowDelegate {
     /// Held across the camera warm-up too, so a chord repeating into it cannot stack previews.
     private var presenting = false
 
-    /// True when the user took the join. The camera settles first: a panel opened over a session
-    /// still starting shows a black stage, and the TCC prompt would take key and cancel the join.
+    /// The camera settles first: a panel over a starting session shows a black stage.
     func present(meeting: MeetingEvent, now: Date) async -> Bool {
         guard !presenting else { return false }
         presenting = true

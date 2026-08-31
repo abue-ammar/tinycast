@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// A value the pane shows only on request: scrambled and blurred until clicked, plain after. A
-/// Settings pane gets screenshotted, screen-shared and recorded, and a signed-in account address is
-/// the one thing on this one that names a person. Monospaced in both states so the row keeps its
-/// width when the disguise drops, since `RedactedPlaceholder` matches only the value's length.
+/// Shown only on request: a Settings pane gets screenshotted, and this is what names a person.
 struct RedactedText: View {
     let value: String
     var revealHelp = "Click to reveal"

@@ -40,7 +40,7 @@ struct ExtensionRegistry: Codable, Identifiable, Hashable, Sendable {
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
         kind: .raycastStore, name: "Raycast Store")
 
-    /// The fallback if the store's endpoint goes. Off by default: it serves source, so it needs Node.
+    /// The fallback if the store's endpoint goes; off by default, since it serves source.
     static let officialGitHub = ExtensionRegistry(
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
         kind: .github, name: "raycast/extensions", owner: "raycast", repository: "extensions",

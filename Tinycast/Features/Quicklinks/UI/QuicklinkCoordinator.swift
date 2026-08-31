@@ -7,7 +7,7 @@ final class QuicklinkCoordinator {
     private let argumentSession: QuicklinkArgumentSession
     private let settings: AppSettings
     private let appIndex: AppIndex
-    private let injector: SnippetTextInjector
+    private let injector: TextInjector
     private let hotKeys: HotKeyManager
     private let favorites: FavoritesStore
     private let visibility: VisibilityStore
@@ -29,7 +29,7 @@ final class QuicklinkCoordinator {
         argumentSession: QuicklinkArgumentSession,
         settings: AppSettings,
         appIndex: AppIndex,
-        injector: SnippetTextInjector,
+        injector: TextInjector,
         hotKeys: HotKeyManager,
         favorites: FavoritesStore,
         visibility: VisibilityStore,
@@ -60,23 +60,22 @@ final class QuicklinkCoordinator {
 
     // MARK: - Feature presence
 
-    /// The switch moves section and commands together; "show in launcher" hides only the section.
+    /// Either switch off means the feature reaches the launcher not at all — rows and commands.
     func applyQuicklinksPresence() {
-        let enabled = settings.quicklinksEnabled
-        appIndex.setQuicklinks(
-            enabled && settings.quicklinksShowInLauncher ? store.quicklinks : [])
+        let visible = settings.quicklinksEnabled && settings.quicklinksShowInLauncher
+        appIndex.setQuicklinks(visible ? store.quicklinks : [])
         appIndex.setCommandsVisible(
-            [.createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks],
-            enabled)
+            [.createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks], visible)
     }
 
     // MARK: - Opening
 
     /// The one funnel for every open, so neither the switch nor the prompt can be bypassed.
-    func openQuicklink(id: UUID, forcingDefaultApp: Bool = false) {
-        guard settings.quicklinksEnabled, let quicklink = store.quicklink(id: id) else {
-            return
-        }
+    /// `seed` is the fallback row's query, which fills the first `{argument}` the link declares.
+    func openQuicklink(id: UUID, forcingDefaultApp: Bool = false, filling seed: String? = nil) {
+        guard settings.quicklinksEnabled, let quicklink = store.quicklink(id: id),
+            quicklink.isEnabled
+        else { return }
         // With the palette closed a shortcut still reads the selection from the frontmost app.
         let target =
             windowController.isVisible
@@ -99,17 +98,26 @@ final class QuicklinkCoordinator {
 
         let expansion = SnippetTemplateEngine.expand(
             text: quicklink.link, context: context, encoding: encoding)
-        arguments += expansion.missingArguments
+        var missing = expansion.missingArguments
+        // The seed is a value, not a selection, so it fills a real `{argument}` and never the prompt.
+        var seeded: [String: String] = [:]
+        if let seed, !missing.isEmpty { seeded[missing.removeFirst().name] = seed }
+        arguments += missing
         guard arguments.isEmpty else {
             argumentSession.begin(
-                quicklink: quicklink, context: context, encoding: encoding, arguments: arguments)
+                quicklink: quicklink, context: context, encoding: encoding, arguments: arguments,
+                values: seeded)
             pendingQuicklinkForcesDefaultApp = forcingDefaultApp
             // Never `restoreAnyMode`: this screen is always a fresh prompt, never a restored one.
             paletteCoordinator.showPalette(mode: .quicklinkArguments)
             return
         }
-        performQuicklinkOpen(
-            quicklink, link: expansion.text, forcingDefaultApp: forcingDefaultApp)
+        let filled =
+            seeded.isEmpty
+            ? expansion
+            : SnippetTemplateEngine.expand(
+                text: quicklink.link, context: context, userArguments: seeded, encoding: encoding)
+        performQuicklinkOpen(quicklink, link: filled.text, forcingDefaultApp: forcingDefaultApp)
     }
 
     /// `{selection}` promoted to an argument when unreadable and the setting says ask.
@@ -223,6 +231,11 @@ final class QuicklinkCoordinator {
 
     func setQuicklinkShowsInRootSearch(_ shows: Bool, id: UUID) {
         do { try store.setShowsInRootSearch(shows, id: id) } catch { report(error) }
+    }
+
+    /// Keeps the row and its shortcut, but takes it out of every surface that could open it.
+    func setQuicklinkEnabled(_ enabled: Bool, id: UUID) {
+        do { try store.setEnabled(enabled, id: id) } catch { report(error) }
     }
 
     func duplicateQuicklink(id: UUID) {

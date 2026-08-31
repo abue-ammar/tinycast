@@ -1,5 +1,35 @@
 import Foundation
 
+/// An attached picture, already encoded for the wire; every provider takes it as a data URL.
+struct AIImage: Equatable, Hashable, Sendable {
+    let data: Data
+    let mimeType: String
+
+    var dataURL: String { "data:\(mimeType);base64,\(data.base64EncodedString())" }
+}
+
+/// Requests cap near 25 MB and a data URL costs a third more, so the ceiling lives here.
+enum AIAttachmentBudget {
+    static let maxCount = 6
+    static let maxBytes = 10 * 1_048_576
+
+    /// Whether `images` can take `candidate` and stay inside both limits.
+    static func admits(_ images: [AIImage], adding candidate: AIImage) -> Bool {
+        images.count < maxCount
+            && images.reduce(candidate.data.count) { $0 + $1.data.count } <= maxBytes
+    }
+
+    /// The longest leading run that fits, for a turn assembled by any route but the composer.
+    static func bounded(_ images: [AIImage]) -> [AIImage] {
+        var total = 0
+        return Array(
+            images.prefix(maxCount).prefix { image in
+                total += image.data.count
+                return total <= maxBytes
+            })
+    }
+}
+
 struct AIMessage: Equatable, Sendable {
     enum Role: String, Sendable {
         case system
@@ -15,8 +45,11 @@ struct AIMessage: Equatable, Sendable {
     let toolCallID: String?
 
     init(
-        role: Role, text: String, images: [AIImage] = [],
-        toolCalls: [AIToolCall] = [], toolCallID: String? = nil
+        role: Role,
+        text: String,
+        images: [AIImage] = [],
+        toolCalls: [AIToolCall] = [],
+        toolCallID: String? = nil
     ) {
         self.role = role
         self.text = text
@@ -34,8 +67,10 @@ struct AIRequest: Equatable, Sendable {
     let tools: [AIToolDefinition]
 
     init(
-        messages: [AIMessage], instructions: String? = nil,
-        maxOutputTokens: Int = 4096, webSearch: Bool = false,
+        messages: [AIMessage],
+        instructions: String? = nil,
+        maxOutputTokens: Int = 4096,
+        webSearch: Bool = false,
         tools: [AIToolDefinition] = []
     ) {
         self.messages = messages
@@ -44,35 +79,18 @@ struct AIRequest: Equatable, Sendable {
         self.webSearch = webSearch
         self.tools = tools
     }
-}
 
-struct AIImage: Equatable, Hashable, Sendable {
-    let data: Data
-    let mimeType: String
-
-    var dataURL: String {
-        "data:\(mimeType);base64,\(data.base64EncodedString())"
-    }
-}
-
-enum AIAttachmentBudget {
-    static let maxCount = 3
-    static let maxBytes = 12 * 1024 * 1024
-
-    static func admits(_ images: [AIImage], adding next: AIImage) -> Bool {
-        images.count < maxCount && (images.reduce(0) { $0 + $1.data.count } + next.data.count) <= maxBytes
-    }
-
-    static func bounded(_ images: [AIImage]) -> [AIImage] {
-        var totalBytes = 0
-        var kept: [AIImage] = []
-        for image in images.prefix(maxCount) {
-            let nextBytes = totalBytes + image.data.count
-            guard nextBytes <= maxBytes else { break }
-            kept.append(image)
-            totalBytes = nextBytes
-        }
-        return kept
+    init(
+        instructions: String?,
+        messages: [AIMessage],
+        webSearch: Bool = false,
+        tools: [AIToolDefinition] = []
+    ) {
+        self.messages = messages
+        self.instructions = instructions
+        self.maxOutputTokens = 4096
+        self.webSearch = webSearch
+        self.tools = tools
     }
 }
 

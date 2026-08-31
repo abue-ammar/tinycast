@@ -3,16 +3,20 @@ import Foundation
 
 /// The aliases macOS knows an app by, which no Info.plist key exposes.
 enum SpotlightNames {
-    /// `MDItem.h` exports no constant for this key, so it is named directly.
-    private static let attribute = "kMDItemAlternateNames"
+    /// `MDItem.h` exports no constant for either key, so both are named directly.
+    private static let alternatesAttribute = "kMDItemAlternateNames"
+    private static let localizedNameAttribute = "kMDItemDisplayName"
 
     /// Empty when the path isn't indexed; Spotlight off is a thinner index, not a failure.
     nonisolated static func alternateNames(for url: URL, displayName: String) -> [String] {
-        guard let item = MDItemCreateWithURL(nil, url as CFURL),
-            let raw = MDItemCopyAttribute(item, attribute as CFString) as? [String]
-        else { return [] }
+        guard let item = MDItemCreateWithURL(nil, url as CFURL) else { return [] }
+        let alternates = MDItemCopyAttribute(item, alternatesAttribute as CFString) as? [String] ?? []
+        // Apple's system apps translate only in `InfoPlist.loctable`, which `CFBundle` can't read.
+        let localized = (MDItemCopyAttribute(item, localizedNameAttribute as CFString) as? String)
+            .map(SearchFields.strippingAppExtension)
         return SearchFields.usableAlternateNames(
-            raw, displayName: displayName, fileName: url.lastPathComponent)
+            alternates + [localized].compactMap { $0 },
+            displayName: displayName, fileName: url.lastPathComponent)
     }
 
     /// ~0.8 ms per bundle, so a pass re-reads only bundles whose modification date moved.

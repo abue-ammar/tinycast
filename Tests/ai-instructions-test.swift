@@ -1,8 +1,6 @@
 import Foundation
 
-/// Pins `AIInstructions`: enabled, the preamble always rides along, the user's text lands after it,
-/// and whitespace alone never counts as a prompt; disabled, a turn carries nothing at all. The
-/// preamble's own content is pinned too, since it ships to every model on every turn.
+/// Pins `AIInstructions`: the preamble rides along enabled, and nothing at all disabled.
 @main
 struct AIInstructionsTest {
     static func main() {

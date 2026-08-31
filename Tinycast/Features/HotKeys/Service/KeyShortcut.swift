@@ -98,7 +98,7 @@ struct KeyShortcut: Hashable, Sendable {
     @MainActor private var keyGlyph: String {
         if let special = Self.specialKeyGlyphs[carbonKeyCode] { return special }
         if let name = Self.functionKeyNames[carbonKeyCode] { return name }
-        return Self.layoutCharacter(for: carbonKeyCode)?.uppercased() ?? "?"
+        return ASCIIKeyboardLayout.character(for: carbonKeyCode)?.uppercased() ?? "?"
     }
 
     private static let specialKeyGlyphs: [Int: String] = [
@@ -115,37 +115,6 @@ struct KeyShortcut: Hashable, Sendable {
         kVK_F16: "F16", kVK_F17: "F17", kVK_F18: "F18", kVK_F19: "F19", kVK_F20: "F20"
     ]
 
-    // `TISGetInputSourceProperty` is only safe on the main thread.
-    @MainActor private static func layoutCharacter(for keyCode: Int) -> String? {
-        guard
-            let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?
-                .takeRetainedValue(),
-            let layoutDataPointer = TISGetInputSourceProperty(
-                source, kTISPropertyUnicodeKeyLayoutData)
-        else { return nil }
-
-        let layoutData = unsafeBitCast(layoutDataPointer, to: CFData.self)
-        let keyLayout = unsafeBitCast(
-            CFDataGetBytePtr(layoutData), to: UnsafePointer<UCKeyboardLayout>.self)
-        var deadKeyState: UInt32 = 0
-        var length = 0
-        var characters = [UniChar](repeating: 0, count: 4)
-
-        let error = UCKeyTranslate(
-            keyLayout,
-            UInt16(keyCode),
-            UInt16(kUCKeyActionDisplay),
-            0,  // no modifiers: the glyph is the key's base character
-            UInt32(LMGetKbdType()),
-            OptionBits(kUCKeyTranslateNoDeadKeysBit),
-            &deadKeyState,
-            characters.count,
-            &length,
-            &characters
-        )
-        guard error == noErr, length > 0 else { return nil }
-        return String(utf16CodeUnits: characters, count: length)
-    }
 }
 
 // Decoding routes through the masking initializer. See docs/features/hotkeys.md#persistence.

@@ -418,6 +418,8 @@ final class HyperKeyTap: HealthCheckable {
         let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
         let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
         for event in [down, up] {
+            // The session source still carries the chord we injected, and a modified Escape is eaten.
+            event?.flags = []
             event?.setIntegerValueField(.eventSourceUserData, value: Self.syntheticTag)
             event?.post(tap: .cghidEventTap)
         }

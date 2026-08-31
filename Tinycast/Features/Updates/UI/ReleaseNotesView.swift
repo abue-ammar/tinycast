@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Lays out a release body as a document. `AttributedString`'s parser only does inline styling, so
-/// headings and bullets are placed here instead of arriving as literal `##` and `*`.
+/// `AttributedString` only does inline styling, so headings and bullets are placed here.
 struct ReleaseNotesView: View {
     let text: String
 

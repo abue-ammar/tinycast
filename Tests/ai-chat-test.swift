@@ -28,6 +28,7 @@ struct AIChatTests {
         markdownKeepsCommonMarkEdges()
         segmentsClampSearchOffsets()
         leavingAConversationDropsItsStagedImages()
+        retentionPrunesByAgeAndCascades()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -47,8 +48,8 @@ struct AIChatTests {
 
         expect(session.title == "Explain the launcher action layout", "titles collapse whitespace")
         expect(session.preview == "Provider failed", "previews use the latest visible message")
-        expect(session.requestMessages.count == 2, "failed replies do not poison the next request")
-        expect(session.requestMessages.last?.role == .assistant, "complete replies remain context")
+        expect(session.requestMessages().count == 2, "failed replies do not poison the next request")
+        expect(session.requestMessages().last?.role == .assistant, "complete replies remain context")
     }
 
     static func requestsKeepOnlyBoundedContext() {
@@ -58,7 +59,7 @@ struct AIChatTests {
         session.append(ChatMessage(role: .user, text: "First", sentAt: now, images: [picture]))
         session.append(ChatMessage(role: .assistant, text: "Reply", sentAt: now))
         session.append(ChatMessage(role: .user, text: "Second", sentAt: now, images: [picture]))
-        let request = session.requestMessages
+        let request = session.requestMessages()
         expect(request.count == 3, "a small chat is sent whole")
         expect(request.first?.images.isEmpty == true, "older turns drop their images")
         expect(request.last?.images == [picture], "the newest user turn keeps its images")
@@ -69,12 +70,12 @@ struct AIChatTests {
         bloated.append(ChatMessage(role: .assistant, text: "Reply", sentAt: now))
         bloated.append(ChatMessage(role: .user, text: "Second", sentAt: now))
         expect(
-            bloated.requestMessages.map(\.text) == ["Second"],
+            bloated.requestMessages().map(\.text) == ["Second"],
             "a reply never survives without the user turn that prompted it")
 
         var huge = ChatSession(createdAt: now)
         huge.append(ChatMessage(role: .user, text: big, sentAt: now))
-        expect(huge.requestMessages.first?.text == big, "the newest user message is never trimmed")
+        expect(huge.requestMessages().first?.text == big, "the newest user message is never trimmed")
 
         var overloaded = ChatSession(createdAt: now)
         overloaded.append(
@@ -82,7 +83,7 @@ struct AIChatTests {
                 role: .user, text: "Look", sentAt: now,
                 images: Array(repeating: picture, count: AIAttachmentBudget.maxCount + 3)))
         expect(
-            overloaded.requestMessages.last?.images.count == AIAttachmentBudget.maxCount,
+            overloaded.requestMessages().last?.images.count == AIAttachmentBudget.maxCount,
             "the newest turn's own pictures are bounded too, whatever staged them")
 
         let whole = ChatSession.boundedContext(
@@ -170,7 +171,7 @@ struct AIChatTests {
                 == [ChatSearch(query: "india news", isComplete: true, textOffset: 3)],
             "searches survive reopening and are always finished")
         expect(
-            session.requestMessages.first?.images == [picture],
+            session.requestMessages().first?.images == [picture],
             "attached images travel with the request")
         expect(loaded?.messages.last?.state == .failed, "an interrupted stream is repaired")
         expect(
@@ -278,6 +279,65 @@ struct AIChatTests {
             verified?.messages.last?.searches
                 == [ChatSearch(query: "news", isComplete: true, textOffset: 1)],
             "a repaired tail keeps its searches")
+    }
+
+    static func retentionPrunesByAgeAndCascades() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-ai-prune-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ChatHistoryStore(directory: directory)
+
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let picture = AIImage(data: Data(repeating: 7, count: 64), mimeType: "image/png")
+        func save(id: UUID, at moment: Date, images: [AIImage] = []) {
+            var session = ChatSession(id: id, createdAt: moment)
+            session.append(
+                ChatMessage(role: .user, text: "question", sentAt: moment, images: images))
+            session.append(ChatMessage(role: .assistant, text: "answer", sentAt: moment))
+            store.save(session)
+        }
+
+        let stale = UUID()
+        let fresh = UUID()
+        save(id: stale, at: now.addingTimeInterval(-40 * 86_400), images: [picture])
+        save(id: fresh, at: now.addingTimeInterval(-2 * 86_400))
+        expect(store.conversations.count == 2, "both conversations are stored to begin with")
+
+        let cutoff = AIRetention.month.cutoff(from: now)
+        expect(cutoff != nil, "a bounded retention has a cutoff")
+        let removed = store.prune(before: cutoff!)
+
+        expect(removed == 1, "only the conversation past the cutoff is pruned, got \(removed)")
+        expect(
+            store.conversations.map(\.id) == [fresh],
+            "the resident summaries drop the pruned conversation")
+        expect(store.session(id: stale) == nil, "pruning cascades to the pruned messages")
+        expect(store.session(id: fresh)?.messages.count == 2, "a newer conversation is untouched")
+
+        // The cascade has to reach the child tables, or blobs outlive the chat that carried them.
+        let database = directory.appendingPathComponent("ai-chats.sqlite3")
+        expect(
+            count(database, "SELECT COUNT(*) FROM messages") == 2,
+            "only the surviving conversation's messages remain")
+        expect(
+            count(database, "SELECT COUNT(*) FROM message_images") == 0,
+            "pruning cascades to message_images, so no picture is orphaned")
+
+        expect(store.prune(before: cutoff!) == 0, "a second prune finds nothing left to remove")
+        expect(
+            AIRetention.forever.cutoff(from: now) == nil,
+            "Forever names no cutoff, so nothing is ever pruned")
+    }
+
+    static func count(_ database: URL, _ sql: String) -> Int {
+        var connection: OpaquePointer?
+        guard sqlite3_open(database.path, &connection) == SQLITE_OK else { return -1 }
+        defer { sqlite3_close(connection) }
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(connection, sql, -1, &statement, nil) == SQLITE_OK else { return -1 }
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW else { return -1 }
+        return Int(sqlite3_column_int64(statement, 0))
     }
 
     static func tamper(_ database: URL, _ sql: String) -> Bool {
@@ -429,9 +489,7 @@ struct AIChatTests {
             "a search at the start or past the end never produces an empty text segment")
     }
 
-    /// A staged picture belongs to the composer of the conversation it was picked in. Leaving that
-    /// conversation drops it, and moves `stagingGeneration` so a ⌘V decode still in flight is
-    /// disowned rather than landing on whatever conversation is on screen when it finishes.
+    /// Leaving a conversation drops its staged images and disowns a decode in flight.
     static func leavingAConversationDropsItsStagedImages() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("tinycast-ai-staging-\(UUID().uuidString)", isDirectory: true)

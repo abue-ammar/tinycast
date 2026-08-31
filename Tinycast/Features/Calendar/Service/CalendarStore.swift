@@ -1,14 +1,22 @@
 import AppKit
 import EventKit
 
-/// Today's and tomorrow's meetings, read from EventKit. See docs/features/calendar.md.
+/// The span's meetings, read from EventKit. See docs/features/calendar.md.
 @MainActor
 @Observable
 final class CalendarStore {
-    /// Flattened occurrences over `[startOfToday, endOfTomorrow]`, newest query wins.
+    /// Flattened occurrences over `span`, newest query wins.
     private(set) var events: [MeetingEvent] = []
     private(set) var calendars: [MeetingCalendar] = []
     private(set) var access: CalendarAccess = Permissions.calendarAccess()
+
+    /// Changing it re-reads: nothing may filter a snapshot into a span it never fetched.
+    var span: MeetingSpan = .todayAndTomorrow {
+        didSet {
+            guard span != oldValue, lastReloadAt != nil else { return }
+            reload()
+        }
+    }
 
     /// Fired whenever `events` changes, so the launcher's meeting slice is republished.
     @ObservationIgnored var onChange: (() -> Void)?
@@ -24,8 +32,7 @@ final class CalendarStore {
     @ObservationIgnored private var wakeObserver: NotificationToken?
     @ObservationIgnored private var lastReloadAt: Date?
 
-    /// How long a snapshot is trusted with the palette closed. `.EKEventStoreChanged` covers edits;
-    /// this covers the day rolling over and a Mac that slept through both.
+    /// Covers the day rolling over and a Mac that slept; edits come from EventKit.
     private static let staleAfter: TimeInterval = 10 * 60
 
     init() {
@@ -63,7 +70,7 @@ final class CalendarStore {
         return true
     }
 
-    /// EventKit says when to reload, so nothing here polls. The palette adds one refresh per summon.
+    /// EventKit says when to reload; the palette adds one refresh per summon.
     private func observeStoreChanges() {
         guard changeObserver == nil, let eventStore else { return }
         let center = NotificationCenter.default
@@ -96,14 +103,13 @@ final class CalendarStore {
             return
         }
         let aged = now.timeIntervalSince(lastReloadAt) >= Self.staleAfter
-        // A day boundary invalidates the two-day span itself, however fresh the snapshot is.
+        // A day boundary invalidates the span itself, however fresh the snapshot is.
         let rolled = !Calendar.current.isDate(lastReloadAt, inSameDayAs: now)
         guard aged || rolled else { return }
         reload()
     }
 
-    /// Two days of events is a sub-millisecond query and `EKEventStore` is not `Sendable`, so this
-    /// stays on the main actor; only pure `MeetingEvent` values leave it.
+    /// `EKEventStore` is not `Sendable`, so this stays on main; only pure values leave.
     func reload() {
         access = Permissions.calendarAccess()
         guard access == .granted else {
@@ -125,13 +131,15 @@ final class CalendarStore {
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
         let selected = sources.filter { !hiddenCalendarIDs.contains($0.calendarIdentifier) }
-        guard !selected.isEmpty, let span = Self.span(from: Date()) else {
+        guard !selected.isEmpty,
+            let interval = span.interval(from: Date(), calendar: .current)
+        else {
             publish([])
             return
         }
-        // The predicate expands recurrence itself; fetching masters and rolling our own never works.
+        // The predicate expands recurrence itself; rolling our own never works.
         let predicate = store.predicateForEvents(
-            withStart: span.start, end: span.end, calendars: selected)
+            withStart: interval.start, end: interval.end, calendars: selected)
         publish(store.events(matching: predicate).compactMap(Self.meeting(from:)))
     }
 
@@ -141,23 +149,12 @@ final class CalendarStore {
         onChange?()
     }
 
-    /// Midnight today through midnight the day after tomorrow, in the Mac's own zone.
-    private static func span(from now: Date) -> (start: Date, end: Date)? {
-        let calendar = Calendar.current
-        guard let start = calendar.dateInterval(of: .day, for: now)?.start,
-            let end = calendar.date(byAdding: .day, value: 2, to: start)
-        else { return nil }
-        return (start, end)
-    }
-
     private static func meeting(from event: EKEvent) -> MeetingEvent? {
         // A cancelled event is not happening, so it never reaches a surface.
         guard event.status != .canceled, let start = event.startDate, let end = event.endDate,
             let calendar = event.calendar
         else { return nil }
-        let declined =
-            event.attendees?
-            .first { $0.isCurrentUser }?.participantStatus == .declined
+        let me = event.attendees?.first { $0.isCurrentUser }
         return MeetingEvent(
             id: (event.eventIdentifier ?? event.calendarItemIdentifier)
                 + "|\(start.timeIntervalSinceReferenceDate)",
@@ -165,21 +162,29 @@ final class CalendarStore {
             start: start,
             end: end,
             isAllDay: event.isAllDay,
-            isDeclined: declined,
+            isDeclined: me?.participantStatus == .declined,
             calendarID: calendar.calendarIdentifier,
             calendarName: calendar.title,
             calendarItemID: event.calendarItemIdentifier,
-            link: MeetingLink.detect(fields: [
-                event.url?.absoluteString, event.location, event.notes
-            ]))
+            link: MeetingLink.detect(
+                fields: [event.url?.absoluteString, event.location, event.notes],
+                account: accountEmail(of: me ?? event.organizer)))
+    }
+
+    /// The organizer covers an event booked with no guests and so no attendee list.
+    private static func accountEmail(of participant: EKParticipant?) -> String? {
+        guard let participant, participant.isCurrentUser,
+            participant.url.scheme?.lowercased() == "mailto"
+        else { return nil }
+        let address = participant.url.path(percentEncoded: false)
+        return address.contains("@") ? address : nil
     }
 
     func event(id: String) -> MeetingEvent? {
         events.first { $0.id == id }
     }
 
-    /// Writes the draft to the calendar new events go to. False means there is no such calendar,
-    /// which is a report rather than a silent no-op.
+    /// False means there is no such calendar, which is a report, not a silent no-op.
     func createEvent(_ draft: EventDraft, now: Date) -> Bool {
         let store = eventStore ?? EKEventStore()
         eventStore = store

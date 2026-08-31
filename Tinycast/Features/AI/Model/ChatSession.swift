@@ -34,31 +34,27 @@ struct ChatSession: Equatable, Sendable {
             updatedAt: updatedAt, messageCount: messages.count)
     }
 
-    var requestMessages: [AIMessage] {
+    /// `textBudget` is the route's, not the chat's: on-device windows hold far less than a cloud.
+    func requestMessages(textBudget: Int = Self.defaultTextBudget) -> [AIMessage] {
         Self.boundedContext(
             messages.compactMap { message in
-                guard message.role == .user || message.role == .tool || message.state == .complete || !message.toolCalls.isEmpty else { return nil }
-                let role: AIMessage.Role
+                guard message.role == .user || message.role == .tool || message.state == .complete else { return nil }
                 switch message.role {
-                case .user: role = .user
-                case .assistant: role = .assistant
-                case .tool: role = .tool
+                case .user:
+                    return AIMessage(role: .user, text: message.text, images: message.images)
+                case .assistant:
+                    return AIMessage(role: .assistant, text: message.text, toolCalls: message.toolCalls)
+                case .tool:
+                    return AIMessage(role: .tool, text: message.text, toolCallID: message.toolCallID)
                 }
-                return AIMessage(
-                    role: role,
-                    text: message.text,
-                    images: message.images,
-                    toolCalls: message.toolCalls,
-                    toolCallID: message.toolCallID
-                )
-            })
+            }, textBudget: textBudget)
     }
 
-    /// Provider requests cap near 25 MB; resending every turn whole walks into an opaque 413. Older
-    /// turns come back as text inside `textBudget`, and the prompt keeps its own pictures up to
-    /// `AIAttachmentBudget` — so a request stops growing with the chat. Its own text is never cut.
+    static let defaultTextBudget = 100_000
+
+    /// Older turns come back as text inside `textBudget`, so a request stops growing with the chat.
     static func boundedContext(
-        _ messages: [AIMessage], textBudget: Int = 100_000
+        _ messages: [AIMessage], textBudget: Int = Self.defaultTextBudget
     ) -> [AIMessage] {
         guard let newest = messages.lastIndex(where: { $0.role == .user }) else { return messages }
         var remaining = textBudget
@@ -78,9 +74,7 @@ struct ChatSession: Equatable, Sendable {
         let prompt = messages[newest]
         let bounded = AIMessage(
             role: prompt.role, text: prompt.text,
-            images: AIAttachmentBudget.bounded(prompt.images),
-            toolCalls: prompt.toolCalls,
-            toolCallID: prompt.toolCallID)
+            images: AIAttachmentBudget.bounded(prompt.images))
         return head.reversed() + [bounded] + tail
     }
 

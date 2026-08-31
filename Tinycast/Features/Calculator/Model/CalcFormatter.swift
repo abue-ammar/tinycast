@@ -45,6 +45,27 @@ enum CalcFormatter {
         return "\(feetPart) \(inchPart)"
     }
 
+    /// Seconds as the largest units that fit: `8,700` → `2 hr 25 min`.
+    static func timespan(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return display(seconds) }
+        let sign = seconds < 0 ? "-" : ""
+        var remainder = abs(seconds).rounded()
+        var parts: [String] = []
+        for step in timespanSteps where remainder >= step.seconds {
+            let count = (remainder / step.seconds).rounded(.towardZero)
+            remainder -= count * step.seconds
+            parts.append("\(grouped(String(format: "%.0f", count))) \(step.symbol)")
+        }
+        // Sub-second input has no whole part to show, so it keeps its own precision.
+        if parts.isEmpty { return "\(display(seconds)) s" }
+        return sign + parts.joined(separator: " ")
+    }
+
+    /// Weeks are the largest step: a month is not a fixed number of seconds.
+    private static let timespanSteps: [(seconds: Double, symbol: String)] = [
+        (604800, "wk"), (86400, "day"), (3600, "hr"), (60, "min"), (1, "s")
+    ]
+
     /// Insert `,` every three integer digits. Exponent-form strings pass through untouched.
     static func grouped(_ text: String) -> String {
         guard !text.contains("e"), !text.contains("E") else { return text }

@@ -1,5 +1,27 @@
 import Foundation
 
+/// Values are passed positionally, so what the user types is never re-parsed by zsh.
+struct CustomCommandArgument: Codable, Hashable, Sendable {
+    var name: String
+    /// An optional argument may be submitted empty; a required one holds ↵ until it has a value.
+    var isOptional: Bool
+
+    init(name: String, isOptional: Bool = false) {
+        self.name = name
+        self.isOptional = isOptional
+    }
+
+    /// A blank name is dropped rather than rejected, so an import can't lose the whole command.
+    static func sanitized(_ arguments: [CustomCommandArgument]) -> [CustomCommandArgument] {
+        arguments.compactMap { argument in
+            var cleaned = argument
+            cleaned.name = argument.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleaned.name.isEmpty, !cleaned.name.contains("\0") else { return nil }
+            return cleaned
+        }
+    }
+}
+
 struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     static let entryIDPrefix = "custom-command:"
     /// One glyph for every custom command, so every surface reads as the same thing.
@@ -8,29 +30,81 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     let id: UUID
     var name: String
     var command: String
+    /// Off keeps the command and everything attached to it, but nothing may offer or run it.
+    var isEnabled: Bool
     /// Sources the shell config so aliases resolve; opt-in, a heavy one costing more.
     var loadsShellEnvironment: Bool
     var requiresConfirmation: Bool
     var showsConfirmation: Bool
+    /// Prompted for in order before the run; empty for the commands that take no input.
+    var arguments: [CustomCommandArgument]
+    /// Captures what the command prints and opens the output window once it exits.
+    var showsOutput: Bool
+    /// Kept abbreviated, so a `~` path survives a home directory that moves.
+    var workingDirectory: String?
+    /// The launcher glyph; nil falls back to the shared terminal symbol.
+    var iconSymbol: String?
 
     init(
-        id: UUID = UUID(), name: String, command: String,
+        id: UUID = UUID(), name: String, command: String, isEnabled: Bool = true,
         loadsShellEnvironment: Bool = false, requiresConfirmation: Bool = false,
-        showsConfirmation: Bool = false
+        showsConfirmation: Bool = false, arguments: [CustomCommandArgument] = [],
+        showsOutput: Bool = false, workingDirectory: String? = nil, iconSymbol: String? = nil
     ) {
         self.id = id
         self.name = name
         self.command = command
+        self.isEnabled = isEnabled
         self.loadsShellEnvironment = loadsShellEnvironment
         self.requiresConfirmation = requiresConfirmation
         self.showsConfirmation = showsConfirmation
+        self.arguments = arguments
+        self.showsOutput = showsOutput
+        self.workingDirectory = workingDirectory
+        self.iconSymbol = iconSymbol
     }
+
+    /// The glyph every surface draws for this command.
+    var symbol: String { iconSymbol ?? Self.sfSymbol }
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
     static func id(fromEntryID entryID: String) -> UUID? {
         guard entryID.hasPrefix(entryIDPrefix) else { return nil }
         return UUID(uuidString: String(entryID.dropFirst(entryIDPrefix.count)))
+    }
+
+    // Hand-written, so an added field keeps stored commands and older backups readable.
+    private enum CodingKeys: String, CodingKey {
+        case id, name, command, isEnabled, loadsShellEnvironment, requiresConfirmation
+        case showsConfirmation, arguments, showsOutput, workingDirectory, iconSymbol
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        command = try container.decode(String.self, forKey: .command)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        loadsShellEnvironment =
+            try container.decodeIfPresent(Bool.self, forKey: .loadsShellEnvironment) ?? false
+        requiresConfirmation =
+            try container.decodeIfPresent(Bool.self, forKey: .requiresConfirmation) ?? false
+        showsConfirmation =
+            try container.decodeIfPresent(Bool.self, forKey: .showsConfirmation) ?? false
+        arguments =
+            try container.decodeIfPresent([CustomCommandArgument].self, forKey: .arguments) ?? []
+        showsOutput = try container.decodeIfPresent(Bool.self, forKey: .showsOutput) ?? false
+        workingDirectory = try container.decodeIfPresent(String.self, forKey: .workingDirectory)
+        iconSymbol = try container.decodeIfPresent(String.self, forKey: .iconSymbol)
+    }
+}
+
+extension String {
+    /// Trimmed, and nil when that leaves nothing — an empty optional field means "unset", not "".
+    fileprivate var cleanedPathComponent: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed.contains("\0") ? nil : trimmed
     }
 }
 
@@ -92,6 +166,15 @@ final class CustomCommandStore {
         commit(updated)
     }
 
+    func setEnabled(_ enabled: Bool, id: UUID) {
+        guard let index = commands.firstIndex(where: { $0.id == id }),
+            commands[index].isEnabled != enabled
+        else { return }
+        var updated = commands
+        updated[index].isEnabled = enabled
+        commit(updated)
+    }
+
     @discardableResult
     func remove(id: UUID) -> CustomCommand? {
         guard let index = commands.firstIndex(where: { $0.id == id }) else { return nil }
@@ -113,6 +196,9 @@ final class CustomCommandStore {
         var value = draft
         value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         value.command = draft.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        value.arguments = CustomCommandArgument.sanitized(draft.arguments)
+        value.workingDirectory = draft.workingDirectory?.cleanedPathComponent
+        value.iconSymbol = draft.iconSymbol?.cleanedPathComponent
         guard !value.name.isEmpty else { throw CustomCommandValidationError.emptyName }
         guard !value.command.isEmpty else { throw CustomCommandValidationError.emptyCommand }
         guard !value.name.contains("\0"), !value.command.contains("\0") else {
@@ -148,6 +234,9 @@ final class CustomCommandStore {
             var cleaned = value
             cleaned.name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
             cleaned.command = value.command.trimmingCharacters(in: .whitespacesAndNewlines)
+            cleaned.arguments = CustomCommandArgument.sanitized(value.arguments)
+            cleaned.workingDirectory = value.workingDirectory?.cleanedPathComponent
+            cleaned.iconSymbol = value.iconSymbol?.cleanedPathComponent
             let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: .current)
             guard !cleaned.name.isEmpty, !cleaned.command.isEmpty, !cleaned.name.contains("\0"),
                 !cleaned.command.contains("\0"), ids.insert(cleaned.id).inserted,

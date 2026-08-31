@@ -1,11 +1,6 @@
 import SwiftUI
 
-/// The inline argument fields Raycast shows beside the search field when the selected command declares
-/// `arguments` — the command's icon, then one compact field per argument, filled before ↵ runs it.
-///
-/// Focus is deliberately separate from the search field's: the palette's whole focus model hangs off
-/// one always-attached `TextField` (see docs/palette.md), so these get their own `FocusState` and Tab
-/// hands focus back and forth rather than replacing it.
+/// The inline argument fields beside the search field; their own `FocusState`, Tab hands over.
 struct CommandArgumentsRow: View {
     let arguments: [ExtensionCommandArgument]
     /// The selected command's glyph, drawn as a leading chip so the fields read as belonging to it.
@@ -35,8 +30,7 @@ struct CommandArgumentsRow: View {
 
     static let height: CGFloat = 26
 
-    /// What the whole strip occupies, so the header can shrink the search field to exactly the room
-    /// left over — the fields sit right after the typed text, as they do in Raycast.
+    /// The header shrinks the search field to exactly the room left over.
     static func totalWidth(for arguments: [ExtensionCommandArgument], hasIcon: Bool) -> CGFloat {
         let fields = arguments.reduce(0) { $0 + fieldWidth(for: $1) }
         let gaps = CGFloat(arguments.count + (hasIcon ? 0 : -1)) * Theme.Spacing.xs
@@ -74,7 +68,7 @@ private struct ArgumentField: View {
         .tint(.white)
         .onSubmit(onSubmit)
         .multilineTextAlignment(.center)
-        // Sized to the placeholder so a three-argument command (Hours / Minutes / Seconds) still fits.
+        // Sized to the placeholder so a three-argument command still fits.
         .frame(width: CommandArgumentsRow.fieldWidth(for: argument))
         .padding(.horizontal, Theme.Spacing.sm)
         .frame(height: CommandArgumentsRow.height)
@@ -95,7 +89,7 @@ private struct ArgumentField: View {
         return ExtensionColors.fieldFill
     }
 
-    /// Focus reads as a brighter edge; an unfilled required argument stays amber until it's answered.
+    /// Focus reads as a brighter edge; an unfilled required argument stays amber.
     private var stroke: Color {
         if isFocused { return ExtensionColors.fieldFocusStroke }
         if argument.required && text.isEmpty { return Color.orange.opacity(0.45) }

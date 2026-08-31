@@ -1,6 +1,11 @@
 import AppKit
 import UniformTypeIdentifiers
 
+extension UTType {
+    /// Not per-channel: a UTI names an interchange format, so Dev must read stable's exports.
+    static let tinycastBackup = UTType(exportedAs: "com.tinycast.backup")
+}
+
 /// The backup flows' entry points, shared by the Settings pane and the commands.
 @MainActor
 enum BackupActions {
@@ -16,49 +21,106 @@ enum BackupActions {
     // MARK: - Tinycast native (own file panels; dialogs come from `AppCore`)
 
     /// The shared save panel; an accessory app must activate first or it opens behind.
-    static func chooseSaveLocation(named base: String) -> URL? {
+    static func chooseSaveLocation(named base: String, type: UTType = .json) -> URL? {
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "\(base)-\(dateStamp()).json"
+        panel.allowedContentTypes = [type]
+        let ext = type.preferredFilenameExtension ?? "json"
+        panel.nameFieldStringValue = "\(base)-\(dateStamp()).\(ext)"
         panel.canCreateDirectories = true
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK else { return nil }
         return panel.url
     }
 
-    static func chooseJSONFile() -> URL? {
+    static func chooseJSONFile() -> URL? { chooseFile(ofType: .json) }
+
+    static func chooseBackupFile() -> URL? { chooseFile(ofType: .tinycastBackup) }
+
+    private static func chooseFile(ofType type: UTType) -> URL? {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.json]
+        panel.allowedContentTypes = [type]
         panel.allowsMultipleSelection = false
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK else { return nil }
         return panel.url
     }
 
-    static func exportSettings(core: AppCore) async {
-        guard let url = chooseSaveLocation(named: "Tinycast-Settings") else { return }
+    // MARK: - Tinycast backups
+
+    /// Composes off-main, then seals — a clipboard history runs to gigabytes.
+    static func exportBackup(
+        core: AppCore, categories: Set<BackupCategory>
+    ) async throws
+        -> BackupComposer.Result
+    {
+        guard let destination = chooseSaveLocation(named: "Tinycast", type: .tinycastBackup) else {
+            throw CancellationError()
+        }
+        let plan = BackupComposer.plan(categories, from: core)
+        return try await Task.detached(priority: .userInitiated) {
+            let staging = try BackupStaging()
+            defer { staging.discard() }
+            let result = try BackupComposer.write(plan, into: staging.bundle)
+            try BackupArchive.seal(directory: staging.root, into: destination)
+            return result
+        }.value
+    }
+
+    /// Opens the archive and reads its manifest, leaving staging for the caller to apply and discard.
+    static func openBackup(at file: URL) async throws -> (BackupStaging, BackupManifest) {
+        try await Task.detached(priority: .userInitiated) {
+            let staging = try BackupStaging()
+            do {
+                try BackupArchive.open(file: file, into: staging.root)
+                return (staging, try staging.bundle.readManifest())
+            } catch {
+                staging.discard()
+                throw error
+            }
+        }.value
+    }
+
+    static func applyBackup(
+        _ categories: Set<BackupCategory>, from staging: BackupStaging, to core: AppCore
+    ) async -> BackupApplier.Summary? {
+        let bundle = staging.bundle
+        if categories.contains(.configuration),
+            let data = try? Data(contentsOf: bundle.settingsURL),
+            let backup = try? SettingsBackup(json: data)
+        {
+            let commands = backup.customCommands?.count ?? 0
+            let shortcuts = backup.hotkeys?.customCommands?.count ?? 0
+            guard await confirmExecutableImport(core: core, commands: commands, shortcuts: shortcuts)
+            else { return nil }
+        }
+        return await BackupApplier.apply(categories, from: bundle, to: core)
+    }
+
+    /// The launcher has no picker, so its commands take everything; the pane is where you choose.
+    static func runExportCommand(core: AppCore) async {
         do {
-            try SettingsBackup.gather(from: core).encoded().write(to: url, options: .atomic)
+            let result = try await exportBackup(core: core, categories: BackupCategory.all)
+            await present(
+                core: core, title: "Backup Exported", message: exportText(result),
+                symbol: exportSymbol, tone: .success)
+        } catch is CancellationError {
         } catch {
             await present(
                 core: core, title: "Export Failed", message: error.localizedDescription,
-                symbol: "square.and.arrow.up")
+                symbol: exportSymbol)
         }
     }
 
-    static func importSettings(core: AppCore) async {
-        guard let url = chooseJSONFile() else { return }
+    static func runImportCommand(core: AppCore) async {
+        guard let file = chooseBackupFile() else { return }
         do {
-            let backup = try SettingsBackup(json: try Data(contentsOf: url))
-            let commandCount = backup.customCommands?.count ?? 0
-            let shortcutCount = backup.hotkeys?.customCommands?.count ?? 0
+            let (staging, manifest) = try await openBackup(at: file)
+            defer { staging.discard() }
             guard
-                await confirmExecutableImport(
-                    core: core, commands: commandCount, shortcuts: shortcutCount)
+                let summary = await applyBackup(manifest.categories, from: staging, to: core)
             else { return }
             await present(
-                core: core, title: "Settings Imported",
-                message: summaryText(backup.apply(to: core)),
+                core: core, title: "Backup Imported", message: summaryText(summary),
                 symbol: importSymbol, tone: .success)
         } catch {
             await present(
@@ -75,7 +137,7 @@ enum BackupActions {
         // Off-main in an autoreleasepool, so the large JSON tree drains at once.
         let result = try await Task.detached(priority: .userInitiated) {
             try autoreleasepool {
-                try RaycastImport.read(file: file, passphrase: passphrase).selecting(options)
+                try RaycastImportReader.read(file: file, passphrase: passphrase).selecting(options)
             }
         }.value
         // Reported, not thrown: it must not abort the rest of what was asked for.
@@ -129,16 +191,48 @@ enum BackupActions {
         return panel.runModal() == .OK ? panel.url : nil
     }
 
-    /// Nil when the file isn't a Raycast export; reads only the leading bytes, mapped.
-    static func detectRaycastFormat(of file: URL) -> RaycastFormat? {
-        guard let raw = try? Data(contentsOf: file, options: .mappedIfSafe) else { return nil }
-        return try? RaycastFormat.detect(raw)
+    /// Reads only the leading bytes, mapped, so a file is labelled before a passphrase is typed.
+    static func isRaycastExport(_ file: URL) -> Bool {
+        guard let raw = try? Data(contentsOf: file, options: .mappedIfSafe) else { return false }
+        return RaycastDecoder.isExport(raw)
     }
 
     // MARK: - Helpers
 
     static func summaryText(_ s: SettingsBackup.ApplySummary) -> String {
         appliedText(s) ?? nothingImportedText
+    }
+
+    /// One sentence per category that actually moved, so an import is never silent.
+    static func summaryText(_ summary: BackupApplier.Summary) -> String {
+        var parts: [String] = []
+        if let settings = summary.settings, let applied = appliedText(settings) {
+            parts.append(applied)
+        }
+        var imported: [String] = []
+        if summary.clipboard > 0 { imported.append("\(summary.clipboard) clips") }
+        if summary.snippets > 0 { imported.append("\(summary.snippets) snippets") }
+        if summary.notes > 0 { imported.append("\(summary.notes) notes") }
+        if summary.learning > 0 { imported.append("\(summary.learning) learning records") }
+        if !imported.isEmpty {
+            parts.append("Imported " + imported.joined(separator: ", ") + ".")
+        }
+        parts.append(contentsOf: summary.problems)
+        return parts.isEmpty ? nothingImportedText : parts.joined(separator: " ")
+    }
+
+    static func exportText(_ result: BackupComposer.Result) -> String {
+        let categories = BackupCategory.ordered(result.manifest.categories)
+        var text =
+            categories.isEmpty
+            ? "Nothing was selected."
+            : "Saved "
+                + categories.map(\.descriptor.label)
+                .joined(separator: ", ") + "."
+        if result.missingImages > 0 {
+            text += " \(result.missingImages) images were unavailable and skipped."
+        }
+        return text
     }
 
     static let nothingImportedText = "Nothing to import from this file."
@@ -183,6 +277,7 @@ enum BackupActions {
 
     /// Every import dialog carries the same glyph, so the flow reads as one thing.
     private static let importSymbol = "square.and.arrow.down"
+    private static let exportSymbol = "square.and.arrow.up"
 
     private static func present(
         core: AppCore, title: String, message: String, symbol: String, tone: DialogTone = .danger

@@ -18,49 +18,79 @@ A tiny, fully native macOS launcher — the essentials, without the bloat.
   <img src="docs/screenshot.png" alt="Tinycast command palette" width="720">
 </p>
 
-<p align="center">
-  <a href="https://buy.polar.sh/polar_cl_NDVFC20DKQpLcNawsh97QzbARBXD3WNn8v35R0mbJmT">
-    <img alt="Support Tinycast" width="320" height="64" src="docs/support-button.svg"></a>
-</p>
-
 Around **5 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
 CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there's nothing to it.
 
 It also **runs Raycast extensions** — the real ones, rendered as native SwiftUI. No Node.js, no
 browser: JavaScriptCore ships with macOS, so that costs no extra binary size.
 
+## Support
+
+Tinycast is free, and it stays that way. If it earns a place in your daily flow, a one-off tip helps
+keep it actively maintained. GitHub Sponsors isn't available in my country, so please support here:
+
+<p align="center">
+  <a href="https://buy.polar.sh/polar_cl_NDVFC20DKQpLcNawsh97QzbARBXD3WNn8v35R0mbJmT">
+    <img alt="Support Tinycast" width="188" height="44" src="docs/support-button.svg"></a><br>
+  <sub>Payments are handled securely by <a href="https://polar.sh">Polar.sh</a>.</sub>
+</p>
+
 ## Features
 
 - **App launcher** — fuzzy-search and launch anything, pin favorites, see what's running, quit an app
   or every app at once.
-- **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
-- **Calculator** — do math, unit, live currency and crypto conversions inline, right in the palette.
-- **Clipboard history** — text and images, searchable, pasted back into the app you were using.
-- **Snippets** — reusable Markdown templates with dynamic placeholders, arguments, nested references
-  and optional keyword expansion.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
+- **Search Files** — open files and folders from the folders you choose, through Spotlight, with no
+  index of our own.
+- **Clipboard history** — text and images, searchable, pasted back into the app you were using.
+- **Calculator** — do math, unit, live currency and crypto conversions inline, right in the palette.
+- **Quicklinks** — turn a URL, search, file or deeplink into a command, with placeholders for typed
+  input, the clipboard or the date.
+- **Snippets** — reusable Markdown templates with dynamic placeholders, arguments, nested references
+  and optional keyword expansion.
+- **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
+- **Window management** — 34 Rectangle-style actions: halves, quarters, thirds, sizing, nudging,
+  display moves, fullscreen and Spaces.
+- **System actions** — lock, sleep, restart, empty trash, toggle appearance, Bluetooth, mute, hidden
+  files, and more.
+- **Calendar and meetings** — your next meeting on the empty palette and in the menu bar, one key to
+  join it, or let it join itself.
+- **Notes** — an unlimited collection of plain Markdown files in one floating editor, searchable from
+  the palette.
+- **Emoji picker** — a searchable emoji grid, one keystroke away.
+- **AI chat** — bring your own key, chat from the palette. Off out of the box, like every AI feature.
+- **Quick Actions** — fix grammar, rewrite, translate or summarize the selected text in any app.
 - **Raycast extensions** — run the ones you already have natively, rendered as SwiftUI.
+- **Backup and import** — export your settings to a file, or import your setup from Raycast.
 
 ## Install
+
+First, add the tap:
 
 ```sh
 brew trust --tap abue-ammar/tinycast   # required for third-party taps
 brew tap abue-ammar/tinycast
-brew install --cask tinycast          # stable
-brew install --cask tinycast@beta     # beta  (installs side-by-side)
-brew install --cask tinycast-sequoia  # stable channel  (macOS 15 Sequoia)
 ```
 
-Tinycast also runs on macOS 15 Sequoia — install the `tinycast-sequoia` cask above.
+Then run the one line that matches your Mac:
 
-Each channel is a separate app (`Tinycast.app`, `Tinycast Beta.app`) with its own settings and
-permissions, so you can run stable next to the beta.
+| Your Mac                         | Install                                  |
+| -------------------------------- | ---------------------------------------- |
+| Apple silicon, macOS 26 or newer | `brew install --cask tinycast`           |
+| Intel, macOS 26                  | `brew install --cask tinycast-universal` |
+| macOS 15 Sequoia                 | `brew install --cask tinycast-sequoia`   |
 
-Tinycast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
-automatically on every install and update, so there's nothing to run. (If you download the DMG
-directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
-"/Applications/Tinycast.app"`.)
+Not sure which you have? **Apple menu → About This Mac.** Homebrew checks too, and refuses the
+wrong one.
+
+Want early builds? `brew install --cask tinycast@beta` puts `Tinycast Beta.app` beside the stable
+app, with its own settings and permissions. Apple silicon, macOS 26+.
+
+Homebrew clears the macOS quarantine flag on every install and update, so there is nothing else to
+run. Downloading a DMG from [Releases](https://github.com/abue-ammar/tinycast/releases) instead?
+Tinycast is self-signed, so clear the flag once:
+`xattr -dr com.apple.quarantine "/Applications/Tinycast.app"`.
 
 ## Permissions
 

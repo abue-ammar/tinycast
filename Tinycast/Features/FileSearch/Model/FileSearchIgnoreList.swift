@@ -1,9 +1,9 @@
 import Darwin
 import Foundation
 
-/// gitignore-flavoured excludes: a bare pattern matches any path component, one with `/` the whole path.
+/// gitignore-flavoured: a bare pattern matches any component, one with `/` the path.
 struct FileSearchIgnoreList: Sendable, Equatable {
-    /// Compiled in rather than stored, so changing the shipped rules reaches installs that already ran.
+    /// Compiled in, not stored, so changing the shipped rules reaches existing installs.
     static let defaults = ["node_modules", "DerivedData", "build", "dist", "target", "Pods"]
 
     private let literalNames: Set<String>
@@ -46,7 +46,7 @@ struct FileSearchIgnoreList: Sendable, Equatable {
     }
 }
 
-/// One compiled pattern. `fnmatch` runs without `FNM_PATHNAME`, so `*` spans `/` and `**/tmp/**` works.
+/// One compiled pattern; `fnmatch` runs without `FNM_PATHNAME`, so `*` spans `/`.
 private struct Glob: Sendable, Equatable {
     let pattern: String
     private let terminated: ContiguousArray<CChar>
@@ -60,7 +60,7 @@ private struct Glob: Sendable, Equatable {
         character == "*" || character == "?" || character == "["
     }
 
-    /// Spotlight treats `?` and `[` as literals and only understands `*`, so anything else stays local.
+    /// Spotlight reads `?` and `[` as literals and knows only `*`, so anything else stays local.
     var isSpotlightExpressible: Bool {
         !pattern.contains(where: { $0 == "?" || $0 == "[" || $0 == "\"" || $0 == "\\" })
     }

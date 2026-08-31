@@ -113,7 +113,7 @@ enum CalcCurrency {
         "SAR": ["riyal", "riyals"]  // 2
     ]
 
-    /// ISO 4217's own names where CLDR carries a different one; the standard is the source of truth.
+    /// ISO 4217's own names where CLDR differs; the standard is the source of truth.
     private static let isoNames: [String: [String]] = [
         "CNY": ["rmb", "renminbi"]  // ISO 4217 names CNY "Yuan Renminbi"; CLDR says "Chinese Yuan"
     ]

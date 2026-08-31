@@ -41,6 +41,7 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 | `Tinycast/Palette/` | the palette shell: panel, window controller, `RootPaletteView`, `PaletteScreen` |
 | `Tinycast/Windows/` | the non-palette AppKit surfaces: `Dialog/`, `HUD/`, `About/`, `AppWindowController` |
 | `Tinycast/Features/` | one folder per feature; larger ones split `Model/` `Service/` `UI/` `Settings/` |
+| `Tinycast/Migration/` | one-time data moves, each with a delete-by date — **this folder goes on 2026-09-05** |
 | `Tests/` | the standalone harnesses — one Swift file each, no XCTest target |
 | `Scripts/` | every executable script: test runner, data generators, packaging, linting, editor setup |
 

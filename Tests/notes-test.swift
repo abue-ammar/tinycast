@@ -332,7 +332,7 @@ struct NotesTests {
         store.stop()
     }
 
-    /// Deleting a note trashes it for real, so every harness repository redirects that inside the root.
+    /// Deleting trashes for real, so every harness repository redirects that inside the root.
     private static func repository(in root: URL, support: URL? = nil) throws -> NotesRepository {
         let trash = trashDirectory(in: root)
         try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)

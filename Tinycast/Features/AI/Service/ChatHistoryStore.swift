@@ -179,6 +179,25 @@ final class ChatHistoryStore {
         conversations = []
     }
 
+    /// Inline BLOBs make this the one store where a delete frees pages without shrinking the file.
+    @discardableResult
+    func prune(before cutoff: Date) -> Int {
+        guard ensureDatabase(), let database,
+            let statement = prepare("DELETE FROM conversations WHERE updated_at < ?;", in: database)
+        else { return 0 }
+        var removed = 0
+        defer {
+            sqlite3_finalize(statement)
+            if removed > 0 { sqlite3_exec(database, "VACUUM", nil, nil, nil) }
+        }
+        sqlite3_bind_double(statement, 1, cutoff.timeIntervalSince1970)
+        guard sqlite3_step(statement) == SQLITE_DONE else { return 0 }
+        removed = Int(sqlite3_changes(database))
+        guard removed > 0 else { return 0 }
+        conversations.removeAll { $0.updatedAt < cutoff }
+        return removed
+    }
+
     private func ensureDatabase() -> Bool {
         if database != nil { return true }
         do {

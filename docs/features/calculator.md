@@ -15,6 +15,17 @@ in (see Currency below).
 - **`CalcEngine.evaluate` never fetches** — it takes a finished `CurrencyRates?`, nil meaning no
   snapshot has landed yet. `CurrencyRateStore` owns the fetch and the cacheless `.ephemeral` session,
   and `CurrencyFeed` — pure, so the harness covers it — turns the payloads into that snapshot.
+- **The time-zone table is Foundation's, never generated and never hand-listed.**
+  `TimeZone.knownTimeZoneIdentifiers` already carries the whole IANA database, so `CalcTimeZone`
+  builds its city index from that on first use rather than shipping a copy that would rot every time
+  IANA moves a zone. `TimeZone.abbreviationDictionary` stays deliberately unused — it holds 51
+  entries and its `BDT` is the Bangladeshi taka. The home zone is read off the **injected calendar**,
+  never `TimeZone.current`, which is what keeps the path pure and the harness deterministic.
+  `localizedName` needs a `Locale`, so a badge is the identifier's own city component instead.
+- **A workday is 8 hours, and nothing consults a calendar.** Weekends and public holidays would make
+  the same query answer differently on two Macs, and the only supported source for them is EventKit,
+  whose Full Calendar Access grant a calculator must never provoke mid-keystroke. `workdays` is
+  therefore an ordinary time unit, and `calendarEnabled` stays the Calendar feature's own consent.
 - **`CurrencyData.generated.swift` is emitted by `node Scripts/gen-currencies.js`** and never hand-edited.
   Three currency tables are hand-maintained, all in `CalcCurrency`: `contested`, the nouns several
   currencies share (`dollars`, `pounds`); `isoNames`, the standard's own names where CLDR substitutes
@@ -27,18 +38,22 @@ in (see Currency below).
 
 1. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
-2. Numeric reject
-3. Tokenize
-4. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
-5. Base conversion
-6. Explicit unit conversion (`10km to mi`)
-7. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`,
+2. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
+   because a zone phrase is words rather than calculator input
+3. Numeric reject
+4. Tokenize
+5. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
+6. Base conversion
+7. **Timespan** (`145 mins to timespan` → `2 hr 25 min`)
+8. Explicit unit conversion (`10km to mi`)
+9. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`,
    `(20 sgd to usd) * 30`), which also answers a bare amount (`1 usd`, `1 btc`) in the Mac's own
    currency
-8. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
-9. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
+10. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
+11. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
    `CalcUnits.parseBareConversion` + the `autoTargets` map)
-10. Plain arithmetic
+12. Natural-language percent, ratio and list forms (`CalcPercent`)
+13. Plain arithmetic
 
 Date/time depends on the clock, so it takes an injected `now` / `calendar` — the public `evaluate(_:)`
 uses the live clock, and `evaluate(_:now:calendar:)` lets `calc-test.swift` assert exact strings
@@ -48,8 +63,18 @@ against a fixed clock.
 
 - **A** — duration until a moment: `hrs till 9am`, `days till 9april`
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
-- **C** — a moment ± a duration: `today + 3 weeks`, `now + 90 min`
+- **C** — a moment ± durations: `today + 3 weeks`, `now + 90 min`,
+  `17.2.26 + 100 weekdays - 4 + 2`
 - **D** — difference between two moments: `jul 4 - today`
+- **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
+- **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
+- **G** — a named moment, once qualified: `tomorrow at 9am`, `next monday`, `last friday`
+
+**An answered moment badges its weekday.** Grammars C and E resolve to a date, and the day of the
+week is the thing a date does not say out loud — so `5 weekdays from now` reads `4 September` under
+a `Friday` pill rather than repeating the weekday inside the date and badging it `Result`.
+`answerString` is `momentString` without the leading `EEEE` for exactly that reason; the source
+badge keeps its own weekday, since nothing else on the card carries it.
 
 A bare, recurring date or time resolves by _bias_: `till` takes the upcoming occurrence, `since` the
 most recent past one; an absolute date ignores the bias. Grammar D only engages when at least one
@@ -57,12 +82,60 @@ operand contains a letter, because two letter-free operands (`5/2 - 1/2`) are eq
 arithmetic and are left to the calculator rather than silently read as dates. Two-digit years expand
 the way date pickers do — 00–68 to the 2000s, 69–99 to the 1900s.
 
+A **dotted** date is day-first (`19.2.27` is 19 February 2027), matching the convention that writes
+it, where the slashed form stays month-first. It needs three parts and a two- or four-digit year,
+which is what separates a date from a decimal and from a version number: `1.5 + 3` is 4.5 and
+`1.2.3 + 1` earns no card.
+
+The version-number overlap is only **partly** closed, and irreducibly so: `1.2.24` is both a
+plausible semver and a valid 1 February 2024, with nothing in the text to tell them apart. A
+one-digit or three-digit tail is rejected (`1.2.3`, `10.15.7`), which covers the common shapes, but
+a two-digit patch reads as a date. Requiring a four-digit year would close it and cost `19.2.27`,
+which is the more common thing to type.
+
+The same convention writes an **ordinal dot** after the day, so `28. aug + 3` reads as 28 August.
+Only a trailing dot is dropped, which is why `28.5 aug` stays silent rather than becoming a date.
+
+Grammar G needs the qualifier. A lone `tomorrow` is an app search, so `at <time>` or a leading
+`next` / `last` earns a card — the same rule that keeps `today` and `july` silent. **A written day
+is qualifier enough**: `25. aug`, `aug 25` and `25.8.27` all answer, badged with their weekday,
+because nobody types a day-and-month pair looking for an app. A month alone still names no day, so
+`july` stays a search.
+
+A bare date takes the year it is **nearest**, not the next one — three days behind is likelier the
+date meant than the same day twelve months out. Grammar C shifts a moment, so it reads the year the
+same way and `25. aug` and `25. aug + 3` can never disagree. Grammar D measures _to_ a moment,
+where the documented forward bias still decides: `jul 4 - today` keeps looking ahead.
+
+A bare number after a moment takes the unit that moment implies: hours off a clock time
+(`3:45pm + 5` → 8:45 PM), days off a date (`august 5 + 5` → 10 August). It is checked before the
+spelled durations, since `5` names no unit of its own.
+
+Grammar C **chains**: every `± <term>` after the first is applied in written order, so
+`17.2.26 + 100 weekdays - 4 + 2` shifts three times. All of them must be durations — one term that
+is not (`today + 3 weeks - kg`) drops the whole card rather than answering from a prefix, which is
+what leaves a trailing moment to grammar D and keeps `jul 4 - today` a difference.
+
+Grammar F resolves the weekday **inside the landing week** rather than counting forward from the
+landing day, so `monday in 3 weeks` is that week's Monday whichever day you ask on. The week is
+`Calendar`'s own, so it follows the user's first-weekday preference — on a Monday-first calendar
+`sunday in 1 week` lands at the end of that week rather than its start. It runs after every other
+grammar because `in` is also the unit connector, which is what keeps `10 in in cm` a conversion.
+
 `CalcQuantity` is a separate typed precedence parser rather than a mode added to the scalar
 `CalcParser`. Scalar `*` / `/` preserve the unit, compatible quantity division returns a scalar, and a
 trailing `to` / `in` converts the complete expression. A conversion inside parentheses is itself a
 quantity, so `(20 sgd to usd) * 30` converts then multiplies. Percentages keep relative semantics
 for addition (`10kg + 20%` → `12 kg`) and act as fractional scalars for multiplication and division
 (`10kg * 3%` → `0.3 kg`, `10kg / 25%` → `40 kg`).
+
+A conversion may also appear **mid-expression, but only where `+` or `-` follows it**:
+`10kg to lb + 3lb` converts and then adds, without needing the parentheses it used to. The
+restriction is the whole point. `20 eur to usd * 30` has two honest readings — convert then scale,
+or convert into a scaled unit — so it stays silent and keeps asking for `(20 eur to usd) * 30`,
+while `+` and `-` carry no such ambiguity because a conversion target is never an addend.
+A **trailing** `to` is untouched by this and still converts the whole expression, so
+`10kg + 500g to lb` remains the sum in pounds rather than `10kg + (500g to lb)`.
 
 **The last unit typed decides the answer's unit.** `+` / `-` convert the _left_ side into the right
 operand's unit, so `5feet + 1m` is `2.524 m` and `10kg + 500g` is `10,500 g` — the unit you finished
@@ -94,11 +167,107 @@ An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace kee
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
 target makes the intent unambiguous (`273.15K to C`).
 
+A **slashed rate** (`km/h`, `m/s`, `mbit/s`) is one unit rather than a division, but only when the
+table knows the whole spelling: the tokenizer looks ahead from a letter run across a `/` to the next
+one and keeps them together only if `CalcUnits.byName` resolves the result. That is the same
+table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
+`10 m / 2` still divide while `1 km/x` stays silent.
+
+Beyond the core four, `CalcParser.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),
+the inverses (`asin`/`arcsin` through `atan`), the hyperbolics (`sinh`, `acosh`, …) and
+`cbrt`/`exp`/`log2`/`sign`/`trunc`, alongside the `tau` and `phi` constants. `sec` is also the
+abbreviation for seconds, which costs nothing: a unit position resolves through `CalcUnits` long
+before a bare name reaches the function table, so `10 sec to min` stays a duration.
+
 Scientific notation (`1e5` → `100,000`, `5e-3km`, `3e+2`) is read only while the exponent hugs the
 mantissa, which is what keeps `2 e` and `2e` reading as 2 × Euler's _e_ — an exponent needs digits
 after the `e`. Like `10k`, it tokenizes as a shorthand rather than a plain literal, so a lone `1e5`
 still earns a card where a lone `100000` deliberately doesn't. A literal that overflows to infinity
 (`1e400`) is treated as non-calculator input, not as a card.
+
+## Time zones
+
+`CalcTimeZone` answers `time in Tokyo`, `what time is it in London`, `5pm ldn in sf` and
+`9:30am in nyc`. It runs **before the tokenizer** — a zone phrase is words, and `5pm ldn in sf`
+is not calculator input — but its grammar always needs an `in` / `to` / `at` connector, so an
+ordinary app search never reaches the zone table at all.
+
+The source is the Mac's own zone unless the query names one, which is what makes `5pm london in sf`
+work without either side being local. That zone comes from the **injected calendar**, so `Model/`
+performs no environment read and `calc-test` pins UTC exactly as it pins the clock. A result that
+lands on another date is suffixed `(tomorrow)` / `(yesterday)` rather than silently reading as the
+same day — the copyable text stays the bare time.
+
+A trailing `+ 2h` / `- 30 min` shifts the answer before it is converted, so `5pm ldn in sf + 2h`
+stays one query rather than needing two. Only sub-day units qualify, since a zone answer is a clock
+time, and `5pm london in sf + 2 kg` is silent rather than wrong.
+
+The offset's unit may be left out — `time in sao paulo + 5` is five hours — because a clock answer
+admits no other reading. The implication is the **offset's alone**: `time in 4` still names no zone
+and stays silent, and a bare `5 + 3` is arithmetic exactly as it was. It mirrors the bare number a
+moment already takes in grammar C.
+
+`diff paris` answers how far a zone runs from the Mac's own, and a duration may stand where a zone
+would (`time in 4 hours`, `time in 4 hours in san francisco`) — the zone table is tried first, so a
+city always outranks a duration. City names are matched **diacritic-folded**, because the identifiers
+carry no accents while the cities do: `são paulo` and `zürich` resolve alongside their bare
+spellings, the same folding `CalcCurrency` already applies to its nouns.
+
+Two tables back it. `cities` is derived from `TimeZone.knownTimeZoneIdentifiers` on first use: 443
+identifiers keyed by their city component, ~0.8 ms to build and ~18 ns to query, so nothing is
+generated and no copy of tzdata is committed. `aliases` is the hand-written half, and the only place
+judgement lives — the abbreviations (`pst`, `cet`, `jst`), the nicknames a zone name doesn't carry
+(`sf`, `nyc`, `ldn`), and the renamed zones Foundation still resolves but no longer lists
+(`kolkata`, `saigon`). It is deliberately small and deliberately not slang, for the same reason
+`CalcCurrency` refuses `quid`.
+
+It also carries the **cities IANA never names**. The database ships one representative city per
+distinct clock history, not one per city, so Graz, Salzburg, Hannover and Basel simply do not exist
+in it — their clocks have never differed from Vienna's, Berlin's or Zurich's by a second. Roughly a
+hundred are listed, chosen as the ones people actually type. Accented spellings need no entry of
+their own, since the lookup folds diacritics before it reaches the table.
+
+Apple can resolve any city: `MKGeocodingRequest` returns a `TimeZone` directly, needs no
+entitlement and prompts for nothing. It is deliberately **not** used. It is asynchronous and
+network-backed at ~150 ms a call, where `CalcEngine.evaluate` is synchronous and runs against every
+keystroke behind a one-deep memo — so `time in salzburg` would issue a request per prefix typed, and
+answer nothing at all offline. A launcher that answers `time in vienna` on a plane but not
+`time in salzburg` is worse than one with a known edge.
+
+`aliases` also carries the **IATA airport codes** (`vie`, `lhr`, `nrt`, `sfo`), which no Foundation
+surface knows: `TimeZone(abbreviation:)` and `TimeZone(identifier:)` both return nil for every one,
+and the whole `abbreviationDictionary` is 51 zone abbreviations rather than airports. They are a
+curated product choice, so the list is the busiest airports rather than an attempt at all ~9,000.
+Two are deliberately absent: `MAD` is the Moroccan dirham, and `IST` is India Standard Time — a
+currency and a zone abbreviation both outrank an airport, the same ordering the rest of the file
+follows. The compiler enforces the rest: a duplicate key in the literal is a warning, which is what
+caught `syd` and `hkg` already being nicknames.
+
+Order settles the collisions. Time zones run **last** among the named paths, after units and
+currency, so `10 cordoba to usd` stays money and `1 cup to ml` stays volume. `cordoba` is the one
+word the zone and currency tables both claim.
+
+## Timespans
+
+`145 mins to timespan` breaks a duration into the units that fit it (`2 hr 25 min`), with zero
+parts dropped. Weeks are the largest step on purpose: a month is not a fixed number of seconds, so
+carrying one would make the answer depend on which month you meant. Only a time unit converts, so
+`10 km to timespan` stays silent.
+
+## Workdays
+
+`workdays` is two separate things, and both avoid a calendar.
+
+As a **unit** it is 8 hours, which answers `55h in workdays` and `3 workdays in hours`.
+
+As a **duration in date arithmetic** it counts days and skips weekends: `today + 5 business days`,
+`tomorrow + 10 work days`, `5 weekdays from now`, `august 26 2026 + 15 workdays`. `business day`,
+`work day`, `working day` and `weekday` are all the same phrase, written as one word or two.
+`addBusinessDays` steps a day at a time rather than doing arithmetic on weeks, which is what keeps a
+Saturday anchor honest — `saturday + 1 business day` is Monday, not Sunday.
+
+Public holidays are deliberately not modelled in either. The only supported source is EventKit, and a
+calculator must never provoke its Full Calendar Access grant mid-keystroke — see the invariant above.
 
 ## Implicit multiplication
 
@@ -112,6 +281,27 @@ starts an implicit product. Adjacent _numbers_ never do — `5 3` stays an app s
 currency name is a constant or function, so `10km` keeps its own path. `QuantityParser.peekBinary`
 carries the same `(` rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
 `2*(3)kg`); adjacency there still means the composite-quantity `+` described above, never a product.
+
+## Natural-language forms
+
+`CalcPercent` owns the phrasings the arithmetic parser can't see, all of which run after the unit
+and currency paths so a spelled-out word never outranks a measurement:
+
+- `20% off 500` → 400, and `50 as % of 200` → 25%
+- `15% tip on 42` → 6.3 — the tip alone, which is what the phrase asks for
+- `50 is what % of 200` → 25%, the spoken form of `as % of`
+- `30 is 20% of what` → 150, solving for the whole instead of the share
+- `ratio of 1920 to 1080` → `16 : 9`, reduced by GCD; integers only
+- `average|sum|min|max of 10, 20, 30`, separated by `,` or `and`
+- `round 47 to nearest 5` → 45, snapping to a step rather than a digit count
+
+The list forms are the reason `CalcToken` carries a `comma` case. It is meaningful only here — every
+other path rejects it — and a comma **between digits** is still the grouping separator it always was,
+so `1,000 + 234` is unchanged and a bare `10,5` stays silent.
+
+Each of these badges what its number **is** — `Tip`, `Discounted`, `Percentage`, `Total`, `Ratio`,
+`Average`, `Sum`, `Minimum`, `Maximum`, `Rounded` — rather than the bare `Result` that says nothing
+the card doesn't already show. `min` and `max` are only told apart by it.
 
 ## Modulo
 
@@ -203,12 +393,17 @@ reads `122.84 BDT`, badged `US Dollar → Bangladeshi Taka`, and `1 btc` follows
 region comes from `RegionCurrency`, one `Locale.current.currency` read — a preference, so nothing
 ever asks for location, and a `Model/` file never performs it.
 
+Where the region names the currency already written, the amount pairs with the **dollar** instead —
+the **euro** where the dollar is the one that was typed. Converting is the only reason to write a
+lone amount, so `25 eur` on a European Mac answering `25.00 EUR` said nothing at all; it now reads
+`28.95 USD`, which is what Raycast answers for the same query.
+
 The target only applies where there is genuinely nothing else to say. An operator keeps the currency
 written (`$10 + €5` stays euros), an explicit target overrides everything, a trailing operator holds
 the typed currency while the expression is still being written (`$10 +`), and a lone code with no
 amount is still an app search. Where the region names no currency, names one the table doesn't carry,
-names the currency already written, or names one the snapshot doesn't quote, the amount answers in
-the currency written rather than erroring about a code the user never typed.
+or names one the snapshot doesn't quote, the amount answers in the currency written rather than
+erroring about a code the user never typed — an unresolvable region still names no target.
 
 ### Exchange rates
 

@@ -6,8 +6,10 @@
   If the writer and the poller ever disagree, the app re-captures its own pastes in a loop.
 - **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so
   `clipboard-test` can compile it standalone. It uses `isolated deinit` for its SQLite teardown.
-- A database that cannot be opened is deleted and recreated. That is only sound because history is
-  regenerable — `QuicklinkStore` deliberately does the opposite.
+- A database that cannot be opened is deleted and recreated. That is sound because a history is
+  captured rather than authored, and there is no UI for an unavailable clipboard — `QuicklinkStore`
+  deliberately does the opposite. It is **not** a licence to treat the file as disposable: it lives in
+  Application Support precisely because nothing else can put it back.
 - **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` stays
   `text`/`image` — the two things capture can tell apart — so improving the classifier is a code
   change rather than a database migration plus a backfill.
@@ -21,14 +23,33 @@ pasteboard and the poller skips anything carrying it.
 ## Store
 
 `ClipboardStore` is SQLite-backed: rows plus a trigram FTS5 index in `clipboard.sqlite3`, with image
-blobs as loose PNG files, all under `~/Library/Caches/<bundle-id>/`. The newest 1000 rows are mirrored
-in the observable `items` window; FTS search reaches older rows.
+blobs as loose PNG files, all under `~/Library/Application Support/<bundle-id>/`. The newest 1000 rows
+are mirrored in the observable `items` window; FTS search reaches older rows.
+
+**Application Support, not Caches.** `~/Library/Caches` is excluded from Time Machine and the system
+may reclaim it at any time without telling the app, so a history kept there survives neither a restore
+nor a full disk — while the retention setting offers **Forever** and a pin is an explicit act. The
+store used to live there; `StorageRelocation` moves an existing one across, once.
 
 A database that won't open is deleted and recreated (worst case the store degrades to session-only
 in-memory history).
 
 Image capture (TIFF→PNG re-encode + blob write) runs off the main actor via detached tasks; row
 inserts, search, and pruning stay on the main actor.
+
+**A backup reads the whole table, not `items`.** `forEachStoredItem(inDatabaseAt:)` is `nonisolated`
+and opens a second connection, because the resident window stops at 1000 rows while the table is
+capped only by age — an export that read `items` would silently drop the rest of someone's history,
+and walking an uncapped table is not main-actor work. That connection is `SQLITE_OPEN_READWRITE`, as
+`StorageRelocation`'s is: a read-only connection to a WAL database still has to create its `-shm`
+file, and fails confusingly when it cannot. It reads in `rowid` order, oldest first, so a streaming
+import rebuilds the same order it exported.
+
+**A restore streams back the same way.** `importStoredItems(inDatabaseAt:adoptingImagesInto:_:)` is the
+one insert path a bulk import takes, `importEntries` included: it hashes the existing rows once into a
+dedupe set rather than scanning the table per candidate, holds one transaction, and moves a staged blob
+into `imagesDir` only once the row is known to be new. `adoptingImagesInto` is nil where the paths
+handed in are already the ones to keep, as the Raycast import's are.
 
 **The load query is deliberately two indexed branches**, not one `pinned_at IS NOT NULL OR rowid >= ?`.
 It fetches every pinned row plus the newest `memoryWindow` unpinned ones, keyed off the floor rowid

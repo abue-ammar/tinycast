@@ -42,8 +42,7 @@ struct TextTrailingDragHandle: NSViewRepresentable {
     }
 }
 
-/// Tracks the drag itself rather than calling `performDrag(with:)`, which hands the gesture to the
-/// window server and returns at once — leaving no way to know when the mouse actually comes up.
+/// Tracks the drag itself: `performDrag(with:)` returns at once, never saying when the mouse rose.
 private class DragView: NSView {
     private var onBegan: (() -> Void)?
     private var onEnded: (() -> Void)?
@@ -83,7 +82,7 @@ private final class TextTailDragView: DragView {
     private static let edgeSlack: CGFloat = 4
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        // `point` is in the superview's coordinates; the text is measured from our own leading edge.
+        // `point` is in the superview's space; the text is measured from our own leading edge.
         let local = convert(point, from: superview)
         guard bounds.contains(local) else { return nil }
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width

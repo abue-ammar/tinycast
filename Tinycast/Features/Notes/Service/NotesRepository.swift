@@ -49,7 +49,7 @@ struct NotesRepository: Sendable {
                 includingPropertiesForKeys: Array(keys),
                 options: [.skipsHiddenFiles]
             )
-            // An entry that can't be read is skipped, never fatal: one bad file must not hide the rest.
+            // An unreadable entry is skipped: one bad file must not hide the rest.
             .compactMap { candidate -> NoteSummary? in
                 guard candidate.pathExtension.caseInsensitiveCompare("md") == .orderedSame,
                     let values = try? candidate.resourceValues(forKeys: keys),
@@ -94,6 +94,27 @@ struct NotesRepository: Sendable {
                 try writeNewFileAtomically(Data(), to: $0)
             }
             return try load(NoteID(rawValue: url.lastPathComponent))
+        }
+    }
+
+    /// One note as a backup carries it, before it has a file to live in.
+    struct Incoming: Sendable, Equatable {
+        let title: String
+        let source: String
+    }
+
+    /// Beside the existing notes, never over them; an unusable title is skipped, not fatal.
+    func importNotes(_ notes: [Incoming]) throws(Failure) -> Int {
+        try mappedError(at: notesDirectory) {
+            var imported = 0
+            for note in notes {
+                guard let base = try? validatedTitle(note.title) else { continue }
+                _ = try claimUniqueURL(base: base) {
+                    try writeNewFileAtomically(Data(note.source.utf8), to: $0)
+                }
+                imported += 1
+            }
+            return imported
         }
     }
 

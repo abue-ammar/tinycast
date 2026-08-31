@@ -376,16 +376,20 @@ enum SystemActionRunner {
     @discardableResult
     private static func ejectAllDisks() throws -> Int {
         let keys: Set<URLResourceKey> = [
-            .volumeIsEjectableKey, .volumeIsInternalKey, .volumeIsLocalKey
+            .volumeIsEjectableKey, .volumeIsInternalKey, .volumeIsLocalKey,
+            .volumeIsRootFileSystemKey
         ]
         let urls =
             FileManager.default.mountedVolumeURLs(
                 includingResourceValuesForKeys: Array(keys), options: [.skipHiddenVolumes]) ?? []
         let ejectable = urls.filter { url in
             guard let values = try? url.resourceValues(forKeys: keys) else { return false }
-            return values.volumeIsEjectable == true
-                && values.volumeIsInternal != true
-                && values.volumeIsLocal != false
+            guard values.volumeIsLocal != false,
+                values.volumeIsInternal != true,
+                values.volumeIsRootFileSystem != true
+            else { return false }
+            // A dock's fixed-media HDD is external but not ejectable, so external alone qualifies.
+            return values.volumeIsEjectable == true || values.volumeIsInternal == false
         }
         var failures: [String] = []
         var ejected = 0
@@ -396,7 +400,11 @@ enum SystemActionRunner {
                 try NSWorkspace.shared.unmountAndEjectDevice(at: url)
                 ejected += 1
             } catch {
-                guard mountedVolumeExists(url) else { continue }
+                // An eject that errors yet leaves no mount behind still took the volume offline.
+                guard mountedVolumeExists(url) else {
+                    ejected += 1
+                    continue
+                }
                 failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }

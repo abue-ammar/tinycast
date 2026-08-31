@@ -144,15 +144,14 @@ struct WindowCommandTests {
             !WindowLayout.isTileCommand(.maximize) && !WindowLayout.isTileCommand(.moveLeft),
             "free-floating commands are not tiles")
 
-        // Fullscreen has no geometry at all — the mover branches before ever asking for a placement.
+        // Fullscreen has no geometry: the mover branches before asking for a placement.
         expect(frame(.toggleFullscreen) == nil, "Toggle Fullscreen produces no placement")
     }
 
     // MARK: - Convention lock
 
     static func testConventionLock() {
-        // AX space: +Y points down, so the top half starts at the visible frame's minY. This single
-        // assertion is what stops a bottom-left convention being reintroduced by accident.
+        // AX space: +Y points down, so the top half starts at the visible frame's minY.
         expect(
             frame(.topHalf)?.minY == mainScreen.visibleFrame.minY,
             "top half is anchored at visibleFrame.minY (AX space, +Y down)")
@@ -401,7 +400,7 @@ struct WindowCommandTests {
                 mainScreen.visibleFrame.contains(rect), "gap \(gap) keeps the tile on screen")
         }
         expectRect(frame(.leftHalf, gap: -5)!, frame(.leftHalf)!, "a negative gap reads as zero")
-        // Every non-finite value reads as zero — one rule, so NaN and infinity can't behave differently.
+        // Every non-finite value reads as zero, so NaN and infinity behave alike.
         expectRect(frame(.leftHalf, gap: .nan)!, frame(.leftHalf)!, "a NaN gap reads as zero")
         expectRect(
             frame(.leftHalf, gap: .infinity)!, frame(.leftHalf)!, "an infinite gap reads as zero")
@@ -558,7 +557,7 @@ struct WindowCommandTests {
         expect(sliding.size == start.size, "nudging to the edge never resizes")
         expectRect(frame(.moveLeft, window: sliding)!, sliding, "a flush window nudges no further")
 
-        // A window wider than the canvas pins its leading edge rather than being shoved off the far side.
+        // A window wider than the canvas pins its leading edge rather than sliding off.
         let overWide = CGRect(x: 100, y: 100, width: 2000, height: 400)
         let pinned = frame(.moveLeft, window: overWide)!
         expect(pinned.minX == 0, "an oversized window pins to the canvas edge")
@@ -638,7 +637,7 @@ struct WindowCommandTests {
         expectRect(
             frame(.restore, restore: recorded)!, recorded, "a valid restore frame comes back untouched")
 
-        // A restore point stranded off every current display (a monitor was unplugged) is recovered.
+        // A restore point stranded off every display is recovered.
         let stranded = CGRect(x: 9000, y: 9000, width: 400, height: 300)
         let recovered = frame(.restore, restore: stranded)!
         expect(recovered.size == stranded.size, "a stranded restore keeps its size")
@@ -656,7 +655,7 @@ struct WindowCommandTests {
         let half = CGRect(x: 0, y: 0, width: 720, height: 900)
         let original = CGRect(x: 100, y: 100, width: 600, height: 400)
 
-        // A fresh window: step 0, nothing to restore to yet, and the current frame becomes the anchor.
+        // A fresh window: step 0, nothing to restore, the current frame is the anchor.
         var memory = WindowActionMemory<Int>()
         var decision = memory.decide(
             key: 1, command: .leftHalf, currentFrame: original, currentScreenID: 1,
@@ -751,7 +750,6 @@ struct WindowCommandTests {
             expect(nonDecision.step == 0, "a non-cycling command never advances")
         }
 
-        // Cycle timeout.
         var timed = WindowActionMemory<Int>(cycleTimeout: 60)
         let timedSeed = timed.decide(
             key: 1, command: .leftHalf, currentFrame: original, currentScreenID: 1,
@@ -826,7 +824,6 @@ struct WindowCommandTests {
         expect(bounded.record(for: 0) == nil, "the oldest key is evicted")
         expect(bounded.record(for: 36) != nil, "the 64 most recent keys survive")
 
-        // Forgetting.
         bounded.forget { $0 % 2 == 0 }
         expect(bounded.record(for: 99) != nil, "forget(where:) keeps non-matching keys")
         expect(bounded.record(for: 98) == nil, "forget(where:) drops matching keys")
@@ -894,7 +891,7 @@ struct WindowCommandTests {
                         if rect.intersection(host.visibleFrame).isNull {
                             problems.append("off-screen frame: \(label)")
                         }
-                        // Determinism, and no drift when the same command is applied twice at step 0.
+                        // Determinism, and no drift when a command is applied twice at step 0.
                         if WindowLayout.placement(for: input)?.frame != rect {
                             problems.append("non-deterministic: \(label)")
                         }

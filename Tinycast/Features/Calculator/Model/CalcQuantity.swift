@@ -78,12 +78,12 @@ enum CalcQuantity {
         }
     }
 
-    /// Nil where converting says nothing: no region, an unknown one, or the currency already typed.
+    /// Converting is the only reason to type a lone amount, so it pairs with the region's own.
     private static func regionTarget(_ region: String?, from: CurrencyDef) -> CurrencyDef? {
-        guard let target = region.flatMap({ CalcCurrency.byName[$0.lowercased()] }),
-            target.code != from.code
+        guard let regional = region.flatMap({ CalcCurrency.byName[$0.lowercased()] })
         else { return nil }
-        return target
+        guard regional.code == from.code else { return regional }
+        return CalcCurrency.byName[from.code == "USD" ? "eur" : "usd"]
     }
 
     private static func convertedResult(
@@ -214,6 +214,8 @@ enum CalcQuantity {
                 if op == "-" || op == "+" { attachNext = isSign(at: index, tokens) }
             case .arrow:
                 add("→")
+            case .comma:
+                add(",", attached: true)
             }
             index += 1
         }
@@ -280,6 +282,12 @@ private struct QuantityParser {
 
     private mutating func parseExpression(minBindingPower: Int) -> QuantityValue? {
         guard var left = parseOperand() else { return nil }
+        if let target = peekAdditiveConversion() {
+            position += 2
+            operationCount += 1
+            guard let converted = converted(left, to: target) else { return nil }
+            left = converted
+        }
         while let binary = peekBinary(left: left), binary.bindingPower >= minBindingPower {
             if binary.consumesToken { position += 1 }
             operationCount += 1
@@ -291,6 +299,16 @@ private struct QuantityParser {
             left = combined
         }
         return left
+    }
+
+    /// A mid-expression `to` only when `+`/`-` follows it: `to usd * 30` stays genuinely ambiguous.
+    private func peekAdditiveConversion() -> String? {
+        guard position + 2 < tokens.count, CalcUnits.isConnector(tokens[position]),
+            case .ident(let name) = tokens[position + 1],
+            CalcUnits.byName[name] != nil || CalcCurrency.byName[name] != nil,
+            case .op(let next) = tokens[position + 2], next == "+" || next == "-"
+        else { return nil }
+        return name
     }
 
     /// An operator, its binding power, its right operand's minimum, and whether it consumes.

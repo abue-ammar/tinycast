@@ -88,8 +88,7 @@ private struct CameraFeed: NSViewRepresentable {
     }
 }
 
-/// `DialogButton`'s twin. Duplicated rather than shared: the dialog owns its own button, and a
-/// preview that had to move with it would couple two unrelated surfaces.
+/// `DialogButton`'s twin, duplicated so two unrelated surfaces need not move together.
 private struct PreviewButton: View {
     let title: String
     let keyCap: String

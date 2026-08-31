@@ -1,7 +1,6 @@
 import Foundation
 
-/// Publishes the current minute so a countdown re-renders on the boundary rather than per keystroke.
-/// It runs only while something is watching — the palette, the menu bar, or auto join.
+/// Publishes the current minute, and only while something is watching.
 @MainActor
 @Observable
 final class MeetingClock {
@@ -14,8 +13,7 @@ final class MeetingClock {
 
     var isRunning: Bool { tick != nil }
 
-    /// Idempotent: `applyClock` calls this whenever a watcher appears, and a restart would only
-    /// throw away an aligned loop.
+    /// Idempotent: `applyClock` calls this per watcher, and a restart would lose alignment.
     func start() {
         guard tick == nil else { return }
         now = Date()

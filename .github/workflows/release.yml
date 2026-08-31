@@ -24,6 +24,11 @@ permissions:
 jobs:
   build:
     runs-on: macos-26
+    # Consumed by the `universal` job, so the channel identity is derived in exactly one place.
+    outputs:
+      full_version: ${{ steps.meta.outputs.full_version }}
+      display_name: ${{ steps.meta.outputs.display_name }}
+      bundle_id: ${{ steps.meta.outputs.bundle_id }}
     steps:
       - uses: actions/checkout@v7
 
@@ -90,13 +95,28 @@ jobs:
           BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
+          # ARCHS pinned to what this channel has always shipped: trusting ARCHS_STANDARD is what
+          # let a thin arm64 build reach Intel users once already (compat/README.md).
           xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Tinycast Self-Signed" \
             OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
             PRODUCT_NAME="$DISPLAY_NAME" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
+
+      # Apple silicon users pay for no Intel slice: assert the download stays thin.
+      - name: Assert the build is arm64-only
+        env:
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+        run: |
+          BIN="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app/Contents/MacOS/${DISPLAY_NAME}"
+          SLICES="$(lipo -archs "$BIN")"
+          if [ "$SLICES" != "arm64" ]; then
+            echo "::error::expected arm64 alone, got '$SLICES'"
+            exit 1
+          fi
 
       # Two artifacts from one build: the DMG people download and the cask installs, and the zip
       # the in-app updater installs — it expands with `ditto` instead of mounting a volume.
@@ -235,3 +255,143 @@ jobs:
             }' > payload.json
           curl -fsS -X POST -H "Content-Type: application/json" -d @payload.json \
             "${DISCORD_WEBHOOK_URL}?with_components=true"
+
+  # macOS 26 is the last release to boot on Intel, so stable also ships a universal build under its
+  # own cask. Same tag, version, bundle id and signature — only the slices and filenames differ, so
+  # nothing here can change what the Apple silicon job above publishes.
+  universal:
+    needs: build
+    if: github.event.inputs.channel == 'stable'
+    runs-on: macos-26
+    env:
+      VERSION: ${{ needs.build.outputs.full_version }}
+      DISPLAY_NAME: ${{ needs.build.outputs.display_name }}
+      BUNDLE_ID: ${{ needs.build.outputs.bundle_id }}
+      CASK: tinycast-universal
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_PATH="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)"
+          if [ -z "$XCODE_PATH" ]; then
+            echo "::error::No Xcode 26.x found on this runner. Installed Xcodes:"
+            ls /Applications | grep -i xcode || true
+            exit 1
+          fi
+          echo "Using $XCODE_PATH"
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
+
+      # The SAME identity as the thin build, and a hard failure if it is missing: the in-app updater
+      # compares the staged bundle's leaf certificate against the running app's before installing.
+      - name: Import signing certificate
+        env:
+          P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
+        run: |
+          if [ -z "${P12_BASE64}" ]; then
+            echo "::error::SIGNING_P12_BASE64 not set — a differently-signed build cannot self-update."
+            exit 1
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KPW="$(openssl rand -base64 24)"
+          echo "${P12_BASE64}" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KPW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KPW" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "${P12_PASSWORD}" -A -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KPW" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed 's/"//g')
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Build app
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Tinycast Self-Signed" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
+            PRODUCT_NAME="$DISPLAY_NAME" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            build
+
+      # A silently-dropped ARCHS override would publish a thin build under the universal name, which
+      # is the one mistake this whole channel exists to prevent.
+      - name: Assert both slices on the shipping binary
+        run: |
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
+          BIN="$APP/Contents/MacOS/${DISPLAY_NAME}"
+          SLICES="$(lipo -archs "$BIN")"
+          PLIST_MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
+          echo "arch=$SLICES LSMinimumSystemVersion=$PLIST_MIN"
+          if [ "$PLIST_MIN" != "26.0" ]; then
+            echo "::error::expected LSMinimumSystemVersion 26.0, got $PLIST_MIN"
+            exit 1
+          fi
+          for A in arm64 x86_64; do
+            case " $SLICES " in
+              *" $A "*) ;;
+              *) echo "::error::no $A slice — this is not a universal build"; exit 1 ;;
+            esac
+            MINOS="$(xcrun vtool -arch "$A" -show-build-version "$BIN" | awk '/minos/{print $2}')"
+            if [ "$MINOS" != "26.0" ]; then
+              echo "::error::$A: expected a macOS 26.0 floor, got minos=$MINOS"
+              exit 1
+            fi
+          done
+
+      - name: Package DMG and ZIP
+        run: |
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
+          STAGE="$(mktemp -d)"
+          cp -R "$APP" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          mkdir -p dist
+          diskutil image create from "$STAGE" --format UDZO --volumeName "$DISPLAY_NAME" \
+            "dist/Tinycast-Universal-${VERSION}.dmg"
+          ditto -c -k --keepParent --sequesterRsrc "$APP" "dist/Tinycast-Universal-${VERSION}.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Tinycast-Universal-${{ needs.build.outputs.full_version }}
+          path: dist/
+
+      # Upload, never create: the build job owns the release. Uploading second also keeps the thin
+      # zip first in the asset list, so clients predating architecture-aware selection still take it.
+      - name: Attach to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "v${VERSION}" \
+            "dist/Tinycast-Universal-${VERSION}.dmg" \
+            "dist/Tinycast-Universal-${VERSION}.zip"
+
+      - name: Update Homebrew cask
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "${TAP_TOKEN}" ]; then
+            echo "::warning::HOMEBREW_TAP_TOKEN secret not set — skipping cask bump."
+            exit 0
+          fi
+          SHA="$(shasum -a 256 "dist/Tinycast-Universal-${VERSION}.dmg" | awk '{print $1}')"
+          git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/abue-ammar/homebrew-tinycast.git" tap
+          CASK_FILE="tap/Casks/${CASK}.rb"
+          if [ ! -f "$CASK_FILE" ]; then
+            echo "::error::$CASK_FILE not found in tap."
+            exit 1
+          fi
+          sed -i '' -E "s|^  version \".*\"|  version \"${VERSION}\"|" "$CASK_FILE"
+          sed -i '' -E "s|^  sha256 \".*\"|  sha256 \"${SHA}\"|" "$CASK_FILE"
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "Casks/${CASK}.rb"
+          if git diff --cached --quiet; then
+            echo "No cask changes to commit."
+          else
+            git commit -m "${CASK} ${VERSION}"
+            git push
+          fi

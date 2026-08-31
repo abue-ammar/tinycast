@@ -21,8 +21,7 @@ extension NSWindow {
         }
     }
 
-    /// Safe to interrupt: the handler checks opacity, so `cancelFade` can rescue it. `done` runs
-    /// once the panel is actually off screen, which is where teardown the user can see belongs.
+    /// Safe to interrupt — the handler checks opacity — and `done` runs once it is off screen.
     func fadeOut(duration: TimeInterval, done: (@MainActor () -> Void)? = nil) {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration

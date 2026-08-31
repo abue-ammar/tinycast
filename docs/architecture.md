@@ -21,7 +21,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
 │ Quicklink{,Destination,Store,Archive} · Notes/Model/* · Snippets/Model/* · │
 │ ShellCommandRunner · DoubleTap{Modifier,Detector} · ClipboardStore ·       │
-│ RaycastFormat · RaycastV1Decoder · AppSettingsKey · SettingsBackupCoverage │
+│ RaycastDecoder · Scrypt · AppSettingsKey · SettingsBackupCoverage          │
 │ MeetingLink · MeetingEvent · UpcomingWindow · MeetingDay · MenuBarSummary  │
 │ AutoJoinPolicy · EventDraft · SupportReminderSchedule                      │
 └──────────────────────────────────┬─────────────────────────────────────────┘
@@ -30,7 +30,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ All platform I/O, one folder per feature.                                  │
 │ AppIndex · SpotlightNames · FileSearchService · SettingsPaneScanner ·      │
 │ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │
-│ SystemActionRunner · QuicklinkLauncher · SnippetTextInjector ·             │
+│ SystemActionRunner · QuicklinkLauncher · TextInjector ·             │
 │ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
 │ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor ·       │
 │ CalendarStore · MeetingLauncher · MeetingClock · CameraPreviewSession ·    │

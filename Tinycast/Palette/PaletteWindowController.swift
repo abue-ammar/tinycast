@@ -10,8 +10,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
-    /// The session anchor — the panel's top-left, resolved once per show, the top edge being the
-    /// one that must not drift. See docs/features/palette.md#window-placement.
+    /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
     private var drag: DragSession?
@@ -112,11 +111,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// Both reset paths come through here, so the screen and the conversation cannot disagree about
-    /// whether the palette was left behind — a chat is a thing being done, like a typed query.
+    /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
     private func popToRoot() {
         core.palette.prepare(mode: .launcher)
-        core.aiChatCoordinator.popToRoot()
     }
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
@@ -140,9 +137,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch). One of our own
-    /// dialogs is none of those: hiding would pop to root, which tears down an extension command
-    /// while its `confirmAlert` is still waiting for the answer.
+    /// Not for one of our own dialogs: hiding would tear down a command mid-`confirmAlert`.
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, !core.isShowingDialog else { return }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
@@ -218,28 +213,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     private func ensurePanel() -> PalettePanel {
         if let panel { return panel }
-        let root = RootPaletteView()
-            .environment(core)
-            .environment(core.settings)
-            .environment(core.palette)
-            .environment(core.appIndex)
-            .environment(core.clipboardStore)
-            .environment(core.favorites)
-            .environment(core.visibility)
-            .environment(core.aliases)
-            .environment(core.calcHistory)
-            .environment(core.currencyRates)
-            .environment(core.emojiIndex)
-            .environment(core.frequentEmoji)
-            .environment(core.fileSearch)
-            .environment(core.runningApps)
-            .environment(core.hotKeys)
-            .environment(core.uninstall)
-            .environment(core.quicklinks)
-            .environment(core.quicklinkArguments)
-            .environment(core.extensions)
-            .environment(core.calendarStore)
-            .environment(core.meetingClock)
+        let root = RootPaletteView().paletteEnvironment(core)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteState = core.palette
@@ -254,6 +228,13 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // The argument form steps back through the answers first, one key per field.
             if core.palette.mode == .quicklinkArguments,
                 let previous = core.quicklinkArguments.retreat()
+            {
+                core.palette.query = previous
+                core.palette.selection = 0
+                return true
+            }
+            if core.palette.mode == .customCommandArguments,
+                let previous = core.customCommandArguments.retreat()
             {
                 core.palette.query = previous
                 core.palette.selection = 0
@@ -285,8 +266,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 self.core.palette.prepare(mode: .launcher)
                 return true
             }
-            // Character chords, not key codes: Dvorak transposes the two.
-            guard let character = event.charactersIgnoringModifiers?.lowercased() else { return false }
+            // Through the ASCII-capable layout: an IME must not move ⌘W off its physical key.
+            guard
+                let character = ASCIIKeyboardLayout.character(for: event)?.lowercased()
+                    ?? event.charactersIgnoringModifiers?.lowercased()
+            else { return false }
             switch character {
             case ",":
                 self.core.settingsCoordinator.showSettings()
@@ -323,13 +307,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.setFrame(frame, display: true)
     }
 
-    /// The display to anchor to; never `NSScreen.main`, which follows the focused window either way.
+    /// The display to anchor to; never `NSScreen.main`, which follows the focused window.
     private func targetScreen() -> NSScreen? {
         core.settings.openOnCursorScreen ? NSScreen.underCursor : NSScreen.primary
     }
 
-    /// The session anchor, cached until hide so both placements read one `visibleFrame`. A
-    /// remembered drag outranks the display setting; the default is what it falls back to.
+    /// Cached until hide, so both placements read one `visibleFrame`; a drag outranks the setting.
     private func resolveAnchor() -> CGPoint? {
         if let anchor { return anchor }
         let resolved = restoredAnchor() ?? targetScreen().map(defaultAnchor(on:))

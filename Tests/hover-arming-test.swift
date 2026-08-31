@@ -1,9 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Drives the real `PaletteState` arming rules, so the palette can never go back to lighting a row
-/// the pointer never chose — a scroll slides rows under a still pointer, and a wheel gesture ends
-/// with a mouse-moved event that has not moved anywhere.
+/// The palette may never light a row the pointer never chose, drift included.
 @main
 @MainActor
 struct HoverArmingTests {

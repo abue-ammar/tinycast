@@ -42,7 +42,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **An icon is drawn for a surface *and* a system icon style, and both move under you.** macOS restyles the icons `NSWorkspace` hands out when System Settings → Appearance → **Icon & widget style** changes, so `IconStyleMonitor` and Tinycast's own appearance both call `IconCache.invalidateStyled()`. **The monitor may not invalidate on the notification itself.** AppKit posts `NSWorkspaceIconAppearanceConfigurationDidChange` before IconServices has swapped what `NSWorkspace` vends — measured at 25–120ms behind, jittering run to run — and the images it hands back are live objects macOS restyles in place, so flattening one on the signal freezes the *outgoing* style into a bitmap nothing ever invalidates again. `IconStyleMonitor` therefore polls `IconCache.styleFingerprint()` until the pixels actually move, and only then invalidates. Waiting also sidesteps the cost: re-flattening every icon the instant a restyle begins forces a cold IconServices regeneration, measured at 160× the settled draw cost. That drops the cached bitmaps, bumps every cache key so an in-flight decode cannot repopulate a stale one, and moves `IconCache.style.generation`. **Any view that draws an icon must key its fetch on that generation** — wrap the view's own key in `IconRequest`, or call `IconCache.observeStyle()` where the icon is resolved synchronously in a `body`. It is reached through `IconCache` rather than injected precisely because icons are drawn in menus, popovers and every list, where a missed injection would be a silent staleness bug.
 - **No hard dividers between the list and the bars.** The header and bottom bar are `safeAreaInset` overlays with no background; separation comes from `edgeDissolve()`, nothing else. (One deliberate exception: the vertical hairline between the clipboard list and its preview pane.)
 - **The panel corner is clipped once, at the root.** `RootPaletteView.body` ends with `.background(panelScrim) → .background(VisualEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. Keep that order; the scrim goes _over_ the vibrancy, and the clip is last.
-- **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`.
+- **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`, or a gradient `mask` where a surface owns its own fade — `scrollEdgeEffectStyle` draws a *material* where a scroll view meets a safe area, so over a panel that already has `panelScrim` + `VisualEffectView` it composites to nothing. Tried and rejected on `QuickActionResultView`, with and without `safeAreaBar`.
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
 - **No `NSAlert`, no `NSSlider`, no system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
 - **A dialog has three independent axes; never let one infer another.** The **icon** (`DialogRequest.symbol`, required) is always the *subject's* own glyph — a command being confirmed uses its `SystemAction.sfSymbol`, so the Restart dialog shows the same icon as the Restart row. Tone never picks an icon. The **tone** (`DialogTone`: `.neutral` / `.success` / `.danger`) tints only that glyph. The **button** takes its color from `DialogAction.Role` (`.standard` white / `.destructive` red / `.cancel` secondary), so a red-glyph security warning can still carry a plain white button — as "Import executable commands?" does.
@@ -74,7 +74,15 @@ section's closing padding). See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `row 10` · `card 10` · `dialog 20` · `menuPanel 16` · `menu 6` · `menuRow 10` · `barControl 8` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+
+`barControl` dresses the header pop-ups (type filter, AI model), which state a value and drop a menu
+the way a native pop-up button does — a rectangle, not a pill.
+
+**The footer action group stays a `Capsule`, and so do the buttons inside it.** It is the primary
+action, and the pill is the affordance saying so; squaring it off reads as a toolbar. The capsule
+also keeps the pair concentric for free — a capsule's radius is half its height, so the inner
+buttons land exactly `Spacing.xs` inside the wrapper without either radius being written down.
 
 Notes has no corner of its own: it clips to `panel`, so the two floating surfaces read as siblings.
 
@@ -83,6 +91,36 @@ Notes has no corner of its own: it clips to `panel`, so the two floating surface
 `menu` is the shared small-control corner (sidebar tiles, About link pills); `menuRow` is the slightly rounder hover highlight behind popover-menu rows.
 
 Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corners everywhere, never `.circular`.
+
+#### Concentric corners
+
+**Where two rounded corners sit adjacent and are seen together, the inner radius is the outer radius
+minus the gap between them.** Miss it and the curves stop being parallel: the inner corner reads
+tight or slack against the one behind it, which is visible long before anyone can name it.
+
+Inside a menu the rule holds exactly, and `menuRow` exists to keep it holding:
+
+| Outer | Gap | Inner |
+| --- | --- | --- |
+| `menuPanel 16` | `Spacing.sm 6` | `menuRow 10` |
+
+**Alignment to a control outranks it.** Every palette menu hangs off a button, and its edge lines up
+with that button's — `MenuPanel.inset` is `Spacing.md`, which is `bottomBar`'s own horizontal padding,
+and the header menus use `Spacing.md * 2` to meet the header button in its wider gutter. The buttons
+sit directly under the menus, so a 2pt disagreement there reads as broken padding, while the same 2pt
+against the panel's corner reads as almost nothing. Anchor to the control, then let the corner fall
+where it does: `panel 26` against an 8pt gap would want `menuPanel 18`, and it stays 16.
+
+**It applies only where corners actually meet.** A list row sits mid-panel with the header above and
+the bottom bar below, so it shares no corner with `panel` and has nothing to be concentric with —
+`row 10` is chosen for the row's own size and stays on the shared scale. Forcing the rule there would
+round every row to 18 for no reason.
+
+If a pair ever does need closing, **move the gap, not the curve** — but only once you have checked
+what else is anchored to that gap. A radius is shared by surfaces across several features, a
+placement constant is not: `Radius.menuPanel` alone dresses the ⌘K menu, the extensions actions
+panel, the shortcut-recorder callout and the Notes switcher, and `menuRow` is deliberately equal to
+`row` so a row pill is one shape everywhere.
 
 ### Size (`Theme.Size`)
 
@@ -392,6 +430,16 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   read left to right and the outcome is the last thing you want to land on. Auto-dismisses after
   `Duration.messageHUD` (2.4s) — longer than the volume box, since a sentence needs reading time and a
   level only needs a glance — and a repeat call replaces rather than stacks.
+- **The same pill reports work still running**, through `showProgress(message:)`: a Quick Action set to
+  replace has no panel to watch the answer arrive in, so the pill says `Fixing Grammar…` in its place
+  and the result message replaces it when the model is done. Its trailing mark is a spinner rather
+  than a tone, which is why `MessageHUDView.Accessory` exists — a tone says how something *went*, and
+  nothing has gone anywhere yet. The spinner is **`progress.indicator` with
+  `.symbolEffect(.variableColor)`, never a `ProgressView`**: AppKit draws that one itself and ignores
+  every tint given to it, so a blue spinner is only reachable as a symbol. Progress has no natural
+  dwell, so it is shown with `dwells: false` and stays up until something replaces it or
+  `HUDPresenter.dismiss()` runs — the caller owns that, and `QuickActionCoordinator.produce` pairs the
+  two with a `defer` so a throw or a cancellation cannot strand it.
 - **`HUDPresenter`** is what keeps those two controllers from duplicating each other: one panel at a
   time, replace rather than stack, fade in, sit out its dwell, fade away, centred horizontally on
   a screen. The two HUDs differ only in their content, their anchor (`edgeInset(hudEdgeOffset 48)` for
@@ -466,6 +514,10 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   is unaffected.
 - **`.settingsEnabled(_:)`, never a bare `.disabled(_:)`.** It dims as well as disables, so a
   switched-off row reads as unavailable rather than merely unresponsive.
+- **A `TextEditor` ignores `.disabled(_:)` on macOS** — its own and an ancestor's alike. The backing
+  `NSTextView` keeps its caret, its keyboard and its selection, so a "disabled" prompt box still takes
+  typing and still gives up its text to ⌘A ⌘C. Swap the editor for a `Text` when it must be read-only,
+  the way `SystemPromptEditor` does; dimming an editor that still accepts input is the bug, not the fix.
 - **A group is a `Section`**, with `header:` for its name and `footer:` for the caption that used to
   ride under the last row.
 - **The pane's own title is not in the pane.** `SettingsToolbarController` puts it in the titlebar,

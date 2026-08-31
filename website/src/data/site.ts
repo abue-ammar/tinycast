@@ -43,6 +43,13 @@ export const channels = [
     note: "Recommended",
   },
   {
+    id: "universal",
+    label: "Intel",
+    command:
+      "brew trust --tap abue-ammar/tinycast && brew install --cask abue-ammar/tinycast/tinycast-universal",
+    note: "Intel Macs",
+  },
+  {
     id: "beta",
     label: "Beta",
     command:

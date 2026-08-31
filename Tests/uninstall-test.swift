@@ -273,8 +273,7 @@ struct UninstallTests {
             "every bin directory is absolute or home-relative")
     }
 
-    /// The home directory holds the user's own work, so nothing there is ever a candidate. Asserting
-    /// the absence keeps a future root addition from quietly reopening it.
+    /// Nothing in home is ever a candidate; asserting it guards a future root.
     static func testHomeIsOutOfScope() {
         expect(
             !UninstallSearchRoot.all.contains { $0.path(home: home) == home },
@@ -285,8 +284,7 @@ struct UninstallTests {
                 return path.hasPrefix(home + "/Library/") || path.hasPrefix("/Library/")
             },
             "every root lives under a Library directory — never ~/Documents, ~/Dev or ~/Code")
-        // VS Code's CFBundleName is literally "Code", so it *would* match `~/Code` on name alone —
-        // the root table is the only thing standing between that and the user's source tree.
+        // VS Code's bundle name is "Code", so only the root table saves `~/Code`.
         let code = identity(
             bundleID: "com.microsoft.VSCode", name: "Visual Studio Code", bundleName: "Code")
         expect(
@@ -577,8 +575,7 @@ struct UninstallTests {
 
     // MARK: - Cross-identity sweep
 
-    /// The one assertion about the matcher as a whole: no artifact belonging to one app may ever be
-    /// produced for another. A rule that regresses in isolation still gets caught here.
+    /// No artifact of one app may be produced for another, even if a rule regresses.
     static func testCrossIdentitySweep() {
         let apps: [(id: String, name: String)] = [
             ("com.apple.iBooksX", "Books"),
@@ -644,9 +641,7 @@ struct UninstallTests {
             roots.first { $0.base == .systemLibrary && $0.relativePath == "Caches" }?.path(home: home)
                 == "/Library/Caches",
             "a system root ignores the home directory")
-        // A child of these is a bundle ID by construction, so a name match there is a false positive
-        // by definition. Asserting the exclusion rather than the inclusion keeps this honest as
-        // plug-in wells are added.
+        // A child of these is a bundle ID, so a name match there is a false positive.
         let bundleIDOnly: Set<String> = [
             "Preferences", "Preferences/ByHost", "Containers", "Group Containers",
             "Application Scripts", "Saved Application State", "HTTPStorages", "WebKit", "Cookies",

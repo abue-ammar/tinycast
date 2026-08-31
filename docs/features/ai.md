@@ -2,7 +2,8 @@
 
 Tinycast has one app-wide provider layer for features that need text generation. Settings chooses the
 default model; callers ask `AppCore.aiProvider()` for the current provider and stream an `AIRequest`.
-AI Chat is the first consumer, but the provider layer does not depend on it.
+AI Chat is the first consumer and [Quick Actions](quick-actions.md) the second; the provider layer
+depends on neither, and Quick Actions carries its own route rather than borrowing this one.
 
 ## Invariants
 
@@ -29,9 +30,22 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
 - **Remote endpoints require HTTPS.** Plain HTTP is accepted only for `localhost`, `127.0.0.1` and
   `::1`, where a key is optional, and any other scheme is rejected outright — a loopback host does
   not excuse `ftp://`. `AIEndpointPolicy` is the one place that decides this.
-- **The default model is the routing decision.** It names either one saved API connection and model or
-  one ChatGPT subscription model and reasoning effort. A removed connection, model or subscription
-  falls forward to another usable API model, or to no selection.
+- **The default model is the routing decision.** It names the on-device model, one saved API
+  connection and model, or one ChatGPT subscription model and reasoning effort. A removed connection,
+  model or subscription falls forward to the on-device route when this Mac has one, then to another
+  usable API model, then to no selection.
+- **The on-device route is configured by having a Mac.** `.appleIntelligence` takes no key, opens no
+  socket and names no endpoint, so the Keychain, HTTPS and ephemeral-session rules below have nothing
+  to bind to — the Settings pane must never grow a credential field for it. It is text-only and
+  offers no web search, the preamble still rides ahead of every turn, and history is bounded to
+  `AppleIntelligence.contextBudget` rather than the cloud routes' ~100 KB because the on-device window
+  holds a prompt and its reply together. Availability is asked for each time, never cached at launch:
+  the model finishes downloading mid-session, and reading it inside a view body leaves SwiftUI
+  observing the framework's own state.
+- **An unavailable on-device model is reported, never rerouted.** Fall-forward exists for a route the
+  reader *removed*; a Mac with Apple Intelligence switched off keeps its stored selection and is told
+  why, because silently moving someone from a free, private, local model onto a billed endpoint is
+  the one redirection this feature must never perform.
 - **ChatGPT subscription access stays separate from API-key billing.** It uses `codex app-server` with
   a private `CODEX_HOME` under Tinycast's Application Support directory. Tinycast never reads browser
   cookies, copies another Codex login or calls undocumented ChatGPT web endpoints.
@@ -44,27 +58,50 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
 - **Chat is a palette screen, not another window** — including its lifetime. The launcher command
   enters `.ai`; its search field is the composer, and the shared footer's primary pill is Return's
   job: Send (`↵`), or Stop (`↵`) while a response streams — followed by Actions (`⌘K`), which owns
-  New Chat. A conversation lasts exactly as long as the palette remembers anything else: Pop to Root
-  Search resets the screen and starts a new chat in the same breath, through
-  `AIChatCoordinator.popToRoot`, so closing the palette and summoning it again does not reopen on a
-  thread from before. A reply still streaming is never reset out from under the reader — it was
-  asked for — and the transcript is saved regardless, so the old conversation is one ⌘K → Chat
-  History away.
+  New Chat. **A conversation outlives the window that showed it, and one place decides for how
+  long.** Pop to Root forgets the screen and the query; whether the next summon resumes the
+  transcript is Settings → AI's `Opens to`, applied in `AIChatCoordinator.applyOpenPolicy` on the
+  way into `.ai`. That used to be Pop to Root's job by accident — it fires on every hide, so a chat
+  never survived Escape — and deciding at open time from a timestamp leaves one clock instead of two
+  racing over the same state, and a verdict that still holds after a relaunch. A reply still
+  streaming is never reset out from under the reader — it was asked for — and the transcript is
+  saved regardless, so the old conversation is one ⌘K → Chat History away.
+- **Arriving with a question skips the open policy entirely.** `ask(_:)` — ⇥ from the launcher, and
+  the AI fallback row — always starts a new chat and submits the text, because a question asked
+  outright is not a summon: resuming a transcript to append an unrelated line to it would be the one
+  reading of `Opens to` nobody wants. It is `showPalette(mode: .ai)` and `send`, never `showChat`.
+- **`AIConversationOpenPolicy` is the whole rule, and it is pure.** `Recent Conversation` resumes the
+  resident transcript, or reopens the newest saved one when nothing is resident, unless it has been
+  idle past `Start a new conversation after`; `A New Conversation` always starts fresh. There is no
+  third setting for "immediately" because that *is* `A New Conversation` — two controls able to
+  express one state would only ever disagree.
 - **History is local and lazy.** Conversation summaries stay in memory while transcripts load from the
   system SQLite database only for the selected preview or opened chat. Empty chats are never saved.
+- **Retention is enforced only while AI is on.** `Keep conversations` prunes on the enable transition
+  and whenever the setting changes, through `AIChatCoordinator.applyRetention` — never on a schedule
+  and never while `aiEnabled` is false, because age passes while the feature is off and "off means
+  fully off" promises the file is untouched. A Mac left off for four months keeps its chats.
+  `ChatHistoryStore.prune(before:)` is one `DELETE` that cascades to messages, images and searches,
+  and it `VACUUM`s only when something actually went: pictures live inline as BLOBs, so this is the
+  one store where a delete alone frees pages without ever shrinking the file.
 - **Everything but the newest message is bounded.** `ChatSession.boundedContext` sends that message
   whole — truncating what someone just typed is worse than the provider's own error — keeps images
   only on that turn and only up to `AIAttachmentBudget`, and walks older text newest-first into a
-  ~100 KB budget; both transports funnel through `requestMessages`, so no route can resend every
-  image each turn or let history grow the payload as a chat goes on. The composer refuses a picture
+  budget the *route* names: ~100 KB for a cloud endpoint, `AppleIntelligence.contextBudget` for the
+  on-device model. Every transport funnels through `requestMessages(textBudget:)`, so no route can
+  resend every image each turn or let history grow the payload as a chat goes on. The composer refuses a picture
   past the budget and says so, rather than letting send time drop it silently.
 
 ## Connections and routing
 
-`AIProviderKind` exposes four named presets plus a custom OpenAI-compatible route:
+`AIModelSelection` has three cases: `.appleIntelligence`, `.chatGPT` and `.api`. The first needs no
+connection at all — `AppleIntelligenceProvider` talks to the Foundation Models framework, so there is
+nothing to name and nothing to store. The other two route through `AIProviderKind`, which exposes four
+named presets plus a custom OpenAI-compatible route:
 
 | Setting | Transport | Default base URL |
 | --- | --- | --- |
+| Apple Intelligence | Foundation Models, on device | none |
 | OpenAI API | OpenAI Chat Completions | `https://api.openai.com/v1` |
 | Anthropic Claude | Anthropic Messages | `https://api.anthropic.com` |
 | Google Gemini | Gemini's OpenAI-compatible API | `https://generativelanguage.googleapis.com/v1beta/openai` |
@@ -94,13 +131,25 @@ system messages are lifted into its top-level `system` field; the other HTTP rou
 messages in the OpenAI message array.
 
 `AIProviderFactory` resolves the selection, validates the endpoint, reads the key at the last possible
-moment and returns either `HTTPAIProvider` or `ChatGPTSubscriptionProvider`. A future feature should
-hold neither settings nor credentials itself.
+moment and returns `AppleIntelligenceProvider`, `HTTPAIProvider` or `ChatGPTSubscriptionProvider`. A
+consumer should hold neither settings nor credentials itself. The `selection` and `guardrails`
+overload is what lets Quick Actions pick its own route and ask for permissive content
+transformations without a second factory.
+
+`AppleIntelligenceProvider` is the only route whose model is a local process. It builds a `Transcript`
+from the turns ahead of the newest user message and streams the rest as the prompt, so a conversation
+resumes rather than being replayed as one blob. Foundation Models reports the whole answer so far in
+every snapshot while every other transport speaks in deltas; `AppleIntelligenceDelta` is the one place
+that difference lives. Guardrails are a construction parameter rather than a constant: chat writes
+fresh prose, where the default filter belongs, and a later text-rewrite feature transforms text the
+reader already wrote, which is what `permissiveContentTransformations` exists for — so that feature
+needs no second provider. `GenerationError` never reaches the transcript as-is; its `Context` carries
+a debug description written for a log, so each case maps to a plain sentence instead.
 
 ## Chat surface
 
 The built-in `AI Chat` launcher command enters `AIScreen`, and carries a bindable global shortcut
-(`HotKeyAction.aiChat`) that does the same thing from any app; Tab from the launcher is the third
+(`HotKeyAction.command(.aiChat)`) that does the same thing from any app; Tab from the launcher is the third
 way in. Settings → AI holds both the recorder and a checkbox for the command's place in launcher
 search; the shortcut keeps working while the command is hidden, and does nothing at all while the
 feature is off. The palette search field becomes the single-line composer. The footer pill and
@@ -170,10 +219,21 @@ nineteenth feature coordinator.
 - Switching while a response streams does not stop or reroute that response; the new model applies to
   the following message.
 - With no available model, the menu offers Configure AI and opens the AI Settings pane.
-- Harnesses: `ai-provider-test` (endpoints, stream decoding, persistence repair, Codex framing),
-  `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore`) and `codex-turn-test` (the Stop
-  path, driven against a stub app-server stalled where Stop races the turn ID), all in
-  `run-tests.sh`.
+- With Apple Intelligence available and nothing else configured, opening chat or the AI pane leaves
+  the selection reading **Apple Intelligence** without asking for anything.
+- With it switched off in System Settings, the pane says so and chat says so; neither moves the
+  reader onto a configured API connection.
+- With `Opens to: Recent Conversation` and a five-minute window, Escape out and summon again inside
+  five minutes resumes the transcript; past it, the composer is empty. Quitting and relaunching still
+  reopens the last conversation. `A New Conversation` is always empty.
+- Setting `Keep conversations` to 7 days drops older chats from ⌘K → Chat History and shrinks
+  `ai-chats.sqlite3`. Switching AI off, waiting past a boundary and switching back on prunes nothing
+  that was saved before it went off.
+- Harnesses: `ai-provider-test` (endpoints, stream decoding, persistence repair, Codex framing,
+  on-device routing), `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore`),
+  `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
+  turn ID) and `apple-intelligence-test` (status copy, snapshot deltas, transcript assembly, error
+  mapping, plus one real generation when this Mac can run one), all in `run-tests.sh`.
 
 ## ChatGPT subscription
 
@@ -209,6 +269,7 @@ URLs, and as `input_image` when prior turns are injected.
 
 | Route | Web search | Images |
 | --- | --- | --- |
+| Apple Intelligence | never — it reaches nothing | never — the model is text-only |
 | ChatGPT subscription | Codex `web_search` config | `image` input part |
 | OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality |
 | OpenAI / Gemini / compatible | not offered | `image_url` part, assumed supported |
@@ -269,7 +330,8 @@ width and clipped the search field well short of the button.
 
 Settings → AI is a normal grouped `Form` inside Tinycast's existing Settings window. It owns no
 separate settings window or palette overlay. The pane edits multiple API connections, manages the
-ChatGPT login and chooses the one default model shared by future features.
+ChatGPT login and chooses chat's default model, which is also the fallback Quick Actions uses
+until its own pane names one.
 
 The signed-in ChatGPT address is the one thing on the pane that names a person, and a Settings pane
 is what gets screenshotted into a bug report or left on screen in a recording, so `RedactedText`
@@ -297,4 +359,6 @@ describing itself, and a user switch must not be able to lift it.
 excluded from settings backups. The first is meaningless without machine-local Keychain items; the
 second names an external destination and must not silently redirect AI traffic after an import; the
 last two are standing instructions and the switch that sends them, both of which change every
-answer and must not arrive on another Mac unread.
+answer and must not arrive on another Mac unread. `aiRetention`, `aiOpensTo` and `aiNewChatAfter`
+join them: all three are decisions about conversations that never leave the Mac that had them, and
+an import must not arrive carrying an instruction to delete them.

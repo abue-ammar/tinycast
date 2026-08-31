@@ -1,26 +1,32 @@
 import AppKit
 
-/// Owns snippet expansion: the keyword listener, the argument prompt, delivery, feature presence.
+/// Owns the snippet flow: listener, browser, editor handoff, delivery, presence.
 @MainActor
-final class SnippetExpansionCoordinator {
+final class SnippetCoordinator {
     private let store: SnippetsStore
     private let listener: SnippetKeywordListener
-    private let injector: SnippetTextInjector
+    private let injector: TextInjector
     private let clipboardStore: ClipboardStore
     private let appIndex: AppIndex
     private let settings: AppSettings
+    private let windowController: PaletteWindowController
+    private let paletteCoordinator: PaletteCoordinator
+    private let settingsCoordinator: SettingsCoordinator
     /// Routed out so `MessageHUDController` stays owned by `AppCore`.
     private let showMessage: @MainActor (String) -> Void
-    /// The consent dialog only — never for state this type owns.
+    /// The consent dialog and the `pendingSnippetEdit` handoff to the Settings pane.
     private unowned let core: AppCore
 
     init(
         store: SnippetsStore,
         listener: SnippetKeywordListener,
-        injector: SnippetTextInjector,
+        injector: TextInjector,
         clipboardStore: ClipboardStore,
         appIndex: AppIndex,
         settings: AppSettings,
+        windowController: PaletteWindowController,
+        paletteCoordinator: PaletteCoordinator,
+        settingsCoordinator: SettingsCoordinator,
         showMessage: @escaping @MainActor (String) -> Void,
         core: AppCore
     ) {
@@ -30,6 +36,9 @@ final class SnippetExpansionCoordinator {
         self.clipboardStore = clipboardStore
         self.appIndex = appIndex
         self.settings = settings
+        self.windowController = windowController
+        self.paletteCoordinator = paletteCoordinator
+        self.settingsCoordinator = settingsCoordinator
         self.showMessage = showMessage
         self.core = core
     }
@@ -67,8 +76,10 @@ final class SnippetExpansionCoordinator {
 
     // MARK: - Feature presence
 
+    /// Either switch off means the feature reaches the launcher not at all — rows and commands.
     func applySnippetsLauncherPresence() {
         let visible = settings.snippetsEnabled && settings.snippetsShowInLauncher
+        appIndex.setCommandsVisible([.searchSnippets, .createSnippet], visible)
         appIndex.updateSnippets(visible ? store.snippets : [])
     }
 
@@ -84,7 +95,26 @@ final class SnippetExpansionCoordinator {
         listener.stop()
         injector.cancelAutomaticExpansion()
         store.stop()
-        appIndex.updateSnippets([])
+        applySnippetsLauncherPresence()
+    }
+
+    // MARK: - Browsing and editing
+
+    /// The switch gates the browser, the way Search Files re-checks its own before opening.
+    func showSnippets() {
+        guard settings.snippetsEnabled else { return }
+        paletteCoordinator.togglePalette(mode: .snippets)
+    }
+
+    /// Opens the Snippets pane with the editor showing `record`; nil is a new snippet.
+    func editSnippet(_ record: StoredSnippet?) {
+        core.pendingSnippetEdit = SnippetEditRequest(record: record)
+        settingsCoordinator.showSettings(tab: .snippets)
+    }
+
+    func showSnippetInFinder(_ record: StoredSnippet) {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        AppLauncher.showInFinder(record.fileURL)
     }
 
     // MARK: - Expansion
@@ -119,6 +149,13 @@ final class SnippetExpansionCoordinator {
             history.insert(current, at: 0)
         }
         return history
+    }
+
+    /// The browser's ↵. The target has to be read before the panel hides, as the launcher's does.
+    func expandSnippetFromPalette(id: StoredSnippet.ID) {
+        let target = windowController.previousApp
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        expandSnippet(id: id, targetApp: target)
     }
 
     func expandSnippet(
@@ -214,7 +251,7 @@ final class SnippetExpansionCoordinator {
         confirmation: String?
     ) {
         injector.deliver(
-            result,
+            InjectedText(result.text, cursorOffsetFromEnd: result.cursorOffsetFromEnd),
             targetApp: targetApp,
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,

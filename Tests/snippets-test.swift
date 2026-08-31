@@ -16,6 +16,7 @@ struct SnippetsTests {
         try testRepositoryStorage()
         try await testRepositoryConcurrency()
         try await testDeliveryQueueAndPasteboard()
+        await testCopySelectionFallback()
         try await testStoreWatcher()
         testTemplateExpansion()
         testDynamicPlaceholders()
@@ -59,7 +60,7 @@ struct SnippetsTests {
         check(
             "Raycast import keeps valid entries and source order",
             imported.map(\.name) == ["Email", "Multiline 雪", "Blank Keyword"])
-        // The remaining assertions index into the result, so a wrong count has to fail rather than trap.
+        // The assertions index the result, so a wrong count must fail rather than trap.
         guard imported.count == 3 else { return }
         check("Raycast import preserves text and Unicode", imported[1].text == "First\nSecond")
         check(
@@ -173,7 +174,7 @@ struct SnippetsTests {
         expectParseError(
             "unknown frontmatter key is rejected", content: "---\nunknown: \"value\"\n---\n", fileURL: fileURL
         )
-        // These keys were removed or renamed; a file still carrying one is reported, not silently half-loaded.
+        // A file still carrying a removed key is reported, not silently half-loaded.
         expectParseError(
             "the removed category key is rejected", content: "---\ncategory: \"Work\"\n---\n",
             fileURL: fileURL)
@@ -336,7 +337,7 @@ struct SnippetsTests {
         } catch SnippetRepository.RepositoryError.conflict {
             check("stale deletes report a revision conflict", true)
         }
-        // Everything below needs the reloaded record; report the loss instead of trapping, and keep the later contracts running.
+        // Report the loss instead of trapping, and keep the later contracts running.
         if let currentSaved = try crudRepository.load().records.first(where: { $0.id == saved.id }) {
             try crudRepository.delete(
                 fileURL: currentSaved.fileURL,
@@ -556,8 +557,45 @@ struct SnippetsTests {
         }
     }
 
+    /// The dangerous case is a copy that never lands, returning what the reader last copied.
+    private static func testCopySelectionFallback() async {
+        let injector = TextInjector(clipboardManager: ClipboardManager(), settings: AppSettings())
+        let backing = NSPasteboard(name: .init("tinycast-copy-tests-\(UUID().uuidString)"))
+        defer { backing.releaseGlobally() }
+        let pasteboard = CountingPasteboard(backing: backing)
+
+        func seed(_ text: String) {
+            let item = NSPasteboardItem()
+            item.setString(text, forType: .string)
+            backing.clearContents()
+            _ = backing.writeObjects([item])
+        }
+
+        seed("Something the reader copied earlier")
+        let unchanged = await injector.copySelection(from: nil, pasteboard: pasteboard)
+        check("a copy that never lands returns nothing, not the stale clipboard", unchanged == nil)
+        check(
+            "the reader's clipboard survives a failed copy",
+            backing.string(forType: .string) == "Something the reader copied earlier")
+
+        seed("Original")
+        let writer = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(60))
+            let item = NSPasteboardItem()
+            item.setString("the selection", forType: .string)
+            backing.clearContents()
+            _ = backing.writeObjects([item])
+        }
+        let copied = await injector.copySelection(from: nil, pasteboard: pasteboard)
+        _ = await writer.result
+        check("a copy that lands is read back: \(copied ?? "nil")", copied == "the selection")
+        check(
+            "the reader's clipboard is restored afterwards",
+            backing.string(forType: .string) == "Original")
+    }
+
     private static func testDeliveryQueueAndPasteboard() async throws {
-        let queue = SnippetDeliveryQueue()
+        let queue = DeliveryQueue()
         var order: [String] = []
         queue.enqueue(isAutomatic: false) {
             order.append("first-start")
@@ -584,7 +622,7 @@ struct SnippetsTests {
         check("automatic cancellation cannot run a queued stale delivery", !automaticRan)
 
         var completionCount = 0
-        let completion = SnippetDeliveryCompletion { completionCount += 1 }
+        let completion = DeliveryCompletion { completionCount += 1 }
         completion.confirm()
         completion.confirm()
         check(
@@ -593,19 +631,19 @@ struct SnippetsTests {
 
         check(
             "unavailable AX text attributes use the event delivery fallback",
-            SnippetAccessibilityReplacement.unavailable.fallsBackToEvents)
+            AccessibilityReplacement.unavailable.fallsBackToEvents)
         check(
             "a rejected AX keyword replacement fails closed instead of deleting by events",
-            !SnippetAccessibilityReplacement.rejected.fallsBackToEvents)
+            !AccessibilityReplacement.rejected.fallsBackToEvents)
         check(
             "unreadable AX state accepts a posted paste after the conservative delay",
-            SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
+            PasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: 15,
                 hadPreviousState: true,
                 readStateAfterPaste: false))
         check(
             "readable unchanged AX state is not treated as a confirmed paste",
-            !SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
+            !PasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: 79,
                 hadPreviousState: true,
                 readStateAfterPaste: true))
@@ -1000,7 +1038,7 @@ struct SnippetsTests {
         check("reference depth limit leaves the unexpanded token visible", depthResult.text == "{snippet:S6}")
     }
 
-    /// The Raycast-compatible placeholder set: every token, parameter and modifier, against an injected clock, locale, clipboard history and UUID source.
+    /// Every token, parameter and modifier, against injected clock, locale and UUIDs.
     private static func testDynamicPlaceholders() {
         var calendar = Calendar(identifier: .gregorian)
         let timeZone = TimeZone(secondsFromGMT: 0)!
@@ -1184,8 +1222,7 @@ struct SnippetsTests {
             ).text == "[]")
     }
 
-    /// The engine is shared with Quicklinks: it also expands a bare string, can percent-encode every
-    /// value it produces, and accepts Raycast's `{selectedText}` spelling of `{selection}`.
+    /// Shared with Quicklinks: bare strings, encoding, and Raycast's `{selectedText}`.
     private static func testTemplateEncodingAndSelectionAlias() {
         var calendar = Calendar(identifier: .gregorian)
         let timeZone = TimeZone(secondsFromGMT: 0)!
@@ -1606,7 +1643,7 @@ struct SnippetsTests {
 }
 
 @MainActor
-private final class CountingPasteboard: SnippetPasteboardAccess {
+private final class CountingPasteboard: PasteboardAccess {
     let backing: NSPasteboard
     private(set) var clearCount = 0
     private(set) var writeCount = 0
@@ -1668,9 +1705,10 @@ enum Permissions {
 enum Paster {
     static let tinycastEventTag: Int64 = 0x54494E59
     @MainActor static func postCommandV(toPid pid: pid_t? = nil) {}
+    @MainActor static func postCommandC(toPid pid: pid_t? = nil) {}
 }
 
-/// Deterministic `{uuid}` source. `@unchecked Sendable` with a lock because `makeUUID` is a `@Sendable` closure.
+/// Deterministic `{uuid}` source; the lock is why it is `@unchecked Sendable`.
 private final class UUIDSequence: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0

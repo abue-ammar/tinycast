@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// The shared category picker; unsupported categories disable rather than disappear.
+/// The category picker shared by the Backup pane and onboarding.
 struct RaycastImportSelection: View {
     @Binding var selection: RaycastImportOptions
-    var format: RaycastFormat?
 
     private struct Category: Identifiable {
         let option: RaycastImportOptions
@@ -28,8 +27,6 @@ struct RaycastImportSelection: View {
     private static let columns = Array(
         repeating: GridItem(.flexible(), spacing: Theme.Spacing.md, alignment: .leading), count: 3)
 
-    private var available: RaycastImportOptions { format?.supportedOptions ?? .all }
-
     private func included(_ option: RaycastImportOptions) -> Binding<Bool> {
         Binding(
             get: { selection.contains(option) },
@@ -40,7 +37,6 @@ struct RaycastImportSelection: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             LazyVGrid(columns: Self.columns, alignment: .leading, spacing: Theme.Spacing.sm) {
                 ForEach(Self.categories) { category in
-                    let supported = available.contains(category.option)
                     Toggle(isOn: included(category.option)) {
                         HStack(spacing: Theme.Spacing.sm) {
                             Image(systemName: category.symbol)
@@ -50,19 +46,15 @@ struct RaycastImportSelection: View {
                         }
                     }
                     .toggleStyle(.checkbox)
-                    .disabled(!supported)
-                    .help(supported ? "" : "This Raycast export doesn't include \(category.label).")
                 }
             }
-            Button(selection == available ? "Deselect All" : "Select All") {
-                selection = selection == available ? [] : available
+            Button(selection == .all ? "Deselect All" : "Select All") {
+                selection = selection == .all ? [] : .all
             }
             .buttonStyle(.link)
             .font(.caption)
         }
         .font(.callout)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Clear unsupported bits, so a box ticked before the file can't import nothing.
-        .onChange(of: available) { _, options in selection.formIntersection(options) }
     }
 }

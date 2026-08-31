@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// File-scoped so a row and the cap that counts rows read one number, and can't drift into half a row.
+/// File-scoped so a row and the cap that counts rows read one number.
 private enum Metrics {
     static let width: CGFloat = 300
     /// The glyph slot plus its breathing room — the tallest thing a row contains.
@@ -8,12 +8,16 @@ private enum Metrics {
     static let rowSpacing: CGFloat = 1
     /// Six rows and half of the seventh, so a long panel reads as scrollable rather than clipped.
     static let visibleRows: CGFloat = 6.5
-    static var maxHeight: CGFloat { visibleRows * (rowHeight + rowSpacing) }
+    /// Rounded: a fractional height lands the glass edge on a half pixel.
+    static var maxHeight: CGFloat { (visibleRows * (rowHeight + rowSpacing)).rounded() }
+
+    /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
+    static func height(rows: Int) -> CGFloat {
+        min(CGFloat(rows) * (rowHeight + rowSpacing) - rowSpacing, maxHeight)
+    }
 }
 
-/// One row of a running command's ⌘K panel. Its own type, not `PopoverMenuItem`: an extension names
-/// any icon and tints it, and the palette's menu row carries neither. Drawing only — a row's handler
-/// stays on `PaletteMenuContent`, so the panel and the keyboard fire the same one.
+/// Its own type, not `PopoverMenuItem`: an extension names any icon and tints it.
 struct ExtensionActionItem {
     let title: String
     let icon: ExtensionImage.Resolved
@@ -21,14 +25,16 @@ struct ExtensionActionItem {
     var isDestructive = false
 }
 
-/// The ⌘K panel of a running command. Not `PopoverMenu`: an extension's panel is long, so it scrolls.
+/// The ⌘K panel of a running command; not `PopoverMenu`, because it scrolls.
 struct ExtensionActionsPanel: View {
     var header: String?
     let items: [ExtensionActionItem]
     @Binding var selection: Int
     let onActivate: (Int) -> Void
 
-    /// A hovered row is already visible, so scrolling to it would drag the list from under the cursor.
+    /// The palette arms this only once the pointer has moved of its own accord.
+    @Environment(PaletteState.self) private var palette
+    /// A hovered row is already visible, so scrolling would drag the list under it.
     @State private var hoverSelection: Int?
 
     var body: some View {
@@ -43,7 +49,7 @@ struct ExtensionActionsPanel: View {
                     .padding(.top, Theme.Spacing.xs)
                     .padding(.bottom, Theme.Spacing.xs / 2)
             }
-            // The header stays put while rows move under it, so what the panel belongs to stays read.
+            // The header stays put while rows move under it.
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: Metrics.rowSpacing) {
@@ -52,21 +58,19 @@ struct ExtensionActionsPanel: View {
                             ExtensionActionRow(
                                 item: items[index],
                                 selected: index == selection,
-                                onHover: {
-                                    hoverSelection = index
-                                    selection = index
-                                },
                                 onActivate: { onActivate(index) }
                             )
                             .id(index)
+                            .onContinuousHover { if case .active = $0 { hover(index) } }
                         }
                     }
                 }
-                .frame(maxHeight: Metrics.maxHeight)
+                .frame(height: Metrics.height(rows: items.count))
                 // Without this a panel shorter than the cap rubber-bands against nothing.
                 .scrollBounceBehavior(.basedOnSize)
-                // None, like a real menu: `thinScrollbar` wants floating bars, the native one cuts glass.
-                .scrollIndicators(.hidden)
+                // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
+                .scrollIndicators(.never)
+                .overflowFade()
                 .onChange(of: selection) {
                     let movedByPointer = hoverSelection == selection
                     hoverSelection = nil
@@ -78,19 +82,23 @@ struct ExtensionActionsPanel: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(width: Metrics.width)
-        // Glass carries its own elevation, so a drop shadow on top reads heavy.
         .glassEffect(
             .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
         )
     }
+
+    /// Armed only once the pointer has moved of its own accord, so a scroll past it lights nothing.
+    private func hover(_ index: Int) {
+        guard palette.hoverHighlightArmed, index != selection else { return }
+        hoverSelection = index
+        selection = index
+    }
 }
 
-/// Its own row, not the palette's: that one is file-private, and this one may grow its own trimmings.
+/// Its own row, not the palette's: that one is file-private.
 private struct ExtensionActionRow: View {
     let item: ExtensionActionItem
     let selected: Bool
-    /// Fired on enter, so the owner can move selection and share one highlight.
-    let onHover: () -> Void
     let onActivate: () -> Void
 
     var body: some View {
@@ -111,8 +119,11 @@ private struct ExtensionActionRow: View {
                 }
             }
             .padding(.horizontal, Theme.Spacing.md)
-            // Fixed, not padded: the cap above counts rows, so a row has to be one known height.
-            .frame(maxWidth: .infinity, minHeight: Metrics.rowHeight, alignment: .leading)
+            // Fixed, not padded: the height maths above counts rows, so a row is one exact height.
+            .frame(
+                maxWidth: .infinity, minHeight: Metrics.rowHeight, maxHeight: Metrics.rowHeight,
+                alignment: .leading
+            )
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
@@ -120,11 +131,9 @@ private struct ExtensionActionRow: View {
             )
         }
         .buttonStyle(.plain)
-        .onHover { if $0 { onHover() } }
     }
 
-    /// A symbol is drawn here rather than handed to `ExtensionIconView`: the row's glyph is sized to
-    /// the menu's 20pt slot, which that view's own scale would shrink. Everything else it draws better.
+    /// Drawn here, not by `ExtensionIconView`, whose scale would shrink the 20pt slot.
     @ViewBuilder
     private var icon: some View {
         if case .symbol(let name) = item.icon.source {

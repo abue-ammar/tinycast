@@ -77,7 +77,9 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
+| `.snippets` | `SnippetsScreen` | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets)) |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
+| `.customCommandArguments` | `CustomCommandArgumentsScreen` | `CustomCommandArgumentsView` (see [custom-commands.md](custom-commands.md#arguments)) |
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
 
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab rings the three
@@ -94,17 +96,22 @@ pairing of a label with its key. It is drawn only when Tab really would open cha
 back out of `PaletteTabAction` rather than restated, so a hint can never promise a destination the
 key does not go to: an argument field to walk takes Tab first, and the hint steps aside for it.
 
-`PaletteTabAction` decides where Tab goes *and* whether the typed text travels with it. Launcher and
-clipboard hand the query over, since one search narrows either list; crossing chat's edge opens a
-fresh screen in both directions, because that field holds a half-written message rather than a query
-— seeding a composer from a search reads as noise, and a draft dropped into a filter matches nothing.
+`PaletteTabAction` decides where Tab goes *and* what happens to the typed text. The clipboard hands
+the query over, since one search narrows either list. **From the launcher, Tab `.ask`s** — chat opens
+fresh with the typed text already sent, so one key turns a search into a question. Leaving chat is
+still a `.freshScreen`: that field holds a half-written message rather than a query, and a draft
+dropped into a filter matches nothing. `.ask` is its own case rather than a `carryQuery(.ai)` because
+the text is submitted, not seeded, and the hint reads the case back out (`== .ask`) instead of
+restating the rule.
 
-The argument screen is the one mode where the search field is not a search field: it _is_ the current
-argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.
-Its own state lives on `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on
-`UninstallSession`, and leaving the mode cancels the pending open. A bare backspace steps back an
-argument before it falls through to the usual exit-to-launcher; Escape erases the half-typed answer
-first, and a second press hides the palette, which ends the pending open with it.
+The two argument screens — `.quicklinkArguments` and `.customCommandArguments`, together
+`PaletteMode.isArgumentForm` — are the modes where the search field is not a search field: it _is_ the
+current argument's input, so its placeholder names that argument and ↵ submits rather than activating
+a row. Neither has rows, which is why `isArgumentForm` is what keeps the ↵ pill drawn. Their state
+lives on `AppCore.quicklinkArguments` and `AppCore.customCommandArguments`, the way `.uninstall`'s
+target lives on `UninstallSession`, and leaving the mode cancels the pending open or run. A bare
+backspace steps back an argument before it falls through to the usual exit-to-launcher; Escape erases
+the half-typed answer first, and a second press hides the palette, ending the pending work with it.
 
 ### Inline command arguments
 
@@ -273,7 +280,7 @@ the arrow outside it, and AppKit's own alternation over the field came straight 
 `RootPaletteView` holds a single `OpenMenu?` rather than a flag per menu, so "at most one is open" is
 structural instead of a pair of `onChange` handlers pushing each other closed. Three cases today —
 the ⌘K Actions menu (`.bottomTrailing`), the app menu (`.bottomLeading`) and the clipboard type
-filter (`.topTrailing`, hung under its header button). `menuContent` resolves the open case to one
+filter (`.belowHeaderTrailing`, hung under its header button). `menuContent` resolves the open case to one
 `PaletteMenuContent` — a row count, a row action and a view built on demand — so ↑/↓, plain ↵, Esc and
 the click-away catcher serve every menu without knowing which is up. A screen supplies its rows as a
 `PopoverMenuContent` through `actions(at:)` and the default `menuContent` wraps them; a screen whose
@@ -286,6 +293,21 @@ active filter.
 
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
+
+### The menu's own window
+
+A menu is **not** an overlay inside the palette: `MenuPanelController` hosts it in a `MenuPanel`, a
+borderless non-activating `NSPanel` added as a **child window** of the palette's, which is what makes
+it follow a palette drag and vanish with it. Glass renders against the desktop rather than inside an
+already-blurred, clipped panel, and no menu can be cropped by `RootPaletteView`'s `clipShape` however
+long it grows. `MenuPanel.canBecomeKey` is `false` so the palette keeps key status and its
+`onKeyPress` handlers keep driving the highlight, and `MenuPanel.sendEvent` mirrors `PalettePanel`'s
+hover arming — rows light on real pointer movement, never on a scroll under a still cursor.
+
+The panel is a second SwiftUI hierarchy, so it observes nothing of `RootPaletteView`'s `@State`:
+`syncMenuPanel` pushes a rebuilt tree on every `openMenu` or `menuSelection` change, and
+`paletteEnvironment` injects the same stores into both hierarchies so they cannot drift.
+`WindowReader` reports the palette's `NSWindow`, which the menu's frame is placed against.
 
 ## Menu-open input freeze
 
@@ -301,6 +323,15 @@ frozen instead:
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
   force-casts its field editor to a private subclass, so vending a custom one crashes — only the
   existing one can be tuned.
+
+## ↵ never commits the search field
+
+Plain ↵ is claimed by `RootPaletteView`'s own `onKeyPress` whenever the search field holds focus, and
+`activateSelection` runs from there — the field carries no `onSubmit`. Letting the field submit ends
+editing, and AppKit tears the field editor down and selects the whole string when focus returns, so a
+screen opened with a carried query (the Search Files fallback) came up with that query selected. An
+IME's composition and any other focused field — the inline argument fields, an extension form — are
+left alone: the handler returns `.ignored` for them, and their own `onSubmit` still commits.
 
 ## Chords `onKeyPress` never sees
 
@@ -338,6 +369,16 @@ navigation code, so the compact bar's expand-on-↓, the grid's row and column s
 movement and the scroll-into-view intent all follow for free. The caret keeps ⌃F/⌃B off the grid
 because `moveHorizontally` leaves →/← `.ignored` there, and the field editor then moves by a character
 exactly as the chord natively would. A chord carrying any modifier beyond ⌃ — ⌃⇧Q, say — is left alone.
+
+Character shortcut handlers accept every key so SwiftUI still calls them when the active input
+source produces a non-ASCII character. Inside the callback, `ASCIIKeyboardLayout` resolves
+`NSApp.currentEvent.keyCode` through the current ASCII-capable layout before comparing the shortcut.
+Panel-owned chords use the same translation directly. A ⌘ chord translates through the layout's own
+Command table, so "Dvorak – QWERTY ⌘" keeps giving QWERTY positions while Command is held; a ⌃ chord
+translates without it, since only Command is remapped. A non-ASCII input source or IME therefore
+cannot turn ⌘K into a different logical key, while Dvorak and other ASCII layouts keep their own
+letter positions. No replacement event is synthesized, and unmodified typing stays on the active
+input source and follows the normal composition path.
 
 ## Focus restoration (load-bearing)
 

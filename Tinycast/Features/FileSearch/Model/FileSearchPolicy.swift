@@ -3,7 +3,7 @@ import Foundation
 /// Decides what a configured scope list means: which roots Spotlight takes as-is, and what to drop.
 struct FileSearchPolicy: Sendable, Equatable {
     let homeDirectory: URL
-    /// Home is held apart because `~/Library` can never be a scope, so it has to be expanded instead.
+    /// Home is held apart because `~/Library` can never be a scope, so it is expanded.
     let directRoots: [URL]
     let includesHome: Bool
     let ignore: FileSearchIgnoreList

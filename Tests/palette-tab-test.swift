@@ -1,7 +1,6 @@
 import Foundation
 
-/// Drives Tab's ring, so the three surfaces stay reachable in one direction and a chat draft never
-/// arrives in a list that would search it. Chat is skipped whole when the feature is turned off.
+/// The three surfaces stay reachable one way, and chat is skipped when off.
 @main
 @MainActor
 struct PaletteTabTests {
@@ -20,8 +19,8 @@ struct PaletteTabTests {
     static func main() {
         expect(
             PaletteTabAction.resolve(mode: .launcher, aiEnabled: true),
-            .freshScreen(.ai),
-            "the launcher opens chat, and a search query is not seeded as a draft")
+            .ask,
+            "the launcher hands the typed text to chat as the question, not as a draft")
         expect(
             PaletteTabAction.resolve(mode: .ai, aiEnabled: true),
             .freshScreen(.clipboard),
@@ -42,7 +41,9 @@ struct PaletteTabTests {
             "turned off, the clipboard still returns to the launcher")
 
         // A sub-screen is reached by a command or a hotkey, so Tab leaves rather than ringing on.
-        for mode in [PaletteMode.aiHistory, .emoji, .fileSearch, .calculatorHistory, .quicklinks] {
+        for mode in [
+            PaletteMode.aiHistory, .emoji, .fileSearch, .calculatorHistory, .quicklinks, .snippets
+        ] {
             expect(
                 PaletteTabAction.resolve(mode: mode, aiEnabled: true),
                 .carryQuery(.launcher),
@@ -60,6 +61,8 @@ struct PaletteTabTests {
         for _ in 0..<3 {
             switch PaletteTabAction.resolve(mode: mode, aiEnabled: true) {
             case .carryQuery(let next), .freshScreen(let next): mode = next
+            // Asking opens chat, so the ring still steps onto it.
+            case .ask: mode = .ai
             }
             visited.append(mode)
         }
@@ -75,6 +78,7 @@ struct PaletteTabTests {
         for _ in 0..<2 {
             switch PaletteTabAction.resolve(mode: offMode, aiEnabled: false) {
             case .carryQuery(let next), .freshScreen(let next): offMode = next
+            case .ask: offMode = .ai
             }
             offVisited.append(offMode)
         }

@@ -440,7 +440,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         ]
     }
 
-    /// Reads the app the palette displaced, never the system-wide focus, which is our own field here.
+    /// Reads the app the palette displaced, never the system-wide focus.
     private func selectedText() throws -> String {
         guard Permissions.ensureAccessibility() else {
             throw ExtensionHostError.unsupported("getSelectedText without the Accessibility permission")
@@ -455,8 +455,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         return text
     }
 
-    /// Joined on a linefeed, which Finder forbids in a name; the comma AppleScript defaults to would
-    /// cut any path that contains one into two paths that exist nowhere.
+    /// Joined on a linefeed, which Finder forbids in a name; a comma would split paths.
     private func finderSelection() throws -> [[String: String]] {
         let script = """
             set AppleScript's text item delimiters to linefeed

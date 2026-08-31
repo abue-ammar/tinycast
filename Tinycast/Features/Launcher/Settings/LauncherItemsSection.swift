@@ -20,9 +20,9 @@ struct LauncherItemsSection: View {
 
     var body: some View {
         Section {
-            Toggle(isOn: kindBinding) {
-                Text("Show in launcher")
-                Text("Uncheck an item below to hide just that one.")
+            Toggle(isOn: enabledBinding) {
+                Text("Enable \(header)")
+                Text("Off hides them all and stops their shortcuts. Uncheck one below to hide just that one.")
             }
         } header: {
             Text(header)
@@ -47,17 +47,16 @@ struct LauncherItemsSection: View {
                 .padding(.vertical, -Self.rowPadding)
             }
         }
-        // Rows dim while the category is off but stay interactive, so one can still be re-hidden.
-        .opacity(visibility.isKindVisible(kind) ? 1 : 0.45)
+        .settingsEnabled(visibility.isKindEnabled(kind))
     }
 
     /// A grouped `Form` row's own vertical padding.
     private static let rowPadding: CGFloat = 15
 
-    private var kindBinding: Binding<Bool> {
+    private var enabledBinding: Binding<Bool> {
         Binding(
-            get: { visibility.isKindVisible(kind) },
-            set: { visibility.setKindVisible($0, for: kind) }
+            get: { visibility.isKindEnabled(kind) },
+            set: { visibility.setKindEnabled($0, for: kind) }
         )
     }
 }

@@ -1,10 +1,10 @@
 import AppKit
 import Foundation
 
-/// Maps a Raycast 2.x payload onto Tinycast's fields. See docs/features/raycast-import.md.
-enum RaycastImportV2 {
-    static func read(_ raw: Data, passphrase: String) throws -> RaycastImport.Result {
-        try map(RaycastV2Decoder.decrypt(raw, passphrase: passphrase))
+/// Maps a decrypted Raycast payload onto Tinycast's fields. See docs/features/raycast-import.md.
+enum RaycastImportReader {
+    static func read(file: URL, passphrase: String) throws -> RaycastImport.Result {
+        try map(RaycastDecoder.decrypt(try Data(contentsOf: file), passphrase: passphrase))
     }
 
     private static func map(_ decrypted: Data) throws -> RaycastImport.Result {
@@ -84,6 +84,7 @@ enum RaycastImportV2 {
         let settings = json["settings"] as? [String: Any]
         var hotkeys = SettingsBackup.HotkeyBackup()
         var apps: [String: HotKeyBinding] = [:]
+        var commands: [String: HotKeyBinding] = [:]
         var mapped = false
 
         if let general = settings?["general"] as? [String: Any],
@@ -97,10 +98,10 @@ enum RaycastImportV2 {
             guard let binding = binding(from: command["macosHotkey"]) else { continue }
             switch command["extensionId"] as? String {
             case "e:r:clipboard-history":
-                hotkeys.toggleClipboard = binding
+                commands[CommandID.clipboardHistory.rawValue] = binding
                 mapped = true
             case "e:r:emoji-picker":
-                hotkeys.toggleEmoji = binding
+                commands[CommandID.searchEmoji.rawValue] = binding
                 mapped = true
             case "e:r:applications":
                 if let path = appPath(fromCommandID: command["id"] as? String),
@@ -114,6 +115,7 @@ enum RaycastImportV2 {
             }
         }
         if !apps.isEmpty { hotkeys.apps = apps }
+        if !commands.isEmpty { hotkeys.commands = commands }
         return mapped ? hotkeys : nil
     }
 

@@ -29,7 +29,7 @@ final class UpdateCheckStore {
 
     private let fileURL: URL
     private var skippedVersion: AppVersion?
-    /// At most one uninvited appearance per version per launch; after that the window is the user's.
+    /// At most one uninvited appearance per version per launch.
     @ObservationIgnored private var announcedVersion: AppVersion?
     @ObservationIgnored private var withheldRetries = 0
     @ObservationIgnored private var pump: Task<Void, Never>?
@@ -82,7 +82,7 @@ final class UpdateCheckStore {
         isChecking = true
         defer { isChecking = false }
         guard let data = await Self.body() else { return false }
-        latest = ReleaseFeed.newest(from: data, channel: channel)
+        latest = ReleaseFeed.newest(from: data, channel: channel, architecture: .current)
         lastCheckedAt = Date()
         persist()
         return true

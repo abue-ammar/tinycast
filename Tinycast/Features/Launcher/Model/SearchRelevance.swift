@@ -10,7 +10,7 @@ enum FuzzyMatch {
         case subsequence
 
         var isLiteral: Bool { self != .subsequence }
-        /// Anchored at the candidate's start: what a short, deliberate field must match to win its band.
+        /// Anchored at the candidate's start: what a short, deliberate field must match.
         var isAnchored: Bool { self == .exact || self == .prefix }
     }
 
@@ -134,8 +134,10 @@ struct SearchFields: Sendable {
     var names: [String]
     /// The user's own alias for the entry; deliberate, so it outranks every vendor field.
     var userAlias: String?
-    /// Spotlight's `kMDItemAlternateNames`: `iBooks`, `Codex`, `浏览器`.
+    /// What Spotlight knows the entry by: `iBooks`, `Codex`, `浏览器`, and the system-language name.
     var alternateNames: [String] = []
+    /// What provides the entry rather than what it is — the extension a command came from.
+    var ownerName: String?
     var bundleID: String?
     var executableName: String?
 }
@@ -147,9 +149,11 @@ enum SearchRelevance {
         case bundleID = 1
         case alternateNameSubsequence = 2
         case nameSubsequence = 3
-        case alternateNameLiteral = 4
-        case nameLiteral = 5
-        case userAlias = 6
+        /// Shared by every entry it owns, so a fuzzy hit floods: literal only.
+        case ownerName = 4
+        case alternateNameLiteral = 5
+        case nameLiteral = 6
+        case userAlias = 7
 
         var offset: Int { rawValue * SearchRelevance.bandStride }
     }
@@ -162,7 +166,7 @@ enum SearchRelevance {
         score(FuzzyMatch.Query(query), fields: fields)
     }
 
-    /// The folded form: an index ranking every entry against one query folds it once, not per entry.
+    /// The folded form: an index folds one query once, not once per entry.
     static func score(_ query: FuzzyMatch.Query, fields: SearchFields) -> Int? {
         // Every entry is equally relevant to an empty query, so no field claims a band.
         guard !query.isEmpty else { return 0 }
@@ -170,12 +174,12 @@ enum SearchRelevance {
 
         func consider(_ candidate: String, literal: Band, subsequence: Band?) {
             guard let match = FuzzyMatch.match(query, candidate: candidate) else { return }
-            // No subsequence band on identifiers: it would change which apps appear at all.
+            // A nil subsequence band opts a field out: a loose hit changes which entries appear.
             guard let band = match.tier.isLiteral ? literal : subsequence else { return }
             best = max(best ?? Int.min, band.offset + match.score)
         }
 
-        // Only a hit from the alias's start earns the top band; one inside it ranks like a vendor alias.
+        // Only a hit from the alias's start earns the top band; inside it ranks as a vendor alias.
         if let alias = fields.userAlias, let match = FuzzyMatch.match(query, candidate: alias),
             match.tier.isLiteral
         {
@@ -187,6 +191,9 @@ enum SearchRelevance {
         }
         for alternate in fields.alternateNames {
             consider(alternate, literal: .alternateNameLiteral, subsequence: .alternateNameSubsequence)
+        }
+        if let ownerName = fields.ownerName {
+            consider(ownerName, literal: .ownerName, subsequence: nil)
         }
         if let bundleID = fields.bundleID {
             consider(identifyingPart(of: bundleID), literal: .bundleID, subsequence: nil)
@@ -224,7 +231,7 @@ extension SearchFields {
         }
     }
 
-    private static func strippingAppExtension(_ name: String) -> String {
+    static func strippingAppExtension(_ name: String) -> String {
         name.hasSuffix(".app") ? String(name.dropLast(4)) : name
     }
 

@@ -1,7 +1,6 @@
 import Foundation
 
-/// Pins the back/forward semantics of the Settings titlebar. Compiles the shipped `SettingsHistory`
-/// and `SettingsTab`, so a pane added to the sidebar can't quietly change how navigation behaves.
+/// Compiles the shipped `SettingsHistory`, so a new pane can't change navigation.
 @main
 @MainActor
 struct SettingsHistoryTests {
@@ -45,8 +44,7 @@ struct SettingsHistoryTests {
         expect(!history.canGoForward, "with nothing ahead")
     }
 
-    /// Clicking the row that is already selected — the commonest sidebar interaction — must not
-    /// stack duplicate entries, or Back would walk through the same pane repeatedly.
+    /// Reselecting must not stack entries, or Back walks the same pane repeatedly.
     static func reselectingIsNotANavigation() {
         var history = SettingsHistory(current: .general)
         history.select(.general)
@@ -104,9 +102,7 @@ struct SettingsHistoryTests {
     }
 
     // MARK: - Sidebar taxonomy
-    //
-    // The sidebar renders groups, not `allCases`, so a pane left out of every group would be
-    // unreachable while still compiling and still routable from a menu.
+    // The sidebar renders groups, so a pane in none is unreachable but still compiles.
 
     static func sidebarCoversEveryPane() {
         let grouped = SettingsSection.allCases.flatMap(\.tabs)
@@ -116,8 +112,7 @@ struct SettingsHistoryTests {
         expect(grouped.count == SettingsTab.allCases.count, "and none appears twice")
     }
 
-    /// A selectable `List` flattens section and row IDs into one namespace. When both were `Int`
-    /// raw values the ranges overlapped, and SwiftUI dropped whole groups from the sidebar.
+    /// A selectable `List` flattens section and row IDs into one namespace.
     static func sidebarIdentityNamespacesAreDisjoint() {
         let sections = Set(SettingsSection.allCases.map { AnyHashable($0.id) })
         let tabs = Set(SettingsTab.allCases.map { AnyHashable($0.id) })

@@ -2,7 +2,6 @@ import CoreGraphics
 import Foundation
 
 /// Switches Space with a synthetic Dock swipe, so macOS skips its sliding transition.
-/// See docs/features/window-management.md#switching-space.
 @MainActor
 final class SpaceSwitcher {
     /// The running OS decides whether the payload is required, so this cannot be `#available`.

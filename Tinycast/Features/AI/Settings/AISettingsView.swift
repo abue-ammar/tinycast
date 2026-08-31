@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct AISettingsView: View {
+    @Environment(AppCore.self) private var core
     @Environment(AISettingsStore.self) private var settings
     @Environment(AppSettings.self) private var appSettings
     @Environment(ChatGPTSubscriptionManager.self) private var subscription
@@ -31,6 +32,7 @@ struct AISettingsView: View {
             Group {
                 defaultModelSection
                 chatSection
+                conversationsSection
                 systemPromptSection
                 chatGPTSection
                 apiConnectionsSection
@@ -59,6 +61,8 @@ struct AISettingsView: View {
         .onAppear {
             loadKeyStatuses()
             refreshSubscription()
+            // Whichever of this pane and the chat opens first leaves a real selection behind.
+            settings.resolveDefaultModel()
         }
         // Switched on with the pane already open, the ChatGPT section would otherwise stay empty.
         .onChange(of: appSettings.aiEnabled) { refreshSubscription() }
@@ -68,6 +72,11 @@ struct AISettingsView: View {
 
     private var defaultModelSection: some View {
         Section {
+            // A Mac with nothing configured is the one that needs telling its free route is off.
+            if let reason = appleIntelligenceReason {
+                Label(reason, systemImage: "apple.intelligence")
+                    .foregroundStyle(.secondary)
+            }
             if modelGroups.isEmpty {
                 Label("No AI provider configured", systemImage: "sparkles")
                     .foregroundStyle(.secondary)
@@ -98,14 +107,24 @@ struct AISettingsView: View {
         } header: {
             Text("Default")
         } footer: {
-            Text(
-                modelGroups.isEmpty
-                    ? "Connect ChatGPT or add an API connection below."
-                    : "Tinycast contacts only the selected provider when an AI feature runs."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            Text(defaultModelFooter)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+    }
+
+    private var defaultModelFooter: String {
+        if settings.defaultModel?.isOnDevice == true {
+            return "Apple Intelligence runs on this Mac. No key, no account, and nothing leaves it."
+        }
+        return modelGroups.isEmpty
+            ? "Turn on Apple Intelligence, connect ChatGPT, or add an API connection below."
+            : "Tinycast contacts only the selected provider when an AI feature runs."
+    }
+
+    /// Why the on-device route is missing from the picker, or `nil` when it is there.
+    private var appleIntelligenceReason: String? {
+        settings.isAppleIntelligenceAvailable() ? nil : AppleIntelligenceProvider.status().message
     }
 
     private var chatSection: some View {
@@ -125,6 +144,42 @@ struct AISettingsView: View {
         }
     }
 
+    private var conversationsSection: some View {
+        @Bindable var settings = settings
+        return Section {
+            Picker(selection: $settings.opensTo) {
+                ForEach(AIOpensTo.allCases) { Text($0.title).tag($0) }
+            } label: {
+                Text("Opens to")
+                Text("What summoning AI Chat lands on.")
+            }
+            if settings.opensTo == .recent {
+                Picker(selection: $settings.newChatAfter) {
+                    ForEach(AINewChatAfter.allCases) { Text($0.title).tag($0) }
+                } label: {
+                    Text("Start a new conversation after")
+                    Text("Idle this long and the next summon starts fresh instead.")
+                }
+            }
+            Picker(selection: $settings.retention) {
+                ForEach(AIRetention.allCases) { Text($0.title).tag($0) }
+            } label: {
+                Text("Keep conversations")
+                Text("Older conversations are deleted permanently.")
+            }
+            .onChange(of: settings.retention) { core.aiChatCoordinator.applyRetention() }
+        } header: {
+            Text("Conversations")
+        } footer: {
+            Text(
+                "Conversations stay on this Mac. Nothing here is carried in a settings backup — which "
+                    + "chats a Mac keeps is that Mac's business."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+    }
+
     private var systemPromptSection: some View {
         @Bindable var settings = settings
         return Section {
@@ -133,7 +188,7 @@ struct AISettingsView: View {
                 Text("Off sends nothing ahead of your message, not even what Tinycast says about itself.")
             }
             SystemPromptEditor(text: $settings.systemPrompt)
-                .disabled(!settings.systemPromptEnabled)
+                .settingsEnabled(settings.systemPromptEnabled)
         } header: {
             Text("System prompt")
         } footer: {
@@ -268,6 +323,16 @@ struct AISettingsView: View {
 
     private var modelGroups: [AIModelGroup] {
         var groups: [AIModelGroup] = []
+        if settings.isAppleIntelligenceAvailable() {
+            groups.append(
+                AIModelGroup(
+                    id: "apple-intelligence",
+                    title: "On device",
+                    choices: [
+                        AIModelChoice(
+                            selection: .appleIntelligence, title: AppleIntelligence.title)
+                    ]))
+        }
         if subscription.isConnected, !subscription.models.isEmpty {
             groups.append(
                 AIModelGroup(
@@ -757,8 +822,7 @@ private struct AIConnectionEditorSheet: View {
         }
     }
 
-    /// Discovery reaches the endpoint before Save does, so it honours the same rule: retarget the
-    /// connection and it must ask for a key rather than introduce the old one to a new host.
+    /// Discovery honours the Save rule: a retarget asks for a key rather than reuse the old host's.
     private var storedKeyMatchesTarget: Bool {
         target.hasStoredKey && AIEndpointPolicy.sameDestination(connection, target.connection)
     }

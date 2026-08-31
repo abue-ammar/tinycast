@@ -12,7 +12,7 @@ struct ClipboardSettingsView: View {
         return Form {
             Section {
                 SettingsRow(title: "Clipboard History") {
-                    ShortcutRecorder(action: .toggleClipboard)
+                    ShortcutRecorder(action: .command(.clipboardHistory))
                 }
             } header: {
                 Text("Global Shortcuts")

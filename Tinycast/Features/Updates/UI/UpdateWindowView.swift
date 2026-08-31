@@ -10,8 +10,7 @@ struct UpdateWindowView: View {
     static let initialSize = CGSize(width: width, height: 158)
 
     private static let iconSize: CGFloat = 52
-    /// macOS bakes a transparent margin into an app icon; bleeding it out is what lets the artwork
-    /// line up with the padding instead of floating a few points inside it.
+    /// macOS bakes a transparent margin into an app icon; bleeding it out aligns the artwork.
     private static let iconBleed: CGFloat = 6
     /// A fixed reading area: notes run from one line to fifty, and the window may not track that.
     private static let cardHeight: CGFloat = 196
@@ -22,12 +21,10 @@ struct UpdateWindowView: View {
             detail
             actions
         }
-        // Less on top: the title bar already contributes its own 32pt above this, and clearing the
-        // traffic lights is the only reason the hero cannot start at the inset the other edges use.
+        // Less on top: the title bar adds 32pt, and the lights must be cleared.
         .padding(.top, Theme.Spacing.sm)
         .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-        // Take the ideal height rather than the window's, so the measurement is the content's own
-        // and sizing the window to it converges instead of feeding back.
+        // The ideal height, not the window's, so sizing to it converges instead of feeding back.
         .fixedSize(horizontal: false, vertical: true)
         .onGeometryChange(for: CGFloat.self) {
             $0.size.height
@@ -35,8 +32,7 @@ struct UpdateWindowView: View {
             updates.fit(height: $0)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        // Only the gradient reaches under the transparent titlebar; the content stays inside the
-        // safe area, so the padding it measures is the padding the window ends up with.
+        // Only the gradient reaches under the titlebar; the content stays in the safe area.
         .background(
             LinearGradient(
                 colors: [Theme.Colors.sheen, Color.clear], startPoint: .top, endPoint: .center

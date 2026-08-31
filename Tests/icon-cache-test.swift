@@ -13,8 +13,7 @@ struct IconCacheTests {
         }
     }
 
-    /// A tinted tile is a different icon from the plain one, and from every other tint — the cache
-    /// key has to carry the colour, or a re-skinned extension serves whatever was drawn first.
+    /// The cache key carries the colour, or a re-skin serves whatever was drawn first.
     static func tintedTiles() {
         let plain = bitmap(IconCache.symbolIcon(named: "star"))
         let red = bitmap(

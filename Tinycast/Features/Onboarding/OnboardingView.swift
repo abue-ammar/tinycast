@@ -192,7 +192,7 @@ struct OnboardingView: View {
                         .onSubmit { model.run(core: core) }
                 }
             }
-            RaycastImportSelection(selection: $model.selection, format: model.format)
+            RaycastImportSelection(selection: $model.selection)
                 .padding(.horizontal, Theme.Spacing.xs)
             if let status = model.status {
                 importStatus(status)
@@ -366,9 +366,11 @@ final class OnboardingModel {
     var importing = false
     var status: ImportStatus?
     var selection: RaycastImportOptions = .all
-    var format: RaycastFormat?
+    var isRaycastExport = false
 
-    var canImport: Bool { format != nil && !passphrase.isEmpty && !selection.isEmpty && !importing }
+    var canImport: Bool {
+        isRaycastExport && !passphrase.isEmpty && !selection.isEmpty && !importing
+    }
     var didImport: Bool {
         if case .success = status { return true }
         return false
@@ -378,13 +380,13 @@ final class OnboardingModel {
         guard let name = file?.lastPathComponent else {
             return "Choose a .rayconfig file exported from Raycast."
         }
-        return "\(name) — \(format?.title ?? "not a Raycast export")"
+        return "\(name) — \(isRaycastExport ? "Raycast export" : "not a Raycast export")"
     }
 
     func chooseFile() {
         guard let url = BackupActions.pickRaycastFile() else { return }
         file = url
-        format = BackupActions.detectRaycastFormat(of: url)
+        isRaycastExport = BackupActions.isRaycastExport(url)
         status = nil
     }
 

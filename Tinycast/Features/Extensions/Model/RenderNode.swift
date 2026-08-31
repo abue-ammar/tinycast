@@ -1,8 +1,6 @@
 import Foundation
 
-/// A prop value as it arrives from the extension runtime. `handler` is a callback the palette can
-/// dispatch back; `node` is an element-valued prop the runtime hoisted out of a `__slot` (an
-/// `ActionPanel` on `actions`, a `Detail.Metadata` on `metadata`, …).
+/// A prop value from the runtime; `node` is an element-valued prop hoisted out of a `__slot`.
 enum RenderValue: Sendable, Equatable {
     case string(String)
     case number(Double)
@@ -92,8 +90,7 @@ enum RenderValue: Sendable, Equatable {
         }
     }
 
-    /// Decode a JSON array — how host-call arguments cross from the JS queue to the main actor as
-    /// `Sendable` values.
+    /// How host-call arguments cross from the JS queue to the main actor as `Sendable`.
     static func arguments(from json: String) -> [RenderValue] {
         ExtensionRuntime.jsonArray(from: json).map(RenderValue.init(json:))
     }
@@ -126,9 +123,7 @@ enum RenderValue: Sendable, Equatable {
         }
     }
 
-    /// `Date.ISO8601FormatStyle` rather than `ISO8601DateFormatter`: the format style is `Sendable`, so it
-    /// can be a shared constant under strict concurrency. JS always sends fractional seconds; the
-    /// whole-second parse is the fallback for a hand-built value.
+    /// The format style is `Sendable`, so it can be a shared constant under strict concurrency.
     private static let fractionalISO = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
     private static let plainISO = Date.ISO8601FormatStyle()
 
@@ -147,8 +142,7 @@ struct RenderNode: Sendable, Equatable, Identifiable {
     let text: String?
 
     var isText: Bool { type == "#text" }
-    /// True for a real host element — the discriminator that keeps an ordinary prop object (`{type:
-    /// "day"}` on Action.PickDate) from being mistaken for a hoisted slot node.
+    /// The discriminator keeping an ordinary prop object from reading as a hoisted slot node.
     var isElement: Bool { !isText && id > 0 }
 
     init(
@@ -189,8 +183,7 @@ struct RenderNode: Sendable, Equatable, Identifiable {
     func array(_ key: String) -> [RenderValue] { props[key]?.arrayValue ?? [] }
     func object(_ key: String) -> [String: RenderValue]? { props[key]?.objectValue }
 
-    /// Concatenated text of this node's direct text children — how `Form.Description`-style content
-    /// and stray JSX strings arrive.
+    /// How `Form.Description`-style content and stray JSX strings arrive.
     var textContent: String {
         children.compactMap { $0.isText ? $0.text : nil }.joined()
     }
@@ -210,7 +203,7 @@ struct RenderNode: Sendable, Equatable, Identifiable {
     }
 }
 
-/// The root the runtime pushes after every commit: one `__screen` per entry on the navigation stack.
+/// The root the runtime pushes after every commit: one `__screen` per stack entry.
 struct RenderTree: Sendable, Equatable {
     let screens: [RenderNode]
 

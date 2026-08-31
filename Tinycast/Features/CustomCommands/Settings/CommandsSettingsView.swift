@@ -33,6 +33,12 @@ struct CommandsSettingsView: View {
                     ForEach(sortedCommands) { command in
                         CustomCommandSettingsRow(
                             command: command,
+                            isEnabled: Binding(
+                                get: { command.isEnabled },
+                                set: {
+                                    core.customCommandCoordinator.setCustomCommandEnabled(
+                                        $0, id: command.id)
+                                }),
                             onEdit: { editor = EditorTarget(command: command) },
                             onDelete: { pendingDeletion = command })
                     }
@@ -75,14 +81,17 @@ private struct EditorTarget: Identifiable {
 
 private struct CustomCommandSettingsRow: View {
     let command: CustomCommand
+    @Binding var isEnabled: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         SettingsRow(title: command.name, subtitle: command.command) {
-            Image(systemName: CustomCommand.sfSymbol)
+            Image(systemName: command.symbol)
         } trailing: {
+            // A disabled command's shortcut fires into the funnel's refusal, so it dims too.
             ShortcutRecorder(action: .customCommand(id: command.id))
+                .settingsEnabled(command.isEnabled)
 
             Button(action: onEdit) {
                 Image(systemName: "pencil")
@@ -98,6 +107,12 @@ private struct CustomCommandSettingsRow: View {
             .buttonStyle(.plain)
             .help("Delete Command")
             .accessibilityLabel("Delete \(command.name)")
+
+            Toggle("", isOn: $isEnabled)
+                .labelsHidden()
+                .toggleStyle(.checkbox)
+                .help("Enabled")
+                .accessibilityLabel("Enable \(command.name)")
         }
     }
 }

@@ -17,12 +17,13 @@ final class SettingsCoordinator {
     }
 
     /// A fresh window mounts on `tab`; an open one navigates to it, recording the jump in history.
-    func showSettings(tab: SettingsTab = .general) {
+    /// A nil `tab` only reveals the window, so re-opening a minimised one keeps the pane it was on.
+    func showSettings(tab: SettingsTab? = nil) {
         if window.focus() {
-            navigation?.select(tab)
+            if let tab { navigation?.select(tab) }
             return
         }
-        let navigation = SettingsNavigationState(tab: tab)
+        let navigation = SettingsNavigationState(tab: tab ?? .general)
         self.navigation = navigation
         window.show(chrome: SettingsToolbarController(navigation: navigation)) {
             SettingsSplitViewController(
@@ -41,11 +42,13 @@ final class SettingsCoordinator {
             .environment(core.hotKeys)
             .environment(core.visibility)
             .environment(core.aliases)
+            .environment(core.fallbacks)
             .environment(core.customCommands)
             .environment(core.snippetsStore)
             .environment(core.quicklinks)
             .environment(core.calendarStore)
             .environment(core.aiSettings)
+            .environment(core.quickActionSettings)
             .environment(core.chatGPTSubscription)
             // Propagates down so the window's materials show through, not each list's backing.
             .scrollContentBackground(.hidden)

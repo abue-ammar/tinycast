@@ -1,8 +1,6 @@
 import Foundation
 
-/// Decoding for the two registry APIs, kept apart from the networking so a harness can feed it
-/// recorded payloads. Both are other people's endpoints: every field beyond the few an install
-/// actually needs is optional, so a response that grows or loses a key still parses.
+/// Both are other people's endpoints, so every field an install doesn't need is optional.
 enum ExtensionStoreResponse {
 
     // MARK: - Raycast's store
@@ -58,8 +56,7 @@ enum ExtensionStoreResponse {
         }
     }
 
-    /// Parses a store search into listings. An entry without a usable download is dropped rather than
-    /// listed as something that can't be installed.
+    /// An entry without a usable download is dropped, not listed as uninstallable.
     static func parseStore(_ data: Data, registry: ExtensionRegistry) throws -> [ExtensionListing] {
         let payload = try JSONDecoder().decode(StorePayload.self, from: data)
         return payload.data.compactMap { entry -> ExtensionListing? in
@@ -84,17 +81,13 @@ enum ExtensionStoreResponse {
 
     // MARK: - A GitHub registry
 
-    static func contentsURL(
-        owner: String, repository: String, path: String, ref: String
+    static func treeURL(
+        owner: String, repository: String, sha: String, recursive: Bool = false
     ) -> URL? {
         var components = URLComponents(
-            string: "https://api.github.com/repos/\(owner)/\(repository)/contents/\(path)")
-        components?.queryItems = [URLQueryItem(name: "ref", value: ref)]
+            string: "https://api.github.com/repos/\(owner)/\(repository)/git/trees/\(sha)")
+        if recursive { components?.queryItems = [URLQueryItem(name: "recursive", value: "1")] }
         return components?.url
-    }
-
-    static func treeURL(owner: String, repository: String, sha: String) -> URL? {
-        URL(string: "https://api.github.com/repos/\(owner)/\(repository)/git/trees/\(sha)")
     }
 
     /// A Git tree: what a directory holds, by sha rather than by path.
@@ -109,6 +102,7 @@ enum ExtensionStoreResponse {
             let sha: String
 
             var isDirectory: Bool { type == "tree" }
+            var isFile: Bool { type == "blob" }
         }
 
         func directorySHA(named name: String) -> String? {
@@ -128,34 +122,7 @@ enum ExtensionStoreResponse {
         throw ExtensionStoreError.malformedResponse
     }
 
-    /// One entry of a GitHub directory listing.
-    struct GitHubEntry: Decodable, Hashable, Sendable {
-        let name: String
-        let path: String
-        let type: String
-        let size: Int?
-        let downloadURL: String?
-
-        var isDirectory: Bool { type == "dir" }
-
-        enum CodingKeys: String, CodingKey {
-            case name, path, type, size
-            case downloadURL = "download_url"
-        }
-    }
-
-    /// A directory listing, or a thrown message when GitHub answered with one instead — a bad ref and
-    /// a rate limit both arrive as a JSON object where an array was expected.
-    static func parseContents(_ data: Data) throws -> [GitHubEntry] {
-        if let entries = try? JSONDecoder().decode([GitHubEntry].self, from: data) { return entries }
-        struct Message: Decodable { let message: String }
-        if let error = try? JSONDecoder().decode(Message.self, from: data) {
-            throw ExtensionStoreError.registryRejected(error.message)
-        }
-        throw ExtensionStoreError.malformedResponse
-    }
-
-    /// The parts of an extension's `package.json` a listing shows, read straight from the repository.
+    /// The parts of `package.json` a listing shows, read from the repository.
     static func parseManifestSummary(
         _ data: Data, folder: String, registry: ExtensionRegistry
     ) -> ExtensionListing? {

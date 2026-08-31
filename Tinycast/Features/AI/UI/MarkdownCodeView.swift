@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A fenced code block. Lines soft-wrap rather than scroll: a second scroll view inside the
-/// transcript would fight the palette's own dissolve and thin scrollbar.
+/// Lines soft-wrap: a second scroll view would fight the transcript's own dissolve.
 struct MarkdownCodeView: View {
     let language: String?
     let text: String

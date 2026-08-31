@@ -1,7 +1,19 @@
 import AppKit
 import Carbon.HIToolbox
 
-enum SnippetAccessibilityReplacement: Equatable {
+/// Its own shape, not a caller's result type, so the injector stays owned by no one feature.
+struct InjectedText: Equatable, Sendable {
+    let text: String
+    /// Leaves the caret this many characters back from the end; nil leaves it after the text.
+    let cursorOffsetFromEnd: Int?
+
+    init(_ text: String, cursorOffsetFromEnd: Int? = nil) {
+        self.text = text
+        self.cursorOffsetFromEnd = cursorOffsetFromEnd
+    }
+}
+
+enum AccessibilityReplacement: Equatable {
     case delivered
     case unavailable
     case rejected
@@ -11,7 +23,7 @@ enum SnippetAccessibilityReplacement: Equatable {
 }
 
 @MainActor
-final class SnippetDeliveryCompletion {
+final class DeliveryCompletion {
     private let callback: @MainActor () -> Void
     private(set) var isConfirmed = false
 
@@ -27,12 +39,12 @@ final class SnippetDeliveryCompletion {
 }
 
 @MainActor
-final class SnippetTextInjector {
+final class TextInjector {
     typealias AutomaticGeneration = UInt
 
     private let clipboardManager: ClipboardManager
     private let settings: AppSettings
-    private let deliveryQueue = SnippetDeliveryQueue()
+    private let deliveryQueue = DeliveryQueue()
     private var automaticGeneration: AutomaticGeneration = 0
     private var activePasteboardLease: TemporaryPasteboardLease?
 
@@ -45,7 +57,7 @@ final class SnippetTextInjector {
     var isDelivering: Bool { !deliveryQueue.isIdle || activePasteboardLease != nil }
 
     func prepareInteractiveExpansion(targetApp: NSRunningApplication?) -> Bool {
-        guard targetApp?.isTerminated != true, Permissions.ensureAccessibility() else {
+        guard targetAcceptsInjection(targetApp), Permissions.ensureAccessibility() else {
             activate(targetApp)
             return false
         }
@@ -87,6 +99,16 @@ final class SnippetTextInjector {
         }
     }
 
+    /// A hotkey's target comes from `frontmostApplication`, which can be Tinycast itself.
+    private func targetAcceptsInjection(_ targetApp: NSRunningApplication?) -> Bool {
+        guard let targetApp,
+            !targetApp.isTerminated,
+            targetApp.bundleIdentifier != Bundle.main.bundleIdentifier,
+            !IsSecureEventInputEnabled()
+        else { return false }
+        return true
+    }
+
     func automaticExpansionIsAllowed(
         generation: AutomaticGeneration,
         targetApp: NSRunningApplication?
@@ -94,10 +116,7 @@ final class SnippetTextInjector {
         guard generation == automaticGeneration,
             settings.snippetsEnabled,
             Permissions.isAccessibilityTrusted(),
-            !IsSecureEventInputEnabled(),
-            let targetApp,
-            !targetApp.isTerminated,
-            targetApp.bundleIdentifier != Bundle.main.bundleIdentifier
+            targetAcceptsInjection(targetApp)
         else { return false }
         return true
     }
@@ -115,8 +134,63 @@ final class SnippetTextInjector {
             timeZone: .current)
     }
 
+    /// The caller must know there *is* a selection: a zero-length one inserts at the caret instead.
+    func replaceSelection(
+        with text: String,
+        in targetApp: NSRunningApplication?,
+        onDelivered: @escaping @MainActor () -> Void = {}
+    ) {
+        deliver(
+            InjectedText(text), targetApp: targetApp, expectedKeyword: nil, keywordLength: 0,
+            automaticGeneration: nil, onDelivered: onDelivered)
+    }
+
+    /// A `changeCount` that never moves means nothing was selected, not that the old clipboard won.
+    func copySelection(from targetApp: NSRunningApplication?) async -> String? {
+        await deliveryQueue.drain()
+        guard finishPendingPasteboardOwnership(),
+            await activateAndWaitForTarget(targetApp, automaticGeneration: nil),
+            deliveryIsAllowed(
+                automaticGeneration: nil, targetApp: targetApp,
+                promptForInteractiveAccessibility: true)
+        else { return nil }
+        return await copySelection(from: targetApp, pasteboard: NSPasteboard.general)
+    }
+
+    /// Split for the harness, which drives a stub pasteboard rather than another app.
+    func copySelection(
+        from targetApp: NSRunningApplication?, pasteboard: any PasteboardAccess
+    ) async -> String? {
+        clipboardManager.prepareForTinycastPasteboardMutation()
+        guard let original = PasteboardSnapshot(pasteboard: pasteboard) else { return nil }
+        defer { restore(original, to: pasteboard) }
+
+        Paster.postCommandC(toPid: targetApp?.processIdentifier)
+        for _ in 0..<Self.copyPollAttempts {
+            guard await wait(for: Self.copyPollInterval) else { return nil }
+            guard pasteboard.changeCount != original.changeCount else { continue }
+            guard let copied = PasteboardSnapshot(pasteboard: pasteboard),
+                let data = copied.firstStringData
+            else { return nil }
+            return String(bytes: data, encoding: .utf8)
+        }
+        return nil
+    }
+
+    private func restore(_ snapshot: PasteboardSnapshot, to pasteboard: any PasteboardAccess) {
+        guard let items = snapshot.pasteboardItems() else { return }
+        pasteboard.clearContents()
+        guard pasteboard.writeObjects(items) else { return }
+        clipboardManager.synchronizeAfterTinycastPasteboardMutation(
+            changeCount: pasteboard.changeCount)
+    }
+
+    /// A copy lands well inside a second; past that the app was never going to answer.
+    private static let copyPollAttempts = 40
+    private static let copyPollInterval = Duration.milliseconds(25)
+
     func deliver(
-        _ result: SnippetTemplateEngine.ExpansionResult,
+        _ injected: InjectedText,
         targetApp: NSRunningApplication?,
         expectedKeyword: String?,
         keywordLength: Int,
@@ -137,7 +211,7 @@ final class SnippetTextInjector {
         deliveryQueue.enqueue(isAutomatic: automaticGeneration != nil) { [weak self] in
             guard let self else { return }
             await self.performDelivery(
-                result,
+                injected,
                 targetApp: targetApp,
                 expectedKeyword: expectedKeyword,
                 keywordLength: keywordLength,
@@ -147,7 +221,7 @@ final class SnippetTextInjector {
     }
 
     private func performDelivery(
-        _ result: SnippetTemplateEngine.ExpansionResult,
+        _ injected: InjectedText,
         targetApp: NSRunningApplication?,
         expectedKeyword: String?,
         keywordLength: Int,
@@ -164,9 +238,9 @@ final class SnippetTextInjector {
                 promptForInteractiveAccessibility: true)
         else { return }
 
-        let completion = SnippetDeliveryCompletion(callback: onDelivered)
+        let completion = DeliveryCompletion(callback: onDelivered)
         let accessibilityReplacement = replaceUsingAccessibility(
-            result,
+            injected,
             targetApp: targetApp,
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength)
@@ -178,13 +252,13 @@ final class SnippetTextInjector {
 
         guard
             await deliverUsingEvents(
-                result.text,
+                injected.text,
                 keywordLength: keywordLength,
                 targetApp: targetApp,
                 automaticGeneration: automaticGeneration)
         else { return }
 
-        guard let offset = result.cursorOffsetFromEnd, offset > 0 else {
+        guard let offset = injected.cursorOffsetFromEnd, offset > 0 else {
             completion.confirm()
             return
         }
@@ -364,13 +438,12 @@ final class SnippetTextInjector {
             else { return false }
             return true
         }
-        guard targetApp?.isTerminated != true else { return false }
-        if let targetApp {
-            guard targetApp.isActive,
-                NSWorkspace.shared.frontmostApplication?.processIdentifier
-                    == targetApp.processIdentifier
-            else { return false }
-        }
+        // Re-checked before every post, so a target that went away or went secure stops delivery.
+        guard targetAcceptsInjection(targetApp), let targetApp,
+            targetApp.isActive,
+            NSWorkspace.shared.frontmostApplication?.processIdentifier
+                == targetApp.processIdentifier
+        else { return false }
         return promptForInteractiveAccessibility
             ? Permissions.ensureAccessibility()
             : Permissions.isAccessibilityTrusted()
@@ -412,11 +485,11 @@ final class SnippetTextInjector {
     }
 
     private func replaceUsingAccessibility(
-        _ result: SnippetTemplateEngine.ExpansionResult,
+        _ injected: InjectedText,
         targetApp: NSRunningApplication?,
         expectedKeyword: String?,
         keywordLength: Int
-    ) -> SnippetAccessibilityReplacement {
+    ) -> AccessibilityReplacement {
         guard let targetApp,
             let element = AccessibilityText.focusedElement(in: targetApp),
             isAttributeSettable(kAXSelectedTextRangeAttribute, in: element),
@@ -448,15 +521,15 @@ final class SnippetTextInjector {
             AXUIElementSetAttributeValue(
                 element,
                 kAXSelectedTextAttribute as CFString,
-                result.text as CFString) == .success
+                injected.text as CFString) == .success
         else {
             _ = setSelectedRange(originalRange, in: element)
             return .rejected
         }
 
-        let cursorOffset = min(result.cursorOffsetFromEnd ?? 0, result.text.count)
-        let cursorIndex = result.text.index(result.text.endIndex, offsetBy: -cursorOffset)
-        let insertedPrefixLength = result.text[..<cursorIndex].utf16.count
+        let cursorOffset = min(injected.cursorOffsetFromEnd ?? 0, injected.text.count)
+        let cursorIndex = injected.text.index(injected.text.endIndex, offsetBy: -cursorOffset)
+        let insertedPrefixLength = injected.text[..<cursorIndex].utf16.count
         _ = setSelectedRange(
             NSRange(location: replacementRange.location + insertedPrefixLength, length: 0),
             in: element)
@@ -484,7 +557,7 @@ final class SnippetTextInjector {
                 readStateAfterPaste = true
                 if currentState != previousState { return true }
             }
-            if SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
+            if PasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: attempt,
                 hadPreviousState: previousState != nil,
                 readStateAfterPaste: readStateAfterPaste)
@@ -658,7 +731,7 @@ final class SnippetTextInjector {
     }
 }
 
-enum SnippetPasteConfirmationPolicy {
+enum PasteConfirmationPolicy {
     static func acceptsUnconfirmedDelivery(
         attempt: Int,
         hadPreviousState: Bool,
@@ -669,7 +742,7 @@ enum SnippetPasteConfirmationPolicy {
 }
 
 @MainActor
-final class SnippetDeliveryQueue {
+final class DeliveryQueue {
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private var tail: (id: UUID, task: Task<Void, Never>)?
     private var automaticTaskID: UUID?
@@ -719,14 +792,14 @@ final class SnippetDeliveryQueue {
 }
 
 @MainActor
-protocol SnippetPasteboardAccess: AnyObject {
+protocol PasteboardAccess: AnyObject {
     var changeCount: Int { get }
     var pasteboardItems: [NSPasteboardItem]? { get }
     @discardableResult func clearContents() -> Int
     func writeObjects(_ objects: [any NSPasteboardWriting]) -> Bool
 }
 
-extension NSPasteboard: SnippetPasteboardAccess {}
+extension NSPasteboard: PasteboardAccess {}
 
 @MainActor
 final class TemporaryPasteboardLease {
@@ -736,7 +809,7 @@ final class TemporaryPasteboardLease {
         case failed
     }
 
-    private let pasteboard: any SnippetPasteboardAccess
+    private let pasteboard: any PasteboardAccess
     private let ownedChangeCount: Int
     private let originalStringData: Data
     private let temporaryItem: NSPasteboardItem
@@ -747,7 +820,7 @@ final class TemporaryPasteboardLease {
     }
 
     private init(
-        pasteboard: any SnippetPasteboardAccess,
+        pasteboard: any PasteboardAccess,
         ownedChangeCount: Int,
         originalStringData: Data,
         temporaryItem: NSPasteboardItem
@@ -760,7 +833,7 @@ final class TemporaryPasteboardLease {
 
     static func begin(
         text: String,
-        pasteboard: any SnippetPasteboardAccess,
+        pasteboard: any PasteboardAccess,
         onMutation: (Int) -> Void = { _ in }
     ) -> TemporaryPasteboardLease? {
         guard let snapshot = PasteboardSnapshot(pasteboard: pasteboard),
@@ -822,7 +895,7 @@ struct PasteboardSnapshot {
         items.first?.values.first { $0.type == .string }?.data
     }
 
-    init?(pasteboard: any SnippetPasteboardAccess) {
+    init?(pasteboard: any PasteboardAccess) {
         let changeCount = pasteboard.changeCount
         var items: [Item] = []
         for pasteboardItem in pasteboard.pasteboardItems ?? [] {

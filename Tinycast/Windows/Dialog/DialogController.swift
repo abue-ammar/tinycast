@@ -7,8 +7,7 @@ final class DialogController: NSObject, NSWindowDelegate {
     private var panel: DialogPanel?
     private var continuation: CheckedContinuation<Int, Never>?
 
-    /// True while a question is on screen and unanswered — the palette reads this so its own dialog
-    /// taking key doesn't read as a click-away.
+    /// The palette reads this so its own dialog taking key isn't a click-away.
     var isPresenting: Bool { continuation != nil }
 
     func confirm(
@@ -116,8 +115,7 @@ final class DialogController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// An accessory can refuse its own dialog's primary action; the dialog then simply stays up,
-    /// which is what a greyed-out button would say if `DialogAction` could carry one.
+    /// A refused primary action leaves the dialog up, as a greyed-out button would.
     private static func accepts(_ index: Int, for request: DialogRequest) -> Bool {
         guard index == request.defaultIndex, case .eventDraft(let state) = request.accessory else {
             return true

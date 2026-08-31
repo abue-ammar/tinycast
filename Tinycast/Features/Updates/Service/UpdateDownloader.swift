@@ -1,7 +1,6 @@
 import Foundation
 
-/// Streams a release DMG to disk. `URLSession` reports byte progress only to a delegate, so this
-/// is the one place in the feature that still uses one; the stream is what everything else sees.
+/// `URLSession` reports byte progress only to a delegate, hence the one left here.
 enum UpdateDownloader {
     enum Event: Sendable {
         case progress(received: Int64, expected: Int64)
@@ -14,7 +13,7 @@ enum UpdateDownloader {
     ) -> AsyncThrowingStream<Event, any Error> {
         AsyncThrowingStream { continuation in
             let config = URLSessionConfiguration.ephemeral
-            // Cacheless, never `URLSession.shared`, so the only copy of the image is the one on disk.
+            // Cacheless, never `URLSession.shared`, so the only copy is the one on disk.
             config.urlCache = nil
             config.timeoutIntervalForRequest = 60
             let delegate = Delegate(
@@ -53,7 +52,7 @@ private final class Delegate: NSObject, URLSessionDownloadDelegate, @unchecked S
         _ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData: Int64,
         totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64
     ) {
-        // A server that omits Content-Length reports -1; the release's own size is the better guess.
+        // A server omitting Content-Length reports -1; the release's size is the better guess.
         let total = totalBytesExpectedToWrite > 0 ? totalBytesExpectedToWrite : expected
         events.yield(.progress(received: totalBytesWritten, expected: total))
     }

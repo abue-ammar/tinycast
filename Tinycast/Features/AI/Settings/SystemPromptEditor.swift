@@ -1,18 +1,19 @@
 import SwiftUI
 
-/// The user's own addition to every request. Hidden behind a blur when it already has content, so
-/// opening Settings on a stream or in a screenshot does not spill whatever someone told the model
-/// to do; an empty one opens plain, because there is nothing yet to give away and a blurred empty
-/// box is only a puzzle. The card keeps its edges — only the text goes soft.
+/// Blurred once it has content, so opening Settings on a stream cannot spill it; empty opens plain.
 struct SystemPromptEditor: View {
     @Binding var text: String
 
+    @Environment(\.isEnabled) private var isEnabled
     @State private var isRevealed: Bool
 
     init(text: Binding<String>) {
         _text = text
         _isRevealed = State(initialValue: text.wrappedValue.isBlank)
     }
+
+    /// A `TextEditor` keeps caret, keyboard and selection through `.disabled`, so it goes
+    private var isEditable: Bool { isEnabled && isRevealed }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -31,11 +32,7 @@ struct SystemPromptEditor: View {
                 .disabled(text.isBlank)
                 .accessibilityLabel(isRevealed ? "Hide the system prompt" : "Show the system prompt")
             }
-            TextEditor(text: $text)
-                .font(.body)
-                .scrollContentBackground(.hidden)
-                .blur(radius: isRevealed ? 0 : Theme.Blur.redaction)
-                .disabled(!isRevealed)
+            prompt
                 .padding(Theme.Spacing.sm)
                 .frame(height: Theme.Size.editorTextHeight)
                 .background(
@@ -48,6 +45,27 @@ struct SystemPromptEditor: View {
                 )
         }
     }
+
+    @ViewBuilder
+    private var prompt: some View {
+        if isEditable {
+            TextEditor(text: $text)
+                .font(.body)
+                .scrollContentBackground(.hidden)
+        } else {
+            ScrollView {
+                Text(text)
+                    .font(.body)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Self.textInset)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .blur(radius: isRevealed ? 0 : Theme.Blur.redaction)
+        }
+    }
+
+    /// The text container's line-fragment padding, which is where `TextEditor` starts its own text.
+    private static let textInset: CGFloat = 5
 }
 
 extension String {

@@ -73,19 +73,24 @@ struct AIModelCapabilities: Equatable, Sendable {
     let webSearch: Bool
 
     static let chatGPT = AIModelCapabilities(images: true, webSearch: true)
+    /// The on-device model is text-only and reaches nothing, so it offers neither.
+    static let appleIntelligence = AIModelCapabilities(images: false, webSearch: false)
 }
 
 enum AIModelSource: Codable, Equatable, Hashable, Sendable {
+    case appleIntelligence
     case chatGPT
     case api(UUID)
 }
 
 enum AIModelSelection: Codable, Equatable, Hashable, Sendable {
+    case appleIntelligence
     case chatGPT(model: String, effort: String?)
     case api(connection: UUID, model: String)
 
     var source: AIModelSource {
         switch self {
+        case .appleIntelligence: return .appleIntelligence
         case .chatGPT: return .chatGPT
         case .api(let connection, _): return .api(connection)
         }
@@ -93,9 +98,13 @@ enum AIModelSelection: Codable, Equatable, Hashable, Sendable {
 
     var model: String {
         switch self {
+        case .appleIntelligence: return AppleIntelligence.modelID
         case .chatGPT(let model, _), .api(_, let model): return model
         }
     }
+
+    /// The one route with nothing to bill and nothing to configure, so it needs no capability gate.
+    var isOnDevice: Bool { self == .appleIntelligence }
 }
 
 struct AIHTTPConfiguration: Equatable, Sendable {
@@ -137,8 +146,7 @@ enum AIEndpointPolicy {
 
     static func validate(_ value: String) throws -> URL {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Any scheme with a loopback host used to pass here, so `ftp://localhost` was a valid
-        // provider. Only the two schemes the transport can actually speak get that far.
+        // Only the two schemes the transport speaks: `ftp://localhost` was once a valid provider.
         guard let url = URL(string: value), let host = url.host(),
             url.scheme == "https" || url.scheme == "http"
         else {
@@ -150,8 +158,7 @@ enum AIEndpointPolicy {
         return url
     }
 
-    /// A stored key is issued for one endpoint, so it may not follow a connection retargeted at
-    /// another: a changed provider or base URL leaves the saved secret behind rather than send it.
+    /// A key is issued for one endpoint, so a changed provider or base URL leaves it behind.
     static func sameDestination(_ connection: AIConnection, _ other: AIConnection) -> Bool {
         connection.provider == other.provider && connection.baseURL == other.baseURL
     }

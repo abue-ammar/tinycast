@@ -1,66 +1,31 @@
+import AppKit
 import SwiftUI
 
 struct ChatTranscriptView: View {
     let messages: [ChatMessage]
     let status: String?
     let usage: AIUsage?
-
+    /// Cleared when the reader scrolls up, so a streaming reply stops dragging them back down.
     @State private var followsTail = true
 
-    /// Below this velocity, a scroll toward the top is treated as the user wanting to stay put;
-    /// anything gentler might just be a finger lifting off a wheel.
-    private static let deliberateScroll: CGFloat = 8
+    /// Below this a backward move is momentum settling, not the reader asking for the wheel.
+    private static let deliberateScroll: CGFloat = 2
 
-    /// Merges intermediate assistant chunks and tool turns into clean assistant messages for display.
-    private var displayMessages: [ChatMessage] {
-        var result: [ChatMessage] = []
-        var currentAssistantTurn: ChatMessage?
-
-        for message in messages {
-            if message.role == .tool {
-                continue
-            }
-            if message.role == .user {
-                if let turn = currentAssistantTurn {
-                    result.append(turn)
-                    currentAssistantTurn = nil
-                }
-                result.append(message)
-            } else if message.role == .assistant {
-                if var turn = currentAssistantTurn {
-                    for search in message.searches {
-                        if let index = turn.searches.firstIndex(where: { $0.query == search.query }) {
-                            turn.searches[index] = search
-                        } else {
-                            turn.searches.append(search)
-                        }
-                    }
-                    if !message.text.isEmpty {
-                        turn.text = message.text
-                    }
-                    turn.state = message.state
-                    currentAssistantTurn = turn
-                } else {
-                    currentAssistantTurn = message
-                }
-            }
-        }
-        if let turn = currentAssistantTurn {
-            result.append(turn)
-        }
-        return result
+    /// Where the reader sits and whether that is the end; a growing reply moves the end on its own.
+    private struct ScrollMark: Equatable {
+        var offset: CGFloat
+        var atEnd: Bool
     }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                // Not lazy: a transcript is a few tall rows, and an estimated height is what every
-                // anchored jump and the end test are measured against.
+                // Not lazy: every anchored jump and the end test measure an estimated height
                 VStack(spacing: Theme.Spacing.xl) {
-                    ForEach(displayMessages) { message in
+                    ForEach(messages) { message in
                         ChatMessageView(
                             message: message,
-                            status: message.id == displayMessages.last?.id ? status : nil
+                            status: message.id == messages.last?.id ? status : nil
                         )
                         .id(message.id)
                     }
@@ -85,15 +50,12 @@ struct ChatTranscriptView: View {
             .onScrollGeometryChange(for: ScrollMark.self) { geometry in
                 ScrollMark(
                     offset: geometry.contentOffset.y,
-                    // The offset rests at `-insetTop`, so the end sits that much past a raw
-                    // offset plus the band — without it the true bottom never reads as the end.
+                    // The offset rests at `-insetTop`, so the end is that far past offset plus band
                     atEnd: geometry.contentOffset.y + geometry.containerSize.height
                         + geometry.contentInsets.top
                         >= geometry.contentSize.height - Theme.Spacing.chatFollowTailSlack)
             } action: { old, new in
-                // A plain wheel reports no ScrollPhase, so the offset is the only signal every
-                // input device gives. Reaching the end is tested first and wins: a wheel settling
-                // back a pixel off the end would otherwise hand control straight back again.
+                // The offset is the only signal every device gives; the end wins, tested first
                 if new.atEnd {
                     followsTail = true
                 } else if new.offset < old.offset - Self.deliberateScroll {
@@ -123,8 +85,7 @@ struct ChatTranscriptView: View {
     }
 }
 
-/// A fast reply grows the transcript quicker than a reader can scroll toward it, so arriving at
-/// the end cannot be the only way to resume: this asks for the tail rather than chasing it.
+/// A fast reply outruns a reader scrolling toward it, so this asks for the tail, not chases it.
 private struct ResumeFollowingButton: View {
     let action: () -> Void
 
@@ -169,7 +130,7 @@ private struct ChatMessageView: View {
         }
     }
 
-    /// Laid out at rest and only faded in, so a hover can't reflow the transcript under the pointer.
+    /// Laid out at rest and only faded in, so a hover cannot reflow the transcript
     private var footer: some View {
         HStack(spacing: Theme.Spacing.sm) {
             if message.role == .user { timestamp }
@@ -199,8 +160,7 @@ private struct ChatMessageView: View {
                 .font(Theme.Typography.rowTitle)
                 .foregroundStyle(message.state == .failed ? Theme.Colors.destructive : .primary)
                 .textSelection(.enabled)
-                // Only the user bubble is inset: it carries a fill. A reply's `sm` is just enough
-                // to put its first pixel under the header's back chevron.
+                // The user bubble is inset because it carries a fill; a reply clears the chevron
                 .padding(.horizontal, message.role == .user ? Theme.Spacing.xl : Theme.Spacing.sm)
                 .padding(.vertical, Theme.Spacing.md)
                 .background(
@@ -226,16 +186,14 @@ private struct ChatMessageView: View {
     /// Only a reply is markdown — what the user typed is shown back exactly as they typed it.
     @ViewBuilder private var rendered: some View {
         if message.role == .assistant {
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                if !message.searches.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        ForEach(Array(message.searches.enumerated()), id: \.offset) { _, search in
-                            ChatSearchRow(search: search)
-                        }
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                ForEach(Array(message.segments.enumerated()), id: \.offset) { _, segment in
+                    switch segment {
+                    case .text(let text):
+                        MarkdownView(blocks: MarkdownBlock.parse(text))
+                    case .search(let search):
+                        ChatSearchRow(search: search)
                     }
-                }
-                if !message.text.isEmpty {
-                    MarkdownView(blocks: MarkdownBlock.parse(message.text))
                 }
             }
         } else {
@@ -248,7 +206,6 @@ private struct ChatMessageView: View {
 struct ChatImageThumbnail: View {
     let image: AIImage
     let edge: CGFloat
-
     @State private var decoded: NSImage?
 
     var body: some View {
@@ -256,84 +213,34 @@ struct ChatImageThumbnail: View {
             if let decoded {
                 Image(nsImage: decoded)
                     .resizable()
-                    .scaledToFill()
+                    .aspectRatio(contentMode: .fill)
             } else {
-                Theme.Colors.controlSurface
+                Color.clear
             }
         }
         .frame(width: edge, height: edge)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .strokeBorder(Theme.Colors.border)
-        )
         .task(id: image) { decoded = NSImage(data: image.data) }
     }
 }
 
-/// A tool execution inside a reply: live while it runs, a record of what it looked up once done.
+/// A web search inside a reply: live while it runs, a record of what it looked up once done.
 private struct ChatSearchRow: View {
     let search: ChatSearch
 
-    private enum ToolKind {
-        case weather(String)
-        case location
-        case calculate(String)
-        case webpage(String)
-        case webSearch(String)
-    }
-
-    private var toolKind: ToolKind {
-        let raw = search.query ?? ""
-        if raw.hasPrefix("weather:") {
-            let loc = String(raw.dropFirst("weather:".count)).trimmingCharacters(in: .whitespaces)
-            return .weather(loc.isEmpty ? "Current location" : loc)
-        } else if raw.hasPrefix("loc:") || raw == "location" {
-            return .location
-        } else if raw.hasPrefix("calc:") {
-            let expr = String(raw.dropFirst("calc:".count)).trimmingCharacters(in: .whitespaces)
-            return .calculate(expr)
-        } else if raw.hasPrefix("http://") || raw.hasPrefix("https://") {
-            let host = URL(string: raw)?.host?.replacingOccurrences(of: "www.", with: "") ?? raw
-            return .webpage(host)
-        } else {
-            return .webSearch(raw)
-        }
-    }
-
     var body: some View {
-        let (icon, label, detail): (String, String, String) = {
-            switch toolKind {
-            case .weather(let place):
-                let title = search.isComplete ? "Checked weather" : "Checking weather"
-                return ("cloud.sun", title, place)
-            case .location:
-                let title = search.isComplete ? "Located" : "Locating"
-                return ("location", title, "Current location")
-            case .calculate(let expr):
-                let title = search.isComplete ? "Calculated" : "Calculating"
-                return ("function", title, expr)
-            case .webpage(let host):
-                let title = search.isComplete ? "Read webpage" : "Reading webpage"
-                return ("doc.text", title, host)
-            case .webSearch(let query):
-                let title = search.isComplete ? "Searched web" : "Searching web"
-                return ("globe", title, query)
-            }
-        }()
-
         HStack(spacing: Theme.Spacing.sm) {
             if search.isComplete {
-                Image(systemName: icon)
+                Image(systemName: "globe")
                     .font(Theme.Typography.rowTrailing)
                     .symbolRenderingMode(.hierarchical)
             } else {
                 ProgressView().controlSize(.small)
             }
-            Text(label)
+            Text(search.isComplete ? "Searched web" : "Searching web")
                 .font(Theme.Typography.rowTrailing)
-            if !detail.isEmpty {
-                Text("· \(detail)")
+            if let query = search.query, !query.isEmpty {
+                Text("· \(query)")
                     .font(Theme.Typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textTertiary)
                     .lineLimit(1)
@@ -342,9 +249,4 @@ private struct ChatSearchRow: View {
         .foregroundStyle(Theme.Colors.textSecondary)
         .animation(.easeOut(duration: Theme.Duration.chatFooter), value: search.isComplete)
     }
-}
-
-private struct ScrollMark: Equatable {
-    let offset: CGFloat
-    let atEnd: Bool
 }

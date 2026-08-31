@@ -1,7 +1,6 @@
 import Foundation
 
-/// How an app bundle's name is read. Apps ship `CFBundleDisplayName = ""` often enough that a blank
-/// value has to read as absent: the empty name it yields draws as nothing and matches no query.
+/// A blank `CFBundleDisplayName` must read as absent: it draws as nothing and matches nothing.
 enum AppDisplayName {
     /// The Info.plist value as a name, or nil when it is absent, not a string, or blank.
     static func named(_ value: Any?) -> String? {
@@ -28,7 +27,7 @@ extension Bundle {
             ?? bundleURL.deletingPathExtension().lastPathComponent
     }
 
-    /// Localized: `object(forInfoDictionaryKey:)` consults `InfoPlist.strings` where the bundle has one.
+    /// Localized: `object(forInfoDictionaryKey:)` consults `InfoPlist.strings`.
     private func infoName(_ key: String) -> String? {
         AppDisplayName.named(object(forInfoDictionaryKey: key))
     }

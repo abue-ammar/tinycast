@@ -15,7 +15,6 @@ enum SpaceDirection: Sendable {
 }
 
 /// The synthetic Dock swipe macOS switches Spaces with, as data rather than events.
-/// See docs/features/window-management.md#switching-space.
 enum SpaceGesture {
     /// The Dock ignores a gesture that skips a phase, so all three are always posted.
     enum Phase: Int64, CaseIterable, Sendable {

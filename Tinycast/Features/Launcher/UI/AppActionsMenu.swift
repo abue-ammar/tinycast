@@ -3,8 +3,7 @@ import SwiftUI
 /// Actions menu for a launcher app, from right-click or the Actions pill.
 @MainActor
 enum AppActionsMenu {
-    /// The favorites rows for one entry — what they may do and how to run them, resolved by the
-    /// screen that owns the visible order. Every row here runs the same call its chord does.
+    /// Resolved by the screen that owns the visible order; every row runs its chord's call.
     @MainActor
     struct FavoriteActions {
         let isFavorite: Bool
@@ -24,11 +23,14 @@ enum AppActionsMenu {
                 shortcut: "↵"
             ) { core.launcherCoordinator.launch(app, searchQuery: searchQuery) }
         ]
-        items.append(
-            PopoverMenuItem(
-                title: favorites.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                systemImage: favorites.isFavorite ? "star.slash" : "star", shortcut: "⇧⌘F",
-                action: favorites.toggle))
+        // A query-driven row lives only for its query, so pinning it would favorite nothing.
+        if !CommandCatalog.isQueryDriven(app) {
+            items.append(
+                PopoverMenuItem(
+                    title: favorites.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                    systemImage: favorites.isFavorite ? "star.slash" : "star", shortcut: "⇧⌘F",
+                    action: favorites.toggle))
+        }
         if favorites.canMoveUp {
             items.append(
                 PopoverMenuItem(
@@ -60,6 +62,12 @@ enum AppActionsMenu {
                 })
         }
         if running, app.kind == .application {
+            items.append(
+                PopoverMenuItem(
+                    title: "Restart Application", systemImage: "arrow.clockwise", shortcut: "⌘R"
+                ) {
+                    core.launcherCoordinator.restart(app)
+                })
             items.append(
                 PopoverMenuItem(
                     title: "Quit Application", systemImage: "power", shortcut: "⌃⇧Q",

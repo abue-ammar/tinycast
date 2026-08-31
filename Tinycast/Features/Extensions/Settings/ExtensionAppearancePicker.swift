@@ -3,7 +3,7 @@ import SwiftUI
 /// Swatches and a searchable symbol grid. Changes apply at once: the launcher is the real preview.
 struct ExtensionAppearancePicker: View {
     let current: ExtensionAppearance
-    /// Whether the extension is currently re-skinned, which is the only time resetting means anything.
+    /// Whether it is re-skinned, the only time resetting means anything.
     let isCustom: Bool
     let onPick: (ExtensionAppearance) -> Void
     let onReset: () -> Void
@@ -128,7 +128,7 @@ struct ExtensionAppearancePicker: View {
         .padding(Metrics.inset)
         .frame(width: Metrics.popoverWidth)
         .task {
-            // Only the fallback has a single category; once the real catalog is in, don't re-read it.
+            // Only the fallback has a single category; don't re-read the real catalog.
             guard catalog.categories.count == 1 else { return }
             catalog = await Task.detached(priority: .userInitiated) { SymbolCatalog.load() }.value
         }
@@ -140,7 +140,7 @@ struct ExtensionAppearancePicker: View {
     }
 }
 
-/// The launcher's icon tile, drawn in SwiftUI so the picker previews exactly what `IconCache` renders.
+/// Drawn in SwiftUI so the picker previews exactly what `IconCache` renders.
 struct SymbolTile: View {
     let symbol: String
     let tint: ExtensionTint

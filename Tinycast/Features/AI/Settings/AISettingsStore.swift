@@ -26,9 +26,28 @@ final class AISettingsStore {
             defaults.set(systemPromptEnabled, forKey: AppSettingsKey.aiSystemPromptEnabled.rawValue)
         }
     }
+    /// Forever by default, so upgrading deletes nothing the reader did not ask to lose.
+    var retention: AIRetention {
+        didSet { defaults.set(retention.rawValue, forKey: AppSettingsKey.aiRetention.rawValue) }
+    }
+    var opensTo: AIOpensTo {
+        didSet { defaults.set(opensTo.rawValue, forKey: AppSettingsKey.aiOpensTo.rawValue) }
+    }
+    var newChatAfter: AINewChatAfter {
+        didSet {
+            defaults.set(newChatAfter.rawValue, forKey: AppSettingsKey.aiNewChatAfter.rawValue)
+        }
+    }
 
-    init(defaults: UserDefaults = .standard) {
+    /// Asked each time: the model lands mid-session, and a flag read at launch would never notice.
+    @ObservationIgnored let isAppleIntelligenceAvailable: @Sendable () -> Bool
+
+    init(
+        defaults: UserDefaults = .standard,
+        isAppleIntelligenceAvailable: @escaping @Sendable () -> Bool = { false }
+    ) {
         self.defaults = defaults
+        self.isAppleIntelligenceAvailable = isAppleIntelligenceAvailable
         connections = Self.decodeConnections(
             defaults.data(forKey: AppSettingsKey.aiConnections.rawValue))
         defaultModel = Self.decodeDefaultModel(
@@ -38,10 +57,21 @@ final class AISettingsStore {
         systemPrompt = defaults.string(forKey: AppSettingsKey.aiSystemPrompt.rawValue) ?? ""
         systemPromptEnabled =
             defaults.object(forKey: AppSettingsKey.aiSystemPromptEnabled.rawValue) as? Bool ?? true
+        // Unset reads as 0, which no retention case carries — `forever` is negative on purpose.
+        retention =
+            AIRetention(rawValue: defaults.integer(forKey: AppSettingsKey.aiRetention.rawValue))
+            ?? .forever
+        opensTo =
+            AIOpensTo(rawValue: defaults.integer(forKey: AppSettingsKey.aiOpensTo.rawValue))
+            ?? .recent
+        newChatAfter =
+            AINewChatAfter(
+                rawValue: defaults.integer(forKey: AppSettingsKey.aiNewChatAfter.rawValue))
+            ?? .fiveMinutes
         if case .api(let connection, let model) = defaultModel,
             !connections.contains(where: { $0.id == connection && $0.models.contains(model) })
         {
-            defaultModel = firstAPISelection()
+            defaultModel = firstAvailableSelection()
         }
     }
 
@@ -78,13 +108,13 @@ final class AISettingsStore {
     func removeConnection(id: UUID) {
         connections.removeAll { $0.id == id }
         guard case .api(id, _) = defaultModel else { return }
-        defaultModel = firstAPISelection()
+        defaultModel = firstAvailableSelection()
     }
 
     func reconcile(chatGPTModels models: [ChatGPTSubscription.Model], isSignedOut: Bool) {
         guard case .chatGPT(let model, let effort) = defaultModel else { return }
         if isSignedOut {
-            defaultModel = firstAPISelection()
+            defaultModel = firstAvailableSelection()
             return
         }
         guard !models.isEmpty else { return }
@@ -98,7 +128,15 @@ final class AISettingsStore {
             model: replacement.id, effort: replacement.resolvedEffort(nil))
     }
 
-    private func firstAPISelection() -> AIModelSelection? {
+    /// Nothing chosen yet takes the route that needs no account, leaving a real stored selection.
+    func resolveDefaultModel() {
+        guard defaultModel == nil, let selection = firstAvailableSelection() else { return }
+        defaultModel = selection
+    }
+
+    /// The on-device model leads: free, private, always configured, so never a surprising landing.
+    private func firstAvailableSelection() -> AIModelSelection? {
+        if isAppleIntelligenceAvailable() { return .appleIntelligence }
         for connection in connections {
             if let model = connection.models.first {
                 return .api(connection: connection.id, model: model)

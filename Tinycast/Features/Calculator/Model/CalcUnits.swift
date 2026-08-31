@@ -128,6 +128,7 @@ enum CalcUnits {
         // Time
         "ms": ("s", false), "s": ("ms", false), "min": ("s", false), "hr": ("min", false),
         "day": ("hr", false), "week": ("day", false),
+        "workdays": ("hr", false),
         // Area
         "mm²": ("in2", false), "cm²": ("in2", false), "m²": ("ft2", false), "km²": ("mi2", false),
         "in²": ("cm2", false), "ft²": ("m2", false), "yd²": ("m2", false), "mi²": ("km2", false),
@@ -203,6 +204,10 @@ enum CalcUnits {
         add(UnitDef("hr", "Hours", .time, 3600), ["h", "hr", "hrs", "hour", "hours"])
         add(UnitDef("day", "Days", .time, 86400), ["d", "day", "days"])
         add(UnitDef("week", "Weeks", .time, 604800), ["wk", "week", "weeks"])
+        // 8 hours; weekends and holidays would need a calendar, and a calculator must not ask.
+        add(
+            UnitDef("workdays", "Workdays", .time, 28800),
+            ["workday", "workdays", "businessday", "businessdays"])
 
         // Area (base: square meter). The tokenizer folds "²" to "2", so mm²/mm2 are one name.
         add(UnitDef("mm²", "Square Millimeters", .area, 1e-6), ["mm2", "sqmm"])
@@ -260,12 +265,15 @@ enum CalcUnits {
         add(UnitDef("arcsec", "Arcseconds", .angle, .pi / 648000), ["arcsec", "arcsecond", "arcseconds"])
         add(UnitDef("turn", "Turns", .angle, 2 * .pi), ["turn", "turns", "rev", "revolution", "revolutions"])
 
-        // Speed (base: meter/second) — slash-free aliases; symbols keep the pretty "/".
-        add(UnitDef("m/s", "Meters per Second", .speed, 1), ["mps"])
-        add(UnitDef("km/h", "Kilometers per Hour", .speed, 1000.0 / 3600), ["kmh", "kph"])
-        add(UnitDef("mph", "Miles per Hour", .speed, 1609.344 / 3600), ["mph"])
-        add(UnitDef("ft/s", "Feet per Second", .speed, 0.3048), ["fps"])
+        // Speed (base: meter/second) — a slashed spelling stays whole, so it is a name.
+        add(UnitDef("m/s", "Meters per Second", .speed, 1), ["mps", "m/s", "m/sec"])
+        add(
+            UnitDef("km/h", "Kilometers per Hour", .speed, 1000.0 / 3600),
+            ["kmh", "kph", "km/h", "km/hr", "kmph"])
+        add(UnitDef("mph", "Miles per Hour", .speed, 1609.344 / 3600), ["mph", "mi/h", "mi/hr"])
+        add(UnitDef("ft/s", "Feet per Second", .speed, 0.3048), ["fps", "ft/s", "ft/sec"])
         add(UnitDef("kn", "Knots", .speed, 1852.0 / 3600), ["kn", "knot", "knots"])
+        add(UnitDef("km/s", "Kilometers per Second", .speed, 1000), ["km/s", "km/sec"])
 
         // Pressure (base: pascal)
         add(UnitDef("Pa", "Pascals", .pressure, 1), ["pa", "pascal", "pascals"])
@@ -280,10 +288,10 @@ enum CalcUnits {
 
         // Data transfer rate (base: bit/second) — SI (1000ⁿ) bit rates.
         add(UnitDef("bps", "Bits per Second", .dataRate, 1), ["bps"])
-        add(UnitDef("Kbps", "Kilobits per Second", .dataRate, 1e3), ["kbps"])
-        add(UnitDef("Mbps", "Megabits per Second", .dataRate, 1e6), ["mbps"])
-        add(UnitDef("Gbps", "Gigabits per Second", .dataRate, 1e9), ["gbps"])
-        add(UnitDef("Tbps", "Terabits per Second", .dataRate, 1e12), ["tbps"])
+        add(UnitDef("Kbps", "Kilobits per Second", .dataRate, 1e3), ["kbps", "kbit/s", "kb/s"])
+        add(UnitDef("Mbps", "Megabits per Second", .dataRate, 1e6), ["mbps", "mbit/s", "mb/s"])
+        add(UnitDef("Gbps", "Gigabits per Second", .dataRate, 1e9), ["gbps", "gbit/s", "gb/s"])
+        add(UnitDef("Tbps", "Terabits per Second", .dataRate, 1e12), ["tbps", "tbit/s", "tb/s"])
 
         return table
     }()

@@ -5,16 +5,8 @@ import Foundation
 @Observable
 final class HotKeyManager {
     var onTogglePalette: (() -> Void)?
-    var onToggleClipboard: (() -> Void)?
-    var onToggleEmoji: (() -> Void)?
-    var onShowNotes: (() -> Void)?
-    var onCreateNote: (() -> Void)?
-    var onSearchNotes: (() -> Void)?
-    var onSearchFiles: (() -> Void)?
-    var onJoinNextMeeting: (() -> Void)?
-    var onShowSchedule: (() -> Void)?
-    var onCreateEvent: (() -> Void)?
-    var onShowAIChat: (() -> Void)?
+    /// The launcher's own command funnel, so a shortcut and a palette row run the same thing.
+    var onRunCommand: ((CommandID) -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
@@ -22,6 +14,8 @@ final class HotKeyManager {
     var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
+    /// Whether the action's launcher category is switched on. Set in `AppCore.start()`.
+    var allowsAction: ((HotKeyAction) -> Bool)?
 
     /// The recorder currently capturing, which also pauses both engines.
     var recordingAction: HotKeyAction? {
@@ -73,9 +67,7 @@ final class HotKeyManager {
         syncDoubleTaps()
     }
 
-    /// Entry ids holding an extension-command hotkey. Not pruned in `start()` like the UUID-keyed
-    /// indexes are: the installed set is scanned asynchronously and only when extensions are on, so
-    /// "not installed yet" is indistinguishable from "gone" at launch. Uninstalling clears its own.
+    /// Never pruned at launch: not-installed-yet and gone are indistinguishable there.
     var boundExtensionCommandEntryIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundExtensionCommandKey) ?? []
     }
@@ -141,9 +133,7 @@ final class HotKeyManager {
             var set = Set(boundExtensionCommandEntryIDs)
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
             UserDefaults.standard.set(Array(set), forKey: boundExtensionCommandKey)
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .joinNextMeeting, .mySchedule, .createEvent, .aiChat, .systemAction,
-            .windowCommand:
+        case .togglePalette, .command, .systemAction, .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -194,26 +184,8 @@ final class HotKeyManager {
         switch action {
         case .togglePalette:
             return "App Launcher"
-        case .toggleClipboard:
-            return CommandID.clipboardHistory.name
-        case .toggleEmoji:
-            return CommandID.searchEmoji.name
-        case .showNotes:
-            return CommandID.showNotes.name
-        case .createNote:
-            return CommandID.createNote.name
-        case .searchNotes:
-            return CommandID.searchNotes.name
-        case .searchFiles:
-            return CommandID.searchFiles.name
-        case .joinNextMeeting:
-            return CommandID.joinNextMeeting.name
-        case .mySchedule:
-            return CommandID.mySchedule.name
-        case .createEvent:
-            return CommandID.createEvent.name
-        case .aiChat:
-            return CommandID.aiChat.name
+        case .command(let id):
+            return id.name
         case .app(let bundleID), .settingsPane(let bundleID):
             return displayName?(action) ?? bundleID
         case .customCommand:
@@ -248,18 +220,11 @@ final class HotKeyManager {
     }
 
     private func perform(_ action: HotKeyAction) {
+        // The category switch, the way each feature switch already guards its own funnel.
+        guard allowsAction?(action) ?? true else { return }
         switch action {
         case .togglePalette: onTogglePalette?()
-        case .toggleClipboard: onToggleClipboard?()
-        case .toggleEmoji: onToggleEmoji?()
-        case .showNotes: onShowNotes?()
-        case .createNote: onCreateNote?()
-        case .searchNotes: onSearchNotes?()
-        case .searchFiles: onSearchFiles?()
-        case .joinNextMeeting: onJoinNextMeeting?()
-        case .mySchedule: onShowSchedule?()
-        case .createEvent: onCreateEvent?()
-        case .aiChat: onShowAIChat?()
+        case .command(let id): onRunCommand?(id)
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)

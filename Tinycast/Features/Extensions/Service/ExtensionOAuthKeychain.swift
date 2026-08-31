@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Protocol for OAuth token storage, allowing in-memory testing without touching the Keychain.
+/// Injected so a harness can hold tokens without touching the real Keychain.
 protocol ExtensionOAuthTokenStore: Sendable {
     func get(account: String) -> String?
     func set(_ value: String, account: String) -> Bool
@@ -9,7 +9,6 @@ protocol ExtensionOAuthTokenStore: Sendable {
     func removeAll(prefix: String, exactMatch: String)
 }
 
-/// Default Keychain-backed implementation of `ExtensionOAuthTokenStore`.
 struct KeychainOAuthTokenStore: ExtensionOAuthTokenStore {
     private let serviceName = "com.tinycast.extensions.oauth"
 
@@ -90,8 +89,7 @@ struct KeychainOAuthTokenStore: ExtensionOAuthTokenStore {
     }
 }
 
-/// Secure token storage for Raycast Extension OAuth tokens.
-/// Keyed by extension name and provider ID.
+/// Secure storage for extension OAuth tokens, keyed by extension name and provider.
 enum ExtensionOAuthKeychain {
     nonisolated(unsafe) static var store: ExtensionOAuthTokenStore = KeychainOAuthTokenStore()
 
@@ -102,27 +100,23 @@ enum ExtensionOAuthKeychain {
         return extensionName
     }
 
-    /// Retrieve stored tokens JSON string.
     static func getTokens(extensionName: String, providerId: String?) -> String? {
         let account = accountKey(extensionName: extensionName, providerId: providerId)
         return store.get(account: account)
     }
 
-    /// Save tokens JSON string.
     @discardableResult
     static func setTokens(_ jsonString: String, extensionName: String, providerId: String?) -> Bool {
         let account = accountKey(extensionName: extensionName, providerId: providerId)
         return store.set(jsonString, account: account)
     }
 
-    /// Remove stored tokens.
     @discardableResult
     static func removeTokens(extensionName: String, providerId: String?) -> Bool {
         let account = accountKey(extensionName: extensionName, providerId: providerId)
         return store.remove(account: account)
     }
 
-    /// Remove all OAuth tokens stored for an extension (e.g. on uninstall).
     static func removeAllTokens(extensionName: String) {
         store.removeAll(prefix: "\(extensionName):", exactMatch: extensionName)
     }

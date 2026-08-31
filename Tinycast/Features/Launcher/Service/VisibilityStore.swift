@@ -1,6 +1,6 @@
 import Foundation
 
-/// Which items and categories are hidden; the launcher list only, not bindings.
+/// A category that is off runs nothing, so it gates shortcuts as well as the list.
 @MainActor
 @Observable
 final class VisibilityStore {
@@ -9,29 +9,29 @@ final class VisibilityStore {
     private let kindsKey = "hiddenLauncherKinds"
 
     private(set) var hiddenItemKeys: Set<String>
-    private(set) var hiddenKinds: Set<String>
+    private(set) var disabledKinds: Set<String>
     /// AppIndex includes this in its result key, invalidating a list when the visible set moves.
     private(set) var revision = 0
 
     init() {
         hiddenItemKeys = Set(defaults.stringArray(forKey: itemsKey) ?? [])
-        hiddenKinds = Set(defaults.stringArray(forKey: kindsKey) ?? [])
+        disabledKinds = Set(defaults.stringArray(forKey: kindsKey) ?? [])
     }
 
     /// Replace both exclusion sets at once (used when importing a settings backup).
-    func replace(hiddenItems: [String], hiddenKinds newKinds: [String]) {
+    func replace(hiddenItems: [String], disabledKinds newKinds: [String]) {
         hiddenItemKeys = Set(hiddenItems)
-        hiddenKinds = Set(newKinds)
+        disabledKinds = Set(newKinds)
         revision &+= 1
         defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
-        defaults.set(Array(hiddenKinds), forKey: kindsKey)
+        defaults.set(Array(disabledKinds), forKey: kindsKey)
     }
 
     func key(for entry: AppEntry) -> String { entry.preferenceKey }
 
     /// Whether the entry appears in the launcher: its category and the item itself must be on.
     func isVisible(_ entry: AppEntry) -> Bool {
-        isKindVisible(entry.kind) && isItemVisible(entry)
+        isKindEnabled(entry.kind) && isItemVisible(entry)
     }
 
     func isItemVisible(_ entry: AppEntry) -> Bool {
@@ -54,13 +54,25 @@ final class VisibilityStore {
         defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
     }
 
-    func isKindVisible(_ kind: AppEntry.Kind) -> Bool {
-        !hiddenKinds.contains(kind.rawValue)
+    func isKindEnabled(_ kind: AppEntry.Kind) -> Bool {
+        !disabledKinds.contains(kind.rawValue)
     }
 
-    func setKindVisible(_ visible: Bool, for kind: AppEntry.Kind) {
-        if visible { hiddenKinds.remove(kind.rawValue) } else { hiddenKinds.insert(kind.rawValue) }
+    func setKindEnabled(_ enabled: Bool, for kind: AppEntry.Kind) {
+        if enabled { disabledKinds.remove(kind.rawValue) } else { disabledKinds.insert(kind.rawValue) }
         revision &+= 1
-        defaults.set(Array(hiddenKinds), forKey: kindsKey)
+        defaults.set(Array(disabledKinds), forKey: kindsKey)
+    }
+
+    /// A feature carrying its own switch is not this store's to gate.
+    func allowsHotKey(_ action: HotKeyAction) -> Bool {
+        switch action {
+        case .app: isKindEnabled(.application)
+        case .settingsPane: isKindEnabled(.systemSettings)
+        case .systemAction: isKindEnabled(.systemAction)
+        case .command: isKindEnabled(.command)
+        case .togglePalette, .customCommand, .windowCommand, .quicklink, .extensionCommand:
+            true
+        }
     }
 }

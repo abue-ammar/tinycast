@@ -1,7 +1,6 @@
 import Foundation
 
-/// Reopens the app once this process is gone. `open` on a bundle id that is still running would
-/// only re-activate the instance on its way out, so the relaunch has to outlive us.
+/// `open` on a running bundle id only re-activates it, so the relaunch outlives us.
 enum RelaunchRunner {
     static func relaunchAfterExit(_ bundleURL: URL) {
         let process = Process()

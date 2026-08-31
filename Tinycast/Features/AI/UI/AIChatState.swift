@@ -12,9 +12,7 @@ final class AIChatState {
     /// Images staged for the next message; they go out with whatever is typed next.
     private(set) var pendingImages: [ChatAttachment] = []
 
-    /// Staging outlives the keystroke that began it, so a decode still in flight has to be able to
-    /// tell that the message it was picked for has gone. Every path that consumes or drops the
-    /// staged images moves this on; the counter lives beside them so a new one cannot forget to.
+    /// Every path that consumes or drops the staged images moves this on, so a late decode knows
     @ObservationIgnored private(set) var stagingGeneration = 0
 
     private let history: ChatHistoryStore
@@ -34,13 +32,16 @@ final class AIChatState {
     @discardableResult
     func send(
         _ input: String, using provider: any AIProvider, webSearch: Bool = false,
-        instructions: String? = nil
+        instructions: String? = nil, contextBudget: Int = ChatSession.defaultTextBudget
     ) -> Bool {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !pendingImages.isEmpty, !isStreaming else { return false }
         notice = nil
         session.append(ChatMessage(role: .user, text: text, images: pendingImages.map(\.image)))
         clearStaging()
+        let request = AIRequest(
+            instructions: instructions,
+            messages: session.requestMessages(textBudget: contextBudget), webSearch: webSearch)
         session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
         isStreaming = true
         isThinking = false
@@ -49,105 +50,56 @@ final class AIChatState {
 
         replyGeneration += 1
         let generation = replyGeneration
-        let registry = AIToolRegistry.shared
-        replyTask = Task { [weak self, provider, registry] in
-            guard let self else { return }
+        replyTask = Task { [weak self, provider] in
             do {
                 var turn = 0
                 let maxTurns = 8
+                let registry = AIToolRegistry.shared
+
                 while turn < maxTurns {
                     turn += 1
-                    guard !Task.isCancelled, self.replyGeneration == generation else { return }
-
-                    // On the final turn, omit tools to force the model to synthesize its final text response
-                    let canUseTools = webSearch && (turn < maxTurns - 1)
-                    let tools = canUseTools ? registry.availableTools : []
-                    let request = AIRequest(
-                        messages: self.session.requestMessages,
+                    guard let self, !Task.isCancelled, self.replyGeneration == generation else { return }
+                    let canUseTools = (turn < maxTurns - 1)
+                    let availableTools = canUseTools ? registry.availableTools : []
+                    let currentRequest = AIRequest(
                         instructions: instructions,
+                        messages: self.session.requestMessages(textBudget: contextBudget),
                         webSearch: webSearch,
-                        tools: tools
+                        tools: availableTools
                     )
 
                     var receivedToolCalls: [AIToolCall] = []
 
-                    for try await event in provider.stream(request) {
-                        guard !Task.isCancelled, self.replyGeneration == generation else {
+                    for try await event in provider.stream(currentRequest) {
+                        guard let self, !Task.isCancelled, self.replyGeneration == generation else {
                             return
                         }
-                        switch event {
-                        case .toolCall(let toolCall):
-                            receivedToolCalls.append(toolCall)
-                        case .finished:
-                            if receivedToolCalls.isEmpty {
-                                self.receive(event)
-                            }
-                        default:
+                        if case .toolCall(let call) = event {
+                            receivedToolCalls.append(call)
+                        } else {
                             self.receive(event)
                         }
                     }
 
-                    guard !Task.isCancelled, self.replyGeneration == generation else { return }
+                    guard let self, !Task.isCancelled, self.replyGeneration == generation else { return }
 
                     if !receivedToolCalls.isEmpty {
-                        self.discardPendingText()
+                        self.flushPendingText()
                         if var last = self.session.messages.last, last.role == .assistant {
-                            last.state = .complete
                             last.toolCalls = receivedToolCalls
-                            last.text = ""
                             self.session.replaceLast(with: last)
                         }
-
                         for toolCall in receivedToolCalls {
-                            guard !Task.isCancelled, self.replyGeneration == generation else { return }
-
-                            if toolCall.name == "web_search" {
-                                var queryParam: String?
-                                if let data = toolCall.argumentsJSON.data(using: .utf8),
-                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                                   let q = json["query"] as? String {
-                                    queryParam = q
-                                }
-                                self.receive(.searching(queryParam))
-                            } else if toolCall.name == "web_fetch" {
-                                var urlParam: String?
-                                if let data = toolCall.argumentsJSON.data(using: .utf8),
-                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                                   let u = json["url"] as? String {
-                                    urlParam = u
-                                }
-                                self.receive(.searching(urlParam))
-                            } else if toolCall.name == "calculate" {
-                                var exprParam: String?
-                                if let data = toolCall.argumentsJSON.data(using: .utf8),
-                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                                   let e = json["expression"] as? String {
-                                    exprParam = e
-                                }
-                                self.receive(.searching("calc:" + (exprParam ?? "")))
-                            } else if toolCall.name == "get_location" {
-                                self.receive(.searching("loc:current"))
-                            } else if toolCall.name == "get_weather" {
-                                var locParam = ""
-                                if let data = toolCall.argumentsJSON.data(using: .utf8),
-                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                                   let l = json["location"] as? String {
-                                    locParam = l
-                                }
-                                self.receive(.searching("weather:" + locParam))
-                            }
-
                             let result = await registry.execute(call: toolCall)
-                            self.receive(.searched(nil))
-
-                            self.session.append(ChatMessage(
-                                role: .tool,
-                                text: result.output,
-                                state: .complete,
-                                toolCallID: result.callID
-                            ))
+                            self.session.append(
+                                ChatMessage(
+                                    role: .tool,
+                                    text: result.output,
+                                    state: .complete,
+                                    toolCallID: result.callID
+                                )
+                            )
                         }
-
                         self.session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
                         self.history.save(self.session)
                         continue
@@ -156,12 +108,12 @@ final class AIChatState {
                     }
                 }
 
-                guard !Task.isCancelled, self.replyGeneration == generation,
+                guard let self, !Task.isCancelled, self.replyGeneration == generation,
                     self.isStreaming
                 else { return }
-                self.finishLast(state: .complete, fallback: "I was unable to complete the response. Please try asking again.")
+                self.finishLast(state: .failed, fallback: "The response ended unexpectedly.")
             } catch {
-                guard !Task.isCancelled, self.replyGeneration == generation,
+                guard let self, !Task.isCancelled, self.replyGeneration == generation,
                     self.isStreaming
                 else { return }
                 self.finishLast(state: .failed, fallback: error.localizedDescription)
@@ -174,8 +126,7 @@ final class AIChatState {
         notice = message
     }
 
-    /// Refused rather than truncated: the composer is the last place an oversized turn can be
-    /// explained, and dropping a picture at send time reads as the app having lost it.
+    /// Refused, not truncated: the composer is the last place an oversized turn can be explained.
     @discardableResult
     func attach(_ attachment: ChatAttachment) -> ChatAttachmentRefusal? {
         guard !pendingImages.contains(where: { $0.image == attachment.image }) else { return nil }
@@ -214,10 +165,6 @@ final class AIChatState {
         finishLast(state: .failed, fallback: "Cancelled")
     }
 
-    func stop() {
-        cancel()
-    }
-
     func startNewChat() {
         cancel()
         session = ChatSession()
@@ -226,8 +173,7 @@ final class AIChatState {
         clearStaging()
     }
 
-    /// Staged images belong to the composer of the conversation they were picked in, so leaving one
-    /// for another drops them rather than letting them go out with whatever is typed there next.
+    /// Staged images belong to the conversation they were picked in; leaving it drops them.
     @discardableResult
     func open(id: UUID) -> Bool {
         if session.id == id, !session.messages.isEmpty { return true }
@@ -280,7 +226,7 @@ final class AIChatState {
             guard var message = session.messages.last, message.role == .assistant else { return }
             isThinking = false
             message.searches.append(
-                ChatSearch(query: query, isComplete: false, textOffset: 0))
+                ChatSearch(query: query, isComplete: false, textOffset: message.text.count))
             session.replaceLast(with: message)
         case .searched(let query):
             flushPendingText()
@@ -292,9 +238,7 @@ final class AIChatState {
             session.replaceLast(with: message)
         case .usage(let usage):
             self.usage = usage
-        case .toolCall:
-            break
-        case .toolExecuting:
+        case .toolCall, .toolExecuting:
             break
         case .finished:
             finishLast(state: .complete, fallback: "No response")
@@ -320,6 +264,8 @@ final class AIChatState {
             pendingText = ""
             return
         }
+        // Text after a search means the search is over, whether or not the route says so.
+        message.searches = message.searches.map { Self.completed($0) }
         message.text += pendingText
         pendingText = ""
         session.replaceLast(with: message)
@@ -357,4 +303,24 @@ extension AIChatState {
         search.isComplete = true
         return search
     }
+}
+
+/// Why the composer would not take another picture; both limits are `AIAttachmentBudget`'s.
+enum ChatAttachmentRefusal: Equatable, Sendable {
+    case count
+    case size
+
+    var message: String {
+        switch self {
+        case .count: return "\(AIAttachmentBudget.maxCount) images is all one message can carry."
+        case .size: return "That image is too big for this message — send these first."
+        }
+    }
+}
+
+/// A staged image with the name the chip shows; the name is for the composer only, not the wire.
+struct ChatAttachment: Identifiable, Equatable, Sendable {
+    let id = UUID()
+    let image: AIImage
+    let name: String
 }

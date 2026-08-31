@@ -81,7 +81,7 @@ private struct CalcColumn: View {
 
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
-            Text(text)
+            Text(CalcSyntax.highlighted(text))
                 .font(Theme.Typography.calcResult.weight(weight))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -104,6 +104,41 @@ private struct CalcColumn: View {
     }
 }
 
+/// Dims the words that join an expression, so the values they join read first.
+private enum CalcSyntax {
+    static func highlighted(_ text: String) -> AttributedString {
+        var attributed = AttributedString()
+        let words = text.split(separator: " ", omittingEmptySubsequences: false)
+        // Rebuilt word by word, so a connector is only ever matched whole — `min` is not `in`.
+        for (index, word) in words.enumerated() {
+            if index > 0 { attributed.append(AttributedString(" ")) }
+            var piece = AttributedString(String(word))
+            if isConnector(word, at: index, of: words) {
+                piece.foregroundColor = Theme.Colors.textTertiary
+            }
+            attributed.append(piece)
+        }
+        return attributed
+    }
+
+    /// `in` joins two units and follows one; in `10 in in cm` only the second joins.
+    private static func isConnector(
+        _ word: Substring, at index: Int, of words: [Substring]
+    ) -> Bool {
+        let lowered = word.lowercased()
+        if connectors.contains(lowered) { return true }
+        guard lowered == "in", index > 0, index + 1 < words.count else { return false }
+        return words[index + 1].lowercased() != "in"
+    }
+
+    /// Words only, never a unit: `min` and `in` are also units, so they are matched by position.
+    private static let connectors: Set<String> = [
+        "to", "of", "off", "on", "as", "from", "ago", "at", "tip", "ratio", "average", "avg",
+        "mean", "sum", "total", "round", "nearest", "and", "is", "what", "the", "next", "last",
+        "+", "-", "×", "÷", "^", "→", "->", "mod"
+    ]
+}
+
 /// Actions menu for the card; only answers copy, so an error card is never passed one.
 @MainActor
 enum CalcActionsMenu {
@@ -113,6 +148,11 @@ enum CalcActionsMenu {
             items: [
                 PopoverMenuItem(title: "Copy Answer", systemImage: "doc.on.doc", shortcut: "↵") {
                     core.calculatorCoordinator.copyCalculatorResult(result)
+                },
+                PopoverMenuItem(
+                    title: "Copy Calculation", systemImage: "doc.on.doc.fill", shortcut: "⇧⌘↵"
+                ) {
+                    core.calculatorCoordinator.copyCalculationWithExpression(result)
                 }
             ]
         )

@@ -1,12 +1,8 @@
 import Foundation
 
-/// The stand-in a redacted value wears until someone asks for the real one. Derived from the value,
-/// so a redrawn row never reshuffles into a different disguise, and shaped like it — `@`, `.`, `-`
-/// and `_` survive — so an address still reads as an address behind the blur. The scramble is the
-/// redaction and the blur only signals it: a blurred real address can be read back off a paused
-/// frame, a blurred fake one has nothing to give up. Length survives too, so that much still leaks.
+/// The scramble is the redaction and the blur only signals it; length still leaks.
 enum RedactedPlaceholder {
-    /// No `i`, `l`, `o`, `0` or `1`: a half-blurred glyph should not be identifiable by elimination.
+    /// No `i`, `l`, `o`, `0` or `1`: a half-blurred glyph must not be read by elimination.
     private static let alphabet = Array("abcdefghjkmnpqrstuvwxyz23456789")
 
     /// The characters that carry an address's shape rather than its content.

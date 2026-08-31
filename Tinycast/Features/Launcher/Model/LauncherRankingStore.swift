@@ -8,7 +8,7 @@ struct LauncherRankingRecord: Codable, Hashable, Sendable {
     var lastUsed: Date
 }
 
-/// Learns which result a query leads to, as bounded on-device frecency data in Caches.
+/// Learns which result a query leads to, as bounded on-device frecency data.
 @MainActor
 @Observable
 final class LauncherRankingStore {
@@ -111,6 +111,15 @@ final class LauncherRankingStore {
         didMutate()
     }
 
+    /// Replaces the table wholesale from a backup; the same filter and cap the initialiser applies.
+    func replace(_ imported: [LauncherRankingRecord]) {
+        records = Array(
+            imported
+                .filter { !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0 }
+                .prefix(Self.cap))
+        didMutate()
+    }
+
     /// Locale-independent: a Turkish fold maps "I" to "ı" and orphans every stored key.
     static func normalize(_ query: String) -> String {
         query
@@ -155,10 +164,11 @@ final class LauncherRankingStore {
         }
     }
 
+    /// Application Support, not Caches: relearning a ranking takes the user weeks of use.
     private static func defaultFileURL() -> URL {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
         let base = FileManager.default
-            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(bundleID, isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appendingPathComponent("launcher-ranking.json")

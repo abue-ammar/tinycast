@@ -306,8 +306,7 @@ struct CalcTests {
         expectBadges("(1kg + 500g) to lb", source: "Expression", target: "Pounds")
         expectError("(1kg + 500g) to m", "Cannot convert Weight to Length.")
 
-        // Adjacent compatible quantities are additive, matching common composite-unit notation.
-        // Composite reads as one quantity in its leading unit; an explicit operator answers in the last.
+        // Composite reads as one quantity in its leading unit; an operator answers in the last.
         expectDisplay("5 feet 3 inches to cm", "160.02 cm")
         expectDisplay("5 feet 3 inches", "5.25 ft")
         expectDisplay("1hr 30min", "1.5 hr")
@@ -335,7 +334,7 @@ struct CalcTests {
         expectDisplay("$10 + 5", "15.00 USD")
         expectBadges("5kg+5", source: "Expression", target: "Kilograms")
         expectDisplay("10kg + -20%", "9.8 kg")  // unary minus drops percent, as in `450 + -20%`
-        // Adjacency is different: there a bare number is a unit still being typed, so it stays silent
+        // Adjacency differs: a bare number there is a unit still being typed.
         expectNil("1hr 30")  // mid-way through "1hr 30min"
         expectNil("5 feet 3")  // mid-way through "5 feet 3 inches"
         expectError(
@@ -368,14 +367,14 @@ struct CalcTests {
             "days till july", source: "Friday, 24 July", target: "Thursday, 1 July, 2027")
         expectDisplayAt("days until tomorrow", "1 day")
         expectDisplayAt("weeks till 9april", "37 weeks")  // 259 / 7
-        expectDisplayAt("today + 3 weeks", "Friday, 14 August")
-        expectDisplayAt("now + 90 min", "Friday, 24 July at 1:48 AM")
+        expectDisplayAt("today + 3 weeks", "14 August")
+        expectDisplayAt("now + 90 min", "24 July at 1:48 AM")
         expectDisplayAt("jul 4 - today", "345 days")
         expectBadgesAt("jul 4 - today", source: "Sunday, 4 July, 2027", target: "Friday, 24 July")
         // Arithmetic with spaced operators must still be plain math, not date math
         expectDisplayAt("10 - 3", "7")
         expectDisplayAt("450 + 20%", "540")
-        // Letter-free `m/d - m/d` is fraction math, not a date difference (both operands are valid arithmetic)
+        // Letter-free `m/d - m/d` is fraction math, not a date difference.
         expectDisplayAt("5/2 - 1/2", "2")
         expectDisplayAt("3/4 - 1/4", "0.5")
         expectDisplayAt("1/2 - 1/4", "0.25")
@@ -414,8 +413,7 @@ struct CalcTests {
         expectDisplay("100 mbps to kbps", "100,000 Kbps")
         expectBadges("100 kmh to mph", source: "Kilometers per Hour", target: "Miles per Hour")
 
-        // Bare-unit auto-conversion coverage gaps: bar/psi/atm/Mbps/Gbps/Kbps had it, their
-        // neighbors didn't — same category, same treatment.
+        // Bare-unit auto-conversion gaps: same category, same treatment.
         expectDisplay("5 mbar", "0.07251886887 psi")
         expectDisplay("5 kPa", "0.7251886887 psi")
         expectDisplay("5 hPa", "0.07251886887 psi")
@@ -424,7 +422,7 @@ struct CalcTests {
         expectDisplay("100 bps", "0.1 Kbps")
         expectDisplay("1 Tbps", "1,000 Gbps")
 
-        // Base conversion accepts an expression on the value side, like unit conversion already does
+        // Base conversion accepts an expression on the value side, as unit conversion does.
         expectDisplay("2*128 to hex", "0x100")
         expectDisplay("10*5 to hex", "0x32")
 
@@ -436,15 +434,15 @@ struct CalcTests {
         expectBadges("255 to hex", source: "Decimal", target: "Hexadecimal")
         expectBadges("0xff to decimal", source: "Hexadecimal", target: "Decimal")
         expectBadges("3*3", source: "Expression", target: "Result")
-        expectBadges("20% off 500", source: "Expression", target: "Result")
+        expectBadges("20% off 500", source: "Expression", target: "Discounted")
 
         // days since — past elapsed, against the fixed clock (Fri 2026-07-24)
         expectDisplayAt("days since 9jul", "15 days")
         expectBadgesAt("days since 9jul", source: "Thursday, 9 July", target: "Friday, 24 July")
         expectDisplayAt("weeks since 3jul", "3 weeks")
         expectDisplayAt("days since yesterday", "1 day")
-        // Date ± duration now carries the resolved start as a source badge
-        expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Result")
+        // The answer's weekday is the badge, so the date itself does not repeat it.
+        expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Friday")
 
         // Currency — against the fixed `fx` table below (1 USD = 0.92 EUR = 0.79 GBP = 157 JPY)
         expectDisplay("1 euro to dollars", "1.09 USD")
@@ -483,8 +481,7 @@ struct CalcTests {
         expectNil("10 usd to nonsense")
         expectNil("usd")  // a lone code is still an app search
         expectNil("btc")  // …and a lone ticker no more than a lone code
-        // The table is generated from the feed's own currency list, so codes nobody hand-typed still
-        // resolve — reaching "no rate" (not "no card") is what proves recognition.
+        // The table is generated from the feed, so "no rate" is what proves recognition.
         expectError("5 usd to zmw", "No exchange rate for ZMW.")
         expectError("5 usd to afn", "No exchange rate for AFN.")
         check(
@@ -517,7 +514,7 @@ struct CalcTests {
         // Slang is no longer carried: CLDR has no "quid", and we don't hand-maintain synonyms
         expectNil("50 quid to usd")
         expectNil("100 bucks to eur")
-        // The last word of a name isn't always its noun — "Special Drawing Rights" is not a "rights"
+        // The last word of a name isn't always its noun — Special Drawing Rights.
         expectNil("1 rights to usd")
         // A result too small to show at all reads as a clean zero, never "-0.00"
         expectDisplay("-0.0000000000001 usd to eur", "0.00 EUR")
@@ -563,7 +560,10 @@ struct CalcTests {
         // A trailing suffix reports through the same conversion the group uses.
         expectError("($10 + $5) to npr", "No exchange rate for NPR.")
         expectError("(1kg + 500g) to usd", "Cannot convert Weight to Currency.")
-        expectNil("20 eur to usd * 30")  // mid-expression `to` needs parens or a trailing suffix
+        // A mid-expression `to` converts before it adds; `* 30` stays ambiguous, so it needs parens
+        expectNil("20 eur to usd * 30")
+        expectNil("20 eur to usd / 2")
+        expectDisplay("20 eur to usd + 5 usd", "26.74 USD")
         expectDisplay("$10 +", "10.00 USD")
         expectBadges("$10 +", source: "Expression", target: "US Dollar")
         // Juxtaposition multiplies on either side of the amount, same as an explicit "*"
@@ -606,8 +606,12 @@ struct CalcTests {
         expectDisplay("10$", "835.00 INR", region: "INR")
         expectDisplay("1 btc", "5,010,000.00 INR", region: "INR")
         expectCopy("1 usd", "83.50 INR", region: "INR")
-        // Nothing to say: the region names the currency written, one nobody quotes, or none at all
-        expectDisplay("1 usd", "1.00 USD", region: "USD")
+        // The region names the currency written, so the dollar pairs with the euro instead
+        expectDisplay("1 usd", "0.92 EUR", region: "USD")
+        expectBadges("1 usd", source: "US Dollar", target: "Euro", region: "USD")
+        expectDisplay("1 eur", "1.09 USD", region: "EUR")
+        expectBadges("1 eur", source: "Euro", target: "US Dollar", region: "EUR")
+        // Nothing to say: the region names one nobody quotes, or none at all
         expectDisplay("1 usd", "1.00 USD", region: "NPR")
         expectDisplay("1 usd", "1.00 USD", region: "ZZZ")
         expectDisplay("1 usd", "1.00 USD")
@@ -643,6 +647,311 @@ struct CalcTests {
             "feed reported failure",
             fiat: Data(#"{"success":false,"source":"USD","quotes":{"USDEUR":0.9}}"#.utf8))
 
+        // Slashed rate spellings — the tokenizer keeps a known `unit/unit` whole
+        expectDisplay("100 km/h to mph", "62.13711922 mph")
+        expectDisplay("60 mph in km/h", "96.56064 km/h")
+        expectDisplay("5 m/s to km/h", "18 km/h")
+        expectDisplay("100 km/h", "62.13711922 mph")
+        expectExpression("100 km/h to mph", "100 km/h")
+        expectBadges("5 m/s to km/h", source: "Meters per Second", target: "Kilometers per Hour")
+        expectDisplay("100 mbit/s to mbps", "100 Mbps")
+        // An unknown pairing leaves the slash as division, so ordinary arithmetic is untouched
+        expectDisplay("10/2", "5")
+        expectDisplay("6/2(1+2)", "9")
+        expectDisplay("10 m / 2", "5 m")
+        expectNil("1 km/x")
+
+        // Workdays are 8 hours; weekends and holidays are a calendar's business, not a unit's
+        expectDisplay("55h in workdays", "6.875 workdays")
+        expectDisplay("3 workdays in hours", "24 hr")
+        expectDisplay("2 businessdays to hours", "16 hr")
+        expectBadges("55h in workdays", source: "Hours", target: "Workdays")
+
+        // The rest of the trig set, plus the constants that come with it
+        expectDisplay("cot(1)", "0.6420926159")
+        expectDisplay("sec(1)", "1.850815718")
+        expectDisplay("csc(1)", "1.188395106")
+        expectDisplay("asin(1)", "1.570796327")
+        expectDisplay("acos(1)", "0")
+        expectDisplay("arctan(1)", "0.7853981634")
+        expectDisplay("sinh(1)", "1.175201194")
+        expectDisplay("tanh(0)", "0")
+        expectDisplay("cbrt(27)", "3")
+        expectDisplay("log2(1024)", "10")
+        expectDisplay("exp(0)", "1")
+        expectDisplay("sign(-5)", "-1")
+        expectDisplay("trunc(3.7)", "3")
+        expectDisplay("2 tau", "12.56637061")
+        expectDisplay("phi * 2", "3.236067977")
+        // `sec` is also seconds, and a unit position still wins
+        expectDisplay("10 sec to min", "0.1666666667 min")
+        expectDisplay("30 sec + 1 min", "1.5 min")
+
+        // Percentage and ratio phrasings
+        expectDisplay("15% tip on 42", "6.3")
+        expectDisplay("20% tip of 80", "16")
+        expectDisplay("50 is what % of 200", "25%")
+        expectDisplay("30 is 20% of what", "150")
+        expectDisplay("ratio of 3 to 5", "3 : 5")
+        expectDisplay("ratio of 4 to 6", "2 : 3")
+        expectDisplay("ratio of 1920 to 1080", "16 : 9")
+        expectBadges("15% tip on 42", source: "Expression", target: "Tip")
+
+        // List aggregates and snapping, both of which need the comma token
+        expectDisplay("average of 10, 20, 30", "20")
+        expectDisplay("avg of 1 and 2 and 3", "2")
+        expectDisplay("sum of 10, 20, 30", "60")
+        expectDisplay("max of 4, 9, 2", "9")
+        expectDisplay("min of 4, 9, 2", "2")
+        expectDisplay("sum of 2*3, 4", "10")
+        expectDisplay("round 47 to nearest 5", "45")
+        expectDisplay("round 12.3 to nearest 0.5", "12.5")
+        // A comma between digits is still a grouping separator, and one operand is not a list
+        expectDisplay("1,000 + 234", "1,234")
+        expectNil("average of 5")
+        expectNil("10,5")
+
+        // Timespans break a duration into the units that fit it
+        expectDisplay("145 mins to timespan", "2 hr 25 min")
+        expectDisplay("8700 s to timespan", "2 hr 25 min")
+        expectDisplay("90000 s to timespan", "1 day 1 hr")
+        expectDisplay("55 h to timespan", "2 day 7 hr")
+        expectDisplay("1000000 s to timespan", "1 wk 4 day 13 hr 46 min 40 s")
+        expectBadges("145 mins to timespan", source: "Minutes", target: "Timespan")
+        expectNil("10 km to timespan")
+
+        // Time zones. The clock is UTC-pinned, so every one of these is exact.
+        expectDisplayAt("time in tokyo", "9:18 AM")
+        expectDisplayAt("time in sf", "5:18 PM (yesterday)")
+        expectDisplayAt("what time is it in london", "1:18 AM")
+        expectDisplayAt("time in kolkata", "5:48 AM")
+        expectDisplayAt("time in utc", "12:18 AM")
+        expectBadgesAt("time in tokyo", source: "UTC", target: "Tokyo")
+        expectBadgesAt("time in sf", source: "UTC", target: "Los Angeles")
+        // A named source zone overrides the Mac's own, so neither side has to be local
+        expectDisplayAt("5pm london in sf", "9:00 AM")
+        expectDisplayAt("9:30am in nyc", "5:30 AM")
+        expectDisplayAt("5pm in tokyo", "2:00 AM (tomorrow)")
+        expectBadgesAt("5pm london in sf", source: "London", target: "Los Angeles")
+        // Aliases cover what the identifiers don't spell, and DST is Foundation's own answer
+        expectDisplayAt("time in nyc", "8:18 PM (yesterday)")
+        expectDisplayAt("time in cet", "2:18 AM")
+        // A zone name never outranks a unit or a currency, and a non-zone stays a search
+        expectDisplay("1 cup to ml", "236.5882365 mL")
+        expectNil("time in xyzzy")
+        expectNil("in tokyo")
+        expectNil("time")
+
+        // IATA airport codes, which Foundation has no notion of
+        expectDisplayAt("time in vie", "2:18 AM")
+        expectDisplayAt("time in lhr", "1:18 AM")
+        expectDisplayAt("time in nrt", "9:18 AM")
+        expectDisplayAt("time in sfo", "5:18 PM (yesterday)")
+        expectBadgesAt("time in vie", source: "UTC", target: "Vienna")
+        expectDisplayAt("5pm vie in nrt", "12:00 AM (tomorrow)")
+        // `mad` stays the Moroccan dirham, and `ist` stays India Standard Time
+        expectError("10 mad to usd", "No exchange rate for MAD.")
+        expectBadgesAt("time in ist", source: "UTC", target: "Kolkata")
+
+        // A trailing offset shifts a zone answer, so the whole thing stays one query
+        expectDisplayAt("5pm london in sf", "9:00 AM")
+        expectDisplayAt("5pm london in sf + 2h", "11:00 AM")
+        expectDisplayAt("5pm london in sf - 1 hour", "8:00 AM")
+        expectDisplayAt("5pm london in sf + 30 min", "9:30 AM")
+        expectBadgesAt("5pm london in sf + 2h", source: "London", target: "Los Angeles")
+        // A unit conversion is not a zone offset, and neither is a bare sum
+        expectDisplay("1 cup to ml", "236.5882365 mL")
+        expectNil("5pm london in sf + 2 kg")
+
+        // `<weekday> in <n> weeks` answers that weekday inside the week it lands in
+        expectDisplayAt("monday in 3 weeks", "10 August")
+        expectDisplayAt("monday in 1 week", "27 July")
+        expectDisplayAt("tuesday in 2 weeks", "4 August")
+        expectDisplayAt("friday in 2 weeks", "7 August")
+        expectBadgesAt("monday in 3 weeks", source: "Friday, 24 July", target: "Monday")
+        // A month is not a weekday, and `in` still reaches the unit path
+        expectNil("monday in 3 kg")
+        expectDisplay("10 in in cm", "25.4 cm")
+
+        // A zone's offset from the Mac's own
+        expectDisplayAt("diff paris", "2:18 AM (+2h)")
+        expectDisplayAt("time diff tokyo", "9:18 AM (+9h)")
+        expectDisplayAt("diff kolkata", "5:48 AM (+5h 30m)")
+        expectBadgesAt("diff paris", source: "UTC", target: "Paris")
+        expectNil("diff xyzzy")
+
+        // A duration where a zone would go, and both at once
+        expectDisplayAt("time in 4 hours", "4:18 AM")
+        expectDisplayAt("time in 90 min", "1:48 AM")
+        expectDisplayAt("time in 4 hours in san francisco", "9:18 PM (yesterday)")
+
+        // A bare offset on a clock answer is hours, the unit the answer already implies
+        expectDisplayAt("time in tokyo + 2", "11:18 AM")
+        expectDisplayAt("time in tokyo - 2", "7:18 AM (tomorrow)")
+        expectDisplayAt("5pm london in sf + 3", "12:00 PM")
+        // Only the offset implies it: a bare number is still no zone, and plain math is untouched
+        expectNilAt("time in 4")
+        expectDisplay("5 + 3", "8")
+
+        // Dotted dates are day-first, the convention that writes them
+        expectDisplayAt("19.2.27 + 3", "22 February, 2027")
+        expectDisplayAt("19.02.2027 + 3", "22 February, 2027")
+        expectDisplayAt("19.2.27 - 3", "16 February, 2027")
+        expectDisplayAt("31.12.26 + 1", "1 January, 2027")
+        expectDisplayAt("19.2.27 + 3 weeks", "12 March, 2027")
+        expectBadgesAt("19.2.27 + 3", source: "Friday, 19 February, 2027", target: "Monday")
+        // A decimal is not a date, and a version number is not one either
+        expectDisplay("1.5 + 3", "4.5")
+        expectDisplay("99.99 + 0.01", "100")
+        expectNilAt("1.2.3 + 1")
+        expectNilAt("1.5.5 + 3")
+        // An impossible day still earns no card
+        expectNilAt("30.2.27 + 1")
+
+        // Malformed input a fuzzer found: both of these read past the end of the token array
+        expectNil("round is next round to")
+        expectNilAt(": from to at sf")
+        expectNil("round to")
+        expectNil("round 5 to")
+        expectNilAt(": at sf")
+        expectNil("is what % of")
+        expectNil("tip on")
+
+        // The gate scans for whitespace, not a literal space, so a pasted NBSP still lands.
+        expectDisplayAt("time\u{a0}in\u{a0}tokyo", "9:18 AM")
+        expectDisplayAt("time\u{9}in\u{9}tokyo", "9:18 AM")
+        expectDisplayAt("time\u{2009}in\u{2009}tokyo", "9:18 AM")
+
+        // The ordinal dot German and Austrian dates write after the day
+        expectDisplayAt("28. aug + 3", "31 August")
+        expectDisplayAt("28. august + 3", "31 August")
+        expectDisplayAt("28.aug + 3", "31 August")
+        // Nearest, not next: from July, January is six months back rather than six ahead
+        expectDisplayAt("1. jan + 1", "2 January")
+        expectDisplayAt("28. aug 2027 + 3", "31 August, 2027")
+        expectBadgesAt("28. aug + 3", source: "Friday, 28 August", target: "Monday")
+        // Only a trailing dot is an ordinal, so a decimal day is still not a date
+        expectNilAt("28.5 aug + 1")
+
+        // A written day is its own reason for a card: the weekday is why you typed it
+        expectDisplayAt("25. aug", "25 August")
+        expectDisplayAt("25 aug", "25 August")
+        expectDisplayAt("aug 25", "25 August")
+        expectDisplayAt("25.8.27", "25 August, 2027")
+        expectDisplayAt("1. jan", "1 January")
+        expectBadgesAt("25. aug", source: "Friday, 24 July", target: "Tuesday")
+        // A bare date takes the year it is nearest, so it agrees with the same date plus a shift
+        expectDisplayAt("25. aug + 3", "28 August")
+        // A month or a relative word alone is still an app search
+        expectNilAt("july")
+        expectNilAt("aug")
+        expectNilAt("today")
+        expectNilAt("tomorrow")
+
+        // Date arithmetic chains left to right, however many terms it carries
+        expectDisplayAt("17.2.26 + 100 week days - 4 + 2", "5 July")
+        expectDisplayAt("17.2.26 + 100 weekdays", "7 July")
+        expectDisplayAt("17.2.26 + 100 weekdays - 4", "3 July")
+        expectDisplayAt("today + 3 weeks - 2 days", "12 August")
+        expectDisplayAt("today + 5 + 2", "31 July")
+        expectDisplayAt("today + 1 day + 1 day + 1 day", "27 July")
+        expectDisplayAt("now + 90 min + 30 min", "24 July at 2:18 AM")
+        expectDisplayAt("3:45pm + 5 - 2", "24 July at 6:45 PM")
+        expectBadgesAt("17.2.26 + 100 week days - 4 + 2", source: "Tuesday, 17 February", target: "Sunday")
+        // Every term must be a duration, so a unit or a stray word still earns no card
+        expectNilAt("today + 3 weeks - kg")
+        expectNilAt("today + 5 - abc")
+        // Two moments are still a difference, and letter-free operands are still arithmetic
+        expectDisplayAt("jul 4 - today", "345 days")
+        expectDisplay("5 + 3 - 2", "6")
+        expectDisplay("5/2 - 1/2", "2")
+
+        // Accented spellings resolve, since the identifiers carry none
+        expectDisplayAt("time in são paulo", "9:18 PM (yesterday)")
+        expectDisplayAt("time in sao paulo", "9:18 PM (yesterday)")
+        expectDisplayAt("time in zürich", "2:18 AM")
+
+        // Cities IANA never names, because their clocks never differed from the zone's own
+        expectBadgesAt("time in graz", source: "UTC", target: "Vienna")
+        expectBadgesAt("time in salzburg", source: "UTC", target: "Vienna")
+        expectBadgesAt("time in klagenfurt", source: "UTC", target: "Vienna")
+        expectBadgesAt("time in hannover", source: "UTC", target: "Berlin")
+        expectBadgesAt("time in stuttgart", source: "UTC", target: "Berlin")
+        expectBadgesAt("time in basel", source: "UTC", target: "Zurich")
+        expectBadgesAt("time in manchester", source: "UTC", target: "London")
+        expectBadgesAt("time in florence", source: "UTC", target: "Rome")
+        expectBadgesAt("time in lyon", source: "UTC", target: "Paris")
+        expectBadgesAt("time in krakow", source: "UTC", target: "Warsaw")
+        // Their accented spellings fold onto the same entry
+        expectBadgesAt("time in düsseldorf", source: "UTC", target: "Berlin")
+        expectBadgesAt("time in kraków", source: "UTC", target: "Warsaw")
+        expectBadgesAt("time in malmö", source: "UTC", target: "Stockholm")
+        expectBadgesAt("5pm graz in basel", source: "Vienna", target: "Zurich")
+
+        // A bare number takes the unit its moment implies
+        expectDisplayAt("3:45pm + 5", "24 July at 8:45 PM")
+        expectDisplayAt("3:45pm - 2", "24 July at 1:45 PM")
+        expectDisplayAt("august 5 + 5", "10 August")
+        expectDisplayAt("august 5 - 5", "31 July")
+
+        // A named moment earns a card once it carries a time or a qualifier
+        expectDisplayAt("tomorrow at 9am", "25 July at 9:00 AM")
+        expectDisplayAt("next monday", "27 July")
+        expectDisplayAt("last friday", "17 July")
+        expectBadgesAt("tomorrow at 9am", source: "Friday, 24 July", target: "Saturday")
+        // A lone date word is still an app search
+        expectNilAt("tomorrow")
+        expectNilAt("today")
+
+        // Spoken function and operator names
+        expectDisplay("square root of 625", "25")
+        expectDisplay("square root of 64", "8")
+        expectDisplay("cube root of 27", "3")
+        expectDisplay("2 power 10", "1,024")
+        expectDisplay("2 power 3 power 2", "512")
+
+        // Business days skip weekends. The clock is Fri 2026-07-24, so every hop crosses one.
+        expectDisplayAt("today + 1 business day", "27 July")
+        expectDisplayAt("today + 5 business days", "31 July")
+        expectDisplayAt("today - 1 business day", "23 July")
+        expectDisplayAt("today - 3 business days", "21 July")
+        expectDisplayAt("tomorrow + 10 work days", "7 August")
+        expectDisplayAt("today + 15 workdays", "14 August")
+        expectDisplayAt("today + 5 weekdays", "31 July")
+        // Raycast's own shape: the weekday rides the badge rather than the date
+        expectBadgesAt("today + 5 business days", source: "Friday, 24 July", target: "Friday")
+        expectBadgesAt("today + 1 business day", source: "Friday, 24 July", target: "Monday")
+        // The duration may lead, with `from` naming the anchor or `ago` implying today
+        expectDisplayAt("5 weekdays from now", "31 July")
+        expectDisplayAt("10 business days from today", "7 August")
+        expectDisplayAt("3 days from today", "27 July")
+        expectDisplayAt("2 weeks ago", "10 July")
+        expectDisplayAt("3 days ago", "21 July")
+        expectBadgesAt("5 weekdays from now", source: "Friday, 24 July", target: "Friday")
+        // A month name with both a day and a year
+        expectDisplayAt("august 26 2026 + 15 workdays", "16 September")
+        expectDisplayAt("august 26 2026 + 15 days", "10 September")
+        expectDisplayAt("26 august 2026 + 1 day", "27 August")
+        expectDisplayAt("august 26 2027 + 1 day", "27 August, 2027")
+        // The 8-hour unit is a different thing, and keeps answering as one
+        expectDisplay("55h in workdays", "6.875 workdays")
+        expectDisplay("3 workdays in hours", "24 hr")
+        expectNil("5 from 10")
+
+        // A conversion mid-expression, which used to need parentheses
+        expectDisplay("10kg to lb + 3lb", "25.04622622 lb")
+        expectDisplay("10kg to lb - 1lb", "21.04622622 lb")
+        expectDisplay("100 km/h to mph + 3mph", "65.13711922 mph")
+        expectDisplay("10km to mi + 3mi", "9.213711922 mi")
+        expectDisplay("10kg to lb + 3lb + 1lb", "26.04622622 lb")
+        expectDisplay("10km to mi + 3mi to km", "14.828032 km")
+        expectDisplay("10kg to lb + 3", "25.04622622 lb")
+        expectError("1kg to m + 3", "Cannot convert Weight to Length.")
+        // A trailing `to` still converts the whole expression rather than the last operand
+        expectDisplay("10kg + 500g to lb", "23.14853753 lb")
+        expectDisplay("1kg + 1kg to g", "2,000 g")
+        expectDisplay("2hr + 30min to min", "150 min")
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -665,8 +974,7 @@ struct CalcTests {
 
     // MARK: - Fixed exchange rates so currency answers are deterministic
 
-    /// NPR, ZMW, AFN and SHIB are deliberately absent: the table recognizes them, so a query for one
-    /// must reach "no exchange rate" rather than no card. Coins are inverted, as the store stores them.
+    /// Absent on purpose: a recognized code must reach "no exchange rate", not no card.
     static let fx = CurrencyRates(
         base: "USD",
         rates: [
@@ -713,7 +1021,7 @@ struct CalcTests {
         }
     }
 
-    /// The Mac's region currency, injected rather than read, so the suite ignores the host's region.
+    /// The region currency is injected, so the suite ignores the host's region.
     static func label(_ query: String, _ region: String?) -> String {
         region.map { "\(query) [region \($0)]" } ?? query
     }

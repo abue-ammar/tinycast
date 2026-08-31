@@ -9,11 +9,17 @@ earliest scope wins).
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
   A new category means a new case, a slice in `AppIndex.publishEntries()`, and the matching filter in
   `LauncherList.rows`, in that order.
+- **A category's switch is a master switch, not a list filter.** `VisibilityStore.isKindEnabled` gates
+  `orderedResults` *and* `HotKeyManager.perform`, so `Enable Applications` off stops the per-app chords
+  as well as the rows — the guard sits in the one dispatch funnel, the way each feature switch already
+  guards its own. The per-item checkbox beside it is the narrow tool: it hides one row and leaves that
+  row's shortcut firing. A new category must be wired into `VisibilityStore.allowsHotKey`, or its
+  chords keep running while its pane reads off.
 - **`Model/SearchRelevance.swift` is Foundation-only and pure**, so `fuzz-test` compiles the shipped
   scorer. It owns both `FuzzyMatch` and the field bands.
-- **Searchable fields stay separate** — display name, Spotlight alternate names, bundle id and executable
-  name are never flattened into one string, because the field is what picks the band. A new searchable
-  field means a new `Band` case and a `consider` call, in priority order.
+- **Searchable fields stay separate** — display name, Spotlight alternate names, owner name, bundle id
+  and executable name are never flattened into one string, because the field is what picks the band. A
+  new searchable field means a new `Band` case and a `consider` call, in priority order.
 - **`Model/SearchScopes.swift` and `Model/LauncherRankingStore.swift` are pure too** — the ranking store
   takes its clock via `now` and its path via `fileURL`, for `scopes-test` and `ranking-test`.
 
@@ -53,15 +59,16 @@ format scalars first, since app metadata can contain bidi/zero-width markers bef
 
 ## Searchable fields
 
-An app is matched on five fields kept deliberately separate — flattening them into one string would
+An entry is matched on six fields kept deliberately separate — flattening them into one string would
 lose the thing that decides the ranking. `SearchRelevance.score` evaluates each independently and the
 strongest one becomes the entry's base relevance:
 
 | Band | Field                                   | Match strength                                    |
 | ---- | --------------------------------------- | ------------------------------------------------- |
-| 6    | user alias (any entry kind)             | anchored literal — exact / prefix                 |
-| 5    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
-| 4    | Spotlight alternate names, plus a user alias's word-start / substring hits | literal |
+| 7    | user alias (any entry kind)             | anchored literal — exact / prefix                 |
+| 6    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
+| 5    | Spotlight alternate names, plus a user alias's word-start / substring hits | literal |
+| 4    | owner name (the extension a command came from) | literal only                               |
 | 3    | display name                            | subsequence                                       |
 | 2    | Spotlight alternate names               | subsequence                                       |
 | 1    | bundle identifier                       | literal only                                      |
@@ -91,6 +98,21 @@ order. For the same reason a bundle id is matched with its leading component str
 (`apple.Photos`, not `com.apple.Photos`): `com` alone prefixes almost every installed app. The full id
 still matches exactly, so a pasted identifier resolves.
 
+### Owner names
+
+An extension's title is a keyword for every command it ships: `lucide` finds Lucide's *Search Icons*
+without the user aliasing each command by hand. `AppEntry.ownerName` carries it — the same string the
+row already prints as its kind label — and `SearchRelevance` gives it the weakest literal band, for two
+reasons. It does not name the entry, so any hit on a command's own title, on another entry's title, or
+on a Spotlight alias outranks it; and every command of one extension carries the identical string, so a
+subsequence band there would surface a whole extension at once on letter soup. Literal-only keeps that
+bounded while a real prefix hit still beats an incidental subsequence elsewhere — the same trade the
+identifier fields make, for the same reason.
+
+Because the band is uniform across an extension, its commands score identically and cluster together,
+tie-broken alphabetically and then by the learned boost. Ranking a third-party string this low is
+deliberate: an extension titled `Safari` can never take that query from the real Safari.
+
 ### Category search
 
 A query that *equals* a category's own name lists that whole category under its section header, in the
@@ -111,6 +133,78 @@ draws the headers, `pinsFavorites` pins the Favorites prefix and hands out the �
 listing takes the first only. Opening a row from one also records nothing in `LauncherRankingStore` — a
 category word is not a search for the row that ran, and learning it would rank that row under `s`.
 
+### Contextual commands
+
+A **contextual** command is one the query itself supplies the target for, so it exists only while a
+query resolves and never sits in the index. `CommandCatalog.contextual` names them, `all` filters
+them out, and `LauncherScreen` offers the row per keystroke — ahead of the ranked matches, because
+nothing the index holds answers a typed address better. There is one today: typing a web address or
+a bare host puts **Open in Browser** on top, and activating it hands the URL to the system's default
+handler through `AppLauncher.open`.
+
+The shape a query has to have is `QuicklinkDestination.detect` returning `.web`, reused rather than
+re-written so `github.com` and `https://…` mean the same thing here as they do in a quicklink. The
+entry is an ordinary `.command`, so `VisibilityStore` still gates it — Commands off hides the row —
+and its `url` carries the destination instead of the catalog's `tinycast://` placeholder. Nothing
+learns from it and nothing pins it: `LauncherCoordinator.launch` skips `LauncherRankingStore` for a
+contextual row, the way it already skips a category listing, since a pasted URL is not a term any
+row should rank under; and ⇧⌘F is refused, because a favorite the empty query can never resolve is
+dead state a backup would then carry.
+
+The row prints `AppEntry.subtitle` beside its name — the one field for an entry whose name alone
+can't say what it acts on.
+
+### Fallbacks
+
+A **fallback** is the other half of the query-driven idea: a command the query is the input for,
+offered under a `Use “…” with…` header **below every result**, whatever the query says. A contextual
+row leads because it recognised the query; a fallback trails because nothing did.
+
+`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the three shipped
+destinations and `.quicklink(UUID)` for a user's own. `Builtin` exists rather than a bare `CommandID`
+so `FallbackCoordinator.run` is **exhaustive**: a fourth built-in cannot compile without saying where
+its query goes. `Fallback.id` is deliberately the row's own `AppEntry.id`, which is what lets a stored
+order name a live row across a rename or a reinstall.
+
+| Fallback | Where the query goes | Offered when |
+| --- | --- | --- |
+| AI Chat | a fresh chat, question already sent (`AIChatCoordinator.ask`) | `aiEnabled` |
+| Search Files | the file-search screen, already narrowed | `fileSearchEnabled` |
+| Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
+| a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |
+
+**A quicklink earns a fallback row by declaring a placeholder**, nothing else —
+`QuicklinkDestination.containsPlaceholder`. `openQuicklink(id:filling:)` assigns the query to the
+first *real* missing argument and leaves the rest to the argument form, which opens pre-filled
+through `QuicklinkArgumentSession.begin(values:)`. The seed never fills the **selection** prompt:
+that one is not an `{argument}` and is resolved by replacing the context, so seeding it through
+`userArguments` would silently do nothing.
+
+**Run Shell Command carries its own switch, not the custom-command library's.** Turning off Custom
+Commands hides a library of saved commands; it says nothing about a shell line someone types
+deliberately. The fallback's checkbox is the switch. The run is an ad-hoc `CustomCommand` that is
+never stored — same streaming window, same Stop button — so `CustomCommandCoordinator` keeps
+`lastShellCommand` for the window's Rerun, which has no library entry to look up. It sources the
+shell config (`ll` should mean the reader's own alias) and takes the runner's default home directory.
+
+**The order and the checkboxes are not in a settings backup.** The fallback list is where an import
+could arm shell execution from the launcher, which is the line `snippetsEnabled` already draws:
+a flag that grants a capability is never carried by a backup.
+
+`FallbackStore` is a thin persistence shell over `Fallback.ordered(_:by:)`, which is pure and covered
+by `fallback-test`: stored ids first, then anything the order has never seen, and a stored id with
+nothing behind it — a deleted quicklink — is skipped rather than resurrected. Settings ▸ Fallbacks
+lists exactly `FallbackCoordinator.available`, so a fallback whose feature is off is absent from the
+pane as well as from the launcher, and reorders through ↑/↓ buttons like a favorite rather than
+introducing this codebase's first drag-reorder.
+
+**A fallback row is not a result, and `LauncherScreen.Row` says so.** `.fallback` is its own case
+with a `fallback-` prefixed id, because AI Chat can be a ranked hit *and* a fallback in the same
+list, and two rows sharing one id would collapse in `ForEach`. That is also why `LauncherList` takes
+a `selectedRowID` rather than an entry id. Nothing about a fallback row is learned, pinned or
+revealed: `activate` routes to `FallbackCoordinator.run` instead of `LauncherCoordinator.launch`, and
+`FallbackActionsMenu` offers only running it and opening the pane.
+
 ### User aliases
 
 `AliasStore` (`Launcher/Service/`) keeps one user-chosen alias per entry, keyed by `preferenceKey`
@@ -129,7 +223,9 @@ visibility checkbox, not a per-invocation action, so the ⌘K menu stays out of 
 on `LauncherItemsSection` puts an `AliasField` on each row, dressed like the `ShortcutRecorder`
 beside it; edits store as typed and trim when the field loses focus, and a blank means none. That
 list filters by **membership only**, keeping the index's name order — re-ranking it per keystroke
-would move the row being edited out from under its own field editor.
+would move the row being edited out from under its own field editor. A pane with a hand-written row
+hands `AliasField` the key itself: Settings ▸ Quicklinks passes `Quicklink.entryID`, and dims the
+field on a quicklink hidden from root search, whose entry the ranker never sees.
 
 Aliases ride along in a settings backup (`launcherAliases`), and deleting what an alias points at —
 uninstalling an app, deleting a quicklink or custom command, uninstalling an extension — removes it
@@ -140,7 +236,22 @@ with the entry's other per-entry preferences.
 `SpotlightNames` reads `kMDItemAlternateNames` — the aliases macOS itself knows an app by, which no
 Info.plist key exposes: `iBooks` for Books, `iCal` for Calendar, `Address Book` for Contacts,
 `System Preferences` for System Settings, `browser` / `浏览器` / `사파리` for Safari. `MDItem.h` exports
-no constant for the attribute, so it is named directly.
+no constant for either attribute it reads, so both are named directly.
+
+It also reads `kMDItemDisplayName`, the app's name in the system language, because nothing else
+supplies it (#371). Every app under `/System/Applications` keeps its translations in one
+`Contents/Resources/InfoPlist.loctable` and none ships an `InfoPlist.strings`, so `CFBundle` resolves
+all 65 of them to `en` whatever the system language is — which is why the row label reads English
+without being pinned there, and why without this a Portuguese Mac finds Find My as `Find My` and never
+as `Buscar`. It measures 12 bundles carrying alternates under `en` against 49 under `pt-BR`. The value
+is a file name, so its `.app` comes off first; on an English Mac it then equals the display name and
+`usableAlternateNames` drops it, so nothing is indexed twice. Both attributes ride the one `MDItem`
+the pass already creates, so the cost below is unchanged.
+
+Leave `Bundle.installedAppName` on `object(forInfoDictionaryKey:)`. Reading `infoDictionary` to force
+an English label looks equivalent and is not: FindMy's raw `Info.plist` names it `FindMy`, and
+`Find My` lives only in the loctable, so the raw dictionary spells three Apple apps worse — `FindMy`,
+`VoiceMemos`, `Siri AI` — and changes nothing else.
 
 Spotlight mixes junk in with the real aliases, and `SearchFields.usableAlternateNames` (pure, covered
 by the harness) drops it: every bundle lists its own `<Name>.app` file name, several system apps ship
@@ -215,8 +326,11 @@ is TCC-protected, so an unprivileged read fails in a way indistinguishable from 
 silently skip a real empty. Eject All Disks, Dismiss Notifications and Unhide All Apps report the same
 way when there is nothing to act on. Volume and mute fall back to the output's preferred stereo channels when the device exposes
 no master element (common on HDMI), and Toggle Mute parks the level at zero when there is no mute
-control at all. Multi-disk ejection excludes internal and network volumes, treats a sibling volume
-that the same physical eject already unmounted as done, and reports remaining failures together.
+control at all. Multi-disk ejection takes every external or ejectable volume — a dock's fixed-media
+HDD reports as neither ejectable nor removable, so external alone qualifies — while excluding
+internal, network and root volumes, treats a sibling volume that the same physical eject already
+unmounted as done, counts a volume whose eject errored but whose mount is gone as ejected, and
+reports remaining failures together.
 Preference-backed toggles refuse to write when the current value can't be read, and notification
 dismissal matches Accessibility subroles rather than English labels.
 
@@ -250,6 +364,17 @@ Only the display name is indexed. Activation resolves the stable UUID through th
 to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
 execution semantics.
 
+## Quick Action commands
+
+`CommandID.fixGrammar`, `.rewrite`, `.translate` and `.summarize` publish the four Quick Actions
+while `quickActionsEnabled` is on, each carrying the action's own title and glyph so the launcher row
+and the settings row can never drift. `CommandID.init(_ action: QuickAction)` is exhaustive, so a
+fifth action cannot reach the launcher without one.
+
+Activation hands the action to `QuickActionCoordinator.run(_:)` **without** hiding the palette first:
+the coordinator reads the displaced app and then hides, because after the hide the frontmost app is
+Tinycast. See [quick-actions.md](quick-actions.md).
+
 ## Notes commands
 
 `CommandID.showNotes`, `.createNote`, and `.searchNotes` publish the three Notes entry points while the
@@ -268,6 +393,13 @@ paths; see the command in `development.md`.
 
 Launcher icons use a persistent 32 MB cost-capped `NSCache`. Fitted file-row icons use a separate
 transient 8 MB cache that is purged when its palette list disappears (`IconCache`).
+
+A file-icon key carries a `FileIconStamp` as well as the path — the bundle's own modification and
+attribute dates plus its `Icon\r` — because pasting a custom icon in Finder leaves the bundle's
+contents alone, so a path-only key served the bitmap decoded first for the rest of the session.
+`AppIndex.scan` reads the stamp off-main into `AppEntry.iconStamp`, `EntryIcon.file` carries it, and
+because it is part of `iconKey` the re-scan on the next palette open re-decodes exactly the apps
+whose icon moved.
 
 ## Favorites
 
@@ -325,18 +457,27 @@ Application and System Settings results expose **Show in Finder** in their ⌘K 
 shortcut is available for them. `AppEntry.canRevealInFinder` is the one rule both the menu row and
 the key handler read, so the advertised chord can't drift from the behavior.
 
-## Quitting apps
+## Quitting and restarting apps
 
 `RunningAppsMonitor` (live from `NSWorkspace` launch/terminate notifications) drives both the row's
-running dot and the availability of the quit actions:
+running dot and the availability of the running-only actions:
 
-- **Quit Application** — the last row of an app's ⌘K Actions menu, shown only while that app is
+- **Quit Application** — a row of an app's ⌘K Actions menu, shown only while that app is
   running, also bound to **⌃⇧Q** on the selected row. The chord guard mirrors the menu row's
   condition (an `.application` entry that `RunningAppsMonitor` reports running) so the key never
   swallows a press it won't act on, and it's skipped in the compact bar, which shows no selection.
   `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
   anything was running; the palette only dismisses when something was, and it restores focus unless
   the app it just quit _was_ `previousApp`.
+- **Restart Application** — the row above it and **⌘R**, on the same guard: both chords resolve
+  their target through `LauncherScreen.runningApplication(at:)`, the single place that condition
+  lives. `AppLauncher.restart(bundleID:url:)` snapshots the running instances, subscribes to
+  `NSWorkspace.DidTerminateApplicationMessage` _before_ terminating so an instance that exits at
+  once can't outrun the wait, then reopens the bundle once every snapshotted PID has gone. The wait
+  is bounded by a five-second grace: a quit an app refuses, or one sitting behind a save sheet the
+  user leaves standing, relaunches nothing and leaves that app running. The palette dismisses the
+  moment the quit is asked for and never restores focus — either the relaunch takes it, or the app
+  that refused the quit is the one asking for it.
 - **Quit All Applications** a system action. `AppLauncher.quitAllTargets()` is the
   policy (every `.regular` app except Finder — `terminate()` only relaunches it — and Tinycast,
   excluded by PID because About/Settings temporarily flips it to `.regular`). `SystemActionCoordinator.quitAllApps()`
@@ -347,6 +488,6 @@ Both quits are graceful `NSRunningApplication.terminate()`, so an app with unsav
 its own save sheet.
 
 The ⌘K menu samples `isRunning` **once, when it opens** (`RootPaletteView.openActions()`), so an app
-launching or quitting elsewhere can't add or drop the Quit row while the menu is up — the same freeze
+launching or quitting elsewhere can't add or drop those two rows while the menu is up — the same freeze
 the rest of the menu already has ([palette.md](palette.md)). Only `LauncherList` observes
 `RunningAppsMonitor` live, for the running dot.

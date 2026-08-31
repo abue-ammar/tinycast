@@ -3,10 +3,7 @@ import SwiftUI
 
 /// What a tint actually paints with. Split from the `Model/` type so that stays Foundation-only.
 extension ExtensionTint {
-    /// Fixed sRGB, not the system colours: the tile is rasterized off the main thread, where a dynamic
-    /// colour would resolve against whatever appearance that thread happens to see. Pinning the values
-    /// also guarantees the picker's SwiftUI preview and the drawn bitmap are the same colour. These are
-    /// Apple's dark-mode system values, which is the only appearance the app runs in.
+    /// Fixed sRGB: the tile is rasterized off-main, where a dynamic colour resolves wrongly.
     private var components: (red: Double, green: Double, blue: Double) {
         switch self {
         case .red: return (1.00, 0.27, 0.23)

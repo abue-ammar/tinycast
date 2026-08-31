@@ -1,7 +1,6 @@
 import Foundation
 
-/// Drives the real Escape precedence, so one press can never skip a step the user can still see —
-/// an open menu, typed text — and land on the one that throws work away.
+/// One press may never skip a step the user can still see and throw work away.
 @main
 @MainActor
 struct PaletteEscapeTests {

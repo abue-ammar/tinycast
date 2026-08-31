@@ -11,7 +11,7 @@ enum ExtensionSessionState: Equatable {
     case finished
 }
 
-/// Owns the installed set, the runtime and the one running command. See docs/features/extensions.md.
+/// Owns the installed set, the runtime and the running command.
 @MainActor
 @Observable
 final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
@@ -54,7 +54,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         bridge.context = self
     }
 
-    /// Wires collaborators only; the coordinator applies the switches, deciding whether anything scans.
+    /// Wires collaborators only; the coordinator decides whether anything scans.
     func start(appIndex: AppIndex, coordinator: ExtensionCoordinator) {
         self.appIndex = appIndex
         self.coordinator = coordinator
@@ -66,7 +66,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     // MARK: - The switches
 
-    /// Idempotent both ways, so applying settings on launch is the same call as flipping the switch.
+    /// Idempotent both ways, so launch and the switch are the same call.
     func setEnabled(_ enabled: Bool) async {
         guard enabled != isEnabled else { return }
         isEnabled = enabled
@@ -133,7 +133,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             bundleID: nil,
             kind: .extensionCommand,
             iconOverride: icon(for: command, in: owner, appearance: appearance),
-            labelOverride: owner.title)
+            ownerName: owner.title)
     }
 
     /// Persist and re-publish, so rows change under the user rather than on the next scan.
@@ -142,7 +142,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         publishLauncherEntries()
     }
 
-    /// An appearance wins, else the shipped artwork: the launcher is handed the answer, not the why.
+    /// An appearance wins, else the shipped artwork; the launcher gets the answer.
     private func icon(
         for command: ExtensionCommand, in owner: InstalledExtension,
         appearance: ExtensionAppearance?
@@ -210,7 +210,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         return failed
     }
 
-    /// Takes everything keyed to it: files, storage, icon, and through `onDidUninstall` its shortcuts.
+    /// Takes everything keyed to it: files, storage, icon, and its shortcuts.
     func uninstall(_ installedExtension: InstalledExtension) async {
         if running?.extensionName == installedExtension.manifest.name { await stop() }
         let entryIDs = installedExtension.manifest.commands.map {
@@ -306,7 +306,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             return
         }
 
-        // Reading the bundle is IO on a file that can be a few hundred KB; keep it off the main actor.
+        // Reading a few hundred KB of bundle is IO; keep it off the main actor.
         let code = await Task.detached(priority: .userInitiated) {
             (try? String(contentsOf: bundle, encoding: .utf8)) ?? ""
         }.value
@@ -343,7 +343,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
         self.sessionID = nil
         await runtime.stop(session: sessionID)
-        // Then discard the context outright, so nothing an extension left behind reaches the next run.
+        // Discard the context outright, so nothing left behind reaches the next run.
         runtime.shutdown()
         storage.flush()
         resetSessionState()
@@ -436,7 +436,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         var stamped = toast
         stamped.id = nextToastID
         nextToastID += 1
-        // A no-view command's toast has no palette to appear in; show it as a HUD instead of dropping it.
+        // A no-view command's toast has no palette to appear in, so show a HUD.
         guard coordinator?.isPaletteVisible == true else {
             coordinator?.showHUD(
                 [toast.title, toast.message].compactMap { $0 }.joined(separator: " — "))

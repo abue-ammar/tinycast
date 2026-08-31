@@ -1,7 +1,8 @@
 # Snippets
 
 Snippets are reusable plain-text templates stored as Markdown. They can be expanded from launcher
-results, or automatically when an enabled keyword is typed in another app.
+results, from the dedicated browser below, or automatically when an enabled keyword is typed in
+another app.
 
 ## Invariants
 
@@ -47,10 +48,10 @@ is the whole feature, keyword expansion included — there is no separate expans
 enabling it doubles as keyword-expansion consent: it confirms with an explanation first, then
 requests Accessibility, and it ships off. Switching it off is a full teardown — the keyword listener,
 the store and its watchers stop, and the launcher section disappears — while the files and the toggle
-states survive for re-enabling. "Show in launcher" only hides the launcher section; keyword expansion
-keeps working. `snippetsShowInLauncher` travels in settings backups; `snippetsEnabled` deliberately
-does not, so an import can never enable keystroke listening. `AppCore`'s settings sinks re-project on
-every change.
+states survive for re-enabling. "Show in launcher" takes the section and the two Snippet commands out
+of the launcher together; keyword expansion and the browser's shortcut keep working.
+`snippetsShowInLauncher` travels in settings backups; `snippetsEnabled` deliberately does not, so an
+import can never enable keystroke listening. `AppCore`'s settings sinks re-project on every change.
 
 ## Importing from Raycast
 
@@ -157,6 +158,10 @@ Its name and keyword are both searchable, scored in the same tiers as an app's n
 above an app only when it genuinely matches better. Launcher expansion may interactively request
 Accessibility because it begins from an explicit user action.
 
+`Search Snippets` and `Create Snippet` are launcher commands of their own, and either switch takes
+them out with the rows: "Show in launcher" off means the feature reaches launcher search not at all.
+The browser stays reachable by its global shortcut, and the editor from the pane.
+
 Automatic keyword expansion comes with the feature switch: enabling snippets in
 **Settings → Snippets** first shows an explanation, then stores the flag and requests Accessibility if
 it is missing. The flag is intentionally excluded from settings backups, so importing a backup cannot
@@ -185,6 +190,32 @@ duplicates resolve by file identity. Tinycast-tagged synthetic events are ignore
 Immediately before deleting a matched keyword and before inserting its expansion, automatic delivery
 re-checks consent, both permissions, Secure Event Input, the captured target app, and cancellation
 generation. A failed gate leaves the typed keyword untouched.
+
+## Search Snippets
+
+`PaletteMode.snippets` is a dedicated browser, reached by the `Search Snippets` command or by the
+global shortcut recorded in **Settings → Snippets**. Like Search Quicklinks it stays out of the Tab
+cycle and exits with Escape or a bare backspace, and like the clipboard it splits into a list and a
+preview.
+
+The list is every **enabled** snippet — a disabled one is absent here exactly as it is absent from the
+launcher — filtered by name *or* keyword. Substring matching, not the launcher's fuzzy scorer: this is
+a library being browsed rather than a query racing apps and commands for a rank.
+
+The preview shows the **raw template**, never an expansion. Expanding per selection would capture the
+clipboard, read the target's selected text and burn a `{uuid}` on every arrow key, and a snippet
+carrying `{argument}` would raise its prompt just to draw a pane. Beside it sits the name, keyword,
+file name and character count.
+
+↵ and the ⌘K menu's **Paste Snippet** both go through `SnippetCoordinator.expandSnippetFromPalette`,
+which reads `previousApp` before hiding the panel and then calls the same `expandSnippet` funnel a
+launcher row does — so template expansion, cursor placement, the Accessibility prompt, the
+confirmation HUD and the pasteboard lease are the ones described below, not a second copy of them.
+The rest of the menu is **Edit Snippet** and **Create Snippet**, which hand off to the pane's editor
+through `AppCore.pendingSnippetEdit`, and **Show in Finder**.
+
+`Create Snippet` is a launcher command as well as a menu row because the palette swallows ⌘K when a
+screen has no rows: an empty library would otherwise open a browser with nothing to do.
 
 ## Confirmation HUD
 

@@ -17,8 +17,7 @@ final class PaletteState {
     var resetToken = UUID()
     /// Bumped when an action reorders the list, so the highlight scrolls back into view.
     var followToken = UUID()
-    /// Bumped when the panel intercepts ⌘.. AppKit binds that chord to `cancelOperation:`, so the
-    /// field editor eats it before `onKeyPress`; the screen still owns which row it pins.
+    /// AppKit binds ⌘. to `cancelOperation:`, so the field editor eats it before `onKeyPress`.
     private(set) var pinChordToken = UUID()
     /// Bumped when AppKit resolves ⌘1…⌘0 to a slot index from the physical number row.
     private(set) var favoriteSlotToken = UUID()
@@ -28,8 +27,7 @@ final class PaletteState {
     var forceExpanded = false
     /// The paste target, mirrored on every show; `prepare` resets the screen, not this.
     var pasteTarget: PasteTarget?
-    /// Values typed into the inline argument fields an extension command declares, keyed by
-    /// `argumentKey`. Cleared with the rest of the screen.
+    /// Values typed into an extension's inline argument fields, keyed by `argumentKey`.
     var commandArguments: [String: String] = [:]
     /// True while ⌘ is held, which numbers the favorite rows. The panel is the only writer.
     private(set) var commandHeld = false
@@ -39,8 +37,7 @@ final class PaletteState {
     private(set) var hoverDisarmToken = UUID()
     /// Where the pointer stood when the list last moved on its own; movement is measured from here.
     @ObservationIgnored private var hoverAnchor: CGPoint = .zero
-    /// The search field's frame, published by the view that owns it. The panel's cursor policy
-    /// is a containment test against this: hit-testing a rebuilding hierarchy misses the field.
+    /// A containment test, because hit-testing a rebuilding hierarchy misses the field.
     @ObservationIgnored var searchFieldFrame: CGRect = .zero
     /// True while a footer menu is open. See docs/features/palette.md#menu-open-input-freeze.
     @ObservationIgnored var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
@@ -88,8 +85,7 @@ final class PaletteState {
         hoverHighlightArmed = true
     }
 
-    /// Keys and scrolling move the list themselves, so the highlight drops and movement is then
-    /// measured from where the pointer stands now — drift under it is not a new choice of row.
+    /// Movement is measured from where the pointer stands now: drift is not a new choice.
     func disarmHoverHighlight(pointerAt location: CGPoint) {
         hoverAnchor = location
         dropHoverHighlight()

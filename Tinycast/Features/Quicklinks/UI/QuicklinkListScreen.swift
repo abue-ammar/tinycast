@@ -7,10 +7,13 @@ struct QuicklinkListScreen: PaletteScreen {
     let vm: PaletteState
     let openActions: () -> Void
 
+    /// A disabled quicklink is offered nowhere, so it is absent here as it is from root search.
+    private var library: [Quicklink] { store.quicklinks.filter(\.isEnabled) }
+
     var rows: [Quicklink] {
         let query = vm.query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return store.quicklinks }
-        return store.quicklinks.filter { $0.name.localizedCaseInsensitiveContains(query) }
+        guard !query.isEmpty else { return library }
+        return library.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
     var primaryActionTitle: String { "Open Quicklink" }
@@ -61,8 +64,7 @@ struct QuicklinkListScreen: PaletteScreen {
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         let rows = rows
         if rows.isEmpty {
-            EmptyResults(
-                text: store.quicklinks.isEmpty ? "No quicklinks yet" : "No matching quicklinks")
+            EmptyResults(text: library.isEmpty ? "No quicklinks yet" : "No matching quicklinks")
         } else {
             QuicklinkList(
                 results: rows,

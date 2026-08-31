@@ -1,7 +1,6 @@
 import Foundation
 
-/// One generation at a time over the app-server: an ephemeral thread per request, streamed back as
-/// provider events. `connect` is the manager's readiness check; the runner never owns the login.
+/// One generation at a time over the app-server, streamed back as provider events.
 @MainActor
 final class CodexTurnRunner {
     private static let safetyInstructions = """
@@ -26,8 +25,7 @@ final class CodexTurnRunner {
     private var activeToken: TurnToken?
     private var activeThreadID: String?
     private var activeTurnID: String?
-    /// A Stop that beat the turn's ID leaves its thread armed here: the server is still working, so
-    /// the first ID that names that turn — notification or response — spends the interrupt.
+    /// A Stop that beat the turn's ID arms its thread; the first ID to name it spends the Stop.
     private var pendingInterruptThreadID: String?
     private var appliedEffort: String?
 
@@ -56,7 +54,7 @@ final class CodexTurnRunner {
         interruptActiveTurn()
     }
 
-    /// Drops the live turn and the effort written into the server's config; the next turn rewrites it.
+    /// Drops the live turn and the effort in the server's config; the next turn rewrites it.
     func reset() {
         interruptActiveTurn()
         appliedEffort = nil
@@ -115,8 +113,7 @@ final class CodexTurnRunner {
         }
     }
 
-    /// A thread Stop already dropped. Nothing streams from it — it is watched only for the turn ID
-    /// that Stop lacked, and let go once the turn ends on its own.
+    /// A thread Stop already dropped, watched only for the turn ID that Stop lacked.
     private func handleArmed(
         method: String, params: [String: CodexValue], threadID: String
     ) {
@@ -199,9 +196,7 @@ final class CodexTurnRunner {
                 throw CodexAppServerClient.ClientError.requestFailed(
                     "Codex returned no generation thread.")
             }
-            // Ownership can change while `thread/start` is in flight: a Stop's cancellation and the
-            // real response race to resume this. Claiming the thread after losing the turn would aim
-            // `isActive` and every notification guard at a stream nobody is reading.
+            // Claiming the thread after losing the turn aims `isActive` at a stream nobody reads.
             guard activeToken === token, !Task.isCancelled else { return }
             activeThreadID = threadID
 
@@ -289,15 +284,14 @@ final class CodexTurnRunner {
         clearActiveTurn()
         guard let threadID else { return }
         guard let turnID else {
-            // Stop beat the ID: arm the thread rather than lose the turn the server is still running.
+            // Stop beat the ID: arm the thread rather than lose the turn the server still runs.
             pendingInterruptThreadID = threadID
             return
         }
         interrupt(threadID: threadID, turnID: turnID)
     }
 
-    /// `turn/started` and the `turn/start` response both name the turn, and either may arrive first;
-    /// disarming here is what keeps a Stopped turn from being interrupted twice.
+    /// Either naming of the turn may arrive first; disarming keeps a Stop from firing twice.
     private func interruptOnce(threadID: String, turnID: String) {
         guard pendingInterruptThreadID == threadID else { return }
         pendingInterruptThreadID = nil

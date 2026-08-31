@@ -1,7 +1,6 @@
 import Foundation
 
-/// Pins `RedactedPlaceholder`: the disguise has to be stable, shaped like the address it stands in
-/// for, and drawn from an alphabet that gives a squinting viewer nothing.
+/// The disguise must be stable, address-shaped, and give a squinting viewer nothing.
 @main
 struct RedactionTest {
     static func main() {

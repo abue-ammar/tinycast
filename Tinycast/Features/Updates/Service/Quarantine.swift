@@ -1,10 +1,6 @@
 import Foundation
 
-/// The `com.apple.quarantine` flag, through the syscalls rather than the `xattr` tool.
-///
-/// An archive Tinycast fetched itself is not quarantined — macOS sets the flag for sandboxed
-/// downloaders and for apps that opt in with `LSFileQuarantineEnabled`, and Tinycast is neither —
-/// so this is a guard against being wrong about that, not a routine step.
+/// A guard, not a routine step: an archive Tinycast fetched itself is not quarantined.
 enum Quarantine {
     private static let attribute = "com.apple.quarantine"
 
@@ -15,8 +11,7 @@ enum Quarantine {
         }
     }
 
-    /// Clears the flag from a bundle and everything inside it, since expanding a quarantined
-    /// archive marks every file it wrote, not just the bundle root.
+    /// Expanding a quarantined archive marks every file it wrote, not just the root.
     static func clear(from root: URL) {
         remove(from: root)
         guard

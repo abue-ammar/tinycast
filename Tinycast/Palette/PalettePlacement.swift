@@ -1,7 +1,6 @@
 import CoreGraphics
 
-/// Where the palette's top-left corner sits. Pure, with every screen fact injected, so the window
-/// controller holds no placement maths of its own and this stays testable off a display.
+/// Pure, with every screen fact injected, so this stays testable off a display.
 enum PalettePlacement {
     /// The untouched placement: centred, top edge a fraction of the way down, growing downward.
     static func defaultAnchor(
@@ -14,8 +13,7 @@ enum PalettePlacement {
             y: visibleFrame.maxY - visibleFrame.height * topMarginFraction)
     }
 
-    /// A stored anchor, or nil once no display shows enough of the compact bar to grab it back —
-    /// which is what a disconnected screen or a resolution change leaves behind.
+    /// Nil once no display shows enough of the compact bar to grab it back.
     static func restored(
         _ stored: CGPoint, graspable: CGSize, visibleFrames: [CGRect], minimumVisible: CGFloat
     ) -> CGPoint? {

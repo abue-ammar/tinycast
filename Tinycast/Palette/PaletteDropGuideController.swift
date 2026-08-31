@@ -1,8 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Shows the drop guides over one screen for the length of a drag. The window controller drives it;
-/// nothing else may, since only a live drag has a home placement to point at.
+/// Driven by the window controller: only a live drag has a home placement to point at.
 @MainActor
 final class PaletteDropGuideController {
     private var panel: NSPanel?
@@ -44,7 +43,7 @@ final class PaletteDropGuideController {
 
     // MARK: - Private
 
-    /// One step under `.floating`, so the guides clear other apps but never the panel being dragged.
+    /// One step under `.floating`, so guides clear other apps but not the dragged panel.
     private static let level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue - 1)
 
     private func ensurePanel() -> NSPanel {
