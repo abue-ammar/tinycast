@@ -22,6 +22,39 @@ enum AccessibilityReplacement: Equatable {
     var fallsBackToEvents: Bool { self == .unavailable }
 }
 
+enum AccessibilityReplacementPolicy {
+    enum KeywordState: Equatable {
+        case matched(NSRange)
+        case pending
+        case rejected
+    }
+
+    static func keywordState(value: String, selectedRange: NSRange, keyword: String) -> KeywordState {
+        guard selectedRange.length == 0,
+            let selectedStringRange = Range(selectedRange, in: value)
+        else { return .rejected }
+        let beforeCursor = value[..<selectedStringRange.lowerBound]
+        guard beforeCursor.count >= keyword.count else { return .pending }
+        let start = beforeCursor.index(beforeCursor.endIndex, offsetBy: -keyword.count)
+        guard beforeCursor[start...].lowercased() == keyword.lowercased() else { return .rejected }
+        return .matched(NSRange(start..<beforeCursor.endIndex, in: value))
+    }
+
+    static func confirmsReplacement(
+        originalValue: String,
+        replacementRange: NSRange,
+        insertedText: String,
+        observedValue: String?
+    ) -> Bool {
+        guard let observedValue,
+            let stringRange = Range(replacementRange, in: originalValue)
+        else { return false }
+        var expected = originalValue
+        expected.replaceSubrange(stringRange, with: insertedText)
+        return observedValue == expected
+    }
+}
+
 @MainActor
 final class DeliveryCompletion {
     private let callback: @MainActor () -> Void
@@ -188,6 +221,8 @@ final class TextInjector {
     /// A copy lands well inside a second; past that the app was never going to answer.
     private static let copyPollAttempts = 40
     private static let copyPollInterval = Duration.milliseconds(25)
+    private static let accessibilityConvergenceAttempts = 8
+    private static let accessibilityConvergenceInterval = Duration.milliseconds(5)
 
     func deliver(
         _ injected: InjectedText,
@@ -239,11 +274,12 @@ final class TextInjector {
         else { return }
 
         let completion = DeliveryCompletion(callback: onDelivered)
-        let accessibilityReplacement = replaceUsingAccessibility(
+        let accessibilityReplacement = await replaceUsingAccessibility(
             injected,
             targetApp: targetApp,
             expectedKeyword: expectedKeyword,
-            keywordLength: keywordLength)
+            keywordLength: keywordLength,
+            automaticGeneration: automaticGeneration)
         if accessibilityReplacement == .delivered {
             completion.confirm()
             return
@@ -484,46 +520,60 @@ final class TextInjector {
         return false
     }
 
+    private struct AccessibilityReplacementTarget {
+        let element: AXUIElement
+        let value: String
+        let originalRange: NSRange
+        let replacementRange: NSRange
+    }
+
+    private enum AccessibilityTargetState {
+        case ready(AccessibilityReplacementTarget)
+        case pending
+        case unavailable
+        case rejected
+    }
+
     private func replaceUsingAccessibility(
         _ injected: InjectedText,
         targetApp: NSRunningApplication?,
         expectedKeyword: String?,
-        keywordLength: Int
-    ) -> AccessibilityReplacement {
-        guard let targetApp,
-            let element = AccessibilityText.focusedElement(in: targetApp),
-            isAttributeSettable(kAXSelectedTextRangeAttribute, in: element),
-            isAttributeSettable(kAXSelectedTextAttribute, in: element),
-            let value = stringValue(in: element),
-            let originalRange = selectedRange(in: element)
-        else { return .unavailable }
-        guard let selectedStringRange = Range(originalRange, in: value) else {
-            return .rejected
+        keywordLength: Int,
+        automaticGeneration: AutomaticGeneration?
+    ) async -> AccessibilityReplacement {
+        guard let targetApp else { return .unavailable }
+        let state = await accessibilityReplacementTarget(
+            in: targetApp,
+            expectedKeyword: expectedKeyword,
+            keywordLength: keywordLength,
+            automaticGeneration: automaticGeneration)
+        guard case .ready(let target) = state else {
+            switch state {
+            case .pending, .unavailable: return .unavailable
+            case .rejected: return .rejected
+            case .ready: return .rejected
+            }
         }
+        if usesTextMarkerSelection(target.element) { return .unavailable }
 
-        let replacementRange: NSRange
-        if keywordLength > 0 {
-            guard originalRange.length == 0,
-                let expectedKeyword,
-                value[..<selectedStringRange.lowerBound].count >= keywordLength
-            else { return .rejected }
-            let cursor = selectedStringRange.lowerBound
-            let start = value.index(cursor, offsetBy: -keywordLength)
-            let actualKeyword = String(value[start..<cursor]).lowercased()
-            guard actualKeyword == expectedKeyword.lowercased() else { return .rejected }
-            replacementRange = NSRange(start..<cursor, in: value)
-        } else {
-            replacementRange = originalRange
+        guard setSelectedRange(target.replacementRange, in: target.element) else {
+            return .unavailable
         }
-
-        guard setSelectedRange(replacementRange, in: element) else { return .unavailable }
+        let writeStatus = AXUIElementSetAttributeValue(
+            target.element,
+            kAXSelectedTextAttribute as CFString,
+            injected.text as CFString)
+        guard writeStatus == .success else {
+            return setSelectedRange(target.originalRange, in: target.element) ? .unavailable : .rejected
+        }
         guard
-            AXUIElementSetAttributeValue(
-                element,
-                kAXSelectedTextAttribute as CFString,
-                injected.text as CFString) == .success
+            AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: target.value,
+                replacementRange: target.replacementRange,
+                insertedText: injected.text,
+                observedValue: stringValue(in: target.element))
         else {
-            _ = setSelectedRange(originalRange, in: element)
+            _ = setSelectedRange(target.originalRange, in: target.element)
             return .rejected
         }
 
@@ -531,9 +581,85 @@ final class TextInjector {
         let cursorIndex = injected.text.index(injected.text.endIndex, offsetBy: -cursorOffset)
         let insertedPrefixLength = injected.text[..<cursorIndex].utf16.count
         _ = setSelectedRange(
-            NSRange(location: replacementRange.location + insertedPrefixLength, length: 0),
-            in: element)
+            NSRange(location: target.replacementRange.location + insertedPrefixLength, length: 0),
+            in: target.element)
         return .delivered
+    }
+
+    private func accessibilityReplacementTarget(
+        in targetApp: NSRunningApplication,
+        expectedKeyword: String?,
+        keywordLength: Int,
+        automaticGeneration: AutomaticGeneration?
+    ) async -> AccessibilityTargetState {
+        for attempt in 0..<Self.accessibilityConvergenceAttempts {
+            let state = inspectAccessibilityTarget(
+                in: targetApp,
+                expectedKeyword: expectedKeyword,
+                keywordLength: keywordLength)
+            guard case .pending = state else { return state }
+            guard attempt < Self.accessibilityConvergenceAttempts - 1,
+                automaticGeneration != nil,
+                deliveryIsAllowed(
+                    automaticGeneration: automaticGeneration,
+                    targetApp: targetApp,
+                    promptForInteractiveAccessibility: false),
+                await wait(for: Self.accessibilityConvergenceInterval)
+            else { return .unavailable }
+        }
+        return .unavailable
+    }
+
+    private func inspectAccessibilityTarget(
+        in targetApp: NSRunningApplication,
+        expectedKeyword: String?,
+        keywordLength: Int
+    ) -> AccessibilityTargetState {
+        guard let element = AccessibilityText.focusedElement(in: targetApp),
+            isAttributeSettable(kAXSelectedTextRangeAttribute, in: element),
+            isAttributeSettable(kAXSelectedTextAttribute, in: element),
+            let value = stringValue(in: element),
+            let originalRange = selectedRange(in: element)
+        else { return .unavailable }
+        if keywordLength == 0 {
+            guard Range(originalRange, in: value) != nil else { return .rejected }
+            return .ready(
+                AccessibilityReplacementTarget(
+                    element: element,
+                    value: value,
+                    originalRange: originalRange,
+                    replacementRange: originalRange))
+        }
+        guard let expectedKeyword, expectedKeyword.count == keywordLength else { return .rejected }
+        switch AccessibilityReplacementPolicy.keywordState(
+            value: value,
+            selectedRange: originalRange,
+            keyword: expectedKeyword)
+        {
+        case .matched(let replacementRange):
+            return .ready(
+                AccessibilityReplacementTarget(
+                    element: element,
+                    value: value,
+                    originalRange: originalRange,
+                    replacementRange: replacementRange))
+        case .pending:
+            return .pending
+        case .rejected:
+            return .rejected
+        }
+    }
+
+    private func usesTextMarkerSelection(_ element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXSelectedTextMarkerRangeAttribute as CFString,
+                &value) == .success,
+            let value
+        else { return false }
+        return CFGetTypeID(value) == AXTextMarkerRangeGetTypeID()
     }
 
     private func waitForPasteConfirmation(
@@ -574,6 +700,7 @@ final class TextInjector {
     ) -> AccessibilityTextState? {
         guard let targetApp,
             let element = AccessibilityText.focusedElement(in: targetApp),
+            !usesTextMarkerSelection(element),
             let value = stringValue(in: element),
             let selectedRange = selectedRange(in: element)
         else { return nil }

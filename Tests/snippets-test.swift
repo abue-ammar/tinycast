@@ -636,6 +636,44 @@ struct SnippetsTests {
             "a rejected AX keyword replacement fails closed instead of deleting by events",
             !AccessibilityReplacement.rejected.fallsBackToEvents)
         check(
+            "an AX keyword one character behind the event stream remains pending",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "!tcaxprob",
+                selectedRange: NSRange(location: 9, length: 0),
+                keyword: "!tcaxprobe") == .pending)
+        check(
+            "a converged AX keyword resolves to its exact replacement range",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "prefix !tcaxprobe",
+                selectedRange: NSRange(location: 17, length: 0),
+                keyword: "!tcaxprobe") == .matched(NSRange(location: 7, length: 10)))
+        check(
+            "an AX state with enough text but the wrong suffix is a genuine rejection",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "prefix !tcaxwrong",
+                selectedRange: NSRange(location: 17, length: 0),
+                keyword: "!tcaxprobe") == .rejected)
+        check(
+            "an empty editor AX snapshot remains pending instead of becoming a false mismatch",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "",
+                selectedRange: NSRange(location: 0, length: 0),
+                keyword: "!tcaxprobe") == .pending)
+        check(
+            "AX replacement confirmation requires the observable text to actually change",
+            AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: "!tcprobe",
+                replacementRange: NSRange(location: 0, length: 8),
+                insertedText: "PROBE_OK",
+                observedValue: "PROBE_OK"))
+        check(
+            "an AX setter success with unchanged text is not accepted as delivery",
+            !AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: "!tcprobe",
+                replacementRange: NSRange(location: 0, length: 8),
+                insertedText: "PROBE_OK",
+                observedValue: "!tcprobe"))
+        check(
             "unreadable AX state accepts a posted paste after the conservative delay",
             PasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: 15,

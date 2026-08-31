@@ -240,14 +240,17 @@ not report completion and therefore cannot show it.
 
 The preferred path is one atomic Accessibility replacement. Tinycast requires a focused element with
 readable text plus writable selected-range and selected-text attributes. For an automatic expansion it
-also verifies that the exact captured keyword is immediately before the cursor before replacing it.
-An Accessibility mismatch is rejected rather than guessed.
+also verifies that the exact captured keyword is immediately before the cursor. A renderer whose
+Accessibility text is briefly behind the key stream gets a bounded convergence window; a readable
+state that contains enough text but disagrees with the keyword is still rejected rather than guessed.
 
-Some editors grant Accessibility but do not expose writable text attributes. In that case Tinycast
-falls back to tagged keyboard events while keeping the same permission, consent, Secure Event Input,
-target-app and cancellation gates. The fallback deletes the keyword first, waits for deletion to
-settle, then inserts the expansion. Short single-line expansions of at most 100 characters use Unicode
-keyboard events.
+Web and editor controls that expose text-marker selections use tagged keyboard events instead of AX
+mutation because text-marker state is authoritative for reading but not a reliable write channel.
+Editors whose AX text remains unavailable after convergence use the same fallback. The fallback keeps
+the permission, consent, Secure Event Input, target-app and cancellation gates, deletes the keyword
+first, waits for deletion to settle, then inserts the expansion. Short single-line expansions of at
+most 100 characters use Unicode keyboard events. Native AX replacement is read back before delivery is
+confirmed, so a successful setter that leaves the text unchanged is not reported as delivered.
 
 Longer or multiline fallback text uses a temporary paste only when the existing pasteboard's first
 item has plain text that can be restored without another pasteboard write. Tinycast snapshots every
@@ -258,9 +261,10 @@ newer copy is never overwritten. Empty, image-first, unreadable or otherwise uns
 the Unicode-event fallback instead. The clipboard poller synchronizes to Tinycast's ownership changes
 so temporary or restored text is not added as new history.
 
-When Accessibility text state is readable, a long paste waits for evidence that the target changed.
-If the editor cannot expose post-paste text state, a successfully posted paste is accepted only after
-a conservative delay instead of being treated as a permanent failure. Cursor movement starts after
+When authoritative Accessibility text state is readable, a long paste waits for evidence that the
+target changed. Text-marker editors and controls that cannot expose post-paste text state accept a
+successfully posted paste only after a conservative delay instead of treating misleading or absent AX
+state as a permanent failure. Cursor movement starts after
 that confirmation or delay and after pasteboard restoration. Delivery completion is reported exactly
 once only after the Accessibility replacement or event fallback (including requested cursor movement)
 finishes successfully. Disabling automatic expansion or
