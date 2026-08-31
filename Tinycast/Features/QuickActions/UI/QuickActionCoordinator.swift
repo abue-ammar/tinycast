@@ -180,10 +180,17 @@ final class QuickActionCoordinator {
             })
     }
 
+    /// A replacement that never lands would otherwise lose the reply, so the clipboard keeps it.
     private func deliver(_ text: String, to target: NSRunningApplication?, action: QuickAction) {
-        injector.replaceSelection(with: text, in: target) { [weak self] in
-            self?.core.showMessage("\(action.title) applied")
-        }
+        injector.replaceSelection(
+            with: text, in: target,
+            onDelivered: { [weak self] in self?.core.showMessage("\(action.title) applied") },
+            onFailed: { [weak self] in
+                Paster.copyPlainText(text)
+                self?.core.showMessage(
+                    "\(action.title) couldn't replace the selection — copied instead",
+                    tone: .danger)
+            })
     }
 
     /// A failure the reader cannot see is a hotkey that silently did nothing.

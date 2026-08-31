@@ -241,7 +241,14 @@ not report completion and therefore cannot show it.
 The preferred path is one atomic Accessibility replacement. Tinycast requires a focused element with
 readable text plus writable selected-range and selected-text attributes. For an automatic expansion it
 also verifies that the exact captured keyword is immediately before the cursor before replacing it.
-An Accessibility mismatch is rejected rather than guessed.
+A keyword mismatch is rejected rather than guessed, and rejection is the only outcome that stops
+delivery outright — it is returned before anything is written, so the document cannot have moved.
+
+**A `kAXErrorSuccess` from the setter is not evidence.** Chromium answers success and applies nothing,
+so the element's value has to be seen to change — polled for up to 300 ms, since a browser applies the
+edit in its renderer rather than in the process that answered. An unmoved value is `.unavailable`, not
+`.delivered`, so the event tiers still get their turn instead of a "applied" message over unchanged
+text.
 
 Some editors grant Accessibility but do not expose writable text attributes. In that case Tinycast
 falls back to tagged keyboard events while keeping the same permission, consent, Secure Event Input,
@@ -249,14 +256,23 @@ target-app and cancellation gates. The fallback deletes the keyword first, waits
 settle, then inserts the expansion. Short single-line expansions of at most 100 characters use Unicode
 keyboard events.
 
-Longer or multiline fallback text uses a temporary paste only when the existing pasteboard's first
-item has plain text that can be restored without another pasteboard write. Tinycast snapshots every
-item, type and data payload, takes temporary ownership with the same item shape, and changes only the
-first plain-text payload. Restoration mutates that owned item back in place; it never clears the
-clipboard before a fallible restore. The pasteboard change count is checked before restoration, so a
-newer copy is never overwritten. Empty, image-first, unreadable or otherwise unsafe pasteboards use
-the Unicode-event fallback instead. The clipboard poller synchronizes to Tinycast's ownership changes
-so temporary or restored text is not added as new history.
+**A Unicode keystroke carries at most four UTF-16 units.** Blink stores one key event's text in a
+fixed `WebKeyboardEvent::kTextLengthCap` array, so a Chromium target — Brave, Chrome, Electron, VS
+Code, Slack — silently drops everything past the fourth unit of a single event. `UnicodeTypingChunk`
+splits the text into four-unit keystrokes on scalar boundaries, because a lone surrogate half is not
+text and a scalar never exceeds four units on its own. The chunks post through the same spaced,
+re-gated loop the deletions use, so a target that goes away mid-word stops the rest.
+
+Longer or multiline fallback text uses a temporary paste. Tinycast snapshots every item, type and data
+payload, takes temporary ownership with the same item shape, and changes only the first plain-text
+payload; restoration mutates that owned item back in place, never clearing the clipboard before a
+fallible restore. A pasteboard with no string of its own — empty, or image-first — **borrows** instead:
+Tinycast writes a single string item and restores by rewriting the snapshot, which is the one path that
+clears first, because there is no original string item left to write back into. Declining the loan
+there would have sent a long multiline expansion down the keystroke path a character at a time. The
+pasteboard change count is checked before restoration, so a newer copy is never overwritten, and the
+clipboard poller synchronizes to Tinycast's ownership changes so temporary or restored text is not
+added as new history.
 
 When Accessibility text state is readable, a long paste waits for evidence that the target changed.
 If the editor cannot expose post-paste text state, a successfully posted paste is accepted only after

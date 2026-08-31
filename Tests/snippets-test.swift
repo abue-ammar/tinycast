@@ -622,12 +622,24 @@ struct SnippetsTests {
         check("automatic cancellation cannot run a queued stale delivery", !automaticRan)
 
         var completionCount = 0
-        let completion = DeliveryCompletion { completionCount += 1 }
+        var failureCount = 0
+        let completion = DeliveryCompletion(
+            onDelivered: { completionCount += 1 }, onFailed: { failureCount += 1 })
         completion.confirm()
         completion.confirm()
+        completion.settle()
         check(
             "delivery completion invokes its callback exactly once after confirmation",
-            completion.isConfirmed && completionCount == 1)
+            completion.isConfirmed && completionCount == 1 && failureCount == 0)
+
+        var unconfirmedFailures = 0
+        let unconfirmed = DeliveryCompletion(onFailed: { unconfirmedFailures += 1 })
+        unconfirmed.settle()
+        unconfirmed.settle()
+        unconfirmed.confirm()
+        check(
+            "a delivery that returned early reports failure exactly once and stays unconfirmed",
+            !unconfirmed.isConfirmed && unconfirmedFailures == 1)
 
         check(
             "unavailable AX text attributes use the event delivery fallback",
@@ -635,6 +647,21 @@ struct SnippetsTests {
         check(
             "a rejected AX keyword replacement fails closed instead of deleting by events",
             !AccessibilityReplacement.rejected.fallsBackToEvents)
+
+        check(
+            "a Unicode keystroke never carries more than Blink's four-unit cap",
+            UnicodeTypingChunk.split(String(repeating: "a", count: 30))
+                .allSatisfy { $0.count <= UnicodeTypingChunk.maxUTF16Units })
+        check(
+            "chunked Unicode keystrokes reassemble into the original text",
+            UnicodeTypingChunk.split("Fix this sentence, 雪が降る 👨‍👩‍👧 — done.")
+                .flatMap { $0 } == Array("Fix this sentence, 雪が降る 👨‍👩‍👧 — done.".utf16))
+        check(
+            "a surrogate pair is never split across two keystrokes",
+            UnicodeTypingChunk.split("ab👩🏽‍🚀").allSatisfy { chunk in
+                String(decoding: chunk, as: UTF16.self).unicodeScalars.allSatisfy { $0.value != 0xFFFD }
+            })
+        check("empty text produces no keystrokes", UnicodeTypingChunk.split("").isEmpty)
         check(
             "unreadable AX state accepts a posted paste after the conservative delay",
             PasteConfirmationPolicy.acceptsUnconfirmedDelivery(
@@ -717,23 +744,34 @@ struct SnippetsTests {
                 && pasteboard.string(forType: .string) == "Newer copy")
 
         _ = pasteboard.replaceObjects([])
+        let emptyLease = TemporaryPasteboardLease.begin(
+            text: "Temporary from empty",
+            pasteboard: pasteboard)
         check(
-            "an empty clipboard declines temporary ownership for the Unicode fallback",
-            TemporaryPasteboardLease.begin(
-                text: "Temporary from empty",
-                pasteboard: pasteboard) == nil
+            "an empty clipboard still lends a temporary string to paste",
+            emptyLease?.isOwned == true
+                && pasteboard.string(forType: .string) == "Temporary from empty")
+        check(
+            "restoring a borrowed empty clipboard leaves it empty again",
+            emptyLease?.restoreIfOwned() != nil
                 && pasteboard.pasteboardItems?.isEmpty != false)
 
         let imageOnlyItem = NSPasteboardItem()
         imageOnlyItem.setData(Data([9, 8, 7]), forType: .png)
         _ = pasteboard.replaceObjects([imageOnlyItem])
+        let imageLease = TemporaryPasteboardLease.begin(
+            text: "Temporary over image",
+            pasteboard: pasteboard)
         check(
-            "a non-text clipboard declines temporary ownership without changing its payload",
-            TemporaryPasteboardLease.begin(
-                text: "Temporary over image",
-                pasteboard: pasteboard) == nil
+            "a non-text clipboard still lends a temporary string to paste",
+            imageLease?.isOwned == true
+                && pasteboard.string(forType: .string) == "Temporary over image")
+        check(
+            "restoring a borrowed image clipboard returns the original payload",
+            imageLease?.restoreIfOwned() != nil
                 && pasteboard.pasteboardItems?.count == 1
-                && pasteboard.data(forType: .png) == Data([9, 8, 7]))
+                && pasteboard.data(forType: .png) == Data([9, 8, 7])
+                && pasteboard.string(forType: .string) == nil)
     }
 
     private static func testStoreWatcher() async throws {

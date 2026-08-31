@@ -172,10 +172,18 @@ The Accessibility tier replaces the live selection atomically. The event tiers b
 paste over it, which every app treats as replacing a selection — but that is the target app's
 behaviour rather than something Tinycast asserts, so it is the part worth checking by hand.
 
+**A replacement that never lands says so, and keeps the reply.** Every tier can decline, and a shortcut
+that quietly did nothing is indistinguishable from a shortcut that is not bound. `DeliveryCompletion`
+now settles either way, so a delivery that returned early reports failure exactly once; Quick Actions
+put the generated text on the clipboard and raise a HUD rather than dropping it. Snippets pass no
+failure handler, so automatic expansion stays silent as before.
+
 ### Manual sweep
 
-- Select text in Safari, Chrome, Slack, Mail, Notes, VS Code and Terminal, press Fix Grammar, and
-  confirm the selection is **replaced** rather than appended to.
+- Select text in Safari, Chrome, Brave, Slack, Mail, Notes, VS Code and Terminal, press Fix Grammar,
+  and confirm the selection is **replaced** rather than appended to.
+- In a Chromium target, run one on a **short** selection whose result stays under 100 characters on
+  one line: the whole result lands, not its first four characters.
 - Replace mode, with a slow route selected: the message pill says `Fixing Grammar…` with a blue
   spinner while the model works, and the result message takes its place.
 - Run one from the launcher (⌘Space → "Fix Grammar") with text selected behind it: the palette
