@@ -23,8 +23,8 @@ struct ExtensionListView: View {
                     Rectangle().fill(Theme.Colors.separator).frame(width: 1)
                     detailPane
                 }
-            } else if case .grid(let columns) = screen.kind {
-                gridBody(columns: columns)
+            } else if case .grid(let layout) = screen.kind {
+                gridBody(layout: layout)
             } else {
                 rowList
             }
@@ -101,18 +101,30 @@ struct ExtensionListView: View {
         screen.items.indices.contains(selection) ? screen.items[selection].id : nil
     }
 
-    private func gridBody(columns: Int) -> some View {
+    /// Measured once for the whole grid: a tile's own `GeometryReader` would cost a pass per cell.
+    private func gridBody(layout: ExtensionGridLayout) -> some View {
+        GeometryReader { geometry in
+            grid(
+                layout: layout,
+                tileWidth: layout.tileWidth(
+                    inWidth: geometry.size.width - Theme.Spacing.md * 2,
+                    spacing: Theme.Spacing.sm))
+        }
+    }
+
+    private func grid(layout: ExtensionGridLayout, tileWidth: Double) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVGrid(
                     columns: Array(
-                        repeating: GridItem(.flexible(), spacing: Theme.Spacing.sm), count: columns),
+                        repeating: GridItem(.flexible(), spacing: Theme.Spacing.sm),
+                        count: layout.columns),
                     spacing: Theme.Spacing.sm
                 ) {
                     ForEach(screen.items) { item in
                         ExtensionGridCell(
                             node: item.node, selected: item.index == selection,
-                            assetsPath: assetsPath
+                            assetsPath: assetsPath, layout: layout, width: tileWidth
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -132,7 +144,7 @@ struct ExtensionListView: View {
             .edgeDissolve()
             .thinScrollbar()
             .scrollFollowsSelection(
-                scroll, row: selectedRowID, atOrigin: selection < columns, proxy: proxy)
+                scroll, row: selectedRowID, atOrigin: selection < layout.columns, proxy: proxy)
         }
     }
 
@@ -277,31 +289,39 @@ struct ExtensionAccessoriesView: View {
     }
 }
 
-/// One `Grid.Item`: a large content tile with its title underneath.
+/// One `Grid.Item`: content sized to the tile the `Grid`'s props ask for, title underneath.
 private struct ExtensionGridCell: View {
     @Environment(\.isDarkAppearance) private var isDark
     let node: RenderNode
     let selected: Bool
     let assetsPath: String?
+    let layout: ExtensionGridLayout
+    let width: Double
     @State private var hovered = false
 
-    /// `content` is an `ImageLike`, `{value, tooltip}` or `{color}` — all `resolve`'s job.
-    private var resolved: ExtensionImage.Resolved? {
-        ExtensionImage.resolve(node.props["content"], assetsPath: assetsPath, isDark: isDark)
+    private var content: RenderValue? { node.props["content"] }
+
+    /// A tile may be a bare `{color}` swatch instead, which has no image to resolve.
+    private var swatch: Color? {
+        guard let fields = content?.objectValue else { return nil }
+        return ExtensionImage.color((fields["value"]?.objectValue ?? fields)["color"], isDark: isDark)
+    }
+
+    private var height: Double { width / layout.aspectRatio }
+
+    private var contentSize: CGSize {
+        let inset = width * layout.inset.fraction
+        return CGSize(width: width - inset * 2, height: height - inset * 2)
+    }
+
+    private var background: Color {
+        if selected { return Theme.Colors.selection }
+        return hovered ? Theme.Colors.rowHover : ExtensionColors.gridItemFill
     }
 
     var body: some View {
         VStack(spacing: Theme.Spacing.xs) {
-            ExtensionIconView(resolved: resolved, size: 56, animates: true)
-                .frame(maxWidth: .infinity)
-                .padding(Theme.Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                        .fill(
-                            selected
-                                ? Theme.Colors.selection
-                                : (hovered ? Theme.Colors.rowHover : ExtensionColors.gridItemFill))
-                )
+            tile
             if let title = node.string("title") {
                 Text(title)
                     .font(Theme.Typography.rowTrailing)
@@ -314,6 +334,109 @@ private struct ExtensionGridCell: View {
                     .lineLimit(1)
             }
         }
+        .frame(width: width)
         .armedHover($hovered)
+    }
+
+    private var tile: some View {
+        tileContent
+            .frame(width: contentSize.width, height: contentSize.height)
+            .clipShape(RoundedRectangle(cornerRadius: contentRadius, style: .continuous))
+            .frame(width: width, height: height)
+            .background(
+                RoundedRectangle(cornerRadius: ExtensionGridLayout.tileRadius, style: .continuous)
+                    .fill(background)
+            )
+            // A tile filled edge to edge hides that fill, so the ring is what marks the selection.
+            .overlay {
+                RoundedRectangle(cornerRadius: ExtensionGridLayout.tileRadius, style: .continuous)
+                    .strokeBorder(Theme.Colors.border, lineWidth: 2)
+                    .opacity(selected ? 1 : 0)
+            }
+    }
+
+    /// Filling content shares the tile's corner; inset artwork is small enough to need a tighter one.
+    private var contentRadius: Double {
+        layout.inset == .zero ? ExtensionGridLayout.tileRadius : Theme.Radius.thumbnail
+    }
+
+    /// `content` is an `ImageLike` or `{value, tooltip}` wrapping one — both `resolve`'s job.
+    @ViewBuilder
+    private var tileContent: some View {
+        let resolved = ExtensionImage.resolve(content, assetsPath: assetsPath, isDark: isDark)
+        if resolved == nil, let swatch {
+            Rectangle().fill(swatch)
+        } else {
+            ExtensionGridContentView(resolved: resolved, fills: layout.fills, size: contentSize)
+        }
+    }
+}
+
+/// A tile's image, scaled to the tile it is given — unlike `ExtensionIconView`'s fixed icon box.
+private struct ExtensionGridContentView: View {
+    @Environment(\.isDarkAppearance) private var isDark
+    let resolved: ExtensionImage.Resolved?
+    let fills: Bool
+    /// Passed down rather than measured: the grid already knows every tile's size.
+    let size: CGSize
+    @State private var loaded: NSImage?
+
+    var body: some View {
+        content
+            // Keyed on appearance too: an inline SVG's palette resolves at decode.
+            .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
+                loaded = await ExtensionImage.load(resolved, isDark: isDark, animates: true)
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch resolved?.source {
+        case .symbol(let name):
+            // A symbol has no artwork to scale, so it takes a share of the tile rather than all of it.
+            Image(systemName: name)
+                .resizable()
+                .scaledToFit()
+                .symbolRenderingMode(resolved?.tint == nil ? .hierarchical : .monochrome)
+                .foregroundStyle(resolved?.tint ?? Theme.Colors.textSecondary)
+                .padding(min(size.width, size.height) * 0.2)
+        case .glyph(let text):
+            Text(text)
+                .font(.system(size: min(size.width, size.height) * 0.72))
+        case .file, .fileIcon, .remote, .inline:
+            if let loaded {
+                image(loaded)
+            } else {
+                placeholder
+            }
+        case nil:
+            placeholder
+        }
+    }
+
+    /// The tile is clipped already, so the faint fill needs no corner of its own.
+    private var placeholder: some View { Rectangle().fill(Theme.Colors.iconPlaceholder) }
+
+    @ViewBuilder
+    private func image(_ image: NSImage) -> some View {
+        // Only a multi-frame image pays for `NSImageView`; a still stays on SwiftUI's path.
+        if image.isAnimated {
+            AnimatedImageView(image: image)
+                .scaleEffect(fills ? coverScale(image) : 1)
+        } else {
+            // A `tintColor` masks the artwork, which is what colours a `currentColor` SVG.
+            Image(nsImage: image)
+                .resizable()
+                .renderingMode(resolved?.tint == nil ? .original : .template)
+                .aspectRatio(contentMode: fills ? .fill : .fit)
+                .foregroundStyle(resolved?.tint ?? .primary)
+        }
+    }
+
+    /// `NSImageView` only ever fits proportionally, so `Grid.Fit.Fill` scales that draw up to cover.
+    private func coverScale(_ image: NSImage) -> Double {
+        let scales = [size.width / image.size.width, size.height / image.size.height]
+        guard let low = scales.min(), let high = scales.max(), low > 0, high.isFinite else { return 1 }
+        return high / low
     }
 }

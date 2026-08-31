@@ -357,6 +357,28 @@ enum ExtensionImage {
     ]
 }
 
+extension ExtensionImage {
+    /// An animating tile takes the image as shipped; the fitted path would hand back one frame.
+    static func load(_ resolved: Resolved?, isDark: Bool, animates: Bool) async -> NSImage? {
+        switch resolved?.source {
+        case .file(let path):
+            return animates
+                ? await ExtensionIconCache.loadOriginalAsync(atPath: path)
+                : await ExtensionIconCache.loadAsync(atPath: path)
+        case .fileIcon(let path):
+            // Fitted, not raw: only the normalized draw keeps bundles and documents one size.
+            return await IconCache.loadFittedAsync(forFile: path)
+        case .remote(let url):
+            return await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
+        case .inline(let url):
+            return await ExtensionIconCache.loadInlineAsync(
+                url, palette: svgPalette(isDark: isDark))
+        default:
+            return nil
+        }
+    }
+}
+
 /// A resolved icon at row size; an unresolvable one draws the faint tile, so rows never jump.
 struct ExtensionIconView: View {
     @Environment(\.isDarkAppearance) private var isDark
@@ -372,7 +394,7 @@ struct ExtensionIconView: View {
             .clipShape(shape)
             // Keyed on appearance too: an inline SVG's palette resolves at decode.
             .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
-                await load()
+                loaded = await ExtensionImage.load(resolved, isDark: isDark, animates: animates)
             }
     }
 
@@ -421,24 +443,4 @@ struct ExtensionIconView: View {
             : AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
     }
 
-    /// An animating tile takes the image as shipped; the fitted path would hand back one frame.
-    private func load() async {
-        switch resolved?.source {
-        case .file(let path):
-            loaded =
-                animates
-                ? await ExtensionIconCache.loadOriginalAsync(atPath: path)
-                : await ExtensionIconCache.loadAsync(atPath: path)
-        case .fileIcon(let path):
-            // Fitted, not raw: only the normalized draw keeps bundles and documents one size.
-            loaded = await IconCache.loadFittedAsync(forFile: path)
-        case .remote(let url):
-            loaded = await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
-        case .inline(let url):
-            loaded = await ExtensionIconCache.loadInlineAsync(
-                url, palette: ExtensionImage.svgPalette(isDark: isDark))
-        default:
-            loaded = nil
-        }
-    }
 }

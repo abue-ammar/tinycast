@@ -122,6 +122,7 @@
 		4549280508130B232069071E /* BackupSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112551581ECF83B53D405334 /* BackupSettingsView.swift */; };
 		45739848B8C2B00E0BFC208F /* FileSearchScope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D1A69B721AA863AFFE176F /* FileSearchScope.swift */; };
 		45799EE1F41091B32544B6AE /* ExtensionManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30BBF211CE6A076EAF8D6C33 /* ExtensionManifest.swift */; };
+		462CE7617EC4EED7E7B5A072 /* ExtensionGridLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220CECFE780E8BE18FAE0A1C /* ExtensionGridLayout.swift */; };
 		4640C7CC8DCA6E6FA49394A8 /* CommandsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D303E193CFEFE455778C150 /* CommandsSettingsView.swift */; };
 		464F93E1F16A3242396F32F9 /* SearchScopes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E4A7E45F7D1CC5FB8868715 /* SearchScopes.swift */; };
 		46F5D522E6F5470D3694A218 /* RaycastImportReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CD7591D273A6484DD48018A /* RaycastImportReader.swift */; };
@@ -496,6 +497,7 @@
 		1F64FC06CB10BDF8CD044D64 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		201FCD08ACA933378876385B /* ClipboardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
 		209D951FDD587A040F1F76F3 /* PaletteWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteWindowController.swift; sourceTree = "<group>"; };
+		220CECFE780E8BE18FAE0A1C /* ExtensionGridLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionGridLayout.swift; sourceTree = "<group>"; };
 		2258D4A6B6C22AB7C5D421BE /* DoubleTapMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleTapMonitor.swift; sourceTree = "<group>"; };
 		23591B301A183579098AA019 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		2384FC4A96FDAD19D0737312 /* CameraPreviewSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewSession.swift; sourceTree = "<group>"; };
@@ -1275,6 +1277,7 @@
 				D755EEABA1DA9CA4CE2D0B4F /* ExtensionAppearance.swift */,
 				ED5AAA98FFF7A4D34D7B490D /* ExtensionBootConfig.swift */,
 				F85C82C66132C7723272E873 /* ExtensionGridGeometry.swift */,
+				220CECFE780E8BE18FAE0A1C /* ExtensionGridLayout.swift */,
 				30BBF211CE6A076EAF8D6C33 /* ExtensionManifest.swift */,
 				0ADFFB5180991764FB13FE0B /* ExtensionPackageManager.swift */,
 				810AA3AD31C7E11932E34F28 /* ExtensionRegistry.swift */,
@@ -2439,6 +2442,7 @@
 				B566FC125D9D193F234EC1AB /* ExtensionFetcher.swift in Sources */,
 				5D3E51C5FDA9EE53AFD12181 /* ExtensionFormView.swift in Sources */,
 				C9A7290682E9D0881713C009 /* ExtensionGridGeometry.swift in Sources */,
+				462CE7617EC4EED7E7B5A072 /* ExtensionGridLayout.swift in Sources */,
 				5B90A314CF4801995EA0EE01 /* ExtensionHostBridge.swift in Sources */,
 				0288221BA580DFA8F5B116B7 /* ExtensionIconCache.swift in Sources */,
 				9E5B694969D3F99BF7D0D9E1 /* ExtensionImage.swift in Sources */,

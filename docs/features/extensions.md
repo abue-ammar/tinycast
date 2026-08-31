@@ -161,6 +161,14 @@ screens hold (see [palette.md](palette.md)).
   whole signal. `ExtensionScreen.Item`
   carries both the flat `selection` index and the scroll id, and is the `ForEach` identity of the row
   and the grid cell alike — see the scroll-id rule in [ui.md](../ui.md#rows-selection-hover).
+- **Grid tiles** — `ExtensionGridLayout` reads the `Grid`'s `columns`, `aspectRatio`, `fit` and `inset`
+  and is the one place tile geometry is decided. A tile is a column wide and `aspectRatio` tall, and its
+  content is scaled to that tile rather than drawn at an icon size, which is what makes an image-heavy
+  grid (GIFs, logos) look as it does in Raycast; `inset` is the extension's own knob for pulling small
+  artwork back in, so **never compensate for a too-large tile by clamping the content**. The grid is
+  measured once for every cell — a tile that measured itself would cost a layout pass each. A symbol or
+  glyph has no artwork to scale, so it takes a share of the tile; `Grid.Section` props are not read,
+  since the grid draws one column count throughout.
 - **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, fetched
   and inline images) with `AttributedString` handling inline styling, plus `Detail.Metadata`.
 - **Appearance** — `environment.appearance` reports the real one, so an extension that branches on it

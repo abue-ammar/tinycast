@@ -5,7 +5,7 @@ import SwiftUI
 struct ExtensionScreen: Equatable {
     enum Kind: Equatable {
         case list
-        case grid(columns: Int)
+        case grid(ExtensionGridLayout)
         case detail
         case form
         /// A root component Tinycast doesn't render (`MenuBarExtra`), or nothing rendered yet.
@@ -97,7 +97,7 @@ struct ExtensionScreen: Equatable {
         case "List":
             kind = .list
         case "Grid":
-            kind = .grid(columns: ExtensionScreen.gridColumns(root))
+            kind = .grid(ExtensionGridLayout(root))
         case "Detail":
             kind = .detail
         case "Form":
@@ -185,16 +185,6 @@ struct ExtensionScreen: Equatable {
         if let subtitle = item.string("subtitle") { haystack.append(subtitle) }
         haystack.append(contentsOf: item.array("keywords").compactMap(\.stringValue))
         return haystack.contains { FuzzyMatch.score(needle, candidate: $0) != nil }
-    }
-
-    private static func gridColumns(_ root: RenderNode) -> Int {
-        if let columns = root.double("columns").map({ Int($0) }), columns > 0 { return columns }
-        // Raycast's default is 5; `itemSize` is the legacy way of saying the same thing.
-        switch root.string("itemSize") {
-        case "small": return 8
-        case "large": return 3
-        default: return 5
-        }
     }
 
     /// The `ActionPanel` that applies to the current selection: the item's own, else the screen's.

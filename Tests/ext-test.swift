@@ -412,7 +412,38 @@ struct ExtensionTests {
                 {"id":2,"type":"Grid","props":{"columns":4},"children":[
                   {"id":3,"type":"Grid.Item","props":{"title":"One"},"children":[]}]}
                 """), query: "")
-        check("kind is grid with columns", grid.kind == .grid(columns: 4), String(describing: grid.kind))
+        check(
+            "kind is grid with columns", grid.kind == .grid(ExtensionGridLayout(columns: 4)),
+            String(describing: grid.kind))
+
+        let shaped = ExtensionScreen(
+            tree: tree(
+                """
+                {"id":2,"type":"Grid","props":{"columns":3,"aspectRatio":"16/9","fit":"fill",
+                  "inset":"lg"},"children":[
+                  {"id":3,"type":"Grid.Item","props":{"title":"One"},"children":[]}]}
+                """), query: "")
+        check(
+            "grid layout props parsed",
+            shaped.kind
+                == .grid(
+                    ExtensionGridLayout(
+                        columns: 3, aspectRatio: 16.0 / 9, fills: true, inset: .large)),
+            String(describing: shaped.kind))
+
+        let legacy = ExtensionScreen(
+            tree: tree(#"{"id":2,"type":"Grid","props":{"itemSize":"small"},"children":[]}"#),
+            query: "")
+        check("itemSize still sets columns", legacy.kind == .grid(ExtensionGridLayout(columns: 8)))
+
+        let layout = ExtensionGridLayout(columns: 5)
+        check(
+            "tile width divides the space",
+            layout.tileWidth(inWidth: 100, spacing: 5) == 16,
+            String(layout.tileWidth(inWidth: 100, spacing: 5)))
+        check("columns clamp to Raycast's range", ExtensionGridLayout(columns: 99).columns == 8)
+        check("a bad aspect ratio falls back to square", ExtensionGridLayout(aspectRatio: 0).aspectRatio == 1)
+        check("large inset insets a quarter of the tile", ExtensionGridLayout.Inset.large.fraction == 0.24)
 
         let form = ExtensionScreen(
             tree: tree(
