@@ -18,8 +18,46 @@ enum AccessibilityReplacement: Equatable {
     case unavailable
     case rejected
 
-    /// `.rejected` is only ever returned before anything is written, so the text cannot have moved.
+    /// `.rejected` means the document is not the one we measured, so events would edit the wrong text.
     var fallsBackToEvents: Bool { self == .unavailable }
+}
+
+/// The two judgements the Accessibility tier makes, kept pure so the harness can drive both.
+enum AccessibilityReplacementPolicy {
+    enum KeywordState: Equatable {
+        case matched(NSRange)
+        case pending
+        case rejected
+    }
+
+    /// Too little text yet is a renderer still catching up; enough text but wrong is a real mismatch.
+    static func keywordState(
+        value: String, selectedRange: NSRange, keyword: String
+    ) -> KeywordState {
+        guard selectedRange.length == 0,
+            let selectedStringRange = Range(selectedRange, in: value)
+        else { return .rejected }
+        let beforeCursor = value[..<selectedStringRange.lowerBound]
+        guard beforeCursor.count >= keyword.count else { return .pending }
+        let start = beforeCursor.index(beforeCursor.endIndex, offsetBy: -keyword.count)
+        guard beforeCursor[start...].lowercased() == keyword.lowercased() else { return .rejected }
+        return .matched(NSRange(start..<beforeCursor.endIndex, in: value))
+    }
+
+    /// Chromium answers `.success` and applies nothing, so the value has to read back as we wrote it.
+    static func confirmsReplacement(
+        originalValue: String,
+        replacementRange: NSRange,
+        insertedText: String,
+        observedValue: String?
+    ) -> Bool {
+        guard let observedValue,
+            let stringRange = Range(replacementRange, in: originalValue)
+        else { return false }
+        var expected = originalValue
+        expected.replaceSubrange(stringRange, with: insertedText)
+        return observedValue == expected
+    }
 }
 
 @MainActor
@@ -262,7 +300,8 @@ final class TextInjector {
             injected,
             targetApp: targetApp,
             expectedKeyword: expectedKeyword,
-            keywordLength: keywordLength)
+            keywordLength: keywordLength,
+            automaticGeneration: automaticGeneration)
         if accessibilityReplacement == .delivered {
             completion.confirm()
             return
@@ -503,76 +542,150 @@ final class TextInjector {
         return false
     }
 
+    private struct AccessibilityTarget {
+        let element: AXUIElement
+        let value: String
+        let originalRange: NSRange
+        let replacementRange: NSRange
+    }
+
+    private enum AccessibilityTargetState {
+        case ready(AccessibilityTarget)
+        case pending
+        case unavailable
+        case rejected
+    }
+
+    /// Rule 1: a renderer surface answers about its own model, so it is never written to over AX.
     private func replaceUsingAccessibility(
         _ injected: InjectedText,
         targetApp: NSRunningApplication?,
         expectedKeyword: String?,
-        keywordLength: Int
+        keywordLength: Int,
+        automaticGeneration: AutomaticGeneration?
     ) async -> AccessibilityReplacement {
-        guard let targetApp,
-            let element = AccessibilityText.focusedElement(in: targetApp),
-            isAttributeSettable(kAXSelectedTextRangeAttribute, in: element),
-            isAttributeSettable(kAXSelectedTextAttribute, in: element),
-            let value = stringValue(in: element),
-            let originalRange = selectedRange(in: element)
-        else { return .unavailable }
-        // Offsets its own value cannot address are a broken tier, not proof the document moved.
-        guard let selectedStringRange = Range(originalRange, in: value) else {
+        guard let targetApp else { return .unavailable }
+        let state = await accessibilityTarget(
+            in: targetApp,
+            expectedKeyword: expectedKeyword,
+            keywordLength: keywordLength,
+            automaticGeneration: automaticGeneration)
+        guard case .ready(let target) = state else {
+            if case .rejected = state { return .rejected }
             return .unavailable
         }
 
-        let replacementRange: NSRange
-        if keywordLength > 0 {
-            guard originalRange.length == 0,
-                let expectedKeyword,
-                value[..<selectedStringRange.lowerBound].count >= keywordLength
-            else { return .rejected }
-            let cursor = selectedStringRange.lowerBound
-            let start = value.index(cursor, offsetBy: -keywordLength)
-            let actualKeyword = String(value[start..<cursor]).lowercased()
-            guard actualKeyword == expectedKeyword.lowercased() else { return .rejected }
-            replacementRange = NSRange(start..<cursor, in: value)
-        } else {
-            replacementRange = originalRange
+        guard setSelectedRange(target.replacementRange, in: target.element) else {
+            return .unavailable
         }
-
-        guard setSelectedRange(replacementRange, in: element) else { return .unavailable }
         guard
             AXUIElementSetAttributeValue(
-                element,
+                target.element,
                 kAXSelectedTextAttribute as CFString,
-                injected.text as CFString) == .success,
-            await accessibilityValue(in: element, movedFrom: value)
+                injected.text as CFString) == .success
         else {
-            _ = setSelectedRange(originalRange, in: element)
+            _ = setSelectedRange(target.originalRange, in: target.element)
             return .unavailable
+        }
+
+        let observed = stringValue(in: target.element)
+        guard
+            AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: target.value,
+                replacementRange: target.replacementRange,
+                insertedText: injected.text,
+                observedValue: observed)
+        else {
+            _ = setSelectedRange(target.originalRange, in: target.element)
+            // An untouched value is a tier that did nothing; anything else moved text we cannot name.
+            return observed == target.value ? .unavailable : .rejected
         }
 
         let cursorOffset = min(injected.cursorOffsetFromEnd ?? 0, injected.text.count)
         let cursorIndex = injected.text.index(injected.text.endIndex, offsetBy: -cursorOffset)
         let insertedPrefixLength = injected.text[..<cursorIndex].utf16.count
         _ = setSelectedRange(
-            NSRange(location: replacementRange.location + insertedPrefixLength, length: 0),
-            in: element)
+            NSRange(location: target.replacementRange.location + insertedPrefixLength, length: 0),
+            in: target.element)
         return .delivered
     }
 
-    /// Chromium answers `.success` and applies nothing, so only a moved value counts as delivered.
-    private func accessibilityValue(
-        in element: AXUIElement, movedFrom previous: String
-    ) async -> Bool {
-        for attempt in 0..<Self.accessibilityVerifyAttempts {
-            if let current = stringValue(in: element), current != previous { return true }
-            guard attempt < Self.accessibilityVerifyAttempts - 1,
-                await wait(for: Self.accessibilityVerifyInterval)
-            else { return false }
+    /// Rule 2: a renderer applies the keystroke before it says so, so a short lag is not a mismatch.
+    private func accessibilityTarget(
+        in targetApp: NSRunningApplication,
+        expectedKeyword: String?,
+        keywordLength: Int,
+        automaticGeneration: AutomaticGeneration?
+    ) async -> AccessibilityTargetState {
+        for attempt in 0..<Self.accessibilityConvergenceAttempts {
+            let state = inspectAccessibilityTarget(
+                in: targetApp,
+                expectedKeyword: expectedKeyword,
+                keywordLength: keywordLength)
+            guard case .pending = state else { return state }
+            guard attempt < Self.accessibilityConvergenceAttempts - 1,
+                automaticGeneration != nil,
+                deliveryIsAllowed(
+                    automaticGeneration: automaticGeneration,
+                    targetApp: targetApp,
+                    promptForInteractiveAccessibility: false),
+                await wait(for: Self.accessibilityConvergenceInterval)
+            else { return .unavailable }
         }
-        return false
+        return .unavailable
     }
 
-    /// Long enough for a renderer round-trip, short enough that the event tiers still feel prompt.
-    private static let accessibilityVerifyAttempts = 12
-    private static let accessibilityVerifyInterval = Duration.milliseconds(25)
+    private func inspectAccessibilityTarget(
+        in targetApp: NSRunningApplication,
+        expectedKeyword: String?,
+        keywordLength: Int
+    ) -> AccessibilityTargetState {
+        guard let element = AccessibilityText.focusedElement(in: targetApp),
+            !usesTextMarkerSelection(element),
+            isAttributeSettable(kAXSelectedTextRangeAttribute, in: element),
+            isAttributeSettable(kAXSelectedTextAttribute, in: element),
+            let value = stringValue(in: element),
+            let originalRange = selectedRange(in: element)
+        else { return .unavailable }
+
+        guard keywordLength > 0 else {
+            // Offsets its own value cannot address are a broken tier, not proof the document moved.
+            guard Range(originalRange, in: value) != nil else { return .unavailable }
+            return .ready(
+                AccessibilityTarget(
+                    element: element, value: value, originalRange: originalRange,
+                    replacementRange: originalRange))
+        }
+        guard let expectedKeyword, expectedKeyword.count == keywordLength else { return .rejected }
+        switch AccessibilityReplacementPolicy.keywordState(
+            value: value, selectedRange: originalRange, keyword: expectedKeyword)
+        {
+        case .matched(let replacementRange):
+            return .ready(
+                AccessibilityTarget(
+                    element: element, value: value, originalRange: originalRange,
+                    replacementRange: replacementRange))
+        case .pending: return .pending
+        case .rejected: return .rejected
+        }
+    }
+
+    /// Web content and Monaco expose selection only as markers; their `AXValue` trails or is empty.
+    private func usesTextMarkerSelection(_ element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXSelectedTextMarkerRangeAttribute as CFString,
+                &value) == .success,
+            let value
+        else { return false }
+        return CFGetTypeID(value) == AXTextMarkerRangeGetTypeID()
+    }
+
+    /// A renderer converges in single-digit milliseconds; past this it was never going to.
+    private static let accessibilityConvergenceAttempts = 8
+    private static let accessibilityConvergenceInterval = Duration.milliseconds(5)
 
     private func waitForPasteConfirmation(
         previousState: AccessibilityTextState?,
@@ -612,6 +725,7 @@ final class TextInjector {
     ) -> AccessibilityTextState? {
         guard let targetApp,
             let element = AccessibilityText.focusedElement(in: targetApp),
+            !usesTextMarkerSelection(element),
             let value = stringValue(in: element),
             let selectedRange = selectedRange(in: element)
         else { return nil }

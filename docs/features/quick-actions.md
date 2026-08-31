@@ -168,9 +168,11 @@ selected"; otherwise the app told us nothing either way and says so.
 cancel, because a shortcut is an explicit gesture rather than an expansion the app decided to
 attempt. Its serial delivery queue is what stops two features fighting over the pasteboard lease.
 
-The Accessibility tier replaces the live selection atomically. The event tiers behind it type or
-paste over it, which every app treats as replacing a selection — but that is the target app's
-behaviour rather than something Tinycast asserts, so it is the part worth checking by hand.
+The Accessibility tier replaces the live selection atomically, under the five-rule delivery contract
+in [snippets.md](snippets.md#text-delivery-and-pasteboard-safety) — Quick Actions simply enter it with
+no keyword, so rule 2 never applies. The event tiers behind it type or paste over the selection, which
+every app treats as replacing it — but that is the target app's behaviour rather than something
+Tinycast asserts, so it is the part worth checking by hand.
 
 **A replacement that never lands says so, and keeps the reply.** Every tier can decline, and a shortcut
 that quietly did nothing is indistinguishable from a shortcut that is not bound. `DeliveryCompletion`

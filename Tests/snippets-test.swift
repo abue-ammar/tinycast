@@ -649,6 +649,65 @@ struct SnippetsTests {
             !AccessibilityReplacement.rejected.fallsBackToEvents)
 
         check(
+            "an AX keyword one character behind the event stream remains pending",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "!tcaxprob",
+                selectedRange: NSRange(location: 9, length: 0),
+                keyword: "!tcaxprobe") == .pending)
+        check(
+            "a converged AX keyword resolves to its exact replacement range",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "prefix !tcaxprobe",
+                selectedRange: NSRange(location: 17, length: 0),
+                keyword: "!tcaxprobe") == .matched(NSRange(location: 7, length: 10)))
+        check(
+            "an AX state with enough text but the wrong suffix is a genuine rejection",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "prefix !tcaxwrong",
+                selectedRange: NSRange(location: 17, length: 0),
+                keyword: "!tcaxprobe") == .rejected)
+        check(
+            "an empty editor AX snapshot remains pending instead of becoming a false mismatch",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "",
+                selectedRange: NSRange(location: 0, length: 0),
+                keyword: "!tcaxprobe") == .pending)
+        check(
+            "a non-empty selection is a mismatch rather than a lagging caret",
+            AccessibilityReplacementPolicy.keywordState(
+                value: "prefix !tcaxprobe",
+                selectedRange: NSRange(location: 7, length: 10),
+                keyword: "!tcaxprobe") == .rejected)
+        check(
+            "AX replacement confirmation requires the observable text to actually change",
+            AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: "!tcprobe",
+                replacementRange: NSRange(location: 0, length: 8),
+                insertedText: "PROBE_OK",
+                observedValue: "PROBE_OK"))
+        check(
+            "an AX setter success with unchanged text is not accepted as delivery",
+            !AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: "!tcprobe",
+                replacementRange: NSRange(location: 0, length: 8),
+                insertedText: "PROBE_OK",
+                observedValue: "!tcprobe"))
+        check(
+            "an AX write that lands somewhere unexpected is not accepted as delivery",
+            !AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: "keep !tcprobe",
+                replacementRange: NSRange(location: 5, length: 8),
+                insertedText: "PROBE_OK",
+                observedValue: "PROBE_OK !tcprobe"))
+        check(
+            "an unreadable value after the write is not accepted as delivery",
+            !AccessibilityReplacementPolicy.confirmsReplacement(
+                originalValue: "!tcprobe",
+                replacementRange: NSRange(location: 0, length: 8),
+                insertedText: "PROBE_OK",
+                observedValue: nil))
+
+        check(
             "a Unicode keystroke never carries more than Blink's four-unit cap",
             UnicodeTypingChunk.split(String(repeating: "a", count: 30))
                 .allSatisfy { $0.count <= UnicodeTypingChunk.maxUTF16Units })
@@ -1573,8 +1632,9 @@ struct SnippetsTests {
             now: { Date(timeIntervalSince1970: 1_000) },
             syntheticEventTag: 123,
             logsTapFailures: false)
+        var activityCount = 0
 
-        listener.start { _, _, _, _ in }
+        listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in })
         check(
             "real listener waits without permissions and does not install",
             listener.status == .needsAccessibility && tap.installCount == 0)
@@ -1593,7 +1653,25 @@ struct SnippetsTests {
                 && tap.installCount == 2
                 && tap.state == .active)
 
-        listener.start { _, _, _, _ in }
+        listener.processEvent(
+            typeRaw: CGEventType.keyDown.rawValue,
+            keyCode: 0,
+            flagsRaw: 0,
+            text: "x",
+            eventUserData: 0,
+            secureEventInputEnabled: false)
+        listener.processEvent(
+            typeRaw: CGEventType.keyDown.rawValue,
+            keyCode: 0,
+            flagsRaw: 0,
+            text: "x",
+            eventUserData: 123,
+            secureEventInputEnabled: false)
+        check(
+            "real user input invalidates pending automatic delivery while Tinycast events do not",
+            activityCount == 1)
+
+        listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in })
         check(
             "real listener repeated start does not install a second tap",
             listener.status == .active && tap.installCount == 2)
@@ -1632,7 +1710,7 @@ struct SnippetsTests {
         check(
             "real listener stop is authoritative",
             listener.status == .off && tap.state == .absent)
-        listener.start { _, _, _, _ in }
+        listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in })
         listener.stop()
         check(
             "real listener rapid on and off leaves no tap",
