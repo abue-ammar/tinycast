@@ -515,7 +515,6 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             throw ExtensionHostError.unknown("oauth.\(method)")
         }
     }
-}
 
     // MARK: - AI
 
@@ -530,11 +529,11 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             return ""
         }
 
-        guard let context, let aiSettings = context.aiSettings else {
+        guard let ctx = self.context, let aiSettings = ctx.aiSettings else {
             throw ExtensionHostError.unsupported("AI is not configured in Tinycast Settings.")
         }
 
-        let subscription = context.chatGPTSubscription ?? ChatGPTSubscriptionManager()
+        let subscription = ctx.chatGPTSubscription ?? ChatGPTSubscriptionManager()
         let provider = try AIProviderFactory.make(settings: aiSettings, subscription: subscription)
 
         let registry = AIToolRegistry.shared
@@ -561,9 +560,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
                     assistantText += delta
                 case .toolCall(let call):
                     toolCalls.append(call)
-                case .error(let err):
-                    throw AIProviderError.responseFailed(err)
-                case .complete:
+                default:
                     break
                 }
             }
@@ -582,3 +579,5 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
         throw AIProviderError.responseFailed("AI tool execution exceeded maximum turns.")
     }
+
+}
