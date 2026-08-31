@@ -76,6 +76,7 @@ struct ExtensionLaunchContext: Sendable {
     var fallbackText: String?
     /// Injected, never read: a running command keeps what it booted with.
     var isDarkAppearance: Bool
+    var aiAvailable: Bool = true
 
     func jsonString() -> String {
         var environment: [String: Any] = [
@@ -90,7 +91,8 @@ struct ExtensionLaunchContext: Sendable {
             "textSize": "medium",
             "appearance": isDarkAppearance ? "dark" : "light",
             "launchType": "userInitiated",
-            "canAccess": false
+            "canAccess": false,
+            "aiAvailable": aiAvailable
         ]
         environment["ownerOrAuthorName"] = extensionTitle
 

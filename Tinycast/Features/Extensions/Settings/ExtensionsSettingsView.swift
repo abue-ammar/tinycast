@@ -407,6 +407,16 @@ private struct ExtensionDisclosure: View {
                     if index > 0 { rule }
                     CommandRows(installed: installed, command: command)
                 }
+
+                if !installed.manifest.tools.isEmpty {
+                    rule
+                    heading(installed.manifest.tools.count == 1 ? "AI Command" : "AI Commands")
+                    ForEach(Array(installed.manifest.tools.enumerated()), id: \.element.id) {
+                        index, tool in
+                        if index > 0 { rule }
+                        AIToolRow(installed: installed, tool: tool)
+                    }
+                }
             }
             HStack {
                 Spacer()
@@ -837,5 +847,36 @@ extension String {
     /// Sorts on the first letter: "(Basic) Bookmarks" otherwise leads on its bracket.
     fileprivate var sortKey: String {
         String(drop { !$0.isLetter && !$0.isNumber })
+    }
+}
+
+/// One AI command/tool: its description and its enablement toggle.
+private struct AIToolRow: View {
+    let installed: InstalledExtension
+    let tool: ExtensionAITool
+    @Environment(AppCore.self) private var core
+
+    private var isEnabled: Bool {
+        core.settings.isAIToolEnabled(
+            extensionName: installed.manifest.name, toolName: tool.name)
+    }
+
+    var body: some View {
+        SettingsCardRow(
+            title: tool.title,
+            detail: tool.description.isEmpty ? nil : tool.description
+        ) {
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { isEnabled },
+                    set: {
+                        core.settings.setAIToolEnabled(
+                            extensionName: installed.manifest.name, toolName: tool.name,
+                            enabled: $0)
+                    })
+            )
+            .labelsHidden()
+        }
     }
 }

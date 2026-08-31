@@ -29,6 +29,8 @@ protocol ExtensionHostContext: AnyObject {
     func getOAuthTokens(providerId: String) -> String?
     func setOAuthTokens(providerId: String, tokens: String)
     func removeOAuthTokens(providerId: String)
+    var aiSettings: AISettingsStore? { get }
+    var chatGPTSubscription: ChatGPTSubscriptionManager? { get }
 }
 
 /// A toast as the palette shows it.
@@ -141,6 +143,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         case "fetch": return try await fetcher.request(arguments.first)
         case "proc": return try await ExtensionAsyncProcess.run(arguments.first)
         case "oauth": return try await oauth(method: method, arguments: arguments)
+        case "ai": return try await ai(method: method, arguments: arguments)
         default: throw ExtensionHostError.unknown("\(api).\(method)")
         }
     }
@@ -513,3 +516,69 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         }
     }
 }
+
+    // MARK: - AI
+
+    private func ai(method: String, arguments: [RenderValue]) async throws -> Any? {
+        guard method == "ask" else {
+            throw ExtensionHostError.unknown("ai.\(method)")
+        }
+        guard let payload = arguments.first?.objectValue,
+            let prompt = payload["prompt"]?.stringValue,
+            !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            return ""
+        }
+
+        guard let context, let aiSettings = context.aiSettings else {
+            throw ExtensionHostError.unsupported("AI is not configured in Tinycast Settings.")
+        }
+
+        let subscription = context.chatGPTSubscription ?? ChatGPTSubscriptionManager()
+        let provider = try AIProviderFactory.make(settings: aiSettings, subscription: subscription)
+
+        let registry = AIToolRegistry.shared
+        let availableTools = registry.availableTools
+
+        var messages = [AIMessage(role: .user, text: prompt)]
+        let maxTurns = 5
+        var turn = 0
+
+        while turn < maxTurns {
+            turn += 1
+            let request = AIRequest(
+                instructions: "You are a helpful AI assistant executing a task for a desktop extension. Use tools when needed to provide accurate, up-to-date answers.",
+                messages: messages,
+                tools: availableTools
+            )
+
+            var assistantText = ""
+            var toolCalls: [AIToolCall] = []
+
+            for try await event in provider.stream(request) {
+                switch event {
+                case .text(let delta):
+                    assistantText += delta
+                case .toolCall(let call):
+                    toolCalls.append(call)
+                case .error(let err):
+                    throw AIProviderError.responseFailed(err)
+                case .complete:
+                    break
+                }
+            }
+
+            if toolCalls.isEmpty {
+                return assistantText.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+
+            messages.append(AIMessage(role: .assistant, text: assistantText, toolCalls: toolCalls))
+
+            for call in toolCalls {
+                let result = await registry.execute(call: call)
+                messages.append(AIMessage(role: .tool, text: result.output, toolCallID: call.id))
+            }
+        }
+
+        throw AIProviderError.responseFailed("AI tool execution exceeded maximum turns.")
+    }

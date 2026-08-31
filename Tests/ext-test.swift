@@ -218,6 +218,9 @@ struct ExtensionTests {
                     "name": "args", "title": "Args", "mode": "view",
                     "arguments": [["name": "q", "required": true, "placeholder": "Query"]]
                 ]
+            ],
+            "tools": [
+                ["name": "get-status", "title": "Get Status", "description": "Fetches status"]
             ]
         ]
         guard let manifest = ExtensionManifest(json: json) else {
@@ -242,6 +245,10 @@ struct ExtensionTests {
         check("keywords", manifest.commands[0].keywords == ["find"])
         check("arguments", manifest.commands[3].arguments.first?.name == "q")
         check("argument required", manifest.commands[3].arguments.first?.required == true)
+        check("ai tools count", manifest.tools.count == 1)
+        check("ai tool name", manifest.tools.first?.name == "get-status")
+        check("ai tool title", manifest.tools.first?.title == "Get Status")
+        check("ai tool description", manifest.tools.first?.description == "Fetches status")
         // A blank optional argument arrives as "": `Number(args.x)` is NaN for undefined.
         check(
             "unfilled arguments are completed to empty strings",

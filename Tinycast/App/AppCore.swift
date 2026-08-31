@@ -191,7 +191,7 @@ final class AppCore {
             clipboardManager.start()
 
             appIndex.start(settings: settings)
-            extensions.start(appIndex: appIndex, coordinator: extensionCoordinator)
+            extensions.start(appIndex: appIndex, coordinator: extensionCoordinator, aiSettings: aiSettings, chatGPTSubscription: chatGPTSubscription)
             extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()

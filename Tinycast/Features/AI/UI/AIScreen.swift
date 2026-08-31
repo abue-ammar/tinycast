@@ -6,6 +6,7 @@ struct AIScreen: PaletteScreen {
     let chat: AIChatState
     let settings: AISettingsStore
     let coordinator: AIChatCoordinator
+    let core: AppCore
 
     struct Row: Identifiable {
         let id = "ai-chat"
@@ -77,9 +78,41 @@ struct AIScreen: PaletteScreen {
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         AnyView(
-            AIChatView(
-                chat: chat, settings: settings, availability: coordinator.availability,
-                onConfigure: coordinator.showSettings, onAppear: coordinator.warmUpModelList))
+            ZStack(alignment: .bottomLeading) {
+                AIChatView(
+                    chat: chat, settings: settings, availability: coordinator.availability,
+                    onConfigure: coordinator.showSettings, onAppear: coordinator.warmUpModelList)
+
+                if let mentionQuery = Self.activeMention(in: vm.query) {
+                    AIMentionTypeaheadView(
+                        query: mentionQuery,
+                        installed: core.extensions.installed,
+                        onSelect: { token in
+                            Self.applyMention(token, to: vm)
+                        }
+                    )
+                    .padding(.leading, Theme.Spacing.lg)
+                    .padding(.bottom, Theme.Spacing.md)
+                }
+            }
+        )
+    }
+
+    static func activeMention(in text: String) -> String? {
+        guard let atIndex = text.lastIndex(of: "@") else { return nil }
+        if atIndex > text.startIndex {
+            let prevIndex = text.index(before: atIndex)
+            if !text[prevIndex].isWhitespace { return nil }
+        }
+        let after = text[text.index(after: atIndex)...]
+        if after.contains(where: \.isWhitespace) { return nil }
+        return String(after)
+    }
+
+    static func applyMention(_ token: String, to vm: PaletteState) {
+        guard let atIndex = vm.query.lastIndex(of: "@") else { return }
+        let prefix = String(vm.query[..<atIndex])
+        vm.query = prefix + "@" + token + " "
     }
 }
 
@@ -195,5 +228,111 @@ struct AIModelButton: View {
             action: action
         )
         .fixedSize(horizontal: true, vertical: false)
+    }
+}
+
+
+// MARK: - @ Mention Typeahead
+
+struct AIMentionItem: Identifiable, Hashable {
+    let id: String
+    let token: String
+    let title: String
+    let subtitle: String
+    let iconName: String?
+    let iconPath: String?
+}
+
+private struct AIMentionTypeaheadView: View {
+    let query: String
+    let installed: [InstalledExtension]
+    let onSelect: (String) -> Void
+
+    private var items: [AIMentionItem] {
+        var result: [AIMentionItem] = []
+
+        // 1. Built-in Tools
+        let builtins = [
+            AIMentionItem(id: "web", token: "web", title: "Web Search & Fetch", subtitle: "Search the web and read pages", iconName: "globe", iconPath: nil),
+            AIMentionItem(id: "calc", token: "calc", title: "Calculator", subtitle: "Evaluate math and unit conversions", iconName: "function", iconPath: nil),
+            AIMentionItem(id: "weather", token: "weather", title: "Weather & Location", subtitle: "Get local forecast and coordinates", iconName: "cloud.sun", iconPath: nil)
+        ]
+
+        // 2. Installed Extensions
+        let extensions = installed.map { ext in
+            let toolCount = ext.manifest.tools.count
+            let sub = toolCount > 0 ? "\(toolCount) AI command\(toolCount == 1 ? "" : "s")" : ext.manifest.description
+            return AIMentionItem(
+                id: ext.manifest.name,
+                token: ext.manifest.name,
+                title: ext.title,
+                subtitle: sub,
+                iconName: nil,
+                iconPath: ext.iconPath
+            )
+        }
+
+        let combined = builtins + extensions
+        if query.isEmpty {
+            return combined
+        }
+        return combined.filter {
+            $0.token.localizedCaseInsensitiveContains(query) ||
+            $0.title.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    var body: some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(items.prefix(5)) { item in
+                    Button(action: { onSelect(item.token) }) {
+                        HStack(spacing: Theme.Spacing.md) {
+                            if let iconPath = item.iconPath {
+                                ExtensionIconView(
+                                    resolved: ExtensionImage.Resolved(source: .file(iconPath)),
+                                    size: 20)
+                            } else if let iconName = item.iconName {
+                                Image(systemName: iconName)
+                                    .font(.system(size: 14))
+                                    .frame(width: 20, height: 20)
+                                    .foregroundStyle(Theme.Colors.accent)
+                            }
+
+                            VStack(alignment: .leading, spacing: 1) {
+                                HStack(spacing: Theme.Spacing.xs) {
+                                    Text(item.title)
+                                        .font(.system(size: 13, weight: .medium))
+                                    Text("@" + item.token)
+                                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                }
+                                if !item.subtitle.isEmpty {
+                                    Text(item.subtitle)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, Theme.Spacing.md)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(width: 320)
+            .padding(.vertical, 4)
+            .background(VisualEffectView())
+            .background(Theme.Colors.panelScrim)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        }
     }
 }

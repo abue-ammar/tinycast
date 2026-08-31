@@ -255,6 +255,26 @@ final class AppSettings {
         }
     }
 
+    /// Extension AI tools explicitly disabled by the user ("<extensionName>:<toolName>").
+    var disabledAIToolKeys: Set<String> {
+        didSet {
+            defaults.set(Array(disabledAIToolKeys), forKey: Key.disabledAITools.rawValue)
+        }
+    }
+
+    func isAIToolEnabled(extensionName: String, toolName: String) -> Bool {
+        !disabledAIToolKeys.contains("\(extensionName):\(toolName)")
+    }
+
+    func setAIToolEnabled(extensionName: String, toolName: String, enabled: Bool) {
+        let key = "\(extensionName):\(toolName)"
+        if enabled {
+            disabledAIToolKeys.remove(key)
+        } else {
+            disabledAIToolKeys.insert(key)
+        }
+    }
+
     /// Doubles as calendar-access consent, so only `CalendarCoordinator` may write it.
     var calendarEnabled: Bool {
         didSet { defaults.set(calendarEnabled, forKey: Key.calendarEnabled.rawValue) }
@@ -447,6 +467,8 @@ final class AppSettings {
             ?? ExtensionRegistry.defaults
         extensionCustomSearchPaths =
             defaults.stringArray(forKey: Key.extensionCustomSearchPaths.rawValue) ?? []
+        disabledAIToolKeys =
+            Set(defaults.stringArray(forKey: Key.disabledAITools.rawValue) ?? [])
         // Opt-in, like extensions: until it is asked for, EventKit is never loaded.
         calendarEnabled = defaults.bool(forKey: Key.calendarEnabled.rawValue)
         calendarShowInLauncher =

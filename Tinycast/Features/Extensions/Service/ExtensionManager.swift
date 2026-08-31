@@ -39,6 +39,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     @ObservationIgnored private let oauthSession = ExtensionOAuthSession()
     @ObservationIgnored private weak var appIndex: AppIndex?
     @ObservationIgnored private weak var coordinator: ExtensionCoordinator?
+    @ObservationIgnored weak var aiSettings: AISettingsStore?
+    @ObservationIgnored weak var chatGPTSubscription: ChatGPTSubscriptionManager?
 
     /// The entry ids an uninstall invalidated, so another feature can drop what it keyed to them.
     @ObservationIgnored var onDidUninstall: (([String]) -> Void)?
@@ -55,9 +57,16 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     /// Wires collaborators only; the coordinator decides whether anything scans.
-    func start(appIndex: AppIndex, coordinator: ExtensionCoordinator) {
+    func start(
+        appIndex: AppIndex,
+        coordinator: ExtensionCoordinator,
+        aiSettings: AISettingsStore? = nil,
+        chatGPTSubscription: ChatGPTSubscriptionManager? = nil
+    ) {
         self.appIndex = appIndex
         self.coordinator = coordinator
+        self.aiSettings = aiSettings
+        self.chatGPTSubscription = chatGPTSubscription
         runtime.setDelegate(self)
         // Not gated on `isEnabled`: a stranded workspace is ours whether or not the feature is on.
         let temp = FileManager.default.temporaryDirectory

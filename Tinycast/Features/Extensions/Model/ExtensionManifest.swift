@@ -138,6 +138,24 @@ struct ExtensionCommandArgument: Sendable, Hashable {
     }
 }
 
+/// An AI tool defined in a manifest's `tools` array.
+struct ExtensionAITool: Sendable, Hashable, Identifiable {
+    let name: String
+    let title: String
+    let description: String
+
+    var id: String { name }
+
+    init?(json: Any) {
+        guard let dict = json as? [String: Any],
+            let name = dict["name"] as? String
+        else { return nil }
+        self.name = name
+        self.title = dict["title"] as? String ?? name
+        self.description = dict["description"] as? String ?? ""
+    }
+}
+
 struct ExtensionCommand: Sendable, Hashable, Identifiable {
     let name: String
     let title: String
@@ -189,6 +207,7 @@ struct ExtensionManifest: Sendable, Hashable {
     let categories: [String]
     let platforms: [String]?
     let commands: [ExtensionCommand]
+    let tools: [ExtensionAITool]
     let preferences: [ExtensionPreferenceSchema]
 
     /// `platforms` is absent on older manifests, which predate Windows support and are macOS-only.
@@ -234,6 +253,7 @@ struct ExtensionManifest: Sendable, Hashable {
         categories = json["categories"] as? [String] ?? []
         platforms = json["platforms"] as? [String]
         self.commands = commands
+        tools = (json["tools"] as? [Any] ?? []).compactMap(ExtensionAITool.init(json:))
         preferences = (json["preferences"] as? [Any] ?? []).compactMap(ExtensionPreferenceSchema.init(json:))
     }
 }
