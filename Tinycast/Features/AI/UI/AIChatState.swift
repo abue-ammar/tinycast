@@ -39,9 +39,6 @@ final class AIChatState {
         notice = nil
         session.append(ChatMessage(role: .user, text: text, images: pendingImages.map(\.image)))
         clearStaging()
-        let request = AIRequest(
-            instructions: instructions,
-            messages: session.requestMessages(textBudget: contextBudget), webSearch: webSearch)
         session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
         isStreaming = true
         isThinking = false
@@ -71,7 +68,7 @@ final class AIChatState {
                     var receivedToolCalls: [AIToolCall] = []
 
                     for try await event in provider.stream(currentRequest) {
-                        guard let self, !Task.isCancelled, self.replyGeneration == generation else {
+                        guard !Task.isCancelled, self.replyGeneration == generation else {
                             return
                         }
                         if case .toolCall(let call) = event {
@@ -81,7 +78,7 @@ final class AIChatState {
                         }
                     }
 
-                    guard let self, !Task.isCancelled, self.replyGeneration == generation else { return }
+                    guard !Task.isCancelled, self.replyGeneration == generation else { return }
 
                     if !receivedToolCalls.isEmpty {
                         self.flushPendingText()
