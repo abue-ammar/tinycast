@@ -78,6 +78,6 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Tinycast uses your location to provide accurate local weather and location-aware AI responses.</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2026. All rights reserved.</string>
+	<string>Tinycast</string>
 </dict>
 </plist>

@@ -82,9 +82,9 @@ function rejectingNamespace(name, members) {
 }
 
 const AI = {
-  ask: system.askAI,
-  Model: system.AIModel,
-  Creativity: system.AICreativity,
+  ...rejectingNamespace("AI", ["ask"]),
+  Model: Object.freeze({}),
+  Creativity: Object.freeze({}),
 };
 
 const OAuth = {

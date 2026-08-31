@@ -138,79 +138,11 @@ export function getPreferenceValues() {
   return { ...boot.preferences };
 }
 
-export const AICreativity = Object.freeze({
-  None: "none",
-  Low: "low",
-  Medium: "medium",
-  High: "high",
-  Maximum: "maximum",
-});
-
-export const AIModel = Object.freeze({
-  "OpenAI_GPT-4o": "openai/gpt-4o",
-  "OpenAI_GPT-4o-mini": "openai/gpt-4o-mini",
-  "Anthropic_Claude_3_5_Sonnet": "anthropic/claude-3-5-sonnet",
-  "Anthropic_Claude_3_5_Haiku": "anthropic/claude-3-5-haiku",
-  "Anthropic_Claude_3_Opus": "anthropic/claude-3-opus",
-  "Google_Gemini_1_5_Pro": "google/gemini-1.5-pro",
-  "Google_Gemini_1_5_Flash": "google/gemini-1.5-flash",
-  "Google_Gemini_2_0_Flash": "google/gemini-2.0-flash",
-  "Perplexity_Sonar": "perplexity/sonar",
-});
-
-export function canAccess(target) {
-  if (target === "AI" || target?.ask !== undefined || target === AIModel || target === AICreativity) {
-    return Boolean(boot.environment?.aiAvailable);
-  }
-  return false;
-}
-
-export function askAI(prompt, options = {}) {
-  const listeners = { data: [], error: [], end: [] };
-
-  const promise = (async () => {
-    if (options.signal?.aborted) {
-      const err = new Error("Aborted");
-      err.name = "AbortError";
-      throw err;
-    }
-    const result = await hostCall("ai", "ask", [{
-      prompt: String(prompt ?? ""),
-      creativity: options.creativity,
-      model: options.model,
-    }]);
-
-    const text = String(result ?? "");
-    for (const fn of listeners.data) {
-      try { fn(text); } catch {}
-    }
-    for (const fn of listeners.end) {
-      try { fn(); } catch {}
-    }
-    return text;
-  })();
-
-  promise.on = function (event, listener) {
-    if (listeners[event]) listeners[event].push(listener);
-    return promise;
-  };
-  promise.off = function (event, listener) {
-    if (listeners[event]) {
-      listeners[event] = listeners[event].filter(l => l !== listener);
-    }
-    return promise;
-  };
-  promise.addListener = promise.on;
-  promise.removeListener = promise.off;
-
-  return promise;
-}
-
 export const environment = new Proxy(
   {},
   {
     get(_target, key) {
-      if (key === "canAccess") return canAccess;
+      if (key === "canAccess") return () => false;
       return boot.environment?.[key];
     },
     has: (_target, key) => key in (boot.environment ?? {}),
