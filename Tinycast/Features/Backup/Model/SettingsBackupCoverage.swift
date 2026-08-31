@@ -82,6 +82,14 @@ enum SettingsBackupCoverage {
             "The default model names an external AI destination; importing must not choose one.",
         AppSettingsKey.aiWebSearch.rawValue:
             "Whether prompts may reach a search engine is a choice each Mac makes for itself.",
+        AppSettingsKey.aiCalculatorTool.rawValue:
+            "Whether AI may evaluate calculator expressions is a choice each Mac makes for itself.",
+        AppSettingsKey.aiWeatherTool.rawValue:
+            "Whether AI may query weather forecasts is a choice each Mac makes for itself.",
+        AppSettingsKey.aiLocationTool.rawValue:
+            "Whether AI may access location context is a choice each Mac makes for itself.",
+        AppSettingsKey.aiExtensionTools.rawValue:
+            "Whether AI may execute extension commands is a choice each Mac makes for itself.",
         AppSettingsKey.aiSystemPrompt.rawValue:
             "Standing instructions to a model are the one AI setting that changes every answer; an "
             + "import must not carry them onto another Mac unseen.",
@@ -109,6 +117,8 @@ enum SettingsBackupCoverage {
         AppSettingsKey.quickActionInstructions.rawValue:
             "Custom model instructions change transformed results and must not move unseen.",
         AppSettingsKey.quickActionLanguage.rawValue:
-            "Follows the language the person at this Mac reads, not the one who wrote the backup."
+            "Follows the language the person at this Mac reads, not the one who wrote the backup.",
+        AppSettingsKey.disabledAITools.rawValue:
+            "Per-extension AI tool toggles depend on which extensions are installed on this Mac."
     ]
 }

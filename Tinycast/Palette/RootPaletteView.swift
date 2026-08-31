@@ -115,7 +115,11 @@ struct RootPaletteView: View {
 
     /// Takes a resolved screen — reaching `rows` costs a list build, so callers resolve it once.
     private func selection(in screen: any PaletteScreen) -> Int {
-        selection(count: screen.rows.count)
+        if vm.mode == .ai, let mentionQuery = AIScreen.activeMention(in: vm.query) {
+            let count = AIScreen.mentionItems(for: mentionQuery, installed: core.extensions.installed).count
+            return count == 0 ? 0 : min(max(vm.selection, 0), min(count - 1, 5))
+        }
+        return selection(count: screen.rows.count)
     }
 
     private var menuOpen: Bool { openMenu != nil }
@@ -192,7 +196,7 @@ struct RootPaletteView: View {
         // Resolve the screen once per render, so the flat index can't drift from the rows.
         let screen = screen
         let count = screen.rows.count
-        let sel = selection(count: count)
+        let sel = selection(in: screen)
         // The argument forms have no rows to count, but ↵ still does something.
         let showActionGroup =
             (count > 0 || vm.mode.isArgumentForm) && screen.hasPrimaryAction(at: sel)
@@ -358,6 +362,10 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.tab) {
+            if vm.mode == .ai, let _ = AIScreen.activeMention(in: vm.query) {
+                AIScreen.completeSelectedMention(at: sel, in: vm, core: core)
+                return .handled
+            }
             if !menuOpen { advanceTabFocus() }
             return .handled
         }
@@ -500,6 +508,12 @@ struct RootPaletteView: View {
                     .frame(width: Theme.Size.headerIconSlot)
             }
             headerGutter(width: Theme.Spacing.md)
+            if vm.mode == .ai, let staged = core.aiChat.stagedMention {
+                AIMentionChip(item: staged) {
+                    core.aiChat.clearStagedMention()
+                }
+                headerGutter(width: Theme.Spacing.xs)
+            }
             // One structural position: a field inside a branch loses first responder when it flips.
             searchField.frame(width: headerAccessory.map(searchFieldWidth))
             if let accessory = headerAccessory {

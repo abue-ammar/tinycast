@@ -242,9 +242,9 @@ public struct AIToolCall: Equatable, Sendable {
 extension AIToolDefinition {
     public static let webSearch = AIToolDefinition(
         name: "web_search",
-        description: "Search the web for real-time information, news, current events, and facts.",
+        description: "Search the web for real-time information, latest news, current events, and facts. Always use the current date or year when searching for current news or recent events.",
         parameters: [
-            AIToolParameter(name: "query", type: "string", description: "The search query to execute.", isRequired: true),
+            AIToolParameter(name: "query", type: "string", description: "The search query to execute (include current date/year when looking for today's or recent news).", isRequired: true),
             AIToolParameter(name: "category", type: "string", description: "Optional category filter (e.g. general, news, weather).", isRequired: false)
         ]
     )
@@ -260,9 +260,9 @@ extension AIToolDefinition {
 
     public static let calculate = AIToolDefinition(
         name: "calculate",
-        description: "Evaluate a mathematical expression, unit conversion, currency exchange, or date calculation accurately.",
+        description: "Fast on-device calculator supporting full native features: arithmetic and scientific math (trig, log, powers, sqrt, fractions), unit and measurement conversions (speed, weight, temperature, data storage, length), live currency and crypto exchange rates (e.g. USD to INR, EUR to JPY, BTC to USD), timezone conversions (e.g. 5pm London in Tokyo, EST to IST), date/time intervals and calendar calculations (e.g. days until Christmas, now + 3 weeks), percentage/tip/ratio calculations (e.g. 15% tip on 42, ratio of 1920 to 1080), and base radix conversions (hex, bin, dec, oct).",
         parameters: [
-            AIToolParameter(name: "expression", type: "string", description: "The mathematical formula or conversion string (e.g. 128 * 4.5).", isRequired: true)
+            AIToolParameter(name: "expression", type: "string", description: "The mathematical expression, unit/currency conversion, timezone query, date calculation, percentage, or radix conversion to evaluate (e.g. '1 USD in INR', '100 km/h to mph', 'sqrt(64) + 36', '5pm London in Tokyo').", isRequired: true)
         ]
     )
 

@@ -94,6 +94,34 @@ setFieldCommandHandler((command, fieldId) => {
 });
 
 globalThis.__tinycast = {
+  /// Execute an AI tool function and report the result via toolFinished.
+  executeTool(sessionId, code, filename, dirname, inputJson, contextJson) {
+    const context = JSON.parse(contextJson || "{}");
+    configureSystem(context);
+    const input = JSON.parse(inputJson || "{}");
+    try {
+      const exports = evaluateCommonJS(code, filename, dirname);
+      const entry = exports?.default ?? exports;
+      if (typeof entry !== "function") {
+        throw new Error("Tool does not export a function.");
+      }
+      Promise.resolve(entry(input)).then(
+        (result) => {
+          const json = typeof result === "string" ? result : JSON.stringify(result !== undefined ? result : null);
+          globalThis.__tinycastHost.toolFinished(sessionId, true, json);
+        },
+        (error) => {
+          const message = error instanceof Error ? (error.message || String(error)) : String(error);
+          globalThis.__tinycastHost.toolFinished(sessionId, false, message);
+        },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? (error.message || String(error)) : String(error);
+      globalThis.__tinycastHost.toolFinished(sessionId, false, message);
+    }
+    return "ok";
+  },
+
   /// Called once, before any command runs.
   boot(configJson) {
     const config = JSON.parse(configJson);

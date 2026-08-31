@@ -58,9 +58,23 @@ struct AIScreen: PaletteScreen {
     func activate(at selection: Int) {
         if chat.isStreaming {
             coordinator.stopResponse()
+        } else if let _ = Self.activeMention(in: vm.query) {
+            Self.completeSelectedMention(at: selection, in: vm, core: core)
         } else if coordinator.send(vm.query) {
             vm.query = ""
         }
+    }
+
+    func move(_ delta: Int, axis: Axis, from selection: Int) -> Int? {
+        guard axis == .vertical, let mentionQuery = Self.activeMention(in: vm.query) else {
+            return nil
+        }
+        let items = Self.mentionItems(for: mentionQuery, installed: core.extensions.installed)
+        let activeItems = Array(items.prefix(6))
+        guard !activeItems.isEmpty else { return nil }
+        let current = min(max(selection, 0), activeItems.count - 1)
+        let next = (current + delta + activeItems.count) % activeItems.count
+        return next
     }
 
     func secondary(at selection: Int) -> Bool { false }
@@ -78,7 +92,7 @@ struct AIScreen: PaletteScreen {
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         AnyView(
-            ZStack(alignment: .bottomLeading) {
+            ZStack(alignment: .topLeading) {
                 AIChatView(
                     chat: chat, settings: settings, availability: coordinator.availability,
                     onConfigure: coordinator.showSettings, onAppear: coordinator.warmUpModelList)
@@ -86,13 +100,17 @@ struct AIScreen: PaletteScreen {
                 if let mentionQuery = Self.activeMention(in: vm.query) {
                     AIMentionTypeaheadView(
                         query: mentionQuery,
+                        selection: selection,
                         installed: core.extensions.installed,
-                        onSelect: { token in
-                            Self.applyMention(token, to: vm)
+                        onSelect: { item in
+                            Self.applyMention(item, to: vm, in: chat)
+                        },
+                        onHover: { idx in
+                            vm.selection = idx
                         }
                     )
-                    .padding(.leading, Theme.Spacing.lg)
-                    .padding(.bottom, Theme.Spacing.md)
+                    .padding(.top, Theme.Spacing.xs)
+                    .padding(.leading, Theme.Spacing.xl)
                 }
             }
         )
@@ -109,10 +127,58 @@ struct AIScreen: PaletteScreen {
         return String(after)
     }
 
-    static func applyMention(_ token: String, to vm: PaletteState) {
+    static func mentionItems(for query: String, installed: [InstalledExtension]) -> [AIMentionItem] {
+        let builtins = [
+            AIMentionItem(
+                id: "websearch", token: "websearch", title: "Web Search",
+                iconName: "globe", iconPath: nil),
+            AIMentionItem(
+                id: "calculator", token: "calculator", title: "Calculator",
+                iconName: "function", iconPath: nil),
+            AIMentionItem(
+                id: "weather", token: "weather", title: "Weather",
+                iconName: "cloud.sun.fill", iconPath: nil),
+            AIMentionItem(
+                id: "location", token: "location", title: "Location",
+                iconName: "location.fill", iconPath: nil)
+        ]
+
+        let extensions = installed.map { ext in
+            AIMentionItem(
+                id: ext.manifest.name,
+                token: ext.manifest.name,
+                title: ext.title,
+                iconName: nil,
+                iconPath: ext.iconPath
+            )
+        }
+
+        let combined = builtins + extensions
+        if query.isEmpty {
+            return combined
+        }
+        return combined.filter {
+            $0.token.localizedCaseInsensitiveContains(query) ||
+            $0.title.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    static func completeSelectedMention(at selection: Int? = nil, in vm: PaletteState, core: AppCore) {
+        guard let mentionQuery = activeMention(in: vm.query) else { return }
+        let items = mentionItems(for: mentionQuery, installed: core.extensions.installed)
+        guard !items.isEmpty else { return }
+        let maxIndex = min(items.count - 1, 5)
+        let index = max(0, min(selection ?? vm.selection, maxIndex))
+        let selectedItem = items[index]
+        applyMention(selectedItem, to: vm, in: core.aiChat)
+    }
+
+    static func applyMention(_ item: AIMentionItem, to vm: PaletteState, in chat: AIChatState) {
         guard let atIndex = vm.query.lastIndex(of: "@") else { return }
         let prefix = String(vm.query[..<atIndex])
-        vm.query = prefix + "@" + token + " "
+        vm.query = prefix
+        chat.stageMention(item)
+        vm.selection = 0
     }
 }
 
@@ -234,111 +300,161 @@ struct AIModelButton: View {
 
 // MARK: - @ Mention Typeahead
 
-struct AIMentionItem: Identifiable, Hashable {
-    let id: String
-    let token: String
-    let title: String
-    let subtitle: String
-    let iconName: String?
-    let iconPath: String?
-}
 
-private struct AIMentionTypeaheadView: View {
-    let query: String
-    let installed: [InstalledExtension]
-    let onSelect: (String) -> Void
 
-    private var items: [AIMentionItem] {
-        // 1. Built-in Tools
-        let builtins = [
-            AIMentionItem(id: "web", token: "web", title: "Web Search & Fetch", subtitle: "Search the web and read pages", iconName: "globe", iconPath: nil),
-            AIMentionItem(id: "calc", token: "calc", title: "Calculator", subtitle: "Evaluate math and unit conversions", iconName: "function", iconPath: nil),
-            AIMentionItem(id: "weather", token: "weather", title: "Weather & Location", subtitle: "Get local forecast and coordinates", iconName: "cloud.sun", iconPath: nil)
-        ]
+/// A unified square badge icon with vibrant tile background for AI tools.
+struct AIToolBadgeView: View {
+    let iconName: String
+    var size: CGFloat = 18
+    var cornerRadius: CGFloat = 4
 
-        // 2. Installed Extensions
-        let extensions = installed.map { ext in
-            let toolCount = ext.manifest.tools.count
-            let sub = toolCount > 0 ? "\(toolCount) AI command\(toolCount == 1 ? "" : "s")" : ext.manifest.description
-            return AIMentionItem(
-                id: ext.manifest.name,
-                token: ext.manifest.name,
-                title: ext.title,
-                subtitle: sub,
-                iconName: nil,
-                iconPath: ext.iconPath
-            )
-        }
-
-        let combined = builtins + extensions
-        if query.isEmpty {
-            return combined
-        }
-        return combined.filter {
-            $0.token.localizedCaseInsensitiveContains(query) ||
-            $0.title.localizedCaseInsensitiveContains(query)
+    private var tileColor: Color {
+        switch iconName {
+        case "globe":
+            return Color.blue
+        case "function", "plus.forwardslash.minus":
+            return Color.orange
+        case "cloud.sun", "cloud.sun.fill":
+            return Color.cyan
+        case "location", "location.fill":
+            return Color.indigo
+        case "doc.text":
+            return Color.gray
+        default:
+            return Color.blue
         }
     }
 
     var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(tileColor)
+            Image(systemName: iconName)
+                .font(.system(size: size * 0.55, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// A staged tool / extension chip displayed inside the search bar before the cursor.
+struct AIMentionChip: View {
+    let item: AIMentionItem
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if let iconPath = item.iconPath {
+                ExtensionIconView(
+                    resolved: ExtensionImage.Resolved(source: .file(iconPath)),
+                    size: 16)
+            } else if let iconName = item.iconName {
+                AIToolBadgeView(iconName: iconName, size: 18, cornerRadius: 4)
+            }
+
+            Text(item.title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.primary)
+                .lineLimit(1)
+        }
+        .padding(.leading, 4)
+        .padding(.trailing, 8)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Theme.Colors.controlSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(Theme.Colors.border, lineWidth: 0.5)
+        )
+    }
+}
+
+private struct AIMentionTypeaheadView: View {
+    let query: String
+    let selection: Int
+    let installed: [InstalledExtension]
+    let onSelect: (AIMentionItem) -> Void
+    let onHover: (Int) -> Void
+    @Environment(PaletteState.self) private var palette
+
+    private var items: [AIMentionItem] {
+        Array(AIScreen.mentionItems(for: query, installed: installed).prefix(6))
+    }
+
+    var body: some View {
+        let currentSel = min(max(selection, 0), max(items.count - 1, 0))
         if !items.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(items.prefix(5)) { item in
-                    Button(action: { onSelect(item.token) }) {
-                        AIMentionRowView(item: item)
+            VStack(alignment: .leading, spacing: Theme.Size.menuRowSpacing) {
+                Text("Extensions & Tools")
+                    .font(Theme.Typography.sectionHeader)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.top, Theme.Spacing.xs)
+                    .padding(.bottom, Theme.Spacing.xs / 2)
+
+                VStack(alignment: .leading, spacing: Theme.Size.menuRowSpacing) {
+                    ForEach(items.indices, id: \.self) { index in
+                        AIMentionRowView(
+                            item: items[index],
+                            isSelected: index == currentSel,
+                            onActivate: { onSelect(items[index]) }
+                        )
+                        .onContinuousHover { phase in
+                            guard palette.hoverHighlightArmed, case .active = phase else { return }
+                            onHover(index)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             }
-            .frame(width: 320)
-            .padding(.vertical, 4)
-            .background(VisualEffectView())
-            .background(Theme.Colors.panelScrim)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+            .padding(Theme.Spacing.sm)
+            .frame(width: Theme.Size.menuWidth)
+            .glassEffect(
+                .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
             )
-            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
         }
     }
 }
 
 private struct AIMentionRowView: View {
     let item: AIMentionItem
+    let isSelected: Bool
+    let onActivate: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            if let iconPath = item.iconPath {
-                ExtensionIconView(
-                    resolved: ExtensionImage.Resolved(source: .file(iconPath)),
-                    size: 20)
-            } else if let iconName = item.iconName {
-                Image(systemName: iconName)
-                    .font(.system(size: 14))
-                    .frame(width: 20, height: 20)
-                    .foregroundStyle(Color.accentColor)
-            }
+        Button(action: onActivate) {
+            HStack(spacing: Theme.Spacing.sm) {
+                if let iconPath = item.iconPath {
+                    ExtensionIconView(
+                        resolved: ExtensionImage.Resolved(source: .file(iconPath)),
+                        size: Theme.Size.menuIcon)
+                } else if let iconName = item.iconName {
+                    AIToolBadgeView(iconName: iconName, size: Theme.Size.menuIcon, cornerRadius: 4)
+                }
 
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: Theme.Spacing.xs) {
-                    Text(item.title)
-                        .font(.system(size: 13, weight: .medium))
-                    Text("@" + item.token)
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                }
-                if !item.subtitle.isEmpty {
-                    Text(item.subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                Text(item.title)
+                    .font(Theme.Typography.menuRow)
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+
+                Spacer(minLength: Theme.Spacing.sm)
+
+                Text("@" + item.token)
+                    .font(Theme.Typography.rowTrailing)
+                    .foregroundStyle(isSelected ? Theme.Colors.textPrimary : Color.secondary)
             }
-            Spacer()
+            .padding(.horizontal, Theme.Spacing.md)
+            .frame(
+                maxWidth: .infinity, minHeight: Theme.Size.menuRowHeight,
+                maxHeight: Theme.Size.menuRowHeight, alignment: .leading
+            )
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
+                    .fill(isSelected ? Theme.Colors.selection : Color.clear)
+            )
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 6)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
     }
 }

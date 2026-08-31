@@ -80,3 +80,13 @@ enum ChatSegment: Equatable {
     case text(String)
     case search(ChatSearch)
 }
+
+
+/// A staged tool or extension mention in AI Chat.
+struct AIMentionItem: Identifiable, Hashable, Equatable, Sendable {
+    let id: String
+    let token: String
+    let title: String
+    let iconName: String?
+    let iconPath: String?
+}

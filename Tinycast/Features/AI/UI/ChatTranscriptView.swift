@@ -18,7 +18,15 @@ struct ChatTranscriptView: View {
     }
 
     private var visibleMessages: [ChatMessage] {
-        messages.filter { $0.role != .tool && (!$0.text.isEmpty || !$0.images.isEmpty || $0.state == .streaming) }
+        messages.filter {
+            $0.role != .tool && (
+                !$0.text.isEmpty ||
+                !$0.images.isEmpty ||
+                !$0.searches.isEmpty ||
+                !$0.toolCalls.isEmpty ||
+                $0.state == .streaming
+            )
+        }
     }
 
     var body: some View {
@@ -138,7 +146,7 @@ private struct ChatMessageView: View {
     private var footer: some View {
         HStack(spacing: Theme.Spacing.sm) {
             if message.role == .user { timestamp }
-            ChatCopyButton(text: message.text)
+            if !message.text.isEmpty { ChatCopyButton(text: message.text) }
             if message.role == .assistant { timestamp }
         }
         .opacity(hovered ? 1 : 0)
@@ -232,18 +240,36 @@ struct ChatImageThumbnail: View {
 private struct ChatSearchRow: View {
     let search: ChatSearch
 
+    private var extensionInfo: (title: String, iconPath: String?)? {
+        guard let raw = search.query, raw.hasPrefix("ext:") else { return nil }
+        let withoutPrefix = String(raw.dropFirst(4))
+        let colonIndex = withoutPrefix.firstIndex(of: ":") ?? withoutPrefix.endIndex
+        let header = String(withoutPrefix[..<colonIndex])
+        if let pipeIndex = header.firstIndex(of: "|") {
+            let title = String(header[..<pipeIndex])
+            let path = String(header[header.index(after: pipeIndex)...])
+            return (title: title, iconPath: path.isEmpty ? nil : path)
+        } else {
+            return (title: header, iconPath: nil)
+        }
+    }
+
     private var iconName: String {
-        guard let query = search.query?.lowercased() else { return "globe" }
+        guard let query = search.query?.lowercased() else { return "puzzlepiece.extension" }
         if query.hasPrefix("calc:") { return "function" }
-        if query.hasPrefix("weather:") { return "cloud.sun" }
-        if query.hasPrefix("location:") { return "location" }
+        if query.hasPrefix("weather:") { return "cloud.sun.fill" }
+        if query.hasPrefix("location:") { return "location.fill" }
         if query.hasPrefix("fetch:") || query.hasPrefix("http") { return "doc.text" }
-        return "globe"
+        if !query.contains(":") { return "globe" }
+        return "puzzlepiece.extension"
     }
 
     private var displayTitle: String {
         guard let raw = search.query else {
             return search.isComplete ? "Searched web" : "Searching web"
+        }
+        if let ext = extensionInfo {
+            return search.isComplete ? "Used \(ext.title)" : "Using \(ext.title)…"
         }
         if raw.hasPrefix("calc:") {
             return search.isComplete ? "Calculated" : "Calculating"
@@ -257,24 +283,42 @@ private struct ChatSearchRow: View {
         if raw.hasPrefix("fetch:") {
             return search.isComplete ? "Fetched page" : "Fetching page"
         }
+        if let colonIndex = raw.firstIndex(of: ":") {
+            let toolName = String(raw[..<colonIndex]).trimmingCharacters(in: .whitespaces)
+            return search.isComplete ? "Used \(toolName)" : "Using \(toolName)…"
+        }
         return search.isComplete ? "Searched web" : "Searching web"
     }
 
     private var displayQuery: String? {
         guard let raw = search.query else { return nil }
+        if raw.hasPrefix("ext:") {
+            let withoutPrefix = String(raw.dropFirst(4))
+            guard let colonIndex = withoutPrefix.firstIndex(of: ":") else { return nil }
+            let after = String(withoutPrefix[withoutPrefix.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
+            if after.isEmpty || after == "{}" || after == "[]" { return nil }
+            return after
+        }
         if let colonIndex = raw.firstIndex(of: ":") {
             let after = String(raw[raw.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
-            return after.isEmpty ? nil : after
+            if after.isEmpty || after == "{}" || after == "[]" { return nil }
+            return after
         }
-        return raw.isEmpty ? nil : raw
+        if raw.isEmpty || raw == "{}" || raw == "[]" { return nil }
+        return raw
     }
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             if search.isComplete {
-                Image(systemName: iconName)
-                    .font(Theme.Typography.rowTrailing)
-                    .symbolRenderingMode(.hierarchical)
+                if let iconPath = extensionInfo?.iconPath, FileManager.default.fileExists(atPath: iconPath) {
+                    ExtensionIconView(
+                        resolved: ExtensionImage.Resolved(source: .file(iconPath)),
+                        size: 16
+                    )
+                } else {
+                    AIToolBadgeView(iconName: iconName, size: 16, cornerRadius: 3.5)
+                }
             } else {
                 ProgressView().controlSize(.small)
             }

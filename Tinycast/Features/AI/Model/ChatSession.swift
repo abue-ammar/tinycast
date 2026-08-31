@@ -69,13 +69,16 @@ struct ChatSession: Equatable, Sendable {
             guard remaining >= 0 else { break }
             head.append(AIMessage(role: message.role, text: message.text, toolCalls: message.toolCalls, toolCallID: message.toolCallID))
         }
-        // The slice opens with the user turn that prompted it; an orphaned reply reads as noise.
-        while head.last?.role == .assistant { head.removeLast() }
+        var trimmedHead = Array(head.reversed())
+        // The slice opens with a user turn; drop any partial/orphaned turns from the head.
+        while let first = trimmedHead.first, first.role != .user {
+            trimmedHead.removeFirst()
+        }
         let prompt = messages[newest]
         let bounded = AIMessage(
             role: prompt.role, text: prompt.text,
             images: AIAttachmentBudget.bounded(prompt.images))
-        return head.reversed() + [bounded] + tail
+        return trimmedHead + [bounded] + tail
     }
 
     mutating func append(_ message: ChatMessage) {
@@ -87,6 +90,12 @@ struct ChatSession: Equatable, Sendable {
         guard !messages.isEmpty else { return }
         messages[messages.count - 1] = message
         updatedAt = max(updatedAt, now)
+    }
+
+    mutating func updateMessage(id: UUID, mutate: (inout ChatMessage) -> Void) {
+        guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
+        mutate(&messages[index])
+        updatedAt = max(updatedAt, Date())
     }
 
     private static func summary(_ text: String, limit: Int) -> String {

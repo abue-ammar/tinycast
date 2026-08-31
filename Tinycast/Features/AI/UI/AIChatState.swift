@@ -11,6 +11,15 @@ final class AIChatState {
     private(set) var notice: String?
     /// Images staged for the next message; they go out with whatever is typed next.
     private(set) var pendingImages: [ChatAttachment] = []
+    private(set) var stagedMention: AIMentionItem?
+
+    func stageMention(_ item: AIMentionItem) {
+        stagedMention = item
+    }
+
+    func clearStagedMention() {
+        stagedMention = nil
+    }
 
     /// Every path that consumes or drops the staged images moves this on, so a late decode knows
     @ObservationIgnored private(set) var stagingGeneration = 0
@@ -32,6 +41,7 @@ final class AIChatState {
     @discardableResult
     func send(
         _ input: String, using provider: any AIProvider, webSearch: Bool = false,
+        toolFilter: AIToolRegistry.ToolFilter = AIToolRegistry.ToolFilter(),
         instructions: String? = nil, contextBudget: Int = ChatSession.defaultTextBudget
     ) -> Bool {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -58,7 +68,7 @@ final class AIChatState {
                     turn += 1
                     guard let self, !Task.isCancelled, self.replyGeneration == generation else { return }
                     let canUseTools = (turn < maxTurns - 1)
-                    let availableTools = canUseTools ? registry.availableTools : []
+                    let availableTools = canUseTools ? registry.tools(matching: toolFilter) : []
                     let currentRequest = AIRequest(
                         instructions: instructions,
                         messages: self.session.requestMessages(textBudget: contextBudget),
@@ -83,15 +93,24 @@ final class AIChatState {
 
                     if !receivedToolCalls.isEmpty {
                         self.flushPendingText()
-                        if var last = self.session.messages.last, last.role == .assistant {
-                            last.toolCalls = receivedToolCalls
-                            last.state = .complete
-                            self.session.replaceLast(with: last)
+                        var turnSearches: [ChatSearch] = []
+                        let turnAssistantID = self.session.messages.last(where: { $0.role == .assistant })?.id
+                        if let turnAssistantID {
+                            self.session.updateMessage(id: turnAssistantID) { msg in
+                                msg.toolCalls = receivedToolCalls
+                            }
                         }
                         for toolCall in receivedToolCalls {
                             let (searchQuery, statusDesc) = Self.searchInfo(for: toolCall)
                             let searchItem = ChatSearch(query: searchQuery, isComplete: false, textOffset: 0)
+                            turnSearches.append(searchItem)
                             accumulatedSearches.append(searchItem)
+
+                            if let turnAssistantID {
+                                self.session.updateMessage(id: turnAssistantID) { msg in
+                                    msg.searches = turnSearches
+                                }
+                            }
                             self.toolStatus = statusDesc
 
                             let result = await registry.execute(call: toolCall)
@@ -104,8 +123,17 @@ final class AIChatState {
                                 )
                             )
 
+                            if let idx = turnSearches.indices.last {
+                                turnSearches[idx].isComplete = true
+                            }
                             if let idx = accumulatedSearches.indices.last {
                                 accumulatedSearches[idx].isComplete = true
+                            }
+                            if let turnAssistantID {
+                                self.session.updateMessage(id: turnAssistantID) { msg in
+                                    msg.searches = turnSearches
+                                    msg.state = .complete
+                                }
                             }
                         }
                         self.toolStatus = nil
@@ -113,19 +141,12 @@ final class AIChatState {
                             ChatMessage(
                                 role: .assistant,
                                 text: "",
-                                state: .streaming,
-                                searches: accumulatedSearches
+                                state: .streaming
                             )
                         )
                         self.history.save(self.session)
                         continue
                     } else {
-                        if var last = self.session.messages.last, last.role == .assistant {
-                            if last.searches.isEmpty && !accumulatedSearches.isEmpty {
-                                last.searches = accumulatedSearches
-                                self.session.replaceLast(with: last)
-                            }
-                        }
                         self.finishLast(state: .complete, fallback: "No response")
                         break
                     }
@@ -174,6 +195,7 @@ final class AIChatState {
 
     private func clearStaging() {
         pendingImages = []
+        stagedMention = nil
         stagingGeneration += 1
     }
 
@@ -340,8 +362,9 @@ extension AIChatState {
             else if let u = json["url"] as? String { queryParam = u }
             else if let e = json["expression"] as? String { queryParam = e }
             else if let l = json["location"] as? String { queryParam = l }
+            else if let firstValue = json.values.first as? String { queryParam = firstValue }
         }
-        if queryParam.isEmpty { queryParam = call.argumentsJSON }
+        if queryParam == "{}" || queryParam == "[]" { queryParam = "" }
 
         switch call.name {
         case "web_search":
@@ -356,6 +379,10 @@ extension AIChatState {
         case "get_location":
             return (query: "location: Current Location", status: "Locating…")
         default:
+            if let extInfo = AIToolRegistry.shared.extensionInfo(for: call.name) {
+                let formattedQuery = "ext:\(extInfo.extensionTitle)|\(extInfo.iconPath ?? ""):\(queryParam)"
+                return (query: formattedQuery, status: "Using \(extInfo.extensionTitle)…")
+            }
             return (query: "\(call.name): \(queryParam)", status: "Using \(call.name)…")
         }
     }

@@ -8,6 +8,9 @@ final class PalettePanel: NSPanel {
     var onBareBackspace: (() -> Bool)?
     /// Command chords the field editor swallows, plus the ones no main menu handles.
     var onCommandShortcut: ((NSEvent) -> Bool)?
+    var onArrowKey: ((NSEvent) -> Bool)?
+    var onTabKey: ((NSEvent) -> Bool)?
+    var onReturnKey: ((NSEvent) -> Bool)?
     /// The palette's typing context, handed over each time a field takes focus.
     var onFieldEditorFocused: ((NSTextInputContext) -> Void)?
     /// Arms hover from `sendEvent`, the one place both event streams pass through.
@@ -159,6 +162,24 @@ final class PalettePanel: NSPanel {
         if event.type == .keyDown,
             event.modifierFlags.contains(.command),
             onCommandShortcut?(event) == true
+        {
+            return
+        }
+        if event.type == .keyDown,
+            (Int(event.keyCode) == kVK_DownArrow || Int(event.keyCode) == kVK_UpArrow),
+            onArrowKey?(event) == true
+        {
+            return
+        }
+        if event.type == .keyDown,
+            Int(event.keyCode) == kVK_Tab,
+            onTabKey?(event) == true
+        {
+            return
+        }
+        if event.type == .keyDown,
+            (Int(event.keyCode) == kVK_Return || Int(event.keyCode) == kVK_ANSI_KeypadEnter),
+            onReturnKey?(event) == true
         {
             return
         }

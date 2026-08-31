@@ -96,12 +96,22 @@ final class AIChatCoordinator {
     func send(_ input: String) -> Bool {
         guard settings.aiEnabled else { return false }
         do {
-            let webSearch = core.aiSettings.webSearchEnabled && capabilities.webSearch
+            let providerWebSearch = core.aiSettings.webSearchEnabled && capabilities.webSearch
+            let localWebSearch = core.aiSettings.webSearchEnabled && !capabilities.webSearch
+            let toolFilter = AIToolRegistry.ToolFilter(
+                webSearch: localWebSearch,
+                calculate: core.aiSettings.calculatorToolEnabled,
+                weather: core.aiSettings.weatherToolEnabled,
+                location: core.aiSettings.locationToolEnabled,
+                extensionTools: core.aiSettings.extensionToolsEnabled
+            )
             return chat.send(
-                input, using: try core.aiProvider(), webSearch: webSearch,
+                input, using: try core.aiProvider(), webSearch: providerWebSearch,
+                toolFilter: toolFilter,
                 instructions: AIInstructions.compose(
                     userPrompt: core.aiSettings.systemPrompt,
-                    isEnabled: core.aiSettings.systemPromptEnabled),
+                    isEnabled: core.aiSettings.systemPromptEnabled,
+                    now: Date()),
                 contextBudget: contextBudget)
         } catch {
             chat.report(error.localizedDescription)

@@ -16,6 +16,22 @@ final class AISettingsStore {
     var webSearchEnabled: Bool {
         didSet { defaults.set(webSearchEnabled, forKey: AppSettingsKey.aiWebSearch.rawValue) }
     }
+    /// On by default: AI can calculate math expressions.
+    var calculatorToolEnabled: Bool {
+        didSet { defaults.set(calculatorToolEnabled, forKey: AppSettingsKey.aiCalculatorTool.rawValue) }
+    }
+    /// On by default: AI can check current weather.
+    var weatherToolEnabled: Bool {
+        didSet { defaults.set(weatherToolEnabled, forKey: AppSettingsKey.aiWeatherTool.rawValue) }
+    }
+    /// On by default: AI can query location.
+    var locationToolEnabled: Bool {
+        didSet { defaults.set(locationToolEnabled, forKey: AppSettingsKey.aiLocationTool.rawValue) }
+    }
+    /// On by default: AI can run extension commands.
+    var extensionToolsEnabled: Bool {
+        didSet { defaults.set(extensionToolsEnabled, forKey: AppSettingsKey.aiExtensionTools.rawValue) }
+    }
     /// Appended to `AIInstructions.preamble` on every turn, so it is billed on every turn.
     var systemPrompt: String {
         didSet { defaults.set(systemPrompt, forKey: AppSettingsKey.aiSystemPrompt.rawValue) }
@@ -54,6 +70,14 @@ final class AISettingsStore {
             defaults.data(forKey: AppSettingsKey.aiDefaultModel.rawValue))
         webSearchEnabled =
             defaults.object(forKey: AppSettingsKey.aiWebSearch.rawValue) as? Bool ?? false
+        calculatorToolEnabled =
+            defaults.object(forKey: AppSettingsKey.aiCalculatorTool.rawValue) as? Bool ?? true
+        weatherToolEnabled =
+            defaults.object(forKey: AppSettingsKey.aiWeatherTool.rawValue) as? Bool ?? true
+        locationToolEnabled =
+            defaults.object(forKey: AppSettingsKey.aiLocationTool.rawValue) as? Bool ?? true
+        extensionToolsEnabled =
+            defaults.object(forKey: AppSettingsKey.aiExtensionTools.rawValue) as? Bool ?? true
         systemPrompt = defaults.string(forKey: AppSettingsKey.aiSystemPrompt.rawValue) ?? ""
         systemPromptEnabled =
             defaults.object(forKey: AppSettingsKey.aiSystemPromptEnabled.rawValue) as? Bool ?? true

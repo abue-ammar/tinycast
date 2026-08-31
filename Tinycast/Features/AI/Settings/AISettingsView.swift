@@ -132,13 +132,28 @@ struct AISettingsView: View {
         return Section {
             Toggle(isOn: $settings.webSearchEnabled) {
                 Text("Web search")
-                Text(
-                    "Sends prompts on to a search engine when the route offers one — ChatGPT and OpenRouter.")
+                Text("Sends prompts on to a search engine when the route offers one — ChatGPT and OpenRouter. Otherwise, seamlessly activates local web search")
+            }
+            Toggle(isOn: $settings.calculatorToolEnabled) {
+                Text("Calculator")
+                Text("Evaluates mathematical expressions and conversions.")
+            }
+            Toggle(isOn: $settings.weatherToolEnabled) {
+                Text("Weather")
+                Text("Looks up live weather and forecasts.")
+            }
+            Toggle(isOn: $settings.locationToolEnabled) {
+                Text("Location")
+                Text("Provides current location context for location-based requests.")
+            }
+            Toggle(isOn: $settings.extensionToolsEnabled) {
+                Text("Extension AI commands")
+                Text("Allows AI to run commands from installed Raycast extensions.")
             }
         } header: {
             Text("Chat")
         } footer: {
-            Text("Images pasted into the chat go to any model that accepts them; others never see one.")
+            Text("When enabled, the model can automatically use these tools during chat conversations.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

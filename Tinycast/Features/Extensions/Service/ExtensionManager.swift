@@ -46,6 +46,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     @ObservationIgnored var onDidUninstall: (([String]) -> Void)?
 
     @ObservationIgnored private var sessionID: String?
+    @ObservationIgnored private var activeToolExtensionName: String?
     @ObservationIgnored private var nextToastID = 1
     @ObservationIgnored private var lastOAuthExtensionName: String?
 
@@ -344,6 +345,64 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             session: session, code: code, file: bundle, mode: command.mode, context: context)
     }
 
+    /// Executes an AI tool provided by an installed extension.
+    func executeTool(
+        extensionName: String,
+        toolName: String,
+        argumentsJSON: String
+    ) async throws -> String {
+        guard let owner = extensionNamed(extensionName) else {
+            throw LaunchError.unknownCommand("\(extensionName)/\(toolName)")
+        }
+        guard let tool = owner.manifest.tools.first(where: { $0.name == toolName }) else {
+            throw LaunchError.unknownCommand("\(extensionName)/\(toolName)")
+        }
+        guard let bundle = owner.toolBundleURL(for: tool) else {
+            throw LaunchError.notBuilt(tool.title)
+        }
+
+        let code = await Task.detached(priority: .userInitiated) {
+            (try? String(contentsOf: bundle, encoding: .utf8)) ?? ""
+        }.value
+        guard !code.isEmpty else {
+            throw LaunchError.notBuilt(tool.title)
+        }
+
+        let supportPath = ExtensionCatalog.supportPath(for: owner.manifest.name)
+        try? FileManager.default.createDirectory(at: supportPath, withIntermediateDirectories: true)
+
+        try await runtime.boot(config: .current(supportDirectory: supportPath))
+
+        let previousActive = activeToolExtensionName
+        activeToolExtensionName = extensionName
+        defer { activeToolExtensionName = previousActive }
+
+        let schemas = owner.manifest.preferences
+        let context = ExtensionLaunchContext(
+            extensionName: owner.manifest.name,
+            extensionTitle: owner.title,
+            commandName: tool.name,
+            commandMode: .noView,
+            assetsPath: owner.assetsPath,
+            supportPath: supportPath.path,
+            preferences: storage.resolvedPreferences(
+                extension: owner.manifest.name, schemas: schemas),
+            caches: storage.caches(extension: owner.manifest.name),
+            arguments: [:],
+            fallbackText: nil,
+            isDarkAppearance: NSApp.effectiveAppearance.isDark
+        )
+
+        let session = UUID().uuidString
+        return try await runtime.executeTool(
+            session: session,
+            code: code,
+            file: bundle,
+            inputJSON: argumentsJSON,
+            context: context
+        )
+    }
+
     func stop() async {
         oauthSession.cancel()
         guard let sessionID else {
@@ -416,7 +475,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     // MARK: - ExtensionHostContext
 
-    var activeExtensionName: String? { running?.extensionName }
+    var activeExtensionName: String? { running?.extensionName ?? activeToolExtensionName }
     var pasteTarget: NSRunningApplication? { coordinator?.pasteTarget }
     var applicationURLs: [URL] { coordinator?.applicationURLs ?? [] }
 
@@ -516,22 +575,22 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult
     {
-        lastOAuthExtensionName = running?.extensionName
+        lastOAuthExtensionName = running?.extensionName ?? activeToolExtensionName
         return try await oauthSession.authorize(options: options)
     }
 
     func getOAuthTokens(providerId: String) -> String? {
-        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return nil }
+        guard let extName = running?.extensionName ?? activeToolExtensionName ?? lastOAuthExtensionName else { return nil }
         return ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: providerId)
     }
 
     func setOAuthTokens(providerId: String, tokens: String) {
-        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return }
+        guard let extName = running?.extensionName ?? activeToolExtensionName ?? lastOAuthExtensionName else { return }
         ExtensionOAuthKeychain.setTokens(tokens, extensionName: extName, providerId: providerId)
     }
 
     func removeOAuthTokens(providerId: String) {
-        guard let extName = running?.extensionName ?? lastOAuthExtensionName else { return }
+        guard let extName = running?.extensionName ?? activeToolExtensionName ?? lastOAuthExtensionName else { return }
         ExtensionOAuthKeychain.removeTokens(extensionName: extName, providerId: providerId)
     }
 }

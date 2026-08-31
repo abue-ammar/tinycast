@@ -91,7 +91,7 @@ struct HTTPAIProvider: AIProvider {
             if configuration.provider == .openRouter {
                 request.setValue(Bundle.main.appDisplayName, forHTTPHeaderField: "X-OpenRouter-Title")
             }
-            var messages = input.messages.compactMap(Self.openAIMessage)
+            var messages = Self.buildOpenAIMessages(input.messages)
             if let instructions = input.instructions?.nonEmpty {
                 messages.insert(["role": "system", "content": instructions], at: 0)
             }
@@ -130,7 +130,7 @@ struct HTTPAIProvider: AIProvider {
                 }).compactMap { $0?.nonEmpty }
             var value: [String: Any] = [
                 "model": configuration.model,
-                "messages": input.messages.compactMap(Self.anthropicMessage),
+                "messages": Self.buildAnthropicMessages(input.messages),
                 "max_tokens": input.maxOutputTokens,
                 "stream": true
             ]
@@ -153,106 +153,184 @@ struct HTTPAIProvider: AIProvider {
         return request
     }
 
-    /// Plain text stays a string; tool responses take role "tool".
-    private static func openAIMessage(_ message: AIMessage) -> [String: Any]? {
-        if message.role == .tool {
-            let callID = AIToolCall.sanitizeID(message.toolCallID ?? "")
-            return [
-                "role": "tool",
-                "tool_call_id": callID,
-                "content": message.text
-            ]
-        }
-        if !message.toolCalls.isEmpty {
-            var msg: [String: Any] = ["role": "assistant"]
-            if let text = message.text.nonEmpty {
-                msg["content"] = text
-            } else {
-                msg["content"] = NSNull()
+    private static func buildOpenAIMessages(_ messages: [AIMessage]) -> [[String: Any]] {
+        var result: [[String: Any]] = []
+        var validToolCallIDs: Set<String> = []
+
+        for message in messages {
+            if message.role == .system { continue }
+
+            if message.role == .tool {
+                let callID = AIToolCall.sanitizeID(message.toolCallID ?? "")
+                if validToolCallIDs.contains(callID) {
+                    result.append([
+                        "role": "tool",
+                        "tool_call_id": callID,
+                        "content": message.text
+                    ])
+                } else if let text = message.text.nonEmpty {
+                    result.append([
+                        "role": "user",
+                        "content": text
+                    ])
+                }
+                continue
             }
-            msg["tool_calls"] = message.toolCalls.map { call in
-                [
-                    "id": call.id,
-                    "type": "function",
-                    "function": [
-                        "name": call.name,
-                        "arguments": call.argumentsJSON
-                    ]
-                ]
+
+            if message.role == .assistant {
+                if !message.toolCalls.isEmpty {
+                    var msg: [String: Any] = ["role": "assistant"]
+                    if let text = message.text.nonEmpty {
+                        msg["content"] = text
+                    } else {
+                        msg["content"] = NSNull()
+                    }
+                    msg["tool_calls"] = message.toolCalls.map { call in
+                        validToolCallIDs.insert(call.id)
+                        return [
+                            "id": call.id,
+                            "type": "function",
+                            "function": [
+                                "name": call.name,
+                                "arguments": call.argumentsJSON
+                            ]
+                        ]
+                    }
+                    result.append(msg)
+                } else if let text = message.text.nonEmpty {
+                    result.append([
+                        "role": "assistant",
+                        "content": text
+                    ])
+                }
+                continue
             }
-            return msg
+
+            if message.role == .user {
+                if message.images.isEmpty {
+                    if let text = message.text.nonEmpty {
+                        result.append(["role": "user", "content": text])
+                    }
+                } else {
+                    var parts: [[String: Any]] = []
+                    if let text = message.text.nonEmpty {
+                        parts.append(["type": "text", "text": text])
+                    }
+                    for image in message.images {
+                        parts.append([
+                            "type": "image_url",
+                            "image_url": [
+                                "url": "data:\(image.mimeType);base64,\(image.data.base64EncodedString())"
+                            ]
+                        ])
+                    }
+                    if !parts.isEmpty {
+                        result.append(["role": "user", "content": parts])
+                    }
+                }
+            }
         }
-        let text = message.text.nonEmpty
-        guard text != nil || !message.images.isEmpty else { return nil }
-        guard !message.images.isEmpty else {
-            return ["role": message.role.rawValue, "content": text ?? ""]
+
+        while let first = result.first, (first["role"] as? String) == "tool" {
+            result.removeFirst()
         }
-        var parts: [[String: Any]] = []
-        if let text { parts.append(["type": "text", "text": text]) }
-        for image in message.images {
-            parts.append([
-                "type": "image_url",
-                "image_url": [
-                    "url": "data:\(image.mimeType);base64,\(image.data.base64EncodedString())"
-                ]
-            ])
-        }
-        return ["role": message.role.rawValue, "content": parts]
+
+        return result
     }
 
-    private static func anthropicMessage(_ message: AIMessage) -> [String: Any]? {
-        if message.role == .system { return nil }
-        if message.role == .tool {
-            let callID = AIToolCall.sanitizeID(message.toolCallID ?? "")
-            return [
-                "role": "user",
-                "content": [
-                    [
+    private static func buildAnthropicMessages(_ messages: [AIMessage]) -> [[String: Any]] {
+        var result: [[String: Any]] = []
+        var lastAssistantToolUseIDs: Set<String> = []
+
+        for message in messages {
+            if message.role == .system { continue }
+
+            if message.role == .tool {
+                let callID = AIToolCall.sanitizeID(message.toolCallID ?? "")
+                if lastAssistantToolUseIDs.contains(callID) {
+                    let toolResultBlock: [String: Any] = [
                         "type": "tool_result",
                         "tool_use_id": callID,
                         "content": message.text
                     ]
-                ]
-            ]
-        }
-        if !message.toolCalls.isEmpty {
-            var content: [[String: Any]] = []
-            if let text = message.text.nonEmpty {
-                content.append(["type": "text", "text": text])
+                    appendUserBlock(toolResultBlock, to: &result)
+                } else if let text = message.text.nonEmpty {
+                    appendUserBlock(["type": "text", "text": text], to: &result)
+                }
+                continue
             }
-            for call in message.toolCalls {
-                let inputObj: Any = {
-                    guard let data = call.argumentsJSON.data(using: .utf8),
-                          let json = try? JSONSerialization.jsonObject(with: data) else { return [:] }
-                    return json
-                }()
-                content.append([
-                    "type": "tool_use",
-                    "id": call.id,
-                    "name": call.name,
-                    "input": inputObj
-                ])
+
+            if message.role == .assistant {
+                var content: [[String: Any]] = []
+                if let text = message.text.nonEmpty {
+                    content.append(["type": "text", "text": text])
+                }
+                var toolUseIDs: Set<String> = []
+                for call in message.toolCalls {
+                    let inputObj: Any = {
+                        guard let data = call.argumentsJSON.data(using: .utf8),
+                              let json = try? JSONSerialization.jsonObject(with: data) else { return [:] }
+                        return json
+                    }()
+                    content.append([
+                        "type": "tool_use",
+                        "id": call.id,
+                        "name": call.name,
+                        "input": inputObj
+                    ])
+                    toolUseIDs.insert(call.id)
+                }
+                lastAssistantToolUseIDs = toolUseIDs
+                guard !content.isEmpty else { continue }
+
+                if let last = result.last, (last["role"] as? String) == "assistant",
+                   var existingContent = last["content"] as? [[String: Any]] {
+                    existingContent.append(contentsOf: content)
+                    result[result.count - 1]["content"] = existingContent
+                } else {
+                    result.append(["role": "assistant", "content": content])
+                }
+                continue
             }
-            return ["role": "assistant", "content": content]
+
+            if message.role == .user {
+                lastAssistantToolUseIDs = []
+                var parts: [[String: Any]] = []
+                if let text = message.text.nonEmpty {
+                    parts.append(["type": "text", "text": text])
+                }
+                for image in message.images {
+                    parts.append([
+                        "type": "image",
+                        "source": [
+                            "type": "base64",
+                            "media_type": image.mimeType,
+                            "data": image.data.base64EncodedString()
+                        ]
+                    ])
+                }
+                guard !parts.isEmpty else { continue }
+                for part in parts {
+                    appendUserBlock(part, to: &result)
+                }
+            }
         }
-        let text = message.text.nonEmpty
-        guard text != nil || !message.images.isEmpty else { return nil }
-        guard !message.images.isEmpty else {
-            return ["role": message.role.rawValue, "content": text ?? ""]
+
+        while let first = result.first, (first["role"] as? String) != "user" {
+            result.removeFirst()
         }
-        var parts: [[String: Any]] = []
-        for image in message.images {
-            parts.append([
-                "type": "image",
-                "source": [
-                    "type": "base64",
-                    "media_type": image.mimeType,
-                    "data": image.data.base64EncodedString()
-                ]
-            ])
+
+        return result
+    }
+
+    private static func appendUserBlock(_ block: [String: Any], to result: inout [[String: Any]]) {
+        if let last = result.last, (last["role"] as? String) == "user",
+           var existingContent = last["content"] as? [[String: Any]] {
+            existingContent.append(block)
+            result[result.count - 1]["content"] = existingContent
+        } else {
+            result.append(["role": "user", "content": [block]])
         }
-        if let text { parts.append(["type": "text", "text": text]) }
-        return ["role": message.role.rawValue, "content": parts]
     }
 }
 

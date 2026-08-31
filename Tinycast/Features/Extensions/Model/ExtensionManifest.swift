@@ -138,11 +138,31 @@ struct ExtensionCommandArgument: Sendable, Hashable {
     }
 }
 
+struct ExtensionAIToolParam: Sendable, Hashable {
+    let name: String
+    let title: String?
+    let type: String?
+    let description: String?
+    let required: Bool?
+
+    init?(json: Any) {
+        guard let dict = json as? [String: Any],
+            let name = dict["name"] as? String
+        else { return nil }
+        self.name = name
+        self.title = dict["title"] as? String
+        self.type = dict["type"] as? String
+        self.description = dict["description"] as? String
+        self.required = dict["required"] as? Bool
+    }
+}
+
 /// An AI tool defined in a manifest's `tools` array.
 struct ExtensionAITool: Sendable, Hashable, Identifiable {
     let name: String
     let title: String
     let description: String
+    let with: [ExtensionAIToolParam]
 
     var id: String { name }
 
@@ -153,6 +173,7 @@ struct ExtensionAITool: Sendable, Hashable, Identifiable {
         self.name = name
         self.title = dict["title"] as? String ?? name
         self.description = dict["description"] as? String ?? ""
+        self.with = (dict["with"] as? [Any] ?? []).compactMap(ExtensionAIToolParam.init(json:))
     }
 }
 

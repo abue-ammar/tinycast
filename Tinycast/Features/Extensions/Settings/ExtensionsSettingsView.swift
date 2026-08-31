@@ -410,12 +410,8 @@ private struct ExtensionDisclosure: View {
 
                 if !installed.manifest.tools.isEmpty {
                     rule
-                    heading(installed.manifest.tools.count == 1 ? "AI Command" : "AI Commands")
-                    ForEach(Array(installed.manifest.tools.enumerated()), id: \.element.id) {
-                        index, tool in
-                        if index > 0 { rule }
-                        AIToolRow(installed: installed, tool: tool)
-                    }
+                    heading("AI Commands")
+                    AIToolExtensionRow(installed: installed)
                 }
             }
             HStack {
@@ -850,21 +846,28 @@ extension String {
     }
 }
 
-/// One AI command/tool: its description and its enablement toggle.
-private struct AIToolRow: View {
+/// Extension-level AI commands enablement toggle and summary.
+private struct AIToolExtensionRow: View {
     let installed: InstalledExtension
-    let tool: ExtensionAITool
     @Environment(AppCore.self) private var core
 
     private var isEnabled: Bool {
-        core.settings.isAIToolEnabled(
-            extensionName: installed.manifest.name, toolName: tool.name)
+        core.settings.isAIToolEnabled(extensionName: installed.manifest.name)
+    }
+
+    private var toolSummary: String {
+        let count = installed.manifest.tools.count
+        if count == 1, let first = installed.manifest.tools.first {
+            return first.description.isEmpty ? first.title : first.description
+        }
+        let titles = installed.manifest.tools.map(\.title).joined(separator: ", ")
+        return "Includes: \(titles)"
     }
 
     var body: some View {
         SettingsCardRow(
-            title: tool.title,
-            detail: tool.description.isEmpty ? nil : tool.description
+            title: "Enable AI Commands",
+            detail: toolSummary
         ) {
             Toggle(
                 "",
@@ -872,7 +875,7 @@ private struct AIToolRow: View {
                     get: { isEnabled },
                     set: {
                         core.settings.setAIToolEnabled(
-                            extensionName: installed.manifest.name, toolName: tool.name,
+                            extensionName: installed.manifest.name,
                             enabled: $0)
                     })
             )

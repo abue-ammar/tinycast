@@ -8,7 +8,8 @@ import PDFKit
 
 // MARK: - AIToolRegistry.swift
 /// Central registry managing all available tools and their execution.
-public final class AIToolRegistry: Sendable {
+@MainActor
+public final class AIToolRegistry {
     public static let shared = AIToolRegistry()
 
     private let searchAggregator: WebSearchAggregator
@@ -17,7 +18,32 @@ public final class AIToolRegistry: Sendable {
     private let weatherService: WeatherService
     private let calculatorRunner: CalculatorToolRunner
 
-    public init(
+    public struct ExtensionToolInfo: Sendable {
+        public let extensionName: String
+        public let extensionTitle: String
+        public let iconPath: String?
+
+        public init(extensionName: String, extensionTitle: String, iconPath: String?) {
+            self.extensionName = extensionName
+            self.extensionTitle = extensionTitle
+            self.iconPath = iconPath
+        }
+    }
+
+    public var extensionToolsProvider: (() -> [AIToolDefinition])?
+    public var extensionToolExecutor: ((AIToolCall) async -> AIToolResult?)?
+    public var extensionToolInfoProvider: ((String) -> ExtensionToolInfo?)?
+    public var calculatorEvaluator: (@MainActor (String) -> String?)? {
+        didSet {
+            calculatorRunner.evaluator = calculatorEvaluator
+        }
+    }
+
+    public func extensionInfo(for toolName: String) -> ExtensionToolInfo? {
+        extensionToolInfoProvider?(toolName)
+    }
+
+    init(
         searchAggregator: WebSearchAggregator = WebSearchAggregator(),
         pageReader: WebPageReader = WebPageReader(),
         locationProvider: LocationProvider = LocationProvider(),
@@ -31,15 +57,52 @@ public final class AIToolRegistry: Sendable {
         self.calculatorRunner = calculatorRunner
     }
 
+    public struct ToolFilter: Sendable {
+        public let webSearch: Bool
+        public let calculate: Bool
+        public let weather: Bool
+        public let location: Bool
+        public let extensionTools: Bool
+
+        public init(
+            webSearch: Bool = true,
+            calculate: Bool = true,
+            weather: Bool = true,
+            location: Bool = true,
+            extensionTools: Bool = true
+        ) {
+            self.webSearch = webSearch
+            self.calculate = calculate
+            self.weather = weather
+            self.location = location
+            self.extensionTools = extensionTools
+        }
+    }
+
+    public func tools(matching filter: ToolFilter) -> [AIToolDefinition] {
+        var tools: [AIToolDefinition] = []
+        if filter.webSearch {
+            tools.append(.webSearch)
+            tools.append(.webFetch)
+        }
+        if filter.calculate {
+            tools.append(.calculate)
+        }
+        if filter.location {
+            tools.append(.getLocation)
+        }
+        if filter.weather {
+            tools.append(.getWeather)
+        }
+        if filter.extensionTools, let custom = extensionToolsProvider?() {
+            tools.append(contentsOf: custom)
+        }
+        return tools
+    }
+
     /// All tool definitions available for the model to use
     public var availableTools: [AIToolDefinition] {
-        [
-            .webSearch,
-            .webFetch,
-            .calculate,
-            .getLocation,
-            .getWeather
-        ]
+        tools(matching: ToolFilter())
     }
 
     /// Executes a tool call asynchronously and returns the formatted result
@@ -56,6 +119,11 @@ public final class AIToolRegistry: Sendable {
         case "get_weather":
             return await executeGetWeather(call: call)
         default:
+            if let customExecutor = extensionToolExecutor {
+                if let result = await customExecutor(call) {
+                    return result
+                }
+            }
             return AIToolResult(
                 callID: call.id,
                 name: call.name,
@@ -172,9 +240,14 @@ public final class AIToolRegistry: Sendable {
 }
 
 // MARK: - CalculatorToolRunner.swift
-/// Fast on-device mathematical expression evaluator using NSExpression.
+/// Fast on-device evaluator for math, units, currencies, and dates.
+@MainActor
 public final class CalculatorToolRunner: Sendable {
-    public init() {}
+    public var evaluator: (@MainActor (String) -> String?)?
+
+    public init(evaluator: (@MainActor (String) -> String?)? = nil) {
+        self.evaluator = evaluator
+    }
 
     public func calculate(expression: String) -> String {
         let trimmed = expression.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -182,24 +255,11 @@ public final class CalculatorToolRunner: Sendable {
             return "Error: Expression cannot be empty."
         }
 
-        let exprString = trimmed
-            .replacingOccurrences(of: "×", with: "*")
-            .replacingOccurrences(of: "÷", with: "/")
-            .replacingOccurrences(of: "^", with: "**")
-
-        let mathExpr = NSExpression(format: exprString)
-        if let mathVal = mathExpr.expressionValue(with: nil, context: nil) as? NSNumber {
-            let formatter = NumberFormatter()
-            formatter.maximumFractionDigits = 8
-            formatter.minimumFractionDigits = 0
-            formatter.numberStyle = .decimal
-            if let formatted = formatter.string(from: mathVal) {
-                return "Result: \(formatted)"
-            }
-            return "Result: \(mathVal)"
+        if let evaluated = evaluator?(trimmed) {
+            return evaluated
         }
 
-        return "Calculation Error: Unable to evaluate expression."
+        return "Calculation Error: Unable to evaluate '\(trimmed)'. If asking for current live market data or web search, please use web_search."
     }
 }
 
@@ -954,9 +1014,17 @@ public struct WebSearchQuery: Equatable, Sendable {
             }
         }
 
-        // Clean out hallucinated past years from news queries
-        if parsedCategory == .news {
-            words = words.filter { $0 != "2024" && $0 != "2025" }
+        // Clean out hallucinated past years only when query explicitly asks for today/latest/current/breaking news
+        let lower = text.lowercased()
+        let isAskingCurrent = lower.contains("today") || lower.contains("latest") || lower.contains("breaking") || lower.contains("current") || lower.contains("now")
+        if parsedCategory == .news && isAskingCurrent {
+            let currentYear = Calendar.current.component(.year, from: Date())
+            words = words.filter { word in
+                if let year = Int(word), year >= 2020, year < currentYear {
+                    return false
+                }
+                return true
+            }
         }
 
         // Check for site: filter

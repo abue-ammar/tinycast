@@ -192,6 +192,7 @@ final class AppCore {
 
             appIndex.start(settings: settings)
             extensions.start(appIndex: appIndex, coordinator: extensionCoordinator, aiSettings: aiSettings, chatGPTSubscription: chatGPTSubscription)
+            configureAITools()
             extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
@@ -409,6 +410,126 @@ final class AppCore {
             { _ = $0.snippetsShowInLauncher },
             reproject: { $0.snippetCoordinator.applySnippetsLauncherPresence() })
         track({ _ = $0.appearance }, reproject: { $0.applyAppearance() })
+    }
+
+    private func configureAITools() {
+        AIToolRegistry.shared.calculatorEvaluator = { [weak self] expression in
+            let region = Locale.current.region?.identifier
+            guard let result = CalcEngine.evaluate(
+                expression,
+                now: Date(),
+                calendar: .current,
+                rates: self?.currencyRates.rates,
+                region: region
+            ) else {
+                return nil
+            }
+            switch result.payload {
+            case .value(let display, _):
+                if let source = result.sourceBadge, let target = result.targetBadge {
+                    return "Result: \(display) (\(source) → \(target))"
+                }
+                return "Result: \(display)"
+            case .error(let message):
+                return "Calculation Error: \(message)"
+            }
+        }
+
+        AIToolRegistry.shared.extensionToolsProvider = { [weak self] in
+            guard let self else { return [] }
+            var definitions: [AIToolDefinition] = []
+
+            for ext in self.extensions.installed {
+                guard self.settings.isAIToolEnabled(extensionName: ext.manifest.name) else {
+                    continue
+                }
+
+                for tool in ext.manifest.tools {
+                    let parameters = tool.with.map { param in
+                        AIToolParameter(
+                            name: param.name,
+                            type: param.type ?? "string",
+                            description: param.description ?? param.title ?? param.name,
+                            isRequired: param.required ?? false
+                        )
+                    }
+
+                    let def = AIToolDefinition(
+                        name: tool.name,
+                        description: "[\(ext.title)] \(tool.description)",
+                        parameters: parameters
+                    )
+                    definitions.append(def)
+                }
+            }
+            return definitions
+        }
+
+        AIToolRegistry.shared.extensionToolInfoProvider = { [weak self] toolName in
+            guard let self else { return nil }
+            let candidateNames = [
+                toolName,
+                toolName.replacingOccurrences(of: "_", with: "-"),
+                toolName.replacingOccurrences(of: "-", with: "_")
+            ]
+
+            for ext in self.extensions.installed {
+                if ext.manifest.tools.contains(where: { t in
+                    candidateNames.contains(t.name) ||
+                    toolName == "\(ext.manifest.name)_\(t.name)" ||
+                    toolName == "\(ext.manifest.name)__\(t.name)"
+                }) {
+                    return AIToolRegistry.ExtensionToolInfo(
+                        extensionName: ext.manifest.name,
+                        extensionTitle: ext.title,
+                        iconPath: ext.iconPath
+                    )
+                }
+            }
+            return nil
+        }
+
+        AIToolRegistry.shared.extensionToolExecutor = { [weak self] call in
+            guard let self else { return nil }
+            let candidateNames = [
+                call.name,
+                call.name.replacingOccurrences(of: "_", with: "-"),
+                call.name.replacingOccurrences(of: "-", with: "_")
+            ]
+
+            for ext in self.extensions.installed {
+                guard self.settings.isAIToolEnabled(extensionName: ext.manifest.name) else {
+                    continue
+                }
+                guard let tool = ext.manifest.tools.first(where: { t in
+                    candidateNames.contains(t.name) ||
+                    call.name == "\(ext.manifest.name)_\(t.name)" ||
+                    call.name == "\(ext.manifest.name)__\(t.name)"
+                }) else {
+                    continue
+                }
+
+                do {
+                    let output = try await self.extensions.executeTool(
+                        extensionName: ext.manifest.name,
+                        toolName: tool.name,
+                        argumentsJSON: call.argumentsJSON
+                    )
+                    return AIToolResult(
+                        callID: call.id,
+                        name: call.name,
+                        output: output
+                    )
+                } catch {
+                    return AIToolResult(
+                        callID: call.id,
+                        name: call.name,
+                        output: "Error executing \(tool.name): \(error.localizedDescription)"
+                    )
+                }
+            }
+            return nil
+        }
     }
 
     /// `.system` resolves to `nil`, so AppKit follows macOS with nothing polling.

@@ -22,6 +22,7 @@ final class ExtensionRuntime: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.tinycast.extensions.js", qos: .userInitiated)
     private var context: JSContext?
     private var timers: [String: DispatchSourceTimer] = [:]
+    private var pendingTools: [String: CheckedContinuation<String, Error>] = [:]
     private let nodeShims = ExtensionNodeShims()
 
     /// Set once at startup; read on the JS queue, so it is written before the runtime ever boots.
@@ -45,6 +46,7 @@ final class ExtensionRuntime: @unchecked Sendable {
     enum RuntimeError: LocalizedError {
         case runtimeResourceMissing
         case bootFailed(String)
+        case toolFailed(String)
 
         var errorDescription: String? {
             switch self {
@@ -52,6 +54,8 @@ final class ExtensionRuntime: @unchecked Sendable {
                 return "RaycastRuntime.generated.js is missing from the app bundle."
             case .bootFailed(let message):
                 return "The extension runtime failed to start: \(message)"
+            case .toolFailed(let message):
+                return "Extension tool failed: \(message)"
             }
         }
     }
@@ -114,6 +118,38 @@ final class ExtensionRuntime: @unchecked Sendable {
                     session, code, file.path, file.deletingLastPathComponent().path,
                     mode.runtimeName, payload
                 ])
+        }
+    }
+
+    /// Execute an AI tool function asynchronously and await its result.
+    func executeTool(
+        session: String,
+        code: String,
+        file: URL,
+        inputJSON: String,
+        context launchContext: ExtensionLaunchContext
+    ) async throws -> String {
+        let payload = launchContext.jsonString()
+        return try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                guard let context = self.context else {
+                    continuation.resume(throwing: RuntimeError.bootFailed("no JSContext"))
+                    return
+                }
+                self.pendingTools[session] = continuation
+
+                let compiled = context.objectForKeyedSubscript("__tinycast")
+                _ = compiled?.invokeMethod(
+                    "executeTool",
+                    withArguments: [
+                        session,
+                        code,
+                        file.path,
+                        file.deletingLastPathComponent().path,
+                        inputJSON,
+                        payload
+                    ])
+            }
         }
     }
 
@@ -191,6 +227,9 @@ final class ExtensionRuntime: @unchecked Sendable {
         let fieldCommand: @convention(block) (String, String) -> Void = { _, _ in
             // Field focus requests have no native target yet; the palette focuses the first field.
         }
+        let toolFinished: @convention(block) (String, Bool, String) -> Void = { [weak self] callId, success, resultJSON in
+            self?.completeTool(callId: callId, success: success, resultJSON: resultJSON)
+        }
         let invoke: @convention(block) (String, String, String, String) -> Void = {
             [weak self] callId, api, method, argsJSON in
             self?.invokeAsync(callId: callId, api: api, method: method, argsJSON: argsJSON)
@@ -214,6 +253,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         host?.setObject(navigation, forKeyedSubscript: "navigationDepthChanged" as NSString)
         host?.setObject(finished, forKeyedSubscript: "finished" as NSString)
         host?.setObject(fieldCommand, forKeyedSubscript: "fieldCommand" as NSString)
+        host?.setObject(toolFinished, forKeyedSubscript: "toolFinished" as NSString)
         host?.setObject(invoke, forKeyedSubscript: "invoke" as NSString)
         host?.setObject(invokeSync, forKeyedSubscript: "invokeSync" as NSString)
         host?.setObject(startTimer, forKeyedSubscript: "startTimer" as NSString)
@@ -227,6 +267,17 @@ final class ExtensionRuntime: @unchecked Sendable {
             return context.evaluateScript(wrapped, withSourceURL: URL(fileURLWithPath: filename))
         }
         context.setObject(compile, forKeyedSubscript: "__tinycastCompile" as NSString)
+    }
+
+    private func completeTool(callId: String, success: Bool, resultJSON: String) {
+        queue.async {
+            guard let continuation = self.pendingTools.removeValue(forKey: callId) else { return }
+            if success {
+                continuation.resume(returning: resultJSON)
+            } else {
+                continuation.resume(throwing: RuntimeError.toolFailed(resultJSON))
+            }
+        }
     }
 
     // MARK: - Host call plumbing
@@ -301,6 +352,10 @@ final class ExtensionRuntime: @unchecked Sendable {
         queue.async {
             for timer in self.timers.values { timer.cancel() }
             self.timers.removeAll()
+            for (_, continuation) in self.pendingTools {
+                continuation.resume(throwing: RuntimeError.toolFailed("Runtime was shut down"))
+            }
+            self.pendingTools.removeAll()
             self.context = nil
         }
     }

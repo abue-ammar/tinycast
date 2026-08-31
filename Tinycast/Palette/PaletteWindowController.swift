@@ -244,6 +244,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 core.palette.prepare(mode: .ai)
                 return true
             }
+            if core.palette.mode == .ai, core.aiChat.stagedMention != nil {
+                core.aiChat.clearStagedMention()
+                return true
+            }
             if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
                 return true
             }
@@ -287,6 +291,36 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             default:
                 return false
             }
+        }
+        panel.onArrowKey = { [weak self] event in
+            guard let core = self?.core else { return false }
+            if core.palette.mode == .ai, let mentionQuery = AIScreen.activeMention(in: core.palette.query) {
+                let items = AIScreen.mentionItems(for: mentionQuery, installed: core.extensions.installed)
+                let activeItems = Array(items.prefix(6))
+                guard !activeItems.isEmpty else { return false }
+                let delta = (Int(event.keyCode) == kVK_DownArrow) ? 1 : -1
+                let current = min(max(core.palette.selection, 0), activeItems.count - 1)
+                let next = (current + delta + activeItems.count) % activeItems.count
+                core.palette.selection = next
+                return true
+            }
+            return false
+        }
+        panel.onTabKey = { [weak self] _ in
+            guard let core = self?.core else { return false }
+            if core.palette.mode == .ai, let _ = AIScreen.activeMention(in: core.palette.query) {
+                AIScreen.completeSelectedMention(at: core.palette.selection, in: core.palette, core: core)
+                return true
+            }
+            return false
+        }
+        panel.onReturnKey = { [weak self] _ in
+            guard let core = self?.core else { return false }
+            if core.palette.mode == .ai, let _ = AIScreen.activeMention(in: core.palette.query) {
+                AIScreen.completeSelectedMention(at: core.palette.selection, in: core.palette, core: core)
+                return true
+            }
+            return false
         }
         self.panel = panel
         return panel

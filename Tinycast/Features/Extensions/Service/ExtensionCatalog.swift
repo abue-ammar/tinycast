@@ -26,6 +26,19 @@ struct InstalledExtension: Sendable, Hashable, Identifiable {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
+    /// The prebuilt CommonJS bundle for an AI tool, or nil when not found.
+    func toolBundleURL(for tool: ExtensionAITool) -> URL? {
+        toolBundleURL(named: tool.name)
+    }
+
+    func toolBundleURL(named toolName: String) -> URL? {
+        let candidates = [
+            directory.appendingPathComponent("tools").appendingPathComponent("\(toolName).js"),
+            directory.appendingPathComponent("\(toolName).js")
+        ]
+        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
     func command(named name: String) -> ExtensionCommand? {
         manifest.commands.first { $0.name == name }
     }
@@ -172,6 +185,10 @@ enum ExtensionCatalog {
                 try fm.copyItem(
                     at: source.appendingPathComponent(file),
                     to: destination.appendingPathComponent(file))
+            }
+            let tools = source.appendingPathComponent("tools")
+            if fm.fileExists(atPath: tools.path) {
+                try fm.copyItem(at: tools, to: destination.appendingPathComponent("tools"))
             }
             let assets = source.appendingPathComponent("assets")
             if fm.fileExists(atPath: assets.path) {

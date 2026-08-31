@@ -13,7 +13,8 @@ enum AIInstructions {
             formatter.timeStyle = .none
             formatter.locale = Locale(identifier: "en_US")
             let dateStr = formatter.string(from: now)
-            preamble += "\n\nCurrent date: \(dateStr)."
+            let year = Calendar.current.component(.year, from: now)
+            preamble += "\n\nCurrent date: \(dateStr). The current year is \(year). Always refer to this current date/year when asked about today, latest news, current events, or recent time periods."
         }
         return trimmed.isEmpty ? preamble : preamble + "\n\n" + trimmed
     }
