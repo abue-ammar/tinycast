@@ -175,6 +175,8 @@ public struct AIToolCall: Equatable, Sendable {
     public let name: String
     public let arguments: String
 
+    public var argumentsJSON: String { arguments }
+
     public init(id: String, name: String, arguments: String) {
         self.id = id
         self.name = name
@@ -191,6 +193,13 @@ public struct AIToolResult: Equatable, Sendable {
     public init(callID: String, toolName: String, output: String, isError: Bool = false) {
         self.callID = callID
         self.toolName = toolName
+        self.output = output
+        self.isError = isError
+    }
+
+    public init(callID: String, name: String, output: String, isError: Bool = false) {
+        self.callID = callID
+        self.toolName = name
         self.output = output
         self.isError = isError
     }
