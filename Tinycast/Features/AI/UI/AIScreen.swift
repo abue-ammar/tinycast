@@ -249,8 +249,6 @@ private struct AIMentionTypeaheadView: View {
     let onSelect: (String) -> Void
 
     private var items: [AIMentionItem] {
-        var result: [AIMentionItem] = []
-
         // 1. Built-in Tools
         let builtins = [
             AIMentionItem(id: "web", token: "web", title: "Web Search & Fetch", subtitle: "Search the web and read pages", iconName: "globe", iconPath: nil),
@@ -287,38 +285,7 @@ private struct AIMentionTypeaheadView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(items.prefix(5)) { item in
                     Button(action: { onSelect(item.token) }) {
-                        HStack(spacing: Theme.Spacing.md) {
-                            if let iconPath = item.iconPath {
-                                ExtensionIconView(
-                                    resolved: ExtensionImage.Resolved(source: .file(iconPath)),
-                                    size: 20)
-                            } else if let iconName = item.iconName {
-                                Image(systemName: iconName)
-                                    .font(.system(size: 14))
-                                    .frame(width: 20, height: 20)
-                                    .foregroundStyle(Theme.Colors.accent)
-                            }
-
-                            VStack(alignment: .leading, spacing: 1) {
-                                HStack(spacing: Theme.Spacing.xs) {
-                                    Text(item.title)
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text("@" + item.token)
-                                        .font(.system(size: 11, weight: .regular, design: .monospaced))
-                                        .foregroundStyle(.secondary)
-                                }
-                                if !item.subtitle.isEmpty {
-                                    Text(item.subtitle)
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            Spacer()
-                        }
-                        .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
+                        AIMentionRowView(item: item)
                     }
                     .buttonStyle(.plain)
                 }
@@ -334,5 +301,44 @@ private struct AIMentionTypeaheadView: View {
             )
             .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
         }
+    }
+}
+
+private struct AIMentionRowView: View {
+    let item: AIMentionItem
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            if let iconPath = item.iconPath {
+                ExtensionIconView(
+                    resolved: ExtensionImage.Resolved(source: .file(iconPath)),
+                    size: 20)
+            } else if let iconName = item.iconName {
+                Image(systemName: iconName)
+                    .font(.system(size: 14))
+                    .frame(width: 20, height: 20)
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text(item.title)
+                        .font(.system(size: 13, weight: .medium))
+                    Text("@" + item.token)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+                if !item.subtitle.isEmpty {
+                    Text(item.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
     }
 }
