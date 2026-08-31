@@ -1573,8 +1573,9 @@ struct SnippetsTests {
             now: { Date(timeIntervalSince1970: 1_000) },
             syntheticEventTag: 123,
             logsTapFailures: false)
+        var activityCount = 0
 
-        listener.start { _, _, _, _ in }
+        listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in })
         check(
             "real listener waits without permissions and does not install",
             listener.status == .needsAccessibility && tap.installCount == 0)
@@ -1593,7 +1594,25 @@ struct SnippetsTests {
                 && tap.installCount == 2
                 && tap.state == .active)
 
-        listener.start { _, _, _, _ in }
+        listener.processEvent(
+            typeRaw: CGEventType.keyDown.rawValue,
+            keyCode: 0,
+            flagsRaw: 0,
+            text: "x",
+            eventUserData: 0,
+            secureEventInputEnabled: false)
+        listener.processEvent(
+            typeRaw: CGEventType.keyDown.rawValue,
+            keyCode: 0,
+            flagsRaw: 0,
+            text: "x",
+            eventUserData: 123,
+            secureEventInputEnabled: false)
+        check(
+            "real user input invalidates pending automatic delivery while Tinycast events do not",
+            activityCount == 1)
+
+        listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in })
         check(
             "real listener repeated start does not install a second tap",
             listener.status == .active && tap.installCount == 2)
@@ -1632,7 +1651,7 @@ struct SnippetsTests {
         check(
             "real listener stop is authoritative",
             listener.status == .off && tap.state == .absent)
-        listener.start { _, _, _, _ in }
+        listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in })
         listener.stop()
         check(
             "real listener rapid on and off leaves no tap",
