@@ -182,6 +182,55 @@ public struct AIToolCall: Equatable, Sendable {
         self.name = name
         self.arguments = arguments
     }
+
+    public init(id: String, name: String, argumentsJSON: String) {
+        self.id = id
+        self.name = name
+        self.arguments = argumentsJSON
+    }
+}
+
+extension AIToolDefinition {
+    public static let webSearch = AIToolDefinition(
+        name: "web_search",
+        description: "Search the web for real-time information, news, current events, and facts.",
+        parameters: [
+            AIToolParameter(name: "query", type: "string", description: "The search query to execute.", isRequired: true),
+            AIToolParameter(name: "category", type: "string", description: "Optional category filter (e.g. general, news, weather).", isRequired: false)
+        ]
+    )
+
+    public static let webFetch = AIToolDefinition(
+        name: "web_fetch",
+        description: "Fetch and read the text content of a specific webpage or PDF document by URL.",
+        parameters: [
+            AIToolParameter(name: "url", type: "string", description: "The full URL to fetch content from.", isRequired: true),
+            AIToolParameter(name: "max_characters", type: "integer", description: "Maximum number of characters to extract (default 4000).", isRequired: false)
+        ]
+    )
+
+    public static let calculate = AIToolDefinition(
+        name: "calculate",
+        description: "Evaluate a mathematical expression, unit conversion, currency exchange, or date calculation accurately.",
+        parameters: [
+            AIToolParameter(name: "expression", type: "string", description: "The mathematical formula or conversion string (e.g. 128 * 4.5).", isRequired: true)
+        ]
+    )
+
+    public static let getLocation = AIToolDefinition(
+        name: "get_location",
+        description: "Get the user current physical location (city, region, country, coordinates).",
+        parameters: []
+    )
+
+    public static let getWeather = AIToolDefinition(
+        name: "get_weather",
+        description: "Get current weather conditions and forecasts for a specific location or current location.",
+        parameters: [
+            AIToolParameter(name: "location", type: "string", description: "City or region name. If omitted, uses current location.", isRequired: false),
+            AIToolParameter(name: "days", type: "integer", description: "Forecast days (1 to 7, default 1).", isRequired: false)
+        ]
+    )
 }
 
 public struct AIToolResult: Equatable, Sendable {
