@@ -15,7 +15,10 @@ private func snippetKeywordCallback(
 
     // A click relocates the caret, so the buffered prefix no longer describes what precedes it.
     if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
-        MainActor.assumeIsolated { listener.clearBuffer() }
+        MainActor.assumeIsolated {
+            listener.userActivity()
+            listener.clearBuffer()
+        }
         return Unmanaged.passUnretained(event)
     }
 
@@ -122,6 +125,7 @@ final class SnippetKeywordListener: HealthCheckable {
     @ObservationIgnored private var observers: [NotificationToken] = []
     /// The keystroke buffer: the tap callback mutates it per event, so it stays untracked.
     @ObservationIgnored private var policy = SnippetKeywordPolicy()
+    @ObservationIgnored private var onUserActivity: (() -> Void)?
     @ObservationIgnored
     private var onMatch: ((StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void)?
     private var sessionActive = true
@@ -158,7 +162,11 @@ final class SnippetKeywordListener: HealthCheckable {
             })
     }
 
-    func start(onMatch: @escaping (StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void) {
+    func start(
+        onUserActivity: @escaping () -> Void,
+        onMatch: @escaping (StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void
+    ) {
+        self.onUserActivity = onUserActivity
         self.onMatch = onMatch
         installObserversIfNeeded()
         healthTicker?.subscribe(self)
@@ -166,6 +174,7 @@ final class SnippetKeywordListener: HealthCheckable {
     }
 
     func stop() {
+        onUserActivity = nil
         onMatch = nil
         healthTicker?.unsubscribe(self)
         observers.removeAll()
@@ -177,6 +186,11 @@ final class SnippetKeywordListener: HealthCheckable {
 
     func clearBuffer() {
         policy.reset()
+    }
+
+    /// A keystroke Tinycast did not synthesize means the caret is the reader's again, not ours.
+    fileprivate func userActivity() {
+        onUserActivity?()
     }
 
     func healthCheck() {
@@ -293,7 +307,7 @@ final class SnippetKeywordListener: HealthCheckable {
         syncTapPresence()
     }
 
-    fileprivate func processEvent(
+    func processEvent(
         typeRaw: UInt32,
         keyCode: Int,
         flagsRaw: UInt64,
@@ -312,6 +326,7 @@ final class SnippetKeywordListener: HealthCheckable {
             hasCommandOrControl: flags.contains(.maskCommand) || flags.contains(.maskControl),
             isResetKey: Self.resetKeyCodes.contains(keyCode),
             isDeleteBackward: keyCode == kVK_Delete)
+        if input != .ignored { onUserActivity?() }
         guard let match = policy.process(input, at: now()) else { return }
         onMatch?(
             match.snippetID,
