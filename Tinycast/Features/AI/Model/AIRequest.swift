@@ -131,3 +131,67 @@ enum AIProviderError: LocalizedError, Equatable, Sendable {
         }
     }
 }
+
+public struct AIToolParameter: Equatable, Sendable {
+    public let name: String
+    public let type: String
+    public let description: String
+    public let isRequired: Bool
+    public let enumValues: [String]?
+
+    public init(
+        name: String,
+        type: String = "string",
+        description: String,
+        isRequired: Bool = true,
+        enumValues: [String]? = nil
+    ) {
+        self.name = name
+        self.type = type
+        self.description = description
+        self.isRequired = isRequired
+        self.enumValues = enumValues
+    }
+}
+
+public struct AIToolDefinition: Equatable, Sendable {
+    public let name: String
+    public let description: String
+    public let parameters: [AIToolParameter]
+
+    public init(
+        name: String,
+        description: String,
+        parameters: [AIToolParameter] = []
+    ) {
+        self.name = name
+        self.description = description
+        self.parameters = parameters
+    }
+}
+
+public struct AIToolCall: Equatable, Sendable {
+    public let id: String
+    public let name: String
+    public let arguments: String
+
+    public init(id: String, name: String, arguments: String) {
+        self.id = id
+        self.name = name
+        self.arguments = arguments
+    }
+}
+
+public struct AIToolResult: Equatable, Sendable {
+    public let callID: String
+    public let toolName: String
+    public let output: String
+    public let isError: Bool
+
+    public init(callID: String, toolName: String, output: String, isError: Bool = false) {
+        self.callID = callID
+        self.toolName = toolName
+        self.output = output
+        self.isError = isError
+    }
+}
