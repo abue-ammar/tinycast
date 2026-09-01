@@ -85,15 +85,20 @@ struct CalendarSettingsView: View {
                     }
                 } label: {
                     Text("Calendar in Menu Bar")
-                    Text("Show a meeting icon or its title and countdown independently of Tinycast's icon.")
+                    Text(
+                        "Its own menu bar item, showing a meeting icon or its title and countdown."
+                    )
                 }
                 Picker(selection: $settings.menuBarEvents) {
-                    ForEach(MenuBarEvents.allCases.dropFirst()) { lead in
+                    ForEach(MenuBarEvents.allCases) { lead in
                         Text(lead.title).tag(lead)
                     }
                 } label: {
                     Text("Show Upcoming Events")
-                    Text("When the next event reaches the menu bar. Today includes the next 30 minutes after midnight.")
+                    Text(
+                        "When the next event reaches the menu bar. Today includes the next 30 "
+                            + "minutes after midnight."
+                    )
                 }
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
                 Toggle(isOn: $settings.menuBarLinkedEventsOnly) {

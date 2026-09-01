@@ -38,24 +38,18 @@ enum JoinWindow: Int, CaseIterable, Identifiable, Sendable {
     var title: String { rawValue == 1 ? "1 minute" : "\(rawValue) minutes" }
 }
 
-/// Zero is the default `integer(forKey:)` also returns unset, so absence reads as Never.
+/// How early the calendar item picks the next event up. Zero, which `integer(forKey:)` also
+/// returns unset, keeps it for the rest of today.
 enum MenuBarEvents: Int, CaseIterable, Identifiable, Sendable {
-    case never = 0
+    case today = 0
     case two = 2
     case five = 5
     case ten = 10
     case thirty = 30
-    case today = -1
 
     var id: Int { rawValue }
 
-    var title: String {
-        switch self {
-        case .never: "Never"
-        case .today: "Today"
-        default: "\(rawValue) minutes before"
-        }
-    }
+    var title: String { self == .today ? "Today" : "\(rawValue) minutes before" }
 }
 
 /// The calendar's independent menu-bar presence. Zero matches an unset preference.
@@ -322,7 +316,9 @@ final class AppSettings {
     }
 
     var calendarLauncherLimit: CalendarLauncherLimit {
-        didSet { defaults.set(calendarLauncherLimit.rawValue, forKey: Key.calendarLauncherLimit.rawValue) }
+        didSet {
+            defaults.set(calendarLauncherLimit.rawValue, forKey: Key.calendarLauncherLimit.rawValue)
+        }
     }
 
     /// Narrows the fetch itself rather than what is shown, so every surface reads the same days.
@@ -356,7 +352,8 @@ final class AppSettings {
 
     var calendarMenuBarDisplay: CalendarMenuBarDisplay {
         didSet {
-            defaults.set(calendarMenuBarDisplay.rawValue, forKey: Key.calendarMenuBarDisplay.rawValue)
+            defaults.set(
+                calendarMenuBarDisplay.rawValue, forKey: Key.calendarMenuBarDisplay.rawValue)
         }
     }
 
@@ -533,14 +530,12 @@ final class AppSettings {
             || defaults.bool(forKey: Key.autoJoinConfirms.rawValue)
         cameraPreview = defaults.bool(forKey: Key.cameraPreview.rawValue)
         // Both default to their zero case, so an unset key needs no presence check.
-        let savedMenuBarEvents =
-            MenuBarEvents(rawValue: defaults.integer(forKey: Key.menuBarEvents.rawValue)) ?? .never
-        menuBarEvents = savedMenuBarEvents
+        menuBarEvents =
+            MenuBarEvents(rawValue: defaults.integer(forKey: Key.menuBarEvents.rawValue)) ?? .today
         calendarMenuBarDisplay =
-            defaults.object(forKey: Key.calendarMenuBarDisplay.rawValue)
-            .flatMap { $0 as? Int }
-            .flatMap(CalendarMenuBarDisplay.init(rawValue:))
-            ?? (savedMenuBarEvents == .never ? .disabled : .meetingIcon)
+            CalendarMenuBarDisplay(
+                rawValue: defaults.integer(forKey: Key.calendarMenuBarDisplay.rawValue))
+            ?? .disabled
         menuBarLinkedEventsOnly =
             defaults.object(forKey: Key.menuBarLinkedEventsOnly.rawValue) == nil
             || defaults.bool(forKey: Key.menuBarLinkedEventsOnly.rawValue)

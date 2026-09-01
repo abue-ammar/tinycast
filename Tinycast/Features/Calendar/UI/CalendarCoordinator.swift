@@ -59,10 +59,9 @@ final class CalendarCoordinator {
 
     /// The event the menu bar carries, or nil for the plain icon.
     var menuBarEvent: MeetingEvent? {
-        guard
-            settings.calendarEnabled, settings.calendarMenuBarDisplay != .disabled,
-            settings.menuBarEvents != .never
-        else { return nil }
+        guard settings.calendarEnabled, settings.calendarMenuBarDisplay != .disabled else {
+            return nil
+        }
         let summary = MenuBarSummary(
             leadMinutes: settings.menuBarEvents == .today ? nil : settings.menuBarEvents.rawValue,
             hideAfterMinutes: settings.hideCurrentEvent.minutes,
@@ -173,7 +172,8 @@ final class CalendarCoordinator {
             appIndex.setMeetings([])
             return
         }
-        let meetings = settings.calendarLauncherLimit.maximum.map { Array(agenda.prefix($0)) } ?? agenda
+        let meetings =
+            settings.calendarLauncherLimit.maximum.map { Array(agenda.prefix($0)) } ?? agenda
         appIndex.setMeetings(meetings.map(Self.entry(for:)))
     }
 

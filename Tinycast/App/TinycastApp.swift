@@ -16,8 +16,9 @@ struct TinycastApp: App {
         StorageRelocation.run()
     }
 
+    /// Two independent items: one preference each, no state either can read off the other.
     var body: some Scene {
-        MenuBarExtra(isInserted: launcherMenuBarInsertion) {
+        MenuBarExtra(isInserted: $showInMenuBar) {
             MenuBarMenu(appName: appName)
         } label: {
             MenuBarLabel(appName: appName)
@@ -25,42 +26,24 @@ struct TinycastApp: App {
         .commands { menuBarCommands }
 
         MenuBarExtra(isInserted: calendarMenuBarInsertion) {
-            MenuBarMenu(appName: appName)
+            CalendarMenuBarMenu()
         } label: {
             CalendarMenuBarLabel(appName: appName)
         }
     }
 
+    /// Reads the raw preference so the scene invalidates, but writes through `AppSettings`: dragging
+    /// the item out must also stop the clock and move the picker, not just the stored value.
     private var calendarMenuBarInsertion: Binding<Bool> {
         Binding(
             get: { calendarMenuBarDisplay != CalendarMenuBarDisplay.disabled.rawValue },
             set: { inserted in
-                if inserted {
-                    if calendarMenuBarDisplay == CalendarMenuBarDisplay.disabled.rawValue {
-                        calendarMenuBarDisplay = CalendarMenuBarDisplay.meetingIcon.rawValue
-                    }
-                } else {
-                    calendarMenuBarDisplay = CalendarMenuBarDisplay.disabled.rawValue
+                let settings = AppCore.shared.settings
+                if !inserted {
+                    settings.calendarMenuBarDisplay = .disabled
+                } else if settings.calendarMenuBarDisplay == .disabled {
+                    settings.calendarMenuBarDisplay = .meetingIcon
                 }
-            })
-    }
-
-    /// The calendar item replaces the launcher item while it is enabled, so the menu bar has one
-    /// Tinycast entry instead of two. Turning the calendar display off restores the user's
-    /// launcher preference immediately.
-    private var launcherMenuBarInsertion: Binding<Bool> {
-        Binding(
-            get: {
-                showInMenuBar
-                    && calendarMenuBarDisplay == CalendarMenuBarDisplay.disabled.rawValue
-            },
-            set: { inserted in
-                // SwiftUI may write `false` when the calendar takes this slot. That is not a user
-                // request to hide the launcher permanently.
-                guard calendarMenuBarDisplay == CalendarMenuBarDisplay.disabled.rawValue else {
-                    return
-                }
-                showInMenuBar = inserted
             })
     }
 
@@ -79,35 +62,5 @@ struct TinycastApp: App {
             Button("Close Settings") { AppCore.shared.settingsCoordinator.closeSettings() }
                 .keyboardShortcut("q")
         }
-    }
-}
-
-private struct MenuBarMenu: View {
-    let appName: String
-
-    var body: some View {
-        if let meeting = AppCore.shared.calendarCoordinator.menuBarEvent {
-            Button("Join \(meeting.title)") {
-                AppCore.shared.calendarCoordinator.join(meeting)
-            }
-            Button("Open in Calendar...") {
-                AppCore.shared.calendarCoordinator.openInCalendar(meeting)
-            }
-            Divider()
-        }
-        Button("Open \(appName)") {
-            AppCore.shared.paletteCoordinator.showPalette(mode: .launcher)
-        }
-        Button("Clipboard History") {
-            AppCore.shared.paletteCoordinator.showPalette(mode: .clipboard)
-        }
-        Divider()
-        Button("Check for Updates...") { AppCore.shared.updateCoordinator.checkForUpdates() }
-        Button("Support \(appName)...") { AppCore.shared.supportCoordinator.showSupport() }
-        Button("Settings...") { AppCore.shared.settingsCoordinator.showSettings() }
-            .keyboardShortcut(",")
-        Divider()
-        // No ⌘Q: the app menu binds it to Close Settings, and two contradictory ⌘Qs is a lie.
-        Button("Quit \(appName)") { NSApp.terminate(nil) }
     }
 }

@@ -175,18 +175,24 @@ which is `[start - lead, start)` for **Automatically** and `[start - lead, min(s
 for the timed options. Because the earliest qualifying event wins, one hiding hands the space to the
 next with no extra logic.
 
-The calendar has its own `MenuBarExtra`, separate from Tinycast's launcher icon, so hiding the latter
-never hides an enabled calendar display. The display choice is **Disabled**, **Meeting Icon**, or
-**Meeting Title**; the title reads `title • in X min` and is capped at `MenuBarSummary.titleCap`
-characters — a hard cap is the only thing that bounds a menu bar. `CalendarMenuBarLabel` reads the
-coordinator rather than the stores, which scopes Observation to the label instead of re-running either
-scene. It falls back to a calendar glyph when nothing is due, so the calendar item never disappears
-out from under the user. In **Meeting Title** mode, once no event remains today it instead reads
-`No upcoming events`.
+**The calendar's item and Tinycast's own item are two independent `MenuBarExtra` scenes**, each
+inserted by one preference and reading nothing off the other: `showInMenuBar` on General for
+Tinycast's, `calendarMenuBarDisplay` here for the calendar's. Either may be the only one in the menu
+bar, both may be, or neither. Dragging the calendar item out writes `.disabled`, which is what the
+picker already said — it never touches `showInMenuBar`.
 
-A click opens the usual menu, with `Join <title>` and `Open in Calendar...` added on top. The latter
-opens that event in Calendar.app. **A bare click never joins**: the menu bar is not a button, and a
-mis-click there would open a call.
+The display choice is **Disabled**, **Meeting Icon**, or **Meeting Title**; the title reads
+`title • in X min` and is capped at `MenuBarSummary.titleCap` characters — a hard cap is the only
+thing that bounds a menu bar. `CalendarMenuBarLabel` reads the coordinator rather than the stores,
+which scopes Observation to the label instead of re-running either scene. It falls back to a calendar
+glyph when nothing is due, so the calendar item never disappears out from under the user. In **Meeting
+Title** mode, once no event remains today it instead reads `No upcoming events`.
+
+`CalendarMenuBarMenu` lists calendar actions only — `Join <title>` and `Open in Calendar...` for the
+displayed event, then `My Schedule` and `Calendar Settings...` — so the two menus never repeat each
+other. `Join` is absent for a linkless appointment rather than opening Calendar under a name that
+lies. **A bare click never joins**: the menu bar is not a button, and a mis-click there would open a
+call.
 
 ## Auto join and the preview
 
@@ -235,9 +241,10 @@ and the empty schedule reads `MeetingSpan.orPhrase` off the store that did the q
 placeholder names no days at all: it is a static `PaletteMode` string, and one that advertised a span
 it could not read would be wrong half the time.
 
-The calendar display and both timing enums put their default at `rawValue == 0`, so an unset preference
-lands on disabled, `.never`, or `.automatically` rather than fighting them. Existing menu-bar users
-are migrated to the meeting-icon display.
+`CalendarMenuBarDisplay` and `MenuBarEvents` both put their default at `rawValue == 0`, so an unset
+preference lands on `.disabled` and `.today` rather than fighting them. `MenuBarEvents` has no `Never`:
+`.disabled` is the one switch that takes the item out of the menu bar, and a second one would only
+disagree with it.
 
 The Permissions pane shows calendar access alongside Accessibility, but only ever opens System
 Settings: the Calendar pane's own switch is the one place that may prompt.

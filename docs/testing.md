@@ -381,13 +381,16 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Adding or deleting an event in Calendar.app updates an open palette without a reopen
 - A meeting with no link is listed and searchable, and answers Open in Calendar rather than Join
 - Import a backup taken with Calendar on: it comes back **off**, and no calendar toggle travels
-- Menu bar on Never: the item is the plain icon; on 5 minutes the title and countdown appear at T-5
-  and step on the minute boundary, not on a keystroke
+- Calendar in Menu Bar on Disabled: the calendar item is gone and Tinycast's own item is unaffected;
+  turning `Show in menu bar` off leaves an enabled calendar item in place, and both off leaves neither
+- On Meeting Title with Show Upcoming Events at 5 minutes, the title and countdown appear at T-5 and
+  step on the minute boundary, not on a keystroke
 - `Only show events with meetings` hides a linkless event and shows it again when unchecked
 - Hide Current Event on Automatically clears the entry at the start and hands the space to the next
   event inside its lead time; on 5 minutes it lingers counting up, then clears
-- Clicking the menu bar item opens `Join <title>`, then `Open in Calendar...`; the latter opens that
-  event in Calendar.app, while a bare click never joins
+- Clicking the calendar item opens `Join <title>`, `Open in Calendar...`, `My Schedule` and
+  `Calendar Settings...` and nothing else; the second opens that event in Calendar.app, while a bare
+  click never joins
 - Camera Preview on: ↵ on the join card opens the panel **already showing live video** — no black
   frame, no blank mid-preview; ↵ joins, Esc drops the join; the camera light goes out with the
   panel, and the first run prompts once, before any panel appears
