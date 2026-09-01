@@ -386,7 +386,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - `Only show events with meetings` hides a linkless event and shows it again when unchecked
 - Hide Current Event on Automatically clears the entry at the start and hands the space to the next
   event inside its lead time; on 5 minutes it lingers counting up, then clears
-- Clicking the menu bar item opens the menu with `Join <title>` on top — a bare click never joins
+- Clicking the menu bar item opens `Join <title>`, then `Open in Calendar...`; the latter opens that
+  event in Calendar.app, while a bare click never joins
 - Camera Preview on: ↵ on the join card opens the panel **already showing live video** — no black
   frame, no blank mid-preview; ↵ joins, Esc drops the join; the camera light goes out with the
   panel, and the first run prompts once, before any panel appears

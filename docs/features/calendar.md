@@ -184,8 +184,9 @@ scene. It falls back to a calendar glyph when nothing is due, so the calendar it
 out from under the user. In **Meeting Title** mode, once no event remains today it instead reads
 `No upcoming events`.
 
-A click opens the usual menu, with `Join <title>` added on top. **A bare click never joins**: the
-menu bar is not a button, and a mis-click there would open a call.
+A click opens the usual menu, with `Join <title>` and `Open in Calendar...` added on top. The latter
+opens that event in Calendar.app. **A bare click never joins**: the menu bar is not a button, and a
+mis-click there would open a call.
 
 ## Auto join and the preview
 

@@ -90,6 +90,9 @@ private struct MenuBarMenu: View {
             Button("Join \(meeting.title)") {
                 AppCore.shared.calendarCoordinator.join(meeting)
             }
+            Button("Open in Calendar...") {
+                AppCore.shared.calendarCoordinator.openInCalendar(meeting)
+            }
             Divider()
         }
         Button("Open \(appName)") {
