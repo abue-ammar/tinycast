@@ -73,7 +73,7 @@ work is not in the interpreter, it's in the `@raycast/api` shim and the Node sur
 same either way. A bare `JSContext` has the full modern language (checked: `Object.groupBy`,
 `Array.fromAsync`, `Intl`, lookbehind regex) and nothing else, so the runtime supplies `console`,
 timers, `fetch`, `URL`, `URLSearchParams`, `TextEncoder`/`TextDecoder`, `AbortController`, `atob`/
-`btoa` and `structuredClone` itself.
+`btoa`, `ReadableStream`/`WritableStream`/`TransformStream` and `structuredClone` itself.
 
 ## The JS runtime
 
@@ -387,13 +387,23 @@ this). `ExtensionHostBridge` keeps those inside Tinycast: `raycast://extensions/
 runs that command when it's installed, anything else reopens the palette. Handing them to the workspace
 would launch Raycast itself.
 
-**Node built-ins** — `path`, `fs` (+ `fs/promises`), `os`, `child_process` (`exec`, `execFile`,
-`execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`), `crypto` (hashes, HMAC, random,
-UUID), `zlib` (gzip/zlib/raw deflate, both directions), `http`/`https` (`request` and `get`, buffered
-over the same URLSession bridge as `fetch`), `stream` (`Stream`, `PassThrough`, `pipeline`), `util`,
-`events`, `buffer`, `url`, `querystring`, `punycode`, `assert`, `string_decoder`, `timers`. Every
-other built-in resolves to a stub that throws only when used, so a bundle that merely references
-`dgram` or `http2` still loads.
+**Node built-ins** — `path`, `fs` (+ `fs/promises`, and `createReadStream`/`createWriteStream`), `os`,
+`child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`),
+`crypto` (hashes, HMAC, random, UUID), `zlib` (gzip/zlib/raw deflate, both directions), `http`/`https`
+(`request` and `get`, buffered over the same URLSession bridge as `fetch`), `stream` (`Readable`,
+`Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`, `finished`, plus `stream/promises` and
+`stream/web`), `util`, `events`, `buffer`, `url`, `querystring`, `punycode`, `assert`,
+`string_decoder`, `timers`. Every other built-in resolves to a stub that throws only when used, so a
+bundle that merely references `dgram` or `http2` still loads.
+
+**Streams** — the stream core is Node's real contract, not a stand-in: an extension that ships
+`stream-chain` and `stream-json` to walk a package index builds object-mode pipelines out of it, and
+`Homebrew` is the reference case. `fetch` responses expose `body` as a `ReadableStream`, so
+`pipeThrough` → `Readable.fromWeb` → `pipeline` → `fs.createWriteStream` works end to end. The bytes
+have already arrived by then, though: the "stream" hands out a buffered response in reader-sized
+pieces, so a progress callback reports how much has been written, never how much has been received.
+One shortcut inside `Transform`: it acknowledges a write as soon as `_transform` calls back rather
+than waiting for room on its readable side, so only a transform nobody reads from can grow unbounded.
 
 A bundle that ships its own HTTP client rather than calling `fetch` — node-fetch travels inside
 `@raycast/utils`, and axios has a Node adapter — reaches the network through `http.request`, so the
@@ -425,7 +435,7 @@ OAuth extensions it excluded are not counted yet — re-measure before quoting t
 | **Aborting a `fetch` already in flight** | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |
 | **Streaming `child_process.spawn`** | `spawn` runs the child to completion and emits its output as one chunk (async-iterable, which is what `get-stream`/`execa` consume). True duplex streaming would need a bidirectional channel across the bridge. Extensions built on `execa`'s deeper stream API can still fail. |
 | **`net` / `tls`** | Resolve but throw on use. Nothing bridges a socket. |
-| **Streaming HTTP** | `http.request` sends when the body ends and delivers the response in one chunk, so progress, backpressure and server-sent events are out of reach. `stream` itself is real enough to carry that — `Stream`, `PassThrough`, `pipeline`, async iteration — and the rest of the module still throws. |
+| **Streaming HTTP** | The bridge answers a request with the whole body at once, so `http.request` delivers one chunk and `Response.body` replays bytes that already arrived. Server-sent events, network-level progress and backpressure onto the socket are all out of reach; `stream` itself is real enough to carry them the day the bridge is. |
 | **Tool/AI-extension entry points (`tools/`)** | Not surfaced. |
 
 ## Working on the runtime

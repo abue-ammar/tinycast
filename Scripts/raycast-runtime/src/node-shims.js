@@ -5,7 +5,21 @@
 
 import { hostCall, hostCallSync } from "./host.js";
 import { Buffer, bufferModule } from "./buffer.js";
+import { EventEmitter } from "./events.js";
 import { base64ToBytes, bytesToBase64, reportUncaught, utf8Decode, utf8Encode } from "./polyfills.js";
+import {
+  Duplex,
+  PassThrough,
+  Readable,
+  Stream,
+  Transform,
+  Writable,
+  finished,
+  finishedPromise,
+  pipeline,
+  pipelinePromise,
+} from "./streams.js";
+import { ReadableStream, TransformStream, WritableStream } from "./web-streams.js";
 import { URL, URLSearchParams } from "./url.js";
 import { punycode } from "./punycode.js";
 
@@ -302,6 +316,8 @@ function fsMode(mode) {
   return parsed & 0o7777;
 }
 
+const FILE_STREAM_CHUNK = 64 * 1024;
+
 const fs = {
   constants: { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1 },
 
@@ -380,11 +396,58 @@ const fs = {
   watch() {
     throw new Error("fs.watch is not supported in Tinycast extensions.");
   },
-  createReadStream() {
-    throw new Error("fs.createReadStream is not supported in Tinycast extensions.");
+  createReadStream(file, options) {
+    const target = fsPath(file);
+    const encoding = typeof options === "string" ? options : options?.encoding;
+    const span = options?.highWaterMark ?? FILE_STREAM_CHUNK;
+    let offset = options?.start ?? 0;
+    const stream = new Readable({
+      highWaterMark: span,
+      read() {
+        try {
+          const bytes = base64ToBytes(hostCallSync("fs", "readRange", [target, offset, span]));
+          offset += bytes.length;
+          this.push(bytes.length ? Buffer.from(bytes) : null);
+        } catch (error) {
+          this.destroy(error);
+        }
+      },
+    });
+    stream.path = target;
+    if (encoding) stream.setEncoding(encoding);
+    return stream;
   },
-  createWriteStream() {
-    throw new Error("fs.createWriteStream is not supported in Tinycast extensions.");
+  // The host has no file handles, so each write is its own call: create once, then append.
+  createWriteStream(file, options) {
+    const target = fsPath(file);
+    let append = options?.flags === "a" || options?.flags === "a+";
+    const put = (data) => {
+      hostCallSync("fs", "writeFile", [target, bytesToBase64(data), append]);
+      append = true;
+    };
+    const stream = new Writable({
+      write(chunk, encoding, callback) {
+        const data = typeof chunk === "string" ? Buffer.from(chunk, encoding) : chunk;
+        try {
+          put(data);
+        } catch (error) {
+          return callback(error);
+        }
+        stream.bytesWritten += data.length;
+        callback(null);
+      },
+      final(callback) {
+        try {
+          if (!append) put(new Uint8Array(0));
+        } catch (error) {
+          return callback(error);
+        }
+        callback(null);
+      },
+    });
+    stream.bytesWritten = 0;
+    stream.path = target;
+    return stream;
   },
   Stats,
   Dirent,
@@ -632,77 +695,6 @@ const zlib = unsupportedModule("zlib", zlibImpl);
 
 // ─── events ─────────────────────────────────────────────────────────
 
-class EventEmitter {
-  constructor() {
-    this._events = new Map();
-    this._maxListeners = 10;
-  }
-  _list(event) {
-    if (!this._events.has(event)) this._events.set(event, []);
-    return this._events.get(event);
-  }
-  on(event, listener) {
-    this._list(event).push(listener);
-    return this;
-  }
-  addListener(event, listener) {
-    return this.on(event, listener);
-  }
-  prependListener(event, listener) {
-    this._list(event).unshift(listener);
-    return this;
-  }
-  once(event, listener) {
-    const wrapper = (...args) => {
-      this.off(event, wrapper);
-      listener(...args);
-    };
-    wrapper.listener = listener;
-    return this.on(event, wrapper);
-  }
-  off(event, listener) {
-    const list = this._events.get(event);
-    if (!list) return this;
-    const index = list.findIndex((entry) => entry === listener || entry.listener === listener);
-    if (index >= 0) list.splice(index, 1);
-    return this;
-  }
-  removeListener(event, listener) {
-    return this.off(event, listener);
-  }
-  removeAllListeners(event) {
-    if (event === undefined) this._events.clear();
-    else this._events.delete(event);
-    return this;
-  }
-  emit(event, ...args) {
-    const list = this._events.get(event);
-    if (!list?.length) return false;
-    for (const listener of list.slice()) listener.apply(this, args);
-    return true;
-  }
-  listenerCount(event) {
-    return this._events.get(event)?.length ?? 0;
-  }
-  listeners(event) {
-    return (this._events.get(event) ?? []).slice();
-  }
-  eventNames() {
-    return Array.from(this._events.keys());
-  }
-  setMaxListeners(count) {
-    this._maxListeners = count;
-    return this;
-  }
-  getMaxListeners() {
-    return this._maxListeners;
-  }
-}
-EventEmitter.EventEmitter = EventEmitter;
-EventEmitter.defaultMaxListeners = 10;
-EventEmitter.once = (emitter, event) =>
-  new Promise((resolve) => emitter.once(event, (...args) => resolve(args)));
-
 class BufferedChildProcess extends EventEmitter {
   constructor(file, args, options) {
     super();
@@ -859,147 +851,12 @@ function runAsync(spec, options, callback, label) {
   return handle;
 }
 
-// ─── stream ─────────────────────────────────────────────────────────
-
-// Two consumers, one class: `@raycast/utils`' `useExec` pipes a child's stdout through a
-// `PassThrough`, and a bundled HTTP client reads a response body with `for await`. Both attach
-// late, so chunks queue until someone asks — emitting eagerly drops the whole body on the floor.
-//
-// The module *is* `Stream`, because Node does `module.exports = Stream` and bundles lean on it:
-// node-fetch tests `body instanceof stream.default` on every Request it builds. The rest of the
-// module still refuses to run.
-class Stream extends EventEmitter {
-  constructor() {
-    super();
-    this.readable = true;
-    this.writable = true;
-    this.writableEnded = false;
-    this.encoding = null;
-    this._queue = [];
-    this._ended = false;
-    this._endEmitted = false;
-    this._flowing = false;
-    this._scheduled = false;
-    this._wake = null;
-  }
-
-  /// node-fetch decides a body was fully read by this flag before it trusts what it collected.
-  get readableEnded() {
-    return this._ended && this._queue.length === 0;
-  }
-
-  setEncoding(encoding) {
-    this.encoding = encoding;
-    return this;
-  }
-
-  write(chunk) {
-    // Node never surfaces an empty chunk as `data`; queueing one would fake a read that never was.
-    if (chunk?.length === 0) return true;
-    const decode = this.encoding && typeof chunk !== "string";
-    this._queue.push(decode ? Buffer.from(chunk).toString(this.encoding) : chunk);
-    this._drain();
-    return true;
-  }
-
-  end(chunk) {
-    if (chunk !== undefined && chunk !== null) this.write(chunk);
-    this.writableEnded = true;
-    this._ended = true;
-    this.emit("finish");
-    this._drain();
-    return this;
-  }
-
-  on(event, listener) {
-    super.on(event, listener);
-    if (event === "data") this.resume();
-    return this;
-  }
-
-  pipe(destination) {
-    this.on("data", (chunk) => destination.write?.(chunk));
-    this.on("end", () => destination.end?.());
-    return destination;
-  }
-
-  async *[Symbol.asyncIterator]() {
-    for (;;) {
-      if (this._queue.length) yield this._queue.shift();
-      else if (this._ended) return;
-      else await new Promise((resolve) => (this._wake = resolve));
-    }
-  }
-
-  resume() {
-    this._flowing = true;
-    this._drain();
-    return this;
-  }
-
-  pause() {
-    this._flowing = false;
-    return this;
-  }
-
-  destroy(error) {
-    this._ended = true;
-    if (error) this.emit("error", error);
-    this._drain();
-    return this;
-  }
-
-  /// A waiting async iterator owns the queue; otherwise nothing moves until the stream flows.
-  _drain() {
-    if (this._wake) {
-      const wake = this._wake;
-      this._wake = null;
-      wake();
-      return;
-    }
-    // Flow a tick late, as Node does: a consumer that adds `data` then `end` must not miss the end.
-    if (!this._flowing || this._scheduled) return;
-    this._scheduled = true;
-    queueMicrotask(() => {
-      this._scheduled = false;
-      while (this._flowing && this._queue.length) this.emit("data", this._queue.shift());
-      if (this._ended && !this._queue.length && !this._endEmitted) {
-        this._endEmitted = true;
-        this.emit("end");
-        this.emit("close");
-      }
-    });
-  }
-}
-
-class PassThrough extends Stream {}
-
-/// Callback form, so `util.promisify(stream.pipeline)` works. Completion comes from the last stage:
-/// a source ends its destination when it ends, which is what `Stream.pipe` wires up.
-function pipeline(...stages) {
-  const callback = typeof stages[stages.length - 1] === "function" ? stages.pop() : null;
-  let settled = false;
-  const finish = (error) => {
-    if (settled) return;
-    settled = true;
-    callback?.(error ?? null);
-  };
-  const last = stages.reduce((from, to) => {
-    from.on?.("error", finish);
-    return from.pipe(to);
-  });
-  last.on("error", finish);
-  last.on("finish", () => finish());
-  last.on("end", () => finish());
-  return last;
-}
-
 // ─── http / https ───────────────────────────────────────────────────
 
 // Bundles ship their own HTTP client — node-fetch travels inside `@raycast/utils` — and drive
 // `http.request` instead of global `fetch`. One request, buffered both ways, over the same
 // URLSession bridge `fetch` uses: no sockets, no streaming, no keep-alive.
-class IncomingMessage extends Stream {
+class IncomingMessage extends PassThrough {
   constructor(raw) {
     super();
     this.statusCode = raw.status ?? 200;
@@ -1364,7 +1221,22 @@ const httpLike = (name) =>
     METHODS: [],
   });
 
-const streamStub = unsupportedModule("stream", Object.assign(Stream, { Stream, PassThrough, pipeline }));
+const streamModule = unsupportedModule(
+  "stream",
+  Object.assign(Stream, {
+    Stream,
+    Readable,
+    Writable,
+    Duplex,
+    Transform,
+    PassThrough,
+    pipeline,
+    finished,
+    promises: { pipeline: (...stages) => pipelinePromise(stages), finished: finishedPromise },
+  }),
+);
+
+const webStreamModule = { ReadableStream, WritableStream, TransformStream };
 
 // ─── Registry ───────────────────────────────────────────────────────
 
@@ -1393,9 +1265,9 @@ export const nodeModules = {
   net: unsupportedModule("net"),
   tls: unsupportedModule("tls"),
   dns: unsupportedModule("dns"),
-  stream: streamStub,
-  "stream/web": unsupportedModule("stream/web"),
-  "stream/promises": unsupportedModule("stream/promises"),
+  stream: streamModule,
+  "stream/web": webStreamModule,
+  "stream/promises": { pipeline: (...stages) => pipelinePromise(stages), finished: finishedPromise },
   worker_threads: unsupportedModule("worker_threads", { isMainThread: true }),
   readline: unsupportedModule("readline"),
   tty: { isatty: () => false },

@@ -135,6 +135,15 @@ function syncHostCall(api, method, args) {
     case "fs.writeFile":
       fs[args[2] ? "appendFileSync" : "writeFileSync"](args[0], Buffer.from(args[1], "base64"));
       return null;
+    case "fs.readRange": {
+      const handle = fs.openSync(args[0], "r");
+      try {
+        const buffer = Buffer.alloc(args[2]);
+        return buffer.subarray(0, fs.readSync(handle, buffer, 0, args[2], args[1])).toString("base64");
+      } finally {
+        fs.closeSync(handle);
+      }
+    }
     case "fs.exists":
       return fs.existsSync(args[0]);
     case "fs.stat": {

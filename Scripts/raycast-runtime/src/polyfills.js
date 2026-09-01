@@ -1,6 +1,13 @@
 // Globals JavaScriptCore doesn't ship that extension bundles (and React's scheduler) assume.
 
 import { hostCall, hostRaw, log } from "./host.js";
+import {
+  ReadableStream,
+  TransformStream,
+  WritableStream,
+  bytesOfReadableStream,
+  readableStreamOfBytes,
+} from "./web-streams.js";
 
 const g = globalThis;
 
@@ -148,12 +155,21 @@ class TinycastResponse {
     this.ok = this.status >= 200 && this.status < 300;
     this.redirected = false;
     this.type = "basic";
-    this._bytes = bodyToBytes(body) ?? EMPTY_BYTES;
+    this._stream = body instanceof ReadableStream ? body : null;
+    this._bytes = this._stream ? null : (bodyToBytes(body) ?? EMPTY_BYTES);
+    this._hasBody = body !== null && body !== undefined;
     this.bodyUsed = false;
+  }
+  // The bytes are already here, so the "stream" hands them out in reader-sized pieces — enough for
+  // an extension that guards on `response.body` and pipes it, but never progressive.
+  get body() {
+    if (!this._hasBody) return null;
+    if (!this._stream) this._stream = readableStreamOfBytes(this._bytes);
+    return this._stream;
   }
   clone() {
     const { status, statusText, headers } = this;
-    return new TinycastResponse(this._bytes, { status, statusText, headers }, this.url);
+    return new TinycastResponse(this._bytes ?? this._stream, { status, statusText, headers }, this.url);
   }
   async arrayBuffer() {
     this.bodyUsed = true;
@@ -162,10 +178,12 @@ class TinycastResponse {
   // A copy: the body outlives the read, so a caller mutating it must not affect the next reader.
   async bytes() {
     this.bodyUsed = true;
+    if (this._bytes === null) this._bytes = await bytesOfReadableStream(this._stream);
     return this._bytes.slice();
   }
   async text() {
     this.bodyUsed = true;
+    if (this._bytes === null) this._bytes = await bytesOfReadableStream(this._stream);
     return utf8Decode(this._bytes);
   }
   async json() {
@@ -240,6 +258,12 @@ function bodyToBytes(body) {
 function encodeBody(body) {
   const bytes = bodyToBytes(body);
   return bytes === null ? null : bytesToBase64(bytes);
+}
+
+if (!g.ReadableStream) {
+  g.ReadableStream = ReadableStream;
+  g.WritableStream = WritableStream;
+  g.TransformStream = TransformStream;
 }
 
 if (!g.fetch) {

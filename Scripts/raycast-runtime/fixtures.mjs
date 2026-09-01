@@ -267,6 +267,55 @@ export default async function Command() {
 }
 `;
 
+// The Homebrew extension streams its package index to disk rather than buffering it: it guards on
+// `response.body`, counts bytes through a `TransformStream`, and pipes the result into a file — then
+// reads it back through a `Transform`. Issue #429: `Response` had no `body`, so it failed at "HTTP 200".
+const streamSource = `
+import fs from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Readable, Transform, Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+
+export default async function Command() {
+  const target = join(tmpdir(), "tinycast-fixture-index.json");
+  const response = await fetch("https://example.test/index.json");
+  if (!response.ok || !response.body) throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+
+  let observed = 0;
+  const counter = new TransformStream({
+    transform(chunk, controller) {
+      observed += chunk.length;
+      controller.enqueue(chunk);
+    },
+  });
+  const sink = fs.createWriteStream(target);
+  await pipeline(Readable.fromWeb(response.body.pipeThrough(counter)), sink);
+
+  const upper = new Transform({
+    transform(chunk, encoding, done) {
+      done(null, chunk.toString().toUpperCase());
+    },
+  });
+  const read = [];
+  const collect = new Writable({
+    write(chunk, encoding, done) {
+      read.push(chunk.toString());
+      done(null);
+    },
+  });
+  await pipeline(fs.createReadStream(target), upper, collect);
+
+  globalThis.__stream = {
+    observed,
+    bytesWritten: sink.bytesWritten,
+    onDisk: fs.readFileSync(target, "utf8"),
+    piped: read.join(""),
+  };
+  fs.unlinkSync(target);
+}
+`;
+
 const oauthSource = `
 import { OAuth } from "@raycast/api";
 
@@ -515,6 +564,32 @@ export async function runFixtures() {
             bodyBase64: Buffer.from('{"ok":true}').toString("base64"),
           };
         },
+      },
+    },
+  );
+
+  const indexBody = JSON.stringify(Array.from({ length: 4000 }, (_, index) => ({ name: `pkg-${index}` })));
+  await run(
+    "a fetch body streams through a transform onto disk",
+    streamSource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__stream");
+      check("the response exposes a body stream", result !== undefined && result.observed > 0, JSON.stringify(result));
+      check("every byte reaches the transform", result?.observed === indexBody.length, `${result?.observed} of ${indexBody.length}`);
+      check("every byte reaches the file", result?.bytesWritten === indexBody.length, String(result?.bytesWritten));
+      check("the file matches the response", result?.onDisk === indexBody);
+      check("reading it back through a Transform preserves it", result?.piped === indexBody.toUpperCase());
+    },
+    {
+      stubs: {
+        "fetch.request": () => ({
+          status: 200,
+          statusText: "OK",
+          headers: { "content-type": "application/json", "content-length": String(indexBody.length) },
+          url: "https://example.test/index.json",
+          bodyBase64: Buffer.from(indexBody).toString("base64"),
+        }),
       },
     },
   );
