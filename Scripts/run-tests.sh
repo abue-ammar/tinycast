@@ -191,6 +191,9 @@ run custom-command-test    Tinycast/Platform/PseudoTerminal.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
                            Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift \
                            Tinycast/Features/CustomCommands/Service/CustomCommandArgumentSession.swift
+run action-chain-test      Tinycast/Features/ActionChains/Model/ActionChain.swift \
+                           Tinycast/Features/ActionChains/Model/ActionChainRunner.swift \
+                           Tinycast/Features/ActionChains/Model/ActionChainStore.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
                            Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
                            Tinycast/Features/Uninstall/Model/UninstallRules.swift \

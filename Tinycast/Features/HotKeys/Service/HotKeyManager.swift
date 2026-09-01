@@ -11,6 +11,7 @@ final class HotKeyManager {
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
     var onOpenQuicklink: ((UUID) -> Void)?
+    var onRunActionChain: ((UUID) -> Void)?
     var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
@@ -48,11 +49,13 @@ final class HotKeyManager {
     private let boundPaneKey = "boundPaneBundleIDs"
     private let boundCustomCommandKey = "boundCustomCommandIDs"
     private let boundQuicklinkKey = "boundQuicklinkIDs"
+    private let boundActionChainKey = "boundActionChainIDs"
     private let boundExtensionCommandKey = "boundExtensionCommandEntryIDs"
 
-    func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>) {
+    func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>, actionChainIDs: Set<UUID>) {
         prune(key: boundCustomCommandKey, live: customCommandIDs) { .customCommand(id: $0) }
         prune(key: boundQuicklinkKey, live: quicklinkIDs) { .quicklink(id: $0) }
+        prune(key: boundActionChainKey, live: actionChainIDs) { .actionChain(id: $0) }
         // After the prunes, so a dropped record can't survive in memory this session.
         for action in candidateActions { bindings[action] = storedBinding(for: action) }
 
@@ -87,6 +90,8 @@ final class HotKeyManager {
 
     /// Quicklink UUIDs with a binding — the same index, its own namespace.
     var boundQuicklinkIDs: [UUID] { boundIDs(key: boundQuicklinkKey) }
+
+    var boundActionChainIDs: [UUID] { boundIDs(key: boundActionChainKey) }
 
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
 
@@ -129,6 +134,8 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundCustomCommandKey)
         case .quicklink(let id):
             index(id, bound: binding != nil, key: boundQuicklinkKey)
+        case .actionChain(let id):
+            index(id, bound: binding != nil, key: boundActionChainKey)
         case .extensionCommand(let entryID):
             var set = Set(boundExtensionCommandEntryIDs)
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
@@ -173,6 +180,7 @@ final class HotKeyManager {
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
         actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
+        actions += boundActionChainIDs.map { .actionChain(id: $0) }
         actions += boundExtensionCommandEntryIDs.map { .extensionCommand(entryID: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
@@ -196,6 +204,8 @@ final class HotKeyManager {
             return WindowCommandCatalog.command(id: id)?.name ?? "Window Command"
         case .quicklink:
             return displayName?(action) ?? "Quicklink"
+        case .actionChain:
+            return displayName?(action) ?? "Action Chain"
         case .extensionCommand:
             return displayName?(action) ?? "Extension Command"
         }
@@ -231,6 +241,7 @@ final class HotKeyManager {
         case .systemAction(let id): onRunSystemAction?(id)
         case .windowCommand(let id): onRunWindowCommand?(id)
         case .quicklink(let id): onOpenQuicklink?(id)
+        case .actionChain(let id): onRunActionChain?(id)
         case .extensionCommand(let entryID): onRunExtensionCommand?(entryID)
         }
     }

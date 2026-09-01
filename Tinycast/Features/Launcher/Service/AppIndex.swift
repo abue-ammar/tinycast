@@ -10,6 +10,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case systemAction
         case windowCommand
         case quicklink
+        case actionChain
         case extensionCommand
         case meeting
 
@@ -47,6 +48,10 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Quicklink", sectionTitle: "Quicklinks",
                     openVerb: "Open Quicklink", canRevealInFinder: false, isSymbolIcon: true)
+            case .actionChain:
+                return KindDescriptor(
+                    label: "Action Chain", sectionTitle: "Action Chains",
+                    openVerb: "Run Action Chain", canRevealInFinder: false, isSymbolIcon: true)
             case .extensionCommand:
                 // The label is per-entry, the owning extension's title; this is the fallback.
                 return KindDescriptor(
@@ -119,6 +124,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return WindowCommandCatalog.command(forEntryID: id).map { .windowCommand(id: $0.id) }
         case .quicklink:
             return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
+        case .actionChain:
+            return ActionChain.id(fromEntryID: id).map { .actionChain(id: $0) }
         case .snippet, .extensionCommand, .meeting:
             return nil
         }
@@ -139,6 +146,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     private var kindSymbol: String {
         switch kind {
         case .quicklink: return Quicklink.sfSymbol
+        case .actionChain: return ActionChain.sfSymbol
         case .snippet: return "text.quote"
         case .customCommand: return CustomCommand.sfSymbol
         case .command: return CommandCatalog.command(for: self)?.sfSymbol ?? "questionmark"
@@ -191,6 +199,7 @@ final class AppIndex {
     private(set) var apps: [AppEntry] = []
 
     private var snippetEntries: [AppEntry] = []
+    private var actionChainEntries: [AppEntry] = []
 
     private struct MatchKey: Equatable {
         let query: String
@@ -298,6 +307,18 @@ final class AppIndex {
             .map(AppEntry.init)
         guard entries != quicklinkEntries else { return }
         quicklinkEntries = entries
+        publishEntries()
+    }
+
+    func setActionChains(_ chains: [ActionChain]) {
+        let entries = chains.map { chain in
+            AppEntry(
+                id: chain.entryID, name: chain.name,
+                url: URL(string: "tinycast://action-chain/" + chain.id.uuidString)!,
+                bundleID: nil, kind: .actionChain, symbolName: ActionChain.sfSymbol)
+        }
+        guard entries != actionChainEntries else { return }
+        actionChainEntries = entries
         publishEntries()
     }
 
@@ -427,7 +448,8 @@ final class AppIndex {
     private func publishEntries() {
         // Each slice arrives in its own display order; the slice order is the section order.
         let updated =
-            meetingEntries + discoveredEntries + extensionEntries + quicklinkEntries + snippetEntries
+            meetingEntries + discoveredEntries + extensionEntries + quicklinkEntries + actionChainEntries
+            + snippetEntries
             + Self.systemActionEntries + windowCommandEntries + customCommandEntries
             + commandEntries
         guard updated != apps else { return }

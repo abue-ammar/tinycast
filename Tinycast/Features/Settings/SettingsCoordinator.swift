@@ -44,6 +44,7 @@ final class SettingsCoordinator {
             .environment(core.aliases)
             .environment(core.fallbacks)
             .environment(core.customCommands)
+            .environment(core.actionChains)
             .environment(core.snippetsStore)
             .environment(core.quicklinks)
             .environment(core.calendarStore)

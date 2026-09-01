@@ -14,6 +14,7 @@ struct SettingsDetailView: View {
             case .systemActions: SystemActionsSettingsView()
             case .commands: CommandsSettingsView()
             case .quicklinks: QuicklinksSettingsView()
+            case .actionChains: ActionChainsSettingsView()
             case .fallbacks: FallbacksSettingsView()
             case .ai: AISettingsView()
             case .quickActions: QuickActionsSettingsView()

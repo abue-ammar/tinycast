@@ -71,7 +71,8 @@ final class VisibilityStore {
         case .settingsPane: isKindEnabled(.systemSettings)
         case .systemAction: isKindEnabled(.systemAction)
         case .command: isKindEnabled(.command)
-        case .togglePalette, .customCommand, .windowCommand, .quicklink, .extensionCommand:
+        case .togglePalette, .customCommand, .windowCommand, .quicklink, .actionChain,
+            .extensionCommand:
             true
         }
     }

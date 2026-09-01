@@ -12,6 +12,7 @@ enum HotKeyAction: Hashable, Sendable {
     case systemAction(id: SystemAction.ID)
     case windowCommand(id: WindowCommand.ID)
     case quicklink(id: UUID)
+    case actionChain(id: UUID)
     /// Keyed by `AppEntry.id`, which is what survives a reinstall of the extension.
     case extensionCommand(entryID: String)
 
@@ -26,6 +27,7 @@ enum HotKeyAction: Hashable, Sendable {
         case .systemAction(let id): "hotkey.systemAction." + id.rawValue
         case .windowCommand(let id): "hotkey.windowCommand." + id.rawValue
         case .quicklink(let id): "hotkey.quicklink." + id.uuidString.lowercased()
+        case .actionChain(let id): "hotkey.actionChain." + id.uuidString.lowercased()
         case .extensionCommand(let entryID): "hotkey.extensionCommand." + entryID
         }
     }

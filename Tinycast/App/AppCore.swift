@@ -10,6 +10,7 @@ final class AppCore {
     let appIndex: AppIndex
     let customCommands = CustomCommandStore()
     let quicklinks = QuicklinkStore()
+    let actionChains = ActionChainStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
@@ -98,6 +99,9 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         hotKeys: hotKeys, favorites: favorites, visibility: visibility,
         ranking: launcherRanking, aliases: aliases, activationPolicy: activationPolicy, core: self)
+    @ObservationIgnored private(set) lazy var actionChainCoordinator = ActionChainCoordinator(
+        store: actionChains, appIndex: appIndex, hotKeys: hotKeys, favorites: favorites,
+        visibility: visibility, ranking: launcherRanking, core: self)
     @ObservationIgnored private(set) lazy var notesCoordinator = NotesCoordinator(
         store: notesStore,
         settings: settings,
@@ -209,6 +213,10 @@ final class AppCore {
             // Before `hotKeys.start` even when off: the prune reads it. docs/features/quicklinks.md
             quicklinks.load()
             quicklinkCoordinator.applyQuicklinksPresence()
+            actionChains.onChange = { [weak self] _ in
+                self?.actionChainCoordinator.applyActionChainsPresence()
+            }
+            actionChainCoordinator.applyActionChainsPresence()
             updateCoordinator.applyEnabled()
             calendarCoordinator.applyEnabled()
             Task { await appIndex.refresh() }
@@ -239,6 +247,9 @@ final class AppCore {
             hotKeys.onOpenQuicklink = { [weak self] id in
                 self?.quicklinkCoordinator.openQuicklink(id: id)
             }
+            hotKeys.onRunActionChain = { [weak self] id in
+                self?.actionChainCoordinator.runActionChain(id: id)
+            }
             hotKeys.onRunExtensionCommand = { [weak self] entryID in
                 self?.extensionCoordinator.runExtensionCommand(entryID: entryID)
             }
@@ -261,7 +272,8 @@ final class AppCore {
             }
             hotKeys.start(
                 customCommandIDs: Set(customCommands.commands.map(\.id)),
-                quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)))
+                quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)),
+                actionChainIDs: Set(actionChains.chains.map(\.id)))
             // Keeps running while Carbon pauses: the recorder needs its rewritten flags.
             hyperKeyTap.start(settings: settings)
 
@@ -321,6 +333,8 @@ final class AppCore {
             return customCommands.command(id: id)?.name
         case .quicklink(let id):
             return quicklinks.quicklink(id: id)?.name
+        case .actionChain(let id):
+            return actionChains.chain(id: id)?.name
         case .extensionCommand(let entryID):
             return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
         case .togglePalette, .command, .systemAction, .windowCommand:

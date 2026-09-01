@@ -7,6 +7,7 @@ struct SettingsBackup: Codable {
     var hotkeys: HotkeyBackup?
     var customCommands: [CustomCommand]?
     var quicklinks: [Quicklink]?
+    var actionChains: [ActionChain]?
     var favoriteApps: [String]?
     var hiddenLauncherItems: [String]?
     var hiddenLauncherKinds: [String]?
@@ -76,6 +77,7 @@ struct SettingsBackup: Codable {
         var systemActions: [String: HotKeyBinding]?
         var windowCommands: [String: HotKeyBinding]?
         var quicklinks: [String: HotKeyBinding]?
+        var actionChains: [String: HotKeyBinding]?
     }
 
     /// A tally of what an import touched, for user-facing confirmation.
@@ -87,6 +89,7 @@ struct SettingsBackup: Codable {
         var aliases = 0
         var customCommands = 0
         var quicklinks = 0
+        var actionChains = 0
     }
 }
 
@@ -171,10 +174,15 @@ extension SettingsBackup {
             uniqueKeysWithValues: hk.boundQuicklinkIDs.compactMap { id in
                 hk.binding(for: .quicklink(id: id)).map { (id.uuidString.lowercased(), $0) }
             })
+        hotkeys.actionChains = Dictionary(
+            uniqueKeysWithValues: hk.boundActionChainIDs.compactMap { id in
+                hk.binding(for: .actionChain(id: id)).map { (id.uuidString.lowercased(), $0) }
+            })
         backup.hotkeys = hotkeys
 
         backup.customCommands = core.customCommands.commands
         backup.quicklinks = core.quicklinks.quicklinks
+        backup.actionChains = core.actionChains.chains
         backup.favoriteApps = core.favorites.keys
         backup.hiddenLauncherItems = Array(core.visibility.hiddenItemKeys)
         backup.hiddenLauncherKinds = Array(core.visibility.disabledKinds)
@@ -192,6 +200,9 @@ extension SettingsBackup {
         // Before the hotkeys, so a restored binding has its quicklink to attach to.
         if let quicklinks {
             summary.quicklinks = core.quicklinkCoordinator.replaceQuicklinks(quicklinks)
+        }
+        if let actionChains {
+            summary.actionChains = core.actionChainCoordinator.replaceActionChains(actionChains)
         }
         if let hotkeys { summary.hotkeys = applyHotkeys(hotkeys, to: core) }
         if let favoriteApps {
@@ -417,6 +428,12 @@ extension SettingsBackup {
                 continue
             }
             apply(b, .quicklink(id: id))
+        }
+        for (rawID, b) in hotkeys.actionChains ?? [:] {
+            guard let id = UUID(uuidString: rawID), core.actionChains.chain(id: id) != nil else {
+                continue
+            }
+            apply(b, .actionChain(id: id))
         }
         return count
     }

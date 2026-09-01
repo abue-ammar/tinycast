@@ -34,6 +34,7 @@ open with an `## Invariants` section; read it before changing anything in that a
 [notes](features/notes.md) ·
 [snippets](features/snippets.md) ·
 [quicklinks](features/quicklinks.md) ·
+[action chains](features/action-chains.md) ·
 [hotkeys](features/hotkeys.md) ·
 [window management](features/window-management.md) ·
 [custom commands](features/custom-commands.md) ·

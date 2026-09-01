@@ -79,6 +79,11 @@ final class LauncherCoordinator {
             customCommandCoordinator.runCustomCommand(id: id)
             return
         }
+        if app.kind == .actionChain {
+            guard let id = ActionChain.id(fromEntryID: app.id) else { return }
+            core.actionChainCoordinator.runActionChain(id: id)
+            return
+        }
         if app.kind == .systemAction {
             guard let action = SystemActionCatalog.action(forEntryID: app.id) else { return }
             systemActionCoordinator.runSystemAction(id: action.id)
@@ -116,7 +121,7 @@ final class LauncherCoordinator {
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
             snippetCoordinator.expandSnippet(id: snippetID, targetApp: previous)
-        case .command, .customCommand, .systemAction, .windowCommand, .quicklink,
+        case .command, .customCommand, .systemAction, .windowCommand, .quicklink, .actionChain,
             .extensionCommand, .meeting:
             break  // handled above
         }
