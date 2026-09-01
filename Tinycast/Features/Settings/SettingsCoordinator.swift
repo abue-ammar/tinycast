@@ -38,6 +38,7 @@ final class SettingsCoordinator {
             .environment(navigation)
             .environment(core)
             .environment(core.settings)
+            .environment(core.windowWorkspaces)
             .environment(core.appIndex)
             .environment(core.hotKeys)
             .environment(core.visibility)

@@ -36,6 +36,7 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case toggleFullscreen = "toggle-fullscreen"
         case previousSpace = "previous-space"
         case nextSpace = "next-space"
+        case restoreWorkspace = "restore-workspace"
     }
 
     /// What the mover has to do, so its dispatch stays exhaustive over the catalog.
@@ -48,6 +49,8 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case fullscreen
         /// No window at all — a synthetic Dock gesture that moves between Spaces.
         case space
+        /// Restore the workspace selected in Settings.
+        case workspace
     }
 
     /// The launcher section a command belongs to, and the order the Settings panel lists them in.
@@ -60,6 +63,7 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case moving
         case fullscreen
         case spaces
+        case workspaces
 
         var title: String {
             switch self {
@@ -71,6 +75,7 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
             case .moving: return "Moving"
             case .fullscreen: return "Fullscreen"
             case .spaces: return "Spaces"
+            case .workspaces: return "Workspaces"
             }
         }
     }
@@ -154,6 +159,7 @@ enum WindowCommandCatalog {
         case .toggleFullscreen: return "Toggle Fullscreen"
         case .previousSpace: return "Switch to Previous Space"
         case .nextSpace: return "Switch to Next Space"
+        case .restoreWorkspace: return "Restore Workspace"
         }
     }
 
@@ -191,6 +197,7 @@ enum WindowCommandCatalog {
         case .toggleFullscreen: return "arrow.up.left.and.arrow.down.right.square"
         case .previousSpace: return "chevron.backward.2"
         case .nextSpace: return "chevron.forward.2"
+        case .restoreWorkspace: return "square.3.layers.3d.top.filled"
         }
     }
 
@@ -199,6 +206,7 @@ enum WindowCommandCatalog {
         case .restore: return .restore
         case .toggleFullscreen: return .fullscreen
         case .previousSpace, .nextSpace: return .space
+        case .restoreWorkspace: return .workspace
         default: return .geometry
         }
     }
@@ -222,6 +230,8 @@ enum WindowCommandCatalog {
             return .fullscreen
         case .previousSpace, .nextSpace:
             return .spaces
+        case .restoreWorkspace:
+            return .workspaces
         }
     }
 }

@@ -112,6 +112,62 @@ final class WindowMover {
         return !applied.equalTo(current)
     }
 
+    /// Reads every eligible app window only when the user asks to save a workspace.
+    func captureWorkspace() -> [WindowWorkspace.Window] {
+        guard Permissions.ensureAccessibility() else { return [] }
+        let geometry = AXGeometry(screens: NSScreen.screens)
+        let screens = Self.screens(NSScreen.screens, geometry: geometry)
+        var captured: [WindowWorkspace.Window] = []
+        for app in NSWorkspace.shared.runningApplications where !app.isTerminated {
+            guard let bundleID = app.bundleIdentifier else { continue }
+            let application = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(application, Self.messagingTimeout)
+            for window in windows(in: application) where isEligible(window) {
+                guard let frame = frame(of: window),
+                    let screen = WindowLayout.screen(containing: frame, in: screens),
+                    screen.id >= 0,
+                    let normalized = WindowWorkspace.NormalizedFrame(frame: frame, in: screen.visibleFrame)
+                else { continue }
+                captured.append(.init(bundleID: bundleID, screenID: UInt32(screen.id), frame: normalized))
+            }
+        }
+        return captured
+    }
+
+    /// Replays a saved workspace once; unavailable apps are launched but never polled for windows.
+    @discardableResult
+    func restoreWorkspace(_ workspace: WindowWorkspace) -> Int {
+        guard Permissions.ensureAccessibility() else { return 0 }
+        let geometry = AXGeometry(screens: NSScreen.screens)
+        let screens = Self.screens(NSScreen.screens, geometry: geometry)
+        guard !screens.isEmpty else { return 0 }
+        let apps = Dictionary(grouping: NSWorkspace.shared.runningApplications, by: \.bundleIdentifier)
+            .compactMapValues { $0.first }
+        var restored = 0
+        for (bundleID, savedWindows) in Dictionary(grouping: workspace.windows, by: \.bundleID) {
+            guard let app = apps[bundleID], !app.isTerminated else {
+                if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                    NSWorkspace.shared.open(url)
+                }
+                continue
+            }
+            let application = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(application, Self.messagingTimeout)
+            let windows = windows(in: application).filter(isEligible)
+            for (saved, window) in zip(savedWindows, windows) {
+                guard let target = screens.first(where: { $0.id == Int(saved.screenID) }) ?? screens.first,
+                    let frame = saved.frame.frame(in: target.visibleFrame),
+                    isSettable(kAXPositionAttribute, on: window)
+                else { continue }
+                if isSettable(kAXSizeAttribute, on: window) { _ = setSize(frame.size, on: window) }
+                guard setPosition(frame.origin, on: window) else { continue }
+                if isSettable(kAXSizeAttribute, on: window) { _ = setSize(frame.size, on: window) }
+                restored += 1
+            }
+        }
+        return restored
+    }
+
     // MARK: - Applying a placement
 
     private func apply(
@@ -172,13 +228,14 @@ final class WindowMover {
             if let window = element(application, attribute), isEligible(window) { return window }
         }
         // Last resort for apps that report neither: the first window that isn't a sheet or a panel.
+        return windows(in: application).first(where: isEligible)
+    }
+
+    private func windows(in application: AXUIElement) -> [AXUIElement] {
         var value: CFTypeRef?
-        guard
-            AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value)
-                == .success,
-            let windows = value as? [AXUIElement]
-        else { return nil }
-        return windows.first(where: isEligible)
+        guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success
+        else { return [] }
+        return value as? [AXUIElement] ?? []
     }
 
     /// A real, restorable window: not a sheet, popover or minimized one, and it reports geometry.

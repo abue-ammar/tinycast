@@ -19,6 +19,7 @@ final class AppCore {
     let hotKeys = HotKeyManager()
     let hyperKeyTap = HyperKeyTap()
     let windowMover = WindowMover()
+    let windowWorkspaces = WindowWorkspaceStore()
     let spaceSwitcher = SpaceSwitcher()
     let inputSourceSwitcher = InputSourceSwitcher()
     let settings: AppSettings
@@ -91,7 +92,8 @@ final class AppCore {
         settingsCoordinator: settingsCoordinator, settings: settings, core: self)
     @ObservationIgnored private(set) lazy var windowCommandCoordinator = WindowCommandCoordinator(
         settings: settings, paletteCoordinator: paletteCoordinator, windowMover: windowMover,
-        spaceSwitcher: spaceSwitcher)
+        workspaceStore: windowWorkspaces, spaceSwitcher: spaceSwitcher,
+        showMessage: { [unowned self] in self.showMessage($0) })
     @ObservationIgnored private(set) lazy var customCommandCoordinator = CustomCommandCoordinator(
         store: customCommands, argumentSession: customCommandArguments, settings: settings,
         appIndex: appIndex,

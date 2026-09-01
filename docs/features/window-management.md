@@ -2,7 +2,7 @@
 
 Rectangle-style window actions — halves, quarters, fourths, thirds, sizing, nudging, display moves,
 native fullscreen and Space switching — searchable in the palette and bindable to global shortcuts.
-34 commands, no new dependencies and no new permission: they reuse the Accessibility grant clipboard
+35 commands, no new dependencies and no new permission: they reuse the Accessibility grant clipboard
 paste already needs.
 
 Ships **off**. Settings › Window Management is the switch, and while it is off there are no launcher
@@ -40,6 +40,19 @@ The first three compile into `Tests/window-command-test.swift` and `SpaceGesture
 dependency, and all must stay pure — `WindowActionMemory` takes `now` as a parameter rather than
 reading a clock. CoreGraphics is needed only because `CGRect`'s `Equatable` conformance lives in that
 overlay rather than in Foundation.
+
+## Workspaces
+
+Settings › Window Management saves named window snapshots on demand. A snapshot records each eligible
+Accessibility window's application bundle identifier, display identifier and frame as fractions of that
+display's `visibleFrame`. Restore resolves the saved display first and uses the primary available display
+when it is gone; frames are rescaled and clamped into the usable area. A missing application is opened
+once when macOS can locate its bundle. Tinycast never polls for its eventual window: a later Restore
+places it after launch.
+
+`Restore Workspace` is a normal launcher command and can be assigned a global shortcut. It restores the
+workspace selected in Settings. Saving, restoring and application launch all happen only from that user
+gesture; the feature adds no timers, observers or idle background work.
 
 Adding a command is four edits in `WindowCommand.swift` (a case in `ID`, plus `name`, `symbol` and
 `group` arms), an arm in `WindowLayout.placement` or `tileFractions`, and bumping

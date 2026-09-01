@@ -185,6 +185,7 @@ run volume-test            Tinycast/Features/SystemActions/Model/VolumeLevel.swi
 run window-command-test    Tinycast/Features/WindowManagement/WindowCommand.swift \
                            Tinycast/Features/WindowManagement/WindowLayout.swift \
                            Tinycast/Features/WindowManagement/WindowActionMemory.swift
+run workspace-test         Tinycast/Features/WindowManagement/WindowWorkspace.swift
 run space-gesture-test     Tinycast/Features/WindowManagement/WindowCommand.swift \
                            Tinycast/Features/WindowManagement/SpaceGesture.swift
 run custom-command-test    Tinycast/Platform/PseudoTerminal.swift \

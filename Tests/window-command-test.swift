@@ -71,7 +71,7 @@ struct WindowCommandTests {
 
     static func testCatalog() {
         let commands = WindowCommandCatalog.all
-        expect(commands.count == 34, "catalog contains all 34 agreed commands")
+        expect(commands.count == 35, "catalog contains all 35 agreed commands")
         expect(commands.map(\.id) == WindowCommand.ID.allCases, "catalog covers every ID once")
         expect(
             Set(commands.map { $0.name.lowercased() }).count == commands.count, "names are unique")
@@ -113,6 +113,9 @@ struct WindowCommandTests {
         expect(
             Set(commands.filter { $0.kind == .space }.map(\.id)) == [.previousSpace, .nextSpace],
             "only the two Space switches are space commands")
+        expect(
+            Set(commands.filter { $0.kind == .workspace }.map(\.id)) == [.restoreWorkspace],
+            "only Restore Workspace runs the selected workspace")
         expect(
             commands.filter { $0.kind == .space }.allSatisfy {
                 WindowLayout.placement(

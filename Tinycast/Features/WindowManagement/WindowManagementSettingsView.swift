@@ -2,6 +2,9 @@ import SwiftUI
 
 struct WindowManagementSettingsView: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(AppCore.self) private var core
+    @Environment(WindowWorkspaceStore.self) private var workspaces
+    @State private var workspaceName = "Workspace"
 
     var body: some View {
         @Bindable var settings = settings
@@ -17,11 +20,48 @@ struct WindowManagementSettingsView: View {
 
             Group {
                 options
+                workspaceLayouts
                 commands
             }
             .settingsEnabled(settings.windowManagementEnabled)
         }
         .formStyle(.grouped)
+    }
+
+    private var workspaceLayouts: some View {
+        Section {
+            HStack(spacing: Theme.Spacing.sm) {
+                TextField("Workspace name", text: $workspaceName)
+                Button("Save current layout") {
+                    core.windowCommandCoordinator.saveWorkspace(named: workspaceName)
+                }
+            }
+            if workspaces.workspaces.isEmpty {
+                Text("Save a layout to restore it later from the launcher or a shortcut.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(workspaces.workspaces) { workspace in
+                    HStack {
+                        Button {
+                            workspaces.selectedID = workspace.id
+                        } label: {
+                            Image(
+                                systemName: workspaces.selectedID == workspace.id
+                                    ? "checkmark.circle.fill" : "circle")
+                        }
+                        .buttonStyle(.plain)
+                        Text(workspace.name)
+                        Spacer()
+                        Button("Restore") { core.windowCommandCoordinator.restoreSelectedWorkspace() }
+                        Button("Delete", role: .destructive) { workspaces.remove(id: workspace.id) }
+                    }
+                }
+            }
+        } header: {
+            Text("Workspaces")
+        } footer: {
+            Text("Frames use each display’s usable area, so a layout adapts to resolution changes.")
+        }
     }
 
     private var options: some View {
