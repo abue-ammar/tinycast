@@ -16,7 +16,7 @@ struct AIChatTests {
         }
     }
 
-    static func main() {
+    static func main() async {
         sessionSummariesAndRequests()
         requestsKeepOnlyBoundedContext()
         attachmentsStayInsideTheTurnBudget()
@@ -29,9 +29,170 @@ struct AIChatTests {
         segmentsClampSearchOffsets()
         leavingAConversationDropsItsStagedImages()
         retentionPrunesByAgeAndCascades()
+        segmentsInterleaveSearchesAndTools()
+        await theToolLoopRunsUntilTheModelStopsAsking()
+        await theToolLoopRefusesToRunForever()
+        await toolOutputIsBoundedBeforeItIsBilled()
+        toolUsesPersistAndSettleOnReload()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
+    }
+
+    /// A reply that searched and called tools has to render them in the order they happened.
+    static func segmentsInterleaveSearchesAndTools() {
+        let message = ChatMessage(
+            role: .assistant, text: "abcdef",
+            searches: [ChatSearch(query: "q", isComplete: true, textOffset: 4)],
+            toolUses: [
+                ChatToolUse(
+                    callID: "1", origin: "Files", title: "read", state: .completed, textOffset: 2)
+            ])
+        expect(
+            message.segments == [
+                .text("ab"),
+                .tool(
+                    ChatToolUse(
+                        callID: "1", origin: "Files", title: "read", state: .completed,
+                        textOffset: 2)),
+                .text("cd"),
+                .search(ChatSearch(query: "q", isComplete: true, textOffset: 4)),
+                .text("ef")
+            ],
+            "segments interleave by offset, whichever kind of interruption came first")
+        expect(
+            ChatToolUse(
+                callID: "1", origin: "Files", title: "read", state: .running, textOffset: 0
+            ).label
+                == "Calling Files · read",
+            "a running call says so, and names the server it is calling")
+    }
+
+    static func theToolLoopRunsUntilTheModelStopsAsking() async {
+        let base = ScriptedProvider(rounds: [
+            [.toolCallRequested(AIToolCall(id: "c1", name: "fs__read", arguments: "{}"))],
+            [.text("done"), .finished]
+        ])
+        let invoker = RecordingInvoker(result: "file contents")
+        let events = await collect(loop(base, invoker))
+
+        expect(base.requests.count == 2, "the loop re-streams the turn once per round of calls")
+        expect(
+            base.requests.first?.tools.map(\.name) == ["fs__read"],
+            "and arms every round with the tools it wraps, which the turn itself never carried")
+        expect(invoker.calls.map(\.name) == ["fs__read"], "and runs exactly what was asked for")
+        expect(
+            events.contains(.toolCall(id: "c1", origin: "Files", title: "read")),
+            "the transcript is told which tool ran, in words a row can show")
+        expect(
+            events.contains(.toolResult(id: "c1", isError: false)),
+            "and told when it came back")
+        expect(
+            !events.contains(where: {
+                if case .toolCallRequested = $0 { return true }; return false
+            }),
+            "the transport's own request event never reaches the transcript")
+        expect(events.last == .finished, "the turn ends once, when the model stops asking")
+
+        let second = base.requests[1]
+        expect(
+            second.messages.last?.toolResult?.content == "file contents",
+            "the result is fed back as the tool turn the next round reads")
+        expect(
+            second.messages.dropLast().last?.toolCalls.first?.id == "c1",
+            "paired with the assistant turn that asked for it, which no provider accepts orphaned")
+    }
+
+    /// A model that only ever calls has stopped answering, and the turn has to end saying so.
+    static func theToolLoopRefusesToRunForever() async {
+        let round: [AIStreamEvent] = [
+            .toolCallRequested(AIToolCall(id: "c", name: "fs__read", arguments: "{}"))
+        ]
+        let base = ScriptedProvider(rounds: Array(repeating: round, count: 40))
+        let invoker = RecordingInvoker(result: "again")
+        var failure: String?
+        do {
+            for try await _ in loop(base, invoker).stream(Self.turn) {}
+        } catch {
+            failure = error.localizedDescription
+        }
+        expect(
+            base.requests.count == AIToolLoopProvider.maxRounds,
+            "the loop stops at its cap rather than billing another round")
+        expect(
+            failure?.contains("\(AIToolLoopProvider.maxRounds) rounds") == true,
+            "and the turn fails with a sentence naming why it stopped")
+    }
+
+    static func toolOutputIsBoundedBeforeItIsBilled() async {
+        let base = ScriptedProvider(rounds: [
+            [.toolCallRequested(AIToolCall(id: "c1", name: "fs__read", arguments: "{}"))],
+            [.finished]
+        ])
+        let invoker = RecordingInvoker(
+            result: String(repeating: "x", count: AIToolLoopProvider.maxResultBytes * 2))
+        _ = await collect(loop(base, invoker))
+        let fed = base.requests[1].messages.last?.toolResult?.content ?? ""
+        expect(
+            fed.utf8.count <= AIToolLoopProvider.maxResultBytes + 32,
+            "a huge result is cut to the per-call ceiling before it enters the context")
+        expect(fed.hasSuffix("truncated."), "and says it was cut rather than pretending it was all")
+    }
+
+    static func toolUsesPersistAndSettleOnReload() {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "ai-tools-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = ChatHistoryStore(directory: directory)
+        var session = ChatSession()
+        session.append(ChatMessage(role: .user, text: "go"))
+        session.append(
+            ChatMessage(
+                role: .assistant, text: "working", state: .complete,
+                toolUses: [
+                    ChatToolUse(
+                        callID: "c1", origin: "Files", title: "read", state: .completed,
+                        textOffset: 3),
+                    ChatToolUse(
+                        callID: "c2", origin: "Files", title: "write", state: .running,
+                        textOffset: 7)
+                ]))
+        store.save(session)
+
+        let reloaded = ChatHistoryStore(directory: directory).session(id: session.id)
+        let uses = reloaded?.messages.last?.toolUses ?? []
+        expect(uses.count == 2, "a reopened chat still shows what the model did on the reader's behalf")
+        expect(uses.first?.title == "read", "in the order it did it")
+        expect(
+            uses.last?.state == .failed,
+            "a call left running belonged to a process that is gone, so it never reported back")
+    }
+
+    private static let turn = AIRequest(messages: [AIMessage(role: .user, text: "go")])
+
+    private static func loop(
+        _ base: ScriptedProvider, _ invoker: RecordingInvoker
+    ) -> AIToolLoopProvider {
+        AIToolLoopProvider(
+            base: base,
+            tools: [
+                AITool(
+                    name: "fs__read", description: "", parameters: .object([:]), origin: "Files",
+                    title: "read")
+            ],
+            invoke: { call in await invoker.invoke(call) })
+    }
+
+    private static func collect(_ provider: AIToolLoopProvider) async -> [AIStreamEvent] {
+        var events: [AIStreamEvent] = []
+        do {
+            for try await event in provider.stream(turn) { events.append(event) }
+        } catch {
+            events.append(.text("ERROR: \(error.localizedDescription)"))
+        }
+        return events
     }
 
     static func sessionSummariesAndRequests() {
@@ -562,5 +723,51 @@ struct AIChatTests {
         expect(
             removing.stagingGeneration == beforeRemove,
             "taking one staged image back leaves another's decode on its way")
+    }
+}
+
+/// A base route that replays one scripted round per request, so the loop's driving is what is tested.
+final class ScriptedProvider: AIProvider, @unchecked Sendable {
+    private let lock = NSLock()
+    private var rounds: [[AIStreamEvent]]
+    private var seen: [AIRequest] = []
+
+    init(rounds: [[AIStreamEvent]]) {
+        self.rounds = rounds
+    }
+
+    var requests: [AIRequest] {
+        lock.withLock { seen }
+    }
+
+    func stream(_ request: AIRequest) -> AIProviderStream {
+        let events: [AIStreamEvent] = lock.withLock {
+            seen.append(request)
+            return rounds.isEmpty ? [.finished] : rounds.removeFirst()
+        }
+        return AIProviderStream { continuation in
+            for event in events { continuation.yield(event) }
+            continuation.finish()
+        }
+    }
+}
+
+/// Stands in for the MCP coordinator: it records what it was asked and answers the same way.
+final class RecordingInvoker: @unchecked Sendable {
+    private let lock = NSLock()
+    private let result: String
+    private var received: [AIToolCall] = []
+
+    init(result: String) {
+        self.result = result
+    }
+
+    var calls: [AIToolCall] {
+        lock.withLock { received }
+    }
+
+    func invoke(_ call: AIToolCall) async -> AIToolResult {
+        lock.withLock { received.append(call) }
+        return AIToolResult(callID: call.id, content: result, isError: false)
     }
 }

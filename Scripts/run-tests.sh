@@ -266,12 +266,22 @@ run ai-provider-test       Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Settings/AISettingsStore.swift
 run ai-chat-test           Tinycast/Features/AI/Model/AIRequest.swift \
                            Tinycast/Features/AI/Model/AIRetention.swift \
+                           Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/JSONValue.swift \
                            Tinycast/Features/AI/Model/ChatMessage.swift \
                            Tinycast/Features/AI/Model/ChatSession.swift \
                            Tinycast/Features/AI/Model/MarkdownBlock.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
                            Tinycast/Features/AI/Service/ChatHistoryStore.swift \
+                           Tinycast/Features/AI/Service/AIToolLoopProvider.swift \
                            Tinycast/Features/AI/UI/AIChatState.swift
+run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Features/AI/Model/AIConnection.swift \
+                           Tinycast/Features/AI/Model/AppleIntelligence.swift \
+                           Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/JSONValue.swift \
+                           Tinycast/Features/MCP/Model/*.swift \
+                           Tinycast/Features/MCP/Settings/MCPSettingsStore.swift
 run quick-action-test      Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \
@@ -281,27 +291,37 @@ run apple-intelligence-test Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
                            Tinycast/Features/AI/Service/AppleIntelligenceProvider.swift
+run slow mcp-stdio-test    Tinycast/Platform/ExecutableLocator.swift \
+                           Tinycast/Platform/KeychainSecretStore.swift \
+                           Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Features/AI/Model/AIConnection.swift \
+                           Tinycast/Features/AI/Model/AppleIntelligence.swift \
+                           Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/AIStreamDecoder.swift \
+                           Tinycast/Features/AI/Model/AIRequest.swift \
+                           Tinycast/Features/AI/Model/JSONValue.swift \
+                           Tinycast/Features/MCP/Model/*.swift \
+                           Tinycast/Features/MCP/Service/*.swift
 run slow codex-turn-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
                            Tinycast/Features/AI/Service/ChatGPTSubscriptionManager.swift \
                            Tinycast/Features/AI/Service/CodexAppServerClient.swift \
-                           Tinycast/Features/AI/Service/CodexExecutableLocator.swift \
+                           Tinycast/Platform/ExecutableLocator.swift \
                            Tinycast/Features/AI/Service/CodexTurnRunner.swift
 
 if [ "$emit_db" -eq 1 ]; then
     printf ']\n' >> "$DB"
     [ -f .compile ] || echo '[]' > .compile
-    python3 - .compile "$DB" <<'PY'
-import json, sys
-
-compile_path, harness_path = sys.argv[1], sys.argv[2]
-existing = json.load(open(compile_path))
-harnesses = json.load(open(harness_path))
-kept = [e for e in existing if not any("/Tests/" in f for f in e.get("files") or [])]
-json.dump(kept + harnesses, open(compile_path, "w"), indent=1)
-print(f"{len(harnesses)} harness entries indexed into .compile")
-PY
+    node -e '
+const fs = require("node:fs");
+const [comp, db] = process.argv.slice(1);
+const existing = JSON.parse(fs.readFileSync(comp, "utf8"));
+const harnesses = JSON.parse(fs.readFileSync(db, "utf8"));
+const kept = existing.filter((e) => !(e.files || []).some((f) => f.includes("/Tests/")));
+fs.writeFileSync(comp, JSON.stringify([...kept, ...harnesses], null, 1));
+console.log(harnesses.length + " harness entries indexed into .compile");
+' .compile "$DB"
     exit 0
 fi
 

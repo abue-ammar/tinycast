@@ -7,7 +7,7 @@ enum AIProviderFactory {
     static func make(
         settings: AISettingsStore,
         subscription: ChatGPTSubscriptionManager,
-        keyStore: APIKeyStore = APIKeyStore()
+        keyStore: KeychainSecretStore = .aiAPIKeys
     ) throws -> any AIProvider {
         guard let selection = settings.defaultModel else {
             throw AIProviderError.unavailable("Choose a default AI model in Settings.")
@@ -22,7 +22,7 @@ enum AIProviderFactory {
         selection: AIModelSelection,
         settings: AISettingsStore,
         subscription: ChatGPTSubscriptionManager,
-        keyStore: APIKeyStore = APIKeyStore(),
+        keyStore: KeychainSecretStore = .aiAPIKeys,
         guardrails: SystemLanguageModel.Guardrails = .default
     ) throws -> any AIProvider {
         switch selection {
@@ -46,7 +46,7 @@ enum AIProviderFactory {
             }
             let key: String
             do {
-                key = try keyStore.key(for: connection.id) ?? ""
+                key = try keyStore.secret(for: connection.id) ?? ""
             } catch {
                 throw AIProviderError.unavailable("The API key could not be read from Keychain.")
             }

@@ -1,39 +1,44 @@
 import Foundation
 
-/// Finds the user's `codex` the way their Terminal would; the app's own PATH is Finder's.
-enum CodexExecutableLocator {
+/// Finds a user's CLI the way their Terminal would; the app's own PATH is Finder's.
+enum ExecutableLocator {
     nonisolated static func locate(
+        _ command: String,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) async -> URL? {
-        if let url = wellKnown(environment: environment).first(where: isExecutable) { return url }
-        guard let path = await loginShellLookup() else { return nil }
+        if let url = wellKnown(command, environment: environment).first(where: isExecutable) {
+            return url
+        }
+        guard let path = await loginShellLookup(command) else { return nil }
         let url = URL(fileURLWithPath: path)
         return isExecutable(url) ? url : nil
     }
 
-    nonisolated private static func wellKnown(environment: [String: String]) -> [URL] {
+    nonisolated private static func wellKnown(
+        _ command: String, environment: [String: String]
+    ) -> [URL] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         var candidates = (environment["PATH"] ?? "")
             .split(separator: ":")
-            .map { URL(fileURLWithPath: String($0)).appending(path: "codex") }
+            .map { URL(fileURLWithPath: String($0)).appending(path: command) }
         candidates += ["/opt/homebrew/bin", "/usr/local/bin"].map {
-            URL(fileURLWithPath: $0).appending(path: "codex")
+            URL(fileURLWithPath: $0).appending(path: command)
         }
-        candidates += [".local/bin", ".npm-global/bin", ".volta/bin", ".bun/bin"].map {
-            home.appending(path: $0).appending(path: "codex")
+        candidates += [".local/bin", ".npm-global/bin", ".volta/bin", ".bun/bin", ".cargo/bin"].map {
+            home.appending(path: $0).appending(path: command)
         }
-        candidates += nvmInstalls(in: home)
+        candidates += nvmInstalls(command, in: home)
         return candidates
     }
 
     /// nvm keeps one `bin` per Node version; the newest is the one `nvm use default` would pick.
-    nonisolated private static func nvmInstalls(in home: URL) -> [URL] {
+    nonisolated private static func nvmInstalls(_ command: String, in home: URL) -> [URL] {
         let versions = home.appending(path: ".nvm/versions/node")
         let names = (try? FileManager.default.contentsOfDirectory(atPath: versions.path)) ?? []
         return
             names
             .sorted { $0.compare($1, options: .numeric) == .orderedDescending }
-            .map { versions.appending(path: $0).appending(path: "bin/codex") }
+            .map { versions.appending(path: $0).appending(path: "bin/\(command)") }
     }
 
     nonisolated private static func isExecutable(_ url: URL) -> Bool {
@@ -41,11 +46,11 @@ enum CodexExecutableLocator {
     }
 
     /// `-i` reads the rc file that puts a version manager on PATH; a watchdog bounds a hang.
-    nonisolated private static func loginShellLookup() async -> String? {
+    nonisolated private static func loginShellLookup(_ command: String) async -> String? {
         await Task.detached {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-ilc", "command -v codex"]
+            process.arguments = ["-ilc", "command -v \(command)"]
             process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
             process.environment = ProcessInfo.processInfo.environment.merging(["TINYCAST": "1"]) {
                 _, new in new

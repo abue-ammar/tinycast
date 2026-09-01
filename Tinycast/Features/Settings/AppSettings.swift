@@ -190,6 +190,10 @@ final class AppSettings {
         didSet { defaults.set(notesEnabled, forKey: Key.notesEnabled.rawValue) }
     }
 
+    /// Off by default: connecting a server is consent to run code Tinycast did not write.
+    var mcpEnabled: Bool {
+        didSet { defaults.set(mcpEnabled, forKey: Key.mcpEnabled.rawValue) }
+    }
     var aiEnabled: Bool {
         didSet { defaults.set(aiEnabled, forKey: Key.aiEnabled.rawValue) }
     }
@@ -423,6 +427,7 @@ final class AppSettings {
             defaults.stringArray(forKey: Key.fileSearchIgnorePatterns.rawValue) ?? []
         notesEnabled = defaults.bool(forKey: Key.notesEnabled.rawValue)
         aiEnabled = defaults.bool(forKey: Key.aiEnabled.rawValue)
+        mcpEnabled = defaults.bool(forKey: Key.mcpEnabled.rawValue)
         customCommandsEnabled = defaults.bool(forKey: Key.customCommandsEnabled.rawValue)
         // These default on, so absence must be distinguished from a stored `false`.
         customCommandsShowInLauncher =

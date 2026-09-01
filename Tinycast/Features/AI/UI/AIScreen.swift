@@ -68,18 +68,28 @@ struct AIScreen: PaletteScreen {
         at selection: Int, focus: FocusState<String?>.Binding
     ) -> PaletteHeaderAccessory? {
         let attachments = chat.pendingImages
-        guard !attachments.isEmpty else { return nil }
+        let addressed = coordinator.addressedServer(in: vm.query)
+        guard !attachments.isEmpty || addressed != nil else { return nil }
+        let width =
+            PendingAttachmentsChips.width(for: attachments)
+            + (addressed.map { ComposerChip.width(of: "@\($0.slug)") } ?? 0)
         return PaletteHeaderAccessory(
-            width: PendingAttachmentsChips.width(for: attachments) + Theme.Size.menuWidth,
+            width: width + Theme.Size.menuWidth,
             fieldNames: [], firstIncompleteField: nil,
-            view: AnyView(PendingAttachmentsChips(attachments: attachments)))
+            view: AnyView(
+                HStack(spacing: Theme.Spacing.sm) {
+                    if let addressed {
+                        ComposerChip(symbol: "wrench.and.screwdriver", label: "@\(addressed.slug)")
+                    }
+                    PendingAttachmentsChips(attachments: attachments)
+                }))
     }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         AnyView(
             AIChatView(
                 chat: chat, settings: settings, availability: coordinator.availability,
-                onConfigure: coordinator.showSettings, onAppear: coordinator.warmUpModelList))
+                onConfigure: coordinator.showSettings, onAppear: coordinator.prepareForChat))
     }
 }
 
@@ -146,34 +156,46 @@ private struct AIEmptyState: View {
     }
 }
 
+/// One pill beside the composer; the row is too thin for anything but a glyph and a word.
+private struct ComposerChip: View {
+    let symbol: String
+    let label: String
+
+    static func width(of label: String) -> CGFloat {
+        let font = Theme.Typography.chipNSFont
+        let text = (label as NSString).size(withAttributes: [.font: font]).width
+        return Theme.Size.chatAttachmentGlyph + text + Theme.Spacing.md * 3
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            Image(systemName: symbol)
+                .font(Theme.Typography.chip)
+                .symbolRenderingMode(.hierarchical)
+                .frame(width: Theme.Size.chatAttachmentGlyph)
+            Text(label)
+                .font(Theme.Typography.chip)
+                .lineLimit(1)
+        }
+        .foregroundStyle(Theme.Colors.textSecondary)
+        .padding(.horizontal, Theme.Spacing.sm)
+        .padding(.vertical, Theme.Spacing.xxs)
+        .background(Capsule().fill(Theme.Colors.controlSurface))
+    }
+}
+
 /// Staged images sit after the typed text as named pills; the row is too thin for a thumbnail.
 private struct PendingAttachmentsChips: View {
     let attachments: [ChatAttachment]
 
     static func width(for attachments: [ChatAttachment]) -> CGFloat {
-        let font = Theme.Typography.chipNSFont
-        return attachments.reduce(0) { total, attachment in
-            let label = (attachment.name as NSString).size(withAttributes: [.font: font]).width
-            return total + Theme.Size.chatAttachmentGlyph + label + Theme.Spacing.md * 3
-        }
+        attachments.reduce(0) { $0 + ComposerChip.width(of: $1.name) }
     }
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             ForEach(attachments) { attachment in
-                HStack(spacing: Theme.Spacing.xs) {
-                    Image(systemName: "photo")
-                        .font(Theme.Typography.chip)
-                        .symbolRenderingMode(.hierarchical)
-                        .frame(width: Theme.Size.chatAttachmentGlyph)
-                    Text(attachment.name)
-                        .font(Theme.Typography.chip)
-                        .lineLimit(1)
-                }
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .padding(.horizontal, Theme.Spacing.sm)
-                .padding(.vertical, Theme.Spacing.xxs)
-                .background(Capsule().fill(Theme.Colors.controlSurface))
+                ComposerChip(symbol: "photo", label: attachment.name)
             }
         }
     }

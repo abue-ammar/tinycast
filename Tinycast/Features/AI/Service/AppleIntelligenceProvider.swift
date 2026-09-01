@@ -77,7 +77,8 @@ struct AppleIntelligenceProvider: AIProvider {
                 entries.append(.prompt(Transcript.Prompt(segments: [segment])))
             case .assistant:
                 entries.append(.response(Transcript.Response(assetIDs: [], segments: [segment])))
-            case .system:
+            // The on-device route offers no tools, so a tool turn can only be foreign history.
+            case .system, .tool:
                 continue
             }
         }

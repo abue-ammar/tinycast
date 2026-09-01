@@ -97,8 +97,10 @@ final class AIChatCoordinator {
         guard settings.aiEnabled else { return false }
         do {
             let webSearch = core.aiSettings.webSearchEnabled && capabilities.webSearch
+            let address = MCPComposerAddress.parse(input, slugs: core.mcpCoordinator.slugs)
             return chat.send(
-                input, using: try core.aiProvider(), webSearch: webSearch,
+                address.rest, using: try toolAware(core.aiProvider(), scopedTo: address.slug),
+                webSearch: webSearch,
                 instructions: AIInstructions.compose(
                     userPrompt: core.aiSettings.systemPrompt,
                     isEnabled: core.aiSettings.systemPromptEnabled),
@@ -107,6 +109,22 @@ final class AIChatCoordinator {
             chat.report(error.localizedDescription)
             return false
         }
+    }
+
+    /// Only chat wraps a route in the tool loop; a text rewrite has nothing to call.
+    private func toolAware(_ provider: any AIProvider, scopedTo slug: String?) -> any AIProvider {
+        let tools = core.mcpCoordinator.tools(scopedTo: slug)
+        guard capabilities.tools, !tools.isEmpty else { return provider }
+        let chatID = chat.session.id
+        return AIToolLoopProvider(base: provider, tools: tools) { [mcp = core.mcpCoordinator] call in
+            await mcp.invoke(call, in: chatID)
+        }
+    }
+
+    /// The server a draft is addressed to, so the composer can show it as a chip while typing.
+    func addressedServer(in draft: String) -> MCPServer? {
+        MCPComposerAddress.parse(draft, slugs: core.mcpCoordinator.slugs).slug
+            .flatMap { core.mcpCoordinator.server(slug: $0) }
     }
 
     func startNewChat() {
@@ -153,8 +171,8 @@ final class AIChatCoordinator {
         case .chatGPT?: return .chatGPT
         case .api(let connection, let model)?:
             return core.aiSettings.connection(id: connection)?.capabilities(for: model)
-                ?? AIModelCapabilities(images: false, webSearch: false)
-        case nil: return AIModelCapabilities(images: false, webSearch: false)
+                ?? AIModelCapabilities.none
+        case nil: return AIModelCapabilities.none
         }
     }
 
@@ -287,6 +305,12 @@ final class AIChatCoordinator {
     }
 
     /// Fetches the list so the title is a name, and a default can resolve without Settings.
+    /// What entering chat costs once: the model list resolved, and the servers connected.
+    func prepareForChat() {
+        warmUpModelList()
+        core.mcpCoordinator.warmUp()
+    }
+
     func warmUpModelList() {
         let stored = core.aiSettings.defaultModel
         if stored == nil {

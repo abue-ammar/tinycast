@@ -35,16 +35,26 @@ struct AIMessage: Equatable, Sendable {
         case system
         case user
         case assistant
+        case tool
     }
 
     let role: Role
     let text: String
     let images: [AIImage]
+    /// Assistant only: the calls this turn asked for, alongside whatever text came with them.
+    let toolCalls: [AIToolCall]
+    /// Tool only: the answer to one of them.
+    let toolResult: AIToolResult?
 
-    init(role: Role, text: String, images: [AIImage] = []) {
+    init(
+        role: Role, text: String, images: [AIImage] = [], toolCalls: [AIToolCall] = [],
+        toolResult: AIToolResult? = nil
+    ) {
         self.role = role
         self.text = text
         self.images = images
+        self.toolCalls = toolCalls
+        self.toolResult = toolResult
     }
 }
 
@@ -54,15 +64,25 @@ struct AIRequest: Equatable, Sendable {
     let maxOutputTokens: Int
     /// Lets the model search the web; each route has its own switch for that, all off by default.
     let webSearch: Bool
+    /// Empty for every route that cannot call one, so a transport need not ask whether it may.
+    let tools: [AITool]
 
     init(
         instructions: String? = nil, messages: [AIMessage], maxOutputTokens: Int = 4_096,
-        webSearch: Bool = false
+        webSearch: Bool = false, tools: [AITool] = []
     ) {
         self.instructions = instructions
         self.messages = messages
         self.maxOutputTokens = maxOutputTokens
         self.webSearch = webSearch
+        self.tools = tools
+    }
+
+    /// The same turn carried forward, armed with what the loop wrapping it may call.
+    func continuing(with messages: [AIMessage], tools: [AITool]) -> AIRequest {
+        AIRequest(
+            instructions: instructions, messages: messages, maxOutputTokens: maxOutputTokens,
+            webSearch: webSearch, tools: tools)
     }
 }
 
@@ -81,6 +101,11 @@ enum AIStreamEvent: Equatable, Sendable {
     case thinking
     case searching(String?)
     case searched(String?)
+    /// What a transport emits; the loop consumes it and never passes it on to the transcript.
+    case toolCallRequested(AIToolCall)
+    /// What the loop emits in its place, already carrying what a row has to show.
+    case toolCall(id: String, origin: String, title: String)
+    case toolResult(id: String, isError: Bool)
     case usage(AIUsage)
     case finished
 }

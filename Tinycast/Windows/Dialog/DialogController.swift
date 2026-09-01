@@ -24,6 +24,17 @@ final class DialogController: NSObject, NSWindowDelegate {
         return await present(request) == 0
     }
 
+    /// More than two ways forward; `options` is in dispatch order and the last one is the cancel.
+    func choose(
+        title: String, message: String?, symbol: String?, tone: DialogTone,
+        options: [DialogAction], defaultIndex: Int
+    ) async -> Int {
+        let request = DialogRequest(
+            title: title, message: message, symbol: symbol, tone: tone, actions: options,
+            defaultIndex: defaultIndex, cancelIndex: options.count - 1)
+        return await present(request)
+    }
+
     func notice(title: String, message: String, symbol: String, tone: DialogTone) async {
         let request = DialogRequest(
             title: title, message: message, symbol: symbol, tone: tone,

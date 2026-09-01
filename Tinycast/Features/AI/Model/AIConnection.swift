@@ -63,7 +63,7 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     func capabilities(for model: String) -> AIModelCapabilities {
         AIModelCapabilities(
             images: provider != .openRouter || visionModels.contains(model),
-            webSearch: provider == .openRouter)
+            webSearch: provider == .openRouter, tools: true)
     }
 }
 
@@ -71,10 +71,13 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
 struct AIModelCapabilities: Equatable, Sendable {
     let images: Bool
     let webSearch: Bool
+    /// Only the two HTTP shapes; the Codex route declines tools and the on-device one has none.
+    let tools: Bool
 
-    static let chatGPT = AIModelCapabilities(images: true, webSearch: true)
-    /// The on-device model is text-only and reaches nothing, so it offers neither.
-    static let appleIntelligence = AIModelCapabilities(images: false, webSearch: false)
+    static let none = AIModelCapabilities(images: false, webSearch: false, tools: false)
+    static let chatGPT = AIModelCapabilities(images: true, webSearch: true, tools: false)
+    /// The on-device model is text-only and reaches nothing, so it offers none of the three.
+    static let appleIntelligence = AIModelCapabilities.none
 }
 
 enum AIModelSource: Codable, Equatable, Hashable, Sendable {

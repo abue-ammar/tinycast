@@ -68,8 +68,14 @@ struct HTTPAIProvider: AIProvider {
         request.timeoutInterval = 90
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        applyAuthentication(to: &request)
+        request.httpBody = try JSONSerialization.data(
+            withJSONObject: AIRequestBody.make(input, configuration: configuration))
+        return request
+    }
 
-        let body: [String: Any]
+    /// Every route's credential and its own identifying headers; the body knows none of this.
+    private func applyAuthentication(to request: inout URLRequest) {
         switch configuration.shape {
         case .openAICompatible:
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -78,72 +84,10 @@ struct HTTPAIProvider: AIProvider {
             } else if configuration.provider == .openRouter {
                 request.setValue(Bundle.main.appDisplayName, forHTTPHeaderField: "X-OpenRouter-Title")
             }
-            var messages = input.messages.compactMap(Self.openAIMessage)
-            if let instructions = input.instructions?.nonEmpty {
-                messages.insert(["role": "system", "content": instructions], at: 0)
-            }
-            var value: [String: Any] = [
-                "model": configuration.model,
-                "messages": messages,
-                "stream": true
-            ]
-            // OpenRouter's own search layer, so it works for every model it routes.
-            if input.webSearch, configuration.provider == .openRouter {
-                value["plugins"] = [["id": "web"]]
-            }
-            body = value
         case .anthropic:
             request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-            let systemParts =
-                ([input.instructions]
-                + input.messages.compactMap {
-                    $0.role == .system ? $0.text : nil
-                }).compactMap { $0?.nonEmpty }
-            var value: [String: Any] = [
-                "model": configuration.model,
-                "messages": input.messages.compactMap(Self.anthropicMessage),
-                "max_tokens": input.maxOutputTokens,
-                "stream": true
-            ]
-            if !systemParts.isEmpty { value["system"] = systemParts.joined(separator: "\n\n") }
-            body = value
         }
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        return request
-    }
-
-    /// Plain text stays a string; only a message with images takes the content-part array.
-    private static func openAIMessage(_ message: AIMessage) -> [String: Any]? {
-        let text = message.text.nonEmpty
-        guard text != nil || !message.images.isEmpty else { return nil }
-        guard !message.images.isEmpty else {
-            return ["role": message.role.rawValue, "content": text ?? ""]
-        }
-        var parts: [[String: Any]] = []
-        if let text { parts.append(["type": "text", "text": text]) }
-        parts += message.images.map { ["type": "image_url", "image_url": ["url": $0.dataURL]] }
-        return ["role": message.role.rawValue, "content": parts]
-    }
-
-    private static func anthropicMessage(_ message: AIMessage) -> [String: Any]? {
-        guard message.role != .system else { return nil }
-        let text = message.text.nonEmpty
-        guard text != nil || !message.images.isEmpty else { return nil }
-        guard !message.images.isEmpty else {
-            return ["role": message.role.rawValue, "content": text ?? ""]
-        }
-        var parts: [[String: Any]] = message.images.map {
-            [
-                "type": "image",
-                "source": [
-                    "type": "base64", "media_type": $0.mimeType,
-                    "data": $0.data.base64EncodedString()
-                ]
-            ]
-        }
-        if let text { parts.append(["type": "text", "text": text]) }
-        return ["role": message.role.rawValue, "content": parts]
     }
 
     private static var googleClientHeader: String {
@@ -183,12 +127,5 @@ struct HTTPAIProvider: AIProvider {
             return "The provider could not be reached."
         default: return "The network request failed."
         }
-    }
-}
-
-private extension String {
-    var nonEmpty: String? {
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
     }
 }

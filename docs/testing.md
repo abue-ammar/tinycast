@@ -104,6 +104,15 @@ If a change touches anything in the right column, the harness on the left is man
 | `backup-archive-test` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
 | `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
 | `support-test` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
+| `mcp-test` | `MCP/Model/` and `MCPSettingsStore` — JSON-RPC framing, handles, tool names, output flattening, trust, `@server` addressing |
+| `mcp-stdio-test` | `MCP/Service/` against a stub server — handshake, listing, calling, and every way one can go away |
+
+The two harnesses that need a server to talk to bring their own: `Tests/ai-fixtures/codex-stub.js`
+and `mcp-stub.js`, each copied into a scratch directory and put in front of PATH so the locator finds
+it the way it would find a real one. Both read fd 0 synchronously rather than through a stream —
+`codex-stub.js` stalls mid-turn on purpose, and an event loop would read the next line while it is
+still holding — and both write with `fs.writeSync`, so a reply is on the pipe before a mode that
+exits does.
 
 A harness that passed before a change passes after it. There is no "I'll fix it next commit" and no
 commenting out a case. If a change genuinely invalidates an assertion, the assertion is rewritten in the

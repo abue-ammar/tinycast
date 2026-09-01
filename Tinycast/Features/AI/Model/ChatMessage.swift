@@ -20,10 +20,13 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     let images: [AIImage]
     /// Web searches the reply made, in order; each sits in the text where it happened.
     var searches: [ChatSearch]
+    /// Tools the reply called, pinned the same way; the calls themselves never enter the context.
+    var toolUses: [ChatToolUse]
 
     init(
         id: UUID = UUID(), role: Role, text: String, state: State = .complete,
-        sentAt: Date = Date(), images: [AIImage] = [], searches: [ChatSearch] = []
+        sentAt: Date = Date(), images: [AIImage] = [], searches: [ChatSearch] = [],
+        toolUses: [ChatToolUse] = []
     ) {
         self.id = id
         self.role = role
@@ -32,17 +35,22 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         self.sentAt = sentAt
         self.images = images
         self.searches = searches
+        self.toolUses = toolUses
     }
 
-    /// The reply split around its searches: text, search, text… so the row renders in place.
+    /// The reply split around what it did: text, search or tool, text… rendered where it happened.
     var segments: [ChatSegment] {
+        let interruptions =
+            (searches.map { (offset: $0.textOffset, segment: ChatSegment.search($0)) }
+            + toolUses.map { (offset: $0.textOffset, segment: ChatSegment.tool($0)) })
+            .sorted { $0.offset < $1.offset }
         var segments: [ChatSegment] = []
         var rest = Substring(text)
         var consumed = 0
-        for search in searches {
-            let take = max(0, min(search.textOffset - consumed, rest.count))
+        for interruption in interruptions {
+            let take = max(0, min(interruption.offset - consumed, rest.count))
             if take > 0 { segments.append(.text(String(rest.prefix(take)))) }
-            segments.append(.search(search))
+            segments.append(interruption.segment)
             rest = rest.dropFirst(take)
             consumed += take
         }
@@ -58,7 +66,29 @@ struct ChatSearch: Equatable, Hashable, Sendable {
     let textOffset: Int
 }
 
+/// One tool call inside a reply: live while it runs, a record of what ran once it is done.
+struct ChatToolUse: Equatable, Hashable, Sendable {
+    enum State: String, Equatable, Hashable, Sendable {
+        case running
+        case completed
+        case failed
+    }
+
+    let callID: String
+    let origin: String
+    let title: String
+    var state: State
+    /// Characters of reply text that had arrived when the call started.
+    let textOffset: Int
+
+    var label: String {
+        let verb = state == .running ? "Calling" : "Called"
+        return origin.isEmpty ? "\(verb) \(title)" : "\(verb) \(origin) · \(title)"
+    }
+}
+
 enum ChatSegment: Equatable, Hashable {
     case text(String)
     case search(ChatSearch)
+    case tool(ChatToolUse)
 }

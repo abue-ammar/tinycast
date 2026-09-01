@@ -212,7 +212,7 @@ final class ChatGPTSubscriptionManager {
         }
     }
 
-    private func usageWindow(_ value: CodexValue?) -> ChatGPTSubscription.UsageWindow? {
+    private func usageWindow(_ value: JSONValue?) -> ChatGPTSubscription.UsageWindow? {
         guard let raw = value?.objectValue, let used = raw["usedPercent"]?.intValue else {
             return nil
         }
@@ -239,7 +239,7 @@ final class ChatGPTSubscriptionManager {
         return true
     }
 
-    private func handleNotification(method: String, params: [String: CodexValue]) {
+    private func handleNotification(method: String, params: [String: JSONValue]) {
         switch method {
         case "account/login/completed":
             if params["success"]?.boolValue == true {

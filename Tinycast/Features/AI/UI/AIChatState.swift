@@ -186,6 +186,22 @@ final class AIChatState {
             }
             message.searches = message.searches.map { Self.completed($0) }
             session.replaceLast(with: message)
+        case .toolCall(let id, let origin, let title):
+            flushPendingText()
+            guard var message = session.messages.last, message.role == .assistant else { return }
+            isThinking = false
+            message.toolUses.append(
+                ChatToolUse(
+                    callID: id, origin: origin, title: title, state: .running,
+                    textOffset: message.text.count))
+            session.replaceLast(with: message)
+        case .toolResult(let id, let isError):
+            guard var message = session.messages.last, message.role == .assistant else { return }
+            guard let index = message.toolUses.lastIndex(where: { $0.callID == id }) else { return }
+            message.toolUses[index].state = isError ? .failed : .completed
+            session.replaceLast(with: message)
+        case .toolCallRequested:
+            break
         case .usage(let usage):
             self.usage = usage
         case .finished:
@@ -237,6 +253,8 @@ final class AIChatState {
         }
         message.state = state
         message.searches = message.searches.map { Self.completed($0) }
+        // A call still running when the turn ends never reported back, whatever ended the turn.
+        message.toolUses = message.toolUses.map { Self.settled($0) }
         session.replaceLast(with: message)
         history.save(session)
         isStreaming = false
@@ -250,6 +268,13 @@ extension AIChatState {
         var search = search
         search.isComplete = true
         return search
+    }
+
+    fileprivate static func settled(_ use: ChatToolUse) -> ChatToolUse {
+        guard use.state == .running else { return use }
+        var use = use
+        use.state = .failed
+        return use
     }
 }
 

@@ -12,7 +12,7 @@ struct AISettingsView: View {
     @State private var editor: AIConnectionEditorTarget?
     @State private var pendingRemoval: AIConnection?
 
-    private let keyStore = APIKeyStore()
+    private let keyStore = KeychainSecretStore.aiAPIKeys
 
     var body: some View {
         @Bindable var appSettings = appSettings
@@ -36,6 +36,7 @@ struct AISettingsView: View {
                 systemPromptSection
                 chatGPTSection
                 apiConnectionsSection
+                MCPSettingsSection()
             }
             .settingsEnabled(appSettings.aiEnabled)
         }
@@ -445,9 +446,9 @@ struct AISettingsView: View {
         do {
             let retargeted = keyStatuses[connection.id] == true && pointsSomewhereNew(connection)
             if !key.isEmpty {
-                try keyStore.setKey(key, for: connection.id)
+                try keyStore.setSecret(key, for: connection.id)
             } else if retargeted, AIEndpointPolicy.isLoopback(connection.baseURL) {
-                try keyStore.removeKey(for: connection.id)
+                try keyStore.removeSecret(for: connection.id)
             } else if retargeted {
                 return "Enter an API key for this endpoint — the saved key stays with the old one."
             } else if !AIEndpointPolicy.isLoopback(connection.baseURL)
@@ -476,7 +477,7 @@ struct AISettingsView: View {
 
     private func removeConnection(_ connection: AIConnection) {
         do {
-            try keyStore.removeKey(for: connection.id)
+            try keyStore.removeSecret(for: connection.id)
             settings.removeConnection(id: connection.id)
             pendingRemoval = nil
             loadKeyStatuses()
@@ -495,7 +496,7 @@ struct AISettingsView: View {
         var statuses: [UUID: Bool] = [:]
         do {
             for connection in settings.connections {
-                statuses[connection.id] = try keyStore.hasKey(for: connection.id)
+                statuses[connection.id] = try keyStore.hasSecret(for: connection.id)
             }
             keyStatuses = statuses
             keyError = false
@@ -868,7 +869,7 @@ private struct AIConnectionEditorSheet: View {
             apiKey = enteredKey
         } else if storedKeyMatchesTarget {
             do {
-                apiKey = try APIKeyStore().key(for: connection.id) ?? ""
+                apiKey = try KeychainSecretStore.aiAPIKeys.secret(for: connection.id) ?? ""
             } catch {
                 discovery = .failed(
                     "The saved key could not be read from Keychain.", allowsManualEntry: false)

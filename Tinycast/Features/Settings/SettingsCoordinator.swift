@@ -48,6 +48,7 @@ final class SettingsCoordinator {
             .environment(core.quicklinks)
             .environment(core.calendarStore)
             .environment(core.aiSettings)
+            .environment(core.mcpSettings)
             .environment(core.quickActionSettings)
             .environment(core.chatGPTSubscription)
             // Propagates down so the window's materials show through, not each list's backing.

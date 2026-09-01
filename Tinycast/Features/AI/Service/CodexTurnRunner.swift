@@ -60,7 +60,7 @@ final class CodexTurnRunner {
         appliedEffort = nil
     }
 
-    func handle(method: String, params: [String: CodexValue]) {
+    func handle(method: String, params: [String: JSONValue]) {
         let thread = params["threadId"]?.stringValue
         if let thread, thread == pendingInterruptThreadID {
             handleArmed(method: method, params: params, threadID: thread)
@@ -115,7 +115,7 @@ final class CodexTurnRunner {
 
     /// A thread Stop already dropped, watched only for the turn ID that Stop lacked.
     private func handleArmed(
-        method: String, params: [String: CodexValue], threadID: String
+        method: String, params: [String: JSONValue], threadID: String
     ) {
         switch method {
         case "turn/started":

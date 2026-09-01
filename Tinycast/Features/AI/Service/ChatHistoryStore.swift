@@ -44,6 +44,16 @@ final class ChatHistoryStore {
           text_offset INTEGER NOT NULL,
           PRIMARY KEY(message_id, position)
         );
+        CREATE TABLE IF NOT EXISTS message_tools(
+          message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+          position INTEGER NOT NULL,
+          call_id TEXT NOT NULL,
+          origin TEXT NOT NULL,
+          title TEXT NOT NULL,
+          state TEXT NOT NULL,
+          text_offset INTEGER NOT NULL,
+          PRIMARY KEY(message_id, position)
+        );
         CREATE INDEX IF NOT EXISTS messages_by_conversation
           ON messages(conversation_id, position);
         CREATE INDEX IF NOT EXISTS conversations_by_recency
@@ -119,6 +129,7 @@ final class ChatHistoryStore {
         bind(id.uuidString, to: messagesStatement, at: 1)
         let images = images(forConversation: id, in: database)
         let searches = searches(forConversation: id, in: database)
+        let toolUses = toolUses(forConversation: id, in: database)
         var messages: [ChatMessage] = []
         while sqlite3_step(messagesStatement) == SQLITE_ROW {
             guard
@@ -139,7 +150,8 @@ final class ChatHistoryStore {
                     id: messageID, role: role, text: body, state: state,
                     sentAt: Date(
                         timeIntervalSince1970: sqlite3_column_double(messagesStatement, 4)),
-                    images: images[messageID] ?? [], searches: searches[messageID] ?? []))
+                    images: images[messageID] ?? [], searches: searches[messageID] ?? [],
+                    toolUses: toolUses[messageID] ?? []))
         }
         return ChatSession(
             id: id, createdAt: createdAt, updatedAt: updatedAt, messages: messages)
@@ -281,6 +293,7 @@ final class ChatHistoryStore {
         }
         return session.messages[rewriteFrom...].allSatisfy {
             saveImages(of: $0, in: database) && saveSearches(of: $0, in: database)
+                && saveToolUses(of: $0, in: database)
         }
     }
 
@@ -337,6 +350,56 @@ final class ChatHistoryStore {
                     textOffset: Int(sqlite3_column_int64(statement, 2))))
         }
         return searches
+    }
+
+    private func saveToolUses(of message: ChatMessage, in database: OpaquePointer) -> Bool {
+        guard !message.toolUses.isEmpty else { return true }
+        let sql = """
+            INSERT INTO message_tools(
+              message_id, position, call_id, origin, title, state, text_offset)
+            VALUES(?, ?, ?, ?, ?, ?, ?);
+            """
+        guard let statement = prepare(sql, in: database) else { return false }
+        defer { sqlite3_finalize(statement) }
+        for (position, use) in message.toolUses.enumerated() {
+            bind(message.id.uuidString, to: statement, at: 1)
+            sqlite3_bind_int64(statement, 2, Int64(position))
+            bind(use.callID, to: statement, at: 3)
+            bind(use.origin, to: statement, at: 4)
+            bind(use.title, to: statement, at: 5)
+            bind(use.state.rawValue, to: statement, at: 6)
+            sqlite3_bind_int64(statement, 7, Int64(use.textOffset))
+            guard sqlite3_step(statement) == SQLITE_DONE else { return false }
+            sqlite3_reset(statement)
+            sqlite3_clear_bindings(statement)
+        }
+        return true
+    }
+
+    /// A call left running belonged to a process that is gone, so it never reported back.
+    private func toolUses(
+        forConversation id: UUID, in database: OpaquePointer
+    ) -> [UUID: [ChatToolUse]] {
+        let sql = """
+            SELECT t.message_id, t.call_id, t.origin, t.title, t.state, t.text_offset
+            FROM message_tools t
+            JOIN messages m ON m.id = t.message_id
+            WHERE m.conversation_id = ? ORDER BY t.message_id, t.position;
+            """
+        guard let statement = prepare(sql, in: database) else { return [:] }
+        defer { sqlite3_finalize(statement) }
+        bind(id.uuidString, to: statement, at: 1)
+        var uses: [UUID: [ChatToolUse]] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let messageID = UUID(uuidString: text(statement, 0)) else { continue }
+            let stored = ChatToolUse.State(rawValue: text(statement, 4)) ?? .failed
+            uses[messageID, default: []].append(
+                ChatToolUse(
+                    callID: text(statement, 1), origin: text(statement, 2),
+                    title: text(statement, 3), state: stored == .running ? .failed : stored,
+                    textOffset: Int(sqlite3_column_int64(statement, 5))))
+        }
+        return uses
     }
 
     private func saveImages(of message: ChatMessage, in database: OpaquePointer) -> Bool {

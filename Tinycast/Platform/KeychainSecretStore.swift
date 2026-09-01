@@ -1,7 +1,8 @@
 import Foundation
 import Security
 
-struct APIKeyStore: Sendable {
+/// Login-Keychain generic passwords, one item per account inside a caller-named scope.
+struct KeychainSecretStore: Sendable {
     enum StoreError: Error {
         case invalidEncoding
         case keychain(OSStatus)
@@ -9,34 +10,38 @@ struct APIKeyStore: Sendable {
 
     private let service: String
 
-    init(bundleIdentifier: String? = Bundle.main.bundleIdentifier) {
-        service = "\(bundleIdentifier ?? "com.tinycast.app").ai-api-keys"
+    /// Every scope the app stores under, named here so the whole keychain surface is one list.
+    static let aiAPIKeys = KeychainSecretStore(scope: "ai-api-keys")
+    static let mcpSecrets = KeychainSecretStore(scope: "mcp-secrets")
+
+    init(scope: String, bundleIdentifier: String? = Bundle.main.bundleIdentifier) {
+        service = "\(bundleIdentifier ?? "com.tinycast.app").\(scope)"
     }
 
-    func key(for connectionID: UUID) throws -> String? {
+    func secret(for account: UUID) throws -> String? {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(
-            query(for: connectionID, returningData: true) as CFDictionary, &result)
+            query(for: account, returningData: true) as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess else { throw StoreError.keychain(status) }
-        guard let data = result as? Data, let key = String(data: data, encoding: .utf8) else {
+        guard let data = result as? Data, let secret = String(data: data, encoding: .utf8) else {
             throw StoreError.invalidEncoding
         }
-        return key
+        return secret
     }
 
     /// Presence check without `kSecReturn*`, so no secret bytes are materialized.
-    func hasKey(for connectionID: UUID) throws -> Bool {
+    func hasSecret(for account: UUID) throws -> Bool {
         let status = SecItemCopyMatching(
-            query(for: connectionID, returningData: false) as CFDictionary, nil)
+            query(for: account, returningData: false) as CFDictionary, nil)
         if status == errSecItemNotFound { return false }
         guard status == errSecSuccess else { throw StoreError.keychain(status) }
         return true
     }
 
-    func setKey(_ key: String, for connectionID: UUID) throws {
-        guard let data = key.data(using: .utf8) else { throw StoreError.invalidEncoding }
-        let lookup = query(for: connectionID, returningData: false)
+    func setSecret(_ secret: String, for account: UUID) throws {
+        guard let data = secret.data(using: .utf8) else { throw StoreError.invalidEncoding }
+        let lookup = query(for: account, returningData: false)
         let update = [kSecValueData as String: data]
         let status = SecItemUpdate(lookup as CFDictionary, update as CFDictionary)
         if status == errSecItemNotFound {
@@ -49,19 +54,18 @@ struct APIKeyStore: Sendable {
         }
     }
 
-    func removeKey(for connectionID: UUID) throws {
-        let status = SecItemDelete(
-            query(for: connectionID, returningData: false) as CFDictionary)
+    func removeSecret(for account: UUID) throws {
+        let status = SecItemDelete(query(for: account, returningData: false) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw StoreError.keychain(status)
         }
     }
 
-    private func query(for connectionID: UUID, returningData: Bool) -> [String: Any] {
+    private func query(for account: UUID, returningData: Bool) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: connectionID.uuidString
+            kSecAttrAccount as String: account.uuidString
         ]
         if returningData {
             query[kSecReturnData as String] = true

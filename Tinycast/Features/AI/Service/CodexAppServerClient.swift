@@ -21,11 +21,11 @@ final class CodexAppServerClient {
     }
 
     private struct PendingRequest {
-        let continuation: CheckedContinuation<[String: CodexValue], Error>
+        let continuation: CheckedContinuation<[String: JSONValue], Error>
         let timeout: Task<Void, Never>
     }
 
-    var onNotification: ((String, [String: CodexValue]) -> Void)?
+    var onNotification: ((String, [String: JSONValue]) -> Void)?
     var onExit: ((String) -> Void)?
 
     private let codexHome: URL
@@ -46,7 +46,7 @@ final class CodexAppServerClient {
 
     func start() async throws {
         if isRunning { return }
-        guard let executable = await CodexExecutableLocator.locate() else {
+        guard let executable = await ExecutableLocator.locate("codex") else {
             throw ClientError.executableMissing
         }
         // A second caller may have started it during the lookup.
@@ -151,7 +151,7 @@ final class CodexAppServerClient {
 
     func request(
         method: String, params: [String: Any] = [:], timeout: Duration = .seconds(15)
-    ) async throws -> [String: CodexValue] {
+    ) async throws -> [String: JSONValue] {
         guard isRunning else { throw ClientError.processExited("Codex is not running.") }
         let id = nextID
         nextID += 1
@@ -260,7 +260,7 @@ final class CodexAppServerClient {
         finishRequest(id, with: .failure(ClientError.timedOut))
     }
 
-    private func finishRequest(_ id: Int, with result: Result<[String: CodexValue], Error>) {
+    private func finishRequest(_ id: Int, with result: Result<[String: JSONValue], Error>) {
         guard let request = pending.removeValue(forKey: id) else { return }
         request.timeout.cancel()
         request.continuation.resume(with: result)

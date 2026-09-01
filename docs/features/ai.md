@@ -23,7 +23,7 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   the system prompt off, and every transport drops a nil instruction, so a turn then carries none.
 - **API keys live only in the login Keychain.** `AIConnection` persists the provider, endpoint and
   model identifiers in `UserDefaults`; it never contains a key. Keys are addressed by connection UUID
-  through `APIKeyStore`, and never enter logs, errors or settings backups. A key is issued for one
+  through `KeychainSecretStore.aiAPIKeys`, and never enter logs, errors or settings backups. A key is issued for one
   endpoint and never follows a connection retargeted at another — change the provider or base URL and
   both model discovery and Save ask for a new key, rather than introduce the saved one to a host it
   was never meant to reach (`AIEndpointPolicy.sameDestination`).
@@ -51,10 +51,20 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   cookies, copies another Codex login or calls undocumented ChatGPT web endpoints.
 - **Codex tools are unavailable.** The app-server launches with tool capabilities disabled, approvals
   set to never and a read-only, network-disabled sandbox. Any server approval request is declined.
+  [MCP](mcp.md) does not lift this: `AIModelCapabilities.tools` is false for the subscription route
+  and for the on-device one, so only the two HTTP shapes are ever handed a tool.
+- **Tool calling is a decorator, not a transport change.** `AIToolLoopProvider` wraps a route and
+  re-streams the turn until the model stops asking, so a route with no tools behaves exactly as it
+  did and `AIChatState` reduces one more pair of events. Only chat wraps: `quickActionProvider()`
+  rewrites the reader's own selected text and has nothing to call. A turn's tool messages stay inside
+  the loop — what the transcript keeps is a `ChatToolUse` record, pinned at a text offset like a
+  search, so `boundedContext` can never separate a stored call from its result.
 - **Every HTTP request uses a private ephemeral `URLSession` with no URL cache.** Provider traffic must
   not create a second credential or response cache on disk.
 - **`Model/` stays Foundation-only.** `ai-provider-test` compiles the shipped provider models and pins
-  endpoints, stream parsing, persistence repair and Codex protocol framing.
+  endpoints, request bodies, stream parsing, persistence repair and Codex protocol framing. Request
+  bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
+  conversation.
 - **Chat is a palette screen, not another window** — including its lifetime. The launcher command
   enters `.ai`; its search field is the composer, and the shared footer's primary pill is Return's
   job: Send (`↵`), or Stop (`↵`) while a response streams — followed by Actions (`⌘K`), which owns
@@ -124,8 +134,9 @@ because the app-server returns the models and reasoning efforts the signed-in ac
 
 ## Provider interface
 
-`AIProvider.stream(_:)` accepts provider-neutral messages, optional instructions and a maximum output
-token count. It returns an `AsyncThrowingStream` of text, thinking state, usage and completion. OpenAI-
+`AIProvider.stream(_:)` accepts provider-neutral messages, optional instructions, a maximum output
+token count and the tools the turn may call. It returns an `AsyncThrowingStream` of text, thinking
+state, tool activity, usage and completion. OpenAI-
 compatible reasoning fields are surfaced as `.thinking`, never mixed into answer text. Anthropic
 system messages are lifted into its top-level `system` field; the other HTTP routes keep system
 messages in the OpenAI message array.
@@ -170,6 +181,11 @@ Assistant replies render Markdown; user messages remain literal. A reply keeps s
 palette is hidden or showing another screen — the state is `AppCore`'s, not the view's — and is
 saved when it finishes; only Stop, New Chat, deleting the chat or quitting cut it short.
 
+Tool activity persists in `message_tools` beside `message_searches`, and `ChatMessage.segments`
+interleaves the two by text offset so a reply renders what it did in the order it did it. A call
+loaded still marked running belonged to a process that is gone, so it reads back as failed — the same
+repair a message left streaming gets.
+
 `ChatHistoryStore` writes `ai-chats.sqlite3` below the bundle-specific Application Support directory.
 It uses the system SQLite already linked by Tinycast, stores no provider credentials, and repairs a
 reply left streaming by a prior process into an interrupted failure when loaded.
@@ -205,8 +221,9 @@ them until an unrelated render or a window exit/re-enter recomputed hover. It di
 the menu, as a native menu's click-away does.
 
 Four more `@MainActor @Observable` types join the shared state: `AISettingsStore`,
-`ChatGPTSubscriptionManager`, `ChatHistoryStore` and `AIChatState`. `AIChatCoordinator` is the
-nineteenth feature coordinator.
+`ChatGPTSubscriptionManager`, `ChatHistoryStore` and `AIChatState`, and [MCP](mcp.md) adds
+`MCPSettingsStore` and `MCPServerManager`. `AIChatCoordinator` is the nineteenth feature coordinator
+and `MCPCoordinator` the twentieth.
 
 ### Manual sweep
 
@@ -229,8 +246,9 @@ nineteenth feature coordinator.
 - Setting `Keep conversations` to 7 days drops older chats from ⌘K → Chat History and shrinks
   `ai-chats.sqlite3`. Switching AI off, waiting past a boundary and switching back on prunes nothing
   that was saved before it went off.
-- Harnesses: `ai-provider-test` (endpoints, stream decoding, persistence repair, Codex framing,
-  on-device routing), `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore`),
+- Harnesses: `ai-provider-test` (endpoints, request bodies, stream decoding, persistence repair,
+  Codex framing, on-device routing), `ai-chat-test` (`ChatSession`, `MarkdownBlock`,
+  `ChatHistoryStore`, `AIToolLoopProvider`),
   `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
   turn ID) and `apple-intelligence-test` (status copy, snapshot deltas, transcript assembly, error
   mapping, plus one real generation when this Mac can run one), all in `run-tests.sh`.
@@ -267,13 +285,13 @@ URLs, and as `input_image` when prior turns are injected.
 
 `AIRequest.webSearch` and `AIMessage.images` are provider-neutral; each route maps them itself:
 
-| Route | Web search | Images |
-| --- | --- | --- |
-| Apple Intelligence | never — it reaches nothing | never — the model is text-only |
-| ChatGPT subscription | Codex `web_search` config | `image` input part |
-| OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality |
-| OpenAI / Gemini / compatible | not offered | `image_url` part, assumed supported |
-| Anthropic | not offered | base64 `image` block |
+| Route | Web search | Images | MCP tools |
+| --- | --- | --- | --- |
+| Apple Intelligence | never — it reaches nothing | never — the model is text-only | never |
+| ChatGPT subscription | Codex `web_search` config | `image` input part | never — its tools are disabled by design |
+| OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | `tools` + `role: "tool"` turns |
+| OpenAI / Gemini / compatible | not offered | `image_url` part, assumed supported | `tools` + `role: "tool"` turns |
+| Anthropic | not offered | base64 `image` block | `tools` + `tool_use` / `tool_result` blocks |
 
 A search is part of the reply, not a status: `item/started` for a `webSearch` item appends a
 `ChatSearch` to the streaming message pinned at the text length so far, `item/completed` (or the
@@ -355,6 +373,7 @@ deliberately cannot reach: the Codex route always prepends its own instruction n
 tools, run commands or touch files. That is a sandbox boundary on a local CLI, not Tinycast
 describing itself, and a user switch must not be able to lift it.
 
+`mcpEnabled` and `mcpServers` are excluded for the reasons in [mcp.md](mcp.md).
 `aiConnections`, `aiDefaultModel`, `aiSystemPrompt` and `aiSystemPromptEnabled` are deliberately
 excluded from settings backups. The first is meaningless without machine-local Keychain items; the
 second names an external destination and must not silently redirect AI traffic after an import; the

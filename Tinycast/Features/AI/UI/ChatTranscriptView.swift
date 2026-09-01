@@ -149,7 +149,9 @@ private struct ChatMessageView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if message.text.isEmpty, message.searches.isEmpty, message.state == .streaming {
+        if message.text.isEmpty, message.searches.isEmpty, message.toolUses.isEmpty,
+            message.state == .streaming
+        {
             HStack(spacing: Theme.Spacing.sm) {
                 ProgressView().controlSize(.small)
                 if let status { Text(status).foregroundStyle(.secondary) }
@@ -179,7 +181,9 @@ private struct ChatMessageView: View {
                     }
                 }
             }
-            if !message.text.isEmpty || !message.searches.isEmpty { rendered }
+            if !message.text.isEmpty || !message.searches.isEmpty || !message.toolUses.isEmpty {
+                rendered
+            }
         }
     }
 
@@ -193,6 +197,8 @@ private struct ChatMessageView: View {
                         MarkdownView(blocks: MarkdownBlock.parse(text))
                     case .search(let search):
                         ChatSearchRow(search: search)
+                    case .tool(let use):
+                        ChatToolRow(use: use)
                     }
                 }
             }
@@ -221,6 +227,37 @@ struct ChatImageThumbnail: View {
         .frame(width: edge, height: edge)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
         .task(id: image) { decoded = NSImage(data: image.data) }
+    }
+}
+
+/// A tool call inside a reply; the same row grammar the search one uses, with its own glyph.
+private struct ChatToolRow: View {
+    let use: ChatToolUse
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            switch use.state {
+            case .running:
+                ProgressView().controlSize(.small)
+            case .completed:
+                glyph("wrench.and.screwdriver")
+            case .failed:
+                glyph("exclamationmark.triangle")
+                    .foregroundStyle(Theme.Colors.destructive)
+            }
+            Text(use.label)
+                .font(Theme.Typography.rowTrailing)
+                .lineLimit(1)
+        }
+        .foregroundStyle(Theme.Colors.textSecondary)
+        .animation(.easeOut(duration: Theme.Duration.chatFooter), value: use.state)
+    }
+
+    /// Sized by the row's own font, like the search row beside it, not by a symbol point size.
+    private func glyph(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(Theme.Typography.rowTrailing)
+            .symbolRenderingMode(.hierarchical)
     }
 }
 

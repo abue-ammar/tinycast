@@ -74,7 +74,7 @@ struct CodexTurnTests {
     }
 }
 
-/// A real client against the stub server in `Tests/ai-fixtures/codex-stub.py`.
+/// A real client against the stub server in `Tests/ai-fixtures/codex-stub.js`.
 @MainActor
 final class StubServer {
     let root: URL
@@ -89,7 +89,7 @@ final class StubServer {
             try FileManager.default.createDirectory(
                 at: executable.deletingLastPathComponent(), withIntermediateDirectories: true)
             try FileManager.default.copyItem(
-                at: URL(fileURLWithPath: "Tests/ai-fixtures/codex-stub.py"), to: executable)
+                at: URL(fileURLWithPath: "Tests/ai-fixtures/codex-stub.js"), to: executable)
             try FileManager.default.setAttributes(
                 [.posixPermissions: 0o755], ofItemAtPath: executable.path)
         } catch {

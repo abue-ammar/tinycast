@@ -49,13 +49,33 @@ struct SSEParser: Sendable {
 }
 
 struct AIStreamDecoder: Sendable {
+    /// A call arrives in fragments keyed by index, with its id and name only on the first one.
+    private struct PartialToolCall {
+        var id = ""
+        var name = ""
+        var arguments = ""
+    }
+
     private let shape: AIHTTPConfiguration.APIShape
     private var parser = SSEParser()
     private var usage = AIUsage()
+    private var partialToolCalls: [Int: PartialToolCall] = [:]
     private(set) var isTerminal = false
 
     init(shape: AIHTTPConfiguration.APIShape) {
         self.shape = shape
+    }
+
+    /// Assembled in index order, so a turn's calls reach the loop as the model listed them.
+    private mutating func flushToolCalls() -> [AIStreamEvent] {
+        guard !partialToolCalls.isEmpty else { return [] }
+        let calls = partialToolCalls.sorted { $0.key < $1.key }.map(\.value)
+        partialToolCalls.removeAll()
+        return calls.compactMap { call in
+            guard !call.name.isEmpty else { return nil }
+            return .toolCallRequested(
+                AIToolCall(id: call.id, name: call.name, arguments: call.arguments))
+        }
     }
 
     mutating func feed(_ data: Data) throws -> [AIStreamEvent] {
@@ -71,6 +91,7 @@ struct AIStreamDecoder: Sendable {
         for payload in payloads where !isTerminal {
             if payload == "[DONE]" {
                 isTerminal = true
+                events.append(contentsOf: flushToolCalls())
                 events.append(.finished)
                 continue
             }
@@ -98,12 +119,14 @@ struct AIStreamDecoder: Sendable {
             throw AIProviderError.responseFailed(message)
         }
         var events: [AIStreamEvent] = []
-        if let delta = chunk.choices?.first?.delta {
-            if let content = delta.content, !content.isEmpty {
+        if let choice = chunk.choices?.first {
+            if let content = choice.delta?.content, !content.isEmpty {
                 events.append(.text(content))
-            } else if delta.hasReasoning {
+            } else if choice.delta?.hasReasoning == true {
                 events.append(.thinking)
             }
+            for fragment in choice.delta?.toolCalls ?? [] { absorb(fragment) }
+            if choice.finishReason == "tool_calls" { events.append(contentsOf: flushToolCalls()) }
         }
         if let reported = chunk.usage {
             usage.inputTokens = reported.promptTokens ?? usage.inputTokens
@@ -111,6 +134,15 @@ struct AIStreamDecoder: Sendable {
             events.append(.usage(usage))
         }
         return events
+    }
+
+    /// A fragment's index is the only stable handle; a gateway may omit it when there is one call.
+    private mutating func absorb(_ fragment: OpenAIChunk.Choice.Delta.ToolCall) {
+        var partial = partialToolCalls[fragment.index ?? 0] ?? PartialToolCall()
+        if let id = fragment.id, !id.isEmpty { partial.id = id }
+        if let name = fragment.function?.name, !name.isEmpty { partial.name = name }
+        partial.arguments += fragment.function?.arguments ?? ""
+        partialToolCalls[fragment.index ?? 0] = partial
     }
 
     private mutating func decodeAnthropic(_ payload: String) throws -> [AIStreamEvent] {
@@ -122,9 +154,19 @@ struct AIStreamDecoder: Sendable {
         }
 
         switch event.type {
+        case "content_block_start":
+            guard event.contentBlock?.type == "tool_use" else { return [] }
+            partialToolCalls[event.index ?? 0] = PartialToolCall(
+                id: event.contentBlock?.id ?? "", name: event.contentBlock?.name ?? "",
+                arguments: "")
+            return []
         case "content_block_delta":
             if event.delta?.type == "text_delta", let text = event.delta?.text, !text.isEmpty {
                 return [.text(text)]
+            }
+            if event.delta?.type == "input_json_delta" {
+                partialToolCalls[event.index ?? 0]?.arguments += event.delta?.partialJSON ?? ""
+                return []
             }
             return event.delta?.type == "thinking_delta" ? [.thinking] : []
         case "message_start":
@@ -132,10 +174,12 @@ struct AIStreamDecoder: Sendable {
             return [.usage(usage)]
         case "message_delta":
             usage.outputTokens = event.usage?.outputTokens ?? usage.outputTokens
-            return [.usage(usage)]
+            // The calls are complete here, and `message_stop` may never arrive on a tool turn.
+            guard event.delta?.stopReason == "tool_use" else { return [.usage(usage)] }
+            return [.usage(usage)] + flushToolCalls()
         case "message_stop":
             isTerminal = true
-            return [.finished]
+            return flushToolCalls() + [.finished]
         case "error":
             isTerminal = true
             throw AIProviderError.responseFailed(Self.anthropicErrorMessage(event.error?.type))
@@ -158,9 +202,21 @@ private struct OpenAIChunk: Decodable {
         struct Delta: Decodable {
             struct ReasoningDetail: Decodable { let text: String? }
 
+            struct ToolCall: Decodable {
+                struct Function: Decodable {
+                    let name: String?
+                    let arguments: String?
+                }
+
+                let index: Int?
+                let id: String?
+                let function: Function?
+            }
+
             let content: String?
             let reasoning: String?
             let reasoningDetails: [ReasoningDetail]?
+            let toolCalls: [ToolCall]?
 
             var hasReasoning: Bool {
                 reasoning?.isEmpty == false
@@ -170,10 +226,17 @@ private struct OpenAIChunk: Decodable {
             enum CodingKeys: String, CodingKey {
                 case content, reasoning
                 case reasoningDetails = "reasoning_details"
+                case toolCalls = "tool_calls"
             }
         }
 
-        let delta: Delta
+        let delta: Delta?
+        let finishReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case delta
+            case finishReason = "finish_reason"
+        }
     }
 
     struct Usage: Decodable {
@@ -197,6 +260,20 @@ private struct AnthropicEvent: Decodable {
     struct Delta: Decodable {
         let type: String?
         let text: String?
+        let partialJSON: String?
+        let stopReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case type, text
+            case partialJSON = "partial_json"
+            case stopReason = "stop_reason"
+        }
+    }
+
+    struct ContentBlock: Decodable {
+        let type: String?
+        let id: String?
+        let name: String?
     }
 
     struct Usage: Decodable {
@@ -213,8 +290,15 @@ private struct AnthropicEvent: Decodable {
     struct ErrorBody: Decodable { let type: String? }
 
     let type: String
+    let index: Int?
     let delta: Delta?
+    let contentBlock: ContentBlock?
     let usage: Usage?
     let message: Message?
     let error: ErrorBody?
+
+    enum CodingKeys: String, CodingKey {
+        case type, index, delta, usage, message, error
+        case contentBlock = "content_block"
+    }
 }

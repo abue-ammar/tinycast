@@ -49,6 +49,8 @@ final class AppCore {
     let aiChat: AIChatState
     let aiSettings = AISettingsStore(
         isAppleIntelligenceAvailable: { AppleIntelligenceProvider.status().isAvailable })
+    let mcpSettings = MCPSettingsStore()
+    let mcp = MCPServerManager()
     let quickActionSettings = QuickActionSettingsStore()
     let chatGPTSubscription = ChatGPTSubscriptionManager()
 
@@ -139,6 +141,8 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var quickActionCoordinator = QuickActionCoordinator(
         settings: settings, store: quickActionSettings, injector: textInjector,
         appIndex: appIndex, paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var mcpCoordinator = MCPCoordinator(
+        settings: settings, store: mcpSettings, manager: mcp, core: self)
     @ObservationIgnored private(set) lazy var aiChatCoordinator = AIChatCoordinator(
         chat: aiChat, settings: settings, appIndex: appIndex, palette: palette,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
@@ -197,6 +201,7 @@ final class AppCore {
             fileSearchCoordinator.applyPolicy()
             notesCoordinator.applyEnabled()
             aiChatCoordinator.applyEnabled()
+            mcpCoordinator.applyEnabled()
             quickActionCoordinator.applyEnabled()
             customCommands.onChange = { [weak self] _ in
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
@@ -341,6 +346,7 @@ final class AppCore {
         snippetsStore.stop()
         aiChat.cancel()
         chatGPTSubscription.stop()
+        mcp.stop()
     }
 
     func aiProvider() throws -> any AIProvider {
@@ -381,6 +387,11 @@ final class AppCore {
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })
+        track(
+            {
+                _ = $0.aiEnabled
+                _ = $0.mcpEnabled
+            }, reproject: { $0.mcpCoordinator.applyEnabled() })
         track(
             { _ = $0.quickActionsEnabled },
             reproject: { $0.quickActionCoordinator.applyEnabled() })
@@ -486,6 +497,16 @@ final class AppCore {
         await dialogs.confirm(
             title: title, message: message, symbol: symbol, tone: tone, confirmTitle: confirmTitle,
             confirmRole: confirmRole, dismissTitle: dismissTitle)
+    }
+
+    /// A question with more than two answers; the returned index is into `options`.
+    func choose(
+        title: String, message: String?, symbol: String?, options: [DialogAction],
+        defaultIndex: Int, tone: DialogTone = .neutral
+    ) async -> Int {
+        await dialogs.choose(
+            title: title, message: message, symbol: symbol, tone: tone, options: options,
+            defaultIndex: defaultIndex)
     }
 
     /// A failure with one usable second option; `true` when the user takes it.
