@@ -38,10 +38,12 @@ struct MenuBarSummary: Sendable {
 
     /// The empty label and the all-day menu-bar choice share one definition of "upcoming".
     static func hasUpcomingEvent(
-        from events: [MeetingEvent], now: Date, calendar: Calendar = .current
+        from events: [MeetingEvent], now: Date, linkedOnly: Bool = false,
+        calendar: Calendar = .current
     ) -> Bool {
         UpcomingWindow.agenda(from: events, now: now).contains {
-            calendar.isDate($0.start, inSameDayAs: now) || $0.start <= now + nextDayGrace
+            (!linkedOnly || $0.link != nil)
+                && (calendar.isDate($0.start, inSameDayAs: now) || $0.start <= now + nextDayGrace)
         }
     }
 

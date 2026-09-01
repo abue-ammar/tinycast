@@ -362,6 +362,13 @@ struct CalendarTests {
             MenuBarSummary.hasUpcomingEvent(from: [midnight], now: justBeforeMidnight, calendar: calendar),
             "the empty label agrees with the midnight grace")
 
+        let appointment = event(
+            id: "appointment", starting: date(year: 2026, month: 8, day: 23, hour: 16), link: nil)
+        expect(
+            !MenuBarSummary.hasUpcomingEvent(
+                from: [appointment], now: morning, linkedOnly: true, calendar: calendar),
+            "Only show events with meetings also removes a linkless event from the empty-label rule")
+
         let thirtyOneMinutesOut = date(year: 2026, month: 8, day: 23, hour: 23, minute: 29)
         expect(
             summary.event(from: [midnight], now: thirtyOneMinutesOut) == nil,

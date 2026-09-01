@@ -54,7 +54,8 @@ final class CalendarCoordinator {
     /// The calendar label keeps its plain icon until today's events are exhausted, with a small
     /// grace across midnight for a meeting that starts imminently.
     var hasUpcomingMenuBarEvent: Bool {
-        MenuBarSummary.hasUpcomingEvent(from: store.events, now: clock.now)
+        MenuBarSummary.hasUpcomingEvent(
+            from: store.events, now: clock.now, linkedOnly: settings.menuBarLinkedEventsOnly)
     }
 
     /// The event the menu bar carries, or nil for the plain icon.

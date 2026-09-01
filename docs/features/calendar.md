@@ -182,7 +182,8 @@ characters — a hard cap is the only thing that bounds a menu bar. `CalendarMen
 coordinator rather than the stores, which scopes Observation to the label instead of re-running either
 scene. It falls back to a calendar glyph when nothing is due, so the calendar item never disappears
 out from under the user. In **Meeting Title** mode, once no event remains today it instead reads
-`No upcoming events`.
+`No upcoming events`. When **Only show events with meetings** is on, linkless appointments do not
+keep the fallback calendar icon visible either.
 
 A click opens the usual menu, with `Join <title>` and `Open in Calendar...` added on top. The latter
 opens that event in Calendar.app. **A bare click never joins**: the menu bar is not a button, and a
