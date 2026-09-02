@@ -7,6 +7,8 @@ struct NotesTests {
 
     static func main() async throws {
         try testRepositoryAndSearch()
+        testDerivedTitles()
+        try testUnnamedNotesTitleThemselves()
         testSwitcherInteraction()
         try await testStoreCollectionAndAutosave()
         try await testCollectionMutationsFlushTheDraft()
@@ -127,6 +129,62 @@ struct NotesTests {
             (try FileManager.default.contentsOfDirectory(atPath: empty.notesDirectory.path)).isEmpty)
     }
 
+    private static func testDerivedTitles() {
+        check(
+            "the names Create claims are unnamed",
+            NoteTitle.isUnnamed("Untitled") && NoteTitle.isUnnamed("Untitled 12"))
+        check(
+            "a typed title is never unnamed",
+            !NoteTitle.isUnnamed("Plan") && !NoteTitle.isUnnamed("untitled")
+                && !NoteTitle.isUnnamed("Untitled notes") && !NoteTitle.isUnnamed("Untitled 2b"))
+
+        check(
+            "a heading marker is not part of the derived title",
+            NoteTitle.firstLine(of: "#  Groceries \n\nmilk") == "Groceries")
+        check(
+            "leading blank lines are skipped",
+            NoteTitle.firstLine(of: "\n \t \n  café snow\nmore") == "café snow")
+        check(
+            "a hashtag is literal text, not a heading",
+            NoteTitle.firstLine(of: "####### seven\n") == "####### seven"
+                && NoteTitle.firstLine(of: "#tag") == "#tag")
+        check(
+            "a blank note derives no title",
+            NoteTitle.firstLine(of: "") == nil && NoteTitle.firstLine(of: "\n  \n\t\n") == nil)
+        check(
+            "a wall of text is capped to one row",
+            NoteTitle.firstLine(of: String(repeating: "a", count: 400))?.count == 120)
+    }
+
+    private static func testUnnamedNotesTitleThemselves() throws {
+        let root = temporaryRoot("derived")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = try repository(in: root)
+
+        let unnamed = try repository.create()
+        try repository.save(id: unnamed.id, source: "# Groceries\n\nmilk\n")
+        let named = try repository.create(title: "Plan")
+        try repository.save(id: named.id, source: "# Ignored heading\n")
+
+        let summaries = try repository.list()
+        let unnamedSummary = try require(summaries.first { $0.id == unnamed.id })
+        check("an unnamed note shows its first line", unnamedSummary.displayTitle == "Groceries")
+        check("an unnamed note keeps its filename as its title", unnamedSummary.title == "Untitled")
+        let namedSummary = try require(summaries.first { $0.id == named.id })
+        check(
+            "a named note ignores its first line",
+            namedSummary.firstLine == nil && namedSummary.displayTitle == "Plan")
+
+        let fuzzy = repository.search(NoteSearch.Query("Grcrs"), summaries: summaries, limit: 10)
+        check(
+            "search matches a derived title the body never spells out",
+            fuzzy.count == 1 && fuzzy.first?.id == unnamed.id)
+
+        let renamed = try repository.rename(id: unnamed.id, title: "Shopping")
+        let afterRename = try require((try repository.list()).first { $0.id == renamed })
+        check("naming a note retires its derived title", afterRename.firstLine == nil)
+    }
+
     private static func testSwitcherInteraction() {
         let id = NoteID(rawValue: "Project.md")
         var rename = NoteSwitcherRenameState()
@@ -178,6 +236,11 @@ struct NotesTests {
             "Create Note is one file when it is the first action",
             started && store.activeTitle == "Untitled" && store.summaries.count == 1)
         check("active selection is persisted separately from note files", selection.id == store.activeID)
+
+        store.updateSource("# Draft heading\nbody")
+        check(
+            "an unnamed note titles itself from the live draft",
+            store.activeTitle == "Draft heading")
 
         store.updateSource("first")
         store.updateSource("latest searchable body")

@@ -324,7 +324,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   creates
 - Empty switcher search reads the complete recent list; title and body searches rank correctly and a
   superseded query never publishes
-- Inline rename updates the Markdown filename without changing source; collisions receive a suffix
+- An Untitled note titles itself from its first line as it is typed, in the title bar and — after the
+  autosave — in the browse list; naming it replaces that, and clearing the name brings it back
+- Inline rename updates the Markdown filename without changing source, and starts from that filename
+  even where the row shows a derived title; collisions receive a suffix
 - Delete confirms through Tinycast, moves the file to Trash, and selecting another note never loses an
   unsaved edit
 - An existing `Floating Note.md` appears as an ordinary note without conversion

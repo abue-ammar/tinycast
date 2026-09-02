@@ -57,9 +57,11 @@ struct NotesRepository: Sendable {
                     values.isHidden != true,
                     let url = try? validatedFileURL(candidate)
                 else { return nil }
+                let title = url.deletingPathExtension().lastPathComponent
                 return NoteSummary(
                     id: NoteID(rawValue: url.lastPathComponent),
-                    title: url.deletingPathExtension().lastPathComponent,
+                    title: title,
+                    firstLine: NoteTitle.isUnnamed(title) ? firstLine(of: url) : nil,
                     modifiedAt: values.contentModificationDate ?? .distantPast)
             }
             .sorted(by: summaryPrecedes)
@@ -177,6 +179,21 @@ struct NotesRepository: Sendable {
         notesDirectory.appendingPathComponent(id.rawValue)
     }
 
+    /// Only an unnamed note pays for this, and only for the head of its file.
+    private func firstLine(of url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let head = try? handle.read(upToCount: NoteTitle.headByteCount), !head.isEmpty
+        else { return nil }
+        // A fixed-size read can land mid-character, so back off to the last complete one.
+        for dropped in 0...3 where head.count > dropped {
+            if let text = String(bytes: head.dropLast(dropped), encoding: .utf8) {
+                return NoteTitle.firstLine(of: text)
+            }
+        }
+        return nil
+    }
+
     private func ensureDirectory() throws {
         try FileManager.default.createDirectory(
             at: notesDirectory, withIntermediateDirectories: true)
@@ -241,7 +258,7 @@ struct NotesRepository: Sendable {
 
     private func summaryPrecedes(_ lhs: NoteSummary, _ rhs: NoteSummary) -> Bool {
         if lhs.modifiedAt != rhs.modifiedAt { return lhs.modifiedAt > rhs.modifiedAt }
-        return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        return lhs.displayTitle.localizedCaseInsensitiveCompare(rhs.displayTitle) == .orderedAscending
     }
 
     private func folded(_ value: String) -> String {
