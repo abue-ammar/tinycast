@@ -106,12 +106,18 @@ run favorites-test         $L/FavoriteSlots.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift
 run calendar-test          Tinycast/Features/Calendar/Model/*.swift
 run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
-                           Tinycast/Features/Clipboard/Model/ClipboardFilter.swift
+                           Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorFormat.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift
 # Expires 2026-09-05, and fails this suite once it has: see Tinycast/Migration/.
 run storage-relocation-test Tinycast/Platform/AppPaths.swift \
                             Tinycast/Migration/StorageRelocation.swift \
                             Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
-                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift
+                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
+                            Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                            Tinycast/Features/Clipboard/Model/ColorFormat.swift \
+                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift
 run emoji-test             Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
                            Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift \
                            Tinycast/Features/Emoji/Model/EmojiData.generated.swift
@@ -132,6 +138,9 @@ run hover-arming-test      Tinycast/Palette/HoverArming.swift \
                            Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorFormat.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
                            Tinycast/Features/Quicklinks/Model/Quicklink.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-escape-test    Tinycast/Palette/PaletteMode.swift \

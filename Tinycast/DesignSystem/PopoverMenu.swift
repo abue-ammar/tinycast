@@ -5,6 +5,8 @@ enum PopoverMenuIcon: Equatable {
     case symbol(String)
     case asset(String)
     case file(path: String)
+    /// No glyph and no slot: a run of rows under one repeated icon says more without it.
+    case blank
 
     /// A paste row's glyph: the target app's icon when known, else a generic symbol.
     static func paste(_ target: PasteTarget?, fallback: String) -> PopoverMenuIcon {
@@ -18,17 +20,20 @@ struct PopoverMenuItem {
     let title: String
     let icon: PopoverMenuIcon
     var shortcut: String?
+    /// A value the row states rather than a chord it runs — what a "Copy as" row copies.
+    var detail: String?
     /// Destructive rows (delete) tint their icon + label red, matching the native menu convention.
     var isDestructive: Bool = false
     let action: () -> Void
 
     init(
-        title: String, icon: PopoverMenuIcon, shortcut: String? = nil, isDestructive: Bool = false,
-        action: @escaping () -> Void
+        title: String, icon: PopoverMenuIcon, shortcut: String? = nil, detail: String? = nil,
+        isDestructive: Bool = false, action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
         self.shortcut = shortcut
+        self.detail = detail
         self.isDestructive = isDestructive
         self.action = action
     }
@@ -141,6 +146,8 @@ private struct PopoverMenuRow: View {
             // `sm`, not `lg`: the icon slot carries its own slack, so the gap reads wider.
             HStack(spacing: Theme.Spacing.sm) {
                 switch item.icon {
+                case .blank:
+                    EmptyView()
                 case .symbol(let name):
                     Image(systemName: name)
                         .font(Theme.Typography.menuIcon)
@@ -162,6 +169,15 @@ private struct PopoverMenuRow: View {
                     .foregroundStyle(item.isDestructive ? Color.red : Color.primary)
                     .lineLimit(1)
                 Spacer(minLength: Theme.Spacing.sm)
+                if let detail = item.detail {
+                    Text(detail)
+                        // Smaller than the title it trails: a stated value, not a second label.
+                        .font(Theme.Typography.keyCap)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        // A notation opens with what identifies it, so the tail is what can go.
+                        .truncationMode(.tail)
+                }
                 if let shortcut = item.shortcut {
                     HStack(spacing: Theme.Spacing.xxs) {
                         ForEach(Array(shortcut.enumerated()), id: \.offset) { _, glyph in

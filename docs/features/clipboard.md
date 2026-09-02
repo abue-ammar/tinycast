@@ -13,6 +13,9 @@
 - **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` stays
   `text`/`image` — the two things capture can tell apart — so improving the classifier is a code
   change rather than a database migration plus a backfill.
+- **A colour is parsed from the text on demand, never stored.** `ColorValue` is the single parser
+  behind the clipboard's swatches and the launcher's colour card, so the two can never disagree
+  about what counts as a colour or what it converts to.
 
 ## Poll-based capture
 
@@ -79,16 +82,20 @@ menu opens highlighting the *active* filter rather than the first row, the way a
 The filter is not gated on the list having rows: an over-narrow filter empties it, and the button is
 the way back out.
 
-`ClipboardFilter` owns the five cases and everything the UI needs from them — title, glyph, and the
+`ClipboardFilter` owns the six cases and everything the UI needs from them — title, glyph, and the
 `emptyMessage` that stops "Clipboard history is empty" from appearing over a history that only looks
 empty. The cases are **exclusive**: a copied URL is a link, not a narrower kind of text, so *Text
-Only* means prose.
+Only* means prose, and *Colors Only* takes `#FF5733` out of it.
 
-`ClipboardItem.textForm` derives `plain`/`link`/`email` from the text on demand — nil for an image.
+`ClipboardItem.textForm` derives `plain`/`color`/`link`/`email` from the text on demand — nil for an
+image.
 The classifier is guarded cheapest-first, because `rows` is rebuilt every render: anything over
 2048 UTF-8 bytes is plain by definition (`utf8.count` is O(1), `count` walks graphemes), then
-anything holding whitespace, then a `scheme://` or `mailto:` prefix, an address shape, and finally
-a bare domain. That last step is the only one needing judgement — `report.pdf` and `index.html` are
+a colour, then anything holding whitespace, then a `scheme://` or `mailto:` prefix, an address
+shape, and finally a bare domain. Colour runs **before** the whitespace reject, because
+`rgb(255, 87, 51)` is one value that happens to be written with spaces in it — every later branch
+is a single token by definition. That last step is the only one needing judgement — `report.pdf`
+and `index.html` are
 domain-shaped — so a bare domain must be lower case (which is what keeps `Safari.app` out) and end
 in one of a compact set of TLDs people actually copy. It is a heuristic whose worst case files a row
 under the wrong type, and `clipboard-test` pins the cases that matter.
@@ -98,6 +105,61 @@ in pin order, and the filter joins the search memo's key — keying on the query
 stale rows for a render or more, since the filter changes without the query moving. One consequence
 of filtering after the fact: the FTS statement's `LIMIT 200` applies to the *unfiltered* matches, so
 a narrow filter over a broad query can show fewer rows than the history holds.
+
+## Colours
+
+A copied colour is drawn as the colour and can be copied back out in another notation. Two
+surfaces read one parser: the clipboard history, and the launcher, where pasting a colour answers
+with a card the way the calculator does.
+
+`ColorValue` (`Model/`, Foundation-only) is that parser. It takes the CSS spellings people copy —
+the four hex lengths, plus `rgb()`/`hsl()` and their alpha forms in both the comma and CSS4
+space-and-slash syntax — and stores **sRGB components**, so every notation derives from one source
+rather than a second parser that can drift from it.
+
+**A colour is rejected rather than approximated**, because a wrong swatch filed under Colors Only
+is worse than none. An HSL channel must carry its `%`, or `hsl(120, 100, 50)` clamps to white.
+Arguments are counted, so `rgb(255,,87,51)` is malformed rather than three good ones with a hole;
+each side of a `/` is counted separately, or `rgb(0 255 / 0.5)` reads an alpha as its blue channel.
+`Double` also parses `nan`, `inf` and Swift literals CSS never writes, and every notation ends in
+an `Int(_:)` that traps on a non-finite value — so the reject sits at the parse boundary.
+
+`ColorFormat` offers four notations: hex, `rgba()`, `hsl()` and `oklch()`, plus the two spellings
+named for their alpha, which `offered(for:)` drops from an opaque colour — six rows at most, four
+for an opaque one. The digits themselves are `ColorDigits`, private to that file: writing a colour
+is the format's business, not the value's. The rest of CSS Color 4 — the space-separated forms,
+`hwb()`, `lab()`, `lch()`, `oklab()` — and the `NSColor`/`UIColor`/SwiftUI spellings were all built
+and then removed: they
+restate the same four answers, and a row you scroll past to reach the one you wanted costs more
+than it gives. `oklch()` stays as the one perceptual space people write, and `hsl()` keeps one
+decimal because whole degrees cost up to 5/255 on the way back. `clipboard-test` sweeps every
+offered notation and re-parses it.
+
+`ColorSpaces.swift` holds Oklab and its polar form — matrices and cube roots, no tables. Oklab is
+private to it: `oklch()` is the one thing it exists for. A neutral is stated with no hue at all,
+since `atan2` over two rounding errors still names a direction.
+
+The notations are a menu of their own under the launcher card, and **nowhere else** — a history
+entry's ⌘K stays the actions it always was, since converting a colour is not something you reach
+for while browsing what you copied. **There is no submenu** either, the palette's menu being one
+level deep, so each row states its value through `PopoverMenuItem.detail`, never `shortcut`, which
+renders one keycap per character. The rows carry `PopoverMenuIcon.blank`, a run of rows under one
+repeated eyedropper saying nothing, and the menu keeps the standard `menuWidth`: every notation
+fits it, and a menu that widened for its content would jump as rows changed.
+
+`ColorSwatch` is the one place a colour is drawn — row thumbnail, preview and card alike — over a
+checkerboard built only when there is alpha to show, so an opaque colour never pays for a `Canvas`
+nothing can see. The preview shows the colour and the copied text and nothing else. Detection is
+narrow by design: anything past 64 UTF-8 bytes is not a colour, and no named colour (`red`) is
+recognised, since a bare English word is prose far more often than CSS — and **a colour is never
+named**: `#D6D6D6` is a swatch and its digits, never *Silver*. `NSColorList` naming was built,
+measured and removed; it knew only the 59 names macOS ships, so most colours read as nothing, and
+CSS's own (`gainsboro`) are in no catalog at all. The card runs **after** the calculator, which
+costs nothing — no colour notation is also an expression.
+
+`ColorCard` is built from the calculator card's own parts — `LeadCardColumn` and
+`.leadCard(selected:)` — so a lead card can't change height or hover with its kind. Its swatch is
+**stretched to the value column rather than sized**, since no notation has a fixed height.
 
 ## Pinned entries
 

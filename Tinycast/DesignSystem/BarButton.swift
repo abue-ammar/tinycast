@@ -67,6 +67,8 @@ struct HeaderMenuButton: View {
         BarButton(chrome: .rounded, action: action) {
             HStack(spacing: Theme.Spacing.sm) {
                 switch icon {
+                case .blank:
+                    EmptyView()
                 case .symbol(let name):
                     Image(systemName: name)
                         .font(Theme.Typography.bar)

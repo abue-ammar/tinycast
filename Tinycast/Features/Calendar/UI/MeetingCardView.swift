@@ -5,13 +5,6 @@ struct MeetingCard: View {
     let meeting: MeetingEvent
     let now: Date
     let selected: Bool
-    @State private var hovered = false
-
-    private var fill: Color {
-        if selected { return Theme.Colors.selection }
-        if hovered { return Theme.Colors.rowHover }
-        return .clear
-    }
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xl) {
@@ -43,15 +36,7 @@ struct MeetingCard: View {
         }
         .padding(.horizontal, Theme.Spacing.xl)
         .padding(.vertical, Theme.Spacing.xxl)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                .fill(Theme.Colors.cardFill)
-        )
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                .fill(fill)
-        )
-        .armedHover($hovered)
+        .leadCard(selected: selected)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(meeting.title), \(UpcomingWindow.countdown(to: meeting.start, now: now))"

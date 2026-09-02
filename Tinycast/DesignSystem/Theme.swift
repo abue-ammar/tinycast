@@ -118,7 +118,7 @@ enum Theme {
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
-        /// The clipboard type filter's menu; `menuWidth` is far too wide for five short rows.
+        /// The clipboard type filter's menu; `menuWidth` is far too wide for six short rows.
         static let clipboardFilterMenuWidth: CGFloat = 200
         /// Stated, not padded: the cap below counts rows, so a capped menu would land mid-row.
         static let menuRowHeight: CGFloat = menuIcon + Spacing.md * 2
@@ -276,6 +276,9 @@ enum Theme {
         static let glassFrost = adaptive(dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(1, alpha: 0.25))
         /// The pill behind the header of the section a Settings search jumped to.
         static let searchFlash = Color.accentColor.opacity(0.35)
+        /// The two squares of a checkerboard, behind a colour with alpha to show.
+        static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
+        static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.

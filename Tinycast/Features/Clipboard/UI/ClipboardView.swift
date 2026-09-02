@@ -135,7 +135,7 @@ private struct ClipboardRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
-            thumbnail
+            thumbnail(item.colorValue)
             Text(previewText)
                 .font(Theme.Typography.menuRow)
                 .lineLimit(1)
@@ -168,10 +168,16 @@ private struct ClipboardRow: View {
     }
 
     @ViewBuilder
-    private var thumbnail: some View {
+    private func thumbnail(_ color: ColorValue?) -> some View {
         switch item.kind {
         case .text:
-            glyphTile("doc.text")
+            // A colour states itself, so it takes the tile a glyph would otherwise fill.
+            if let color {
+                ColorSwatch(color: color)
+                    .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            } else {
+                glyphTile("doc.text")
+            }
         case .image:
             AsyncThumbnail(url: imageURL, maxPixel: 64) { image in
                 image
@@ -256,11 +262,15 @@ struct ClipboardPreview: View {
     private func content(for item: ClipboardItem) -> some View {
         switch item.kind {
         case .text:
-            ScrollView {
-                Text(item.text ?? "")
-                    .font(.system(.subheadline, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            if let color = item.colorValue {
+                ColorPreview(color: color, text: item.text ?? "")
+            } else {
+                ScrollView {
+                    Text(item.text ?? "")
+                        .font(.system(.subheadline, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
             }
         case .image:
             AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) { image in
@@ -347,12 +357,17 @@ private struct ClipboardInfoSection: View {
         }
         switch item.kind {
         case .text:
-            rows.append(InfoRow(label: "Type", value: "Text"))
-            if let characters = details.characters {
-                rows.append(InfoRow(label: "Characters", value: characters.formatted()))
-            }
-            if let words = details.words {
-                rows.append(InfoRow(label: "Words", value: words.formatted()))
+            // What the entry *is*, which is what the type filter files it under.
+            let isColor = item.colorValue != nil
+            rows.append(InfoRow(label: "Type", value: isColor ? "Color" : "Text"))
+            // A colour's own notations are the pane above; its length is not what you came for.
+            if !isColor {
+                if let characters = details.characters {
+                    rows.append(InfoRow(label: "Characters", value: characters.formatted()))
+                }
+                if let words = details.words {
+                    rows.append(InfoRow(label: "Words", value: words.formatted()))
+                }
             }
         case .image:
             rows.append(InfoRow(label: "Type", value: "Image"))
