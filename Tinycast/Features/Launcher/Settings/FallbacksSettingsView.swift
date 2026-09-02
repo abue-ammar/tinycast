@@ -17,7 +17,7 @@ struct FallbacksSettingsView: View {
                 )
                 .foregroundStyle(.secondary)
             } header: {
-                Text("Fallbacks")
+                SettingsSectionHeader(.fallbacksFallbacks)
             }
 
             Section {
@@ -47,6 +47,7 @@ struct FallbacksSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.fallbacks)
         .releasesFocusOnOutsideClick()
     }
 

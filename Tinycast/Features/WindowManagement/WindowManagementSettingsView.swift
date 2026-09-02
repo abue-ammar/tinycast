@@ -7,7 +7,7 @@ struct WindowManagementSettingsView: View {
         @Bindable var settings = settings
         return Form {
             FeatureSwitchSection(
-                header: "Window Management",
+                anchor: .windowManagementWindowManagement,
                 enableTitle: "Enable window management",
                 enableSubtitle:
                     "Moves the window you were last in, using the Accessibility permission Tinycast already uses to paste.",
@@ -22,13 +22,14 @@ struct WindowManagementSettingsView: View {
             .settingsEnabled(settings.windowManagementEnabled)
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.windowManagement)
     }
 
     private var options: some View {
         @Bindable var settings = settings
         return Section {
             Toggle(isOn: $settings.windowCycleOnRepeat) {
-                Text("Cycle sizes on repeat")
+                SettingsRowTitle(.windowManagementOptions, "Cycle sizes on repeat")
                 Text(
                     "Triggering a half again steps it through a third and two thirds before returning."
                 )
@@ -43,11 +44,11 @@ struct WindowManagementSettingsView: View {
                         .labelsHidden()
                 }
             } label: {
-                Text("Gap between windows")
+                SettingsRowTitle(.windowManagementOptions, "Gap between windows")
                 Text("Points left between tiled windows and around the screen edge.")
             }
         } header: {
-            Text("Options")
+            SettingsSectionHeader(.windowManagementOptions)
         }
     }
 

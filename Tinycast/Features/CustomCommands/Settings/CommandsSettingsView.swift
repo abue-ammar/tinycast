@@ -13,11 +13,11 @@ struct CommandsSettingsView: View {
         return Form {
             LauncherItemsSection(
                 kind: .command,
-                header: "Commands",
+                anchor: .commandsCommands,
                 searchPrompt: "Search commands…")
 
             FeatureSwitchSection(
-                header: "Custom Commands",
+                anchor: .commandsCustomCommands,
                 enableTitle: "Enable custom commands",
                 enableSubtitle:
                     "Commands run with your user account in /bin/zsh, so use full executable paths.",
@@ -43,7 +43,11 @@ struct CommandsSettingsView: View {
                             onDelete: { pendingDeletion = command })
                     }
                 }
-                Button("Add Custom Command…") { editor = EditorTarget(command: nil) }
+                Button {
+                    editor = EditorTarget(command: nil)
+                } label: {
+                    SettingsRowTitle(.commandsCustomCommands, "Add Custom Command")
+                }
             } footer: {
                 Text("Name it, then give it a shortcut if you want one.")
                     .font(.caption)
@@ -52,6 +56,7 @@ struct CommandsSettingsView: View {
             .settingsEnabled(settings.customCommandsEnabled)
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.commands)
         .releasesFocusOnOutsideClick()
         .sheet(item: $editor) { target in
             CustomCommandEditorSheet(command: target.command)

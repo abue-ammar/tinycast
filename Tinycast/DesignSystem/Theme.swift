@@ -195,6 +195,10 @@ enum Theme {
         static let tooltip: TimeInterval = 0.15
         static let copyFeedback: TimeInterval = 1.2
         static let chatFooter: TimeInterval = 0.12
+        /// A Settings search result scrolling its section into view, then the pulse that marks it.
+        static let settingsReveal: TimeInterval = 0.28
+        static let settingsFlash: TimeInterval = 2.0
+        static let settingsFlashOut: TimeInterval = 0.6
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
@@ -270,6 +274,8 @@ enum Theme {
         static let cardStroke = ramp(dark: 0.10, light: 0.10)
         /// White in both: the frost brightens glass, and light glass needs more to read at all.
         static let glassFrost = adaptive(dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(1, alpha: 0.25))
+        /// The pill behind the header of the section a Settings search jumped to.
+        static let searchFlash = Color.accentColor.opacity(0.35)
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.

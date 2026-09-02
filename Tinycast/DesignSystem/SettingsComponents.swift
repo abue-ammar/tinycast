@@ -6,6 +6,8 @@ import SwiftUI
 struct SettingsRow<Icon: View, Trailing: View>: View {
     let title: String
     var subtitle: String?
+    /// Set when a search result points at this row, so its title can carry the pulse.
+    var anchor: SettingsAnchor?
     @ViewBuilder var icon: Icon
     @ViewBuilder var trailing: Trailing
 
@@ -13,8 +15,14 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
         HStack(spacing: Theme.Spacing.lg) {
             icon
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(title)
-                    .lineLimit(1)
+                Group {
+                    if let anchor {
+                        SettingsRowTitle(anchor, title)
+                    } else {
+                        Text(title)
+                    }
+                }
+                .lineLimit(1)
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption)
@@ -31,8 +39,13 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
 }
 
 extension SettingsRow where Icon == EmptyView {
-    init(title: String, subtitle: String? = nil, @ViewBuilder trailing: () -> Trailing) {
-        self.init(title: title, subtitle: subtitle, icon: { EmptyView() }, trailing: trailing)
+    init(
+        title: String, subtitle: String? = nil, anchor: SettingsAnchor? = nil,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.init(
+            title: title, subtitle: subtitle, anchor: anchor, icon: { EmptyView() },
+            trailing: trailing)
     }
 }
 
@@ -45,7 +58,7 @@ extension View {
 
 /// A feature pane's opening section: the master switch, then its launcher-visibility companion.
 struct FeatureSwitchSection: View {
-    let header: String
+    let anchor: SettingsAnchor
     let enableTitle: String
     let enableSubtitle: String
     let launcherSubtitle: String
@@ -55,7 +68,7 @@ struct FeatureSwitchSection: View {
     var body: some View {
         Section {
             Toggle(isOn: $isEnabled) {
-                Text(enableTitle)
+                SettingsRowTitle(anchor, enableTitle)
                 Text(enableSubtitle)
             }
             Toggle(isOn: $showsInLauncher) {
@@ -65,7 +78,7 @@ struct FeatureSwitchSection: View {
             // The switch above stays live so the feature can always be turned back on.
             .settingsEnabled(isEnabled)
         } header: {
-            Text(header)
+            SettingsSectionHeader(anchor)
         }
     }
 }

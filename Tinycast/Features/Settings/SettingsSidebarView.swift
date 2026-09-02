@@ -55,7 +55,7 @@ struct SettingsSidebarView: View {
             // Arrowing through results moves the pane with the selection, as System Settings does.
             .onChange(of: highlighted) { _, id in
                 guard let entry = results.first(where: { $0.id == id }) else { return }
-                navigation.select(entry.tab)
+                navigation.select(entry.tab, revealing: entry.target)
             }
         }
     }

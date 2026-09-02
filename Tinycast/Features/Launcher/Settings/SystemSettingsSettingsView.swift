@@ -6,10 +6,11 @@ struct SystemSettingsSettingsView: View {
         Form {
             LauncherItemsSection(
                 kind: .systemSettings,
-                header: "System Settings",
+                anchor: .systemSettingsSystemSettings,
                 searchPrompt: "Search System Settings…")
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.systemSettings)
         .releasesFocusOnOutsideClick()
     }
 }

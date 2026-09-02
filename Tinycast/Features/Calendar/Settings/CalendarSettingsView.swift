@@ -9,7 +9,7 @@ struct CalendarSettingsView: View {
         @Bindable var settings = settings
         Form {
             FeatureSwitchSection(
-                header: "Calendar",
+                anchor: .calendarCalendar,
                 enableTitle: "Join meetings from Tinycast",
                 enableSubtitle:
                     "Reads \(core.calendarCoordinator.span.possessivePhrase) events to find join "
@@ -24,7 +24,7 @@ struct CalendarSettingsView: View {
                         Text(limit.title).tag(limit)
                     }
                 } label: {
-                    Text("Upcoming meetings in launcher")
+                    SettingsRowTitle(.calendarSchedule, "Upcoming meetings in launcher")
                     Text("Choose how many upcoming meetings appear alongside apps and commands.")
                 }
             }
@@ -43,11 +43,11 @@ struct CalendarSettingsView: View {
 
             Section {
                 Toggle(isOn: $settings.calendarIncludesTomorrow) {
-                    Text("Include Tomorrow's Events")
+                    SettingsRowTitle(.calendarSchedule, "Include Tomorrow's Events")
                     Text("Read tomorrow as well as the rest of today, everywhere meetings appear.")
                 }
             } header: {
-                Text("Schedule")
+                SettingsSectionHeader(.calendarSchedule)
             }
             .settingsEnabled(settings.calendarEnabled)
 
@@ -57,24 +57,24 @@ struct CalendarSettingsView: View {
                         Text(window.title).tag(window)
                     }
                 } label: {
-                    Text("Show the join card")
+                    SettingsRowTitle(.calendarJoining, "Show the join card")
                     Text("How early the card appears, and how long past the start it stays.")
                 }
                 Toggle(isOn: $settings.autoJoinMeetings) {
-                    Text("Auto Join Meetings")
+                    SettingsRowTitle(.calendarJoining, "Auto Join Meetings")
                     Text("Automatically join meetings as they start.")
                 }
                 Toggle(isOn: $settings.autoJoinConfirms) {
-                    Text("Confirm before joining")
+                    SettingsRowTitle(.calendarJoining, "Confirm before joining")
                 }
                 .toggleStyle(.checkbox)
                 .settingsEnabled(settings.autoJoinMeetings)
                 Toggle(isOn: $settings.cameraPreview) {
-                    Text("Camera Preview")
+                    SettingsRowTitle(.calendarJoining, "Camera Preview")
                     Text("Open camera preview before joining meetings.")
                 }
             } header: {
-                Text("Joining")
+                SettingsSectionHeader(.calendarJoining)
             }
             .settingsEnabled(settings.calendarEnabled)
 
@@ -84,7 +84,7 @@ struct CalendarSettingsView: View {
                         Text(display.title).tag(display)
                     }
                 } label: {
-                    Text("Calendar in Menu Bar")
+                    SettingsRowTitle(.calendarMenuBar, "Calendar in Menu Bar")
                     Text(
                         "Its own menu bar item, showing a meeting icon or its title and countdown."
                     )
@@ -94,7 +94,7 @@ struct CalendarSettingsView: View {
                         Text(lead.title).tag(lead)
                     }
                 } label: {
-                    Text("Show Upcoming Events")
+                    SettingsRowTitle(.calendarMenuBar, "Show Upcoming Events")
                     Text(
                         "When the next event reaches the menu bar. Today includes the next 30 "
                             + "minutes after midnight."
@@ -102,7 +102,7 @@ struct CalendarSettingsView: View {
                 }
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
                 Toggle(isOn: $settings.menuBarLinkedEventsOnly) {
-                    Text("Only show events with meetings")
+                    SettingsRowTitle(.calendarMenuBar, "Only show events with meetings")
                 }
                 .toggleStyle(.checkbox)
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
@@ -111,12 +111,12 @@ struct CalendarSettingsView: View {
                         Text(hide.title).tag(hide)
                     }
                 } label: {
-                    Text("Hide Current Event")
+                    SettingsRowTitle(.calendarMenuBar, "Hide Current Event")
                     Text("Choose whether to hide a started event or show its time left.")
                 }
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
             } header: {
-                Text("Menu Bar")
+                SettingsSectionHeader(.calendarMenuBar)
             }
             .settingsEnabled(settings.calendarEnabled)
 
@@ -127,6 +127,7 @@ struct CalendarSettingsView: View {
                 .settingsEnabled(settings.calendarEnabled)
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.calendar)
         .releasesFocusOnOutsideClick()
     }
 
@@ -166,7 +167,7 @@ private struct CalendarCommandsSection: View {
                 }
             }
         } header: {
-            Text("Calendar")
+            SettingsSectionHeader(.calendarCalendar)
         } footer: {
             Text("A shortcut works even when its command is hidden from the launcher.")
                 .font(.caption)
@@ -215,7 +216,7 @@ private struct CalendarPickerSection: View {
                 .padding(.vertical, -Self.rowPadding)
             }
         } header: {
-            Text("Calendars")
+            SettingsSectionHeader(.calendarCalendars)
         }
     }
 

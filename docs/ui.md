@@ -539,17 +539,49 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   swaps it for a flat, ranked result list; each result carries the pane's `systemImage`, the row's
   title and a `Pane › Section` breadcrumb, and arrowing through them moves the pane, as System
   Settings does. Selection runs through `SettingsNavigationState.select`, so a result is an ordinary
-  navigation the Back/Forward chevrons can walk. It is a **second `List`**, keyed by
+  navigation the Back/Forward chevrons can walk. **A row result also reveals its section**: the pane
+  scrolls the matched setting to centre and pulses its own name once (`Colors.searchFlash`) before
+  settling; a result no single row answers pulses the section's header instead.
+  It is a **second `List`**, keyed by
   `SettingsSearchEntry.ID`, so result identities never share a selection namespace with `SettingsTab`.
   ⌘F focuses the field, Escape clears it.
 - **`SettingsSearchCatalog` is hand-written, and that is the only option.** A `Form` cannot be asked
-  what rows it holds, so a new row is searchable only once it is listed there — with its pane, its
-  `Section` header, its title and the keywords the title doesn't contain ("caps lock" for Hyper Key).
+  what rows it holds, so a new row is searchable only once it is listed there — with its anchor, its
+  title and the keywords the title doesn't contain ("caps lock" for Hyper Key).
   Matching reuses `FuzzyMatch` (`Launcher/Model/SearchRelevance.swift`), multi-term like `NoteSearch`:
   every term must hit the title, the breadcrumb or a keyword, a title hit outranks the rest, and a
   pane outranks its own rows so a bare "clipboard" lands on the pane. `Tests/settings-history-test.swift`
   pins that every pane is covered and that identities are unique; row-level drift is caught in review.
   **Match ranges are deliberately not highlighted** — `FuzzyMatch` returns tier and score only.
+- **`SettingsAnchor` names a section once, so the catalog and the pane cannot disagree.** An entry
+  takes its pane *from* the anchor, so a row filed under the wrong pane won't compile.
+  `SettingsSectionHeader(_:)` in a section's `header:` supplies the name and the id a group result
+  scrolls to; `SettingsRowTitle(_:_:)` stands in for the `Text` of a row's own label and does the
+  same for one setting. A section with no header of its own takes `.settingsAnchor(_:)`, an id and
+  nothing else. **A catalog entry is `.init(anchor, title)` for one row and `.init(group:_:)` when
+  no single row answers it** — a list, a section's master switch, a button that lives in another
+  row's trailing edge. The half the compiler can't reach — a target nothing declares, which
+  navigates and then sits there — is caught by `Scripts/check-settings-search.js`, run from
+  `Scripts/lint.sh`. **Add the entry and its marker together, or lint will say so.**
+- **The reveal lives in two modifiers, never in a pane** (`SettingsScrollTarget.swift`).
+  `.settingsScrollTarget()` on a pane's `Form` holds the `ScrollViewReader` and one `.task(id:)` keyed
+  on the request, so a second jump cancels the first mid-pulse and the pane releases the request when
+  it settles; `.settingsAnchor(_:)` on a `Section` supplies the `.id` and paints the wash, reading
+  which anchor is lit from `\.settingsFlash` rather than having it threaded down.
+  `SettingsScrollRequest` carries a token because picking the same result twice has to scroll again
+  rather than compare equal and do nothing.
+- **The pulse is a pill on the name, and nothing around it is touched.** A grouped `Form` applies a
+  `.background` to a row's whole *content* box, so lighting a section — or a row — paints ragged
+  blocks at the width of every label, button and footer paragraph in it. (`.listRowBackground` is a
+  no-op here, at section and at row level, and `.overlay` strokes every row separately.) Putting the
+  pill on the label instead is one fixed shape nothing can render badly, it leaves each row's
+  subtitle and control alone, and it marks exactly the words the result row showed.
+- **The light is the window's, not the pane's** (`SettingsNavigationState.flashing`). Both panes are
+  briefly alive across a swap, so a pane-local `@State` pulse dies with the pane that lit it, and an
+  `@Environment` value doesn't reliably repaint an already-realized `Form` row. Two rules fall out:
+  a cancelled reveal returns *without* ending the pulse, since cancellation means a later jump owns
+  the light now; and `scrollRequest` is released only once the pulse is over, because it keys the
+  pane's `.task(id:)` and clearing it early cancels the very task doing the revealing.
 - **The sidebar's field is not `SettingsFilterField`.** That one is borderless because it lives inside
   a `Form` row; the sidebar's is a glass capsule — `.frosted(in: Capsule())` at
   `Size.settingsSearchField`, lensing the sidebar's own vibrancy — and lives in `Features/Settings/`,

@@ -25,7 +25,7 @@ struct SearchScopesSection: View {
                 }
             }
         } header: {
-            Text("Search Scopes")
+            SettingsSectionHeader(.applicationsSearchScopes)
         } footer: {
             Text("Folders searched when indexing applications.")
                 .font(.caption)

@@ -12,7 +12,7 @@ struct SnippetsSettingsView: View {
         @Bindable var core = core
         return Form {
             FeatureSwitchSection(
-                header: "Snippets",
+                anchor: .snippetsSnippets,
                 enableTitle: "Enable snippets",
                 enableSubtitle:
                     "Reusable Markdown templates, expanded from the launcher or a typed keyword.",
@@ -47,6 +47,7 @@ struct SnippetsSettingsView: View {
             .settingsEnabled(settings.snippetsEnabled)
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.snippets)
         // Presented from the pane, so the browser's Edit and Create rows can open it too.
         .sheet(item: $core.pendingSnippetEdit) { request in
             SnippetEditorSheet(record: request.record)
@@ -65,9 +66,11 @@ struct SnippetsSettingsView: View {
 
     private var shortcuts: some View {
         Section {
-            SettingsRow(title: "Search Snippets") { ShortcutRecorder(action: .command(.searchSnippets)) }
+            SettingsRow(title: "Search Snippets", anchor: .snippetsGlobalShortcut) {
+                ShortcutRecorder(action: .command(.searchSnippets))
+            }
         } header: {
-            Text("Global Shortcut")
+            SettingsSectionHeader(.snippetsGlobalShortcut)
         } footer: {
             Text("Opens the snippets browser, whatever app you are in.")
         }
@@ -90,7 +93,7 @@ struct SnippetsSettingsView: View {
             LabeledContent {
                 Button("Add…") { core.snippetCoordinator.editSnippet(nil) }
             } label: {
-                Text("New Snippet")
+                SettingsRowTitle(.snippetsLibrary, "New Snippet")
                 Text("Give the snippet a searchable name and an optional expansion keyword.")
             }
 
@@ -98,11 +101,11 @@ struct SnippetsSettingsView: View {
                 Button("Open Folder", action: core.snippetCoordinator.revealSnippetsInFinder)
                     .accessibilityHint("Reveals this Tinycast channel’s snippets folder in Finder.")
             } label: {
-                Text("Snippets Folder")
+                SettingsRowTitle(.snippetsLibrary, "Snippets Folder")
                 Text("Plain Markdown files in this channel’s Application Support folder.")
             }
         } header: {
-            Text("Library")
+            SettingsSectionHeader(.snippetsLibrary)
         }
     }
 

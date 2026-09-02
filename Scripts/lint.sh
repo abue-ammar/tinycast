@@ -17,4 +17,10 @@ if ! swiftlint lint --quiet ${SWIFTLINT_REPORTER:+--reporter "$SWIFTLINT_REPORTE
     echo "Lint errors above. Warnings do not block; errors do." >&2
     exit 1
 fi
+# A `Form` can't be asked what it holds, so an unclaimed anchor or an unmarked row is a silent
+# no-op: the search result navigates and then nothing scrolls or lights up. Nothing else catches it.
+if ! node Scripts/check-settings-search.js; then
+    exit 1
+fi
+
 echo "✓ lint-clean"

@@ -167,6 +167,11 @@ SwiftLint owns the rules that catch defects, including the two checkable comment
 formatter, deliberately — the configuration and the measurements behind that are in
 [development.md](development.md#formatting).
 
+The script then runs `Scripts/check-settings-search.js`, one check SwiftLint can't: every
+`SettingsAnchor` must be claimed by a section, and every row in `SettingsSearchCatalog` must be
+marked by a `SettingsRowTitle`. Either gap compiles and reads fine, and fails only at runtime as a
+search result that navigates and then sits there.
+
 ## Performance measurement
 
 `Platform/Signposts.swift` emits eight intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,

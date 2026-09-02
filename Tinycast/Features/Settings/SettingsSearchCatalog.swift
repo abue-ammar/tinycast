@@ -3,18 +3,45 @@ import Foundation
 /// One searchable place in Settings: a pane, or a row inside one of its `Form` sections.
 struct SettingsSearchEntry: Identifiable, Hashable, Sendable {
     let tab: SettingsTab
-    /// The `Section` header the row sits under; nil for the pane itself.
-    var section: String?
+    /// Where picking this result lands; nil for the pane itself, which is its own result.
+    let target: SettingsTarget?
     let title: String
     /// Words a user might type that the visible title doesn't contain.
-    var keywords: [String] = []
+    let keywords: [String]
 
-    var id: String { "\(tab.title)/\(section ?? "")/\(title)" }
+    /// Taking the pane from the target is what makes a row filed under the wrong pane unwritable.
+    private init(_ target: SettingsTarget, _ title: String, _ keywords: [String]) {
+        self.tab = target.tab
+        self.target = target
+        self.title = title
+        self.keywords = keywords
+    }
+
+    /// One setting, which its pane marks with a matching `SettingsRowTitle`.
+    init(_ anchor: SettingsAnchor, _ title: String, keywords: [String] = []) {
+        self.init(.row(anchor, title), title, keywords)
+    }
+
+    /// A whole group, for a result no single row answers — a list, or a section's master switch.
+    init(group anchor: SettingsAnchor, _ title: String, keywords: [String] = []) {
+        self.init(.section(anchor), title, keywords)
+    }
+
+    init(pane: SettingsTab, keywords: [String] = []) {
+        self.tab = pane
+        self.target = nil
+        self.title = pane.title
+        self.keywords = keywords
+    }
+
+    var anchor: SettingsAnchor? { target?.anchor }
+
+    var id: String { "\(tab.title)/\(anchor?.title ?? "")/\(title)" }
 
     /// The result row's second line — "General", or "General › Hyper Key".
     var breadcrumb: String {
-        guard let section, section != tab.title else { return tab.title }
-        return "\(tab.title) › \(section)"
+        guard let anchor, anchor.title != tab.title else { return tab.title }
+        return "\(tab.title) › \(anchor.title)"
     }
 }
 
@@ -74,7 +101,7 @@ enum SettingsSearchCatalog {
             band = 0
         }
         // A pane outranks its own rows, so a bare "clipboard" lands on the pane rather than a row.
-        return band + titleScore + (entry.section == nil ? 500_000 : 0)
+        return band + titleScore + (entry.anchor == nil ? 500_000 : 0)
     }
 
     // MARK: - The index
@@ -87,390 +114,390 @@ enum SettingsSearchCatalog {
         + backup + about
 
     private static let general: [SettingsSearchEntry] = [
-        .init(tab: .general, title: "General", keywords: ["preferences", "settings"]),
+        .init(pane: .general, keywords: ["preferences", "settings"]),
         .init(
-            tab: .general, section: "Global Shortcuts", title: "App Launcher",
+            .generalGlobalShortcuts, "App Launcher",
             keywords: ["hotkey", "shortcut", "summon", "palette"]),
         .init(
-            tab: .general, section: "Search", title: "Learned ranking",
+            .generalSearch, "Learned ranking",
             keywords: ["reset", "history", "order", "privacy"]),
         .init(
-            tab: .general, section: "Hyper Key", title: "Hyper Key",
+            .generalHyperKey, "Hyper Key",
             keywords: ["modifier", "remap", "caps lock", "capslock"]),
         .init(
-            tab: .general, section: "Hyper Key", title: "Quick Press",
+            .generalHyperKey, "Quick Press",
             keywords: ["tap", "escape", "single press"]),
         .init(
-            tab: .general, section: "Hyper Key", title: "Include Shift (⇧)",
+            .generalHyperKey, "Include Shift (⇧)",
             keywords: ["modifier", "chord"]),
         .init(
-            tab: .general, section: "Appearance", title: "Theme",
+            .generalAppearance, "Theme",
             keywords: ["dark", "light", "mode", "appearance"]),
         .init(
-            tab: .general, section: "Appearance", title: "Compact mode",
+            .generalAppearance, "Compact mode",
             keywords: ["slim", "search bar", "small"]),
         .init(
-            tab: .general, section: "Appearance", title: "Show favorites in compact mode",
+            .generalAppearance, "Show favorites in compact mode",
             keywords: ["pinned", "apps", "compact"]),
         .init(
-            tab: .general, section: "Appearance", title: "Follow the cursor across displays",
+            .generalAppearance, "Follow the cursor across displays",
             keywords: ["monitor", "screen", "pointer", "multi display"]),
         .init(
-            tab: .general, section: "Appearance", title: "Drag to reposition",
+            .generalAppearance, "Drag to reposition",
             keywords: ["move", "position", "window"]),
         .init(
-            tab: .general, section: "General", title: "Launch at login",
+            .generalGeneral, "Launch at login",
             keywords: ["startup", "login item", "start", "boot"]),
         .init(
-            tab: .general, section: "General", title: "Show in menu bar",
+            .generalGeneral, "Show in menu bar",
             keywords: ["menubar", "status item", "icon", "hide"]),
         .init(
-            tab: .general, section: "General", title: "Pop to Root Search",
+            .generalGeneral, "Pop to Root Search",
             keywords: ["reset", "timeout", "back"]),
         .init(
-            tab: .general, section: "General", title: "Auto-switch input source",
+            .generalGeneral, "Auto-switch input source",
             keywords: ["keyboard", "layout", "language", "abc"])
     ]
 
     private static let applications: [SettingsSearchEntry] = [
-        .init(tab: .applications, title: "Applications", keywords: ["apps", "index", "launcher"]),
+        .init(pane: .applications, keywords: ["apps", "index", "launcher"]),
         .init(
-            tab: .applications, section: "Search Scopes", title: "Search Scopes",
+            group: .applicationsSearchScopes, "Search Scopes",
             keywords: ["folders", "indexed", "locations", "add folder"]),
         .init(
-            tab: .applications, section: "Applications", title: "Enable Applications",
+            .applicationsApplications, "Enable Applications",
             keywords: ["hide apps", "visibility"]),
         .init(
-            tab: .applications, section: "Applications", title: "Aliases and shortcuts",
+            group: .applicationsApplications, "Aliases and shortcuts",
             keywords: ["alias", "hotkey", "per app", "hide"])
     ]
 
     private static let systemSettings: [SettingsSearchEntry] = [
         .init(
-            tab: .systemSettings, title: "System Settings",
+            pane: .systemSettings,
             keywords: ["panes", "preferences", "macos"]),
         .init(
-            tab: .systemSettings, section: "System Settings", title: "Enable System Settings",
+            .systemSettingsSystemSettings, "Enable System Settings",
             keywords: ["hide panes", "visibility"])
     ]
 
     private static let systemActions: [SettingsSearchEntry] = [
         .init(
-            tab: .systemActions, title: "System Actions",
+            pane: .systemActions,
             keywords: ["sleep", "lock", "restart", "shut down", "empty trash"]),
         .init(
-            tab: .systemActions, section: "System Actions", title: "Enable System Actions",
+            .systemActionsSystemActions, "Enable System Actions",
             keywords: ["hide", "visibility"])
     ]
 
     private static let commands: [SettingsSearchEntry] = [
         .init(
-            tab: .commands, title: "Commands",
+            pane: .commands,
             keywords: ["custom", "script", "shell", "terminal"]),
         .init(
-            tab: .commands, section: "Commands", title: "Enable Commands",
+            .commandsCommands, "Enable Commands",
             keywords: ["hide", "visibility"]),
         .init(
-            tab: .commands, section: "Custom Commands", title: "Enable custom commands",
+            .commandsCustomCommands, "Enable custom commands",
             keywords: ["script", "shell"]),
         .init(
-            tab: .commands, section: "Custom Commands", title: "Add Custom Command",
+            .commandsCustomCommands, "Add Custom Command",
             keywords: ["new", "script", "shell", "shortcut"])
     ]
 
     private static let quicklinks: [SettingsSearchEntry] = [
-        .init(tab: .quicklinks, title: "Quicklinks", keywords: ["url", "bookmark", "link"]),
+        .init(pane: .quicklinks, keywords: ["url", "bookmark", "link"]),
         .init(
-            tab: .quicklinks, section: "Quicklinks", title: "Enable quicklinks",
+            .quicklinksQuicklinks, "Enable quicklinks",
             keywords: ["url", "bookmark"]),
         .init(
-            tab: .quicklinks, section: "Quicklinks", title: "Add Quicklink",
+            .quicklinksQuicklinks, "Add Quicklink",
             keywords: ["new", "url", "bookmark", "alias"]),
         .init(
-            tab: .quicklinks, section: "Behaviour", title: "Open in a new window",
+            .quicklinksBehaviour, "Open in a new window",
             keywords: ["browser", "tab"]),
         .init(
-            tab: .quicklinks, section: "Behaviour", title: "When there's no selected text",
+            .quicklinksBehaviour, "When there's no selected text",
             keywords: ["selection", "fallback", "placeholder"]),
         .init(
-            tab: .quicklinks, section: "Behaviour", title: "Confirm before deleting",
+            .quicklinksBehaviour, "Confirm before deleting",
             keywords: ["ask", "delete", "prompt"]),
         .init(
-            tab: .quicklinks, section: "Import & Export", title: "Import quicklinks",
+            .quicklinksImportExport, "Import quicklinks",
             keywords: ["json", "restore"]),
         .init(
-            tab: .quicklinks, section: "Import & Export", title: "Export quicklinks",
+            .quicklinksImportExport, "Export quicklinks",
             keywords: ["json", "backup"])
     ]
 
     private static let fallbacks: [SettingsSearchEntry] = [
         .init(
-            tab: .fallbacks, title: "Fallbacks",
+            pane: .fallbacks,
             keywords: ["no results", "empty", "search web", "order"])
     ]
 
     private static let ai: [SettingsSearchEntry] = [
-        .init(tab: .ai, title: "AI", keywords: ["chat", "llm", "model", "openai", "anthropic"]),
-        .init(tab: .ai, section: "AI", title: "Enable AI", keywords: ["chat", "llm"]),
+        .init(pane: .ai, keywords: ["chat", "llm", "model", "openai", "anthropic"]),
+        .init(.aiAI, "Enable AI", keywords: ["chat", "llm"]),
         .init(
-            tab: .ai, section: "Default", title: "Default model",
+            .aiDefault, "Default model",
             keywords: ["llm", "gpt", "claude"]),
         .init(
-            tab: .ai, section: "Default", title: "Reasoning effort",
+            .aiDefault, "Reasoning effort",
             keywords: ["thinking", "chatgpt"]),
-        .init(tab: .ai, section: "Chat", title: "Web search", keywords: ["browse", "internet"]),
+        .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
         .init(
-            tab: .ai, section: "Conversations", title: "Opens to",
+            .aiConversations, "Opens to",
             keywords: ["new chat", "last", "summon"]),
         .init(
-            tab: .ai, section: "Conversations", title: "Start a new conversation after",
+            .aiConversations, "Start a new conversation after",
             keywords: ["idle", "timeout", "fresh"]),
         .init(
-            tab: .ai, section: "Conversations", title: "Keep conversations",
+            .aiConversations, "Keep conversations",
             keywords: ["retention", "delete", "history", "privacy"]),
         .init(
-            tab: .ai, section: "System prompt", title: "Send a system prompt",
+            .aiSystemPrompt, "Send a system prompt",
             keywords: ["instructions", "persona"]),
         .init(
-            tab: .ai, section: "ChatGPT Subscription", title: "ChatGPT Subscription",
+            group: .aiChatGPTSubscription, "ChatGPT Subscription",
             keywords: ["sign in", "connect", "plus", "codex", "openai"]),
         .init(
-            tab: .ai, section: "API Connections", title: "Add API Connection",
+            .aiAPIConnections, "Add API Connection",
             keywords: ["key", "provider", "openai", "anthropic", "ollama", "base url"]),
         .init(
-            tab: .ai, section: "MCP Servers", title: "Enable MCP servers",
+            .aiMCPServers, "Enable MCP servers",
             keywords: ["tools", "model context protocol"]),
         .init(
-            tab: .ai, section: "MCP Servers", title: "Add MCP Server",
+            .aiMCPServers, "Add MCP Server",
             keywords: ["tools", "model context protocol", "stdio"]),
         .init(
-            tab: .ai, section: "Commands", title: "AI commands",
+            group: .aiCommands, "AI commands",
             keywords: ["shortcut", "launcher", "chat"])
     ]
 
     private static let quickActions: [SettingsSearchEntry] = [
         .init(
-            tab: .quickActions, title: "Quick Actions",
+            pane: .quickActions,
             keywords: ["selected text", "rewrite", "translate", "summarize"]),
         .init(
-            tab: .quickActions, section: "Quick Actions", title: "Enable Quick Actions",
+            .quickActionsQuickActions, "Enable Quick Actions",
             keywords: ["selected text", "accessibility"]),
         .init(
-            tab: .quickActions, section: "Actions", title: "Actions",
+            group: .quickActionsActions, "Actions",
             keywords: ["shortcut", "replace", "preview", "customize"]),
         .init(
-            tab: .quickActions, section: "Model", title: "Model",
+            .quickActionsModel, "Model",
             keywords: ["llm", "ai", "default"]),
         .init(
-            tab: .quickActions, section: "Translate", title: "Translate to",
+            .quickActionsTranslate, "Translate to",
             keywords: ["language", "locale"])
     ]
 
     private static let fileSearch: [SettingsSearchEntry] = [
         .init(
-            tab: .fileSearch, title: "File Search",
+            pane: .fileSearch,
             keywords: ["spotlight", "files", "folders", "find"]),
         .init(
-            tab: .fileSearch, section: "File Search", title: "Enable File Search",
+            .fileSearchFileSearch, "Enable File Search",
             keywords: ["spotlight", "index"]),
         .init(
-            tab: .fileSearch, section: "Commands", title: "File search commands",
+            group: .fileSearchCommands, "File search commands",
             keywords: ["shortcut", "launcher"]),
         .init(
-            tab: .fileSearch, section: "Search Scopes", title: "Search Scopes",
+            group: .fileSearchSearchScopes, "Search Scopes",
             keywords: ["folders", "locations", "home", "add folder"]),
         .init(
-            tab: .fileSearch, section: "Ignore Patterns", title: "Ignore Patterns",
+            group: .fileSearchIgnorePatterns, "Ignore Patterns",
             keywords: ["exclude", "glob", "node_modules", "skip"])
     ]
 
     private static let notes: [SettingsSearchEntry] = [
-        .init(tab: .notes, title: "Notes", keywords: ["markdown", "scratchpad", "floating"]),
+        .init(pane: .notes, keywords: ["markdown", "scratchpad", "floating"]),
         .init(
-            tab: .notes, section: "Notes", title: "Enable Notes",
+            .notesNotes, "Enable Notes",
             keywords: ["markdown", "scratchpad"]),
         .init(
-            tab: .notes, section: "Commands", title: "Notes commands",
+            group: .notesCommands, "Notes commands",
             keywords: ["shortcut", "new note", "search notes"])
     ]
 
     private static let snippets: [SettingsSearchEntry] = [
         .init(
-            tab: .snippets, title: "Snippets",
+            pane: .snippets,
             keywords: ["expansion", "keyword", "text replacement", "template"]),
         .init(
-            tab: .snippets, section: "Snippets", title: "Enable snippets",
+            .snippetsSnippets, "Enable snippets",
             keywords: ["expansion", "keystrokes", "accessibility"]),
         .init(
-            tab: .snippets, section: "Global Shortcut", title: "Search Snippets",
+            .snippetsGlobalShortcut, "Search Snippets",
             keywords: ["hotkey", "browser"]),
         .init(
-            tab: .snippets, section: "Library", title: "New Snippet",
+            .snippetsLibrary, "New Snippet",
             keywords: ["add", "keyword", "expansion"]),
         .init(
-            tab: .snippets, section: "Library", title: "Snippets Folder",
+            .snippetsLibrary, "Snippets Folder",
             keywords: ["reveal", "finder", "markdown", "files"])
     ]
 
     private static let windowManagement: [SettingsSearchEntry] = [
         .init(
-            tab: .windowManagement, title: "Window Management",
+            pane: .windowManagement,
             keywords: ["tile", "halves", "thirds", "maximize", "snap"]),
         .init(
-            tab: .windowManagement, section: "Window Management",
-            title: "Enable window management", keywords: ["tile", "accessibility"]),
+            .windowManagementWindowManagement, "Enable window management",
+            keywords: ["tile", "accessibility"]),
         .init(
-            tab: .windowManagement, section: "Options", title: "Cycle sizes on repeat",
+            .windowManagementOptions, "Cycle sizes on repeat",
             keywords: ["repeat", "thirds", "halves"]),
         .init(
-            tab: .windowManagement, section: "Options", title: "Gap between windows",
+            .windowManagementOptions, "Gap between windows",
             keywords: ["padding", "spacing", "margin", "points"]),
         .init(
-            tab: .windowManagement, section: "Options", title: "Window commands",
+            group: .windowManagementOptions, "Window commands",
             keywords: ["shortcut", "left half", "maximize", "center"])
     ]
 
     private static let clipboard: [SettingsSearchEntry] = [
         .init(
-            tab: .clipboard, title: "Clipboard",
+            pane: .clipboard,
             keywords: ["paste", "history", "copy", "pasteboard"]),
         .init(
-            tab: .clipboard, section: "Global Shortcuts", title: "Clipboard History",
+            .clipboardGlobalShortcuts, "Clipboard History",
             keywords: ["hotkey", "paste", "browser"]),
         .init(
-            tab: .clipboard, section: "History", title: "Keep history for",
+            .clipboardHistory, "Keep history for",
             keywords: ["retention", "delete", "privacy", "expire"]),
         .init(
-            tab: .clipboard, section: "Disabled Applications", title: "Disabled Applications",
+            group: .clipboardDisabledApplications, "Disabled Applications",
             keywords: ["exclude", "password manager", "ignore", "privacy"]),
         .init(
-            tab: .clipboard, section: "Disabled Applications", title: "Clear history",
+            .clipboardDisabledApplications, "Clear history",
             keywords: ["delete", "erase", "wipe"])
     ]
 
     private static let emoji: [SettingsSearchEntry] = [
         .init(
-            tab: .emoji, title: "Emoji & Symbols",
+            pane: .emoji,
             keywords: ["picker", "character", "unicode", "smiley"]),
         .init(
-            tab: .emoji, section: "Global Shortcuts", title: "Emoji & Symbols",
+            .emojiGlobalShortcuts, "Emoji & Symbols",
             keywords: ["hotkey", "picker"]),
         .init(
-            tab: .emoji, section: "Appearance", title: "Emoji Skin Tone",
+            .emojiAppearance, "Emoji Skin Tone",
             keywords: ["colour", "color", "fitzpatrick", "default"])
     ]
 
     private static let calendar: [SettingsSearchEntry] = [
         .init(
-            tab: .calendar, title: "Calendar",
+            pane: .calendar,
             keywords: ["meetings", "events", "zoom", "join", "schedule"]),
         .init(
-            tab: .calendar, section: "Calendar", title: "Join meetings from Tinycast",
+            .calendarCalendar, "Join meetings from Tinycast",
             keywords: ["zoom", "meet", "teams", "permission"]),
         .init(
-            tab: .calendar, section: "Schedule", title: "Upcoming meetings in launcher",
+            .calendarSchedule, "Upcoming meetings in launcher",
             keywords: ["count", "limit", "events"]),
         .init(
-            tab: .calendar, section: "Schedule", title: "Include Tomorrow's Events",
+            .calendarSchedule, "Include Tomorrow's Events",
             keywords: ["next day", "range"]),
         .init(
-            tab: .calendar, section: "Joining", title: "Show the join card",
+            .calendarJoining, "Show the join card",
             keywords: ["hud", "timing", "early", "reminder"]),
         .init(
-            tab: .calendar, section: "Joining", title: "Auto Join Meetings",
+            .calendarJoining, "Auto Join Meetings",
             keywords: ["automatic", "start"]),
         .init(
-            tab: .calendar, section: "Joining", title: "Confirm before joining",
+            .calendarJoining, "Confirm before joining",
             keywords: ["ask", "prompt"]),
         .init(
-            tab: .calendar, section: "Joining", title: "Camera Preview",
+            .calendarJoining, "Camera Preview",
             keywords: ["webcam", "mirror", "video", "check"]),
         .init(
-            tab: .calendar, section: "Menu Bar", title: "Calendar in Menu Bar",
+            .calendarMenuBar, "Calendar in Menu Bar",
             keywords: ["status item", "menubar", "date"]),
         .init(
-            tab: .calendar, section: "Menu Bar", title: "Show Upcoming Events",
+            .calendarMenuBar, "Show Upcoming Events",
             keywords: ["menubar", "next event", "title"]),
         .init(
-            tab: .calendar, section: "Menu Bar", title: "Only show events with meetings",
+            .calendarMenuBar, "Only show events with meetings",
             keywords: ["links", "filter", "menubar"]),
         .init(
-            tab: .calendar, section: "Menu Bar", title: "Hide Current Event",
+            .calendarMenuBar, "Hide Current Event",
             keywords: ["started", "time left", "menubar"]),
         .init(
-            tab: .calendar, section: "Calendars", title: "Calendars",
+            group: .calendarCalendars, "Calendars",
             keywords: ["accounts", "sources", "choose", "icloud", "google"])
     ]
 
     private static let extensions: [SettingsSearchEntry] = [
         .init(
-            tab: .extensions, title: "Extensions",
+            pane: .extensions,
             keywords: ["raycast", "plugins", "store", "javascript"]),
         .init(
-            tab: .extensions, section: "Extensions", title: "Enable extensions",
+            .extensionsExtensions, "Enable extensions",
             keywords: ["raycast", "third party", "javascript"]),
         .init(
-            tab: .extensions, section: "Compatibility", title: "Compatibility",
+            group: .extensionsCompatibility, "Compatibility",
             keywords: ["supported", "unsupported", "raycast api"]),
         .init(
-            tab: .extensions, section: "Installed", title: "Installed extensions",
+            group: .extensionsInstalled, "Installed extensions",
             keywords: ["library", "uninstall", "preferences", "appearance"]),
         .init(
-            tab: .extensions, section: "Install", title: "Search extensions",
+            .extensionsInstall, "Search extensions",
             keywords: ["store", "browse", "install", "registry"]),
         .init(
-            tab: .extensions, section: "Install", title: "Registries",
+            group: .extensionsInstall, "Registries",
             keywords: ["github", "source", "store"]),
         .init(
-            tab: .extensions, section: "Install", title: "Import from Raycast",
+            .extensionsInstall, "Import from Raycast",
             keywords: ["migrate", "existing"]),
         .init(
-            tab: .extensions, section: "Install", title: "Add from folder",
+            .extensionsInstall, "Add from folder",
             keywords: ["local", "develop", "sideload"]),
         .init(
-            tab: .extensions, section: "Storage", title: "Leftover files",
+            .extensionsStorage, "Leftover files",
             keywords: ["clean up", "disk", "reclaim", "cache"])
     ]
 
     private static let permissions: [SettingsSearchEntry] = [
         .init(
-            tab: .permissions, title: "Permissions",
+            pane: .permissions,
             keywords: ["privacy", "tcc", "access", "grant"]),
         .init(
-            tab: .permissions, section: "Accessibility", title: "Accessibility",
+            .permissionsAccessibility, "Accessibility",
             keywords: ["paste", "keystrokes", "privacy", "grant"]),
         .init(
-            tab: .permissions, section: "Calendars", title: "Calendars",
+            .permissionsCalendars, "Calendars",
             keywords: ["events", "privacy", "grant", "eventkit"])
     ]
 
     private static let backup: [SettingsSearchEntry] = [
         .init(
-            tab: .backup, title: "Backup",
+            pane: .backup,
             keywords: ["export", "import", "restore", "migrate", "raycast"]),
         .init(
-            tab: .backup, section: "Export", title: "Export Backup",
+            .backupExport, "Export Backup",
             keywords: ["save", "tinycast file", "archive"]),
         .init(
-            tab: .backup, section: "Import", title: "Backup File",
+            .backupImport, "Backup File",
             keywords: ["restore", "choose", "tinycast file"]),
         .init(
-            tab: .backup, section: "Import from Raycast", title: "Raycast Export",
+            .backupImportFromRaycast, "Raycast Export",
             keywords: ["migrate", "rayconfig", "passphrase"])
     ]
 
     private static let about: [SettingsSearchEntry] = [
         .init(
-            tab: .about, title: "About",
+            pane: .about,
             keywords: ["version", "licence", "license", "credits"]),
         .init(
-            tab: .about, section: "About", title: "Check for Updates",
+            .aboutAbout, "Check for Updates",
             keywords: ["version", "upgrade", "release"]),
         .init(
-            tab: .about, section: "Links", title: "Links",
+            group: .aboutLinks, "Links",
             keywords: ["github", "source", "issues", "website"]),
         .init(
-            tab: .about, section: "Links", title: "Support",
+            .aboutLinks, "Support",
             keywords: ["donate", "sponsor", "funding"])
     ]
 }

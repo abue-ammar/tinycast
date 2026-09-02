@@ -21,7 +21,7 @@ struct AICommandSection: View {
                 }
             }
         } header: {
-            Text("Commands")
+            SettingsSectionHeader(.aiCommands)
         } footer: {
             Text("The shortcut works even when the command is hidden from the launcher.")
                 .font(.caption)

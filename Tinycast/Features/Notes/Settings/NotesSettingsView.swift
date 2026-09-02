@@ -8,17 +8,18 @@ struct NotesSettingsView: View {
         return Form {
             Section {
                 Toggle(isOn: $settings.notesEnabled) {
-                    Text("Enable Notes")
+                    SettingsRowTitle(.notesNotes, "Enable Notes")
                     Text("Keep plain Markdown notes in a floating editor, loaded only when needed.")
                 }
             } header: {
-                Text("Notes")
+                SettingsSectionHeader(.notesNotes)
             }
 
             NotesCommandsSection()
                 .settingsEnabled(settings.notesEnabled)
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.notes)
     }
 }
 
@@ -45,7 +46,7 @@ private struct NotesCommandsSection: View {
                 }
             }
         } header: {
-            Text("Commands")
+            SettingsSectionHeader(.notesCommands)
         } footer: {
             Text("A shortcut works even when its command is hidden from the launcher.")
                 .font(.caption)

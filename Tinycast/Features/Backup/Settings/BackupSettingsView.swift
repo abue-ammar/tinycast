@@ -46,20 +46,20 @@ struct BackupSettingsView: View {
                         Button("Export…") { runExport() }.disabled(exportSelection.isEmpty)
                     }
                 } label: {
-                    Text("Export Backup")
+                    SettingsRowTitle(.backupExport, "Export Backup")
                     Text("Choose what to include, then save it as a single .tinycast file.")
                 }
                 BackupCategorySelection(selection: $exportSelection)
                 if let backupStatus { statusRow(backupStatus) }
             } header: {
-                Text("Export")
+                SettingsSectionHeader(.backupExport)
             }
 
             Section {
                 LabeledContent {
                     Button("Choose…") { chooseBackupFile() }
                 } label: {
-                    Text("Backup File")
+                    SettingsRowTitle(.backupImport, "Backup File")
                     Text(backupFileSubtitle)
                 }
                 if let manifest = openedManifest {
@@ -78,14 +78,14 @@ struct BackupSettingsView: View {
                     }
                 }
             } header: {
-                Text("Import")
+                SettingsSectionHeader(.backupImport)
             }
 
             Section {
                 LabeledContent {
                     Button("Choose…") { chooseRaycastFile() }
                 } label: {
-                    Text("Raycast Export")
+                    SettingsRowTitle(.backupImportFromRaycast, "Raycast Export")
                     Text(raycastFileSubtitle)
                 }
                 LabeledContent {
@@ -111,10 +111,11 @@ struct BackupSettingsView: View {
                 conflictNotice
                 if let status { statusRow(status) }
             } header: {
-                Text("Import from Raycast")
+                SettingsSectionHeader(.backupImportFromRaycast)
             }
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.backup)
         .onDisappear { if !importingBackup { discardStagedBackup() } }
     }
 

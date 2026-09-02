@@ -29,6 +29,9 @@ struct SettingsHistoryTests {
         catalogIdentitiesAreUnique()
         catalogFindsKnownRows()
         catalogRanksTitlesFirst()
+        catalogAnchorsMatchTheirPane()
+        revealingRecordsANewRequestEachTime()
+        flashOutlivesThePaneThatLitIt()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -158,6 +161,16 @@ struct SettingsHistoryTests {
         }
     }
 
+    /// The anchor carries the pane, so a row filed under the wrong one cannot be written.
+    static func catalogAnchorsMatchTheirPane() {
+        for entry in SettingsSearchCatalog.entries {
+            guard let anchor = entry.anchor else { continue }
+            expect(anchor.tab == entry.tab, "“\(entry.title)” is filed under its anchor's pane")
+        }
+        let panes = SettingsSearchCatalog.entries.filter { $0.anchor == nil }.map(\.tab)
+        expect(Set(panes).count == panes.count, "and each pane is listed as a result exactly once")
+    }
+
     /// A term found in the title has to beat the same term found only in a breadcrumb.
     static func catalogRanksTitlesFirst() {
         let results = SettingsSearchCatalog.results(for: "extensions")
@@ -165,5 +178,48 @@ struct SettingsHistoryTests {
         expect(
             SettingsSearchCatalog.results(for: "nothing here matches at all").isEmpty,
             "and an unmatched query returns nothing")
+    }
+
+    // MARK: - Revealing a section
+
+    /// Picking the same result twice has to scroll and pulse again, not compare equal and do nothing.
+    static func revealingRecordsANewRequestEachTime() {
+        let navigation = SettingsNavigationState(tab: .general)
+        expect(navigation.scrollRequest == nil, "a fresh window has nothing to reveal")
+
+        navigation.select(.clipboard)
+        expect(navigation.scrollRequest == nil, "and a plain pane selection asks for no scroll")
+
+        navigation.select(.general, revealing: .section(.generalHyperKey))
+        let first = navigation.scrollRequest
+        expect(first?.target == .section(.generalHyperKey), "a result records what it wants revealed")
+        expect(navigation.tab == .general, "and navigates to that section's pane")
+
+        navigation.select(.general, revealing: .section(.generalHyperKey))
+        expect(navigation.scrollRequest != first, "asking twice is two distinct requests")
+
+        // A stale request must not clear the one that replaced it.
+        if let first { navigation.clear(first) }
+        expect(navigation.scrollRequest != nil, "clearing a superseded request is a no-op")
+        if let live = navigation.scrollRequest { navigation.clear(live) }
+        expect(navigation.scrollRequest == nil, "clearing the live one releases it")
+    }
+
+    /// The pulse outlives the pane that started it, and only its own owner may put it out.
+    static func flashOutlivesThePaneThatLitIt() {
+        let navigation = SettingsNavigationState(tab: .general)
+        navigation.select(.clipboard, revealing: .row(.clipboardHistory, "Keep history for"))
+        navigation.beginFlash(.row(.clipboardHistory, "Keep history for"))
+        expect(navigation.flashing == .row(.clipboardHistory, "Keep history for"), "the revealed row is lit")
+
+        navigation.endFlash(.section(.generalHyperKey))
+        expect(navigation.flashing != nil, "another target can't put it out")
+        navigation.endFlash(.row(.clipboardHistory, "Keep history for"))
+        expect(navigation.flashing == nil, "its own owner can")
+
+        // A jump that lands elsewhere must not leave the old light burning behind it.
+        navigation.beginFlash(.row(.clipboardHistory, "Keep history for"))
+        navigation.select(.general)
+        expect(navigation.flashing == nil, "navigating away clears a stale pulse")
     }
 }

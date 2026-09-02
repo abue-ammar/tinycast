@@ -5,10 +5,11 @@ struct SystemActionsSettingsView: View {
         Form {
             LauncherItemsSection(
                 kind: .systemAction,
-                header: "System Actions",
+                anchor: .systemActionsSystemActions,
                 searchPrompt: "Search system actions…")
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.systemActions)
         .releasesFocusOnOutsideClick()
     }
 }

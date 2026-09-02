@@ -18,7 +18,7 @@ struct QuickActionsSettingsView: View {
         Form {
             Section {
                 Toggle(isOn: enabledBinding) {
-                    Text("Enable Quick Actions")
+                    SettingsRowTitle(.quickActionsQuickActions, "Enable Quick Actions")
                     Text(
                         "Act on the text you have selected in any app. Nothing is read until you "
                             + "press a shortcut.")
@@ -37,7 +37,7 @@ struct QuickActionsSettingsView: View {
                     }
                 }
             } header: {
-                Text("Quick Actions")
+                SettingsSectionHeader(.quickActionsQuickActions)
             }
 
             Group {
@@ -48,6 +48,7 @@ struct QuickActionsSettingsView: View {
             .settingsEnabled(appSettings.quickActionsEnabled)
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.quickActions)
         .onReceive(refreshTimer) { _ in isTrusted = Permissions.isAccessibilityTrusted() }
         .sheet(item: $editingAction) { action in
             InstructionsEditorSheet(
@@ -101,7 +102,7 @@ struct QuickActionsSettingsView: View {
                 }
             }
         } header: {
-            Text("Actions")
+            SettingsSectionHeader(.quickActionsActions)
         } footer: {
             Text(
                 "Replace puts the result straight into your document — undo in the app you were in "
@@ -124,12 +125,12 @@ struct QuickActionsSettingsView: View {
                         Text(choice.menuTitle).tag(Optional(choice.selection))
                     }
                 } label: {
-                    Text("Model")
+                    SettingsRowTitle(.quickActionsModel, "Model")
                     Text("Used by every action except Translate.")
                 }
             }
         } header: {
-            Text("Model")
+            SettingsSectionHeader(.quickActionsModel)
         } footer: {
             Text(
                 "Separate from chat's model on purpose: a shortcut you press all day should not "
@@ -148,11 +149,11 @@ struct QuickActionsSettingsView: View {
                     Text(TextTranslator.displayName(of: $0)).tag($0.minimalIdentifier)
                 }
             } label: {
-                Text("Translate to")
+                SettingsRowTitle(.quickActionsTranslate, "Translate to")
                 Text("The panel can still translate into another language once it is open.")
             }
         } header: {
-            Text("Translate")
+            SettingsSectionHeader(.quickActionsTranslate)
         } footer: {
             Text(
                 "Translation uses Apple's own translator on this Mac, so it costs nothing and "

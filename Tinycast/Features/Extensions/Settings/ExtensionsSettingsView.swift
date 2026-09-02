@@ -21,7 +21,7 @@ struct ExtensionsSettingsView: View {
         @Bindable var settings = core.settings
         return Form {
             FeatureSwitchSection(
-                header: "Extensions",
+                anchor: .extensionsExtensions,
                 enableTitle: "Enable extensions",
                 enableSubtitle:
                     "Run Raycast extensions natively. A running command holds a JavaScript engine "
@@ -44,6 +44,7 @@ struct ExtensionsSettingsView: View {
             storage
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.extensions)
         .releasesFocusOnOutsideClick()
         // Escape and Return are the keyboard way out of the same field.
         .onExitCommand { NSApp.keyWindow?.makeFirstResponder(nil) }
@@ -99,7 +100,7 @@ struct ExtensionsSettingsView: View {
                         + "Raycast's AI, browser and window-management services.")
             }
         } header: {
-            Text("Compatibility")
+            SettingsSectionHeader(.extensionsCompatibility)
         } footer: {
             Text("An extension that needs something missing says so when you run it.")
                 .font(.caption)
@@ -145,9 +146,11 @@ struct ExtensionsSettingsView: View {
                 }
             }
         } header: {
-            Text(
-                core.extensions.installed.isEmpty
-                    ? "Installed" : "Installed (\(core.extensions.installed.count))")
+            SettingsSectionHeader(anchor: .extensionsInstalled) {
+                Text(
+                    core.extensions.installed.isEmpty
+                        ? "Installed" : "Installed (\(core.extensions.installed.count))")
+            }
         } footer: {
             if let error {
                 Label(error, systemImage: "exclamationmark.triangle")
@@ -173,7 +176,7 @@ struct ExtensionsSettingsView: View {
     /// Three rows rather than a menu: search, copy and folder behave differently.
     private var install: some View {
         Section {
-            SettingsRow(title: "Search extensions", subtitle: searchSubtitle) {
+            SettingsRow(title: "Search extensions", subtitle: searchSubtitle, anchor: .extensionsInstall) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
             } trailing: {
@@ -182,7 +185,10 @@ struct ExtensionsSettingsView: View {
                 Button("Search…") { browsingStore = true }
             }
             // A state of this row, not a card: the same job as the button beside it.
-            SettingsRow(title: "Import from Raycast", subtitle: importSubtitle) {
+            SettingsRow(
+                title: "Import from Raycast", subtitle: importSubtitle,
+                anchor: .extensionsInstall
+            ) {
                 Image(systemName: "arrow.down.doc")
                     .foregroundStyle(pending.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
             } trailing: {
@@ -198,7 +204,8 @@ struct ExtensionsSettingsView: View {
             }
             SettingsRow(
                 title: "Add from folder",
-                subtitle: "A folder holding package.json and the built command files."
+                subtitle: "A folder holding package.json and the built command files.",
+                anchor: .extensionsInstall
             ) {
                 Image(systemName: "folder")
                     .foregroundStyle(.secondary)
@@ -206,7 +213,7 @@ struct ExtensionsSettingsView: View {
                 Button("Choose…", action: addFolder)
             }
         } header: {
-            Text("Install")
+            SettingsSectionHeader(.extensionsInstall)
         } footer: {
             if let error {
                 // Under the buttons that caused it: it used to sit beneath the list, far above.
@@ -220,7 +227,10 @@ struct ExtensionsSettingsView: View {
     /// An install cleans up after itself, so in normal use this row has nothing to offer.
     private var storage: some View {
         Section {
-            SettingsRow(title: "Leftover files", subtitle: reclaimableSubtitle) {
+            SettingsRow(
+                title: "Leftover files", subtitle: reclaimableSubtitle,
+                anchor: .extensionsStorage
+            ) {
                 Image(systemName: "internaldrive")
                     .foregroundStyle(reclaimable.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
             } trailing: {
@@ -233,7 +243,7 @@ struct ExtensionsSettingsView: View {
                 .disabled(reclaimable.isEmpty)
             }
         } header: {
-            Text("Storage")
+            SettingsSectionHeader(.extensionsStorage)
         }
     }
 

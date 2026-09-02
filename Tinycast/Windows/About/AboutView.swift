@@ -32,10 +32,12 @@ struct AboutView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Spacing.lg)
                 }
+                .settingsAnchor(.aboutAbout)
                 links
                 support
             }
             .formStyle(.grouped)
+            .settingsScrollTarget(.about)
 
             // Outside the form, so the copyright stays pinned to the bottom edge.
             footer
@@ -65,9 +67,13 @@ struct AboutView: View {
                     .overlay(
                         Capsule().strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
                     )
-                Button("Check for Updates…") { core.updateCoordinator.checkForUpdates() }
-                    .buttonStyle(.link)
-                    .font(.caption)
+                Button {
+                    core.updateCoordinator.checkForUpdates()
+                } label: {
+                    SettingsRowTitle(.aboutAbout, "Check for Updates")
+                }
+                .buttonStyle(.link)
+                .font(.caption)
             }
 
             Text("A tiny, native macOS launcher.")
@@ -82,7 +88,7 @@ struct AboutView: View {
                 AboutLinkRow(link: link)
             }
         } header: {
-            Text("Links")
+            SettingsSectionHeader(.aboutLinks)
         }
     }
 
@@ -99,7 +105,7 @@ struct AboutView: View {
                             .foregroundStyle(Theme.Colors.brand)
                     )
                 VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                    Text("Support \(Bundle.main.appDisplayName)")
+                    SettingsRowTitle(.aboutLinks, "Support")
                         .font(.body.weight(.medium))
                     Text("Free and open source, funded out of pocket.")
                         .font(.caption)
