@@ -258,7 +258,9 @@ run slow ext-test          -parse-as-library \
                            $L/SearchRelevance.swift \
                            Tinycast/Platform/Compression/Zlib.swift
 run settings-history-test  Tinycast/Features/Settings/SettingsTab.swift \
-                           Tinycast/Features/Settings/SettingsHistory.swift
+                           Tinycast/Features/Settings/SettingsHistory.swift \
+                           Tinycast/Features/Settings/SettingsSearchCatalog.swift \
+                           $L/SearchRelevance.swift
 run updates-test           Tinycast/Features/Updates/Model/*.swift
 run support-test           Tinycast/Features/Support/Model/*.swift
 run ai-provider-test       Tinycast/Features/Settings/AppSettingsKey.swift \

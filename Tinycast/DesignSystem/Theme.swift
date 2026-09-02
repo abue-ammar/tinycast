@@ -145,6 +145,8 @@ enum Theme {
         /// The narrowest the pane column may get before a grouped row's control starts colliding.
         static let settingsDetailMinimum: CGFloat = 420
         static let settingsRowIcon: CGFloat = 20
+        /// The sidebar's search field; matches a grouped `Form` row's control height.
+        static let settingsSearchField: CGFloat = 28
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
         /// Label column of an extension's `Form`, so every field's input starts on one line.

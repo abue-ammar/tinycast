@@ -25,6 +25,10 @@ struct SettingsHistoryTests {
         clampsAtBothEnds()
         sidebarCoversEveryPane()
         sidebarIdentityNamespacesAreDisjoint()
+        catalogCoversEveryPane()
+        catalogIdentitiesAreUnique()
+        catalogFindsKnownRows()
+        catalogRanksTitlesFirst()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -120,5 +124,46 @@ struct SettingsHistoryTests {
             sections.isDisjoint(with: tabs),
             "no sidebar group shares an identity with a pane")
         expect(tabs.count == SettingsTab.allCases.count, "and every pane's identity is its own")
+    }
+
+    // MARK: - Search catalog
+    // A `Form` can't be asked what rows it holds, so the catalog is hand-written and can drift.
+
+    static func catalogCoversEveryPane() {
+        let covered = Set(SettingsSearchCatalog.entries.map(\.tab))
+        expect(
+            covered == Set(SettingsTab.allCases),
+            "every pane is reachable from Settings search")
+    }
+
+    /// The results `List` is keyed by `id`; a duplicate would make two rows select as one.
+    static func catalogIdentitiesAreUnique() {
+        let ids = SettingsSearchCatalog.entries.map(\.id)
+        expect(Set(ids).count == ids.count, "no two catalog entries share an identity")
+    }
+
+    static func catalogFindsKnownRows() {
+        let cases: [(String, SettingsTab)] = [
+            ("hyper", .general),
+            ("caps lock", .general),
+            ("launch at login", .general),
+            ("paste history", .clipboard),
+            ("window manage", .windowManagement),
+            ("skin tone", .emoji),
+            ("mcp", .ai)
+        ]
+        for (query, tab) in cases {
+            let found = SettingsSearchCatalog.results(for: query).first
+            expect(found?.tab == tab, "“\(query)” lands on \(tab.title)")
+        }
+    }
+
+    /// A term found in the title has to beat the same term found only in a breadcrumb.
+    static func catalogRanksTitlesFirst() {
+        let results = SettingsSearchCatalog.results(for: "extensions")
+        expect(results.first?.tab == .extensions, "“extensions” opens on its own pane")
+        expect(
+            SettingsSearchCatalog.results(for: "nothing here matches at all").isEmpty,
+            "and an unmatched query returns nothing")
     }
 }

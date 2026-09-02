@@ -42,7 +42,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **An icon is drawn for a surface *and* a system icon style, and both move under you.** macOS restyles the icons `NSWorkspace` hands out when System Settings → Appearance → **Icon & widget style** changes, so `IconStyleMonitor` and Tinycast's own appearance both call `IconCache.invalidateStyled()`. **The monitor may not invalidate on the notification itself.** AppKit posts `NSWorkspaceIconAppearanceConfigurationDidChange` before IconServices has swapped what `NSWorkspace` vends — measured at 25–120ms behind, jittering run to run — and the images it hands back are live objects macOS restyles in place, so flattening one on the signal freezes the *outgoing* style into a bitmap nothing ever invalidates again. `IconStyleMonitor` therefore polls `IconCache.styleFingerprint()` until the pixels actually move, and only then invalidates. Waiting also sidesteps the cost: re-flattening every icon the instant a restyle begins forces a cold IconServices regeneration, measured at 160× the settled draw cost. That drops the cached bitmaps, bumps every cache key so an in-flight decode cannot repopulate a stale one, and moves `IconCache.style.generation`. **Any view that draws an icon must key its fetch on that generation** — wrap the view's own key in `IconRequest`, or call `IconCache.observeStyle()` where the icon is resolved synchronously in a `body`. It is reached through `IconCache` rather than injected precisely because icons are drawn in menus, popovers and every list, where a missed injection would be a silent staleness bug.
 - **No hard dividers between the list and the bars.** The header and bottom bar are `safeAreaInset` overlays with no background; separation comes from `edgeDissolve()`, nothing else. (One deliberate exception: the vertical hairline between the clipboard list and its preview pane.)
 - **The panel corner is clipped once, at the root.** `RootPaletteView.body` ends with `.background(panelScrim) → .background(VisualEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. Keep that order; the scrim goes _over_ the vibrancy, and the clip is last.
-- **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`, or a gradient `mask` where a surface owns its own fade — `scrollEdgeEffectStyle` draws a *material* where a scroll view meets a safe area, so over a panel that already has `panelScrim` + `VisualEffectView` it composites to nothing. Tried and rejected on `QuickActionResultView`, with and without `safeAreaBar`.
+- **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`, or a gradient `mask` where a surface owns its own fade — `scrollEdgeEffectStyle` draws a *material* where a scroll view meets a safe area, so over a panel that already has `panelScrim` + `VisualEffectView` it composites to nothing. Tried and rejected on `QuickActionResultView`, with and without `safeAreaBar`. This is a rule about the borderless panels; the Settings window is a titled `NSWindow` whose system titlebar draws the band itself (see "Settings").
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
 - **No `NSAlert`, no `NSSlider`, no system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
 - **A dialog has three independent axes; never let one infer another.** The **icon** (`DialogRequest.symbol`, required) is always the *subject's* own glyph — a command being confirmed uses its `SystemAction.sfSymbol`, so the Restart dialog shows the same icon as the Restart row. Tone never picks an icon. The **tone** (`DialogTone`: `.neutral` / `.success` / `.danger`) tints only that glyph. The **button** takes its color from `DialogAction.Role` (`.standard` white / `.destructive` red / `.cancel` secondary), so a red-glyph security warning can still carry a plain white button — as "Import executable commands?" does.
@@ -522,10 +522,42 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   ride under the last row.
 - **The pane's own title is not in the pane.** `SettingsToolbarController` puts it in the titlebar,
   seated in the detail column by `.sidebarTrackingSeparator`.
+- **Settings is the one window that keeps the system titlebar.** `AppWindowController` builds every
+  window with `titlebarAppearsTransparent = true`, which opts the titlebar out of the system's glass
+  band; `SettingsToolbarController.install(in:)` sets it back to `false`, so the band and its scroll
+  edge effect are drawn by AppKit as a pane's `Form` scrolls under it. `.fullSizeContentView` and
+  `titlebarSeparatorStyle = .none` stay — the content still runs under the bar, and a hairline would
+  split the surface the band unifies. It also clears `isMovableByWindowBackground`: stock Settings
+  isn't dragged by its content. Onboarding, Updates, Support and Command Output keep the transparent
+  titlebar they were tuned for. Never hand-draw a header band; a main surface takes the system's
+  material, not `glassEffect`.
 - `SettingsComponents.swift` holds only what more than one pane needs: **`SettingsRow`**,
   **`FeatureSwitchSection`** (a feature's master switch plus its launcher-visibility companion) and
   **`SettingsFilterField`** (the filter row above a long list). `Onboarding/OnboardingCard.swift`
   keeps the older hand-drawn card, which that window still uses.
+- **The sidebar searches every pane *and* its rows.** `SettingsSearchField` sits above the list and
+  swaps it for a flat, ranked result list; each result carries the pane's `systemImage`, the row's
+  title and a `Pane › Section` breadcrumb, and arrowing through them moves the pane, as System
+  Settings does. Selection runs through `SettingsNavigationState.select`, so a result is an ordinary
+  navigation the Back/Forward chevrons can walk. It is a **second `List`**, keyed by
+  `SettingsSearchEntry.ID`, so result identities never share a selection namespace with `SettingsTab`.
+  ⌘F focuses the field, Escape clears it.
+- **`SettingsSearchCatalog` is hand-written, and that is the only option.** A `Form` cannot be asked
+  what rows it holds, so a new row is searchable only once it is listed there — with its pane, its
+  `Section` header, its title and the keywords the title doesn't contain ("caps lock" for Hyper Key).
+  Matching reuses `FuzzyMatch` (`Launcher/Model/SearchRelevance.swift`), multi-term like `NoteSearch`:
+  every term must hit the title, the breadcrumb or a keyword, a title hit outranks the rest, and a
+  pane outranks its own rows so a bare "clipboard" lands on the pane. `Tests/settings-history-test.swift`
+  pins that every pane is covered and that identities are unique; row-level drift is caught in review.
+  **Match ranges are deliberately not highlighted** — `FuzzyMatch` returns tier and score only.
+- **The sidebar's field is not `SettingsFilterField`.** That one is borderless because it lives inside
+  a `Form` row; the sidebar's is a glass capsule — `.frosted(in: Capsule())` at
+  `Size.settingsSearchField`, lensing the sidebar's own vibrancy — and lives in `Features/Settings/`,
+  having one call site. **The glass goes on a background layer, not on the content**
+  (`.background { Color.clear.frosted(in: Capsule()) }`): `frosted` ends in `.tint(.clear)`, which a
+  `TextField` descendant would inherit as an invisible caret.
+  `.searchable(placement: .sidebar)` renders nothing here — it needs a SwiftUI `NavigationSplitView`,
+  and this sidebar is an `NSHostingController` in a real `NSSplitViewController`.
 - **A `Form` realizes every row it is handed.** `LauncherItemsSection` therefore holds its items in
   a `LazyVStack` inside one Form row — 400 apps cost 55 ms and 69 views that way against 750 ms and
   2040 eager. Any other unbounded list must do the same.
