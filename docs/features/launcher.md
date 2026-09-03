@@ -23,9 +23,10 @@ earliest scope wins).
   strength and never on which field supplied the text. A new criterion is a field on
   `EntryNaming.Sources` and a line in `aliases(for:)`; adding a `Role` case, or a row to
   `SearchRelevance.cell`, means the criterion was modelled wrong.
-- **`AppIndex.publishEntries` is the one funnel.** Every kind's aliases are built there, once, so a
-  naming rule can never apply to applications and quietly skip snippets — and nothing is built per
-  keystroke.
+- **`EntryNaming.aliases` runs over every kind, once per index change**, so a naming rule can never
+  apply to applications and quietly skip snippets — and nothing is built per keystroke. `AppIndex.scan`
+  names the app slice on its own, off-main: romanizing a CJK index costs ~50 ms per 1,500 entries, and
+  `publishEntries` runs on the main actor whenever any unrelated slice changes.
 - **Aliases stay separate strings** — flattening them into one blob loses the role, which is half of
   what picks the cell.
 - **`Model/SearchScopes.swift` and `Model/LauncherRankingStore.swift` are pure too** — the ranking store
@@ -160,7 +161,9 @@ ICU entirely on a fast scalar check.
 all 65 of them read English on every Mac, whatever language it is set to.
 
 The user's own language wins the **display name**, so a row reads the way Finder reads it. The rest,
-English included, ride along as `.translation`. A non-English user finds their app by the name they
+English included, ride along as `.translation`. `AppDisplayName.inInfo` reads the `-macos` variant of
+each key before the bare one, the way `CFBundle` does: Image Playground's loctable spells the bare
+`CFBundleDisplayName` `Playground` and only the suffixed key `Image Playground`. A non-English user finds their app by the name they
 see *and* by the English name the vendor advertises.
 
 ### Non-Latin names
@@ -332,28 +335,40 @@ supplies it (#371). Every app under `/System/Applications` keeps its translation
 all 65 of them to `en` whatever the system language is — which is why the row label reads English
 without being pinned there, and why without this a Portuguese Mac finds Find My as `Find My` and never
 as `Buscar`. It measures 12 bundles carrying alternates under `en` against 49 under `pt-BR`. The value
-is a file name, so its `.app` comes off first; on an English Mac it then equals the display name and
-`usableAlternateNames` drops it, so nothing is indexed twice. Both attributes ride the one `MDItem`
+is a file name, so its `.app` comes off first; on an English Mac it then equals the display name, and
+`EntryNaming.aliases` drops whatever repeats a name the entry already carries, so nothing is indexed
+twice. Both attributes ride the one `MDItem`
 the pass already creates, so the cost below is unchanged.
 
-Leave `Bundle.installedAppName` on `object(forInfoDictionaryKey:)`. Reading `infoDictionary` to force
-an English label looks equivalent and is not: FindMy's raw `Info.plist` names it `FindMy`, and
-`Find My` lives only in the loctable, so the raw dictionary spells three Apple apps worse — `FindMy`,
-`VoiceMemos`, `Siri AI` — and changes nothing else.
+**A row is labelled the way Finder labels it: the localized name if the bundle ships one, and
+otherwise the file name.** `CFBundleDisplayName` is deliberately *not* the label — LaunchServices
+ignores one that disagrees with the file name, so an app cannot present itself under a name its
+folder does not carry, and neither should a launcher row. Visual Studio Code is the case that shows
+it: `Code.app` would be labelled `Code`, but the folder, Finder, the Dock and the user all say
+`Visual Studio Code`. Over the 83 bundles in the default scopes this rule matches
+`FileManager.displayName` exactly; labelling by `CFBundleDisplayName` misses on that one.
+
+The declared name is not thrown away — it rides along as a `strongName`, so `code` still finds it at
+`name · exact`. Leave `Bundle.installedAppName` on `object(forInfoDictionaryKey:)` where it is still
+read: forcing an English label out of `infoDictionary` looks equivalent and is not, because FindMy's
+raw `Info.plist` names it `FindMy` while `Find My` lives only in the loctable.
 
 Spotlight mixes junk in with the real aliases, and `EntryNaming.usable` (pure, covered
 by the harness) drops it: every bundle lists its own `<Name>.app` file name, several system apps ship
 untranslated `ALTERNATE_NAME_1` placeholders, and some just repeat the display name. Indexing those
 would make `app` match the entire index.
 
-A Spotlight round trip costs ~0.8 ms per bundle cold — 76 ms over the default scopes — and the scan
-reruns on every launcher open, so `SpotlightNames.Cache` memoizes per bundle path and re-reads only
-when the bundle's modification date moves, taking later passes to ~0.2 ms. Each pass is seeded from
-the last and keeps only what it looked at, so uninstalled apps fall out instead of accumulating.
-`.appex` Settings panes carry no alternate names, so `SettingsPaneScanner` doesn't ask.
+A Spotlight round trip costs ~0.8 ms per bundle cold and the loctable read ~0.2 ms, and the scan
+reruns on every launcher open — so `BundleNameCache` memoizes **both** per bundle path and re-reads
+only when the bundle's modification date moves. Caching one and not the other leaves most of a warm
+pass uncached. Each pass is seeded from the last and keeps only what it looked at, so uninstalled apps
+fall out instead of accumulating; a changed system language drops the whole table, because the names
+in it are in the old one. `.appex` Settings panes carry no alternate names, so `SettingsPaneScanner`
+doesn't ask.
 
-Selecting a launcher result records **one row for the submitted query**, and recall aggregates every
-stored query the typed one is a prefix of — so choosing WhatsApp for `wha` still surfaces it under
+Selecting a launcher result records **one row for the submitted query** — `submittedQuery`, named
+so because a table written when the field held one row per *prefix* cannot decode here, which is the
+reset — and recall aggregates every stored query the typed one is a prefix of — so choosing WhatsApp for `wha` still surfaces it under
 `w` and `wh`, at a sixteenth of the rows. The 1,000-record cap therefore holds ~1,000 distinct habits
 rather than ~60.
 

@@ -110,7 +110,7 @@ enum FuzzyMatch {
 
     /// Locale-independent: a Turkish fold maps "I" to "ı" and orphans every stored key.
     static let folding: String.CompareOptions = [
-        .caseInsensitive, .diacriticInsensitive, .widthInsensitive,
+        .caseInsensitive, .diacriticInsensitive, .widthInsensitive
     ]
 
     private static func isWordStart(_ s: String, _ index: String.Index) -> Bool {

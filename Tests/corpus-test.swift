@@ -1,6 +1,8 @@
 import Foundation
 
 /// The launcher's ranking, case by case. **A new complaint is a new case in corpus.json.**
+/// The fixture is synthetic on purpose: never paste a real index in, because the difficulty
+/// comes from how densely the names collide and not from whose Mac they came off.
 @main
 struct CorpusTest {
     struct Entry: Codable {
@@ -42,14 +44,15 @@ struct CorpusTest {
     // MARK: - Thresholds
 
     /// The chosen entry must match its query. A miss here is a naming bug, not a ranking one.
-    static let requiredMatched = 26
+    /// One case short of the corpus: `exten` is a recorded pick its entry cannot match.
+    static let requiredMatched = 58
     /// Cold means zero learned history — how good the ranking is for a brand-new user.
-    static let requiredTop1Cold = 20
-    static let requiredTop5Cold = 26
+    static let requiredTop1Cold = 39
+    static let requiredTop5Cold = 55
     /// Every unprotected case must be winnable by using it — the assertion the band ladder failed.
-    static let requiredReachable = 25
+    static let requiredReachable = 55
     /// Cases the firewall deliberately keeps unreachable; each names its escape in the fixture.
-    static let allowedProtected = 1
+    static let allowedProtected = 3
     /// Picks a user would plausibly spend before giving up on the launcher entirely.
     static let reachablePicks = 20
 
@@ -202,7 +205,7 @@ struct CorpusTest {
             "P1 an exact name hit outranks every weaker match at maximum usage",
             SearchRelevance.protectionFloor
                 > SearchRelevance.poolTop + SearchRelevance.shapeSpan
-                    + LauncherRankingStore.maximumUsage)
+                + LauncherRankingStore.maximumUsage)
         check(
             "P3 the weakest shown match is still learnable to the top of the pool",
             SearchRelevance.poolBottom + LauncherRankingStore.maximumUsage

@@ -161,6 +161,18 @@ struct RankingTest {
             SearchRelevance.protectionFloor
                 > SearchRelevance.poolTop + SearchRelevance.shapeSpan + saturated)
 
+        // One row per prefix, read as one row per submitted query, would inflate every count.
+        let legacyURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-ranking-legacy-\(UUID().uuidString).json")
+        let legacy = """
+            [{"itemKey":"dev.zed.Zed","query":"zed","count":5,\
+            "lastUsed":695000000}]
+            """
+        try? Data(legacy.utf8).write(to: legacyURL)
+        let upgraded = LauncherRankingStore(fileURL: legacyURL) { clock }
+        check("a table from before the record changed shape does not load", upgraded.isEmpty)
+        try? FileManager.default.removeItem(at: legacyURL)
+
         try? FileManager.default.removeItem(at: fileURL)
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)

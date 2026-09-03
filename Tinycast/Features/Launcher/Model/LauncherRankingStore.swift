@@ -1,9 +1,10 @@
 import Foundation
 
-/// One learned launcher choice for a normalized query prefix.
+/// One learned launcher choice, keyed by the whole query the user submitted, never a prefix of it.
+/// A table written when this field held one row per prefix cannot decode here — that is the reset.
 struct LauncherRankingRecord: Codable, Hashable, Sendable {
     let itemKey: String
-    let query: String
+    let submittedQuery: String
     var count: Int
     var lastUsed: Date
 }
@@ -34,7 +35,7 @@ final class LauncherRankingStore {
             let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data)
         {
             records = decoded.filter {
-                !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0
+                !$0.itemKey.isEmpty && !$0.submittedQuery.isEmpty && $0.count > 0
             }
         } else {
             records = []
@@ -54,13 +55,15 @@ final class LauncherRankingStore {
         guard !itemKey.isEmpty, !query.isEmpty, query.count <= Self.queryLimit else { return }
 
         let timestamp = now()
-        if let index = records.firstIndex(where: { $0.itemKey == itemKey && $0.query == query }) {
+        if let index = records.firstIndex(where: {
+            $0.itemKey == itemKey && $0.submittedQuery == query
+        }) {
             records[index].count += 1
             records[index].lastUsed = timestamp
         } else {
             records.append(
                 LauncherRankingRecord(
-                    itemKey: itemKey, query: query, count: 1, lastUsed: timestamp))
+                    itemKey: itemKey, submittedQuery: query, count: 1, lastUsed: timestamp))
         }
 
         if records.count > Self.cap {
@@ -77,11 +80,12 @@ final class LauncherRankingStore {
         let query = Self.normalize(query)
         guard !query.isEmpty else { return [:] }
         var totals: [String: (count: Int, lastUsed: Date)] = [:]
-        for record in records where record.query.hasPrefix(query) {
+        for record in records where record.submittedQuery.hasPrefix(query) {
             let running = totals[record.itemKey]
             totals[record.itemKey] = (
                 (running?.count ?? 0) + record.count,
-                max(running?.lastUsed ?? .distantPast, record.lastUsed))
+                max(running?.lastUsed ?? .distantPast, record.lastUsed)
+            )
         }
         guard !totals.isEmpty else { return [:] }
         let bucket = totals.values.reduce(0) { $0 + $1.count }
@@ -123,7 +127,7 @@ final class LauncherRankingStore {
     func replace(_ imported: [LauncherRankingRecord]) {
         records = Array(
             imported
-                .filter { !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0 }
+                .filter { !$0.itemKey.isEmpty && !$0.submittedQuery.isEmpty && $0.count > 0 }
                 .prefix(Self.cap))
         didMutate()
     }

@@ -11,7 +11,9 @@ enum AppDisplayName {
 
     /// The name a raw Info.plist carries, for callers holding one without a `Bundle` to open.
     static func inInfo(_ info: [String: Any]) -> String? {
-        named(info["CFBundleDisplayName"]) ?? named(info["CFBundleName"])
+        // `CFBundle` reads the `-macos` variant first; Image Playground's loctable ships both.
+        named(info["CFBundleDisplayName-macos"]) ?? named(info["CFBundleDisplayName"])
+            ?? named(info["CFBundleName-macos"]) ?? named(info["CFBundleName"])
     }
 }
 
@@ -21,7 +23,8 @@ extension Bundle {
         infoName("CFBundleDisplayName") ?? infoName("CFBundleName") ?? "Tinycast"
     }
 
-    /// An installed app's name, in Finder's own order, ending at the `.app` filename.
+    /// The name a bundle declares for itself. Not what Finder shows — LaunchServices ignores a
+    /// `CFBundleDisplayName` that disagrees with the file name, so the launcher labels rows by that.
     var installedAppName: String {
         infoName("CFBundleDisplayName") ?? infoName("CFBundleName")
             ?? bundleURL.deletingPathExtension().lastPathComponent

@@ -128,6 +128,7 @@
 		4106FB20E15379C560DCBBB7 /* MCPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF815AC6BE00722DB83B15CD /* MCPTransport.swift */; };
 		4109B5CF37DCA4BCDAE46412 /* ShellCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBFE3C41897391C14DB5A55C /* ShellCommandRunner.swift */; };
 		410F1B5FFAA44378AC9EC2DB /* SystemSettingsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951E746BA1AD25D167A1775F /* SystemSettingsSettingsView.swift */; };
+		41C5B5B0E637FAA4AFD4BF13 /* BundleNameCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57694B58B0A17CAC1D697FAA /* BundleNameCache.swift */; };
 		43885792945F28AF3CDE30BC /* WindowCommandCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06125F7DDE68BB4D52065C06 /* WindowCommandCoordinator.swift */; };
 		43DBCE7B5A84D0D6322124F5 /* MessageHUDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2CB71671625A1F446316A1 /* MessageHUDController.swift */; };
 		44646A576847F2D9FB68D8CF /* MCPServerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F8B8787A7197579A6F6ECC /* MCPServerManager.swift */; };
@@ -636,6 +637,7 @@
 		54E48A8D5E2BC00E9E1CD5BF /* QuicklinkArgumentSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkArgumentSession.swift; sourceTree = "<group>"; };
 		56D6EE5144AEF889C95B3758 /* QuickActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionCoordinator.swift; sourceTree = "<group>"; };
 		570CE37C7133E28F7495ED91 /* MarkdownCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownCodeView.swift; sourceTree = "<group>"; };
+		57694B58B0A17CAC1D697FAA /* BundleNameCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleNameCache.swift; sourceTree = "<group>"; };
 		590A432CC25ED6372B453BFA /* ScheduleScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleScreen.swift; sourceTree = "<group>"; };
 		5B2DBBB997953D2E50EBB050 /* MCPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServer.swift; sourceTree = "<group>"; };
 		5B330ABFC83721904159DDF2 /* MeetingEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingEvent.swift; sourceTree = "<group>"; };
@@ -2138,6 +2140,7 @@
 				DA0AD89CB2C805C50D2C80E1 /* AliasStore.swift */,
 				8E58EBB08450BA3426DF0565 /* AppIndex.swift */,
 				33994DC2FB0A6B23A403CA29 /* AppLauncher.swift */,
+				57694B58B0A17CAC1D697FAA /* BundleNameCache.swift */,
 				75614189EED9B440D911B412 /* FallbackStore.swift */,
 				D43F1080FB443A1D0616790E /* FavoritesStore.swift */,
 				DB5FA545F484D7666E9A5F14 /* RunningAppsMonitor.swift */,
@@ -2473,6 +2476,7 @@
 				00C09E86C3FC4738CF74F1F2 /* BackupStaging.swift in Sources */,
 				0820C7539E3328338C3C8FBD /* BarButton.swift in Sources */,
 				0A238E823704B904EFFB4F22 /* BundleLocalization.swift in Sources */,
+				41C5B5B0E637FAA4AFD4BF13 /* BundleNameCache.swift in Sources */,
 				9E514EA8EB0408653AC3D1D9 /* BundleSignature.swift in Sources */,
 				B6525300EEDACE4F9DC3179E /* CalcCurrency.swift in Sources */,
 				0F667981DF990EF41626F052 /* CalcDateFormatters.swift in Sources */,

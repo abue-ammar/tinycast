@@ -51,7 +51,9 @@ enum ScriptRomanization {
         var hasOther = false
         for scalar in name.unicodeScalars {
             if contains(kanaRanges, scalar) { return .japanese }
-            if contains(hanRanges, scalar) { hasHan = true } else if contains(
+            if contains(hanRanges, scalar) {
+                hasHan = true
+            } else if contains(
                 hangulRanges, scalar)
             {
                 hasHangul = true
@@ -94,7 +96,7 @@ enum ScriptRomanization {
         "ж": "zh", "з": "z", "и": "i", "і": "i", "ї": "yi", "й": "y", "к": "k", "л": "l", "м": "m",
         "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u", "ў": "u", "ф": "f",
         "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch", "ъ": "", "ы": "y", "ь": "",
-        "э": "e", "ю": "yu", "я": "ya",
+        "э": "e", "ю": "yu", "я": "ya"
     ]
 
     private static func transform(_ value: String, _ transform: StringTransform) -> String? {
@@ -111,19 +113,18 @@ enum ScriptRomanization {
         name.folding(options: FuzzyMatch.folding, locale: nil).filter { $0.isLetter || $0.isNumber }
     }
 
-    private static func contains(_ ranges: [ClosedRange<UInt32>], _ scalar: Unicode.Scalar) -> Bool
-    {
+    private static func contains(_ ranges: [ClosedRange<UInt32>], _ scalar: Unicode.Scalar) -> Bool {
         ranges.contains { $0.contains(scalar.value) }
     }
 
     private static let hanRanges: [ClosedRange<UInt32>] = [
-        0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF,
+        0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF
     ]
     private static let kanaRanges: [ClosedRange<UInt32>] = [
-        0x3040...0x309F, 0x30A0...0x30FF, 0x31F0...0x31FF,
+        0x3040...0x309F, 0x30A0...0x30FF, 0x31F0...0x31FF
     ]
     private static let hangulRanges: [ClosedRange<UInt32>] = [
-        0x1100...0x11FF, 0x3130...0x318F, 0xA960...0xA97F, 0xAC00...0xD7AF,
+        0x1100...0x11FF, 0x3130...0x318F, 0xA960...0xA97F, 0xAC00...0xD7AF
     ]
     private static let cyrillicRanges: [ClosedRange<UInt32>] = [0x0400...0x052F]
 }

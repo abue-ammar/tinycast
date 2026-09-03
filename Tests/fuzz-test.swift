@@ -294,7 +294,8 @@ struct FuzzTest {
         let figma = SearchRelevance.quality(query: "figma", fields: app("Figma").fields)!
         check(
             "the strongest field still wins on an aliased entry",
-            figma >= SearchRelevance.cell(.name, .exact)! && figma < SearchRelevance.cell(.userAlias, .exact)!)
+            figma >= SearchRelevance.cell(.name, .exact)! && figma < SearchRelevance.cell(.userAlias, .exact)!
+        )
 
         // Anchoring: only exact and prefix hits earn band 7; inside hits rank with vendor aliases.
         let term = rank("term")
@@ -589,7 +590,7 @@ struct FuzzTest {
                 query = String(source[start..<min(source.count, start + length)])
             case 1:
                 let source = Array(rng.element(allText))
-                query = String(source.enumerated().compactMap { rng.int(3) == 0 ? $0.element : nil })
+                query = String(source.compactMap { rng.int(3) == 0 ? $0 : nil })
             default:
                 query = String((0..<(1 + rng.int(8))).map { _ in rng.element(alphabet) })
             }

@@ -48,6 +48,23 @@ struct AppNameTest {
         check(
             "an info dictionary naming nothing yields nil",
             AppDisplayName.inInfo(["CFBundleDisplayName": " ", "CFBundleName": ""]) == nil)
+        // Image Playground's loctable ships both, and CFBundle reads the platform-suffixed one.
+        check(
+            "the macOS variant of a key wins over the bare key",
+            AppDisplayName.inInfo([
+                "CFBundleDisplayName-macos": "Image Playground",
+                "CFBundleDisplayName": "Playground", "CFBundleName": "Image Playground"
+            ]) == "Image Playground")
+        check(
+            "a blank macOS variant falls through to the bare key",
+            AppDisplayName.inInfo([
+                "CFBundleDisplayName-macos": "", "CFBundleDisplayName": "Playground"
+            ]) == "Playground")
+        check(
+            "a macOS variant of CFBundleName still loses to a real display name",
+            AppDisplayName.inInfo([
+                "CFBundleDisplayName": "Shown", "CFBundleName-macos": "Internal"
+            ]) == "Shown")
 
         // RapidAPI 4.5.5 ships exactly this: blank display name, real `CFBundleName`, Paw's old id.
         let rapidAPI = makeApp(
