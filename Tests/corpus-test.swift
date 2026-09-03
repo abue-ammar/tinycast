@@ -1,6 +1,6 @@
 import Foundation
 
-/// The launcher's ranking over real recorded launches. **A new complaint is a new case here.**
+/// The launcher's ranking, case by case. **A new complaint is a new case in corpus.json.**
 @main
 struct CorpusTest {
     struct Entry: Codable {
@@ -27,11 +27,10 @@ struct CorpusTest {
     struct Case: Codable {
         let query: String
         let expect: String
-        let picks: Int
+        /// What this case pins — the naming or ranking rule a regression here would have broken.
+        let criterion: String
         /// A rival is named exactly what was typed, so the firewall keeps this one unreachable.
         var protected: Bool?
-        /// The query does not match the chosen entry at all — a real mis-pick, kept as recorded.
-        var unmatched: Bool?
         var note: String?
     }
 
@@ -43,14 +42,14 @@ struct CorpusTest {
     // MARK: - Thresholds
 
     /// The chosen entry must match its query. A miss here is a naming bug, not a ranking one.
-    static let requiredMatched = 37
+    static let requiredMatched = 26
     /// Cold means zero learned history — how good the ranking is for a brand-new user.
-    static let requiredTop1Cold = 21
-    static let requiredTop5Cold = 34
+    static let requiredTop1Cold = 20
+    static let requiredTop5Cold = 26
     /// Every unprotected case must be winnable by using it — the assertion the band ladder failed.
-    static let requiredReachable = 35
+    static let requiredReachable = 25
     /// Cases the firewall deliberately keeps unreachable; each names its escape in the fixture.
-    static let allowedProtected = 2
+    static let allowedProtected = 1
     /// Picks a user would plausibly spend before giving up on the launcher entirely.
     static let reachablePicks = 20
 
@@ -73,7 +72,7 @@ struct CorpusTest {
             print("FAIL  corpus.json is unreadable — run from the repo root")
             exit(1)
         }
-        print("# corpus: \(corpus.entries.count) entries, \(corpus.cases.count) real launches")
+        print("# corpus: \(corpus.entries.count) entries, \(corpus.cases.count) cases")
 
         coldAccuracy(corpus)
         reachability(corpus)
@@ -107,12 +106,12 @@ struct CorpusTest {
         var top1 = 0
         var top5 = 0
         var misses: [String] = []
-        for test in corpus.cases where test.unmatched != true {
+        for test in corpus.cases {
             // Unlimited: whether the entry matches at all is a naming question, not a top-N one.
             let ranked = rank(test.query, corpus.entries, limit: corpus.entries.count)
             let position = ranked.firstIndex { $0.key == test.expect }
             if position != nil { matched += 1 }
-            if position == 0 { top1 += 1 } else { misses.append("'\(test.query)'→\(test.expect)") }
+            if position == 0 { top1 += 1 } else { misses.append("'\(test.query)' (\(test.criterion))") }
             if let position, position < 5 { top5 += 1 }
         }
         check(
@@ -132,7 +131,7 @@ struct CorpusTest {
         print("\n# reachability — can using it enough ever make it win")
         var reachable = 0
         var stuck: [String] = []
-        for test in corpus.cases where test.unmatched != true {
+        for test in corpus.cases {
             let usage = [test.expect: learned(reachablePicks)]
             if rank(test.query, corpus.entries, usage: usage).first?.key == test.expect {
                 reachable += 1
