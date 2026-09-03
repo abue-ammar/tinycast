@@ -13,8 +13,8 @@ enum SpotlightNames {
         let alternates = MDItemCopyAttribute(item, alternatesAttribute as CFString) as? [String] ?? []
         // Apple's system apps translate only in `InfoPlist.loctable`, which `CFBundle` can't read.
         let localized = (MDItemCopyAttribute(item, localizedNameAttribute as CFString) as? String)
-            .map(SearchFields.strippingAppExtension)
-        return SearchFields.usableAlternateNames(
+            .map(SearchNames.strippingAppExtension)
+        return SearchNames.usableAlternates(
             alternates + [localized].compactMap { $0 },
             displayName: displayName, fileName: url.lastPathComponent)
     }

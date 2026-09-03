@@ -16,10 +16,15 @@ earliest scope wins).
   row's shortcut firing. A new category must be wired into `VisibilityStore.allowsHotKey`, or its
   chords keep running while its pane reads off.
 - **`Model/SearchRelevance.swift` is Foundation-only and pure**, so `fuzz-test` compiles the shipped
-  scorer. It owns both `FuzzyMatch` and the field bands.
-- **Searchable fields stay separate** — display name, Spotlight alternate names, owner name, bundle id
-  and executable name are never flattened into one string, because the field is what picks the band. A
-  new searchable field means a new `Band` case and a `consider` call, in priority order.
+  scorer. It owns `FuzzyMatch`, `SearchAlias` and the band ladder.
+- **`SearchAlias.Role` is a closed ladder of five, and a new naming criterion must pick one of them.**
+  Criteria are endless — display name, folder rename, Spotlight alternate, localization, pinyin,
+  category, owning extension, bundle id — but *trust* levels are not, so ranking is keyed on the role
+  and the match strength and never on which field supplied the text. A new criterion is a provider in
+  `Model/SearchNames.swift` plus one line in `AppEntry.searchFields`; adding a `Role` case, or a
+  branch to `SearchRelevance.band`, means the criterion was modelled wrong.
+- **Aliases stay separate strings** — flattening them into one blob loses the role, which is half of
+  what picks the band.
 - **`Model/SearchScopes.swift` and `Model/LauncherRankingStore.swift` are pure too** — the ranking store
   takes its clock via `now` and its path via `fileURL`, for `scopes-test` and `ranking-test`.
 
@@ -57,24 +62,35 @@ frecency boost (frequency plus decaying recency). The boost can reorder results 
 tier but cannot make a weaker match kind beat a stronger one. Matching strips invisible Unicode
 format scalars first, since app metadata can contain bidi/zero-width markers before the visible name.
 
-## Searchable fields
+## Searchable aliases
 
-An entry is matched on six fields kept deliberately separate — flattening them into one string would
-lose the thing that decides the ranking. `SearchRelevance.score` evaluates each independently and the
-strongest one becomes the entry's base relevance:
+Every naming criterion an entry carries lowers to one flat list of `SearchAlias` — a string plus a
+`Role` (how far it is trusted) and a `Looseness` (the weakest match it will accept).
+`SearchRelevance.score` matches each, keeps the strongest, and that becomes the entry's base
+relevance. **Which field produced the string is not an input.** That is the whole design: a user's
+next naming demand is a new producer, not a new band.
 
-| Band | Field                                   | Match strength                                    |
-| ---- | --------------------------------------- | ------------------------------------------------- |
-| 7    | user alias (any entry kind)             | anchored literal — exact / prefix                 |
-| 6    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
-| 5    | Spotlight alternate names, plus a user alias's word-start / substring hits | literal |
-| 4    | owner name (the extension a command came from) | literal only                               |
-| 3    | display name                            | subsequence                                       |
-| 2    | Spotlight alternate names               | subsequence                                       |
-| 1    | bundle identifier                       | literal only                                      |
-| 0    | executable name (`CFBundleExecutable`)  | literal only                                      |
+| Role | What lands in it | Looseness |
+| --- | --- | --- |
+| `.userAlias` | the alias the user typed in Tinycast, for any entry kind | literal |
+| `.name` | display name, a snippet's keyword, an `.app` bundle the user renamed on disk | fuzzy |
+| `.translation` | Spotlight alternate names, the system-language name, romanizations | fuzzy |
+| `.owner` | the extension a command came from | literal |
+| `.technical` | bundle identifier, `CFBundleExecutable` | literal (full id: exact) |
 
-The arithmetic is what makes that table binding. A band's offset is `rawValue * bandStride`, and:
+`SearchRelevance.band` crosses those five with the match strength, weakest first:
+
+| Band | Role | Match strength |
+| ---- | ---- | -------------- |
+| 6    | `.userAlias`   | anchored literal — exact / prefix |
+| 5    | `.name`        | literal — exact / prefix / word-start / substring |
+| 4    | `.translation`, plus a user alias's word-start / substring hits | literal |
+| 3    | `.owner`       | literal |
+| 2    | `.name`        | subsequence |
+| 1    | `.translation` | subsequence |
+| 0    | `.technical`   | literal |
+
+The arithmetic is what makes that table binding. A band's offset is its index × `bandStride`, and:
 
 ```
 bandStride            = 10 × FuzzyMatch.maximumScore   = 1,000,000
@@ -82,21 +98,46 @@ FuzzyMatch.maximumScore                                =   100,000
 LauncherRankingStore.maximumBoost                      =     4,500
 ```
 
-So a field can never reach the band above it — the widest possible fuzzy score is a tenth of a stride —
+So an alias can never reach the band above it — the widest possible fuzzy score is a tenth of a stride —
 and the learned frecency boost is two orders of magnitude below a stride, which is what keeps learning
 reordering *within* a tier and never across one. Those three numbers are a contract, not a tuning
 parameter.
 
-A _literal_ hit on a weaker field outranks a _subsequence_ hit on a stronger one. That is the point of
-the split: an alias the vendor actually declared (`Codex` for ChatGPT) must beat the incidental
-c-o-d-e…x scattered through an unrelated app's name, while a real prefix hit on a display name still
-wins outright.
+A _literal_ hit on a weaker human-facing role outranks a _subsequence_ hit on a stronger one. That is
+the point of the split: a name the vendor actually declared (`Codex` for ChatGPT) must beat the
+incidental c-o-d-e…x scattered through an unrelated app's name, while a real prefix hit on a display
+name still wins outright. `.technical` sits under both, because a hit on an identifier is coincidence
+more often than intent.
 
-Identifier fields never subsequence-match — reverse-DNS text is a subsequence of nearly every short
+Identifier aliases never subsequence-match — reverse-DNS text is a subsequence of nearly every short
 query (`cop` ⊂ `com.apple.Photos`), which would change _which_ apps appear rather than just their
 order. For the same reason a bundle id is matched with its leading component stripped
 (`apple.Photos`, not `com.apple.Photos`): `com` alone prefixes almost every installed app. The full id
-still matches exactly, so a pasted identifier resolves.
+rides along as a second alias tightened to `Looseness.exact`, so a pasted identifier resolves and
+nothing looser can flood off it.
+
+### Localized and renamed names
+
+`SearchNames.romanizations` is the answer to "my app's name is not in Latin script": it runs each name
+through ICU's `.toLatin` + `.stripDiacritics`, giving `微信` → `weixin` and its initials `wx`,
+`网易云音乐` → `wangyiyunyinle` / `wyyyl`, `Телеграм` → `telegram`. Both forms land as `.translation`,
+so a Latin-keyboard user reaches a CJK-named app while a real display name still outranks the guess.
+It is deliberately heuristic — ICU reads Han as Mandarin, so a Japanese title romanizes wrong and 行
+picks one of its two readings. A stray fuzzy alias costs far less than an unfindable app.
+
+`AppIndex.publishEntries` applies it to *every* entry kind, not just applications, so an extension
+command titled in Chinese is as findable as an app. The transliteration is memoized by raw name, so
+ICU runs once per new name and never on a keystroke.
+
+Accents and full-width Latin are handled a layer lower instead, in `FuzzyMatch`: folding is
+`[.caseInsensitive, .diacriticInsensitive, .widthInsensitive]`, so `cafe`, `café` and `ｃａｆｅ` are one
+query. ASCII text skips ICU entirely on a fast scalar check.
+
+A renamed bundle is the other half. `AppEntry.name` is the Info.plist display name, which a rename
+never touches, so the on-disk basename is indexed too as a `.name` alias (`AppEntry.addFileName`) —
+rename `Slack.app` to `Work Chat.app` and both still find it. Duplicate copies of one app dedupe by
+bundle id as before, and the losing copy now lends its file name to the winner rather than being
+dropped whole, so a rename in a second folder is not silently lost.
 
 ### Owner names
 
@@ -213,7 +254,7 @@ can carry one. An alias is deliberate in a way no vendor field is, so a hit **fr
 exact or prefix — occupies the top band and ranks its entry first. A hit *inside* the alias ranks
 with the Spotlight aliases instead (`term` inside `iterm` must not beat Terminal's own prefix),
 and a subsequence of a short alias would be noise, so it never matches at all. `AppIndex` folds the
-alias into `SearchFields.userAlias` at rank time, keying its memos on the store's revision.
+alias in as a `.userAlias` at rank time, keying its memos on the store's revision.
 
 A launcher row shows its entry's alias as a small chip after the name, so what a badge-bearing
 result will answer to is visible without opening anything.
@@ -253,7 +294,7 @@ an English label looks equivalent and is not: FindMy's raw `Info.plist` names it
 `Find My` lives only in the loctable, so the raw dictionary spells three Apple apps worse — `FindMy`,
 `VoiceMemos`, `Siri AI` — and changes nothing else.
 
-Spotlight mixes junk in with the real aliases, and `SearchFields.usableAlternateNames` (pure, covered
+Spotlight mixes junk in with the real aliases, and `SearchNames.usableAlternates` (pure, covered
 by the harness) drops it: every bundle lists its own `<Name>.app` file name, several system apps ship
 untranslated `ALTERNATE_NAME_1` placeholders, and some just repeat the display name. Indexing those
 would make `app` match the entire index.

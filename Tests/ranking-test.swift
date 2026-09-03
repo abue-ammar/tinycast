@@ -107,13 +107,13 @@ struct RankingTest {
         check("global reset clears all learned ranking", reloaded.isEmpty)
 
         // No amount of learning lets a weaker field outrank a stronger one.
-        let alias = SearchFields(names: ["ChatGPT"], alternateNames: ["Codex"])
-        let displayName = SearchFields(names: ["Codex Viewer"])
-        let identifier = SearchFields(names: ["Unrelated"], bundleID: "com.openai.codex")
+        let alias: SearchFields = [.name("ChatGPT"), .translation("Codex")]
+        let displayName: SearchFields = [.name("Codex Viewer")]
+        let identifier: SearchFields = [.name("Unrelated"), .technical("openai.codex")]
 
         store.resetAll()
-        for _ in 0..<500 { store.record(itemKey: alias.names[0], query: "codex") }
-        let maxBoost = boost(store, alias.names[0], "codex")
+        for _ in 0..<500 { store.record(itemKey: "ChatGPT", query: "codex") }
+        let maxBoost = boost(store, "ChatGPT", "codex")
         check("the learned table is saturated for this query", maxBoost == 4_500)
 
         func relevance(_ fields: SearchFields, _ query: String) -> Int {
@@ -127,12 +127,12 @@ struct RankingTest {
             relevance(identifier, "codex") + maxBoost < relevance(alias, "codex"))
         check(
             "a saturated boost cannot cross a FuzzyMatch tier",
-            relevance(SearchFields(names: ["Codex Pro"]), "codex") + maxBoost
-                < relevance(SearchFields(names: ["Codex"]), "codex"))
+            relevance(SearchFields([.name("Codex Pro")]), "codex") + maxBoost
+                < relevance(SearchFields([.name("Codex")]), "codex"))
         check(
             "a saturated boost still reorders within one tier",
-            relevance(SearchFields(names: ["Codexes"]), "codex") + maxBoost
-                > relevance(SearchFields(names: ["Codex Pro"]), "codex"))
+            relevance(SearchFields([.name("Codexes")]), "codex") + maxBoost
+                > relevance(SearchFields([.name("Codex Pro")]), "codex"))
         check(
             "the observed boost cap stays under a band stride",
             maxBoost < SearchRelevance.bandStride - FuzzyMatch.maximumScore)

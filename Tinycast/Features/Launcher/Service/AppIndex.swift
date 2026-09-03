@@ -80,8 +80,10 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var matchAliases: [String] = []
     /// Per-item symbol, for the one kind whose glyph is the user's choice. Nil elsewhere.
     var symbolName: String?
-    /// Spotlight's `kMDItemAlternateNames`, ranked below the display name. Applications only.
+    /// Other ways to say this entry's name: Spotlight alternates, localizations, romanizations.
     var alternateNames: [String] = []
+    /// On-disk names that differ from the display name, so a renamed bundle stays findable.
+    var fileNames: [String] = []
     /// `CFBundleExecutable`, matched literally as a last resort. Applications only.
     var executableName: String?
     /// Moves when the bundle's icon changes on disk, retiring the cached bitmap. Applications only.
@@ -94,10 +96,27 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
 
+    /// Every naming criterion this entry carries, lowered to one flat list of tagged aliases.
     var searchFields: SearchFields {
-        SearchFields(
-            names: [name] + matchAliases, alternateNames: alternateNames, ownerName: ownerName,
-            bundleID: bundleID, executableName: executableName)
+        var aliases = ([name] + matchAliases + fileNames).map(SearchAlias.name)
+        aliases += alternateNames.map(SearchAlias.translation)
+        if let ownerName { aliases.append(.owner(ownerName)) }
+        if let bundleID {
+            aliases.append(.technical(SearchNames.identifyingPart(of: bundleID)))
+            // The whole reverse-DNS id is exact-only: as a prefix, "com" would match every app.
+            aliases.append(SearchAlias(bundleID, .technical, looseness: .exact))
+        }
+        if let executableName { aliases.append(.technical(executableName)) }
+        return SearchFields(aliases)
+    }
+
+    /// Only a rename adds anything: a bundle named after its own app repeats the display name.
+    mutating func addFileName(_ fileName: String) {
+        let names = [name] + fileNames
+        guard !fileName.isEmpty,
+            !names.contains(where: { $0.caseInsensitiveCompare(fileName) == .orderedSame })
+        else { return }
+        fileNames.append(fileName)
     }
 
     var kindLabel: String { ownerName ?? kind.descriptor.label }
@@ -213,6 +232,7 @@ final class AppIndex {
     @ObservationIgnored private var resultsMemo = Memo<ResultsKey, [AppEntry]>()
     /// Bumped whenever `apps` changes, so both memos above name the entry set they were built from.
     private var entriesRevision = 0
+    @ObservationIgnored private var romanizationMemo: [String: [String]] = [:]
 
     private static let systemActionEntries: [AppEntry] = SystemActionCatalog.all
         .map { command in
@@ -392,27 +412,33 @@ final class AppIndex {
     ) -> ([AppEntry], SpotlightNames.Cache, SettingsPaneScanner.Cache?) {
         Signposts.interval("AppIndex.scan") {
             var cache = cache
-            var seenBundleIDs = Set<String>()
+            var indexByBundleID: [String: Int] = [:]
             var result: [AppEntry] = []
             for url in SearchScopes.appBundles(in: scopes) {
                 let bundle = Bundle(url: url)
                 let bundleID = bundle?.bundleIdentifier
-                // Dedup by bundle id; the earliest scope wins.
-                if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
+                let fileName = SearchNames.strippingAppExtension(url.lastPathComponent)
+                // Dedup by bundle id; the first scope wins, but a renamed copy lends its name.
+                if let bundleID, let first = indexByBundleID[bundleID] {
+                    result[first].addFileName(fileName)
+                    continue
+                }
 
                 let name =
                     bundle?.installedAppName ?? url.deletingPathExtension().lastPathComponent
                 let executable =
                     bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String
-                result.append(
-                    AppEntry(
-                        id: url.path, name: name, url: url, bundleID: bundleID,
-                        kind: .application,
-                        alternateNames: cache.alternateNames(for: url, displayName: name),
-                        // A binary named after the app adds nothing the display name lacks.
-                        executableName: executable.flatMap {
-                            $0.caseInsensitiveCompare(name) == .orderedSame ? nil : $0
-                        }, iconStamp: FileIconStamp.value(for: url)))
+                var entry = AppEntry(
+                    id: url.path, name: name, url: url, bundleID: bundleID,
+                    kind: .application,
+                    alternateNames: cache.alternateNames(for: url, displayName: name),
+                    // A binary named after the app adds nothing the display name lacks.
+                    executableName: executable.flatMap {
+                        $0.caseInsensitiveCompare(name) == .orderedSame ? nil : $0
+                    }, iconStamp: FileIconStamp.value(for: url))
+                entry.addFileName(fileName)
+                if let bundleID { indexByBundleID[bundleID] = result.count }
+                result.append(entry)
             }
             // Slice order is section order, so the flat selection maps 1:1 onto rows.
             let apps = result.sorted {
@@ -427,12 +453,29 @@ final class AppIndex {
     private func publishEntries() {
         // Each slice arrives in its own display order; the slice order is the section order.
         let updated =
-            meetingEntries + discoveredEntries + extensionEntries + quicklinkEntries + snippetEntries
-            + Self.systemActionEntries + windowCommandEntries + customCommandEntries
-            + commandEntries
+            (meetingEntries + discoveredEntries + extensionEntries + quicklinkEntries
+            + snippetEntries + Self.systemActionEntries + windowCommandEntries
+            + customCommandEntries + commandEntries).map(romanized)
         guard updated != apps else { return }
         apps = updated
         entriesRevision &+= 1
+    }
+
+    /// Adds what a CJK or Cyrillic name gets typed as. Every kind passes through here, so an
+    /// extension command titled in Chinese is as findable as an app.
+    private func romanized(_ entry: AppEntry) -> AppEntry {
+        var entry = entry
+        entry.alternateNames += ([entry.name] + entry.alternateNames + entry.fileNames)
+            .flatMap(romanizations)
+        return entry
+    }
+
+    /// Keyed by the raw name: ICU transliteration runs once per new name, never per keystroke.
+    private func romanizations(of name: String) -> [String] {
+        if let cached = romanizationMemo[name] { return cached }
+        let names = SearchNames.romanizations(of: name)
+        romanizationMemo[name] = names
+        return names
     }
 
     /// Ranked matches, or a whole category when the query names one. Empty returns the full list.
@@ -477,7 +520,9 @@ final class AppIndex {
             let query = FuzzyMatch.Query(q)
             let scored = apps.compactMap { app -> (AppEntry, Int)? in
                 var fields = app.searchFields
-                fields.userAlias = aliases.alias(for: app.preferenceKey)
+                if let alias = aliases.alias(for: app.preferenceKey) {
+                    fields.append(.userAlias(alias))
+                }
                 // Base relevance is the strongest field; the boost is added blind to it.
                 guard let score = SearchRelevance.score(query, fields: fields) else {
                     return nil

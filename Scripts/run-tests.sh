@@ -88,7 +88,7 @@ run() {
 }
 
 L=Tinycast/Features/Launcher/Model
-run slow -O fuzz-test      $L/SearchRelevance.swift
+run slow -O fuzz-test      $L/SearchRelevance.swift $L/SearchNames.swift
 run file-search-test       $L/SearchRelevance.swift \
                            Tinycast/Features/FileSearch/Model/*.swift
 run file-search-session-test Tinycast/Platform/Signposts.swift \
