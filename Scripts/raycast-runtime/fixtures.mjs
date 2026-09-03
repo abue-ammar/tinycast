@@ -172,9 +172,18 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
+import { fileURLToPath } from "node:url";
 import { Detail } from "@raycast/api";
 
 export default function Command() {
+  const errorCode = (fn) => {
+    try {
+      fn();
+      return "none";
+    } catch (error) {
+      return error.code ?? error.name;
+    }
+  };
   const parts = [
     path.join("/a/b", "../c", "d.txt"),
     path.extname("x/y/file.tar.gz"),
@@ -186,6 +195,36 @@ export default function Command() {
     Buffer.from("hello").toString("base64"),
     Buffer.from("aGVsbG8=", "base64").toString("utf8"),
     new TextDecoder().decode(new TextEncoder().encode("héllo")),
+    fileURLToPath("file:///Applications/Tinycast%20Beta.app"),
+    fileURLToPath(new URL("file:///tmp/%ED%95%9C%EA%B8%80.txt")),
+    fileURLToPath("file://localhost/tmp/a?query=ignored#fragment"),
+    fileURLToPath("file:///tmp/a%5Cb"),
+    fileURLToPath("file:tmp/a"),
+    fileURLToPath("file:///tmp/%2e%2e/a"),
+    fileURLToPath("file://%6cocalhost/tmp/a"),
+    fileURLToPath("file:///tmp//a"),
+    fileURLToPath(new URL("file:///tmp/a///b")),
+    fileURLToPath("file:///tmp/a//../b"),
+    fileURLToPath("file:///C:/.."),
+    new URL(
+      "file:///tmp/a?query=" +
+        String.fromCharCode(92) +
+        "keep#fragment=" +
+        String.fromCharCode(92) +
+        "keep",
+    ).href,
+    new URL("https://example.com/C:/..").href,
+    fileURLToPath("file:///a:folder/.."),
+    new URL("..", "file:///a:folder/child").href,
+    new URL("..", "https://example.com/C:/child").href,
+    errorCode(() => fileURLToPath("file:///tmp/a%2Fb")),
+    errorCode(() => fileURLToPath("file://a%2Fb/tmp/a")),
+    errorCode(() => fileURLToPath("file://example.com/tmp/a")),
+    errorCode(() => fileURLToPath("https://example.com/a")),
+    errorCode(() => fileURLToPath({})),
+    errorCode(() => fileURLToPath("file://user@localhost/tmp/a")),
+    errorCode(() => fileURLToPath("file://localhost:/tmp/a")),
+    errorCode(() => fileURLToPath("file:///C:/a", { windows: true })),
   ];
   return <Detail markdown={parts.join("\\n")} />;
 }
@@ -512,6 +551,30 @@ export async function runFixtures() {
       "aGVsbG8=",
       "hello",
       "héllo",
+      "/Applications/Tinycast Beta.app",
+      "/tmp/한글.txt",
+      "/tmp/a",
+      "/tmp/a\\b",
+      "/tmp/a",
+      "/a",
+      "/tmp/a",
+      "/tmp//a",
+      "/tmp/a///b",
+      "/tmp/a/b",
+      "/C:/",
+      String.raw`file:///tmp/a?query=\keep#fragment=\keep`,
+      "https://example.com/",
+      "/a:folder/",
+      "file:///a:folder/",
+      "https://example.com/",
+      "ERR_INVALID_FILE_URL_PATH",
+      "ERR_INVALID_URL",
+      "ERR_INVALID_FILE_URL_HOST",
+      "ERR_INVALID_URL_SCHEME",
+      "ERR_INVALID_ARG_TYPE",
+      "ERR_INVALID_URL",
+      "ERR_INVALID_URL",
+      "Error",
     ];
     expected.forEach((value, index) => check(`shim ${index}: ${value}`, markdown[index] === value, markdown[index]));
   });

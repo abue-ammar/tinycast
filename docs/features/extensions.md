@@ -485,6 +485,9 @@ pieces, so a progress callback reports how much has been written, never how much
 One shortcut inside `Transform`: it acknowledges a write as soon as `_transform` calls back rather
 than waiting for room on its readable side, so only a transform nobody reads from can grow unbounded.
 
+`url.fileURLToPath` implements Node's macOS path form. Its Windows override is intentionally absent:
+Tinycast never runs an extension on Windows.
+
 A bundle that ships its own HTTP client rather than calling `fetch` — node-fetch travels inside
 `@raycast/utils`, and axios has a Node adapter — reaches the network through `http.request`, so the
 shim answers it: one request when the body ends, one response chunk when the bridge replies. The
