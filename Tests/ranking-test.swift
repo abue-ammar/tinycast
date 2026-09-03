@@ -22,7 +22,7 @@ struct RankingTest {
 
         // Mirrors AppIndex.rank: one boosts(query:) pass, then a per-item lookup.
         func boost(_ store: LauncherRankingStore, _ itemKey: String, _ query: String) -> Int {
-            store.boosts(query: query)[itemKey] ?? 0
+            store.usage(query: query)[itemKey] ?? 0
         }
 
         let whatsApp = "net.whatsapp.WhatsApp"
@@ -34,6 +34,10 @@ struct RankingTest {
             LauncherRankingStore.normalize(" wha \n") == "wha")
         check("query key folds case", LauncherRankingStore.normalize("WhA") == "wha")
         check("query key folds diacritics", LauncherRankingStore.normalize("Café") == "cafe")
+        // Matching folds width, so learning must too, or an IME's picks land in an unread bucket.
+        check(
+            "query key folds full-width input the way matching does",
+            LauncherRankingStore.normalize("ｃａｆｅ") == "cafe")
         // A Turkish fold maps "I" to "ı"; asserting the difference keeps this honest.
         check(
             "query key is locale-independent",
@@ -45,7 +49,7 @@ struct RankingTest {
         )
 
         check("unvisited result has no boost", boost(store, whatsApp, "w") == 0)
-        check("an unlearned query yields an empty table", store.boosts(query: "w").isEmpty)
+        check("an unlearned query yields an empty table", store.usage(query: "w").isEmpty)
 
         store.record(itemKey: cafe, query: " Café ")
         check(
@@ -59,45 +63,74 @@ struct RankingTest {
         check("visit does not teach a different query", boost(store, whatsApp, "wa") == 0)
 
         // Golden values: these pin the frecency curve, so a change has to be deliberate.
-        check("one visit, same day, scores 2100", firstBoost == 2_100)
+        check("one visit, same day, scores 1175", firstBoost == 1_175)
         for _ in 0..<9 { store.record(itemKey: whatsApp, query: "Wha") }
-        check("ten visits, same day, score 3576", boost(store, whatsApp, "w") == 3_576)
+        check("ten visits, same day, score 2026", boost(store, whatsApp, "w") == 2_026)
         clock.addTimeInterval(14 * 86_400)
-        check("ten visits, one half-life later, score 2627", boost(store, whatsApp, "w") == 2_627)
+        check("ten visits, one half-life later, score 1583", boost(store, whatsApp, "w") == 1_583)
         clock.addTimeInterval(351 * 86_400)
-        check("ten visits, a year later, score 2076", boost(store, whatsApp, "w") == 2_076)
-        for _ in 0..<200 { store.record(itemKey: wick, query: "w") }
-        check("the blend is capped at 4500", boost(store, wick, "w") == 4_500)
+        check("ten visits, a year later, score 1326", boost(store, whatsApp, "w") == 1_326)
+
+        // The ceiling the firewall depends on, and the saturation the old curve had at 31 uses.
+        check(
+            "usage stays under its ceiling however deep a habit runs",
+            (1...200_000).allSatisfy {
+                LauncherRankingStore.usage(count: $0, lastUsed: clock, share: 1, at: clock)
+                    <= LauncherRankingStore.maximumUsage
+            })
+        check(
+            "using something more always counts for more",
+            LauncherRankingStore.usage(count: 49, lastUsed: clock, share: 1, at: clock)
+                > LauncherRankingStore.usage(count: 31, lastUsed: clock, share: 1, at: clock))
 
         store.resetAll()
         store.record(itemKey: whatsApp, query: "Wha")
         let sameDay = boost(store, whatsApp, "w")
         store.record(itemKey: whatsApp, query: "Wha")
-        check("frequency increases the boost", boost(store, whatsApp, "w") > sameDay)
+        check("frequency increases the usage", boost(store, whatsApp, "w") > sameDay)
 
         clock.addTimeInterval(60 * 86_400)
         check("recency decays over time", boost(store, whatsApp, "w") < sameDay)
 
+        // Frequency leads, so a far larger habit holds even when stale — but at equal counts,
+        // the fresher one wins. That split is what keeps a real habit from being outvoted by noise.
         for _ in 0..<100 { store.record(itemKey: whatsApp, query: "w") }
         clock.addTimeInterval(60 * 86_400)
-        let oldFrequentBoost = boost(store, whatsApp, "w")
+        let staleFrequent = boost(store, whatsApp, "w")
         for _ in 0..<8 { store.record(itemKey: wick, query: "w") }
-        check(
-            "a newer habit can overtake an old frequent result",
-            boost(store, wick, "w") > oldFrequentBoost)
+        check("a much larger habit survives going stale", staleFrequent > boost(store, wick, "w"))
+        store.resetAll()
+        for _ in 0..<8 { store.record(itemKey: whatsApp, query: "w") }
+        clock.addTimeInterval(60 * 86_400)
+        let stale = boost(store, whatsApp, "w")
+        for _ in 0..<8 { store.record(itemKey: wick, query: "w") }
+        check("at equal counts the fresher habit wins", boost(store, wick, "w") > stale)
 
-        let table = store.boosts(query: "w")
+        let table = store.usage(query: "w")
         check(
             "one pass returns every item learned for the query",
             Set(table.keys) == [whatsApp, wick])
 
-        let persistedWickBoost = boost(store, wick, "w")
+        // The empty query is a real one: it is what the launcher opens on.
+        store.resetAll()
+        store.record(itemKey: wick, query: "")
+        check("a launch from the opening list is learned", boost(store, wick, "") > 0)
+        store.record(itemKey: whatsApp, query: "whatsapp")
+        check(
+            "and every typed launch counts toward the opening list too",
+            store.usage(query: "").keys.sorted() == [whatsApp, wick].sorted())
+        check(
+            "one row per query, recalled under every prefix a user might type",
+            boost(store, whatsApp, "wh") > 0 && boost(store, whatsApp, "whatsapp") > 0
+                && boost(store, whatsApp, "x") == 0)
+
+        let persistedWickUsage = boost(store, wick, "")
         // Persisting is off-main, so the reload has to meet it before it can read the file.
         await store.flush()
         let reloaded = LauncherRankingStore(fileURL: fileURL) { clock }
         check(
             "records persist across store instances",
-            boost(reloaded, wick, "w") == persistedWickBoost)
+            boost(reloaded, wick, "") == persistedWickUsage)
 
         reloaded.reset(itemKey: whatsApp)
         check("per-item reset clears every learned query", !reloaded.hasRanking(for: whatsApp))
@@ -106,36 +139,29 @@ struct RankingTest {
         reloaded.resetAll()
         check("global reset clears all learned ranking", reloaded.isEmpty)
 
-        // No amount of learning lets a weaker field outrank a stronger one.
-        let alias: SearchFields = [.name("ChatGPT"), .translation("Codex")]
-        let displayName: SearchFields = [.name("Codex Viewer")]
-        let identifier: SearchFields = [.name("Unrelated"), .technical("openai.codex")]
-
+        // What learning may and may not do, now that it is denominated in picks.
         store.resetAll()
         for _ in 0..<500 { store.record(itemKey: "ChatGPT", query: "codex") }
-        let maxBoost = boost(store, "ChatGPT", "codex")
-        check("the learned table is saturated for this query", maxBoost == 4_500)
+        let saturated = boost(store, "ChatGPT", "codex")
+        check(
+            "the learned table saturates near its ceiling",
+            saturated > 2_500 && saturated <= LauncherRankingStore.maximumUsage)
 
         func relevance(_ fields: SearchFields, _ query: String) -> Int {
-            SearchRelevance.score(query: query, fields: fields)!
+            SearchRelevance.quality(query: query, fields: fields)!
         }
         check(
-            "a saturated boost cannot lift an alias hit over a display-name hit",
-            relevance(alias, "codex") + maxBoost < relevance(displayName, "codex"))
+            "P1 no habit lifts anything over an exactly-typed display name",
+            relevance([.name("Unrelated"), .technical("openai.codex")], "codex") + saturated
+                < relevance([.name("Codex")], "codex"))
         check(
-            "a saturated boost cannot lift an identifier hit over an alias hit",
-            relevance(identifier, "codex") + maxBoost < relevance(alias, "codex"))
+            "a habit does lift a weaker match over a stronger one — that is the point",
+            relevance([.name("ChatGPT"), .translation("Codex")], "codex") + saturated
+                > relevance([.name("Codex Viewer")], "codex"))
         check(
-            "a saturated boost cannot cross a FuzzyMatch tier",
-            relevance(SearchFields([.name("Codex Pro")]), "codex") + maxBoost
-                < relevance(SearchFields([.name("Codex")]), "codex"))
-        check(
-            "a saturated boost still reorders within one tier",
-            relevance(SearchFields([.name("Codexes")]), "codex") + maxBoost
-                > relevance(SearchFields([.name("Codex Pro")]), "codex"))
-        check(
-            "the observed boost cap stays under a band stride",
-            maxBoost < SearchRelevance.bandStride - FuzzyMatch.maximumScore)
+            "the observed ceiling keeps the firewall standing",
+            SearchRelevance.protectionFloor
+                > SearchRelevance.poolTop + SearchRelevance.shapeSpan + saturated)
 
         try? FileManager.default.removeItem(at: fileURL)
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")

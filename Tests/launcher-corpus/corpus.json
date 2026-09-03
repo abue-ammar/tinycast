@@ -1,0 +1,2482 @@
+{
+ "entries": [
+  {
+   "name": "Code",
+   "key": "com.microsoft.VSCode",
+   "bundleID": "com.microsoft.VSCode",
+   "strongNames": [
+    "Visual Studio Code"
+   ],
+   "translations": [],
+   "executableName": "Code",
+   "kind": "application"
+  },
+  {
+   "name": "Tinycast Beta",
+   "key": "com.tinycast.app.beta",
+   "bundleID": "com.tinycast.app.beta",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Tinycast Beta",
+   "kind": "application"
+  },
+  {
+   "name": "Raycast",
+   "key": "com.raycast.macos",
+   "bundleID": "com.raycast.macos",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Raycast",
+   "kind": "application"
+  },
+  {
+   "name": "Google Chrome",
+   "key": "com.google.Chrome",
+   "bundleID": "com.google.Chrome",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Google Chrome",
+   "kind": "application"
+  },
+  {
+   "name": "IINA",
+   "key": "com.colliderli.iina",
+   "bundleID": "com.colliderli.iina",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "IINA",
+   "kind": "application"
+  },
+  {
+   "name": "Brave Origin",
+   "key": "com.brave.Browser.origin",
+   "bundleID": "com.brave.Browser.origin",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Brave Origin",
+   "kind": "application"
+  },
+  {
+   "name": "Xcode",
+   "key": "com.apple.dt.Xcode",
+   "bundleID": "com.apple.dt.Xcode",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Xcode",
+   "kind": "application"
+  },
+  {
+   "name": "Zed",
+   "key": "dev.zed.Zed",
+   "bundleID": "dev.zed.Zed",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "zed",
+   "kind": "application"
+  },
+  {
+   "name": "OrbStack",
+   "bundleID": "dev.kdrag0n.MacVirt",
+   "key": "dev.kdrag0n.MacVirt",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "OrbStack",
+   "kind": "application"
+  },
+  {
+   "name": "Feedback Assistant",
+   "bundleID": "com.apple.appleseed.FeedbackAssistant",
+   "key": "com.apple.appleseed.FeedbackAssistant",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Feedback Assistant",
+   "kind": "application"
+  },
+  {
+   "name": "Neon",
+   "bundleID": "com.neon.app",
+   "key": "com.neon.app",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Neon",
+   "kind": "application"
+  },
+  {
+   "name": "Ghostty",
+   "bundleID": "com.mitchellh.ghostty",
+   "key": "com.mitchellh.ghostty",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "ghostty",
+   "kind": "application"
+  },
+  {
+   "name": "AppCleaner",
+   "bundleID": "net.freemacsoft.AppCleaner",
+   "key": "net.freemacsoft.AppCleaner",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "AppCleaner",
+   "kind": "application"
+  },
+  {
+   "name": "Stats",
+   "bundleID": "eu.exelban.Stats",
+   "key": "eu.exelban.Stats",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Stats",
+   "kind": "application"
+  },
+  {
+   "name": "Alacritty",
+   "bundleID": "org.alacritty",
+   "key": "org.alacritty",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "alacritty",
+   "kind": "application"
+  },
+  {
+   "name": "AnyDesk",
+   "bundleID": "com.philandro.anydesk",
+   "key": "com.philandro.anydesk",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "AnyDesk",
+   "kind": "application"
+  },
+  {
+   "name": "MongoDB Compass",
+   "bundleID": "com.mongodb.compass",
+   "key": "com.mongodb.compass",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "MongoDB Compass",
+   "kind": "application"
+  },
+  {
+   "name": "Siri",
+   "bundleID": "com.apple.siri.launcher",
+   "key": "com.apple.siri.launcher",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Siri",
+   "kind": "application"
+  },
+  {
+   "name": "Music",
+   "bundleID": "com.apple.Music",
+   "key": "com.apple.Music",
+   "strongNames": [],
+   "translations": [
+    "Apple Music"
+   ],
+   "executableName": "Music",
+   "kind": "application"
+  },
+  {
+   "name": "Find My",
+   "bundleID": "com.apple.findmy",
+   "key": "com.apple.findmy",
+   "strongNames": [
+    "FindMy"
+   ],
+   "translations": [],
+   "executableName": "FindMy",
+   "kind": "application"
+  },
+  {
+   "name": "QuickTime Player",
+   "bundleID": "com.apple.QuickTimePlayerX",
+   "key": "com.apple.QuickTimePlayerX",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "QuickTime Player",
+   "kind": "application"
+  },
+  {
+   "name": "Chess",
+   "bundleID": "com.apple.Chess",
+   "key": "com.apple.Chess",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Chess",
+   "kind": "application"
+  },
+  {
+   "name": "Games",
+   "bundleID": "com.apple.games",
+   "key": "com.apple.games",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Games",
+   "kind": "application"
+  },
+  {
+   "name": "Photo Booth",
+   "bundleID": "com.apple.PhotoBooth",
+   "key": "com.apple.PhotoBooth",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Photo Booth",
+   "kind": "application"
+  },
+  {
+   "name": "Books",
+   "bundleID": "com.apple.iBooksX",
+   "key": "com.apple.iBooksX",
+   "strongNames": [],
+   "translations": [
+    "Apple Books",
+    "iBooks"
+   ],
+   "executableName": "Books",
+   "kind": "application"
+  },
+  {
+   "name": "Weather",
+   "bundleID": "com.apple.weather",
+   "key": "com.apple.weather",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Weather",
+   "kind": "application"
+  },
+  {
+   "name": "Notes",
+   "bundleID": "com.apple.Notes",
+   "key": "com.apple.Notes",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Notes",
+   "kind": "application"
+  },
+  {
+   "name": "Image Capture",
+   "bundleID": "com.apple.Image_Capture",
+   "key": "com.apple.Image_Capture",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Image Capture",
+   "kind": "application"
+  },
+  {
+   "name": "Home",
+   "bundleID": "com.apple.Home",
+   "key": "com.apple.Home",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Home",
+   "kind": "application"
+  },
+  {
+   "name": "Freeform",
+   "bundleID": "com.apple.freeform",
+   "key": "com.apple.freeform",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Freeform",
+   "kind": "application"
+  },
+  {
+   "name": "Siri",
+   "bundleID": "com.apple.campo",
+   "key": "com.apple.campo",
+   "strongNames": [
+    "Siri AI"
+   ],
+   "translations": [],
+   "executableName": "Siri AI",
+   "kind": "application"
+  },
+  {
+   "name": "Passwords",
+   "bundleID": "com.apple.Passwords",
+   "key": "com.apple.Passwords",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Passwords",
+   "kind": "application"
+  },
+  {
+   "name": "Preview",
+   "bundleID": "com.apple.Preview",
+   "key": "com.apple.Preview",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Preview",
+   "kind": "application"
+  },
+  {
+   "name": "News",
+   "bundleID": "com.apple.news",
+   "key": "com.apple.news",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "News",
+   "kind": "application"
+  },
+  {
+   "name": "TextEdit",
+   "bundleID": "com.apple.TextEdit",
+   "key": "com.apple.TextEdit",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "TextEdit",
+   "kind": "application"
+  },
+  {
+   "name": "Podcasts",
+   "bundleID": "com.apple.podcasts",
+   "key": "com.apple.podcasts",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Podcasts",
+   "kind": "application"
+  },
+  {
+   "name": "System Settings",
+   "bundleID": "com.apple.systempreferences",
+   "key": "com.apple.systempreferences",
+   "strongNames": [],
+   "translations": [
+    "Preferences",
+    "Settings",
+    "System Preferences"
+   ],
+   "executableName": "System Settings",
+   "kind": "application"
+  },
+  {
+   "name": "TV",
+   "bundleID": "com.apple.TV",
+   "key": "com.apple.TV",
+   "strongNames": [],
+   "translations": [
+    "Apple TV",
+    "Apple TV+"
+   ],
+   "executableName": "TV",
+   "kind": "application"
+  },
+  {
+   "name": "Apps",
+   "bundleID": "com.apple.apps.launcher",
+   "key": "com.apple.apps.launcher",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Apps",
+   "kind": "application"
+  },
+  {
+   "name": "Stocks",
+   "bundleID": "com.apple.stocks",
+   "key": "com.apple.stocks",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Stocks",
+   "kind": "application"
+  },
+  {
+   "name": "Mail",
+   "bundleID": "com.apple.mail",
+   "key": "com.apple.mail",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Mail",
+   "kind": "application"
+  },
+  {
+   "name": "Dictionary",
+   "bundleID": "com.apple.Dictionary",
+   "key": "com.apple.Dictionary",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Dictionary",
+   "kind": "application"
+  },
+  {
+   "name": "Contacts",
+   "bundleID": "com.apple.AddressBook",
+   "key": "com.apple.AddressBook",
+   "strongNames": [],
+   "translations": [
+    "Address Book"
+   ],
+   "executableName": "Contacts",
+   "kind": "application"
+  },
+  {
+   "name": "Time Machine",
+   "bundleID": "com.apple.backup.launcher",
+   "key": "com.apple.backup.launcher",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Time Machine",
+   "kind": "application"
+  },
+  {
+   "name": "AirPort Utility",
+   "bundleID": "com.apple.airport.airportutility",
+   "key": "com.apple.airport.airportutility",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "AirPort Utility",
+   "kind": "application"
+  },
+  {
+   "name": "VoiceOver Utility",
+   "bundleID": "com.apple.VoiceOverUtility",
+   "key": "com.apple.VoiceOverUtility",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "VoiceOver Utility",
+   "kind": "application"
+  },
+  {
+   "name": "Terminal",
+   "bundleID": "com.apple.Terminal",
+   "key": "com.apple.Terminal",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Terminal",
+   "kind": "application"
+  },
+  {
+   "name": "Activity Monitor",
+   "bundleID": "com.apple.ActivityMonitor",
+   "key": "com.apple.ActivityMonitor",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Activity Monitor",
+   "kind": "application"
+  },
+  {
+   "name": "Screenshot",
+   "bundleID": "com.apple.screenshot.launcher",
+   "key": "com.apple.screenshot.launcher",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Screenshot",
+   "kind": "application"
+  },
+  {
+   "name": "Grapher",
+   "bundleID": "com.apple.grapher",
+   "key": "com.apple.grapher",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Grapher",
+   "kind": "application"
+  },
+  {
+   "name": "Audio MIDI Setup",
+   "bundleID": "com.apple.audio.AudioMIDISetup",
+   "key": "com.apple.audio.AudioMIDISetup",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Audio MIDI Setup",
+   "kind": "application"
+  },
+  {
+   "name": "Screen Sharing",
+   "bundleID": "com.apple.ScreenSharing",
+   "key": "com.apple.ScreenSharing",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Screen Sharing",
+   "kind": "application"
+  },
+  {
+   "name": "System Information",
+   "bundleID": "com.apple.SystemProfiler",
+   "key": "com.apple.SystemProfiler",
+   "strongNames": [],
+   "translations": [
+    "System Profiler"
+   ],
+   "executableName": "System Information",
+   "kind": "application"
+  },
+  {
+   "name": "Print Center",
+   "bundleID": "com.apple.printcenter",
+   "key": "com.apple.printcenter",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Print Center",
+   "kind": "application"
+  },
+  {
+   "name": "Migration Assistant",
+   "bundleID": "com.apple.MigrateAssistant",
+   "key": "com.apple.MigrateAssistant",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Migration Assistant",
+   "kind": "application"
+  },
+  {
+   "name": "Script Editor",
+   "bundleID": "com.apple.ScriptEditor2",
+   "key": "com.apple.ScriptEditor2",
+   "strongNames": [],
+   "translations": [
+    "AppleScript Editor"
+   ],
+   "executableName": "Script Editor",
+   "kind": "application"
+  },
+  {
+   "name": "ColorSync Utility",
+   "bundleID": "com.apple.ColorSyncUtility",
+   "key": "com.apple.ColorSyncUtility",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "ColorSync Utility",
+   "kind": "application"
+  },
+  {
+   "name": "Console",
+   "bundleID": "com.apple.Console",
+   "key": "com.apple.Console",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Console",
+   "kind": "application"
+  },
+  {
+   "name": "Disk Utility",
+   "bundleID": "com.apple.DiskUtility",
+   "key": "com.apple.DiskUtility",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Disk Utility",
+   "kind": "application"
+  },
+  {
+   "name": "Bluetooth File Exchange",
+   "bundleID": "com.apple.BluetoothFileExchange",
+   "key": "com.apple.BluetoothFileExchange",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Bluetooth File Exchange",
+   "kind": "application"
+  },
+  {
+   "name": "Digital Color Meter",
+   "bundleID": "com.apple.DigitalColorMeter",
+   "key": "com.apple.DigitalColorMeter",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Digital Color Meter",
+   "kind": "application"
+  },
+  {
+   "name": "Magnifier",
+   "bundleID": "com.apple.Magnifier",
+   "key": "com.apple.Magnifier",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Magnifier",
+   "kind": "application"
+  },
+  {
+   "name": "Font Book",
+   "bundleID": "com.apple.FontBook",
+   "key": "com.apple.FontBook",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Font Book",
+   "kind": "application"
+  },
+  {
+   "name": "FaceTime",
+   "bundleID": "com.apple.FaceTime",
+   "key": "com.apple.FaceTime",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "FaceTime",
+   "kind": "application"
+  },
+  {
+   "name": "Shortcuts",
+   "bundleID": "com.apple.shortcuts",
+   "key": "com.apple.shortcuts",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Shortcuts",
+   "kind": "application"
+  },
+  {
+   "name": "Maps",
+   "bundleID": "com.apple.Maps",
+   "key": "com.apple.Maps",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Maps",
+   "kind": "application"
+  },
+  {
+   "name": "Mission Control",
+   "bundleID": "com.apple.exposelauncher",
+   "key": "com.apple.exposelauncher",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Mission Control",
+   "kind": "application"
+  },
+  {
+   "name": "Stickies",
+   "bundleID": "com.apple.Stickies",
+   "key": "com.apple.Stickies",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Stickies",
+   "kind": "application"
+  },
+  {
+   "name": "Photos",
+   "bundleID": "com.apple.Photos",
+   "key": "com.apple.Photos",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Photos",
+   "kind": "application"
+  },
+  {
+   "name": "Messages",
+   "bundleID": "com.apple.MobileSMS",
+   "key": "com.apple.MobileSMS",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Messages",
+   "kind": "application"
+  },
+  {
+   "name": "iPhone Mirroring",
+   "bundleID": "com.apple.ScreenContinuity",
+   "key": "com.apple.ScreenContinuity",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "iPhone Mirroring",
+   "kind": "application"
+  },
+  {
+   "name": "Calculator",
+   "bundleID": "com.apple.calculator",
+   "key": "com.apple.calculator",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Calculator",
+   "kind": "application"
+  },
+  {
+   "name": "Voice Memos",
+   "bundleID": "com.apple.VoiceMemos",
+   "key": "com.apple.VoiceMemos",
+   "strongNames": [
+    "VoiceMemos"
+   ],
+   "translations": [],
+   "executableName": "VoiceMemos",
+   "kind": "application"
+  },
+  {
+   "name": "Journal",
+   "bundleID": "com.apple.journal",
+   "key": "com.apple.journal",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Journal",
+   "kind": "application"
+  },
+  {
+   "name": "Playground",
+   "bundleID": "com.apple.GenerativePlaygroundApp",
+   "key": "com.apple.GenerativePlaygroundApp",
+   "strongNames": [
+    "Image Playground"
+   ],
+   "translations": [],
+   "executableName": "Image Playground",
+   "kind": "application"
+  },
+  {
+   "name": "Reminders",
+   "bundleID": "com.apple.reminders",
+   "key": "com.apple.reminders",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Reminders",
+   "kind": "application"
+  },
+  {
+   "name": "App Store",
+   "bundleID": "com.apple.AppStore",
+   "key": "com.apple.AppStore",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "App Store",
+   "kind": "application"
+  },
+  {
+   "name": "Phone",
+   "bundleID": "com.apple.mobilephone",
+   "key": "com.apple.mobilephone",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Phone",
+   "kind": "application"
+  },
+  {
+   "name": "Clock",
+   "bundleID": "com.apple.clock",
+   "key": "com.apple.clock",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Clock",
+   "kind": "application"
+  },
+  {
+   "name": "Automator",
+   "bundleID": "com.apple.Automator",
+   "key": "com.apple.Automator",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Automator",
+   "kind": "application"
+  },
+  {
+   "name": "Tips",
+   "bundleID": "com.apple.helpviewer",
+   "key": "com.apple.helpviewer",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Tips",
+   "kind": "application"
+  },
+  {
+   "name": "Calendar",
+   "bundleID": "com.apple.iCal",
+   "key": "com.apple.iCal",
+   "strongNames": [],
+   "translations": [
+    "iCal"
+   ],
+   "executableName": "Calendar",
+   "kind": "application"
+  },
+  {
+   "name": "DVD Player",
+   "bundleID": "com.apple.DVDPlayer",
+   "key": "com.apple.DVDPlayer",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "DVD Player",
+   "kind": "application"
+  },
+  {
+   "name": "Desk View",
+   "bundleID": "com.apple.DeskCam",
+   "key": "com.apple.DeskCam",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Desk View",
+   "kind": "application"
+  },
+  {
+   "name": "Expansion Slot Utility",
+   "bundleID": "com.apple.ExpansionSlotUtility",
+   "key": "com.apple.ExpansionSlotUtility",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Expansion Slot Utility",
+   "kind": "application"
+  },
+  {
+   "name": "Keychain Access",
+   "bundleID": "com.apple.keychainaccess",
+   "key": "com.apple.keychainaccess",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Keychain Access",
+   "kind": "application"
+  },
+  {
+   "name": "Ticket Viewer",
+   "bundleID": "com.apple.Ticket-Viewer",
+   "key": "com.apple.Ticket-Viewer",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Ticket Viewer",
+   "kind": "application"
+  },
+  {
+   "name": "Directory Utility",
+   "bundleID": "com.apple.DirectoryUtility",
+   "key": "com.apple.DirectoryUtility",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Directory Utility",
+   "kind": "application"
+  },
+  {
+   "name": "Wireless Diagnostics",
+   "bundleID": "com.apple.wifi.diagnostics",
+   "key": "com.apple.wifi.diagnostics",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Wireless Diagnostics",
+   "kind": "application"
+  },
+  {
+   "name": "iOS App Installer",
+   "bundleID": "com.apple.IPAInstaller",
+   "key": "com.apple.IPAInstaller",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "iOS App Installer",
+   "kind": "application"
+  },
+  {
+   "name": "About This Mac",
+   "bundleID": "com.apple.AboutThisMacLauncher",
+   "key": "com.apple.AboutThisMacLauncher",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "About This Mac",
+   "kind": "application"
+  },
+  {
+   "name": "Folder Actions Setup",
+   "bundleID": "com.apple.FolderActionsSetup",
+   "key": "com.apple.FolderActionsSetup",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Folder Actions Setup",
+   "kind": "application"
+  },
+  {
+   "name": "Archive Utility",
+   "bundleID": "com.apple.archiveutility",
+   "key": "com.apple.archiveutility",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Archive Utility",
+   "kind": "application"
+  },
+  {
+   "name": "Safari",
+   "bundleID": "com.apple.Safari",
+   "key": "com.apple.Safari",
+   "strongNames": [],
+   "translations": [
+    "浏览器",
+    "browser",
+    "사파리"
+   ],
+   "executableName": "Safari",
+   "kind": "application"
+  },
+  {
+   "name": "Finder",
+   "bundleID": "com.apple.finder",
+   "key": "com.apple.finder",
+   "strongNames": [],
+   "translations": [],
+   "executableName": "Finder",
+   "kind": "application"
+  },
+  {
+   "key": "com.apple.Lock-Screen-Settings.extension",
+   "kind": "systemSettings",
+   "translations": [],
+   "strongNames": [],
+   "name": "Lock Screen",
+   "bundleID": "com.apple.Lock-Screen-Settings.extension"
+  },
+  {
+   "translations": [],
+   "kind": "systemSettings",
+   "name": "Classroom",
+   "strongNames": [],
+   "key": "com.apple.Classroom-Settings.extension",
+   "bundleID": "com.apple.Classroom-Settings.extension"
+  },
+  {
+   "bundleID": "com.apple.Keyboard-Settings.extension",
+   "kind": "systemSettings",
+   "strongNames": [],
+   "name": "Keyboard",
+   "key": "com.apple.Keyboard-Settings.extension",
+   "translations": []
+  },
+  {
+   "bundleID": "com.apple.ControlCenter-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings",
+   "name": "Menu Bar",
+   "key": "com.apple.ControlCenter-Settings.extension",
+   "translations": []
+  },
+  {
+   "key": "com.apple.Transfer-Reset-Settings.extension",
+   "kind": "systemSettings",
+   "name": "Transfer or Reset",
+   "strongNames": [],
+   "translations": [],
+   "bundleID": "com.apple.Transfer-Reset-Settings.extension"
+  },
+  {
+   "strongNames": [],
+   "kind": "systemSettings",
+   "translations": [],
+   "bundleID": "com.apple.Accessibility-Settings.extension",
+   "name": "Accessibility",
+   "key": "com.apple.Accessibility-Settings.extension"
+  },
+  {
+   "strongNames": [],
+   "kind": "systemSettings",
+   "translations": [],
+   "bundleID": "com.apple.Internet-Accounts-Settings.extension",
+   "name": "Internet Accounts",
+   "key": "com.apple.Internet-Accounts-Settings.extension"
+  },
+  {
+   "strongNames": [],
+   "kind": "systemSettings",
+   "translations": [],
+   "bundleID": "com.apple.Touch-ID-Settings.extension",
+   "name": "Touch ID & Password",
+   "key": "com.apple.Touch-ID-Settings.extension"
+  },
+  {
+   "strongNames": [],
+   "kind": "systemSettings",
+   "translations": [],
+   "bundleID": "com.apple.Software-Update-Settings.extension",
+   "name": "Software Update",
+   "key": "com.apple.Software-Update-Settings.extension"
+  },
+  {
+   "name": "CDs & DVDs",
+   "key": "com.apple.CD-DVD-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.CD-DVD-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Spotlight",
+   "key": "com.apple.Spotlight-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Spotlight-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "HeadphoneSettingsExtension",
+   "key": "com.apple.HeadphoneSettings",
+   "translations": [],
+   "bundleID": "com.apple.HeadphoneSettings",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Time Machine",
+   "key": "com.apple.Time-Machine-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Time-Machine-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Date & Time",
+   "key": "com.apple.Date-Time-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Date-Time-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Mouse",
+   "key": "com.apple.Mouse-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Mouse-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Wi‑Fi",
+   "key": "com.apple.wifi-settings-extension",
+   "translations": [],
+   "bundleID": "com.apple.wifi-settings-extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Family",
+   "key": "com.apple.Family-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Family-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Appearance",
+   "key": "com.apple.Appearance-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Appearance-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "AirDrop & Continuity",
+   "key": "com.apple.AirDrop-Handoff-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.AirDrop-Handoff-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "PowerPreferences",
+   "key": "com.apple.Battery-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Battery-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "VPN",
+   "key": "com.apple.NetworkExtensionSettingsUI.NESettingsUIExtension",
+   "translations": [],
+   "bundleID": "com.apple.NetworkExtensionSettingsUI.NESettingsUIExtension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Sound",
+   "key": "com.apple.Sound-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Sound-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Screen Time",
+   "key": "com.apple.Screen-Time-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Screen-Time-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Background Security Improvements",
+   "key": "com.apple.SecurityImprovements-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.SecurityImprovements-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Class Progress",
+   "key": "com.apple.ClassKit-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.ClassKit-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Language & Region",
+   "key": "com.apple.Localization-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Localization-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Game Controllers",
+   "key": "com.apple.Game-Controller-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Game-Controller-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Startup Disk",
+   "key": "com.apple.Startup-Disk-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Startup-Disk-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Storage",
+   "key": "com.apple.settings.Storage",
+   "translations": [],
+   "bundleID": "com.apple.settings.Storage",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Printers & Scanners",
+   "key": "com.apple.Print-Scan-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Print-Scan-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Login Items",
+   "key": "com.apple.LoginItems-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.LoginItems-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Network",
+   "key": "com.apple.Network-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Network-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Focus",
+   "key": "com.apple.Focus-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Focus-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Privacy & Security",
+   "key": "com.apple.settings.PrivacySecurity.extension",
+   "translations": [],
+   "bundleID": "com.apple.settings.PrivacySecurity.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "About",
+   "key": "com.apple.SystemProfiler.AboutExtension",
+   "translations": [],
+   "bundleID": "com.apple.SystemProfiler.AboutExtension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Home",
+   "key": "com.apple.Home.PrivacySettingsExtension",
+   "translations": [],
+   "bundleID": "com.apple.Home.PrivacySettingsExtension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Game Center",
+   "key": "com.apple.Game-Center-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Game-Center-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Device Management",
+   "key": "com.apple.Profiles-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Profiles-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "AppleCare & Warranty",
+   "key": "com.apple.Coverage-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Coverage-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Desktop & Dock",
+   "key": "com.apple.Desktop-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Desktop-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Bluetooth",
+   "key": "com.apple.BluetoothSettings",
+   "translations": [],
+   "bundleID": "com.apple.BluetoothSettings",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Apple Account",
+   "key": "com.apple.systempreferences.AppleIDSettings",
+   "translations": [],
+   "bundleID": "com.apple.systempreferences.AppleIDSettings",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Trackpad",
+   "key": "com.apple.Trackpad-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Trackpad-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Wallet & Apple Pay",
+   "key": "com.apple.WalletSettingsExtension",
+   "translations": [],
+   "bundleID": "com.apple.WalletSettingsExtension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "General",
+   "key": "com.apple.systempreferences.GeneralSettings",
+   "translations": [],
+   "bundleID": "com.apple.systempreferences.GeneralSettings",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "FollowUps",
+   "key": "com.apple.FollowUpSettings.FollowUpSettingsExtension",
+   "translations": [],
+   "bundleID": "com.apple.FollowUpSettings.FollowUpSettingsExtension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Displays",
+   "key": "com.apple.Displays-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Displays-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Wallpaper",
+   "key": "com.apple.Wallpaper-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Wallpaper-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Sharing",
+   "key": "com.apple.Sharing-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Sharing-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Users & Groups",
+   "key": "com.apple.Users-Groups-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Users-Groups-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Notifications",
+   "key": "com.apple.Notifications-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Notifications-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "name": "Siri",
+   "key": "com.apple.Siri-Settings.extension",
+   "translations": [],
+   "bundleID": "com.apple.Siri-Settings.extension",
+   "strongNames": [],
+   "kind": "systemSettings"
+  },
+  {
+   "key": "command:ai-chat",
+   "kind": "command",
+   "name": "AI Chat",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:fix-grammar",
+   "kind": "command",
+   "name": "Fix Grammar",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:rewrite",
+   "kind": "command",
+   "name": "Rewrite",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:translate",
+   "kind": "command",
+   "name": "Translate",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:summarize",
+   "kind": "command",
+   "name": "Summarize",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:calculator-history",
+   "kind": "command",
+   "name": "Calculator History",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:clipboard-history",
+   "kind": "command",
+   "name": "Clipboard History",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:search-emoji",
+   "kind": "command",
+   "name": "Search Emoji & Symbols",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:search-files",
+   "kind": "command",
+   "name": "Search Files",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:open-in-browser",
+   "kind": "command",
+   "name": "Open in Browser",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:run-shell-command",
+   "kind": "command",
+   "name": "Run Shell Command",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:join-next-meeting",
+   "kind": "command",
+   "name": "Join Next Meeting",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:copy-meeting-link",
+   "kind": "command",
+   "name": "Copy Meeting Link",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:my-schedule",
+   "kind": "command",
+   "name": "My Schedule",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:open-in-calendar",
+   "kind": "command",
+   "name": "Open in Calendar",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:create-event",
+   "kind": "command",
+   "name": "Create Event",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:show-notes",
+   "kind": "command",
+   "name": "Show Notes",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:create-note",
+   "kind": "command",
+   "name": "Create Note",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:search-notes",
+   "kind": "command",
+   "name": "Search Notes",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:create-quicklink",
+   "kind": "command",
+   "name": "Create Quicklink",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:search-quicklinks",
+   "kind": "command",
+   "name": "Search Quicklinks",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:search-snippets",
+   "kind": "command",
+   "name": "Search Snippets",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:create-snippet",
+   "kind": "command",
+   "name": "Create Snippet",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:import-quicklinks",
+   "kind": "command",
+   "name": "Import Quicklinks",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:export-quicklinks",
+   "kind": "command",
+   "name": "Export Quicklinks",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:export-settings",
+   "kind": "command",
+   "name": "Export Backup",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:import-settings",
+   "kind": "command",
+   "name": "Import Backup",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:import-from-raycast",
+   "kind": "command",
+   "name": "Import from Raycast",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:check-for-updates",
+   "kind": "command",
+   "name": "Check for Updates",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:settings",
+   "kind": "command",
+   "name": "Settings",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:about",
+   "kind": "command",
+   "name": "About Tinycast",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:support",
+   "kind": "command",
+   "name": "Support Tinycast",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "command:quit",
+   "kind": "command",
+   "name": "Quit Tinycast",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:lock-screen",
+   "kind": "systemAction",
+   "name": "Lock Screen",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:sleep-displays",
+   "kind": "systemAction",
+   "name": "Sleep Displays",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:shut-down",
+   "kind": "systemAction",
+   "name": "Shut Down",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:log-out",
+   "kind": "systemAction",
+   "name": "Log Out",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:show-screen-saver",
+   "kind": "systemAction",
+   "name": "Show Screen Saver",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:play-pause",
+   "kind": "systemAction",
+   "name": "Play / Pause",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:next-track",
+   "kind": "systemAction",
+   "name": "Next Track",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:previous-track",
+   "kind": "systemAction",
+   "name": "Previous Track",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:toggle-mute",
+   "kind": "systemAction",
+   "name": "Toggle Mute",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:volume-up",
+   "kind": "systemAction",
+   "name": "Turn Volume Up",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:volume-down",
+   "kind": "systemAction",
+   "name": "Turn Volume Down",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:set-volume",
+   "kind": "systemAction",
+   "name": "Set Volume…",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:volume-0",
+   "kind": "systemAction",
+   "name": "Set Volume to 0%",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:volume-25",
+   "kind": "systemAction",
+   "name": "Set Volume to 25%",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:volume-50",
+   "kind": "systemAction",
+   "name": "Set Volume to 50%",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:volume-75",
+   "kind": "systemAction",
+   "name": "Set Volume to 75%",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:volume-100",
+   "kind": "systemAction",
+   "name": "Set Volume to 100%",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:show-desktop",
+   "kind": "systemAction",
+   "name": "Show Desktop",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:toggle-system-appearance",
+   "kind": "systemAction",
+   "name": "Toggle System Appearance",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:toggle-stage-manager",
+   "kind": "systemAction",
+   "name": "Toggle Stage Manager",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:open-trash",
+   "kind": "systemAction",
+   "name": "Open Trash",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:empty-trash",
+   "kind": "systemAction",
+   "name": "Empty Trash",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:eject-all-disks",
+   "kind": "systemAction",
+   "name": "Eject All Disks",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:toggle-hidden-files",
+   "kind": "systemAction",
+   "name": "Toggle Hidden Files",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:hide-all-apps-except-frontmost",
+   "kind": "systemAction",
+   "name": "Hide All Apps Except Frontmost",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:unhide-all-hidden-apps",
+   "kind": "systemAction",
+   "name": "Unhide All Hidden Apps",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:quit-all-apps",
+   "kind": "systemAction",
+   "name": "Quit All Applications",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:dismiss-notifications",
+   "kind": "systemAction",
+   "name": "Dismiss Notifications",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "system-action:toggle-bluetooth",
+   "kind": "systemAction",
+   "name": "Toggle Bluetooth",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:left-half",
+   "kind": "windowCommand",
+   "name": "Left Half",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:right-half",
+   "kind": "windowCommand",
+   "name": "Right Half",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:top-half",
+   "kind": "windowCommand",
+   "name": "Top Half",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:bottom-half",
+   "kind": "windowCommand",
+   "name": "Bottom Half",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:top-left-quarter",
+   "kind": "windowCommand",
+   "name": "Top Left Quarter",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:top-right-quarter",
+   "kind": "windowCommand",
+   "name": "Top Right Quarter",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:bottom-left-quarter",
+   "kind": "windowCommand",
+   "name": "Bottom Left Quarter",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:bottom-right-quarter",
+   "kind": "windowCommand",
+   "name": "Bottom Right Quarter",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:first-three-fourths",
+   "kind": "windowCommand",
+   "name": "First Three Fourths",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:last-three-fourths",
+   "kind": "windowCommand",
+   "name": "Last Three Fourths",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:first-third",
+   "kind": "windowCommand",
+   "name": "First Third",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:center-third",
+   "kind": "windowCommand",
+   "name": "Center Third",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:last-third",
+   "kind": "windowCommand",
+   "name": "Last Third",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:first-two-thirds",
+   "kind": "windowCommand",
+   "name": "First Two Thirds",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:last-two-thirds",
+   "kind": "windowCommand",
+   "name": "Last Two Thirds",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:almost-maximize",
+   "kind": "windowCommand",
+   "name": "Almost Maximize",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:reasonable-size",
+   "kind": "windowCommand",
+   "name": "Reasonable Size",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:maximize-height",
+   "kind": "windowCommand",
+   "name": "Maximize Height",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:maximize-width",
+   "kind": "windowCommand",
+   "name": "Maximize Width",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:center-half",
+   "kind": "windowCommand",
+   "name": "Center Half",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:make-larger",
+   "kind": "windowCommand",
+   "name": "Make Larger",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:make-smaller",
+   "kind": "windowCommand",
+   "name": "Make Smaller",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:move-left",
+   "kind": "windowCommand",
+   "name": "Move Left",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:move-right",
+   "kind": "windowCommand",
+   "name": "Move Right",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:move-up",
+   "kind": "windowCommand",
+   "name": "Move Up",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:move-down",
+   "kind": "windowCommand",
+   "name": "Move Down",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:next-display",
+   "kind": "windowCommand",
+   "name": "Move to Next Display",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:previous-display",
+   "kind": "windowCommand",
+   "name": "Move to Previous Display",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:toggle-fullscreen",
+   "kind": "windowCommand",
+   "name": "Toggle Fullscreen",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:previous-space",
+   "kind": "windowCommand",
+   "name": "Switch to Previous Space",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "window-command:next-space",
+   "kind": "windowCommand",
+   "name": "Switch to Next Space",
+   "strongNames": [],
+   "translations": []
+  },
+  {
+   "key": "extension:svgl/index",
+   "kind": "extensionCommand",
+   "name": "Search SVG Logos",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Svgl"
+  },
+  {
+   "key": "extension:svgl/request",
+   "kind": "extensionCommand",
+   "name": "Request SVG Logo",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Svgl"
+  },
+  {
+   "key": "extension:svgl/setup-shadcn-registry",
+   "kind": "extensionCommand",
+   "name": "Setup shadcn/ui Registry",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Svgl"
+  },
+  {
+   "key": "extension:lucide-icons/index",
+   "kind": "extensionCommand",
+   "name": "Search Icons",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Lucide Icons Search"
+  },
+  {
+   "key": "extension:brew/installed",
+   "kind": "extensionCommand",
+   "name": "Show Installed",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:brew/search",
+   "kind": "extensionCommand",
+   "name": "Search",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:brew/outdated",
+   "kind": "extensionCommand",
+   "name": "Show Outdated",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:brew/upgrade",
+   "kind": "extensionCommand",
+   "name": "Upgrade",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:brew/manage-services",
+   "kind": "extensionCommand",
+   "name": "Manage Services",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:brew/services-menu",
+   "kind": "extensionCommand",
+   "name": "Services Menu Bar",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:brew/clean-up",
+   "kind": "extensionCommand",
+   "name": "Clean up",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:brew/clear-cache",
+   "kind": "extensionCommand",
+   "name": "Clear Cache",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Brew"
+  },
+  {
+   "key": "extension:kill-process/index",
+   "kind": "extensionCommand",
+   "name": "Kill Process",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Kill Process"
+  },
+  {
+   "key": "extension:gif-search/search",
+   "kind": "extensionCommand",
+   "name": "Search for GIFs",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "GIF Search"
+  },
+  {
+   "key": "extension:gif-search/favorites",
+   "kind": "extensionCommand",
+   "name": "Browse Favorite GIFs",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "GIF Search"
+  },
+  {
+   "key": "extension:gif-search/recents",
+   "kind": "extensionCommand",
+   "name": "Browse Recent GIFs",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "GIF Search"
+  },
+  {
+   "key": "extension:color-picker/pick-color",
+   "kind": "extensionCommand",
+   "name": "Pick Color",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/extract-color",
+   "kind": "extensionCommand",
+   "name": "Extract Color from Selected Image",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/menu-bar",
+   "kind": "extensionCommand",
+   "name": "Menu Bar Color Picker",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/organize-colors",
+   "kind": "extensionCommand",
+   "name": "Organize Colors",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/favorite-colors",
+   "kind": "extensionCommand",
+   "name": "Favorite Colors",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/generate-colors",
+   "kind": "extensionCommand",
+   "name": "Generate Colors",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/color-names",
+   "kind": "extensionCommand",
+   "name": "Color Names",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/color-wheel",
+   "kind": "extensionCommand",
+   "name": "Color Wheel",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "extension:color-picker/convert-color",
+   "kind": "extensionCommand",
+   "name": "Convert Color",
+   "strongNames": [],
+   "translations": [],
+   "ownerName": "Color Picker"
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/01-cap.md",
+   "kind": "snippet",
+   "name": "\"Cap · 26 chars typed\"",
+   "strongNames": [
+    "\"!t1\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/02-under.md",
+   "kind": "snippet",
+   "name": "\"Under 100 · typed\"",
+   "strongNames": [
+    "\"!t2\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/03-over.md",
+   "kind": "snippet",
+   "name": "\"Over 100 · pasted\"",
+   "strongNames": [
+    "\"!t3\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/04-multiline.md",
+   "kind": "snippet",
+   "name": "\"Multiline · pasted\"",
+   "strongNames": [
+    "\"!t4\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/05-unicode.md",
+   "kind": "snippet",
+   "name": "\"Unicode · typed\"",
+   "strongNames": [
+    "\"!t5\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/06-cursor.md",
+   "kind": "snippet",
+   "name": "\"Cursor · typed\"",
+   "strongNames": [
+    "\"!t6\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/07-cursorpaste.md",
+   "kind": "snippet",
+   "name": "\"Cursor · pasted\"",
+   "strongNames": [
+    "\"!t7\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/08-clipboard.md",
+   "kind": "snippet",
+   "name": "\"Clipboard token\"",
+   "strongNames": [
+    "\"!t8\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/09-selection.md",
+   "kind": "snippet",
+   "name": "\"Selection token\"",
+   "strongNames": [
+    "\"!t9\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/10-argument.md",
+   "kind": "snippet",
+   "name": "\"Argument prompt\"",
+   "strongNames": [
+    "\"!t10\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/11-confirm.md",
+   "kind": "snippet",
+   "name": "\"Confirmation HUD\"",
+   "strongNames": [
+    "\"!t11\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/12-nested.md",
+   "kind": "snippet",
+   "name": "\"Nested + uuid\"",
+   "strongNames": [
+    "\"!t12\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/email.md",
+   "kind": "snippet",
+   "name": "\"email\"",
+   "strongNames": [
+    "\"!em\""
+   ],
+   "translations": []
+  },
+  {
+   "key": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/snip.md",
+   "kind": "snippet",
+   "name": "\"snip\"",
+   "strongNames": [],
+   "translations": []
+  }
+ ],
+ "cases": [
+  {
+   "query": "set",
+   "expect": "system-action:set-volume",
+   "picks": 4
+  },
+  {
+   "query": "brew",
+   "expect": "extension:brew/search",
+   "picks": 3
+  },
+  {
+   "query": "calcu",
+   "expect": "com.apple.calculator",
+   "picks": 3
+  },
+  {
+   "query": "gi",
+   "expect": "extension:gif-search/search",
+   "picks": 3
+  },
+  {
+   "query": "notes",
+   "expect": "command:show-notes",
+   "picks": 3,
+   "protected": true,
+   "note": "the Notes app is named exactly 'notes'; P1 protects an exact name hit. Escape: alias it."
+  },
+  {
+   "query": "sear",
+   "expect": "command:search-snippets",
+   "picks": 3
+  },
+  {
+   "query": "about",
+   "expect": "com.apple.SystemProfiler.AboutExtension",
+   "picks": 2
+  },
+  {
+   "query": "calc",
+   "expect": "command:calculator-history",
+   "picks": 2
+  },
+  {
+   "query": "clip",
+   "expect": "command:clipboard-history",
+   "picks": 2
+  },
+  {
+   "query": "code",
+   "expect": "com.microsoft.VSCode",
+   "picks": 2
+  },
+  {
+   "query": "file",
+   "expect": "command:search-files",
+   "picks": 2
+  },
+  {
+   "query": "luci",
+   "expect": "extension:lucide-icons/index",
+   "picks": 2
+  },
+  {
+   "query": "not",
+   "expect": "command:create-note",
+   "picks": 2
+  },
+  {
+   "query": "qui",
+   "expect": "system-action:quit-all-apps",
+   "picks": 2
+  },
+  {
+   "query": "search",
+   "expect": "command:search-notes",
+   "picks": 2,
+   "protected": true,
+   "note": "the Brew extension's command is named exactly 'Search'. Escape: alias it."
+  },
+  {
+   "query": "sn",
+   "expect": "snippet:/Users/tinycast/Library/Application Support/com.tinycast.app/Snippets/snip.md",
+   "picks": 2
+  },
+  {
+   "query": "activi",
+   "expect": "com.apple.ActivityMonitor",
+   "picks": 1
+  },
+  {
+   "query": "ai",
+   "expect": "command:ai-chat",
+   "picks": 1
+  },
+  {
+   "query": "al",
+   "expect": "org.alacritty",
+   "picks": 1
+  },
+  {
+   "query": "almo",
+   "expect": "window-command:almost-maximize",
+   "picks": 1
+  },
+  {
+   "query": "app",
+   "expect": "com.apple.apps.launcher",
+   "picks": 1
+  },
+  {
+   "query": "crea",
+   "expect": "command:create-note",
+   "picks": 1
+  },
+  {
+   "query": "creat",
+   "expect": "command:create-event",
+   "picks": 1
+  },
+  {
+   "query": "emoji",
+   "expect": "command:search-emoji",
+   "picks": 1
+  },
+  {
+   "query": "exten",
+   "expect": "command:export-settings",
+   "picks": 1,
+   "unmatched": true,
+   "note": "'exten' is not a subsequence of 'Export Backup' — a real mis-pick, kept as recorded."
+  },
+  {
+   "query": "kil",
+   "expect": "extension:kill-process/index",
+   "picks": 1
+  },
+  {
+   "query": "neo",
+   "expect": "com.neon.app",
+   "picks": 1
+  },
+  {
+   "query": "note",
+   "expect": "command:search-notes",
+   "picks": 1
+  },
+  {
+   "query": "olu",
+   "expect": "system-action:set-volume",
+   "picks": 1
+  },
+  {
+   "query": "saf",
+   "expect": "com.apple.Safari",
+   "picks": 1
+  },
+  {
+   "query": "sea",
+   "expect": "command:search-quicklinks",
+   "picks": 1
+  },
+  {
+   "query": "sea",
+   "expect": "command:search-emoji",
+   "picks": 1
+  },
+  {
+   "query": "settin",
+   "expect": "command:settings",
+   "picks": 1
+  },
+  {
+   "query": "siri",
+   "expect": "com.apple.Siri-Settings.extension",
+   "picks": 1
+  },
+  {
+   "query": "siri",
+   "expect": "com.apple.campo",
+   "picks": 1
+  },
+  {
+   "query": "snipp",
+   "expect": "command:search-snippets",
+   "picks": 1
+  },
+  {
+   "query": "svgl",
+   "expect": "extension:svgl/index",
+   "picks": 1
+  },
+  {
+   "query": "svgl",
+   "expect": "extension:svgl/request",
+   "picks": 1
+  }
+ ]
+}

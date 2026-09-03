@@ -16,15 +16,18 @@ earliest scope wins).
   row's shortcut firing. A new category must be wired into `VisibilityStore.allowsHotKey`, or its
   chords keep running while its pane reads off.
 - **`Model/SearchRelevance.swift` is Foundation-only and pure**, so `fuzz-test` compiles the shipped
-  scorer. It owns `FuzzyMatch`, `SearchAlias` and the band ladder.
-- **`SearchAlias.Role` is a closed ladder of five, and a new naming criterion must pick one of them.**
-  Criteria are endless — display name, folder rename, Spotlight alternate, localization, pinyin,
-  category, owning extension, bundle id — but *trust* levels are not, so ranking is keyed on the role
-  and the match strength and never on which field supplied the text. A new criterion is a provider in
-  `Model/SearchNames.swift` plus one line in `AppEntry.searchFields`; adding a `Role` case, or a
-  branch to `SearchRelevance.band`, means the criterion was modelled wrong.
+  scorer. It owns `FuzzyMatch`, `SearchAlias` and the cell table.
+- **`Model/EntryNaming.swift` is the only place a name is decided, for every kind alike.** Criteria
+  are endless — display name, folder rename, Spotlight alternate, localization, pinyin, owning
+  extension, bundle id — but *trust* levels are not, so ranking is keyed on the role and the match
+  strength and never on which field supplied the text. A new criterion is a field on
+  `EntryNaming.Sources` and a line in `aliases(for:)`; adding a `Role` case, or a row to
+  `SearchRelevance.cell`, means the criterion was modelled wrong.
+- **`AppIndex.publishEntries` is the one funnel.** Every kind's aliases are built there, once, so a
+  naming rule can never apply to applications and quietly skip snippets — and nothing is built per
+  keystroke.
 - **Aliases stay separate strings** — flattening them into one blob loses the role, which is half of
-  what picks the band.
+  what picks the cell.
 - **`Model/SearchScopes.swift` and `Model/LauncherRankingStore.swift` are pure too** — the ranking store
   takes its clock via `now` and its path via `fileURL`, for `scopes-test` and `ranking-test`.
 
@@ -66,48 +69,72 @@ format scalars first, since app metadata can contain bidi/zero-width markers bef
 
 Every naming criterion an entry carries lowers to one flat list of `SearchAlias` — a string plus a
 `Role` (how far it is trusted) and a `Looseness` (the weakest match it will accept).
-`SearchRelevance.score` matches each, keeps the strongest, and that becomes the entry's base
+`SearchRelevance.quality` matches each, keeps the strongest, and that becomes the entry's base
 relevance. **Which field produced the string is not an input.** That is the whole design: a user's
-next naming demand is a new producer, not a new band.
+next naming demand is a new producer, not a new rung.
 
 | Role | What lands in it | Looseness |
 | --- | --- | --- |
 | `.userAlias` | the alias the user typed in Tinycast, for any entry kind | literal |
 | `.name` | display name, a snippet's keyword, an `.app` bundle the user renamed on disk | fuzzy |
-| `.translation` | Spotlight alternate names, the system-language name, romanizations | fuzzy |
+| `.translation` | localizations, Spotlight alternate names, romanizations | fuzzy |
 | `.owner` | the extension a command came from | literal |
 | `.technical` | bundle identifier, `CFBundleExecutable` | literal (full id: exact) |
 
-`SearchRelevance.band` crosses those five with the match strength, weakest first:
-
-| Band | Role | Match strength |
-| ---- | ---- | -------------- |
-| 6    | `.userAlias`   | anchored literal — exact / prefix |
-| 5    | `.name`        | literal — exact / prefix / word-start / substring |
-| 4    | `.translation`, plus a user alias's word-start / substring hits | literal |
-| 3    | `.owner`       | literal |
-| 2    | `.name`        | subsequence |
-| 1    | `.translation` | subsequence |
-| 0    | `.technical`   | literal |
-
-The arithmetic is what makes that table binding. A band's offset is its index × `bandStride`, and:
+## The score
 
 ```
-bandStride            = 10 × FuzzyMatch.maximumScore   = 1,000,000
-FuzzyMatch.maximumScore                                =   100,000
-LauncherRankingStore.maximumBoost                      =     4,500
+total = quality + usage
+quality = cell(role, tier) + shape        shape ∈ [0, 99]
+usage   = LauncherRankingStore.usage(…)   usage ∈ [0, 2_999]
 ```
 
-So an alias can never reach the band above it — the widest possible fuzzy score is a tenth of a stride —
-and the learned frecency boost is two orders of magnitude below a stride, which is what keeps learning
-reordering *within* a tier and never across one. Those three numbers are a contract, not a tuning
-parameter.
+**Every gap in the cell table is denominated in learned picks.** A gap of *g* means the weaker match
+overtakes the stronger one once the user has chosen it often enough that `usage ≥ g`. One gap is a
+firewall, and it is the only thing learning can never cross. That is the contract; the numbers below
+are it, not a tuning parameter.
 
-A _literal_ hit on a weaker human-facing role outranks a _subsequence_ hit on a stronger one. That is
-the point of the split: a name the vendor actually declared (`Codex` for ChatGPT) must beat the
-incidental c-o-d-e…x scattered through an unrelated app's name, while a real prefix hit on a display
-name still wins outright. `.technical` sits under both, because a hit on an identifier is coincidence
-more often than intent.
+| cell | value | | cell | value |
+| --- | ---: | --- | --- | ---: |
+| `userAlias · exact` | 7_000 | | `technical · exact` | 1_400 |
+| `name · exact` | **6_500** | | `translation · substring` | 1_200 |
+| `userAlias · prefix` | 3_100 | | `owner · substring` | 1_100 |
+| `name · prefix` | 3_000 | | `name · subsequence` | 1_000 |
+| `translation · exact` | 2_700 | | `technical · prefix` | 900 |
+| `owner · exact` | 2_500 | | `translation · subsequence` | 800 |
+| `name · wordStart` | 2_400 | | `technical · wordStart` | 700 |
+| `translation · prefix` | 2_200 | | `technical · substring` | 600 |
+| `owner · prefix` | 2_000 | | | |
+| `name · substring` | 1_800 | | | |
+| `translation · wordStart` | 1_700 | | | |
+| `owner · wordStart` | 1_500 | | | |
+
+Read it two ways and both hold: fix a role and walk the tiers, or fix a tier and walk the roles —
+strictly decreasing either way. The cells `Looseness` refuses do not exist, so a literal-only role
+has no subsequence rung and the full bundle id is exact-only.
+
+Three inequalities make the table binding, each asserted in `fuzz-test` over the published constants:
+
+```
+P1 firewall    protectionFloor > poolTop + shapeSpan + maximumUsage    6_500 > 6_198
+P2 cell key    min adjacent gap (100) > shapeSpan (99)
+P3 reachable   poolBottom + maximumUsage > poolTop + shapeSpan         3_599 > 3_199
+```
+
+**P1** is the one absolute guarantee left: an exactly-typed display name or user alias, with nothing
+learned, outranks every weaker match at any usage. **P3** is the point of the redesign — anything the
+index is willing to show can be learned to the top of the unprotected pool. Before this, `.owner` sat
+two bands below `.name` (a 2,000,000 gap) against a 4,500 boost, so typing `zed` for a command owned
+by the Zed extension could never win however often it was chosen.
+
+`shape` orders candidates inside one cell: 60% how much of the name the query covered, 40% how early
+the hit sits (by absolute offset — a hit five characters in is equally deep in any name). For a
+subsequence it is the walk's contiguity score over what a run from index 0 would earn.
+
+What this deliberately gives up: **match-kind dominance below `exact` is gone.** Enough picks put an
+owner-only or subsequence hit above another entry's prefix hit. That impossibility was the bug. A
+`name · exact` collision stays unreachable forever — an installed `Zed.app` always takes `zed` — and
+the escape is a user alias, which is what P1 makes worth having.
 
 Identifier aliases never subsequence-match — reverse-DNS text is a subsequence of nearly every short
 query (`cop` ⊂ `com.apple.Photos`), which would change _which_ apps appear rather than just their
@@ -116,28 +143,48 @@ order. For the same reason a bundle id is matched with its leading component str
 rides along as a second alias tightened to `Looseness.exact`, so a pasted identifier resolves and
 nothing looser can flood off it.
 
-### Localized and renamed names
+## One fold, everywhere
 
-`SearchNames.romanizations` is the answer to "my app's name is not in Latin script": it runs each name
-through ICU's `.toLatin` + `.stripDiacritics`, giving `微信` → `weixin` and its initials `wx`,
-`网易云音乐` → `wangyiyunyinle` / `wyyyl`, `Телеграм` → `telegram`. Both forms land as `.translation`,
-so a Latin-keyboard user reaches a CJK-named app while a real display name still outranks the guess.
-It is deliberately heuristic — ICU reads Han as Mandarin, so a Japanese title romanizes wrong and 行
-picks one of its two readings. A stray fuzzy alias costs far less than an unfindable app.
+`FuzzyMatch.normalized` is the only text fold in the launcher: NFC precomposition, format scalars
+stripped, then `[.caseInsensitive, .diacriticInsensitive, .widthInsensitive]` with `locale: nil`.
+Matching, learned-ranking keys, alternate-name dedup, category lookup and rename dedup all call it.
+They used to disagree — the ranking store's fold omitted `.widthInsensitive`, so a full-width IME
+query matched one way and was **learned under a key nothing would ever read back**. ASCII text skips
+ICU entirely on a fast scalar check.
 
-`AppIndex.publishEntries` applies it to *every* entry kind, not just applications, so an extension
-command titled in Chinese is as findable as an app. The transliteration is memoized by raw name, so
-ICU runs once per new name and never on a keystroke.
+## Names in the user's language
 
-Accents and full-width Latin are handled a layer lower instead, in `FuzzyMatch`: folding is
-`[.caseInsensitive, .diacriticInsensitive, .widthInsensitive]`, so `cafe`, `café` and `ｃａｆｅ` are one
-query. ASCII text skips ICU entirely on a fast scalar check.
+`BundleLocalization` reads both `InfoPlist.loctable` and `<code>.lproj/InfoPlist.strings` for
+`Locale.preferredLanguages` plus English. This matters because `CFBundle` resolves only
+`InfoPlist.strings`, and every app under `/System/Applications` translates in the loctable alone — so
+all 65 of them read English on every Mac, whatever language it is set to.
 
-A renamed bundle is the other half. `AppEntry.name` is the Info.plist display name, which a rename
-never touches, so the on-disk basename is indexed too as a `.name` alias (`AppEntry.addFileName`) —
-rename `Slack.app` to `Work Chat.app` and both still find it. Duplicate copies of one app dedupe by
-bundle id as before, and the losing copy now lends its file name to the winner rather than being
-dropped whole, so a rename in a second folder is not silently lost.
+The user's own language wins the **display name**, so a row reads the way Finder reads it. The rest,
+English included, ride along as `.translation`. A non-English user finds their app by the name they
+see *and* by the English name the vendor advertises.
+
+### Non-Latin names
+
+`ScriptRomanization` is the answer to "my app's name is not in Latin script", routed per script
+because no single transform serves them all:
+
+| Script | Rule | Example |
+| --- | --- | --- |
+| Han | ICU `.mandarinToLatin`, full reading and initials | `微信` → `weixin`, `wx` |
+| Japanese | the kana only — ICU would read the kanji as Mandarin | `メモ帳` → `memo` |
+| Hangul | ICU, plus an `l`→`r` variant, because ICU spells every ㄹ `l` | `사파리` → `sapali`, `sapari` |
+| Cyrillic | an explicit BGN table — ICU is scientific, and users are not | `Яндекс` → `yandeks`, not `andeks` |
+| everything else | ICU `.toLatin` | `Ελληνικά` → `ellenika` |
+
+It fires only when transliteration actually changes the letters: `Adobe — Creative Cloud` and
+`Café Noir` are Latin already, and minting `acc` or `cn` for them would put an accidental initialism
+above every name subsequence. **Kanji readings are not solved, only routed** — a Japanese app whose
+name is pure kanji gets a Mandarin reading, which is why the English localization is indexed too.
+
+A renamed bundle is the other half. A Finder rename never touches `CFBundleDisplayName`, so the
+on-disk basename is indexed as a `.name` alias — rename `Slack.app` to `Work Chat.app` and both find
+it. Duplicate copies dedupe by bundle id, and the losing copy lends its file name to the winner
+rather than being dropped whole.
 
 ### Owner names
 
@@ -294,7 +341,7 @@ an English label looks equivalent and is not: FindMy's raw `Info.plist` names it
 `Find My` lives only in the loctable, so the raw dictionary spells three Apple apps worse — `FindMy`,
 `VoiceMemos`, `Siri AI` — and changes nothing else.
 
-Spotlight mixes junk in with the real aliases, and `SearchNames.usableAlternates` (pure, covered
+Spotlight mixes junk in with the real aliases, and `EntryNaming.usable` (pure, covered
 by the harness) drops it: every bundle lists its own `<Name>.app` file name, several system apps ship
 untranslated `ALTERNATE_NAME_1` placeholders, and some just repeat the display name. Indexing those
 would make `app` match the entire index.
@@ -305,15 +352,38 @@ when the bundle's modification date moves, taking later passes to ~0.2 ms. Each 
 the last and keeps only what it looked at, so uninstalled apps fall out instead of accumulating.
 `.appex` Settings panes carry no alternate names, so `SettingsPaneScanner` doesn't ask.
 
-Selecting a launcher result records every prefix of the submitted query, so choosing WhatsApp for
-`wha` also teaches `w` and `wh`. Direct hotkeys and empty-query favorites do not affect learned
-ranking. Learned data stays on device in `launcher-ranking.json`; a result that has learned ranking
-offers a per-item reset in its Actions menu, and users can clear all learned ranking in General
-Settings.
+Selecting a launcher result records **one row for the submitted query**, and recall aggregates every
+stored query the typed one is a prefix of — so choosing WhatsApp for `wha` still surfaces it under
+`w` and `wh`, at a sixteenth of the rows. The 1,000-record cap therefore holds ~1,000 distinct habits
+rather than ~60.
+
+**The empty query is a real query.** It is what the launcher opens on, a launch from it is recorded
+under `""`, and because `""` is a prefix of everything, the opening list is ordered by everything the
+user has ever launched. That ordering happens **inside each kind run and never across one**
+(`LauncherOrder.within`): the launcher draws sections by grouping this list, and the flat selection
+index maps onto the drawn rows only while the list stays in publication order. Favorites are pinned
+after ranking, so their contiguous prefix is untouched. Direct hotkeys and ⌘-digit favorite launches
+still record nothing, so a pin cannot reinforce itself.
+
+Learned data stays on device in `launcher-ranking.json`; a result that has learned ranking offers a
+per-item reset in its Actions menu, and users can clear all learned ranking in General Settings.
 
 Rankings are memoized one query deep and keyed by the ranking store's revision, so a launch or reset
 invalidates the cached order. `rank` resolves the whole learned table for a query up front via
-`boosts(query:)` — one fold and one clock read per pass, not per candidate.
+`usage(query:)` — one fold and one clock read per pass, not per candidate.
+
+The frecency curve is bounded but never flat:
+
+```
+frequency  = 2_000 × (1 − (count+1)^−0.30)
+recency    =   700 × exp(−ageDays / 14)
+confidence =   300 × share × min(1, count/3)
+```
+
+`frequency` replaced a `min(3_000, log2(count+1) × 600)` that clipped at exactly 31 uses — the 49th
+launch counted the same as the 31st. `confidence` is what makes prefix recall safe: a habit under
+`zed` has the whole bucket to itself, while the same habit recalled under `z` competes with every
+other `z…` pick, so its override budget collapses on its own.
 
 ## System actions
 

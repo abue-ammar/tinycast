@@ -88,7 +88,11 @@ run() {
 }
 
 L=Tinycast/Features/Launcher/Model
-run slow -O fuzz-test      $L/SearchRelevance.swift $L/SearchNames.swift
+run slow -O fuzz-test      $L/SearchRelevance.swift $L/ScriptRomanization.swift \
+                           $L/EntryNaming.swift $L/LauncherOrder.swift
+run slow -O corpus-test    $L/SearchRelevance.swift $L/ScriptRomanization.swift \
+                           $L/EntryNaming.swift $L/LauncherOrder.swift \
+                           $L/LauncherRankingStore.swift
 run file-search-test       $L/SearchRelevance.swift \
                            Tinycast/Features/FileSearch/Model/*.swift
 run file-search-session-test Tinycast/Platform/Signposts.swift \
@@ -336,7 +340,11 @@ fi
 
 # `sort -s` is stable, so the slow harnesses lead and everything else keeps its declaration order.
 JOBS="${TINYCAST_TEST_JOBS:-$(sysctl -n hw.ncpu)}"
-sort -s -k1,1n "$QUEUE" | cut -d' ' -f2- | xargs -P "$JOBS" -L1 "$SELF" --exec
+# Without this the suite reports "all passed" whenever dispatch itself dies and no harness ran.
+if ! sort -s -k1,1n "$QUEUE" | cut -d' ' -f2- | xargs -P "$JOBS" -L1 "$SELF" --exec; then
+    echo "harness dispatch failed; no result below can be trusted" >&2
+    exit 1
+fi
 
 # A compiler diagnostic is far longer than PIPE_BUF, so the workers log it and it is replayed here.
 while read -r _ name _; do

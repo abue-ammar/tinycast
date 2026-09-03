@@ -14,9 +14,10 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ environment fact is an injected parameter.                                 │
 │ ⇒ Compiled verbatim by a harness, so it cannot drift.                      │
 │                                                                            │
-│ SearchRelevance · SearchNames · SearchScopes · LauncherRankingStore ·      │
-│ FileSearch{Query,Result,Scope} · Calculator/* · EmojiCatalog ·             │
-│ EmojiGridGeometry · SystemAction · VolumeLevel ·                           │
+│ SearchRelevance · EntryNaming · ScriptRomanization · LauncherOrder ·       │
+│ SearchScopes · LauncherRankingStore · FileSearch{Query,Result,Scope} ·      │
+│ Calculator/* · EmojiCatalog · EmojiGridGeometry · SystemAction ·            │
+│ VolumeLevel ·                                                              │
 │ WindowCommand · WindowLayout · WindowActionMemory · PaletteRowIndex ·      │
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
 │ Quicklink{,Destination,Store,Archive} · Notes/Model/* · Snippets/Model/* · │
