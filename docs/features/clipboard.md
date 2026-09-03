@@ -31,8 +31,7 @@ are mirrored in the observable `items` window; FTS search reaches older rows.
 
 **Application Support, not Caches.** `~/Library/Caches` is excluded from Time Machine and the system
 may reclaim it at any time without telling the app, so a history kept there survives neither a restore
-nor a full disk — while the retention setting offers **Forever** and a pin is an explicit act. The
-store used to live there; `StorageRelocation` moves an existing one across, once.
+nor a full disk — while the retention setting offers **Forever** and a pin is an explicit act.
 
 A database that won't open is deleted and recreated (worst case the store degrades to session-only
 in-memory history).
@@ -43,9 +42,9 @@ inserts, search, and pruning stay on the main actor.
 **A backup reads the whole table, not `items`.** `forEachStoredItem(inDatabaseAt:)` is `nonisolated`
 and opens a second connection, because the resident window stops at 1000 rows while the table is
 capped only by age — an export that read `items` would silently drop the rest of someone's history,
-and walking an uncapped table is not main-actor work. That connection is `SQLITE_OPEN_READWRITE`, as
-`StorageRelocation`'s is: a read-only connection to a WAL database still has to create its `-shm`
-file, and fails confusingly when it cannot. It reads in `rowid` order, oldest first, so a streaming
+and walking an uncapped table is not main-actor work. That connection is `SQLITE_OPEN_READWRITE`,
+not read-only: a read-only connection to a WAL database still has to create its `-shm` file, and
+fails confusingly when it cannot. It reads in `rowid` order, oldest first, so a streaming
 import rebuilds the same order it exported.
 
 **A restore streams back the same way.** `importStoredItems(inDatabaseAt:adoptingImagesInto:_:)` is the

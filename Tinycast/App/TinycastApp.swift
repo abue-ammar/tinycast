@@ -11,11 +11,6 @@ struct TinycastApp: App {
     // Channel-aware: "Tinycast", "Tinycast Dev", or "Tinycast Beta".
     private let appName = Bundle.main.appDisplayName
 
-    /// Before `body`, and so before the first `AppCore.shared`: no store may open at the old path.
-    init() {
-        StorageRelocation.run()
-    }
-
     /// Two independent items: one preference each, no state either can read off the other.
     var body: some Scene {
         MenuBarExtra(isInserted: $showInMenuBar) {
