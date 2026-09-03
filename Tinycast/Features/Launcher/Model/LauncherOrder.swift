@@ -20,27 +20,6 @@ enum LauncherOrder {
             .map(\.0)
     }
 
-    /// The empty query, ordered inside each run: moving one would desync selection from the rows.
-    static func within<Item, Group: Equatable>(
-        _ items: [Item], group: (Item) -> Group, usage: (Item) -> Int, name: (Item) -> String
-    ) -> [Item] {
-        var result: [Item] = []
-        result.reserveCapacity(items.count)
-        var run: [(Item, Int, Int)] = []
-        var current: Group?
-        for (position, item) in items.enumerated() {
-            let itemGroup = group(item)
-            if let current, current != itemGroup {
-                result.append(contentsOf: run.sorted { precedes($0, $1, name: name) }.map(\.0))
-                run.removeAll(keepingCapacity: true)
-            }
-            current = itemGroup
-            run.append((item, usage(item), position))
-        }
-        result.append(contentsOf: run.sorted { precedes($0, $1, name: name) }.map(\.0))
-        return result
-    }
-
     /// Score, then the user's own alphabet, then publication order — a total order either way.
     private static func precedes<Item>(
         _ lhs: (Item, Int, Int), _ rhs: (Item, Int, Int), name: (Item) -> String

@@ -474,22 +474,15 @@ final class AppIndex {
     /// Ranked matches, or a whole category when the query names one. Empty returns the full list.
     func matches(_ query: String, limit: Int = 200) -> [AppEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
+        // The opening list stays alphabetical: a list that reorders as you use it is unscannable.
+        guard !q.isEmpty else { return apps }
         let key = MatchKey(
             query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
             aliasRevision: aliases.revision)
         return matchMemo.value(for: key) {
-            guard !q.isEmpty else { return mostUsedFirst() }
             guard let kind = AppEntry.Kind.named(by: q) else { return rank(q, limit: limit) }
             return categoryListing(kind, query: q)
         }
-    }
-
-    /// The opening list: what the user reaches for, ordered inside each section and never across.
-    private func mostUsedFirst() -> [AppEntry] {
-        let learned = ranking.usage(query: "")
-        guard !learned.isEmpty else { return apps }
-        return LauncherOrder.within(
-            apps, group: \.kind, usage: { learned[$0.preferenceKey] ?? 0 }, name: \.name)
     }
 
     /// Slice order is section order, so filtering keeps sections and selection aligned.

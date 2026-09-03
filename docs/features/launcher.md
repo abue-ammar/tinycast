@@ -357,13 +357,12 @@ stored query the typed one is a prefix of — so choosing WhatsApp for `wha` sti
 `w` and `wh`, at a sixteenth of the rows. The 1,000-record cap therefore holds ~1,000 distinct habits
 rather than ~60.
 
-**The empty query is a real query.** It is what the launcher opens on, a launch from it is recorded
-under `""`, and because `""` is a prefix of everything, the opening list is ordered by everything the
-user has ever launched. That ordering happens **inside each kind run and never across one**
-(`LauncherOrder.within`): the launcher draws sections by grouping this list, and the flat selection
-index maps onto the drawn rows only while the list stays in publication order. Favorites are pinned
-after ranking, so their contiguous prefix is untouched. Direct hotkeys and ⌘-digit favorite launches
-still record nothing, so a pin cannot reinforce itself.
+**The opening list stays alphabetical.** Frecency was tried there and reverted: with the learned
+apps floating to the top and the alphabet resuming below them, the section is sorted by two
+principles with nothing marking the seam, which reads as a scrambled list and moves under the user's
+muscle memory as they use it. Ranking a section needs a labelled group of its own, not a resort in
+place. So nothing is recorded or recalled under `""`, and direct hotkeys and ⌘-digit favorite
+launches still teach nothing either.
 
 Learned data stays on device in `launcher-ranking.json`; a result that has learned ranking offers a
 per-item reset in its Actions menu, and users can clear all learned ranking in General Settings.

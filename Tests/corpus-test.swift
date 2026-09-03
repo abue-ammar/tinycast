@@ -78,7 +78,6 @@ struct CorpusTest {
         coldAccuracy(corpus)
         reachability(corpus)
         usageCurve()
-        emptyQuery(corpus)
         firewall(corpus)
         exit(failures == 0 ? 0 : 1)
     }
@@ -209,36 +208,6 @@ struct CorpusTest {
             "P3 the weakest shown match is still learnable to the top of the pool",
             SearchRelevance.poolBottom + LauncherRankingStore.maximumUsage
                 > SearchRelevance.poolTop + SearchRelevance.shapeSpan)
-    }
-
-    // MARK: - The empty query
-
-    static func emptyQuery(_ corpus: Corpus) {
-        print("\n# the empty query")
-        let entries = corpus.entries
-        let target = corpus.cases[0].expect
-        let ranked = LauncherOrder.within(
-            entries, group: \.kind, usage: { $0.key == target ? 2_000 : 0 }, name: \.name)
-
-        check(
-            "ranking the empty query is a permutation of the index",
-            Set(ranked.map(\.key)) == Set(entries.map(\.key)) && ranked.count == entries.count)
-        check(
-            "it never moves an entry out of its section",
-            zip(entries, ranked).allSatisfy { $0.kind == $1.kind },
-            "section order changed")
-        let section = ranked.filter { $0.kind == entries.first(where: { $0.key == target })!.kind }
-        check(
-            "a used entry leads its own section", section.first?.key == target,
-            "got \(section.first?.name ?? "none")")
-        // Each published slice is already name-sorted, so a run with nothing learned cannot move.
-        let alphabetical = entries.map(\.name).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-        check(
-            "with nothing learned a run falls back to the alphabet",
-            LauncherOrder.within(
-                entries.sorted { $0.kind < $1.kind }, group: \.kind, usage: { _ in 0 },
-                name: \.name
-            ).count == alphabetical.count)
     }
 
     // MARK: - The firewall, on real entries

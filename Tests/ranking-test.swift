@@ -111,26 +111,24 @@ struct RankingTest {
             "one pass returns every item learned for the query",
             Set(table.keys) == [whatsApp, wick])
 
-        // The empty query is a real one: it is what the launcher opens on.
+        // The opening list stays alphabetical, so nothing is learned or recalled under "".
         store.resetAll()
         store.record(itemKey: wick, query: "")
-        check("a launch from the opening list is learned", boost(store, wick, "") > 0)
+        check("a launch with no query teaches nothing", store.isEmpty)
         store.record(itemKey: whatsApp, query: "whatsapp")
-        check(
-            "and every typed launch counts toward the opening list too",
-            store.usage(query: "").keys.sorted() == [whatsApp, wick].sorted())
         check(
             "one row per query, recalled under every prefix a user might type",
             boost(store, whatsApp, "wh") > 0 && boost(store, whatsApp, "whatsapp") > 0
                 && boost(store, whatsApp, "x") == 0)
 
-        let persistedWickUsage = boost(store, wick, "")
+        store.record(itemKey: wick, query: "wick")
+        let persistedWickUsage = boost(store, wick, "wick")
         // Persisting is off-main, so the reload has to meet it before it can read the file.
         await store.flush()
         let reloaded = LauncherRankingStore(fileURL: fileURL) { clock }
         check(
             "records persist across store instances",
-            boost(reloaded, wick, "") == persistedWickUsage)
+            boost(reloaded, wick, "wick") == persistedWickUsage)
 
         reloaded.reset(itemKey: whatsApp)
         check("per-item reset clears every learned query", !reloaded.hasRanking(for: whatsApp))

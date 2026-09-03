@@ -33,7 +33,9 @@ final class LauncherRankingStore {
         if let data = try? Data(contentsOf: self.fileURL),
             let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data)
         {
-            records = decoded.filter { !$0.itemKey.isEmpty && $0.count > 0 }
+            records = decoded.filter {
+                !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0
+            }
         } else {
             records = []
         }
@@ -48,9 +50,8 @@ final class LauncherRankingStore {
 
     /// One row per submitted query; `usage` recalls it under every prefix the user might type.
     func record(itemKey: String, query: String) {
-        // The empty query is a real one: it is what the launcher opens on.
         let query = Self.normalize(query)
-        guard !itemKey.isEmpty, query.count <= Self.queryLimit else { return }
+        guard !itemKey.isEmpty, !query.isEmpty, query.count <= Self.queryLimit else { return }
 
         let timestamp = now()
         if let index = records.firstIndex(where: { $0.itemKey == itemKey && $0.query == query }) {
@@ -74,6 +75,7 @@ final class LauncherRankingStore {
     /// What the user has taught this query; the fold and the clock read happen once, not per row.
     func usage(query: String) -> [String: Int] {
         let query = Self.normalize(query)
+        guard !query.isEmpty else { return [:] }
         var totals: [String: (count: Int, lastUsed: Date)] = [:]
         for record in records where record.query.hasPrefix(query) {
             let running = totals[record.itemKey]
@@ -121,7 +123,7 @@ final class LauncherRankingStore {
     func replace(_ imported: [LauncherRankingRecord]) {
         records = Array(
             imported
-                .filter { !$0.itemKey.isEmpty && $0.count > 0 }
+                .filter { !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0 }
                 .prefix(Self.cap))
         didMutate()
     }
