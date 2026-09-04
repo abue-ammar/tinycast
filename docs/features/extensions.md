@@ -234,6 +234,16 @@ screens hold (see [palette.md](palette.md)).
   been typed since. Both text controls hold the last edit they dispatched and ignore every echo until
   it catches up; without that, typing at speed dropped characters — "Test from Codex" arrived as
   "T Codex".
+
+  Every control carries its title as an accessibility label and its selection as a value, so a
+  picker announces "Difficulty, Easy" rather than the chevron it is drawn with. It reads under the
+  pointer as well as the keyboard: controls lift on hover, a list's rows highlight under the mouse
+  so both share one selection, and clicking a control takes focus as well as acting, which is what
+  lets the two be mixed mid-form.
+
+  `Tests/ext-form-test.swift` drives the geometry and the parser; the interaction was checked against
+  a Form Lab extension covering every control, sectioned and empty and 40-option lists, validation
+  errors, wrapping labels, and forms taller than the palette, in both appearances.
 - **ActionPanel** — flattened (sections and submenus included) into `ExtensionActionsPanel`, the
   feature's own scrolling ⌘K panel. Its rows are `ExtensionActionItem`, not `PopoverMenuItem`: an
   action's `icon` is a full `ImageLike`, so it resolves through `ExtensionImage` like every other
