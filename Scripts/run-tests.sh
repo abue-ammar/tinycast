@@ -266,6 +266,7 @@ run slow ext-test          -parse-as-library \
                            Tinycast/Platform/Images/IconCache.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            $E/Model/ExtensionBootConfig.swift \
+                           $E/Model/ExtensionFormField.swift \
                            $E/Model/ExtensionGridLayout.swift \
                            $E/Model/ExtensionManifest.swift \
                            $E/Model/RenderNode.swift \

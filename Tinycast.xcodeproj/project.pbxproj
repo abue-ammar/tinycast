@@ -383,6 +383,7 @@
 		BB1277D988169C0829374ACC /* QuickActionPanelState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E97E59C7338458DB797507 /* QuickActionPanelState.swift */; };
 		BBAB44C0E70AABE70A048889 /* QuicklinkArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = F616D2EE62AEC6782E77364D /* QuicklinkArchive.swift */; };
 		BC755BD99ECA1F2D382D5C94 /* SettingsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C845A6718CFBD1AFE93BA903 /* SettingsDetailView.swift */; };
+		BC8F52469297804D95605933 /* ExtensionPopUpButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F21745D3D492EACCF00FC6D6 /* ExtensionPopUpButton.swift */; };
 		BCA7E1C4BCF6F77634E54CA7 /* MeetingClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 474E6D9830E336752C79F461 /* MeetingClock.swift */; };
 		BD45A99F26C015BF00AC77D5 /* ApplicationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289FC415E1D1776DD1C4EB9E /* ApplicationsSettingsView.swift */; };
 		BDC1C804377CA32EE147829F /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0548C62E98174F92E13437FB /* CameraPreviewView.swift */; };
@@ -441,6 +442,7 @@
 		D99DAF62B746E6009E1BFB1F /* QuickAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A4DEF28F120FE354EB5599 /* QuickAction.swift */; };
 		D9F77EF819BE3A06AA6B25A3 /* QuickActionPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513217C40F0B8199DC57A35 /* QuickActionPrompt.swift */; };
 		DA1EE0A8933EADD357FCE32C /* QuicklinkArgumentSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E48A8D5E2BC00E9E1CD5BF /* QuicklinkArgumentSession.swift */; };
+		DA55ED3548C2D6C1EB9F205D /* ExtensionFormField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB596CB339D5C3AEBE550A3 /* ExtensionFormField.swift */; };
 		DA781EE329E4D88B9C72788C /* ExtensionActionsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A178C17DB989B6D2D71C021E /* ExtensionActionsPanel.swift */; };
 		DB6B294B3D15B0AABCE5427E /* PaletteScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 445B0374FD5D74DBE23243CD /* PaletteScreen.swift */; };
 		DCAC5BBB64C93F559B25E6FD /* ExtensionAnimatedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFBF31AF26A4786B234ABB64 /* ExtensionAnimatedImage.swift */; };
@@ -593,6 +595,7 @@
 		296F67E23BF91CFBC6D66385 /* SystemActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemActionCoordinator.swift; sourceTree = "<group>"; };
 		29A8B82DCB1B7D131BF0908A /* PaletteDropGuideController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteDropGuideController.swift; sourceTree = "<group>"; };
 		2A82786725DFEB5467778E68 /* AIRetention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRetention.swift; sourceTree = "<group>"; };
+		2AB596CB339D5C3AEBE550A3 /* ExtensionFormField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionFormField.swift; sourceTree = "<group>"; };
 		2AEDBB526AB2C0406D8226D5 /* SystemActionRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemActionRunner.swift; sourceTree = "<group>"; };
 		2B0D967615846F9C4EC3E44F /* ExtensionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionDetailView.swift; sourceTree = "<group>"; };
 		2B0F5891A80B604FBE21897B /* CalcCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcCurrency.swift; sourceTree = "<group>"; };
@@ -1000,6 +1003,7 @@
 		F023729C84682E9231F3D73B /* ExtensionInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionInstaller.swift; sourceTree = "<group>"; };
 		F0311153A4A3557C6FFEAAAB /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		F097C9983DF27A99694C8BC5 /* Zlib.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Zlib.swift; sourceTree = "<group>"; };
+		F21745D3D492EACCF00FC6D6 /* ExtensionPopUpButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionPopUpButton.swift; sourceTree = "<group>"; };
 		F3F97240A718D95DFD9343DB /* UpcomingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingWindow.swift; sourceTree = "<group>"; };
 		F513217C40F0B8199DC57A35 /* QuickActionPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionPrompt.swift; sourceTree = "<group>"; };
 		F524FA7B33C0F861995EB1E6 /* QuicklinkArgumentsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkArgumentsScreen.swift; sourceTree = "<group>"; };
@@ -1498,6 +1502,7 @@
 			children = (
 				D755EEABA1DA9CA4CE2D0B4F /* ExtensionAppearance.swift */,
 				ED5AAA98FFF7A4D34D7B490D /* ExtensionBootConfig.swift */,
+				2AB596CB339D5C3AEBE550A3 /* ExtensionFormField.swift */,
 				F85C82C66132C7723272E873 /* ExtensionGridGeometry.swift */,
 				220CECFE780E8BE18FAE0A1C /* ExtensionGridLayout.swift */,
 				30BBF211CE6A076EAF8D6C33 /* ExtensionManifest.swift */,
@@ -2023,6 +2028,7 @@
 				32D20FAFD9F3CC0E5802A966 /* ExtensionImage.swift */,
 				471E1C3C250FD0A89E2C6430 /* ExtensionListView.swift */,
 				7C0FB3A9CA762A7A8DB99BA6 /* ExtensionPaletteModifiers.swift */,
+				F21745D3D492EACCF00FC6D6 /* ExtensionPopUpButton.swift */,
 				CCCBDD92DEAD780A1DC423CA /* ExtensionScreen.swift */,
 				A7751EBF0F632A123B4A2363 /* ExtensionTintColors.swift */,
 			);
@@ -2762,6 +2768,7 @@
 				1F0E7F2EF27CB82211EDCB4C /* ExtensionCoordinator.swift in Sources */,
 				BFA8B1578664272E7CBFF806 /* ExtensionDetailView.swift in Sources */,
 				B566FC125D9D193F234EC1AB /* ExtensionFetcher.swift in Sources */,
+				DA55ED3548C2D6C1EB9F205D /* ExtensionFormField.swift in Sources */,
 				5D3E51C5FDA9EE53AFD12181 /* ExtensionFormView.swift in Sources */,
 				C9A7290682E9D0881713C009 /* ExtensionGridGeometry.swift in Sources */,
 				462CE7617EC4EED7E7B5A072 /* ExtensionGridLayout.swift in Sources */,
@@ -2777,6 +2784,7 @@
 				97F6E58046553BDCEF5AD447 /* ExtensionOAuthSession.swift in Sources */,
 				FA386C9B6DA24481565D506D /* ExtensionPackageManager.swift in Sources */,
 				2D51D92BE8EAB5440F4C8517 /* ExtensionPaletteModifiers.swift in Sources */,
+				BC8F52469297804D95605933 /* ExtensionPopUpButton.swift in Sources */,
 				CF1015EA1573EFBBA647B93B /* ExtensionRegistriesSheet.swift in Sources */,
 				6FC9F74D9119AC25D178D748 /* ExtensionRegistry.swift in Sources */,
 				50A3CB2A348F8E03D467B169 /* ExtensionRuntime.swift in Sources */,

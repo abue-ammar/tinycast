@@ -454,7 +454,15 @@ struct ExtensionTests {
                 """), query: "")
         check("kind is form", form.kind == .form)
         check("fields collected", form.fields.count == 2)
-        check("form has no selectable rows", form.items.isEmpty)
+        check("only focusable fields are rows", form.items.count == 1)
+        check("the row is the field, not the separator", form.items.first?.node.id == 3)
+        check("a separator has no focus index", form.focusItem(for: form.fields[1]) == nil)
+        check(
+            "a text area keeps the vertical keys",
+            ExtensionFormField(type: "Form.TextArea").ownsVerticalKeys)
+        check(
+            "a dropdown leaves ↵ to the form",
+            !ExtensionFormField(type: "Form.Dropdown").ownsReturn)
 
         let detail = ExtensionScreen(
             // Doubled delimiters: the heading contains `"#`, which closes a single-# string.

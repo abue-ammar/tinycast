@@ -265,6 +265,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onBareBackspace = { [weak self] in
             guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
             else { return false }
+            // A form field owns the key: the text it deletes is the field's, not a query's.
+            if core.palette.isEditingField { return false }
             // The argument form steps back through the answers first, one key per field.
             if core.palette.mode == .quicklinkArguments,
                 let previous = core.quicklinkArguments.retreat()

@@ -15,8 +15,26 @@ struct ExtensionCommandScreen: PaletteScreen {
         return owner.assetsPath
     }
 
-    /// Selectable rows only: a section header is drawn but never landed on.
+    /// Selectable rows only: a section header is drawn but never landed on, and so is a separator.
     var rows: [ExtensionScreen.Item] { screen.items }
+
+    /// A form owns the whole keyboard: its fields are the text, so the search field steps aside.
+    var hidesSearchField: Bool { isForm }
+
+    /// ↵ submits a form whether or not it has a field to land on.
+    var actsWithoutRows: Bool { isForm }
+
+    /// A text area edits with ↑/↓ itself, so only ⇥ leaves it.
+    func ownsVerticalKeys(at selection: Int) -> Bool {
+        guard isForm, rows.indices.contains(selection) else { return false }
+        return ExtensionFormField(type: rows[selection].node.type).ownsVerticalKeys
+    }
+
+    /// ⇥ / ⇧⇥ walk the fields, wrapping at either end as Raycast's form does.
+    func tabTarget(from selection: Int, backwards: Bool) -> Int? {
+        guard isForm, !rows.isEmpty else { return nil }
+        return (selection + (backwards ? -1 : 1) + rows.count) % rows.count
+    }
 
     /// A Grid needs both axes: without this ↓ walks sideways one tile at a time.
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? {
@@ -41,6 +59,17 @@ struct ExtensionCommandScreen: PaletteScreen {
     }
 
     func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }
+
+    /// A form usually ships one Submit action, and a one-row ⌘K panel is noise beside the ↵ pill.
+    func hasActions(at selection: Int) -> Bool {
+        ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).count > 1
+    }
+
+    /// A form's ↵ pill stands even with no field to land on: the action belongs to the screen.
+    var isForm: Bool {
+        if case .form = screen.kind { return true }
+        return false
+    }
 
     /// A command's rows carry tinted icons and its panel scrolls; a menu row cannot.
     func menuContent(

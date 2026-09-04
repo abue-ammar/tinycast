@@ -194,7 +194,20 @@ screens hold (see [palette.md](palette.md)).
   The feature's own fills live in `ExtensionColors` — never in `Theme`.
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
   edit dispatches `onTinycastChange` and the resulting re-render is what updates the control, so
-  `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
+  `defaultValue`, a controlled `value`, and `ref.reset()` all behave. **A form takes the whole
+  keyboard**: its fields *are* the palette's rows, so the search field is hidden and the header left
+  empty. `ExtensionFormField` says what each `Form.*` node is —
+  which of them focus lands on, which keys the control keeps, and which need a focus ring drawn — and
+  `ExtensionScreen` publishes exactly the focusable ones as `items`, so ↑/↓, ⇥/⇧⇥ and the flat
+  selection all walk one order. ⇥ wraps at both ends, ↵ submits from any control that edits no text,
+  Space toggles a checkbox and opens a file picker, ←/→ step a dropdown's value and a tag picker's
+  chips, and a text area keeps ↑/↓ for its own lines so only ⇥ leaves it. A dropdown is an
+  `NSPopUpButton` rather than a `Picker`, because a `Picker` opens only to a click: Space or ↵ opens
+  the menu, which is the whole point of reaching it by keyboard. A field marked `autoFocus`
+  is where the form opens, otherwise the first one. While a control holds focus
+  `PaletteState.isEditingField` is set, which is what keeps a bare backspace deleting text rather
+  than backing out of the command. The footer's Actions half is drawn only when the panel holds more
+  than the one action the ↵ pill already runs, so a plain Submit-only form shows just the pill.
 - **ActionPanel** — flattened (sections and submenus included) into `ExtensionActionsPanel`, the
   feature's own scrolling ⌘K panel. Its rows are `ExtensionActionItem`, not `PopoverMenuItem`: an
   action's `icon` is a full `ImageLike`, so it resolves through `ExtensionImage` like every other

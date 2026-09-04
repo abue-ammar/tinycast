@@ -33,6 +33,8 @@ final class PaletteState {
     var commandArguments: [String: String] = [:]
     /// True while ⌘ is held, which numbers the favorite rows. The panel is the only writer.
     private(set) var commandHeld = false
+    /// True while a form field owns the keyboard, so the palette's own text keys stay out of it.
+    private(set) var isEditingField = false
     /// True only once the pointer has moved of its own accord; untracked, so it never re-renders.
     @ObservationIgnored private(set) var hoverHighlightArmed = false
     /// Bumped when the highlight drops, so a lit row clears even though the pointer never left it.
@@ -55,6 +57,7 @@ final class PaletteState {
         query = ""
         selection = 0
         isComposing = false
+        isEditingField = false
         commandArguments = [:]
         clipboardFilter = .all
         forceExpanded = false
@@ -81,6 +84,12 @@ final class PaletteState {
     func noteCommandHeld(_ held: Bool) {
         guard held != commandHeld else { return }
         commandHeld = held
+    }
+
+    /// Set by whichever screen hands the keyboard to a control of its own.
+    func noteEditingField(_ editing: Bool) {
+        guard editing != isEditingField else { return }
+        isEditingField = editing
     }
 
     /// The pointer moved, which re-lights the highlight once it has cleared the arming slop.
