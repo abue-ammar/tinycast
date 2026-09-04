@@ -47,25 +47,37 @@ enum SearchScopes {
         return result
     }
 
-    /// `.app` is a leaf here — never descended into, only real subfolders recurse.
+    /// `.app` is a leaf here — never descended into.
     private static func appBundles(under url: URL, subfolderDepth: Int) -> [URL] {
         guard
             let items = try? FileManager.default.contentsOfDirectory(
-                at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]
+                at: url.resolvingSymlinksInPath(),
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
             )
         else { return [] }
 
         var result: [URL] = []
         for item in items {
-            if item.pathExtension == "app" {
-                result.append(item)
-            } else if subfolderDepth > 0,
-                (try? item.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
-            {
-                result.append(contentsOf: appBundles(under: item, subfolderDepth: subfolderDepth - 1))
+            let logicalURL = url.appendingPathComponent(item.lastPathComponent)
+            if logicalURL.pathExtension == "app" {
+                if FileManager.default.fileExists(atPath: logicalURL.path) {
+                    result.append(logicalURL)
+                }
+            } else if subfolderDepth > 0, isDirectory(at: logicalURL) {
+                result.append(
+                    contentsOf: appBundles(
+                        under: logicalURL,
+                        subfolderDepth: subfolderDepth - 1))
             }
         }
         return result
+    }
+
+    private static func isDirectory(at url: URL) -> Bool {
+        var isDir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+            && isDir.boolValue
     }
 
     private static func trimTrailingSlash(_ path: String) -> String {

@@ -2,7 +2,7 @@ import Foundation
 
 @main
 struct ScopesTest {
-    static func main() {
+    static func main() throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
             .appendingPathComponent("tinycast-scopes-\(UUID().uuidString)")
@@ -33,13 +33,39 @@ struct ScopesTest {
         let deep = vendor.appendingPathComponent("Deeper")
         makeDir(deep.appendingPathComponent("TooDeep.app"))
 
-        let found = SearchScopes.appBundles(in: [apps.path]).map(\.lastPathComponent)
+        let managedApps = root.appendingPathComponent("Managed Apps")
+        makeDir(managedApps.appendingPathComponent("Managed.app"))
+        let managedAppsLink = apps.appendingPathComponent("Home Manager Apps")
+        try fm.createSymbolicLink(at: managedAppsLink, withDestinationURL: managedApps)
+        let managedAppLink = root.appendingPathComponent("Managed Link.app")
+        try fm.createSymbolicLink(
+            at: managedAppLink,
+            withDestinationURL: managedApps.appendingPathComponent("Managed.app"))
+        let brokenAppLink = apps.appendingPathComponent("Broken.app")
+        try fm.createSymbolicLink(
+            at: brokenAppLink,
+            withDestinationURL: root.appendingPathComponent("Missing.app"))
+
+        let foundURLs = SearchScopes.appBundles(in: [apps.path])
+        let found = foundURLs.map(\.lastPathComponent)
         check(
-            "direct and one-level-nested .app children are indexed",
-            Set(found) == ["Alpha.app", "Beta.app", "Nested.app"])
+            "direct, nested, and symlinked .app children are indexed",
+            Set(found) == ["Alpha.app", "Beta.app", "Managed.app", "Nested.app"])
         check("non-app children are skipped", !found.contains("Notes.txt"))
         check("hidden bundles are skipped", !found.contains(".Hidden.app"))
         check("bundles nested two levels deep are not indexed", !found.contains("TooDeep.app"))
+        let logicalManagedApp = managedAppsLink.appendingPathComponent("Managed.app")
+        let physicalManagedApp = managedApps.appendingPathComponent("Managed.app")
+        check(
+            "apps under a symlink keep their logical paths",
+            foundURLs.contains(logicalManagedApp) && !foundURLs.contains(physicalManagedApp))
+        check("broken .app symlinks are skipped", !foundURLs.contains(brokenAppLink))
+        check(
+            "a symlinked directory works as its own scope",
+            SearchScopes.appBundles(in: [managedAppsLink.path]) == [logicalManagedApp])
+        check(
+            "an .app symlink works as its own scope",
+            SearchScopes.appBundles(in: [managedAppLink.path]) == [managedAppLink])
         check(
             "a deeply nested folder works as its own scope",
             SearchScopes.appBundles(in: [deep.path]).map(\.lastPathComponent) == ["TooDeep.app"])
