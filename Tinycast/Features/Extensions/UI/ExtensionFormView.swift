@@ -115,6 +115,7 @@ struct ExtensionFormView: View {
                     items: ExtensionFormView.items(in: field),
                     chosen: [field.string("value") ?? ""].filter { !$0.isEmpty },
                     placeholder: field.string("placeholder") ?? "Select…",
+                    title: field.string("title") ?? "Dropdown",
                     assetsPath: assetsPath,
                     allowsMultipleSelection: false,
                     index: index, focus: $focused,
@@ -128,6 +129,7 @@ struct ExtensionFormView: View {
                     items: ExtensionFormView.items(in: field),
                     chosen: field.array("value").compactMap(\.stringValue),
                     placeholder: field.string("placeholder") ?? "Select…",
+                    title: field.string("title") ?? "Tags",
                     assetsPath: assetsPath,
                     allowsMultipleSelection: true,
                     index: index, focus: $focused,
@@ -250,6 +252,8 @@ private struct ExtensionTextField: View {
         .extensionFieldChrome(focused: focus == index, hovered: hovered)
         .onHover { hovered = $0 }
         .onSubmit(onSubmit)
+        // The visible label is a Text in the row beside it, which the field cannot claim itself.
+        .accessibilityLabel(Text(node.string("title") ?? node.string("placeholder") ?? "Text"))
         .onAppear { text = node.string("value") ?? "" }
         .onChange(of: node.string("value") ?? "") { _, incoming in
             adopt(incoming)
@@ -300,6 +304,7 @@ private struct ExtensionTextArea: View {
                 height: ExtensionFormMetrics.textAreaHeight
             )
             .onHover { hovered = $0 }
+            .accessibilityLabel(Text(node.string("title") ?? "Text area"))
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
                     Text(node.string("placeholder") ?? "")
@@ -362,6 +367,9 @@ private struct ExtensionCheckbox: View {
             toggle()
             return .handled
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(node.string("label") ?? node.string("title") ?? "Checkbox"))
+        .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
         .onKeyPress(keys: [.return], phases: .down) { press in
             guard press.modifiers.isEmpty else { return .ignored }
             onSubmit()
@@ -442,6 +450,10 @@ private struct ExtensionFilePicker: View {
             choose()
             return .handled
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(node.string("title") ?? "File"))
+        .accessibilityValue(Text(label))
+        .accessibilityAddTraits(.isButton)
         .onKeyPress(keys: [.return], phases: .down) { press in
             guard press.modifiers.isEmpty else { return .ignored }
             choose()

@@ -8,6 +8,8 @@ struct ExtensionPickerField: View {
     /// Every value currently held; a dropdown has one, a tag picker any number.
     let chosen: [String]
     let placeholder: String
+    /// The field's own title, so the control announces what it is rather than as a chevron.
+    let title: String
     let assetsPath: String?
     let allowsMultipleSelection: Bool
     let index: Int?
@@ -119,6 +121,12 @@ struct ExtensionPickerField: View {
         }
         .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
         .contentShape(Rectangle())
+        // Without this the control reads as its chevron: no name, no value, no role.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text(chosen.isEmpty ? placeholder : label))
+        .accessibilityHint(Text(open ? "Showing choices" : "Opens a list of choices"))
+        .accessibilityAddTraits(.isButton)
         .onHover { hovered = $0 }
         .onTapGesture {
             focus = index

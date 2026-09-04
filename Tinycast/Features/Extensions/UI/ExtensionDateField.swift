@@ -95,6 +95,11 @@ struct ExtensionDateField: View {
         }
         .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(node.string("title") ?? "Date"))
+        .accessibilityValue(Text(label))
+        .accessibilityHint(Text(open ? "Showing dates" : "Opens a list of dates"))
+        .accessibilityAddTraits(.isButton)
         .onHover { hovered = $0 }
         .onTapGesture {
             focus = index
