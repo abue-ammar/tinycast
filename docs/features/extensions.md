@@ -201,13 +201,39 @@ screens hold (see [palette.md](palette.md)).
   `ExtensionScreen` publishes exactly the focusable ones as `items`, so ↑/↓, ⇥/⇧⇥ and the flat
   selection all walk one order. ⇥ wraps at both ends, ↵ submits from any control that edits no text,
   Space toggles a checkbox and opens a file picker, ←/→ step a dropdown's value and a tag picker's
-  chips, and a text area keeps ↑/↓ for its own lines so only ⇥ leaves it. A dropdown is an
-  `NSPopUpButton` rather than a `Picker`, because a `Picker` opens only to a click: Space or ↵ opens
-  the menu, which is the whole point of reaching it by keyboard. A field marked `autoFocus`
+  chips, and a text area keeps ↑/↓ for its own lines so only ⇥ leaves it. A field marked `autoFocus`
   is where the form opens, otherwise the first one. While a control holds focus
   `PaletteState.isEditingField` is set, which is what keeps a bare backspace deleting text rather
   than backing out of the command. The footer's Actions half is drawn only when the panel holds more
   than the one action the ↵ pill already runs, so a plain Submit-only form shows just the pill.
+
+  **Every control is drawn by the feature, none by SwiftUI's stock parts.** `ExtensionFieldChrome`
+  is the one rounded surface they all share and `ExtensionFormMetrics` the one place their geometry
+  is stated, so a field, a picker and a text area line up by construction. A `Picker` opens only to a
+  click and a `DatePicker` has no expression field, which is why neither is used.
+
+  A `Form.Dropdown` and a `Form.TagPicker` are the same control — `ExtensionPickerField` — differing
+  only in whether it holds one value or several. It drops `ExtensionPickerPopover`, a searchable list,
+  and **the control keeps first responder the whole time it is open**: the list is an overlay, and a
+  second field inside it would take focus off the control and close the list it belongs to. So the
+  popover's search row renders the query rather than editing it, and every key — the arrows, ↵, ⎋,
+  ⌫ and each typed character — is claimed on the control. `PaletteState.isControlListOpen` is what
+  keeps the palette's own arrow and Escape handlers out of an open list; without it ↓ moved the
+  form's selection instead of the list's highlight.
+
+  `ExtensionDateField` is the same shape over `ExtensionDateExpression`, which parses what Raycast's
+  date field parses — "tomorrow at 10am", "in 3 days", "next friday", "25 dec" — and offers the same
+  presets. It is pure and takes its clock and calendar as parameters, so `ext-form-test` drives it
+  and the popover's flip-up rule directly.
+
+  A picker opens downward, or upward when the form's bottom edge would cut the list off, which is
+  `ExtensionFormMetrics.placement` measured in the form's own coordinate space. The chevron points
+  the way the list actually went.
+
+  **React answers a keystroke a render late**, so a value echoed back mid-word is older than what has
+  been typed since. Both text controls hold the last edit they dispatched and ignore every echo until
+  it catches up; without that, typing at speed dropped characters — "Test from Codex" arrived as
+  "T Codex".
 - **ActionPanel** — flattened (sections and submenus included) into `ExtensionActionsPanel`, the
   feature's own scrolling ⌘K panel. Its rows are `ExtensionActionItem`, not `PopoverMenuItem`: an
   action's `icon` is a full `ImageLike`, so it resolves through `ExtensionImage` like every other

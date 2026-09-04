@@ -261,6 +261,8 @@ run ext-cleanup-test       $E/Service/ExtensionCleanup.swift \
 run ext-store-test         $E/Model/ExtensionRegistry.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift
+run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
+                           $E/Model/ExtensionDateExpression.swift
 run slow ext-test          -parse-as-library \
                            Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \

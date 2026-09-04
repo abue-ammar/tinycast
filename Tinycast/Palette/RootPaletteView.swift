@@ -322,6 +322,8 @@ struct RootPaletteView: View {
         // Repeat included: holding the key keeps stepping, as the bare-key form does.
         .onKeyPress(keys: [.downArrow], phases: [.down, .repeat]) { press in
             if let reorder = moveFavorite(1, modifiers: press.modifiers) { return reorder }
+            // A control's own list owns every navigation key while it is up.
+            if vm.isControlListOpen { return .ignored }
             if isCollapsed {
                 // The compact bar shows no selection, so Down reveals the list's first row.
                 vm.selection = 0
@@ -336,6 +338,7 @@ struct RootPaletteView: View {
         }
         .onKeyPress(keys: [.upArrow], phases: [.down, .repeat]) { press in
             if let reorder = moveFavorite(-1, modifiers: press.modifiers) { return reorder }
+            if vm.isControlListOpen { return .ignored }
             if isCollapsed { return .ignored }
             if menuOpen {
                 moveMenu(-1)
@@ -345,10 +348,12 @@ struct RootPaletteView: View {
         }
         // Horizontal arrows step the grid; elsewhere they stay with the caret.
         .onKeyPress(.leftArrow) {
+            if vm.isControlListOpen { return .ignored }
             if menuOpen { return .handled }
             return moveHorizontally(-1) ? .handled : .ignored
         }
         .onKeyPress(.rightArrow) {
+            if vm.isControlListOpen { return .ignored }
             if menuOpen { return .handled }
             return moveHorizontally(1) ? .handled : .ignored
         }
@@ -377,6 +382,8 @@ struct RootPaletteView: View {
             return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
         }
         .onKeyPress(.escape) {
+            // An open list closes itself first, exactly as the ⌘K menu does.
+            if vm.isControlListOpen { return .ignored }
             switch PaletteEscapeAction.resolve(menuOpen: menuOpen, query: vm.query, mode: vm.mode) {
             case .closeMenu:
                 closeMenus()
@@ -392,6 +399,8 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(keys: [.tab], phases: .down) { press in
+            // ⇥ inside an open list belongs to the list, not to the form's field order.
+            if vm.isControlListOpen { return .handled }
             if !menuOpen { advanceTabFocus(backwards: press.modifiers.contains(.shift)) }
             return .handled
         }

@@ -35,6 +35,8 @@ final class PaletteState {
     private(set) var commandHeld = false
     /// True while a form field owns the keyboard, so the palette's own text keys stay out of it.
     private(set) var isEditingField = false
+    /// True while a control inside a screen has a list open, which owns the arrows and ↵ whole.
+    private(set) var isControlListOpen = false
     /// True only once the pointer has moved of its own accord; untracked, so it never re-renders.
     @ObservationIgnored private(set) var hoverHighlightArmed = false
     /// Bumped when the highlight drops, so a lit row clears even though the pointer never left it.
@@ -58,6 +60,7 @@ final class PaletteState {
         selection = 0
         isComposing = false
         isEditingField = false
+        isControlListOpen = false
         commandArguments = [:]
         clipboardFilter = .all
         forceExpanded = false
@@ -90,6 +93,12 @@ final class PaletteState {
     func noteEditingField(_ editing: Bool) {
         guard editing != isEditingField else { return }
         isEditingField = editing
+    }
+
+    /// Set by a control whose own list is up; the palette leaves every navigation key to it.
+    func noteControlListOpen(_ open: Bool) {
+        guard open != isControlListOpen else { return }
+        isControlListOpen = open
     }
 
     /// The pointer moved, which re-lights the highlight once it has cleared the arming slop.

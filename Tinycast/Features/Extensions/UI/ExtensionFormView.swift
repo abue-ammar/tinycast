@@ -28,6 +28,8 @@ struct ExtensionFormView: View {
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
+            // The space a picker measures itself in, so a list near the bottom can flip upward.
+            .coordinateSpace(name: ExtensionFormCoordinateSpace.name)
             .edgeDissolve()
             .thinScrollbar()
             .scrollFollowsSelection(
@@ -62,6 +64,8 @@ struct ExtensionFormView: View {
             fieldView(field, index: item.index)
                 .id(item.id)
                 .selectionFrame(item.index == selection)
+                // A picker's list must cover the fields below it, which a later row would paint over.
+                .zIndex(item.index == selection ? 1 : 0)
         } else {
             fieldView(field, index: nil)
         }
@@ -72,7 +76,10 @@ struct ExtensionFormView: View {
     private func fieldView(_ field: RenderNode, index: Int?) -> some View {
         switch field.type {
         case "Form.Separator":
-            Rectangle().fill(Theme.Colors.separator).frame(height: 1)
+            Rectangle()
+                .fill(Theme.Colors.separator)
+                .frame(height: 1)
+                .padding(.vertical, Theme.Spacing.xs)
 
         case "Form.Description":
             labelled(field, showTitle: field.string("title") != nil) {
@@ -96,30 +103,41 @@ struct ExtensionFormView: View {
             }
 
         case "Form.Checkbox":
-            HStack(spacing: Theme.Spacing.sm) {
+            labelled(field, showTitle: field.string("title") != nil) {
                 ExtensionCheckbox(
                     node: field, index: index, focus: $focused, onChange: onChange,
                     onSubmit: onSubmit)
             }
-            .padding(.leading, Theme.Size.formLabelWidth + Theme.Spacing.md)
 
         case "Form.Dropdown":
             labelled(field) {
-                ExtensionDropdown(
-                    node: field, index: index, focus: $focused, onChange: onChange,
+                ExtensionPickerField(
+                    items: ExtensionFormView.items(in: field),
+                    chosen: [field.string("value") ?? ""].filter { !$0.isEmpty },
+                    placeholder: field.string("placeholder") ?? "Select…",
+                    assetsPath: assetsPath,
+                    allowsMultipleSelection: false,
+                    index: index, focus: $focused,
+                    onChange: { onChange(field, $0.first ?? "") },
                     onSubmit: onSubmit)
             }
 
         case "Form.TagPicker":
             labelled(field) {
-                ExtensionTagPicker(
-                    node: field, assetsPath: assetsPath, index: index, focus: $focused,
-                    onChange: onChange, onSubmit: onSubmit)
+                ExtensionPickerField(
+                    items: ExtensionFormView.items(in: field),
+                    chosen: field.array("value").compactMap(\.stringValue),
+                    placeholder: field.string("placeholder") ?? "Select…",
+                    assetsPath: assetsPath,
+                    allowsMultipleSelection: true,
+                    index: index, focus: $focused,
+                    onChange: { onChange(field, $0) },
+                    onSubmit: onSubmit)
             }
 
         case "Form.DatePicker":
             labelled(field) {
-                ExtensionDatePicker(
+                ExtensionDateField(
                     node: field, index: index, focus: $focused, onChange: onChange,
                     onSubmit: onSubmit)
             }
@@ -143,23 +161,52 @@ struct ExtensionFormView: View {
         }
     }
 
+    /// Items may be direct children or grouped in sections.
+    static func items(in field: RenderNode) -> [ExtensionPickerItem] {
+        var items: [ExtensionPickerItem] = []
+        func walk(_ node: RenderNode) {
+            for child in node.children {
+                if child.type.hasSuffix(".Item") {
+                    let value = child.string("value") ?? ""
+                    items.append(
+                        ExtensionPickerItem(
+                            value: value, title: child.string("title") ?? value,
+                            iconValue: child.props["icon"]))
+                } else if child.type.hasSuffix(".Section") {
+                    walk(child)
+                }
+            }
+        }
+        walk(field)
+        return items
+    }
+
     /// Raycast forms are label-left / control-right; the fixed label column keeps controls aligned.
     @ViewBuilder
     private func labelled<Content: View>(
         _ field: RenderNode, showTitle: Bool = true, @ViewBuilder content: () -> Content
     ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
-            Text(showTitle ? (field.string("title") ?? "") : "")
-                .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(.secondary)
-                .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
-            VStack(alignment: .leading, spacing: 2) {
-                content()
+        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.xxs) {
+                Spacer(minLength: 0)
+                Text(showTitle ? (field.string("title") ?? "") : "")
+                    .font(Theme.Typography.rowTrailing)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+                // The info marker Raycast draws beside a label that carries one.
                 if let info = field.string("info"), !info.isEmpty {
-                    Text(info)
-                        .font(Theme.Typography.rowTrailing)
-                        .foregroundStyle(.tertiary)
+                    Image(systemName: "info.circle")
+                        .font(Theme.Typography.disclosure)
+                        .foregroundStyle(Theme.Colors.textTertiary)
+                        .help(info)
                 }
+            }
+            .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
+            // Aligns the label with the control's own text rather than with its rounded top edge.
+            .padding(.top, ExtensionFormMetrics.labelBaselineInset)
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                content()
                 if let error = field.string("error"), !error.isEmpty {
                     Text(error)
                         .font(Theme.Typography.rowTrailing)
@@ -167,36 +214,6 @@ struct ExtensionFormView: View {
                 }
             }
             Spacer(minLength: 0)
-        }
-    }
-}
-
-/// Written here rather than in `DesignSystem`: how an extension's form shows focus is its own.
-private struct FormFocusRing: ViewModifier {
-    let showing: Bool
-
-    func body(content: Content) -> some View {
-        content.overlay {
-            RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                .strokeBorder(showing ? ExtensionColors.fieldFocusStroke : .clear, lineWidth: 2)
-                .padding(-Theme.Spacing.xxs)
-                .allowsHitTesting(false)
-        }
-    }
-}
-
-extension View {
-    /// A drawn ring for the controls AppKit rings for nobody; a text field shows its own.
-    fileprivate func formFocusRing(_ showing: Bool) -> some View {
-        modifier(FormFocusRing(showing: showing))
-    }
-
-    /// ↵ from a control that edits no text runs the form's action, exactly as Raycast does.
-    fileprivate func submitsOnReturn(_ onSubmit: @escaping () -> Void) -> some View {
-        onKeyPress(keys: [.return], phases: .down) { press in
-            guard press.modifiers.isEmpty else { return .ignored }
-            onSubmit()
-            return .handled
         }
     }
 }
@@ -210,27 +227,46 @@ private struct ExtensionTextField: View {
     let onChange: (RenderNode, Any) -> Void
     let onSubmit: () -> Void
     @State private var text: String = ""
+    /// The last edit dispatched, so an echo of an older one cannot overwrite newer typing.
+    @State private var sent: String?
 
     var body: some View {
         Group {
             if secure {
-                SecureField(node.string("placeholder") ?? "", text: $text)
+                SecureField("", text: $text, prompt: prompt)
             } else {
-                TextField(node.string("placeholder") ?? "", text: $text)
+                TextField("", text: $text, prompt: prompt)
             }
         }
-        .textFieldStyle(.roundedBorder)
-        .frame(maxWidth: 320)
+        .textFieldStyle(.plain)
+        .font(Theme.Typography.rowTitle)
         .focused($focus, equals: index)
+        .extensionFieldChrome(focused: focus == index)
         .onSubmit(onSubmit)
         .onAppear { text = node.string("value") ?? "" }
         .onChange(of: node.string("value") ?? "") { _, incoming in
-            if incoming != text { text = incoming }
+            adopt(incoming)
         }
         .onChange(of: text) { _, outgoing in
             guard outgoing != (node.string("value") ?? "") else { return }
+            sent = outgoing
             onChange(node, outgoing)
         }
+    }
+
+    /// React answers a keystroke a render late, so an echo arriving mid-word is older than what
+    /// has been typed since. Only once the echo catches up does the extension own the value again.
+    private func adopt(_ incoming: String) {
+        if let sent {
+            guard incoming == sent else { return }
+            self.sent = nil
+            return
+        }
+        if incoming != text { text = incoming }
+    }
+
+    private var prompt: Text {
+        Text(node.string("placeholder") ?? "").foregroundStyle(Theme.Colors.textTertiary)
     }
 }
 
@@ -240,25 +276,42 @@ private struct ExtensionTextArea: View {
     @FocusState.Binding var focus: Int?
     let onChange: (RenderNode, Any) -> Void
     @State private var text: String = ""
+    /// The last edit dispatched; see `ExtensionTextField.adopt` for why an echo can be stale.
+    @State private var sent: String?
 
     var body: some View {
         TextEditor(text: $text)
             .font(Theme.Typography.rowTitle)
             .scrollContentBackground(.hidden)
-            .padding(Theme.Spacing.xs)
-            .frame(maxWidth: 420, minHeight: 72, maxHeight: 140)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                    .fill(Theme.Colors.iconPlaceholder)
-            )
+            // The editor insets its own text, so the chrome's inset is taken off here.
+            .padding(.horizontal, -5)
+            .padding(.vertical, Theme.Spacing.sm)
             .focused($focus, equals: index)
-            .formFocusRing(focus == index)
+            .extensionFieldChrome(
+                focused: focus == index, height: ExtensionFormMetrics.textAreaHeight
+            )
+            .overlay(alignment: .topLeading) {
+                if text.isEmpty {
+                    Text(node.string("placeholder") ?? "")
+                        .font(Theme.Typography.rowTitle)
+                        .foregroundStyle(Theme.Colors.textTertiary)
+                        .padding(.horizontal, ExtensionFormMetrics.textInset)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .allowsHitTesting(false)
+                }
+            }
             .onAppear { text = node.string("value") ?? "" }
             .onChange(of: node.string("value") ?? "") { _, incoming in
+                if let sent {
+                    guard incoming == sent else { return }
+                    self.sent = nil
+                    return
+                }
                 if incoming != text { text = incoming }
             }
             .onChange(of: text) { _, outgoing in
                 guard outgoing != (node.string("value") ?? "") else { return }
+                sent = outgoing
                 onChange(node, outgoing)
             }
     }
@@ -280,171 +333,29 @@ private struct ExtensionCheckbox: View {
                 Image(systemName: isOn ? "checkmark.square.fill" : "square")
                     .font(Theme.Typography.rowTitle)
                     .foregroundStyle(isOn ? Color.accentColor : Theme.Colors.textSecondary)
-                Text(node.string("label") ?? node.string("title") ?? "")
+                Text(node.string("label") ?? "")
                     .font(Theme.Typography.rowTitle)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
             }
+            .extensionFieldChrome(focused: focus == index)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .focusable()
         .focused($focus, equals: index)
-        .formFocusRing(focus == index)
         .onKeyPress(.space) {
             toggle()
             return .handled
         }
-        .submitsOnReturn(onSubmit)
+        .onKeyPress(keys: [.return], phases: .down) { press in
+            guard press.modifiers.isEmpty else { return .ignored }
+            onSubmit()
+            return .handled
+        }
     }
 
     private func toggle() { onChange(node, !isOn) }
-}
-
-/// A native pop-up button, so its menu opens from the keyboard as well as from a click.
-private struct ExtensionDropdown: View {
-    let node: RenderNode
-    let index: Int?
-    @FocusState.Binding var focus: Int?
-    let onChange: (RenderNode, Any) -> Void
-    let onSubmit: () -> Void
-    /// Owned here so the menu opens from a key press rather than from inside a view update.
-    @State private var opener = ExtensionMenuOpener()
-
-    var body: some View {
-        let items = ExtensionDropdownItem.all(in: node)
-        ExtensionPopUpButton(
-            items: items, selected: node.string("value") ?? "", opener: opener,
-            onSelect: { onChange(node, $0) }
-        )
-        .frame(maxWidth: 260, alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
-        .focusable()
-        .focused($focus, equals: index)
-        .formFocusRing(focus == index)
-        // Space and ↵ both open it, the way a focused pop-up button behaves everywhere else.
-        .onKeyPress(.space) { open() }
-        .onKeyPress(keys: [.return], phases: .down) { press in
-            guard press.modifiers.isEmpty else { return .ignored }
-            return open()
-        }
-        .onKeyPress(.leftArrow) { step(-1, in: items) }
-        .onKeyPress(.rightArrow) { step(1, in: items) }
-    }
-
-    private func open() -> KeyPress.Result {
-        opener.open()
-        return .handled
-    }
-
-    /// Clamped rather than wrapping, so holding an arrow settles at an end like every other list.
-    private func step(_ delta: Int, in items: [ExtensionDropdownItem]) -> KeyPress.Result {
-        let current = items.firstIndex { $0.value == node.string("value") ?? "" } ?? 0
-        let next = min(max(current + delta, 0), items.count - 1)
-        guard items.indices.contains(next), next != current else { return .handled }
-        onChange(node, items[next].value)
-        return .handled
-    }
-}
-
-/// `Form.TagPicker` — multi-select over its items, rendered as toggleable chips.
-private struct ExtensionTagPicker: View {
-    @Environment(\.isDarkAppearance) private var isDark
-    let node: RenderNode
-    let assetsPath: String?
-    let index: Int?
-    @FocusState.Binding var focus: Int?
-    let onChange: (RenderNode, Any) -> Void
-    let onSubmit: () -> Void
-    /// Which chip the arrows act on: the field's own cursor, kept apart from the form's focus.
-    @State private var cursor = 0
-
-    private var items: [RenderNode] { node.children.filter { $0.type.hasSuffix(".Item") } }
-    private var selected: [String] { node.array("value").compactMap(\.stringValue) }
-
-    var body: some View {
-        let items = items
-        FlowLayout(spacing: Theme.Spacing.xs) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { position, item in
-                chip(item, at: position)
-            }
-        }
-        .focusable()
-        .focused($focus, equals: index)
-        .formFocusRing(focus == index)
-        .onKeyPress(.leftArrow) { move(-1, count: items.count) }
-        .onKeyPress(.rightArrow) { move(1, count: items.count) }
-        .onKeyPress(.space) {
-            guard items.indices.contains(cursor) else { return .ignored }
-            toggle(items[cursor].string("value") ?? "")
-            return .handled
-        }
-        .submitsOnReturn(onSubmit)
-    }
-
-    private func chip(_ item: RenderNode, at position: Int) -> some View {
-        let value = item.string("value") ?? ""
-        let isOn = selected.contains(value)
-        return Button {
-            cursor = position
-            toggle(value)
-        } label: {
-            HStack(spacing: 3) {
-                if let icon = item.props["icon"] {
-                    ExtensionIconView(
-                        resolved: ExtensionImage.resolve(
-                            icon, assetsPath: assetsPath, isDark: isDark),
-                        size: 12)
-                }
-                Text(item.string("title") ?? value).font(Theme.Typography.rowTrailing)
-            }
-            .padding(.horizontal, Theme.Spacing.sm)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(isOn ? Theme.Colors.selection : ExtensionColors.tagFill))
-            .overlay(
-                Capsule().stroke(
-                    stroke(isOn: isOn, isCursor: focus == index && position == cursor),
-                    lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func stroke(isOn: Bool, isCursor: Bool) -> Color {
-        if isCursor { return ExtensionColors.fieldFocusStroke }
-        return isOn ? ExtensionColors.tagSelectedStroke : .clear
-    }
-
-    private func move(_ delta: Int, count: Int) -> KeyPress.Result {
-        guard count > 0 else { return .ignored }
-        cursor = min(max(cursor + delta, 0), count - 1)
-        return .handled
-    }
-
-    private func toggle(_ value: String) {
-        onChange(
-            node, selected.contains(value) ? selected.filter { $0 != value } : selected + [value])
-    }
-}
-
-private struct ExtensionDatePicker: View {
-    let node: RenderNode
-    let index: Int?
-    @FocusState.Binding var focus: Int?
-    let onChange: (RenderNode, Any) -> Void
-    let onSubmit: () -> Void
-
-    var body: some View {
-        DatePicker(
-            "",
-            selection: Binding(
-                get: { node.date("value") ?? Date() },
-                set: { onChange(node, ["$date": ISO8601DateFormatter().string(from: $0)]) }),
-            displayedComponents: node.string("type") == "date" ? [.date] : [.date, .hourAndMinute]
-        )
-        .labelsHidden()
-        .focused($focus, equals: index)
-        .formFocusRing(focus == index)
-        .submitsOnReturn(onSubmit)
-    }
 }
 
 private struct ExtensionFilePicker: View {
@@ -456,23 +367,38 @@ private struct ExtensionFilePicker: View {
 
     private var paths: [String] { node.array("value").compactMap(\.stringValue) }
 
+    private var label: String {
+        guard !paths.isEmpty else { return "Choose…" }
+        return paths.map { ($0 as NSString).lastPathComponent }.joined(separator: ", ")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Button("Choose…") { choose() }
-            ForEach(paths, id: \.self) { path in
-                Text((path as NSString).lastPathComponent)
+        Button(action: choose) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "doc")
                     .font(Theme.Typography.rowTrailing)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                Text(label)
+                    .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(paths.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
             }
+            .extensionFieldChrome(focused: focus == index)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .focusable()
         .focused($focus, equals: index)
-        .formFocusRing(focus == index)
         .onKeyPress(.space) {
             choose()
             return .handled
         }
-        .submitsOnReturn(onSubmit)
+        .onKeyPress(keys: [.return], phases: .down) { press in
+            guard press.modifiers.isEmpty else { return .ignored }
+            choose()
+            return .handled
+        }
     }
 
     private func choose() {
