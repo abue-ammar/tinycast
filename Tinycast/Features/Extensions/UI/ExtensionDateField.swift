@@ -14,6 +14,7 @@ struct ExtensionDateField: View {
     @State private var highlighted = 0
     /// True while the list opened upward, so the chevron points the way it actually went.
     @State private var flipped = false
+    @State private var hovered = false
     /// Told while the list is up, so the palette leaves every navigation key to it.
     @Environment(PaletteState.self) private var palette
 
@@ -92,8 +93,9 @@ struct ExtensionDateField: View {
             Spacer(minLength: Theme.Spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: flipped)
         }
-        .extensionFieldChrome(focused: focus == index, open: open)
+        .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
         .contentShape(Rectangle())
+        .onHover { hovered = $0 }
         .onTapGesture {
             focus = index
             if open { close() } else { _ = openList() }
@@ -110,7 +112,8 @@ struct ExtensionDateField: View {
                 },
                 selection: highlighted, chosen: [], assetsPath: nil,
                 searchPlaceholder: "Enter expression: tomorrow at 10am",
-                query: query, onSelect: { choose(rows, at: $0) }
+                query: query, onSelect: { choose(rows, at: $0) },
+                onHighlight: { highlighted = $0 }
             )
             .extensionPopoverPlacement(
                 rowCount: rows.count, hasSearchField: true, onFlip: { flipped = $0 }

@@ -20,6 +20,7 @@ struct ExtensionPickerField: View {
     @State private var highlighted = 0
     /// True while the list opened upward, so the chevron points the way it actually went.
     @State private var flipped = false
+    @State private var hovered = false
     /// Read from the view, so a resolved icon repaints when the surface flips appearance.
     @Environment(\.isDarkAppearance) private var isDark
     /// Told while the list is up, so the palette leaves every navigation key to it.
@@ -107,8 +108,9 @@ struct ExtensionPickerField: View {
             Spacer(minLength: Theme.Spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: flipped)
         }
-        .extensionFieldChrome(focused: focus == index, open: open)
+        .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
         .contentShape(Rectangle())
+        .onHover { hovered = $0 }
         .onTapGesture {
             focus = index
             if open { close() } else { _ = openList() }
@@ -122,7 +124,8 @@ struct ExtensionPickerField: View {
             ExtensionPickerPopover(
                 items: matches, selection: highlighted, chosen: Set(chosen),
                 assetsPath: assetsPath, searchPlaceholder: "Search…",
-                query: query, onSelect: { choose(at: $0) }
+                query: query, onSelect: { choose(at: $0) },
+                onHighlight: { highlighted = $0 }
             )
             .extensionPopoverPlacement(
                 rowCount: matches.count, hasSearchField: true, onFlip: { flipped = $0 }

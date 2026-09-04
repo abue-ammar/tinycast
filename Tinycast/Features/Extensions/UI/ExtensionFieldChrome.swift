@@ -6,6 +6,8 @@ struct ExtensionFieldChrome: ViewModifier {
     var focused: Bool
     /// A control that opens a popover keeps its focused edge while the popover has the keyboard.
     var open = false
+    /// Lit under the pointer, so a control that can be clicked says so before it is.
+    var hovered = false
     var height: CGFloat? = ExtensionFormMetrics.controlHeight
 
     func body(content: Content) -> some View {
@@ -17,7 +19,7 @@ struct ExtensionFieldChrome: ViewModifier {
                 RoundedRectangle(
                     cornerRadius: ExtensionFormMetrics.cornerRadius, style: .continuous
                 )
-                .fill(ExtensionColors.fieldFill)
+                .fill(hovered && !focused ? ExtensionColors.fieldHoverFill : ExtensionColors.fieldFill)
             )
             .overlay(
                 RoundedRectangle(
@@ -30,16 +32,20 @@ struct ExtensionFieldChrome: ViewModifier {
     }
 
     private var stroke: Color {
-        focused || open ? ExtensionColors.fieldFocusStroke : ExtensionColors.fieldStroke
+        if focused || open { return ExtensionColors.fieldFocusStroke }
+        return hovered ? ExtensionColors.fieldHoverStroke : ExtensionColors.fieldStroke
     }
 }
 
 extension View {
     /// One control surface, so every row of a form lines up and reads as the same kind of thing.
     func extensionFieldChrome(
-        focused: Bool, open: Bool = false, height: CGFloat? = ExtensionFormMetrics.controlHeight
+        focused: Bool, open: Bool = false, hovered: Bool = false,
+        height: CGFloat? = ExtensionFormMetrics.controlHeight
     ) -> some View {
-        modifier(ExtensionFieldChrome(focused: focused, open: open, height: height))
+        modifier(
+            ExtensionFieldChrome(
+                focused: focused, open: open, hovered: hovered, height: height))
     }
 }
 

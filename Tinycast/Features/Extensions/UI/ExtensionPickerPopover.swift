@@ -25,6 +25,8 @@ struct ExtensionPickerPopover: View {
     let searchPlaceholder: String?
     let query: String
     let onSelect: (Int) -> Void
+    /// Moves the highlight under the pointer, so the mouse and the keyboard share one selection.
+    let onHighlight: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -91,6 +93,7 @@ struct ExtensionPickerPopover: View {
                                 selected: index == selection,
                                 onActivate: { onSelect(index) })
                             .id(index)
+                            .onHover { if $0 { onHighlight(index) } }
                         }
                     }
                 }

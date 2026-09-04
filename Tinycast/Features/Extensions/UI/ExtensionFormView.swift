@@ -103,7 +103,7 @@ struct ExtensionFormView: View {
             }
 
         case "Form.Checkbox":
-            labelled(field, showTitle: field.string("title") != nil) {
+            labelled(field, showTitle: field.string("title") != nil, bare: true) {
                 ExtensionCheckbox(
                     node: field, index: index, focus: $focused, onChange: onChange,
                     onSubmit: onSubmit)
@@ -184,7 +184,8 @@ struct ExtensionFormView: View {
     /// Raycast forms are label-left / control-right; the fixed label column keeps controls aligned.
     @ViewBuilder
     private func labelled<Content: View>(
-        _ field: RenderNode, showTitle: Bool = true, @ViewBuilder content: () -> Content
+        _ field: RenderNode, showTitle: Bool = true, bare: Bool = false,
+        @ViewBuilder content: () -> Content
     ) -> some View {
         HStack(alignment: .top, spacing: Theme.Spacing.md) {
             HStack(spacing: Theme.Spacing.xxs) {
@@ -203,7 +204,11 @@ struct ExtensionFormView: View {
             }
             .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
             // Aligns the label with the control's own text rather than with its rounded top edge.
-            .padding(.top, ExtensionFormMetrics.labelBaselineInset)
+            .padding(
+                .top,
+                bare
+                    ? ExtensionFormMetrics.bareLabelBaselineInset
+                    : ExtensionFormMetrics.labelBaselineInset)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 content()
@@ -229,6 +234,7 @@ private struct ExtensionTextField: View {
     @State private var text: String = ""
     /// The last edit dispatched, so an echo of an older one cannot overwrite newer typing.
     @State private var sent: String?
+    @State private var hovered = false
 
     var body: some View {
         Group {
@@ -241,7 +247,8 @@ private struct ExtensionTextField: View {
         .textFieldStyle(.plain)
         .font(Theme.Typography.rowTitle)
         .focused($focus, equals: index)
-        .extensionFieldChrome(focused: focus == index)
+        .extensionFieldChrome(focused: focus == index, hovered: hovered)
+        .onHover { hovered = $0 }
         .onSubmit(onSubmit)
         .onAppear { text = node.string("value") ?? "" }
         .onChange(of: node.string("value") ?? "") { _, incoming in
@@ -278,6 +285,7 @@ private struct ExtensionTextArea: View {
     @State private var text: String = ""
     /// The last edit dispatched; see `ExtensionTextField.adopt` for why an echo can be stale.
     @State private var sent: String?
+    @State private var hovered = false
 
     var body: some View {
         TextEditor(text: $text)
@@ -288,8 +296,10 @@ private struct ExtensionTextArea: View {
             .padding(.vertical, Theme.Spacing.sm)
             .focused($focus, equals: index)
             .extensionFieldChrome(
-                focused: focus == index, height: ExtensionFormMetrics.textAreaHeight
+                focused: focus == index, hovered: hovered,
+                height: ExtensionFormMetrics.textAreaHeight
             )
+            .onHover { hovered = $0 }
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
                     Text(node.string("placeholder") ?? "")
@@ -324,26 +334,30 @@ private struct ExtensionCheckbox: View {
     @FocusState.Binding var focus: Int?
     let onChange: (RenderNode, Any) -> Void
     let onSubmit: () -> Void
+    @State private var hovered = false
 
     private var isOn: Bool { node.bool("value") ?? false }
 
     var body: some View {
         Button(action: toggle) {
             HStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: isOn ? "checkmark.square.fill" : "square")
-                    .font(Theme.Typography.rowTitle)
-                    .foregroundStyle(isOn ? Color.accentColor : Theme.Colors.textSecondary)
+                box
                 Text(node.string("label") ?? "")
                     .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(Theme.Colors.textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
-            .extensionFieldChrome(focused: focus == index)
+            // No field chrome: a checkbox is its own box, and a second one around it reads as a well.
+            .frame(width: ExtensionFormMetrics.controlWidth, alignment: .leading)
+            .frame(height: ExtensionFormMetrics.controlHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .focusable()
         .focused($focus, equals: index)
+        .focusEffectDisabled()
+        .onHover { hovered = $0 }
         .onKeyPress(.space) {
             toggle()
             return .handled
@@ -353,6 +367,33 @@ private struct ExtensionCheckbox: View {
             onSubmit()
             return .handled
         }
+    }
+
+    /// Drawn rather than an SF Symbol pair: the filled and empty symbols differ in optical weight,
+    /// so a row of them jitters as it is ticked.
+    private var box: some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(isOn ? Color.accentColor : ExtensionColors.fieldFill)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .strokeBorder(borderColor, lineWidth: 1)
+            )
+            .overlay {
+                if isOn {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(
+                width: ExtensionFormMetrics.checkboxSize,
+                height: ExtensionFormMetrics.checkboxSize)
+    }
+
+    private var borderColor: Color {
+        if focus == index { return ExtensionColors.fieldFocusStroke }
+        if isOn { return .clear }
+        return hovered ? ExtensionColors.fieldFocusStroke : ExtensionColors.checkboxStroke
     }
 
     private func toggle() { onChange(node, !isOn) }
@@ -366,6 +407,7 @@ private struct ExtensionFilePicker: View {
     let onSubmit: () -> Void
 
     private var paths: [String] { node.array("value").compactMap(\.stringValue) }
+    @State private var hovered = false
 
     private var label: String {
         guard !paths.isEmpty else { return "Choose…" }
@@ -384,12 +426,14 @@ private struct ExtensionFilePicker: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
-            .extensionFieldChrome(focused: focus == index)
+            .extensionFieldChrome(focused: focus == index, hovered: hovered)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .focusable()
         .focused($focus, equals: index)
+        .focusEffectDisabled()
+        .onHover { hovered = $0 }
         .onKeyPress(.space) {
             choose()
             return .handled

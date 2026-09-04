@@ -12,7 +12,11 @@ enum ExtensionFormMetrics {
     /// Inset of a control's own text from its rounded edge.
     static let textInset: CGFloat = 10
     /// Drops a label to the control's own text rather than to its rounded top edge.
-    static let labelBaselineInset: CGFloat = 7
+    static let labelBaselineInset: CGFloat = 6
+    /// A checkbox carries no field chrome, so its label needs less of a drop to sit level.
+    static let bareLabelBaselineInset: CGFloat = 1
+    /// The box a checkbox draws, and the gap to the label beside it.
+    static let checkboxSize: CGFloat = 14
     /// The gap between a control and the popover it opens, on whichever side it opens.
     static let popoverGap: CGFloat = 6
     static let popoverRowHeight: CGFloat = 32
