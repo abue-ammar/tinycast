@@ -15,6 +15,11 @@ struct ExtensionFieldChrome: ViewModifier {
             .padding(.horizontal, ExtensionFormMetrics.textInset)
             .frame(width: ExtensionFormMetrics.controlWidth, alignment: .leading)
             .frame(height: height, alignment: .topLeading)
+            // A control is taller than its text, so the row's label would align to the box's top
+            // rather than to the words in it. This puts the baseline back on the first line.
+            .alignmentGuide(.firstTextBaseline) { _ in
+                ExtensionFormMetrics.firstLineBaseline
+            }
             .background(
                 RoundedRectangle(
                     cornerRadius: ExtensionFormMetrics.cornerRadius, style: .continuous

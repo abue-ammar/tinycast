@@ -8,15 +8,16 @@ enum ExtensionFormMetrics {
     static let controlHeight: CGFloat = 32
     /// A text area is a control that grew: same width and chrome, several lines tall.
     static let textAreaHeight: CGFloat = 78
-    static let cornerRadius: CGFloat = 8
+    static let cornerRadius: CGFloat = 10
     /// Inset of a control's own text from its rounded edge.
     static let textInset: CGFloat = 10
-    /// Drops a label to the control's own text rather than to its rounded top edge.
-    static let labelBaselineInset: CGFloat = 6
-    /// A checkbox carries no field chrome, so its label needs less of a drop to sit level.
-    static let bareLabelBaselineInset: CGFloat = 1
     /// The box a checkbox draws, and the gap to the label beside it.
     static let checkboxSize: CGFloat = 14
+    /// The gap between one labelled row and the next.
+    static let rowSpacing: CGFloat = 14
+    /// Where a control's first line of text sits from its top edge, which is what a row's label
+    /// aligns to: a tall control would otherwise drag the label to the top of the box.
+    static let firstLineBaseline: CGFloat = 21
     /// The gap between a control and the popover it opens, on whichever side it opens.
     static let popoverGap: CGFloat = 6
     static let popoverRowHeight: CGFloat = 32

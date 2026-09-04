@@ -189,8 +189,8 @@ struct ExtensionFormView: View {
         _ field: RenderNode, showTitle: Bool = true, bare: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.md) {
-            HStack(spacing: Theme.Spacing.xxs) {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xxs) {
                 Spacer(minLength: 0)
                 Text(showTitle ? (field.string("title") ?? "") : "")
                     .font(Theme.Typography.rowTrailing)
@@ -205,12 +205,6 @@ struct ExtensionFormView: View {
                 }
             }
             .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
-            // Aligns the label with the control's own text rather than with its rounded top edge.
-            .padding(
-                .top,
-                bare
-                    ? ExtensionFormMetrics.bareLabelBaselineInset
-                    : ExtensionFormMetrics.labelBaselineInset)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 content()
@@ -222,6 +216,8 @@ struct ExtensionFormView: View {
             }
             Spacer(minLength: 0)
         }
+        // The label sits on the control's own first line, which a tall control would otherwise
+        // pull it away from; the alignment guide below is what keeps the two on one baseline.
     }
 }
 
