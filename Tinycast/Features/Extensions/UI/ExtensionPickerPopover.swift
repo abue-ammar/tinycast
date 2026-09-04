@@ -6,6 +6,8 @@ struct ExtensionPickerItem: Identifiable, Equatable {
     let title: String
     var detail: String?
     var iconValue: RenderValue?
+    /// The section this choice was declared under, drawn as a heading above the first of them.
+    var section: String?
 
     var id: String { value }
 }
@@ -82,8 +84,18 @@ struct ExtensionPickerPopover: View {
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: ExtensionFormMetrics.popoverRowSpacing) {
+                    VStack(alignment: .leading, spacing: ExtensionFormMetrics.popoverRowSpacing) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                            // A heading above the first row of each section, as Raycast draws them.
+                            if let section = item.section, section != sectionBefore(index) {
+                                Text(section)
+                                    .font(Theme.Typography.sectionHeader)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, Theme.Spacing.md)
+                                    .frame(
+                                        height: ExtensionFormMetrics.popoverSectionHeaderHeight,
+                                        alignment: .leading)
+                            }
                             ExtensionPickerRow(
                                 title: item.title,
                                 detail: item.detail,
@@ -97,12 +109,27 @@ struct ExtensionPickerPopover: View {
                         }
                     }
                 }
-                .frame(height: ExtensionFormMetrics.popoverListHeight(rows: items.count))
+                .frame(
+                    height: ExtensionFormMetrics.popoverListHeight(
+                        rows: items.count, headers: headerCount))
                 .scrollBounceBehavior(.basedOnSize)
                 // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
                 .scrollIndicators(.never)
                 .onChange(of: selection) { proxy.scrollTo(selection) }
             }
+        }
+    }
+
+    /// The section of the row before this one, so only the first of a run draws its heading.
+    private func sectionBefore(_ index: Int) -> String? {
+        index > 0 ? items[index - 1].section : nil
+    }
+
+    /// How many headings the list draws, which the height maths has to count as well as rows.
+    private var headerCount: Int {
+        items.indices.reduce(into: 0) { total, index in
+            guard let section = items[index].section, section != sectionBefore(index) else { return }
+            total += 1
         }
     }
 }

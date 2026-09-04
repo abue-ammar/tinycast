@@ -164,20 +164,20 @@ struct ExtensionFormView: View {
     /// Items may be direct children or grouped in sections.
     static func items(in field: RenderNode) -> [ExtensionPickerItem] {
         var items: [ExtensionPickerItem] = []
-        func walk(_ node: RenderNode) {
+        func walk(_ node: RenderNode, section: String?) {
             for child in node.children {
                 if child.type.hasSuffix(".Item") {
                     let value = child.string("value") ?? ""
                     items.append(
                         ExtensionPickerItem(
                             value: value, title: child.string("title") ?? value,
-                            iconValue: child.props["icon"]))
+                            iconValue: child.props["icon"], section: section))
                 } else if child.type.hasSuffix(".Section") {
-                    walk(child)
+                    walk(child, section: child.string("title"))
                 }
             }
         }
-        walk(field)
+        walk(field, section: nil)
         return items
     }
 
@@ -396,7 +396,11 @@ private struct ExtensionCheckbox: View {
         return hovered ? ExtensionColors.fieldFocusStroke : ExtensionColors.checkboxStroke
     }
 
-    private func toggle() { onChange(node, !isOn) }
+    /// A click takes focus too, so the keyboard carries on from where the pointer left off.
+    private func toggle() {
+        focus = index
+        onChange(node, !isOn)
+    }
 }
 
 private struct ExtensionFilePicker: View {
@@ -446,6 +450,7 @@ private struct ExtensionFilePicker: View {
     }
 
     private func choose() {
+        focus = index
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = node.bool("allowMultipleSelection") ?? true
         panel.canChooseDirectories = node.bool("canChooseDirectories") ?? false

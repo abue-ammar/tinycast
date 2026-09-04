@@ -55,6 +55,16 @@ struct ExtensionFormTests {
             ExtensionFormMetrics.popoverHeight(rows: 3, hasSearchField: true)
                 - ExtensionFormMetrics.popoverHeight(rows: 3, hasSearchField: false)
                 == ExtensionFormMetrics.popoverSearchHeight)
+        check(
+            "a section heading takes room of its own",
+            ExtensionFormMetrics.popoverListHeight(rows: 4, headers: 2)
+                - ExtensionFormMetrics.popoverListHeight(rows: 4)
+                == (ExtensionFormMetrics.popoverSectionHeaderHeight
+                    + ExtensionFormMetrics.popoverRowSpacing) * 2)
+        check(
+            "and a headed list still caps at the visible rows",
+            ExtensionFormMetrics.popoverListHeight(rows: 40, headers: 6)
+                == ExtensionFormMetrics.popoverRowsMaxHeight)
     }
 
     static func popoverPlacement() {

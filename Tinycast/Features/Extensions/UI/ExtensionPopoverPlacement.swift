@@ -5,6 +5,8 @@ import SwiftUI
 /// measures the control against the form and applies what the rule decides.
 struct ExtensionPopoverPlacement: ViewModifier {
     let rowCount: Int
+    /// Section headings the list draws; they take room the flip decision has to allow for.
+    let headerCount: Int
     let hasSearchField: Bool
     /// Reported back so the control can point its chevron the way the list actually opened.
     let onFlip: (Bool) -> Void
@@ -13,7 +15,8 @@ struct ExtensionPopoverPlacement: ViewModifier {
     @State private var containerHeight: CGFloat = 0
 
     private var height: CGFloat {
-        ExtensionFormMetrics.popoverHeight(rows: rowCount, hasSearchField: hasSearchField)
+        ExtensionFormMetrics.popoverHeight(
+            rows: rowCount, hasSearchField: hasSearchField, headers: headerCount)
     }
 
     private var placement: ExtensionFormMetrics.Placement {
@@ -56,10 +59,12 @@ enum ExtensionFormCoordinateSpace {
 extension View {
     /// Opens a list downward, or upward when the form's bottom edge would cut it off.
     func extensionPopoverPlacement(
-        rowCount: Int, hasSearchField: Bool, onFlip: @escaping (Bool) -> Void
+        rowCount: Int, headerCount: Int = 0, hasSearchField: Bool,
+        onFlip: @escaping (Bool) -> Void
     ) -> some View {
         modifier(
             ExtensionPopoverPlacement(
-                rowCount: rowCount, hasSearchField: hasSearchField, onFlip: onFlip))
+                rowCount: rowCount, headerCount: headerCount, hasSearchField: hasSearchField,
+                onFlip: onFlip))
     }
 }

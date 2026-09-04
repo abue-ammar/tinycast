@@ -45,6 +45,15 @@ struct ExtensionPickerField: View {
         return items.filter { FuzzyMatch.score(needle, candidate: $0.title) != nil }
     }
 
+    /// Headings the open list will draw, which its height and its flip decision both count.
+    private var sectionCount: Int {
+        let matches = matches
+        return matches.indices.reduce(into: 0) { total, index in
+            guard let section = matches[index].section else { return }
+            if index == 0 || matches[index - 1].section != section { total += 1 }
+        }
+    }
+
     var body: some View {
         control
             .focusable()
@@ -128,7 +137,8 @@ struct ExtensionPickerField: View {
                 onHighlight: { highlighted = $0 }
             )
             .extensionPopoverPlacement(
-                rowCount: matches.count, hasSearchField: true, onFlip: { flipped = $0 }
+                rowCount: matches.count, headerCount: sectionCount, hasSearchField: true,
+                onFlip: { flipped = $0 }
             )
             // Above every later row, so a picker near the top is not covered by the fields under it.
             .zIndex(1)

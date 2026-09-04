@@ -21,6 +21,8 @@ enum ExtensionFormMetrics {
     static let popoverGap: CGFloat = 6
     static let popoverRowHeight: CGFloat = 32
     static let popoverRowSpacing: CGFloat = 1
+    /// A section heading inside a picker's list; shorter than a row, since it is a label.
+    static let popoverSectionHeaderHeight: CGFloat = 24
     /// Six rows and half of the seventh, so a long list reads as scrollable rather than clipped.
     static let popoverVisibleRows: CGFloat = 6.5
     static let popoverCornerRadius: CGFloat = 10
@@ -34,15 +36,17 @@ enum ExtensionFormMetrics {
     }
 
     /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
-    static func popoverListHeight(rows: Int) -> CGFloat {
+    static func popoverListHeight(rows: Int, headers: Int = 0) -> CGFloat {
         guard rows > 0 else { return 0 }
-        let exact = CGFloat(rows) * (popoverRowHeight + popoverRowSpacing) - popoverRowSpacing
+        let pitch = popoverRowHeight + popoverRowSpacing
+        let headings = CGFloat(headers) * (popoverSectionHeaderHeight + popoverRowSpacing)
+        let exact = CGFloat(rows) * pitch - popoverRowSpacing + headings
         return min(exact, popoverRowsMaxHeight)
     }
 
     /// The whole popover, list plus whatever chrome sits above it.
-    static func popoverHeight(rows: Int, hasSearchField: Bool) -> CGFloat {
-        let list = popoverListHeight(rows: rows)
+    static func popoverHeight(rows: Int, hasSearchField: Bool, headers: Int = 0) -> CGFloat {
+        let list = popoverListHeight(rows: rows, headers: headers)
         let search = hasSearchField ? popoverSearchHeight : 0
         // An empty list still draws its search row, so the popover never collapses to its padding.
         return list + search + popoverPadding * 2
