@@ -222,9 +222,15 @@ screens hold (see [palette.md](palette.md)).
   form's selection instead of the list's highlight.
 
   The list is styled as the ⌘K panel is — the same glass surface, row pitch, icon slot and
-  overflow fade — so a picker and the actions menu read as one kind of thing. Its metrics are
-  restated in `ExtensionFormMetrics` rather than read off the panel: an extension's surfaces own
-  their own, and a launcher change must never move a form.
+  overflow fade — so a picker and the actions menu read as one kind of thing, and a focused
+  control takes the system accent edge that Settings and the shortcut recorder already draw.
+  Its metrics are restated in `ExtensionFormMetrics` rather than read off the panel: an extension's
+  surfaces own their own, and a launcher change must never move a form.
+
+  **The query is typed into the control, not into the list.** The one field editor belongs to the
+  palette's search field, so a picker draws its own caret (`ExtensionCaret`) and renders what has
+  been typed in place of its value — the text appears where the eye already is, and a multi-select
+  keeps its chosen values beside it. The list below is results only.
 
   **Every key an open list can receive is resolved in one place**, `ExtensionListKey`. A stack of
   separate `onKeyPress` modifiers let a character rule shadow ⌫, and ⌫ arrives carrying U+007F

@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The rounded surface every form control shares, so a field, a picker and an area read alike.
-/// Written here, never in `DesignSystem`: how an extension's form looks is the feature's own.
+/// The one control surface a form draws, kept here rather than in `DesignSystem`.
 struct ExtensionFieldChrome: ViewModifier {
     var focused: Bool
     /// A control that opens a popover keeps its focused edge while the popover has the keyboard.
@@ -18,8 +17,7 @@ struct ExtensionFieldChrome: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, ExtensionFormMetrics.textInset)
-            // The same vertical inset either way, so a text area's first line sits exactly where a
-            // one-line control's does and the label beside them agrees with both.
+            // One inset either way, so a text area's first line sits where a field's does.
             .padding(.vertical, ExtensionFormMetrics.verticalInset)
             .frame(
                 width: ExtensionFormMetrics.controlWidth, height: height,

@@ -22,8 +22,7 @@ struct ExtensionFormView: View {
                         row(field)
                     }
                 }
-                // Centred as a block, the way Raycast seats a form in its panel; the label column
-                // and the controls keep their own widths inside it.
+                // Centred as a block; the label column and controls keep their own widths.
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, ExtensionFormMetrics.formVerticalPadding)
                 .hideNativeScrollers()
@@ -92,8 +91,7 @@ struct ExtensionFormView: View {
                     .font(Theme.Typography.rowTrailing)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
-                    // Text with no chrome around it still occupies a control's height, so the
-                    // label beside it sits where every other row's label does.
+                    // Bare text still takes a control's height, so its label sits level.
                     .padding(.vertical, ExtensionFormMetrics.verticalInset)
                     .frame(minHeight: ExtensionFormMetrics.controlHeight, alignment: .leading)
             }
@@ -213,8 +211,7 @@ struct ExtensionFormView: View {
                 }
             }
             .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
-            // Centred against a one-line control's height, and free to grow past it: a label long
-            // enough to wrap must not be clipped to a single control's worth of room.
+            // Centred on a control's height but free to grow, so a long label wraps.
             .frame(minHeight: ExtensionFormMetrics.controlHeight)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -269,8 +266,7 @@ private struct ExtensionTextField: View {
         }
     }
 
-    /// React answers a keystroke a render late, so an echo arriving mid-word is older than what
-    /// has been typed since. Only once the echo catches up does the extension own the value again.
+    /// React answers a render late, so an echo mid-word is older than what was typed since.
     private func adopt(_ incoming: String) {
         if let sent {
             guard incoming == sent else { return }
@@ -377,8 +373,7 @@ private struct ExtensionCheckbox: View {
         }
     }
 
-    /// Drawn rather than an SF Symbol pair: the filled and empty symbols differ in optical weight,
-    /// so a row of them jitters as it is ticked.
+    /// Drawn, not an SF Symbol pair: those differ in weight and jitter as they tick.
     private var box: some View {
         RoundedRectangle(cornerRadius: 4, style: .continuous)
             .fill(isOn ? Color.accentColor : ExtensionColors.fieldFill)

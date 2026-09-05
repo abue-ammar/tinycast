@@ -368,8 +368,7 @@ struct RootPaletteView: View {
             guard command || option else {
                 // Claimed before the field editor commits: ending editing reselects a carried query.
                 guard !vm.isComposing else { return .ignored }
-                // A screen that hid the field answers ↵ through its own controls; this is the
-                // fallback for one that has none focused to answer with.
+                // The fallback for a hidden-field screen with no control focused to answer.
                 guard searchFocused || (screen.hidesSearchField && screen.rows.isEmpty) else {
                     return .ignored
                 }

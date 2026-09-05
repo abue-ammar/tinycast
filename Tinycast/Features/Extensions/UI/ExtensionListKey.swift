@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// What a key press means to a control that drops a list. One place decides, so a character rule
-/// can never shadow ⌫ the way a stack of separate `onKeyPress` modifiers let it.
+/// What a key means to a control with a list; one place, so no rule can shadow another.
 enum ExtensionListKey: Equatable {
     case openList
     case moveUp
@@ -39,8 +38,7 @@ enum ExtensionListKey: Equatable {
         default: break
         }
 
-        // Measured, not assumed: the ⌫ key arrives carrying U+007F, while SwiftUI's `.delete`
-        // is U+0008, so matching the named constant alone never fired and nothing was deleted.
+        // Measured: ⌫ arrives as U+007F, not the U+0008 that SwiftUI's `.delete` names.
         if isDeletion(key: key, characters: characters) {
             return listOpen ? .deleteBackward : .ignored
         }

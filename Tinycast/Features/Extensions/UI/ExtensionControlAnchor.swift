@@ -11,8 +11,7 @@ struct ExtensionControlAnchor: Equatable {
     var containerHeight: CGFloat = 0
 }
 
-/// Measures a **control** against the form. The list must never measure itself: it is the thing
-/// being moved, so reading its own frame feeds its offset back into its own measurement.
+/// Measures a control against the form; a list reading its own frame would feed back.
 struct ExtensionAnchorReader: ViewModifier {
     let onMeasure: (ExtensionControlAnchor) -> Void
 

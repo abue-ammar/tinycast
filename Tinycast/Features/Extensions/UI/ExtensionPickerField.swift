@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// A form control that drops a searchable list: `Form.Dropdown` and `Form.TagPicker` alike.
-/// The popover is drawn in an overlay above the form rather than in a window of its own, so it
-/// scrolls with the field it belongs to and never outlives the screen that owns it.
+/// `Form.Dropdown` and `Form.TagPicker`: one control, typing and caret in the field itself.
 struct ExtensionPickerField: View {
     let items: [ExtensionPickerItem]
     /// Every value currently held; a dropdown has one, a tag picker any number.
@@ -20,7 +18,6 @@ struct ExtensionPickerField: View {
     @State private var open = false
     @State private var query = ""
     @State private var highlighted = 0
-    /// True while the list opened upward, so the chevron points the way it actually went.
     @State private var hovered = false
     /// Where this control sits in the form, which is what its list is placed against.
     @State private var anchor = ExtensionControlAnchor()
@@ -28,6 +25,14 @@ struct ExtensionPickerField: View {
     @Environment(\.isDarkAppearance) private var isDark
     /// Told while the list is up, so the palette leaves every navigation key to it.
     @Environment(PaletteState.self) private var palette
+
+    private var isFocused: Bool { focus == index }
+
+    /// What a screen reader hears: the query while searching, else the value held.
+    private var announcedValue: String {
+        guard open, !query.isEmpty else { return chosen.isEmpty ? placeholder : label }
+        return chosen.isEmpty ? query : "\(label), searching \(query)"
+    }
 
     /// What the closed control reads as: the chosen titles, or the placeholder.
     private var label: String {
@@ -48,7 +53,7 @@ struct ExtensionPickerField: View {
         return items.filter { FuzzyMatch.score(needle, candidate: $0.title) != nil }
     }
 
-    /// Headings the open list will draw, which its height and its flip decision both count.
+    /// Headings the open list draws, which its height and its flip decision both count.
     private var sectionCount: Int {
         let matches = matches
         return matches.indices.reduce(into: 0) { total, index in
@@ -63,11 +68,8 @@ struct ExtensionPickerField: View {
             .focused($focus, equals: index)
             // The chrome draws the focused edge, so AppKit's blue ring would be a second one.
             .focusEffectDisabled()
-            .overlay(alignment: .topLeading) { popoverLayer }
-            // One handler, not one per key: the popover is an overlay, so a press on the focused
-            // control never travels into it, and `ExtensionListKey` is the single place that says
-            // what a press means. Separate modifiers let a character rule shadow the delete rule,
-            // which is what stopped ⌫ from ever reaching the query.
+            .overlay(alignment: .topLeading) { listLayer }
+            // One handler: the list is an overlay, which a press on the control never reaches.
             .onKeyPress(phases: [.down, .repeat]) { press in
                 switch ExtensionListKey(press: press, listOpen: open) {
                 case .openList: return openList()
@@ -102,22 +104,48 @@ struct ExtensionPickerField: View {
 
     private var control: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            if let leadingIcon {
+            if let leadingIcon, query.isEmpty {
                 ExtensionIconView(resolved: leadingIcon, size: 14)
             }
-            Text(label)
-                .font(Theme.Typography.rowTitle)
-                .foregroundStyle(chosen.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
-                .lineLimit(1)
+            // While the list is open the control is the search field, caret and all.
+            if open {
+                // A multi-select keeps its chosen values in view while the query is typed.
+                if allowsMultipleSelection, !chosen.isEmpty {
+                    Text(label)
+                        .font(Theme.Typography.rowTitle)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .lineLimit(1)
+                        .layoutPriority(-1)
+                    Text("·")
+                        .font(Theme.Typography.rowTitle)
+                        .foregroundStyle(Theme.Colors.textTertiary)
+                }
+                Text(query.isEmpty ? "Search…" : query)
+                    .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(
+                        query.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
+                    )
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                ExtensionCaret()
+            } else {
+                Text(label)
+                    .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(
+                        chosen.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
+                    )
+                    .lineLimit(1)
+            }
             Spacer(minLength: Theme.Spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: placement.flipped)
         }
-        .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
+        .extensionFieldChrome(focused: isFocused, open: open, hovered: hovered)
         .contentShape(Rectangle())
         // Without this the control reads as its chevron: no name, no value, no role.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(title))
-        .accessibilityValue(Text(chosen.isEmpty ? placeholder : label))
+        // While open the control is a search field, so it announces what is being typed.
+        .accessibilityValue(Text(announcedValue))
         .accessibilityHint(Text(open ? "Showing choices" : "Opens a list of choices"))
         .accessibilityAddTraits(.isButton)
         .onHover { hovered = $0 }
@@ -131,12 +159,11 @@ struct ExtensionPickerField: View {
 
     /// Drawn in an overlay so it sits above the rows below it without a window of its own.
     @ViewBuilder
-    private var popoverLayer: some View {
+    private var listLayer: some View {
         if open {
-            ExtensionPickerPopover(
+            ExtensionPickerList(
                 items: matches, selection: highlighted, chosen: Set(chosen),
-                assetsPath: assetsPath, searchPlaceholder: "Search…",
-                query: query, onSelect: { choose(at: $0) },
+                assetsPath: assetsPath, onSelect: { choose(at: $0) },
                 onHighlight: { highlighted = $0 }
             )
             // Placed from the control's measured frame, never from the list's own.
@@ -151,7 +178,7 @@ struct ExtensionPickerField: View {
         ExtensionFormMetrics.placement(
             anchor: anchor.frame,
             popoverHeight: ExtensionFormMetrics.popoverHeight(
-                rows: matches.count, hasSearchField: true, headers: sectionCount),
+                rows: matches.count, hasSearchField: false, headers: sectionCount),
             containerHeight: anchor.containerHeight)
     }
 

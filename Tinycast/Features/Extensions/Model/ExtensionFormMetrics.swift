@@ -1,7 +1,6 @@
-import CoreGraphics
+import Foundation
 
-/// The geometry every form control shares, so a field, a picker and a text area line up exactly.
-/// Pure numbers, so the popover's placement rule can be driven by a harness.
+/// The geometry every form control shares; pure, so a harness drives the placement rule.
 enum ExtensionFormMetrics {
     /// One control's width and height, matching the proportions Raycast's own form draws.
     static let controlWidth: CGFloat = 360
@@ -11,11 +10,9 @@ enum ExtensionFormMetrics {
     static let cornerRadius: CGFloat = 10
     /// Inset of a control's own text from its rounded edge.
     static let textInset: CGFloat = 10
-    /// The same top inset on every control, so a one-line field and a text area start their text
-    /// on the same line and one label serves both.
+    /// One top inset everywhere, so a field and a text area start their text on one line.
     static let verticalInset: CGFloat = 7
-    /// `NSTextView`'s own line-fragment padding, taken back off so a text area's first character
-    /// sits under a text field's.
+    /// `NSTextView`'s line-fragment padding, taken off so its text aligns with a field's.
     static let textViewGutter: CGFloat = 5
     /// The box a checkbox draws, and the gap to the label beside it.
     static let checkboxSize: CGFloat = 14
@@ -27,8 +24,7 @@ enum ExtensionFormMetrics {
     static let formVerticalPadding: CGFloat = 16
     /// The gap between a control and the popover it opens, on whichever side it opens.
     static let popoverGap: CGFloat = 6
-    /// The ⌘K panel's own row pitch, restated here rather than read from it: an extension's
-    /// surfaces own their metrics, and a launcher change must never move a form.
+    /// The ⌘K panel's pitch, restated: a launcher change must never move a form.
     static let popoverRowHeight: CGFloat = 36
     static let popoverRowSpacing: CGFloat = 1
     /// A section heading inside a picker's list; shorter than a row, since it is a label.
@@ -37,6 +33,10 @@ enum ExtensionFormMetrics {
     static let popoverVisibleRows: CGFloat = 6.5
     /// The search or expression row a popover opens with, where it has one.
     static let popoverSearchHeight: CGFloat = 30
+    /// The drawn caret that stands in for a field editor the control never gets.
+    static let caretWidth: CGFloat = 1
+    static let caretHeight: CGFloat = 15
+    static let caretBlink: TimeInterval = 0.5
     /// `Theme.Spacing.sm` on every side, matching the ⌘K panel's own inset.
     static let popoverPadding: CGFloat = 6
 

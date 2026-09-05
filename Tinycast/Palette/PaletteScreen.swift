@@ -48,8 +48,7 @@ enum PaletteAxis {
 
     var rows: [Row] { get }
     var primaryActionTitle: String { get }
-    /// True when the screen owns the keyboard itself, so the header's field is neither shown
-    /// nor focused.
+    /// True when the screen owns the keyboard, so the header's field is hidden and unfocused.
     var hidesSearchField: Bool { get }
     /// True when ↵ and ⌘K still act with no rows — a form's action belongs to the screen.
     var actsWithoutRows: Bool { get }

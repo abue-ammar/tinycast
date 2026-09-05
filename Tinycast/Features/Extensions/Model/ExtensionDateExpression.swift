@@ -1,7 +1,6 @@
 import Foundation
 
-/// The presets and typed expressions Raycast's date picker offers ("tomorrow at 10am").
-/// Pure: every environment fact — the calendar, the clock — arrives as a parameter.
+/// Presets and typed dates ("tomorrow at 10am"); the clock and calendar are injected.
 enum ExtensionDateExpression {
     /// One row of the picker: a name, the date it means, and how that date reads.
     struct Suggestion: Equatable, Identifiable {

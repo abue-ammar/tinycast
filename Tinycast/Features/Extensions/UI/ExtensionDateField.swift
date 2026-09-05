@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// `Form.DatePicker` — a control that drops presets and parses what is typed into it,
-/// the way Raycast's own date field reads "tomorrow at 10am".
+/// `Form.DatePicker`: presets plus an expression, typed into the control itself.
 struct ExtensionDateField: View {
     let node: RenderNode
     let index: Int?
@@ -12,7 +11,6 @@ struct ExtensionDateField: View {
     @State private var open = false
     @State private var query = ""
     @State private var highlighted = 0
-    /// True while the list opened upward, so the chevron points the way it actually went.
     @State private var hovered = false
     /// Where this control sits in the form, which is what its list is placed against.
     @State private var anchor = ExtensionControlAnchor()
@@ -22,6 +20,7 @@ struct ExtensionDateField: View {
     /// A `date` picker holds a day; anything else holds a time as well.
     private var includesTime: Bool { node.string("type") != "date" }
     private var value: Date? { node.date("value") }
+    private var isFocused: Bool { focus == index }
 
     private var label: String {
         guard let value else { return "No Date" }
@@ -39,9 +38,8 @@ struct ExtensionDateField: View {
             .focusable()
             .focused($focus, equals: index)
             .focusEffectDisabled()
-            .overlay(alignment: .topLeading) { popoverLayer }
-            // One handler over `ExtensionListKey`, as the picker uses: the popover is an overlay,
-            // so a press on the focused control never travels into it.
+            .overlay(alignment: .topLeading) { listLayer }
+            // One handler: the list is an overlay, which a press on the control never reaches.
             .onKeyPress(phases: [.down, .repeat]) { press in
                 switch ExtensionListKey(press: press, listOpen: open) {
                 case .openList: return openList()
@@ -75,18 +73,33 @@ struct ExtensionDateField: View {
             Image(systemName: "calendar")
                 .font(Theme.Typography.rowTrailing)
                 .foregroundStyle(Theme.Colors.textSecondary)
-            Text(label)
-                .font(Theme.Typography.rowTitle)
-                .foregroundStyle(value == nil ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
-                .lineLimit(1)
+            // While the list is open the control is the expression field, caret and all.
+            if open {
+                Text(query.isEmpty ? "tomorrow at 10am" : query)
+                    .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(
+                        query.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
+                    )
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                ExtensionCaret()
+            } else {
+                Text(label)
+                    .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(
+                        value == nil ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
+                    )
+                    .lineLimit(1)
+            }
             Spacer(minLength: Theme.Spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: placement.flipped)
         }
-        .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
+        .extensionFieldChrome(focused: isFocused, open: open, hovered: hovered)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(node.string("title") ?? "Date"))
-        .accessibilityValue(Text(label))
+        // While open the control is an expression field, so it announces what is typed.
+        .accessibilityValue(Text(open && !query.isEmpty ? query : label))
         .accessibilityHint(Text(open ? "Showing dates" : "Opens a list of dates"))
         .accessibilityAddTraits(.isButton)
         .onHover { hovered = $0 }
@@ -99,16 +112,15 @@ struct ExtensionDateField: View {
     }
 
     @ViewBuilder
-    private var popoverLayer: some View {
+    private var listLayer: some View {
         if open {
             let rows = suggestions
-            ExtensionPickerPopover(
+            ExtensionPickerList(
                 items: rows.map {
                     ExtensionPickerItem(value: $0.title, title: $0.title, detail: $0.detail)
                 },
                 selection: highlighted, chosen: [], assetsPath: nil,
-                searchPlaceholder: "Enter expression: tomorrow at 10am",
-                query: query, onSelect: { choose(rows, at: $0) },
+                onSelect: { choose(rows, at: $0) },
                 onHighlight: { highlighted = $0 }
             )
             .offset(y: placement.y - anchor.frame.minY)
@@ -121,7 +133,7 @@ struct ExtensionDateField: View {
         ExtensionFormMetrics.placement(
             anchor: anchor.frame,
             popoverHeight: ExtensionFormMetrics.popoverHeight(
-                rows: suggestions.count, hasSearchField: true),
+                rows: suggestions.count, hasSearchField: false),
             containerHeight: anchor.containerHeight)
     }
 
@@ -145,8 +157,8 @@ struct ExtensionDateField: View {
         query = ""
     }
 
-    private func move(_ delta: Int, count: Int? = nil) -> KeyPress.Result {
-        let rows = count ?? suggestions.count
+    private func move(_ delta: Int) -> KeyPress.Result {
+        let rows = suggestions.count
         guard rows > 0 else { return .handled }
         highlighted = min(max(highlighted + delta, 0), rows - 1)
         return .handled
