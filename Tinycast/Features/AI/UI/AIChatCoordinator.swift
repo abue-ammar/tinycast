@@ -32,6 +32,7 @@ final class AIChatCoordinator {
             // Before the handle closes: cancelling an open reply saves the conversation it ends.
             chat.startNewChat()
             core.chatGPTSubscription.stop()
+            core.installedAI.stop()
             core.chatHistory.close()
             if palette.mode == .ai || palette.mode == .aiHistory { palette.prepare(mode: .launcher) }
             return
@@ -168,7 +169,9 @@ final class AIChatCoordinator {
     var capabilities: AIModelCapabilities {
         switch core.aiSettings.defaultModel {
         case .appleIntelligence?: return .appleIntelligence
-        case .chatGPT?: return .chatGPT
+        case .codex?: return .codex
+        case .claude?, .openCode?:
+            return AIModelCapabilities(images: false, webSearch: false)
         case .api(let connection, let model)?:
             return core.aiSettings.connection(id: connection)?.capabilities(for: model)
                 ?? AIModelCapabilities.none
@@ -273,9 +276,13 @@ final class AIChatCoordinator {
     }
 
     var modelOptions: [AIModelOption] {
-        AIModelOption.catalog(
+        let claude = core.installedAI.status(for: .claude)
+        let openCode = core.installedAI.status(for: .openCode)
+        return AIModelOption.catalog(
             appleIntelligence: core.aiSettings.isAppleIntelligenceAvailable(),
-            chatGPT: core.chatGPTSubscription.models,
+            codex: core.chatGPTSubscription.isConnected ? core.chatGPTSubscription.models : [],
+            claude: claude.isReady ? claude.models : [],
+            openCode: openCode.isReady ? openCode.models : [],
             connections: core.aiSettings.connections)
     }
 
@@ -294,7 +301,9 @@ final class AIChatCoordinator {
     var selectedModelIcon: PopoverMenuIcon {
         switch core.aiSettings.defaultModel {
         case .appleIntelligence?: return AIModelOption.appleIntelligenceIcon
-        case .chatGPT?: return .asset(AIBrand.openAI.assetName)
+        case .codex?: return .asset(AIBrand.openAI.assetName)
+        case .claude?: return .asset(AIBrand.claude.assetName)
+        case .openCode(let model, _)?: return AIModelOption.icon(AIBrand.resolve(model: model))
         case .api(let connection, let model)?:
             return AIModelOption.icon(
                 core.aiSettings.connection(id: connection).flatMap {
@@ -316,32 +325,17 @@ final class AIChatCoordinator {
         if stored == nil {
             prepareModelSwitcher()
             resolveDefaultModel()
-            // On-device settles it here; only a route yet to report in is worth waiting for.
-            if core.aiSettings.defaultModel == nil { awaitModelList() }
             return
         }
-        guard case .chatGPT? = stored else { return }
-        prepareModelSwitcher()
+        switch stored {
+        case .codex?, .claude?, .openCode?: prepareModelSwitcher()
+        default: break
+        }
     }
 
-    /// Not only in Settings: a signed-in subscription must not send the reader there to pick.
+    /// Resolve only routes that do not make a new network or account choice for the reader.
     func resolveDefaultModel() {
         core.aiSettings.resolveDefaultModel()
-        guard core.aiSettings.defaultModel == nil, let first = modelOptions.first else { return }
-        core.aiSettings.select(first.selection)
-    }
-
-    /// A subscription's model list arrives after the screen is up, so the empty state waits
-    private func awaitModelList() {
-        withObservationTracking {
-            _ = core.chatGPTSubscription.models
-        } onChange: { [weak self] in
-            Task { @MainActor in
-                guard let self, self.core.aiSettings.defaultModel == nil else { return }
-                self.resolveDefaultModel()
-                if self.core.aiSettings.defaultModel == nil { self.awaitModelList() }
-            }
-        }
     }
 
     private var selectedModelOption: AIModelOption? {
@@ -350,13 +344,18 @@ final class AIChatCoordinator {
     }
 
     func selectModel(_ option: AIModelOption) {
-        core.aiSettings.select(option.selection)
+        core.aiSettings.select(
+            AIModelOption.withDefaultEffort(
+                option.selection, codex: core.chatGPTSubscription.models,
+                claude: core.installedAI.status(for: .claude).models,
+                openCode: core.installedAI.status(for: .openCode).models))
     }
 
     func prepareModelSwitcher() {
         if core.chatGPTSubscription.phase == .idle {
             core.chatGPTSubscription.refresh()
         }
+        core.installedAI.refresh()
     }
 
     func showSettings() {
@@ -390,7 +389,9 @@ struct AIModelOption: Identifiable {
     /// Every route the Mac can reach, on-device first: it is the one an unconfigured Mac has.
     static func catalog(
         appleIntelligence: Bool,
-        chatGPT: [ChatGPTSubscription.Model],
+        codex: [ChatGPTSubscription.Model],
+        claude: [InstalledAIModel],
+        openCode: [InstalledAIModel],
         connections: [AIConnection]
     ) -> [AIModelOption] {
         let onDevice =
@@ -400,12 +401,22 @@ struct AIModelOption: Identifiable {
                     selection: .appleIntelligence, title: AppleIntelligence.title,
                     sourceTitle: "On device", menuIcon: appleIntelligenceIcon)
             ] : []
-        let subscription = chatGPT.map { model in
+        let codex = codex.map { model in
             AIModelOption(
-                selection: .chatGPT(model: model.id, effort: model.resolvedEffort(nil)),
+                selection: .codex(model: model.id, effort: nil),
                 title: model.name,
-                sourceTitle: "ChatGPT",
+                sourceTitle: "Codex",
                 menuIcon: .asset(AIBrand.openAI.assetName))
+        }
+        let claude = claude.map { model in
+            AIModelOption(
+                selection: .claude(model: model.id, effort: nil), title: model.name,
+                sourceTitle: "Claude", menuIcon: .asset(AIBrand.claude.assetName))
+        }
+        let openCode = openCode.map { model in
+            AIModelOption(
+                selection: .openCode(model: model.id, effort: nil), title: model.name,
+                sourceTitle: "OpenCode", menuIcon: icon(AIBrand.resolve(model: model.id)))
         }
         let api = connections.flatMap { connection in
             connection.models.map { model in
@@ -416,7 +427,49 @@ struct AIModelOption: Identifiable {
                     menuIcon: icon(AIBrand.resolve(provider: connection.provider, model: model)))
             }
         }
-        return onDevice + subscription + api
+        return onDevice + codex + claude + openCode + api
+    }
+
+    static func groupedCatalog(
+        appleIntelligence: Bool,
+        codex: [ChatGPTSubscription.Model],
+        claude: [InstalledAIModel],
+        openCode: [InstalledAIModel],
+        connections: [AIConnection]
+    ) -> [AIModelOptionGroup] {
+        var groups: [AIModelOptionGroup] = []
+        for option in catalog(
+            appleIntelligence: appleIntelligence, codex: codex, claude: claude,
+            openCode: openCode, connections: connections)
+        {
+            if groups.last?.id == option.selection.source {
+                groups[groups.count - 1].options.append(option)
+            } else {
+                groups.append(
+                    AIModelOptionGroup(
+                        source: option.selection.source, title: option.sourceTitle,
+                        options: [option]))
+            }
+        }
+        return groups
+    }
+
+    static func withDefaultEffort(
+        _ selection: AIModelSelection, codex: [ChatGPTSubscription.Model],
+        claude: [InstalledAIModel], openCode: [InstalledAIModel]
+    ) -> AIModelSelection {
+        let effort: String?
+        switch selection {
+        case .codex(let model, _):
+            effort = codex.first { $0.id == model }?.resolvedEffort(nil)
+        case .claude(let model, _):
+            effort = claude.first { $0.id == model }?.resolvedEffort(nil)
+        case .openCode(let model, _):
+            effort = openCode.first { $0.id == model }?.resolvedEffort(nil)
+        case .appleIntelligence, .api:
+            return selection
+        }
+        return selection.withEffort(effort)
     }
 
     var id: AIModelSelection { selection }
@@ -425,4 +478,11 @@ struct AIModelOption: Identifiable {
     func matches(_ other: AIModelSelection) -> Bool {
         selection.source == other.source && selection.model == other.model
     }
+}
+
+struct AIModelOptionGroup: Identifiable {
+    let source: AIModelSource
+    let title: String
+    var options: [AIModelOption]
+    var id: AIModelSource { source }
 }

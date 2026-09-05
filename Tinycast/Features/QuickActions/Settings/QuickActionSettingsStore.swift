@@ -49,6 +49,25 @@ final class QuickActionSettingsStore {
         model = fallback
     }
 
+    func repairInstalledModel(
+        available: [AIModelSelection], unavailableSources: Set<AIModelSource>,
+        fallback: AIModelSelection?
+    ) {
+        guard let model, [.codex, .claude, .openCode].contains(model.source) else { return }
+        let sourceModels = available.filter { $0.source == model.source }
+        if sourceModels.contains(where: { $0.model == model.model }) { return }
+        if let replacement = sourceModels.first {
+            self.model = replacement
+            return
+        }
+        guard unavailableSources.contains(model.source) else { return }
+        guard let fallback, !unavailableSources.contains(fallback.source), fallback != model else {
+            self.model = nil
+            return
+        }
+        self.model = fallback
+    }
+
     private func persistSettings() {
         defaults.set(
             settings.storedPreviewChoices, forKey: AppSettingsKey.quickActionPreviews.rawValue)

@@ -32,11 +32,17 @@ struct CodexTurnTests {
         }
         defer { server.tearDown() }
 
-        let turn = server.startTurn()
+        let turn = server.startTurn(effort: "high")
         guard await server.awaitMark("turn-start-received") else {
             expect(false, "the stub app-server is asked to start a turn")
             return
         }
+        expect(
+            server.received.contains(#""effort":"high""#),
+            "reasoning effort belongs to the turn and does not mutate Codex settings")
+        expect(
+            !server.received.contains("config/value/write"),
+            "a Tinycast turn never writes the user's Codex configuration")
 
         turn.cancel()
         let dropped = await server.awaitCondition { !server.runner.isActive }
@@ -121,10 +127,10 @@ final class StubServer {
     }
 
     /// What the app does: a task iterating the provider stream, where Stop is its cancellation.
-    func startTurn() -> Task<Void, Never> {
+    func startTurn(effort: String? = nil) -> Task<Void, Never> {
         let stream = runner.stream(
             AIRequest(messages: [AIMessage(role: .user, text: "Hello")]),
-            model: "gpt-5-codex", effort: nil)
+            model: "gpt-5-codex", effort: effort)
         return Task {
             do {
                 for try await _ in stream {}

@@ -7,6 +7,7 @@ enum AIProviderFactory {
     static func make(
         settings: AISettingsStore,
         subscription: ChatGPTSubscriptionManager,
+        installedAI: InstalledAIManager,
         keyStore: KeychainSecretStore = .aiAPIKeys
     ) throws -> any AIProvider {
         guard let selection = settings.defaultModel else {
@@ -14,7 +15,7 @@ enum AIProviderFactory {
         }
         return try make(
             selection: selection, settings: settings, subscription: subscription,
-            keyStore: keyStore)
+            installedAI: installedAI, keyStore: keyStore)
     }
 
     /// `guardrails` reaches only the on-device model, the one route that filters locally.
@@ -22,6 +23,7 @@ enum AIProviderFactory {
         selection: AIModelSelection,
         settings: AISettingsStore,
         subscription: ChatGPTSubscriptionManager,
+        installedAI: InstalledAIManager,
         keyStore: KeychainSecretStore = .aiAPIKeys,
         guardrails: SystemLanguageModel.Guardrails = .default
     ) throws -> any AIProvider {
@@ -31,9 +33,13 @@ enum AIProviderFactory {
                 throw AIProviderError.unavailable(message)
             }
             return AppleIntelligenceProvider(guardrails: guardrails)
-        case .chatGPT(let model, let effort):
-            return ChatGPTSubscriptionProvider(
+        case .codex(let model, let effort):
+            return CodexInstalledProvider(
                 turns: subscription.turns, model: model, effort: effort)
+        case .claude(let model, let effort):
+            return try installedAI.provider(kind: .claude, model: model, effort: effort)
+        case .openCode(let model, let effort):
+            return try installedAI.provider(kind: .openCode, model: model, effort: effort)
         case .api(let connectionID, let model):
             guard let connection = settings.connection(id: connectionID) else {
                 throw AIProviderError.unavailable("Choose an API connection in Settings.")

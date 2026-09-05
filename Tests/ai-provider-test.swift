@@ -28,6 +28,7 @@ struct AIProviderTests {
         brokenStreamsFailLoudly()
         brandsResolveFromModelIDs()
         codexProtocolFramesRoundTrip()
+        installedCLIStreamsDecode()
         settingsPersistAndRepairSelections()
         subscriptionSelectionsReconcile()
         onDeviceSelectionsRoundTripAndLead()
@@ -656,10 +657,15 @@ struct AIProviderTests {
             "the on-device selection is its own source")
         expect(
             AIModelSelection.appleIntelligence.isOnDevice
-                && !AIModelSelection.chatGPT(model: "gpt-5", effort: nil).isOnDevice,
+                && !AIModelSelection.codex(model: "gpt-5", effort: nil).isOnDevice,
             "only the on-device selection reads as on device")
 
-        // Data written before this route existed decodes to nothing; there is no migration.
+        let legacy = Data(#"{"chatGPT":{"model":"gpt-5","effort":"high"}}"#.utf8)
+        expect(
+            (try? JSONDecoder().decode(AIModelSelection.self, from: legacy))
+                == .codex(model: "gpt-5", effort: "high"),
+            "the old ChatGPT selection migrates to the installed Codex route")
+
         let suite = "AIProviderTests.onDevice"
         let defaults = isolatedDefaults(suite)
         defer { discardSuite(suite, defaults) }
@@ -736,13 +742,53 @@ struct AIProviderTests {
             efforts: [
                 .init(id: "low", detail: nil), .init(id: "high", detail: nil)
             ], defaultEffort: "high", isDefault: true)
-        store.select(.chatGPT(model: "gpt", effort: "missing"))
-        store.reconcile(chatGPTModels: [model], isSignedOut: false)
+        store.select(.codex(model: "gpt", effort: "missing"))
+        store.reconcile(codexModels: [model], isUnavailable: false)
         expect(
-            store.defaultModel == .chatGPT(model: "gpt", effort: "high"),
+            store.defaultModel == .codex(model: "gpt", effort: "high"),
             "a removed reasoning tier falls back to the model default")
-        store.reconcile(chatGPTModels: [], isSignedOut: true)
-        expect(store.defaultModel == nil, "signing out clears an unusable subscription default")
+        store.reconcile(codexModels: [], isUnavailable: true)
+        expect(store.defaultModel == nil, "signing out clears an unusable Codex default")
+
+        store.select(.claude(model: "removed", effort: nil))
+        store.reconcile(
+            installed: .claude,
+            models: [InstalledAIModel(id: "sonnet", name: "Claude Sonnet")],
+            isUnavailable: false)
+        expect(
+            store.defaultModel == .claude(model: "sonnet", effort: nil),
+            "an installed catalog replaces a model alias that disappeared")
+        store.reconcile(installed: .claude, models: [], isUnavailable: true)
+        expect(store.defaultModel == nil, "signing out clears an unusable Claude default")
+    }
+
+    static func installedCLIStreamsDecode() {
+        let openCodeText = Data(
+            #"{"type":"text","sessionID":"ses_1","part":{"text":"Hello"}}"#.utf8)
+        expect(
+            InstalledAIStreamDecoder.decode(openCodeText, kind: .openCode)
+                == InstalledAIStreamFrame(events: [.text("Hello")], sessionID: "ses_1"),
+            "OpenCode text and its cleanup session decode together")
+        let openCodeFinish = Data(
+            #"{"type":"step_finish","part":{"tokens":{"input":12,"output":4}}}"#.utf8)
+        let openCodeFrame = InstalledAIStreamDecoder.decode(openCodeFinish, kind: .openCode)
+        expect(
+            openCodeFrame.events == [.usage(AIUsage(inputTokens: 12, outputTokens: 4))]
+                && openCodeFrame.completed,
+            "OpenCode completion reports usage and finishes")
+
+        let claudeText = Data(
+            #"{"type":"stream_event","event":{"delta":{"type":"text_delta","text":"Hi"}}}"#.utf8)
+        expect(
+            InstalledAIStreamDecoder.decode(claudeText, kind: .claude).events == [.text("Hi")],
+            "Claude partial text decodes without replaying its full assistant message")
+        let claudeFinish = Data(
+            #"{"type":"result","is_error":false,"usage":{"input_tokens":8,"output_tokens":3}}"#.utf8)
+        let claudeFrame = InstalledAIStreamDecoder.decode(claudeFinish, kind: .claude)
+        expect(
+            claudeFrame.events == [.usage(AIUsage(inputTokens: 8, outputTokens: 3))]
+                && claudeFrame.completed,
+            "Claude result usage ends the stream")
     }
 }
 

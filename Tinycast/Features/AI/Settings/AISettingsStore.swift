@@ -111,21 +111,53 @@ final class AISettingsStore {
         defaultModel = firstAvailableSelection()
     }
 
-    func reconcile(chatGPTModels models: [ChatGPTSubscription.Model], isSignedOut: Bool) {
-        guard case .chatGPT(let model, let effort) = defaultModel else { return }
-        if isSignedOut {
+    func reconcile(codexModels models: [ChatGPTSubscription.Model], isUnavailable: Bool) {
+        guard case .codex(let model, let effort) = defaultModel else { return }
+        if isUnavailable {
             defaultModel = firstAvailableSelection()
             return
         }
         guard !models.isEmpty else { return }
         if let match = models.first(where: { $0.id == model }) {
             let resolved = match.resolvedEffort(effort)
-            if resolved != effort { defaultModel = .chatGPT(model: model, effort: resolved) }
+            if resolved != effort { defaultModel = .codex(model: model, effort: resolved) }
             return
         }
         guard let replacement = models.first(where: \.isDefault) ?? models.first else { return }
-        defaultModel = .chatGPT(
+        defaultModel = .codex(
             model: replacement.id, effort: replacement.resolvedEffort(nil))
+    }
+
+    func reconcile(
+        installed kind: InstalledAIKind, models: [InstalledAIModel], isUnavailable: Bool
+    ) {
+        let selectedModel: String
+        switch (kind, defaultModel) {
+        case (.claude, .claude(let model, _)), (.openCode, .openCode(let model, _)):
+            selectedModel = model
+        default:
+            return
+        }
+        if isUnavailable {
+            defaultModel = firstAvailableSelection()
+            return
+        }
+        guard !models.isEmpty else { return }
+        if let match = models.first(where: { $0.id == selectedModel }) {
+            let resolved = match.resolvedEffort(defaultModel?.effort)
+            if resolved != defaultModel?.effort { defaultModel = defaultModel?.withEffort(resolved) }
+            return
+        }
+        guard let replacement = models.first else { return }
+        switch kind {
+        case .claude:
+            defaultModel = .claude(
+                model: replacement.id, effort: replacement.resolvedEffort(nil))
+        case .openCode:
+            defaultModel = .openCode(
+                model: replacement.id, effort: replacement.resolvedEffort(nil))
+        case .codex: break
+        }
     }
 
     /// Nothing chosen yet takes the route that needs no account, leaving a real stored selection.

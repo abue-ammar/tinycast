@@ -63,7 +63,12 @@ struct QuickActionsSettingsView: View {
             store.resolveModel(
                 appleIntelligenceAvailable: aiSettings.isAppleIntelligenceAvailable(),
                 fallback: aiSettings.defaultModel)
+            if core.chatGPTSubscription.phase == .idle { core.chatGPTSubscription.refresh() }
+            core.installedAI.refresh()
         }
+        .onChange(of: core.chatGPTSubscription.models) { repairInstalledModel() }
+        .onChange(of: core.chatGPTSubscription.phase) { repairInstalledModel() }
+        .onChange(of: core.installedAI.statuses) { repairInstalledModel() }
     }
 
     private var actionsSection: some View {
@@ -116,17 +121,31 @@ struct QuickActionsSettingsView: View {
 
     private var modelSection: some View {
         Section {
-            if modelChoices.isEmpty {
+            if modelGroups.isEmpty {
                 Label("No AI provider configured", systemImage: "sparkles")
                     .foregroundStyle(.secondary)
             } else {
                 Picker(selection: modelBinding) {
-                    ForEach(modelChoices) { choice in
-                        Text(choice.menuTitle).tag(Optional(choice.selection))
+                    ForEach(modelGroups) { group in
+                        Section(group.title) {
+                            ForEach(group.options) { option in
+                                Text(option.title).tag(Optional(option.selection))
+                            }
+                        }
                     }
                 } label: {
                     SettingsRowTitle(.quickActionsModel, "Model")
                     Text("Used by every action except Translate.")
+                }
+                if !selectedEfforts.isEmpty {
+                    Picker(selection: effortBinding) {
+                        ForEach(selectedEfforts) { effort in
+                            Text(effort.title).tag(effort.id)
+                        }
+                    } label: {
+                        Text("Reasoning effort")
+                        Text("Applied when Quick Actions use your \(selectedProviderTitle).")
+                    }
                 }
             }
         } header: {
@@ -187,7 +206,30 @@ struct QuickActionsSettingsView: View {
     }
 
     private var modelBinding: Binding<AIModelSelection?> {
-        Binding(get: { store.model }, set: { store.select($0) })
+        Binding(
+            get: {
+                store.model?.withEffort(nil)
+            },
+            set: { selection in
+                store.select(
+                    selection.map {
+                        AIModelOption.withDefaultEffort(
+                            $0, codex: core.chatGPTSubscription.models,
+                            claude: core.installedAI.status(for: .claude).models,
+                            openCode: core.installedAI.status(for: .openCode).models)
+                    })
+            })
+    }
+
+    private var effortBinding: Binding<String> {
+        Binding(
+            get: {
+                store.model?.effort ?? ""
+            },
+            set: { effort in
+                guard let selection = store.model else { return }
+                store.select(selection.withEffort(effort))
+            })
     }
 
     private var languageBinding: Binding<String> {
@@ -196,12 +238,65 @@ struct QuickActionsSettingsView: View {
             set: { store.settings.targetLanguage = $0 })
     }
 
-    /// The same routes chat offers, flattened: Quick Actions has no reason to group them.
     private var modelChoices: [AIModelOption] {
-        AIModelOption.catalog(
+        modelGroups.flatMap(\.options)
+    }
+
+    private var modelGroups: [AIModelOptionGroup] {
+        let claude = core.installedAI.status(for: .claude)
+        let openCode = core.installedAI.status(for: .openCode)
+        return AIModelOption.groupedCatalog(
             appleIntelligence: aiSettings.isAppleIntelligenceAvailable(),
-            chatGPT: core.chatGPTSubscription.models,
+            codex: core.chatGPTSubscription.isConnected
+                ? core.chatGPTSubscription.models : [],
+            claude: claude.isReady ? claude.models : [],
+            openCode: openCode.isReady ? openCode.models : [],
             connections: aiSettings.connections)
+    }
+
+    private var selectedEfforts: [ChatGPTSubscription.Effort] {
+        guard let selection = store.model else { return [] }
+        switch selection.source {
+        case .codex:
+            return core.chatGPTSubscription.models.first { $0.id == selection.model }?.efforts ?? []
+        case .claude:
+            return core.installedAI.status(for: .claude).models.first {
+                $0.id == selection.model
+            }?.efforts ?? []
+        case .openCode:
+            return core.installedAI.status(for: .openCode).models.first {
+                $0.id == selection.model
+            }?.efforts ?? []
+        case .appleIntelligence, .api:
+            return []
+        }
+    }
+
+    private var selectedProviderTitle: String {
+        switch store.model?.source {
+        case .codex: return "Codex installation"
+        case .claude: return "Claude installation"
+        case .openCode: return "OpenCode installation"
+        default: return "installed provider"
+        }
+    }
+
+    private func repairInstalledModel() {
+        let options = modelChoices.map(\.selection)
+        var unavailable = Set<AIModelSource>()
+        if core.chatGPTSubscription.phase == .signedOut
+            || core.chatGPTSubscription.phase.isUnavailable
+        {
+            unavailable.insert(.codex)
+        }
+        for kind in [InstalledAIKind.claude, .openCode] {
+            let phase = core.installedAI.status(for: kind).phase
+            guard phase == .signInRequired || phase == .notInstalled else { continue }
+            unavailable.insert(kind == .claude ? .claude : .openCode)
+        }
+        store.repairInstalledModel(
+            available: options, unavailableSources: unavailable,
+            fallback: aiSettings.defaultModel)
     }
 
     private struct InstructionsEditorSheet: View {

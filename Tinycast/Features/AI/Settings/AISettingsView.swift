@@ -6,7 +6,9 @@ struct AISettingsView: View {
     @Environment(AISettingsStore.self) private var settings
     @Environment(AppSettings.self) private var appSettings
     @Environment(ChatGPTSubscriptionManager.self) private var subscription
+    @Environment(InstalledAIManager.self) private var installedAI
 
+    @State private var providersPresented = false
     @State private var keyStatuses: [UUID: Bool] = [:]
     @State private var keyError = false
     @State private var editor: AIConnectionEditorTarget?
@@ -22,6 +24,9 @@ struct AISettingsView: View {
                     SettingsRowTitle(.aiAI, "Enable AI")
                     Text("Chat with the model you choose; nothing is loaded or sent until it is on.")
                 }
+                SettingsRow(title: "Providers", subtitle: providerSummary) {
+                    Button("Manage…") { providersPresented = true }
+                }
             } header: {
                 SettingsSectionHeader(.aiAI)
             }
@@ -34,42 +39,25 @@ struct AISettingsView: View {
                 chatSection
                 conversationsSection
                 systemPromptSection
-                chatGPTSection
-                apiConnectionsSection
                 MCPSettingsSection()
             }
             .settingsEnabled(appSettings.aiEnabled)
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.ai)
-        .sheet(item: $editor) { target in
-            AIConnectionEditorSheet(
-                target: target,
-                onSave: saveConnection,
-                onCancel: { editor = nil })
-        }
-        .confirmationDialog(
-            pendingRemoval.map { "Remove “\($0.title)”?" } ?? "Remove connection?",
-            isPresented: removalPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Remove Connection", role: .destructive) {
-                if let pendingRemoval { removeConnection(pendingRemoval) }
-            }
-            Button("Cancel", role: .cancel) { pendingRemoval = nil }
-        } message: {
-            Text("Its saved API key will also be deleted from Keychain.")
+        .sheet(isPresented: $providersPresented) {
+            providersSheet
         }
         .onAppear {
-            loadKeyStatuses()
-            refreshSubscription()
+            refreshInstalledAI()
             // Whichever of this pane and the chat opens first leaves a real selection behind.
             settings.resolveDefaultModel()
         }
-        // Switched on with the pane already open, the ChatGPT section would otherwise stay empty.
-        .onChange(of: appSettings.aiEnabled) { refreshSubscription() }
+        // Switched on with the pane already open, provider status would otherwise stay empty.
+        .onChange(of: appSettings.aiEnabled) { refreshInstalledAI() }
         .onChange(of: subscription.models) { syncSelection() }
         .onChange(of: subscription.phase) { syncSelection() }
+        .onChange(of: installedAI.statuses) { syncSelection() }
     }
 
     private var defaultModelSection: some View {
@@ -86,8 +74,8 @@ struct AISettingsView: View {
                 Picker(selection: modelBinding) {
                     ForEach(modelGroups) { group in
                         Section(group.title) {
-                            ForEach(group.choices) { choice in
-                                Text(choice.title).tag(Optional(choice.selection))
+                            ForEach(group.options) { option in
+                                Text(option.title).tag(Optional(option.selection))
                             }
                         }
                     }
@@ -95,14 +83,14 @@ struct AISettingsView: View {
                     SettingsRowTitle(.aiDefault, "Default model")
                     Text("Used by Tinycast features unless they ask you to choose another model.")
                 }
-                if let efforts = selectedSubscriptionModel?.efforts, !efforts.isEmpty {
+                if !selectedEfforts.isEmpty {
                     Picker(selection: effortBinding) {
-                        ForEach(efforts) { effort in
+                        ForEach(selectedEfforts) { effort in
                             Text(effort.title).tag(effort.id)
                         }
                     } label: {
                         SettingsRowTitle(.aiDefault, "Reasoning effort")
-                        Text("Applied when the default model uses your ChatGPT subscription.")
+                        Text("Applied when the default model uses your \(selectedProviderTitle).")
                     }
                 }
             }
@@ -120,8 +108,22 @@ struct AISettingsView: View {
             return "Apple Intelligence runs on this Mac. No key, no account, and nothing leaves it."
         }
         return modelGroups.isEmpty
-            ? "Turn on Apple Intelligence, connect ChatGPT, or add an API connection below."
+            ? "Turn on Apple Intelligence, set up an installed provider, or add an API connection."
             : "Tinycast contacts only the selected provider when an AI feature runs."
+    }
+
+    private var providerSummary: String {
+        var providers: [String] = []
+        if subscription.isConnected { providers.append("Codex") }
+        for kind in [InstalledAIKind.claude, .openCode]
+        where installedAI.status(for: kind).isReady {
+            providers.append(kind.title)
+        }
+        if !settings.connections.isEmpty {
+            let count = settings.connections.count
+            providers.append(count == 1 ? "1 API connection" : "\(count) API connections")
+        }
+        return providers.isEmpty ? "No external providers ready" : providers.joined(separator: ", ")
     }
 
     /// Why the on-device route is missing from the picker, or `nil` when it is there.
@@ -135,7 +137,7 @@ struct AISettingsView: View {
             Toggle(isOn: $settings.webSearchEnabled) {
                 SettingsRowTitle(.aiChat, "Web search")
                 Text(
-                    "Sends prompts on to a search engine when the route offers one — ChatGPT and OpenRouter.")
+                    "Sends prompts on to a search engine when the route offers one — Codex and OpenRouter.")
             }
         } header: {
             SettingsSectionHeader(.aiChat)
@@ -195,16 +197,67 @@ struct AISettingsView: View {
             SettingsSectionHeader(.aiSystemPrompt)
         } footer: {
             Text(
-                "Your text is sent ahead of every message in every chat, after what Tinycast already tells the model about itself — so both are billed again on each turn."
+                "Your text is sent ahead of every message in every chat, after what Tinycast "
+                    + "already tells the model about itself. Both are billed again on each turn."
             )
             .font(.caption)
             .foregroundStyle(.secondary)
         }
     }
 
-    private var chatGPTSection: some View {
+    private var providersSheet: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("AI Providers").font(.title2.weight(.bold))
+                Text("Use an installed account or connect an API endpoint.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, Theme.Spacing.xxl)
+            .padding(.top, Theme.Spacing.xxl)
+
+            Form {
+                installedAISection
+                apiConnectionsSection
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Spacer()
+                Button("Done") { providersPresented = false }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(Theme.Spacing.xxl)
+        }
+        .frame(width: Theme.Size.editorSheetWidth, height: 600)
+        .sheet(item: $editor) { target in
+            AIConnectionEditorSheet(
+                target: target,
+                onSave: saveConnection,
+                onCancel: { editor = nil })
+        }
+        .confirmationDialog(
+            pendingRemoval.map { "Remove “\($0.title)”?" } ?? "Remove connection?",
+            isPresented: removalPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Remove Connection", role: .destructive) {
+                if let pendingRemoval { removeConnection(pendingRemoval) }
+            }
+            Button("Cancel", role: .cancel) { pendingRemoval = nil }
+        } message: {
+            Text("Its saved API key will also be deleted from Keychain.")
+        }
+        .onAppear {
+            loadKeyStatuses()
+            if subscription.phase == .idle { subscription.refresh() }
+            installedAI.refresh()
+        }
+    }
+
+    private var installedAISection: some View {
         Section {
-            chatGPTConnection
+            codexConnection
             if let limits = subscription.rateLimits, subscription.isConnected {
                 if let primary = limits.primary {
                     quotaRow(primary, fallbackTitle: "Primary window")
@@ -213,12 +266,16 @@ struct AISettingsView: View {
                     quotaRow(secondary, fallbackTitle: "Secondary window")
                 }
             }
+            installedConnection(.claude)
+            installedConnection(.openCode)
         } header: {
-            SettingsSectionHeader(.aiChatGPTSubscription)
+            SettingsSectionHeader(anchor: .aiChatGPTSubscription) {
+                Text("Installed AI")
+            }
         } footer: {
             Text(
-                "Uses OpenAI’s supported Codex App Server. The sign-in is stored in Tinycast’s "
-                    + "private support folder and stays separate from your normal Codex setup."
+                "Tinycast uses the Codex, Claude and OpenCode commands already installed and signed "
+                    + "in on this Mac. Tinycast never stores or asks for their API keys."
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -226,33 +283,25 @@ struct AISettingsView: View {
     }
 
     @ViewBuilder
-    private var chatGPTConnection: some View {
+    private var codexConnection: some View {
         switch subscription.phase {
         case .starting:
             HStack {
                 ProgressView().controlSize(.small)
-                Text("Checking ChatGPT…").foregroundStyle(.secondary)
+                Text("Checking Codex…").foregroundStyle(.secondary)
             }
-        // `.idle` is nothing asked yet — with AI off, no check is coming, so it must not spin.
         case .idle, .signedOut:
             LabeledContent {
-                Button("Connect…") { subscription.connect() }
+                Button("Copy Sign-In Command") { copySignInCommand(.codex) }
+                Button("Check Again") { subscription.refresh() }
             } label: {
-                Text("Not connected")
-                Text("Use models included with an eligible ChatGPT subscription.")
-            }
-        case .waitingForBrowser:
-            LabeledContent {
-                Button("Open Sign-In Again…") { subscription.connect() }
-            } label: {
-                Text("Finish signing in in your browser")
-                Text("Return to Tinycast after the browser confirms sign-in.")
+                Text("Codex · Sign in required")
+                Text("Run codex login in Terminal, then check again.")
             }
         case .connected:
             if let account = subscription.account {
                 LabeledContent {
                     Button("Refresh") { subscription.refresh() }
-                    Button("Disconnect", role: .destructive) { subscription.logout() }
                 } label: {
                     if let email = account.email {
                         RedactedText(
@@ -260,9 +309,9 @@ struct AISettingsView: View {
                             revealHelp: "Click to reveal the signed-in account",
                             hideHelp: "Click to hide the signed-in account")
                     } else {
-                        Text("Connected to ChatGPT")
+                        Text("Codex · Ready")
                     }
-                    Text("ChatGPT \(account.planTitle)")
+                    Text(account.planTitle == "API key" ? "Codex API key" : "ChatGPT \(account.planTitle)")
                 }
             }
         case .unavailable(let message):
@@ -274,14 +323,58 @@ struct AISettingsView: View {
                 }
                 Button("Check Again") { subscription.refresh() }
             } label: {
-                Text("Codex CLI required")
+                Text("Codex · Not installed")
                 Text(message)
             }
         case .failed(let message):
             LabeledContent {
                 Button("Try Again") { subscription.refresh() }
             } label: {
-                Label("ChatGPT connection failed", systemImage: "exclamationmark.triangle")
+                Label("Codex check failed", systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text(message)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func installedConnection(_ kind: InstalledAIKind) -> some View {
+        let status = installedAI.status(for: kind)
+        switch status.phase {
+        case .idle, .checking:
+            HStack {
+                ProgressView().controlSize(.small)
+                Text("Checking \(kind.title)…").foregroundStyle(.secondary)
+            }
+        case .ready:
+            LabeledContent {
+                Button("Refresh") { installedAI.refresh() }
+            } label: {
+                Text("\(kind.title) · Ready")
+                Text(status.version.map { "Version \($0) · \(modelCount(status.models))" }
+                    ?? modelCount(status.models))
+            }
+        case .signInRequired:
+            LabeledContent {
+                Button("Copy Sign-In Command") { copySignInCommand(kind) }
+                Button("Check Again") { installedAI.refresh() }
+            } label: {
+                Text("\(kind.title) · Sign in required")
+                Text("Run \(kind.signInCommand) in Terminal, then check again.")
+            }
+        case .notInstalled:
+            LabeledContent {
+                Button("Install…") { NSWorkspace.shared.open(kind.installURL) }
+                Button("Check Again") { installedAI.refresh() }
+            } label: {
+                Text("\(kind.title) · Not installed")
+                Text("Tinycast could not find the \(kind.command) command.")
+            }
+        case .failed(let message):
+            LabeledContent {
+                Button("Try Again") { installedAI.refresh() }
+            } label: {
+                Label("\(kind.title) check failed", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
                 Text(message)
             }
@@ -329,69 +422,67 @@ struct AISettingsView: View {
         }
     }
 
-    private var modelGroups: [AIModelGroup] {
-        var groups: [AIModelGroup] = []
-        if settings.isAppleIntelligenceAvailable() {
-            groups.append(
-                AIModelGroup(
-                    id: "apple-intelligence",
-                    title: "On device",
-                    choices: [
-                        AIModelChoice(
-                            selection: .appleIntelligence, title: AppleIntelligence.title)
-                    ]))
-        }
-        if subscription.isConnected, !subscription.models.isEmpty {
-            groups.append(
-                AIModelGroup(
-                    id: "chatgpt",
-                    title: "ChatGPT",
-                    choices: subscription.models.map {
-                        AIModelChoice(
-                            selection: .chatGPT(model: $0.id, effort: nil), title: $0.name)
-                    }))
-        }
-        for connection in settings.connections where !connection.models.isEmpty {
-            groups.append(
-                AIModelGroup(
-                    id: connection.id.uuidString,
-                    title: connection.title,
-                    choices: connection.models.map {
-                        AIModelChoice(
-                            selection: .api(connection: connection.id, model: $0), title: $0)
-                    }))
-        }
-        return groups
+    private var modelGroups: [AIModelOptionGroup] {
+        let claude = installedAI.status(for: .claude)
+        let openCode = installedAI.status(for: .openCode)
+        return AIModelOption.groupedCatalog(
+            appleIntelligence: settings.isAppleIntelligenceAvailable(),
+            codex: subscription.isConnected ? subscription.models : [],
+            claude: claude.isReady ? claude.models : [],
+            openCode: openCode.isReady ? openCode.models : [],
+            connections: settings.connections)
     }
 
-    private var selectedSubscriptionModel: ChatGPTSubscription.Model? {
-        guard case .chatGPT(let model, _) = settings.defaultModel else { return nil }
-        return subscription.models.first { $0.id == model }
+    private var selectedEfforts: [ChatGPTSubscription.Effort] {
+        guard let selection = settings.defaultModel else { return [] }
+        switch selection.source {
+        case .codex:
+            return subscription.models.first { $0.id == selection.model }?.efforts ?? []
+        case .claude:
+            return installedAI.status(for: .claude).models.first {
+                $0.id == selection.model
+            }?.efforts ?? []
+        case .openCode:
+            return installedAI.status(for: .openCode).models.first {
+                $0.id == selection.model
+            }?.efforts ?? []
+        case .appleIntelligence, .api:
+            return []
+        }
+    }
+
+    private var selectedProviderTitle: String {
+        switch settings.defaultModel?.source {
+        case .codex: return "Codex installation"
+        case .claude: return "Claude installation"
+        case .openCode: return "OpenCode installation"
+        default: return "installed provider"
+        }
     }
 
     private var modelBinding: Binding<AIModelSelection?> {
         Binding(
             get: {
-                guard case .chatGPT(let model, _) = settings.defaultModel else {
-                    return settings.defaultModel
-                }
-                return .chatGPT(model: model, effort: nil)
+                settings.defaultModel?.withEffort(nil)
             },
             set: { selection in
                 guard let selection else { return }
-                settings.select(withDefaultEffort(selection))
+                settings.select(
+                    AIModelOption.withDefaultEffort(
+                        selection, codex: subscription.models,
+                        claude: installedAI.status(for: .claude).models,
+                        openCode: installedAI.status(for: .openCode).models))
             })
     }
 
     private var effortBinding: Binding<String> {
         Binding(
             get: {
-                guard case .chatGPT(_, let effort) = settings.defaultModel else { return "" }
-                return effort ?? ""
+                settings.defaultModel?.effort ?? ""
             },
             set: { effort in
-                guard case .chatGPT(let model, _) = settings.defaultModel else { return }
-                settings.select(.chatGPT(model: model, effort: effort))
+                guard let selection = settings.defaultModel else { return }
+                settings.select(selection.withEffort(effort))
             })
     }
 
@@ -401,17 +492,17 @@ struct AISettingsView: View {
             set: { if !$0 { pendingRemoval = nil } })
     }
 
-    private func withDefaultEffort(_ selection: AIModelSelection) -> AIModelSelection {
-        guard case .chatGPT(let model, _) = selection else { return selection }
-        let effort = subscription.models.first { $0.id == model }?.resolvedEffort(nil)
-        return .chatGPT(model: model, effort: effort)
-    }
-
     private func syncSelection() {
         settings.reconcile(
-            chatGPTModels: subscription.models, isSignedOut: subscription.phase == .signedOut)
-        if settings.defaultModel == nil, let first = modelGroups.first?.choices.first {
-            settings.select(withDefaultEffort(first.selection))
+            codexModels: subscription.models,
+            isUnavailable: subscription.phase == .signedOut
+                || subscription.phase.isUnavailable)
+        for kind in [InstalledAIKind.claude, .openCode] {
+            let status = installedAI.status(for: kind)
+            settings.reconcile(
+                installed: kind, models: status.models,
+                isUnavailable: status.phase == .signInRequired
+                    || status.phase == .notInstalled)
         }
     }
 
@@ -493,10 +584,20 @@ struct AISettingsView: View {
         }
     }
 
-    /// Opening the pane must not spawn the Codex helper for a feature that is switched off.
-    private func refreshSubscription() {
-        guard appSettings.aiEnabled, subscription.phase == .idle else { return }
-        subscription.refresh()
+    /// Opening the pane must not spawn installed helpers for a feature that is switched off.
+    private func refreshInstalledAI() {
+        guard appSettings.aiEnabled else { return }
+        if subscription.phase == .idle { subscription.refresh() }
+        installedAI.refresh()
+    }
+
+    private func copySignInCommand(_ kind: InstalledAIKind) {
+        Paster.copyPlainText(kind.signInCommand)
+        core.showMessage("Copied \(kind.signInCommand)")
+    }
+
+    private func modelCount(_ models: [InstalledAIModel]) -> String {
+        models.count == 1 ? "1 model" : "\(models.count) models"
     }
 
     private func loadKeyStatuses() {
@@ -512,18 +613,6 @@ struct AISettingsView: View {
             keyError = true
         }
     }
-}
-
-private struct AIModelChoice: Identifiable {
-    let selection: AIModelSelection
-    let title: String
-    var id: AIModelSelection { selection }
-}
-
-private struct AIModelGroup: Identifiable {
-    let id: String
-    let title: String
-    let choices: [AIModelChoice]
 }
 
 private struct AIConnectionEditorTarget: Identifiable {

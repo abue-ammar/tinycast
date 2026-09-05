@@ -51,6 +51,7 @@ final class SettingsCoordinator {
             .environment(core.mcpSettings)
             .environment(core.quickActionSettings)
             .environment(core.chatGPTSubscription)
+            .environment(core.installedAI)
             // Propagates down so the window's materials show through, not each list's backing.
             .scrollContentBackground(.hidden)
     }

@@ -318,6 +318,10 @@ run slow codex-turn-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/AI/Service/CodexAppServerClient.swift \
                            Tinycast/Platform/ExecutableLocator.swift \
                            Tinycast/Features/AI/Service/CodexTurnRunner.swift
+run installed-ai-test     Tinycast/Features/AI/Model/*.swift \
+                          Tinycast/Features/AI/Service/AIProvider.swift \
+                          Tinycast/Features/AI/Service/CodexExecutableLocator.swift \
+                          Tinycast/Features/AI/Service/InstalledCLIProvider.swift
 
 if [ "$emit_db" -eq 1 ]; then
     printf ']\n' >> "$DB"
