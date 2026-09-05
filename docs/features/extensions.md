@@ -221,6 +221,17 @@ screens hold (see [palette.md](palette.md)).
   keeps the palette's own arrow and Escape handlers out of an open list; without it ↓ moved the
   form's selection instead of the list's highlight.
 
+  The list is styled as the ⌘K panel is — the same glass surface, row pitch, icon slot and
+  overflow fade — so a picker and the actions menu read as one kind of thing. Its metrics are
+  restated in `ExtensionFormMetrics` rather than read off the panel: an extension's surfaces own
+  their own, and a launcher change must never move a form.
+
+  **Every key an open list can receive is resolved in one place**, `ExtensionListKey`. A stack of
+  separate `onKeyPress` modifiers let a character rule shadow ⌫, and ⌫ arrives carrying U+007F
+  rather than the U+0008 SwiftUI's `.delete` names, so nothing was ever deleted from a search.
+  Both spellings are answered before characters are considered at all, and the rules are pure so
+  `ext-form-test` drives them.
+
   `ExtensionDateField` is the same shape over `ExtensionDateExpression`, which parses what Raycast's
   date field parses — "tomorrow at 10am", "in 3 days", "next friday", "25 dec" — and offers the same
   presets. It is pure and takes its clock and calendar as parameters, so `ext-form-test` drives it
