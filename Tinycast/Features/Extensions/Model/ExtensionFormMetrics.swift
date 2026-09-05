@@ -36,6 +36,8 @@ enum ExtensionFormMetrics {
     static let caretWidth: CGFloat = 1
     static let caretHeight: CGFloat = 15
     static let caretBlink: TimeInterval = 0.5
+    /// The gap a field editor leaves between its caret and the prompt behind it.
+    static let caretPromptGap: CGFloat = 2
     /// `Theme.Spacing.sm` on every side, matching the ⌘K panel's own inset.
     static let popoverPadding: CGFloat = 6
 

@@ -28,8 +28,6 @@ struct ExtensionFormView: View {
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
-            // The space a picker measures itself in, so a list near the bottom can flip upward.
-            .coordinateSpace(name: ExtensionFormCoordinateSpace.name)
             .edgeDissolve()
             .thinScrollbar()
             .scrollFollowsSelection(
@@ -64,8 +62,6 @@ struct ExtensionFormView: View {
             fieldView(field, index: item.index)
                 .id(item.id)
                 .selectionFrame(item.index == selection)
-                // A picker's list must cover the fields below it, which a later row would paint over.
-                .zIndex(item.index == selection ? 1 : 0)
         } else {
             fieldView(field, index: nil)
         }

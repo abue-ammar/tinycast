@@ -213,24 +213,30 @@ screens hold (see [palette.md](palette.md)).
   click and a `DatePicker` has no expression field, which is why neither is used.
 
   A `Form.Dropdown` and a `Form.TagPicker` are the same control — `ExtensionPickerField` — differing
-  only in whether it holds one value or several. It drops `ExtensionPickerPopover`, a searchable list,
-  and **the control keeps first responder the whole time it is open**: the list is an overlay, and a
-  second field inside it would take focus off the control and close the list it belongs to. So the
+  only in whether it holds one value or several. It drops `ExtensionPickerList`, a searchable list,
+  and **the control keeps first responder the whole time it is open**: the list is a separate window,
+  and a second field inside it would take focus off the control and close the list. So the
   popover's search row renders the query rather than editing it, and every key — the arrows, ↵, ⎋,
   ⌫ and each typed character — is claimed on the control. `PaletteState.isControlListOpen` is what
   keeps the palette's own arrow and Escape handlers out of an open list; without it ↓ moved the
   form's selection instead of the list's highlight.
 
-  The list is styled as the ⌘K panel is — the same glass surface, row pitch, icon slot and
-  overflow fade — so a picker and the actions menu read as one kind of thing, and a focused
-  control takes the system accent edge that Settings and the shortcut recorder already draw.
+  **The list is hosted in a window of its own**, `ExtensionListPanel`, exactly as the ⌘K menu is by
+  `MenuPanelController`. Glass samples what lies behind the window it is in, so a list drawn as an
+  in-window overlay sampled the form and read as a different material however its fill was tuned.
+  With its own borderless child panel it samples the desktop, and a picker and the actions menu are
+  the same surface by construction rather than by matching. It keeps the panel's row pitch, icon
+  slot and overflow fade, and a focused control takes the system accent edge that Settings and the
+  shortcut recorder already draw.
   Its metrics are restated in `ExtensionFormMetrics` rather than read off the panel: an extension's
   surfaces own their own, and a launcher change must never move a form.
 
   **The query is typed into the control, not into the list.** The one field editor belongs to the
   palette's search field, so a picker draws its own caret (`ExtensionCaret`) and renders what has
   been typed in place of its value — the text appears where the eye already is, and a multi-select
-  keeps its chosen values beside it. The list below is results only.
+  keeps its chosen values beside it. `ExtensionQueryText` puts the caret at the insertion point with
+  the prompt after it, as an empty field editor does, and the caret is stepped by a timer at AppKit's
+  own rate — a `repeatForever` animation fades where a real caret switches. The list is results only.
 
   **Every key an open list can receive is resolved in one place**, `ExtensionListKey`. A stack of
   separate `onKeyPress` modifiers let a character rule shadow ⌫, and ⌫ arrives carrying U+007F
@@ -244,8 +250,9 @@ screens hold (see [palette.md](palette.md)).
   and the popover's flip-up rule directly.
 
   A picker opens downward, or upward when the form's bottom edge would cut the list off, which is
-  `ExtensionFormMetrics.placement` measured in the form's own coordinate space. The chevron points
-  the way the list actually went.
+  `ExtensionFormMetrics.placement` applied by `ExtensionListPlacement` against the palette's own
+  frame in screen space, so a list can overhang the form's scroller but never the window. The
+  chevron points the way the list actually went.
 
   **React answers a keystroke a render late**, so a value echoed back mid-word is older than what has
   been typed since. Both text controls hold the last edit they dispatched and ignore every echo until

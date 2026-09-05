@@ -12,8 +12,8 @@ struct ExtensionDateField: View {
     @State private var query = ""
     @State private var highlighted = 0
     @State private var hovered = false
-    /// Where this control sits in the form, which is what its list is placed against.
-    @State private var anchor = ExtensionControlAnchor()
+    /// Reported by the panel once it has placed itself, for the chevron that points its way.
+    @State private var flipped = false
     /// Told while the list is up, so the palette leaves every navigation key to it.
     @Environment(PaletteState.self) private var palette
 
@@ -46,7 +46,18 @@ struct ExtensionDateField: View {
             .focusable()
             .focused($focus, equals: index)
             .focusEffectDisabled()
-            .overlay(alignment: .topLeading) { listLayer }
+            .extensionListPanel(
+                open: open, height: listHeight, revision: revision, flipped: $flipped
+            ) {
+                let rows = suggestions
+                ExtensionPickerList(
+                    items: rows.map {
+                        ExtensionPickerItem(value: $0.title, title: $0.title, detail: $0.detail)
+                    },
+                    selection: highlighted, chosen: [], assetsPath: nil,
+                    onSelect: { choose(rows, at: $0) },
+                    onHighlight: { highlighted = $0 })
+            }
             // One handler: the list is an overlay, which a press on the control never reaches.
             .onKeyPress(phases: [.down, .repeat]) { press in
                 switch ExtensionListKey(press: press, listOpen: open) {
@@ -86,14 +97,7 @@ struct ExtensionDateField: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
             // While the list is open the control is the expression field, caret and all.
             if open {
-                Text(query.isEmpty ? "tomorrow at 10am" : query)
-                    .font(Theme.Typography.rowTitle)
-                    .foregroundStyle(
-                        query.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
-                    )
-                    .lineLimit(1)
-                    .truncationMode(.head)
-                ExtensionCaret()
+                ExtensionQueryText(query: query, prompt: "tomorrow at 10am")
             } else {
                 Text(label)
                     .font(Theme.Typography.rowTitle)
@@ -103,7 +107,7 @@ struct ExtensionDateField: View {
                     .lineLimit(1)
             }
             Spacer(minLength: Theme.Spacing.sm)
-            ExtensionDisclosureChevron(open: open, flipped: placement.flipped)
+            ExtensionDisclosureChevron(open: open, flipped: flipped)
         }
         .extensionFieldChrome(focused: isFocused, open: open, hovered: hovered)
         .contentShape(Rectangle())
@@ -118,35 +122,15 @@ struct ExtensionDateField: View {
             focus = index
             if open { close() } else { _ = openList() }
         }
-        // The control is what the list is placed against; the list must never measure itself.
-        .extensionControlAnchor { anchor = $0 }
     }
 
-    @ViewBuilder
-    private var listLayer: some View {
-        if open {
-            let rows = suggestions
-            ExtensionPickerList(
-                items: rows.map {
-                    ExtensionPickerItem(value: $0.title, title: $0.title, detail: $0.detail)
-                },
-                selection: highlighted, chosen: [], assetsPath: nil,
-                onSelect: { choose(rows, at: $0) },
-                onHighlight: { highlighted = $0 }
-            )
-            .offset(y: placement.y - anchor.frame.minY)
-            .zIndex(1)
-        }
+    /// The panel's own height, which the placement rule then seats above or below the control.
+    private var listHeight: CGFloat {
+        ExtensionFormMetrics.popoverHeight(rows: suggestions.count, hasSearchField: false)
     }
 
-    /// Where the list opens, decided by the shipped rule against the control's measured place.
-    private var placement: ExtensionFormMetrics.Placement {
-        ExtensionFormMetrics.placement(
-            anchor: anchor.frame,
-            popoverHeight: ExtensionFormMetrics.popoverHeight(
-                rows: suggestions.count, hasSearchField: false),
-            containerHeight: anchor.containerHeight)
-    }
+    /// What the hosted list draws; a change to any of it re-pushes the panel's tree.
+    private var revision: AnyHashable { AnyHashable([query, String(highlighted)]) }
 
     private func typed(_ characters: String) -> KeyPress.Result {
         query += characters
