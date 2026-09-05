@@ -8,7 +8,7 @@ final class InstalledAIManager {
         uniqueKeysWithValues: InstalledAIKind.allCases.map { ($0, InstalledAIStatus()) })
 
     @ObservationIgnored private let workspace: URL
-    @ObservationIgnored private var refreshTask: Task<Void, Never>?
+    @ObservationIgnored private var refreshTasks: [InstalledAIKind: Task<Void, Never>] = [:]
 
     init(supportDirectory: URL = AppPaths.applicationSupport()) {
         workspace = supportDirectory.appending(
@@ -20,34 +20,58 @@ final class InstalledAIManager {
     }
 
     @discardableResult
-    func refresh() -> Task<Void, Never> {
-        refreshTask?.cancel()
+    func refresh(enabledKinds: Set<InstalledAIKind> = [.claude, .openCode]) -> Task<Void, Never> {
         for kind in [InstalledAIKind.claude, .openCode] {
-            statuses[kind]?.phase = .checking
+            if enabledKinds.contains(kind) {
+                refresh(kind: kind)
+            } else {
+                stop(kind: kind)
+            }
         }
+        return Task {}
+    }
+
+    @discardableResult
+    func refresh(kind: InstalledAIKind) -> Task<Void, Never> {
+        guard kind != .codex else { return Task {} }
+        refreshTasks[kind]?.cancel()
+        statuses[kind] = InstalledAIStatus(phase: .checking)
+        let workspace = workspace
         let task = Task { [weak self] in
             guard let self else { return }
-            let workspace = self.workspace
-            let claude = Task.detached { await Self.probe(.claude, workspace: workspace) }
-            let openCode = Task.detached { await Self.probe(.openCode, workspace: workspace) }
-            let results = await [claude.value, openCode.value]
+            let result = await Task.detached { await Self.probe(kind, workspace: workspace) }.value
             guard !Task.isCancelled else { return }
-            for (kind, status) in results { self.statuses[kind] = status }
+            self.statuses[result.0] = result.1
         }
-        refreshTask = task
+        refreshTasks[kind] = task
         return task
     }
 
-    func refreshIfNeeded() -> Task<Void, Never> {
-        let phases = [InstalledAIKind.claude, .openCode].map { status(for: $0).phase }
-        if phases.contains(.checking) { return refreshTask ?? Task {} }
-        if phases.contains(.idle) { return refresh() }
+    func refreshIfNeeded(enabledKinds: Set<InstalledAIKind>) -> Task<Void, Never> {
+        let probeKinds = enabledKinds.intersection(Set([.claude, .openCode]))
+        let phases = probeKinds.map { status(for: $0).phase }
+        if probeKinds.isEmpty { return Task {} }
+        if phases.contains(.checking) {
+            return probeKinds.compactMap { refreshTasks[$0] }.first ?? Task {}
+        }
+        if phases.contains(.idle) {
+            refresh(enabledKinds: probeKinds)
+            return probeKinds.compactMap { refreshTasks[$0] }.first ?? Task {}
+        }
         return Task {}
     }
 
     func stop() {
-        refreshTask?.cancel()
-        refreshTask = nil
+        for task in refreshTasks.values { task.cancel() }
+        refreshTasks.removeAll()
+        statuses = Dictionary(
+            uniqueKeysWithValues: InstalledAIKind.allCases.map { ($0, InstalledAIStatus()) })
+    }
+
+    private func stop(kind: InstalledAIKind) {
+        refreshTasks[kind]?.cancel()
+        refreshTasks[kind] = nil
+        statuses[kind] = InstalledAIStatus()
     }
 
     func provider(kind: InstalledAIKind, model: String, effort: String?) throws -> any AIProvider {
@@ -111,6 +135,9 @@ final class InstalledAIManager {
 }
 
 enum InstalledAIProbe {
+    private static let maximumOutputBytes = 2 * 1_048_576
+    private static let readChunkBytes = 64 * 1_024
+
     struct Result: Sendable {
         let status: Int32
         let output: String
@@ -128,13 +155,21 @@ enum InstalledAIProbe {
             process.currentDirectoryURL = workspace
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = output
-            process.standardError = output
+            process.standardError = FileHandle.nullDevice
             do { try process.run() } catch { return Result(status: -1, output: "") }
             let watchdog = Task {
                 try? await Task.sleep(for: .seconds(10))
                 if process.isRunning { process.terminate() }
             }
-            let data = output.fileHandleForReading.readDataToEndOfFile()
+            var data = Data()
+            while data.count < Self.maximumOutputBytes {
+                let count = min(Self.readChunkBytes, Self.maximumOutputBytes - data.count)
+                guard let chunk = try? output.fileHandleForReading.read(upToCount: count),
+                    !chunk.isEmpty
+                else { break }
+                data.append(chunk)
+            }
+            if data.count == Self.maximumOutputBytes, process.isRunning { process.terminate() }
             process.waitUntilExit()
             watchdog.cancel()
             return Result(

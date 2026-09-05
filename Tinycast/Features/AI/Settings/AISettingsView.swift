@@ -18,6 +18,7 @@ struct AISettingsView: View {
 
     var body: some View {
         @Bindable var appSettings = appSettings
+        @Bindable var settings = settings
         return Form {
             Section {
                 Toggle(isOn: $appSettings.aiEnabled) {
@@ -55,6 +56,10 @@ struct AISettingsView: View {
         }
         // Switched on with the pane already open, provider status would otherwise stay empty.
         .onChange(of: appSettings.aiEnabled) { refreshInstalledAI() }
+        .onChange(of: settings.enabledInstalledProviders) {
+            refreshInstalledAI()
+            syncSelection()
+        }
         .onChange(of: subscription.models) { syncSelection() }
         .onChange(of: subscription.phase) { syncSelection() }
         .onChange(of: installedAI.statuses) { syncSelection() }
@@ -206,7 +211,8 @@ struct AISettingsView: View {
     }
 
     private var providersSheet: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        @Bindable var settings = settings
+        return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text("AI Providers").font(.title2.weight(.bold))
                 Text("Use an installed account or connect an API endpoint.")
@@ -250,8 +256,7 @@ struct AISettingsView: View {
         }
         .onAppear {
             loadKeyStatuses()
-            if subscription.phase == .idle { subscription.refresh() }
-            installedAI.refresh()
+            refreshInstalledAI()
         }
     }
 
@@ -284,16 +289,24 @@ struct AISettingsView: View {
 
     @ViewBuilder
     private var codexConnection: some View {
-        switch subscription.phase {
+        if settings.enabledInstalledProviders.contains(.codex) {
+            switch subscription.phase {
         case .starting:
-            HStack {
-                ProgressView().controlSize(.small)
-                Text("Checking Codex…").foregroundStyle(.secondary)
+            LabeledContent {
+                providerActions { providerToggle(.codex) }
+            } label: {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Checking Codex…").foregroundStyle(.secondary)
+                }
             }
         case .idle, .signedOut:
             LabeledContent {
-                Button("Copy Sign-In Command") { copySignInCommand(.codex) }
-                Button("Check Again") { subscription.refresh() }
+                providerActions {
+                    Button("Copy Sign-In Command") { copySignInCommand(.codex) }
+                    Button("Check Again") { subscription.refresh() }
+                    providerToggle(.codex)
+                }
             } label: {
                 Text("Codex · Sign in required")
                 Text("Run codex login in Terminal, then check again.")
@@ -301,7 +314,10 @@ struct AISettingsView: View {
         case .connected:
             if let account = subscription.account {
                 LabeledContent {
-                    Button("Refresh") { subscription.refresh() }
+                    providerActions {
+                        Button("Refresh") { subscription.refresh() }
+                        providerToggle(.codex)
+                    }
                 } label: {
                     if let email = account.email {
                         RedactedText(
@@ -316,39 +332,58 @@ struct AISettingsView: View {
             }
         case .unavailable(let message):
             LabeledContent {
-                Button("Install Codex CLI…") {
-                    if let url = URL(string: "https://developers.openai.com/codex/cli") {
-                        NSWorkspace.shared.open(url)
+                providerActions {
+                    Button("Install Codex CLI…") {
+                        if let url = URL(string: "https://developers.openai.com/codex/cli") {
+                            NSWorkspace.shared.open(url)
+                        }
                     }
+                    Button("Check Again") { subscription.refresh() }
+                    providerToggle(.codex)
                 }
-                Button("Check Again") { subscription.refresh() }
             } label: {
                 Text("Codex · Not installed")
                 Text(message)
             }
         case .failed(let message):
             LabeledContent {
-                Button("Try Again") { subscription.refresh() }
+                providerActions {
+                    Button("Try Again") { subscription.refresh() }
+                    providerToggle(.codex)
+                }
             } label: {
                 Label("Codex check failed", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
                 Text(message)
             }
+            }
+        } else {
+            disabledProvider(.codex)
         }
     }
 
     @ViewBuilder
     private func installedConnection(_ kind: InstalledAIKind) -> some View {
         let status = installedAI.status(for: kind)
-        switch status.phase {
+        if settings.enabledInstalledProviders.contains(kind) {
+            switch status.phase {
         case .idle, .checking:
-            HStack {
-                ProgressView().controlSize(.small)
-                Text("Checking \(kind.title)…").foregroundStyle(.secondary)
+            LabeledContent {
+                providerActions { providerToggle(kind) }
+            } label: {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Checking \(kind.title)…").foregroundStyle(.secondary)
+                }
             }
         case .ready:
             LabeledContent {
-                Button("Refresh") { installedAI.refresh() }
+                providerActions {
+                    Button("Refresh") {
+                        installedAI.refresh(kind: kind)
+                    }
+                    providerToggle(kind)
+                }
             } label: {
                 Text("\(kind.title) · Ready")
                 Text(status.version.map { "Version \($0) · \(modelCount(status.models))" }
@@ -356,29 +391,75 @@ struct AISettingsView: View {
             }
         case .signInRequired:
             LabeledContent {
-                Button("Copy Sign-In Command") { copySignInCommand(kind) }
-                Button("Check Again") { installedAI.refresh() }
+                providerActions {
+                    Button("Copy Sign-In Command") { copySignInCommand(kind) }
+                    Button("Check Again") {
+                        installedAI.refresh(kind: kind)
+                    }
+                    providerToggle(kind)
+                }
             } label: {
                 Text("\(kind.title) · Sign in required")
                 Text("Run \(kind.signInCommand) in Terminal, then check again.")
             }
         case .notInstalled:
             LabeledContent {
-                Button("Install…") { NSWorkspace.shared.open(kind.installURL) }
-                Button("Check Again") { installedAI.refresh() }
+                providerActions {
+                    Button("Install…") { NSWorkspace.shared.open(kind.installURL) }
+                    Button("Check Again") {
+                        installedAI.refresh(kind: kind)
+                    }
+                    providerToggle(kind)
+                }
             } label: {
                 Text("\(kind.title) · Not installed")
                 Text("Tinycast could not find the \(kind.command) command.")
             }
         case .failed(let message):
             LabeledContent {
-                Button("Try Again") { installedAI.refresh() }
+                providerActions {
+                    Button("Try Again") {
+                        installedAI.refresh(kind: kind)
+                    }
+                    providerToggle(kind)
+                }
             } label: {
                 Label("\(kind.title) check failed", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
                 Text(message)
             }
+            }
+        } else {
+            disabledProvider(kind)
         }
+    }
+
+    private func disabledProvider(_ kind: InstalledAIKind) -> some View {
+        LabeledContent {
+            providerActions { providerToggle(kind) }
+        } label: {
+            Text(kind.title)
+            Text("Disabled")
+        }
+    }
+
+    private func providerActions<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            content()
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func providerToggle(_ kind: InstalledAIKind) -> some View {
+        Toggle(
+            "Enable \(kind.title)",
+            isOn: Binding(
+                get: { settings.enabledInstalledProviders.contains(kind) },
+                set: { settings.setInstalledProviderEnabled($0, for: kind) }))
+            .labelsHidden()
+            .toggleStyle(.switch)
     }
 
     private var apiConnectionsSection: some View {
@@ -425,11 +506,14 @@ struct AISettingsView: View {
     private var modelGroups: [AIModelOptionGroup] {
         let claude = installedAI.status(for: .claude)
         let openCode = installedAI.status(for: .openCode)
+        let enabledProviders = settings.enabledInstalledProviders
         return AIModelOption.groupedCatalog(
             appleIntelligence: settings.isAppleIntelligenceAvailable(),
-            codex: subscription.isConnected ? subscription.models : [],
-            claude: claude.isReady ? claude.models : [],
-            openCode: openCode.isReady ? openCode.models : [],
+            codex: enabledProviders.contains(.codex) && subscription.isConnected
+                ? subscription.models : [],
+            claude: enabledProviders.contains(.claude) && claude.isReady ? claude.models : [],
+            openCode: enabledProviders.contains(.openCode) && openCode.isReady
+                ? openCode.models : [],
             connections: settings.connections)
     }
 
@@ -493,15 +577,17 @@ struct AISettingsView: View {
     }
 
     private func syncSelection() {
+        let enabledProviders = settings.enabledInstalledProviders
         settings.reconcile(
-            codexModels: subscription.models,
-            isUnavailable: subscription.phase == .signedOut
+            codexModels: enabledProviders.contains(.codex) ? subscription.models : [],
+            isUnavailable: !enabledProviders.contains(.codex) || subscription.phase == .signedOut
                 || subscription.phase.isUnavailable)
         for kind in [InstalledAIKind.claude, .openCode] {
             let status = installedAI.status(for: kind)
             settings.reconcile(
-                installed: kind, models: status.models,
-                isUnavailable: status.phase == .signInRequired
+                installed: kind,
+                models: enabledProviders.contains(kind) ? status.models : [],
+                isUnavailable: !enabledProviders.contains(kind) || status.phase == .signInRequired
                     || status.phase == .notInstalled)
         }
     }
@@ -586,9 +672,18 @@ struct AISettingsView: View {
 
     /// Opening the pane must not spawn installed helpers for a feature that is switched off.
     private func refreshInstalledAI() {
-        guard appSettings.aiEnabled else { return }
-        if subscription.phase == .idle { subscription.refresh() }
-        installedAI.refresh()
+        guard appSettings.aiEnabled else {
+            subscription.stop()
+            installedAI.stop()
+            return
+        }
+        let enabledProviders = settings.enabledInstalledProviders
+        if enabledProviders.contains(.codex) {
+            if subscription.phase == .idle { subscription.refresh() }
+        } else {
+            subscription.stop()
+        }
+        installedAI.refresh(enabledKinds: enabledProviders)
     }
 
     private func copySignInCommand(_ kind: InstalledAIKind) {

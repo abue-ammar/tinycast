@@ -32,7 +32,7 @@ struct SettingsDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            VisualEffectView(material: .contentBackground, blending: .behindWindow)
+            VisualEffectView(material: .contentBackground, blending: .withinWindow)
                 .ignoresSafeArea()
         )
         // One host for every pane, above their scroll views so a callout is never clipped.

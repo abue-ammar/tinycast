@@ -30,6 +30,7 @@ struct AIProviderTests {
         codexProtocolFramesRoundTrip()
         installedCLIStreamsDecode()
         settingsPersistAndRepairSelections()
+        installedModelLoadingPreferencePersists()
         subscriptionSelectionsReconcile()
         onDeviceSelectionsRoundTripAndLead()
         conversationSettingsPersistAndDecide()
@@ -730,6 +731,21 @@ struct AIProviderTests {
         expect(
             reopened.defaultModel == .api(connection: secondID, model: "gemini-model"),
             "removing the default connection falls forward to another API model")
+    }
+
+    static func installedModelLoadingPreferencePersists() {
+        let suite = "AIProviderTests.installedModelLoading"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+        let store = AISettingsStore(defaults: defaults)
+        expect(
+            store.enabledInstalledProviders == Set(InstalledAIKind.allCases),
+            "installed providers are enabled by default")
+        store.setInstalledProviderEnabled(false, for: .openCode)
+        let reopened = AISettingsStore(defaults: defaults)
+        expect(
+            !reopened.enabledInstalledProviders.contains(.openCode),
+            "a provider toggle survives a restart")
     }
 
     static func subscriptionSelectionsReconcile() {

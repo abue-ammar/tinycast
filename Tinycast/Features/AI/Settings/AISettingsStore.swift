@@ -38,6 +38,14 @@ final class AISettingsStore {
             defaults.set(newChatAfter.rawValue, forKey: AppSettingsKey.aiNewChatAfter.rawValue)
         }
     }
+    var enabledInstalledProviders: Set<InstalledAIKind> {
+        didSet {
+            guard let data = try? JSONEncoder().encode(enabledInstalledProviders.sorted(by: {
+                $0.rawValue < $1.rawValue
+            })) else { return }
+            defaults.set(data, forKey: AppSettingsKey.aiInstalledProviders.rawValue)
+        }
+    }
 
     /// Asked each time: the model lands mid-session, and a flag read at launch would never notice.
     @ObservationIgnored let isAppleIntelligenceAvailable: @Sendable () -> Bool
@@ -68,6 +76,8 @@ final class AISettingsStore {
             AINewChatAfter(
                 rawValue: defaults.integer(forKey: AppSettingsKey.aiNewChatAfter.rawValue))
             ?? .fiveMinutes
+        enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
+            defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
         if case .api(let connection, let model) = defaultModel,
             !connections.contains(where: { $0.id == connection && $0.models.contains(model) })
         {
@@ -166,6 +176,26 @@ final class AISettingsStore {
         defaultModel = selection
     }
 
+    func setInstalledProviderEnabled(_ enabled: Bool, for kind: InstalledAIKind) {
+        var providers = enabledInstalledProviders
+        if enabled {
+            providers.insert(kind)
+        } else {
+            providers.remove(kind)
+        }
+        enabledInstalledProviders = providers
+    }
+
+    func disableInstalledModelSelection(for kind: InstalledAIKind) {
+        guard let source = defaultModel?.source else { return }
+        let matches = switch (kind, source) {
+        case (.codex, .codex), (.claude, .claude), (.openCode, .openCode): true
+        default: false
+        }
+        guard matches else { return }
+        defaultModel = firstAvailableSelection()
+    }
+
     /// The on-device model leads: free, private, always configured, so never a surprising landing.
     private func firstAvailableSelection() -> AIModelSelection? {
         if isAppleIntelligenceAvailable() { return .appleIntelligence }
@@ -214,5 +244,12 @@ final class AISettingsStore {
     private static func decodeDefaultModel(_ data: Data?) -> AIModelSelection? {
         guard let data else { return nil }
         return try? JSONDecoder().decode(AIModelSelection.self, from: data)
+    }
+
+    private static func decodeEnabledInstalledProviders(_ data: Data?) -> Set<InstalledAIKind> {
+        guard let data,
+            let providers = try? JSONDecoder().decode([InstalledAIKind].self, from: data)
+        else { return Set(InstalledAIKind.allCases) }
+        return Set(providers)
     }
 }

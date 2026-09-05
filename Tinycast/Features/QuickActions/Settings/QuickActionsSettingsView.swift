@@ -63,9 +63,16 @@ struct QuickActionsSettingsView: View {
             store.resolveModel(
                 appleIntelligenceAvailable: aiSettings.isAppleIntelligenceAvailable(),
                 fallback: aiSettings.defaultModel)
-            if core.chatGPTSubscription.phase == .idle { core.chatGPTSubscription.refresh() }
-            core.installedAI.refresh()
+            if appSettings.aiEnabled {
+                let enabledProviders = aiSettings.enabledInstalledProviders
+                if enabledProviders.contains(.codex), core.chatGPTSubscription.phase == .idle {
+                    core.chatGPTSubscription.refresh()
+                }
+                core.installedAI.refresh(enabledKinds: enabledProviders)
+            }
         }
+        .onChange(of: appSettings.aiEnabled) { repairInstalledModel() }
+        .onChange(of: aiSettings.enabledInstalledProviders) { repairInstalledModel() }
         .onChange(of: core.chatGPTSubscription.models) { repairInstalledModel() }
         .onChange(of: core.chatGPTSubscription.phase) { repairInstalledModel() }
         .onChange(of: core.installedAI.statuses) { repairInstalledModel() }
@@ -245,12 +252,16 @@ struct QuickActionsSettingsView: View {
     private var modelGroups: [AIModelOptionGroup] {
         let claude = core.installedAI.status(for: .claude)
         let openCode = core.installedAI.status(for: .openCode)
+        let enabledProviders = aiSettings.enabledInstalledProviders
         return AIModelOption.groupedCatalog(
             appleIntelligence: aiSettings.isAppleIntelligenceAvailable(),
-            codex: core.chatGPTSubscription.isConnected
+            codex: appSettings.aiEnabled && enabledProviders.contains(.codex)
+                && core.chatGPTSubscription.isConnected
                 ? core.chatGPTSubscription.models : [],
-            claude: claude.isReady ? claude.models : [],
-            openCode: openCode.isReady ? openCode.models : [],
+            claude: appSettings.aiEnabled && enabledProviders.contains(.claude) && claude.isReady
+                ? claude.models : [],
+            openCode: appSettings.aiEnabled && enabledProviders.contains(.openCode)
+                && openCode.isReady ? openCode.models : [],
             connections: aiSettings.connections)
     }
 
@@ -284,12 +295,18 @@ struct QuickActionsSettingsView: View {
     private func repairInstalledModel() {
         let options = modelChoices.map(\.selection)
         var unavailable = Set<AIModelSource>()
-        if core.chatGPTSubscription.phase == .signedOut
+        if !appSettings.aiEnabled || !aiSettings.enabledInstalledProviders.contains(.codex)
+            || core.chatGPTSubscription.phase == .signedOut
             || core.chatGPTSubscription.phase.isUnavailable
         {
             unavailable.insert(.codex)
         }
         for kind in [InstalledAIKind.claude, .openCode] {
+            guard appSettings.aiEnabled && aiSettings.enabledInstalledProviders.contains(kind)
+            else {
+                unavailable.insert(kind == .claude ? .claude : .openCode)
+                continue
+            }
             let phase = core.installedAI.status(for: kind).phase
             guard phase == .signInRequired || phase == .notInstalled else { continue }
             unavailable.insert(kind == .claude ? .claude : .openCode)

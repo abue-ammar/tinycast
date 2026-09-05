@@ -37,7 +37,18 @@ final class AIChatCoordinator {
             if palette.mode == .ai || palette.mode == .aiHistory { palette.prepare(mode: .launcher) }
             return
         }
-        core.installedAI.refresh()
+        let enabledProviders = core.aiSettings.enabledInstalledProviders
+        if enabledProviders.contains(.codex) {
+            if core.chatGPTSubscription.phase == .idle { core.chatGPTSubscription.refresh() }
+        } else {
+            core.chatGPTSubscription.stop()
+            core.aiSettings.disableInstalledModelSelection(for: .codex)
+        }
+        core.installedAI.refresh(enabledKinds: enabledProviders)
+        for kind in [InstalledAIKind.claude, .openCode]
+        where !enabledProviders.contains(kind) {
+            core.aiSettings.disableInstalledModelSelection(for: kind)
+        }
         // Deferred off the launch path like the clipboard's own read; history fills in behind it.
         Task {
             core.chatHistory.load()
@@ -281,20 +292,25 @@ final class AIChatCoordinator {
     }
 
     var isModelCatalogLoading: Bool {
-        core.chatGPTSubscription.phase == .starting
+        let enabledProviders = core.aiSettings.enabledInstalledProviders
+        return enabledProviders.contains(.codex) && core.chatGPTSubscription.phase == .starting
             || [InstalledAIKind.claude, .openCode].contains {
-                core.installedAI.status(for: $0).phase == .checking
+                enabledProviders.contains($0)
+                    && core.installedAI.status(for: $0).phase == .checking
             }
     }
 
     var modelGroups: [AIModelOptionGroup] {
         let claude = core.installedAI.status(for: .claude)
         let openCode = core.installedAI.status(for: .openCode)
+        let enabledProviders = core.aiSettings.enabledInstalledProviders
         return AIModelOption.groupedCatalog(
             appleIntelligence: core.aiSettings.isAppleIntelligenceAvailable(),
-            codex: core.chatGPTSubscription.isConnected ? core.chatGPTSubscription.models : [],
-            claude: claude.isReady ? claude.models : [],
-            openCode: openCode.isReady ? openCode.models : [],
+            codex: enabledProviders.contains(.codex) && core.chatGPTSubscription.isConnected
+                ? core.chatGPTSubscription.models : [],
+            claude: enabledProviders.contains(.claude) && claude.isReady ? claude.models : [],
+            openCode: enabledProviders.contains(.openCode) && openCode.isReady
+                ? openCode.models : [],
             connections: core.aiSettings.connections)
     }
 
@@ -365,10 +381,20 @@ final class AIChatCoordinator {
 
     @discardableResult
     func prepareModelSwitcher() -> Task<Void, Never> {
-        if core.chatGPTSubscription.phase == .idle {
-            core.chatGPTSubscription.refresh()
+        let enabledProviders = core.aiSettings.enabledInstalledProviders
+        if enabledProviders.contains(.codex) {
+            if core.chatGPTSubscription.phase == .idle {
+                core.chatGPTSubscription.refresh()
+            }
+        } else {
+            core.chatGPTSubscription.stop()
+            core.aiSettings.disableInstalledModelSelection(for: .codex)
         }
-        return core.installedAI.refreshIfNeeded()
+        for kind in [InstalledAIKind.claude, .openCode]
+        where !enabledProviders.contains(kind) {
+            core.aiSettings.disableInstalledModelSelection(for: kind)
+        }
+        return core.installedAI.refreshIfNeeded(enabledKinds: enabledProviders)
     }
 
     func showSettings() {
