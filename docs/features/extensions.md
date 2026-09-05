@@ -253,7 +253,8 @@ screens hold (see [palette.md](palette.md)).
   A picker opens downward, or upward when the form's bottom edge would cut the list off, which is
   `ExtensionFormMetrics.placement` applied by `ExtensionListPlacement` against the palette's own
   frame in screen space, so a list can overhang the form's scroller but never the window. The
-  chevron points the way the list actually went. Scrolling its control out of view closes the list.
+  chevron points the way the list actually went. Scrolling its control out of view closes the list,
+  and so does a press on bare form, which the form catches behind its fields.
 
   **React answers a keystroke a render late**, so a value echoed back mid-word is older than what has
   been typed since. Both text controls hold the last edit they dispatched and ignore every echo until

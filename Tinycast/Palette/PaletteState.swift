@@ -37,6 +37,8 @@ final class PaletteState {
     private(set) var isEditingField = false
     /// True while a control inside a screen has a list open, which owns the arrows and ↵ whole.
     private(set) var isControlListOpen = false
+    /// Bumped when a press lands outside an open control list, which is how the list learns of it.
+    private(set) var controlListDismissToken = UUID()
     /// True only once the pointer has moved of its own accord; untracked, so it never re-renders.
     @ObservationIgnored private(set) var hoverHighlightArmed = false
     /// Bumped when the highlight drops, so a lit row clears even though the pointer never left it.
@@ -99,6 +101,11 @@ final class PaletteState {
     func noteControlListOpen(_ open: Bool) {
         guard open != isControlListOpen else { return }
         isControlListOpen = open
+    }
+
+    func dismissControlList() {
+        guard isControlListOpen else { return }
+        controlListDismissToken = UUID()
     }
 
     /// The pointer moved, which re-lights the highlight once it has cleared the arming slop.

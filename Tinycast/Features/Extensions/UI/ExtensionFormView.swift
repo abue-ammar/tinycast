@@ -25,6 +25,11 @@ struct ExtensionFormView: View {
                 // Centred as a block; the label column and controls keep their own widths.
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, ExtensionFormMetrics.formVerticalPadding)
+                // Behind the fields, so a press on bare form closes an open list as a menu's does.
+                .background {
+                    Color.clear.contentShape(Rectangle())
+                        .onTapGesture { palette.dismissControlList() }
+                }
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
