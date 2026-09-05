@@ -124,6 +124,7 @@ struct ExtensionFormView: View {
                     placeholder: field.string("placeholder") ?? "Select…",
                     title: field.string("title") ?? "Dropdown",
                     info: field.string("info"),
+                    error: field.string("error"),
                     assetsPath: assetsPath,
                     allowsMultipleSelection: false,
                     index: index, focus: $focused,
@@ -139,6 +140,7 @@ struct ExtensionFormView: View {
                     placeholder: field.string("placeholder") ?? "Select…",
                     title: field.string("title") ?? "Tags",
                     info: field.string("info"),
+                    error: field.string("error"),
                     assetsPath: assetsPath,
                     allowsMultipleSelection: true,
                     index: index, focus: $focused,
@@ -224,6 +226,8 @@ struct ExtensionFormView: View {
                     Text(error)
                         .font(Theme.Typography.rowTrailing)
                         .foregroundStyle(.red)
+                        // Spoken by the control it belongs to, so this text is its echo.
+                        .accessibilityHidden(true)
                 }
             }
         }
@@ -259,7 +263,7 @@ private struct ExtensionTextField: View {
         .onSubmit(onSubmit)
         // The visible label is a Text in the row beside it, which the field cannot claim itself.
         .accessibilityLabel(Text(node.string("title") ?? node.string("placeholder") ?? "Text"))
-        .extensionFieldHint(node.string("info"))
+        .extensionFieldHint(node.string("info"), error: node.string("error"))
         .onAppear { text = node.string("value") ?? "" }
         .onChange(of: node.string("value") ?? "") { _, incoming in
             adopt(incoming)
@@ -306,7 +310,7 @@ private struct ExtensionTextArea: View {
             .extensionFieldChrome(focused: focus == index, hovered: hovered, multiline: true)
             .onHover { hovered = $0 }
             .accessibilityLabel(Text(node.string("title") ?? "Text area"))
-            .extensionFieldHint(node.string("info"))
+            .extensionFieldHint(node.string("info"), error: node.string("error"))
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
                     Text(node.string("placeholder") ?? "")
@@ -374,7 +378,7 @@ private struct ExtensionCheckbox: View {
         // A toggle announces what it is and what it holds, not just that it can be pressed.
         .accessibilityAddTraits(isOn ? [.isToggle, .isSelected] : .isToggle)
         .accessibilityValue(Text(isOn ? "On" : "Off"))
-        .extensionFieldHint(node.string("info"))
+        .extensionFieldHint(node.string("info"), error: node.string("error"))
         .onKeyPress(keys: [.return], phases: .down) { press in
             guard press.modifiers.isEmpty else { return .ignored }
             onSubmit()
@@ -458,7 +462,7 @@ private struct ExtensionFilePicker: View {
         .accessibilityLabel(Text(node.string("title") ?? "File"))
         .accessibilityValue(Text(label))
         .accessibilityAddTraits(.isButton)
-        .extensionFieldHint(node.string("info"))
+        .extensionFieldHint(node.string("info"), error: node.string("error"))
         .onKeyPress(keys: [.return], phases: .down) { press in
             guard press.modifiers.isEmpty else { return .ignored }
             choose()

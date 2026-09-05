@@ -10,6 +10,8 @@ struct ExtensionPickerField: View {
     let title: String
     /// The field's own explanation, spoken after the state so both are heard.
     let info: String?
+    /// Whatever the extension reports wrong with the field, spoken before anything else.
+    let error: String?
     let assetsPath: String?
     let allowsMultipleSelection: Bool
     let index: Int?
@@ -39,8 +41,8 @@ struct ExtensionPickerField: View {
     /// What the control does, then whatever the extension explains about the field.
     private var hint: String {
         let state = open ? "Showing choices" : "Opens a list of choices"
-        guard let info, !info.isEmpty else { return state }
-        return state + ". " + info
+        let parts = [error, info].compactMap { $0 }.filter { !$0.isEmpty }
+        return ([state] + parts).joined(separator: ". ")
     }
 
     /// What the closed control reads as: the chosen titles, or the placeholder.

@@ -36,8 +36,9 @@ struct ExtensionDateField: View {
     /// What the control does, then whatever the extension explains about the field.
     private var hint: String {
         let state = open ? "Showing dates" : "Opens a list of dates"
-        guard let info = node.string("info"), !info.isEmpty else { return state }
-        return state + ". " + info
+        let parts = [node.string("error"), node.string("info")]
+            .compactMap { $0 }.filter { !$0.isEmpty }
+        return ([state] + parts).joined(separator: ". ")
     }
 
     var body: some View {
