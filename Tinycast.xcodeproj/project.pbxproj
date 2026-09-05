@@ -317,7 +317,6 @@
 		A54766FEEBC9A4E7BE546226 /* AppPickerPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79E1BEE80A3B75140D10D740 /* AppPickerPopover.swift */; };
 		A5693BFABA85B873EC7F1E0B /* ExtensionCommandScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52146CB01C791AB02518273D /* ExtensionCommandScreen.swift */; };
 		A6200866E3416744A6E8B6E5 /* ExecutableLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2438C33DEAF16B26E4F195EB /* ExecutableLocator.swift */; };
-		A8DF98D6A838ADF321577EEA /* CodexExecutableLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE6F8E3FA640C6F2B1AA8FE /* CodexExecutableLocator.swift */; };
 		A64891F5587F2C11E4A2E2D2 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197035E213BEBA67DDA3377B /* ClipboardManager.swift */; };
 		A6514CA79A45918109A65514 /* UpdateCheckStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF2A1ECA5667B8FD1B1F9FD8 /* UpdateCheckStore.swift */; };
 		A6A8CD2B71A15625F47498EA /* WindowMover.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA99178E0DCF6CBB521FB098 /* WindowMover.swift */; };
@@ -327,6 +326,7 @@
 		A7CEBFBFBB46554ACAD73CFB /* QuicklinkArgumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3044106BC42824C79E1803 /* QuicklinkArgumentsView.swift */; };
 		A7D7F8F64B0937D20D97F428 /* ExtensionAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D755EEABA1DA9CA4CE2D0B4F /* ExtensionAppearance.swift */; };
 		A7F4CD74AEBEFF9F07103CD7 /* EmojiIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 316A544BF6628C0465DE28D8 /* EmojiIndex.swift */; };
+		A8DF98D6A838ADF321577EEA /* CodexExecutableLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE6F8E3FA640C6F2B1AA8FE /* CodexExecutableLocator.swift */; };
 		A9B237874D2DC49A184FF9B0 /* SettingsSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3F48BE32ACD7799661EBF9 /* SettingsSearchField.swift */; };
 		AA52F01D3A91899CCEAF7851 /* ColorCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D763A801000029271E4CADA4 /* ColorCard.swift */; };
 		AAFD2C9276D38719E85B675F /* Memo.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB76FDBFE1E306C2A5B1A29B /* Memo.swift */; };
@@ -514,6 +514,7 @@
 		0E099C50FF0B6A0069CAC5BF /* CommandOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandOutputView.swift; sourceTree = "<group>"; };
 		0EDB1EEB97CC5F6B0B81FFD6 /* LauncherRankingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherRankingStore.swift; sourceTree = "<group>"; };
 		0F5AFB680B55BBAFF2207F99 /* NotesCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesCoordinator.swift; sourceTree = "<group>"; };
+		0FE6F8E3FA640C6F2B1AA8FE /* CodexExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexExecutableLocator.swift; sourceTree = "<group>"; };
 		106F9FEF3F0C36E0C5686DA7 /* AIRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequest.swift; sourceTree = "<group>"; };
 		112551581ECF83B53D405334 /* BackupSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSettingsView.swift; sourceTree = "<group>"; };
 		121A2ACAEC4D2D25D3112634 /* LauncherItemsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherItemsSection.swift; sourceTree = "<group>"; };
@@ -547,7 +548,6 @@
 		2384FC4A96FDAD19D0737312 /* CameraPreviewSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewSession.swift; sourceTree = "<group>"; };
 		23F7C8CBD0AA75D016DBFC06 /* SettingsPaneScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPaneScanner.swift; sourceTree = "<group>"; };
 		2438C33DEAF16B26E4F195EB /* ExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutableLocator.swift; sourceTree = "<group>"; };
-		0FE6F8E3FA640C6F2B1AA8FE /* CodexExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexExecutableLocator.swift; sourceTree = "<group>"; };
 		2575583134BE03EA9FA719CD /* ActivationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationPolicy.swift; sourceTree = "<group>"; };
 		264B68DBB21C3752E39ECC29 /* NoteTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTitle.swift; sourceTree = "<group>"; };
 		26AD346C8FD5F2D4F00FF2B6 /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
@@ -1505,9 +1505,9 @@
 				8F29EE2711B96305EE10B8D8 /* ChatMessage.swift */,
 				1E95EA1EBD6E4B5ECE149FA0 /* ChatSession.swift */,
 				C49AE1E917BF6EA7783F4CAD /* CodexAppServerProtocol.swift */,
-				EB0E63A5CDC274306555E3A8 /* JSONValue.swift */,
 				A76D9592F0809DEC9993684A /* InstalledAI.swift */,
 				D817AF0E23DDCC95147B5AFB /* InstalledAIStream.swift */,
+				EB0E63A5CDC274306555E3A8 /* JSONValue.swift */,
 				DDE8B48420B83D612E01603A /* MarkdownBlock.swift */,
 			);
 			path = Model;
@@ -2670,11 +2670,11 @@
 				3E2E2CFAD5C5731A5F059AD5 /* IconStyleMonitor.swift in Sources */,
 				CB95B0CBF0DFEDFCEA837053 /* ImageThumbnail.swift in Sources */,
 				0A086C5452FD9FCE68AF4E46 /* InputSourceSwitcher.swift in Sources */,
-				CD52F594782DD51D5B3D4CE8 /* JSONValue.swift in Sources */,
 				6D241F01F4BB98AAE1720330 /* InstalledAI.swift in Sources */,
 				EAFC40D8851C50EB62198C7E /* InstalledAIManager.swift in Sources */,
 				2E9CDC24A175FE8AAE4F03D9 /* InstalledAIStream.swift in Sources */,
 				B17B6FE6F8DE23D815E3C5BB /* InstalledCLIProvider.swift in Sources */,
+				CD52F594782DD51D5B3D4CE8 /* JSONValue.swift in Sources */,
 				8855C67C7EE196E3F9EDE778 /* KeyCapChip.swift in Sources */,
 				AE3144FCC55FADC48955D17A /* KeyShortcut.swift in Sources */,
 				067A064C013F0F66208E7DB1 /* KeychainSecretStore.swift in Sources */,
@@ -2924,6 +2924,7 @@
 				CODE_SIGN_ENTITLEMENTS = Tinycast/Tinycast.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = Tinycast/Info.plist;
+				INFOPLIST_KEY_LSUIElement = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -3006,6 +3007,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -3072,6 +3074,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;

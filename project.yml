@@ -17,6 +17,7 @@ settings:
     # Create it once — see docs/signing.md.
     CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
     ENABLE_HARDENED_RUNTIME: NO
+    INFOPLIST_KEY_LSUIElement: YES
     SWIFT_STRICT_CONCURRENCY: complete
   configs:
     Release:
@@ -52,3 +53,4 @@ targets:
         Debug:
           PRODUCT_NAME: Tinycast Dev
           PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+          INFOPLIST_KEY_LSUIElement: NO

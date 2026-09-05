@@ -171,7 +171,7 @@ final class AIChatCoordinator {
         case .appleIntelligence?: return .appleIntelligence
         case .codex?: return .codex
         case .claude?, .openCode?:
-            return AIModelCapabilities(images: false, webSearch: false)
+            return AIModelCapabilities(images: false, webSearch: false, tools: false)
         case .api(let connection, let model)?:
             return core.aiSettings.connection(id: connection)?.capabilities(for: model)
                 ?? AIModelCapabilities.none
