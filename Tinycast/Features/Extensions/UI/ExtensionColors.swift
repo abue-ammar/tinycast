@@ -11,6 +11,9 @@ enum ExtensionColors {
     static let tagSelectedStroke = Theme.Colors.ramp(dark: 0.30, light: 0.26)
     /// A checkbox's own edge, brighter than a field's: it is the control, not a container.
     static let checkboxStroke = Theme.Colors.ramp(dark: 0.26, light: 0.30)
+    /// Behind a picker's glass, which samples the form rather than the desktop a panel sees.
+    static let listBacking = Theme.Colors.adaptive(
+        dark: .srgbInk(0.16, alpha: 0.92), light: .srgbInk(0.97, alpha: 0.92))
     /// Under the pointer, matching the lift every other hoverable row in the app has.
     static let fieldHoverFill = Theme.Colors.ramp(dark: 0.08, light: 0.07)
     static let fieldHoverStroke = Theme.Colors.ramp(dark: 0.18, light: 0.18)

@@ -30,6 +30,11 @@ struct ExtensionPickerList: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(width: ExtensionFormMetrics.controlWidth)
+        // Opaque under the glass: in-window glass samples the form, so rows would show through.
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
+                .fill(ExtensionColors.listBacking)
+        )
         .glassEffect(
             .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
         )
