@@ -9,8 +9,8 @@ enum ExtensionListKeyTests {
             "↓ opens the list",
             resolve(.downArrow, listOpen: false) == .openList, nil)
         check(
-            "↵ opens the list",
-            resolve(.return, listOpen: false) == .openList, nil)
+            "↵ submits the form rather than opening the list",
+            resolve(.return, listOpen: false) == .submitForm, nil)
         check(
             "space opens the list",
             resolve(.space, characters: " ", listOpen: false) == .openList, nil)
@@ -68,6 +68,10 @@ enum ExtensionListKeyTests {
         check(
             "⌥↵ is the screen's",
             resolve(.return, modifiers: .option) == .ignored, nil)
+        // A form is submitted from any control, so a closed picker must not swallow ↵.
+        check(
+            "↵ on a closed control reaches the form",
+            resolve(.return, listOpen: false) == .submitForm, nil)
         check(
             "⌃N is the palette's arrow spelling",
             resolve(KeyEquivalent("n"), characters: "n", modifiers: .control) == .ignored, nil)
