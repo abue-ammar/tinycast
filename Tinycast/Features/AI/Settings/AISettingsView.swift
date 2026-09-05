@@ -72,33 +72,21 @@ struct AISettingsView: View {
                 Label(reason, systemImage: "apple.intelligence")
                     .foregroundStyle(.secondary)
             }
-            if modelGroups.isEmpty {
-                Label("No AI provider configured", systemImage: "sparkles")
-                    .foregroundStyle(.secondary)
-            } else {
-                Picker(selection: modelBinding) {
-                    ForEach(modelGroups) { group in
-                        Section(group.title) {
-                            ForEach(group.options) { option in
-                                Text(option.title).tag(Optional(option.selection))
-                            }
-                        }
-                    }
-                } label: {
+            AIModelSelectionRows(
+                selection: settings.defaultModel,
+                select: { selection in
+                    guard let selection else { return }
+                    settings.select(selection)
+                },
+                modelLabel: {
                     SettingsRowTitle(.aiDefault, "Default model")
                     Text("Used by Tinycast features unless they ask you to choose another model.")
+                },
+                effortLabel: {
+                    SettingsRowTitle(.aiDefault, "Reasoning effort")
+                    Text("Applied when the default model supports reasoning effort.")
                 }
-                if !selectedEfforts.isEmpty {
-                    Picker(selection: effortBinding) {
-                        ForEach(selectedEfforts) { effort in
-                            Text(effort.title).tag(effort.id)
-                        }
-                    } label: {
-                        SettingsRowTitle(.aiDefault, "Reasoning effort")
-                        Text("Applied when the default model uses your \(selectedProviderTitle).")
-                    }
-                }
-            }
+            )
         } header: {
             SettingsSectionHeader(.aiDefault)
         } footer: {
@@ -112,7 +100,9 @@ struct AISettingsView: View {
         if settings.defaultModel?.isOnDevice == true {
             return "Apple Intelligence runs on this Mac. No key, no account, and nothing leaves it."
         }
-        return modelGroups.isEmpty
+        return AIModelOption.availableGroups(
+            settings: settings, subscription: subscription, installedAI: installedAI
+        ).isEmpty
             ? "Turn on Apple Intelligence, set up an installed provider, or add an API connection."
             : "Tinycast contacts only the selected provider when an AI feature runs."
     }
@@ -503,73 +493,6 @@ struct AISettingsView: View {
         }
     }
 
-    private var modelGroups: [AIModelOptionGroup] {
-        let claude = installedAI.status(for: .claude)
-        let openCode = installedAI.status(for: .openCode)
-        let enabledProviders = settings.enabledInstalledProviders
-        return AIModelOption.groupedCatalog(
-            appleIntelligence: settings.isAppleIntelligenceAvailable(),
-            codex: enabledProviders.contains(.codex) && subscription.isConnected
-                ? subscription.models : [],
-            claude: enabledProviders.contains(.claude) && claude.isReady ? claude.models : [],
-            openCode: enabledProviders.contains(.openCode) && openCode.isReady
-                ? openCode.models : [],
-            connections: settings.connections)
-    }
-
-    private var selectedEfforts: [ChatGPTSubscription.Effort] {
-        guard let selection = settings.defaultModel else { return [] }
-        switch selection.source {
-        case .codex:
-            return subscription.models.first { $0.id == selection.model }?.efforts ?? []
-        case .claude:
-            return installedAI.status(for: .claude).models.first {
-                $0.id == selection.model
-            }?.efforts ?? []
-        case .openCode:
-            return installedAI.status(for: .openCode).models.first {
-                $0.id == selection.model
-            }?.efforts ?? []
-        case .appleIntelligence, .api:
-            return []
-        }
-    }
-
-    private var selectedProviderTitle: String {
-        switch settings.defaultModel?.source {
-        case .codex: return "Codex installation"
-        case .claude: return "Claude installation"
-        case .openCode: return "OpenCode installation"
-        default: return "installed provider"
-        }
-    }
-
-    private var modelBinding: Binding<AIModelSelection?> {
-        Binding(
-            get: {
-                settings.defaultModel?.withEffort(nil)
-            },
-            set: { selection in
-                guard let selection else { return }
-                settings.select(
-                    AIModelOption.withDefaultEffort(
-                        selection, codex: subscription.models,
-                        claude: installedAI.status(for: .claude).models,
-                        openCode: installedAI.status(for: .openCode).models))
-            })
-    }
-
-    private var effortBinding: Binding<String> {
-        Binding(
-            get: {
-                settings.defaultModel?.effort ?? ""
-            },
-            set: { effort in
-                guard let selection = settings.defaultModel else { return }
-                settings.select(selection.withEffort(effort))
-            })
-    }
-
     private var removalPresented: Binding<Bool> {
         Binding(
             get: { pendingRemoval != nil },
@@ -862,6 +785,7 @@ private struct AIConnectionEditorSheet: View {
             if connection.baseURL.isEmpty || connection.baseURL == oldProvider.defaultBaseURL {
                 connection.baseURL = newProvider.defaultBaseURL
             }
+            connection.reasoningOptions = nil
             discoveryRevision += 1
         }
     }
@@ -930,13 +854,13 @@ private struct AIConnectionEditorSheet: View {
                 Label("No available model matches this key.", systemImage: "magnifyingglass")
                     .foregroundStyle(.secondary)
                 if connection.provider == .openAICompatible {
-                    Button("Use “\(query)” anyway") { addModel(query, acceptsImages: nil) }
+                    Button("Use “\(query)” anyway") { addModel(query) }
                 }
             }
         } else {
             ForEach(matches) { model in
                 Button {
-                    addModel(model.id, acceptsImages: model.acceptsImages)
+                    addModel(model)
                 } label: {
                     HStack(spacing: Theme.Spacing.md) {
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
@@ -1033,12 +957,13 @@ private struct AIConnectionEditorSheet: View {
                     || $0.name.caseInsensitiveCompare(query) == .orderedSame
             })
         else { return }
-        addModel(match.id, acceptsImages: match.acceptsImages)
+        addModel(match)
     }
 
     private func removeModel(_ model: String) {
         connection.models.removeAll { $0 == model }
         connection.visionModels.removeAll { $0 == model }
+        connection.reasoningOptions?[model] = nil
     }
 
     private func discoverModels() async {
@@ -1090,15 +1015,30 @@ private struct AIConnectionEditorSheet: View {
     }
 
     private func addManualModel() {
-        addModel(modelQuery, acceptsImages: nil)
+        addModel(modelQuery)
     }
 
-    private func addModel(_ value: String, acceptsImages: Bool?) {
+    private func addModel(_ model: AIModelDiscovery.Model) {
+        addModel(
+            model.id, acceptsImages: model.acceptsImages,
+            reasoningOptions: model.reasoningOptions)
+    }
+
+    private func addModel(
+        _ value: String, acceptsImages: Bool? = nil,
+        reasoningOptions: AIConnection.ReasoningOptions? = nil
+    ) {
         let model = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !model.isEmpty else { return }
         if !connection.models.contains(model) { connection.models.append(model) }
         if acceptsImages == true, !connection.visionModels.contains(model) {
             connection.visionModels.append(model)
+        }
+        if connection.provider == .openRouter, let reasoningOptions,
+            !reasoningOptions.efforts.isEmpty
+        {
+            if connection.reasoningOptions == nil { connection.reasoningOptions = [:] }
+            connection.reasoningOptions?[model] = reasoningOptions
         }
         modelQuery = ""
     }

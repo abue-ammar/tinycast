@@ -192,6 +192,15 @@ struct AIProviderTests {
                 provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
                 model: "gpt-5"))
         expect(plain["tools"] == nil, "a turn with no tools sends no tools key at all")
+
+        let router = AIRequestBody.make(
+            AIRequest(messages: [AIMessage(role: .user, text: "hi")]),
+            configuration: AIHTTPConfiguration(
+                provider: .openRouter, baseURL: URL(string: "https://openrouter.ai/api/v1")!,
+                model: "openai/gpt-5", effort: "low"))
+        expect(
+            (router["reasoning"] as? [String: String])?["effort"] == "low",
+            "OpenRouter receives the reasoning effort its catalog offered")
     }
 
     static func providerPresetsResolveEndpoints() {
@@ -273,7 +282,9 @@ struct AIProviderTests {
             {"data":[
                 {"id":"model-a"},
                 {"id":"model-b","name":"Model B",
-                 "architecture":{"input_modalities":["text","image"]}},
+                 "architecture":{"input_modalities":["text","image"]},
+                 "reasoning":{"supported_efforts":["high","medium","low"],
+                              "default_effort":"medium"}},
                 {"id":"model-a"}
             ]}
             """.utf8)
@@ -281,12 +292,18 @@ struct AIProviderTests {
         expect(
             openAIModels == [
                 .init(id: "model-a", name: "model-a"),
-                .init(id: "model-b", name: "Model B", inputModalities: ["text", "image"])
+                .init(
+                    id: "model-b", name: "Model B", inputModalities: ["text", "image"],
+                    reasoningOptions: .init(
+                        efforts: ["high", "medium", "low"], defaultEffort: "medium"))
             ],
             "OpenAI-compatible model lists are named and deduplicated")
         expect(
             openAIModels?.map(\.acceptsImages) == [nil, true],
             "only a catalog that lists modalities says whether a model takes images")
+        expect(
+            openAIModels?.last?.reasoningOptions?.resolvedEffort(nil) == "medium",
+            "OpenRouter reasoning metadata keeps the model's advertised default")
 
         let router = AIConnection(
             provider: .openRouter, models: ["model-a", "model-b"], visionModels: ["model-b"])
@@ -679,10 +696,10 @@ struct AIProviderTests {
         // A configured connection must not be displaced by resolution running a second time.
         let connectionID = UUID()
         store.save(AIConnection(id: connectionID, name: "Local", models: ["m"]))
-        store.select(.api(connection: connectionID, model: "m"))
+        store.select(.api(connection: connectionID, model: "m", effort: nil))
         store.resolveDefaultModel()
         expect(
-            store.defaultModel == .api(connection: connectionID, model: "m"),
+            store.defaultModel == .api(connection: connectionID, model: "m", effort: nil),
             "resolution never overrides a selection the reader made")
 
         // A removed connection falls forward to the route that is always configured.
@@ -707,7 +724,10 @@ struct AIProviderTests {
 
         var first = AIConnection(
             id: firstID, name: "  Work  ", provider: .openRouter,
-            models: [" model-a ", "model-a", "model-b"])
+            models: [" model-a ", "model-a", "model-b"],
+            reasoningOptions: [
+                "model-b": .init(efforts: ["medium", "low"], defaultEffort: "medium")
+            ])
         first.baseURL = " https://openrouter.ai/api/v1 "
         let store = AISettingsStore(defaults: defaults)
         store.save(first)
@@ -718,16 +738,17 @@ struct AIProviderTests {
             store.connections.first?.models == ["model-a", "model-b"],
             "models are trimmed and deduplicated")
         expect(
-            store.defaultModel == .api(connection: firstID, model: "model-a"),
+            store.defaultModel == .api(connection: firstID, model: "model-a", effort: nil),
             "the first saved model becomes the default")
-        store.select(.api(connection: firstID, model: "model-b"))
+        store.select(.api(connection: firstID, model: "model-b", effort: "low"))
 
         let reopened = AISettingsStore(defaults: defaults)
         expect(reopened.connections == store.connections, "connection metadata survives a restart")
         expect(reopened.defaultModel == store.defaultModel, "the default model survives a restart")
         reopened.removeConnection(id: firstID)
         expect(
-            reopened.defaultModel == .api(connection: secondID, model: "gemini-model"),
+            reopened.defaultModel == .api(
+                connection: secondID, model: "gemini-model", effort: nil),
             "removing the default connection falls forward to another API model")
     }
 

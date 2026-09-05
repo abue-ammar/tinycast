@@ -49,7 +49,7 @@ enum AIProviderFactory {
                 throw AIProviderError.unavailable("OpenCode is disabled in AI Settings.")
             }
             return try installedAI.provider(kind: .openCode, model: model, effort: effort)
-        case .api(let connectionID, let model):
+        case .api(let connectionID, let model, let effort):
             guard let connection = settings.connection(id: connectionID) else {
                 throw AIProviderError.unavailable("Choose an API connection in Settings.")
             }
@@ -70,7 +70,7 @@ enum AIProviderFactory {
             }
             return HTTPAIProvider(
                 configuration: AIHTTPConfiguration(
-                    provider: connection.provider, baseURL: baseURL, model: model),
+                    provider: connection.provider, baseURL: baseURL, model: model, effort: effort),
                 apiKey: key)
         }
     }

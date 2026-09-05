@@ -77,8 +77,6 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   MCP servers, browser integration, slash commands or persisted session. OpenCode runs `--pure` with
   deny-all permissions, disabled sharing and a private working directory; Tinycast deletes the session
   recorded in its JSON stream after each turn. Neither route offers images or web search.
-- **Every HTTP request uses a private ephemeral `URLSession` with no URL cache.** Provider traffic must
-  not create a second credential or response cache on disk.
 - **Chat is a palette screen, not another window** — including its lifetime. The launcher command
   enters `.ai`; its search field is the composer, and the shared footer's primary pill is Return's
   job: Send (`↵`), or Stop (`↵`) while a response streams — followed by Actions (`⌘K`), which owns
@@ -169,8 +167,8 @@ content transformations without a second factory.
 
 `AIModelOption.groupedCatalog` is the Settings picker catalog for both AI and Quick Actions. Provider
 sections, ordering and model labels therefore cannot drift between the panes. Each route stores its
-own complete `AIModelSelection`, including the selected reasoning effort for installed models that
-offer one.
+own complete `AIModelSelection`, including the selected reasoning effort for installed models and
+OpenRouter models that offer one.
 
 `AppleIntelligenceProvider` is the only route whose model is a local process. It builds a `Transcript`
 from the turns ahead of the newest user message and streams the rest as the prompt, so a conversation
@@ -185,15 +183,18 @@ a debug description written for a log, so each case maps to a plain sentence ins
 ## Chat surface
 
 The built-in `AI Chat` launcher command enters `AIScreen`, and carries a bindable global shortcut
-(`HotKeyAction.command(.aiChat)`) that does the same thing from any app; Tab from the launcher is the third
-way in. Settings → AI holds both the recorder and a checkbox for the command's place in launcher
+(`HotKeyAction.command(.aiChat)`) that does the same thing from any app; Tab from the launcher is the
+third way in. Settings → AI holds both the recorder and a checkbox for the command's place in launcher
 search; the shortcut keeps working while the command is hidden, and does nothing at all while the
 feature is off. The palette search field becomes the single-line composer. The footer pill and
 Return are one action, `activate`: Send, or Stop while a response streams — an empty composer sends
 nothing, so the pill never needs a disabled state. The header's trailing model switcher uses the
 same in-window menu control as Clipboard's type filter and changes the app-wide default route for
-the next message. It does not interrupt a response already streaming; stopping one is the pill's
-job, so the header never has to fit a third control beside the switcher.
+the next message. For installed routes and OpenRouter models whose catalog reports the capability,
+it also shows the supported reasoning efforts and changes the app-wide effort for the next message.
+Other API routes keep their provider default because their model catalogs expose no portable effort
+contract. Neither change interrupts a response already streaming; stopping one is the pill's job,
+so the header never has to fit a third control beside the switcher.
 
 The second footer control is the palette's normal Actions (`⌘K`) menu. It owns New Chat, Chat History
 and AI Settings, plus Stop Response and Copy Last Response when those actions apply. Chat adds no

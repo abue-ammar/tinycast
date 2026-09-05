@@ -109,7 +109,7 @@ private final class Fixture {
             for kind in [InstalledAIKind.claude, .openCode] {
                 let executable = bin.appending(path: kind.command)
                 try FileManager.default.copyItem(
-                    at: URL(fileURLWithPath: "Tests/ai-fixtures/installed-cli-stub.py"),
+                    at: URL(fileURLWithPath: "Tests/ai-fixtures/installed-cli-stub.js"),
                     to: executable)
                 try FileManager.default.setAttributes(
                     [.posixPermissions: 0o755], ofItemAtPath: executable.path)

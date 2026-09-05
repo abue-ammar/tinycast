@@ -151,7 +151,7 @@ struct PopoverMenu: View {
             .padding(.bottom, Theme.Spacing.xs)
             .frame(
                 maxWidth: .infinity, minHeight: Theme.Size.menuRowHeight,
-                maxHeight: Theme.Size.menuRowHeight, alignment: .bottom)
+                maxHeight: Theme.Size.menuRowHeight, alignment: .bottomLeading)
     }
 
     /// Armed only once the pointer has moved of its own accord, so a scroll past it lights nothing.

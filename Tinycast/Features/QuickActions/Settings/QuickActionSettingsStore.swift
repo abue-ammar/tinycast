@@ -43,7 +43,7 @@ final class QuickActionSettingsStore {
 
     /// A connection the reader removed must not leave this pointing at a route that cannot answer.
     func repairModel(against connections: [AIConnection], fallback: AIModelSelection?) {
-        guard case .api(let id, let name) = model,
+        guard case .api(let id, let name, _) = model,
             !connections.contains(where: { $0.id == id && $0.models.contains(name) })
         else { return }
         model = fallback

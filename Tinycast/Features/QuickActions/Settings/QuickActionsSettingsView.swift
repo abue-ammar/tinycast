@@ -125,33 +125,18 @@ struct QuickActionsSettingsView: View {
 
     private var modelSection: some View {
         Section {
-            if modelGroups.isEmpty {
-                Label("No AI provider configured", systemImage: "sparkles")
-                    .foregroundStyle(.secondary)
-            } else {
-                Picker(selection: modelBinding) {
-                    ForEach(modelGroups) { group in
-                        Section(group.title) {
-                            ForEach(group.options) { option in
-                                Text(option.title).tag(Optional(option.selection))
-                            }
-                        }
-                    }
-                } label: {
+            AIModelSelectionRows(
+                selection: store.model,
+                select: store.select,
+                modelLabel: {
                     SettingsRowTitle(.quickActionsModel, "Model")
                     Text("Used by every action except Translate.")
+                },
+                effortLabel: {
+                    SettingsRowTitle(.quickActionsModel, "Reasoning effort")
+                    Text("Applied when the selected model supports reasoning effort.")
                 }
-                if !selectedEfforts.isEmpty {
-                    Picker(selection: effortBinding) {
-                        ForEach(selectedEfforts) { effort in
-                            Text(effort.title).tag(effort.id)
-                        }
-                    } label: {
-                        Text("Reasoning effort")
-                        Text("Applied when Quick Actions use your \(selectedProviderTitle).")
-                    }
-                }
-            }
+            )
         } header: {
             SettingsSectionHeader(.quickActionsModel)
         } footer: {
@@ -209,33 +194,6 @@ struct QuickActionsSettingsView: View {
             set: { visibility.setItemVisible($0, for: entry) })
     }
 
-    private var modelBinding: Binding<AIModelSelection?> {
-        Binding(
-            get: {
-                store.model?.withEffort(nil)
-            },
-            set: { selection in
-                store.select(
-                    selection.map {
-                        AIModelOption.withDefaultEffort(
-                            $0, codex: core.chatGPTSubscription.models,
-                            claude: core.installedAI.status(for: .claude).models,
-                            openCode: core.installedAI.status(for: .openCode).models)
-                    })
-            })
-    }
-
-    private var effortBinding: Binding<String> {
-        Binding(
-            get: {
-                store.model?.effort ?? ""
-            },
-            set: { effort in
-                guard let selection = store.model else { return }
-                store.select(selection.withEffort(effort))
-            })
-    }
-
     private var languageBinding: Binding<String> {
         Binding(
             get: { store.settings.targetLanguage },
@@ -243,50 +201,10 @@ struct QuickActionsSettingsView: View {
     }
 
     private var modelChoices: [AIModelOption] {
-        modelGroups.flatMap(\.options)
-    }
-
-    private var modelGroups: [AIModelOptionGroup] {
-        let claude = core.installedAI.status(for: .claude)
-        let openCode = core.installedAI.status(for: .openCode)
-        let enabledProviders = aiSettings.enabledInstalledProviders
-        return AIModelOption.groupedCatalog(
-            appleIntelligence: aiSettings.isAppleIntelligenceAvailable(),
-            codex: enabledProviders.contains(.codex)
-                && core.chatGPTSubscription.isConnected
-                ? core.chatGPTSubscription.models : [],
-            claude: enabledProviders.contains(.claude) && claude.isReady
-                ? claude.models : [],
-            openCode: enabledProviders.contains(.openCode)
-                && openCode.isReady ? openCode.models : [],
-            connections: aiSettings.connections)
-    }
-
-    private var selectedEfforts: [ChatGPTSubscription.Effort] {
-        guard let selection = store.model else { return [] }
-        switch selection.source {
-        case .codex:
-            return core.chatGPTSubscription.models.first { $0.id == selection.model }?.efforts ?? []
-        case .claude:
-            return core.installedAI.status(for: .claude).models.first {
-                $0.id == selection.model
-            }?.efforts ?? []
-        case .openCode:
-            return core.installedAI.status(for: .openCode).models.first {
-                $0.id == selection.model
-            }?.efforts ?? []
-        case .appleIntelligence, .api:
-            return []
-        }
-    }
-
-    private var selectedProviderTitle: String {
-        switch store.model?.source {
-        case .codex: return "Codex installation"
-        case .claude: return "Claude installation"
-        case .openCode: return "OpenCode installation"
-        default: return "installed provider"
-        }
+        AIModelOption.availableGroups(
+            settings: aiSettings, subscription: core.chatGPTSubscription,
+            installedAI: core.installedAI)
+            .flatMap(\.options)
     }
 
     private func repairInstalledModel() {

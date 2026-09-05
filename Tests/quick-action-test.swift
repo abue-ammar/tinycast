@@ -70,10 +70,10 @@ struct QuickActionTests {
 
         // Resolution never overrides a choice, and never re-runs over one.
         let connectionID = UUID()
-        store.select(.api(connection: connectionID, model: "m"))
+        store.select(.api(connection: connectionID, model: "m", effort: nil))
         store.resolveModel(appleIntelligenceAvailable: true, fallback: nil)
         expect(
-            store.model == .api(connection: connectionID, model: "m"),
+            store.model == .api(connection: connectionID, model: "m", effort: nil),
             "resolution leaves a route the reader chose alone")
 
         store.settings.setPreviewsResult(true, for: .fixGrammar)
@@ -82,7 +82,7 @@ struct QuickActionTests {
 
         let reopened = QuickActionSettingsStore(defaults: defaults)
         expect(
-            reopened.model == .api(connection: connectionID, model: "m"),
+            reopened.model == .api(connection: connectionID, model: "m", effort: nil),
             "the route survives a relaunch")
         expect(reopened.settings.previewsResult(.fixGrammar), "a preview choice survives a relaunch")
         expect(reopened.settings.targetLanguage == "de", "the target language survives a relaunch")

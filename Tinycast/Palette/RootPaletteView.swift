@@ -150,6 +150,16 @@ struct RootPaletteView: View {
             items.insert(
                 PopoverMenuItem(title: "Loading models…", icon: .blank, isLoading: true) {}, at: 0)
         }
+        let efforts = core.aiChatCoordinator.reasoningEfforts
+        items += efforts.enumerated().map { index, effort in
+            PopoverMenuItem(
+                title: effort.title, icon: .blank,
+                sectionTitle: index == 0 ? "Reasoning effort" : nil,
+                detail: effort.id == core.aiSettings.defaultModel?.effort ? "✓" : nil)
+            {
+                core.aiChatCoordinator.selectReasoningEffort(effort)
+            }
+        }
         guard !items.isEmpty else {
             return PopoverMenuContent(items: [
                 PopoverMenuItem(title: "Configure AI", systemImage: "slider.horizontal.3") {

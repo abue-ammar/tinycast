@@ -78,7 +78,7 @@ final class AISettingsStore {
             ?? .fiveMinutes
         enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
             defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
-        if case .api(let connection, let model) = defaultModel,
+        if case .api(let connection, let model, _) = defaultModel,
             !connections.contains(where: { $0.id == connection && $0.models.contains(model) })
         {
             defaultModel = firstAvailableSelection()
@@ -93,7 +93,7 @@ final class AISettingsStore {
     }
 
     func select(_ selection: AIModelSelection) {
-        if case .api(let connection, let model) = selection {
+        if case .api(let connection, let model, _) = selection {
             guard self.connection(id: connection)?.models.contains(model) == true else { return }
         }
         defaultModel = selection
@@ -106,21 +106,29 @@ final class AISettingsStore {
         } else {
             connections.append(connection)
         }
-        if case .api(connection.id, let model) = defaultModel,
-            !connection.models.contains(model)
-        {
-            defaultModel = connection.models.first.map {
-                .api(connection: connection.id, model: $0)
+        if case .api(connection.id, let model, let effort) = defaultModel {
+            if connection.models.contains(model) {
+                defaultModel = .api(
+                    connection: connection.id, model: model,
+                    effort: connection.reasoningOptions?[model]?.resolvedEffort(effort))
+            } else {
+                defaultModel = connection.models.first.map {
+                    .api(
+                        connection: connection.id, model: $0,
+                        effort: connection.reasoningOptions?[$0]?.resolvedEffort(nil))
+                }
             }
         }
         if defaultModel == nil, let model = connection.models.first {
-            defaultModel = .api(connection: connection.id, model: model)
+            defaultModel = .api(
+                connection: connection.id, model: model,
+                effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
         }
     }
 
     func removeConnection(id: UUID) {
         connections.removeAll { $0.id == id }
-        guard case .api(id, _) = defaultModel else { return }
+        guard case .api(id, _, _) = defaultModel else { return }
         defaultModel = firstAvailableSelection()
     }
 
@@ -204,7 +212,9 @@ final class AISettingsStore {
         if isAppleIntelligenceAvailable() { return .appleIntelligence }
         for connection in connections {
             if let model = connection.models.first {
-                return .api(connection: connection.id, model: model)
+                return .api(
+                    connection: connection.id, model: model,
+                    effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
             }
         }
         return nil
@@ -234,6 +244,10 @@ final class AISettingsStore {
             return model
         }
         connection.visionModels = connection.visionModels.filter(seen.contains)
+        connection.reasoningOptions = connection.reasoningOptions?.filter {
+            seen.contains($0.key) && !$0.value.efforts.isEmpty
+        }
+        if connection.reasoningOptions?.isEmpty == true { connection.reasoningOptions = nil }
         return connection
     }
 
