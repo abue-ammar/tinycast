@@ -463,9 +463,10 @@ private struct ExtensionFilePicker: View {
         .accessibilityValue(Text(label))
         .accessibilityAddTraits(.isButton)
         .extensionFieldHint(node.string("info"), error: node.string("error"))
+        // ↵ submits the form as it does from every other control; space opens the panel.
         .onKeyPress(keys: [.return], phases: .down) { press in
             guard press.modifiers.isEmpty else { return .ignored }
-            choose()
+            onSubmit()
             return .handled
         }
     }
