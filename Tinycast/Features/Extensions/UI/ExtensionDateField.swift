@@ -13,8 +13,9 @@ struct ExtensionDateField: View {
     @State private var query = ""
     @State private var highlighted = 0
     /// True while the list opened upward, so the chevron points the way it actually went.
-    @State private var flipped = false
     @State private var hovered = false
+    /// Where this control sits in the form, which is what its list is placed against.
+    @State private var anchor = ExtensionControlAnchor()
     /// Told while the list is up, so the palette leaves every navigation key to it.
     @Environment(PaletteState.self) private var palette
 
@@ -91,7 +92,7 @@ struct ExtensionDateField: View {
                 .foregroundStyle(value == nil ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
                 .lineLimit(1)
             Spacer(minLength: Theme.Spacing.sm)
-            ExtensionDisclosureChevron(open: open, flipped: flipped)
+            ExtensionDisclosureChevron(open: open, flipped: placement.flipped)
         }
         .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
         .contentShape(Rectangle())
@@ -105,6 +106,8 @@ struct ExtensionDateField: View {
             focus = index
             if open { close() } else { _ = openList() }
         }
+        // The control is what the list is placed against; the list must never measure itself.
+        .extensionControlAnchor { anchor = $0 }
     }
 
     @ViewBuilder
@@ -120,11 +123,18 @@ struct ExtensionDateField: View {
                 query: query, onSelect: { choose(rows, at: $0) },
                 onHighlight: { highlighted = $0 }
             )
-            .extensionPopoverPlacement(
-                rowCount: rows.count, hasSearchField: true, onFlip: { flipped = $0 }
-            )
+            .offset(y: placement.y - anchor.frame.minY)
             .zIndex(1)
         }
+    }
+
+    /// Where the list opens, decided by the shipped rule against the control's measured place.
+    private var placement: ExtensionFormMetrics.Placement {
+        ExtensionFormMetrics.placement(
+            anchor: anchor.frame,
+            popoverHeight: ExtensionFormMetrics.popoverHeight(
+                rows: suggestions.count, hasSearchField: true),
+            containerHeight: anchor.containerHeight)
     }
 
     private func typed(_ characters: String) -> KeyPress.Result {
@@ -145,7 +155,6 @@ struct ExtensionDateField: View {
         guard open else { return }
         open = false
         query = ""
-        flipped = false
     }
 
     private func move(_ delta: Int, count: Int? = nil) -> KeyPress.Result {

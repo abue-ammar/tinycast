@@ -21,8 +21,9 @@ struct ExtensionPickerField: View {
     @State private var query = ""
     @State private var highlighted = 0
     /// True while the list opened upward, so the chevron points the way it actually went.
-    @State private var flipped = false
     @State private var hovered = false
+    /// Where this control sits in the form, which is what its list is placed against.
+    @State private var anchor = ExtensionControlAnchor()
     /// Read from the view, so a resolved icon repaints when the surface flips appearance.
     @Environment(\.isDarkAppearance) private var isDark
     /// Told while the list is up, so the palette leaves every navigation key to it.
@@ -117,7 +118,7 @@ struct ExtensionPickerField: View {
                 .foregroundStyle(chosen.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
                 .lineLimit(1)
             Spacer(minLength: Theme.Spacing.sm)
-            ExtensionDisclosureChevron(open: open, flipped: flipped)
+            ExtensionDisclosureChevron(open: open, flipped: placement.flipped)
         }
         .extensionFieldChrome(focused: focus == index, open: open, hovered: hovered)
         .contentShape(Rectangle())
@@ -132,6 +133,8 @@ struct ExtensionPickerField: View {
             focus = index
             if open { close() } else { _ = openList() }
         }
+        // The control is what the list is placed against; the list must never measure itself.
+        .extensionControlAnchor { anchor = $0 }
     }
 
     /// Drawn in an overlay so it sits above the rows below it without a window of its own.
@@ -144,13 +147,20 @@ struct ExtensionPickerField: View {
                 query: query, onSelect: { choose(at: $0) },
                 onHighlight: { highlighted = $0 }
             )
-            .extensionPopoverPlacement(
-                rowCount: matches.count, headerCount: sectionCount, hasSearchField: true,
-                onFlip: { flipped = $0 }
-            )
+            // Placed from the control's measured frame, never from the list's own.
+            .offset(y: placement.y - anchor.frame.minY)
             // Above every later row, so a picker near the top is not covered by the fields under it.
             .zIndex(1)
         }
+    }
+
+    /// Where the list opens, decided by the shipped rule against the control's measured place.
+    private var placement: ExtensionFormMetrics.Placement {
+        ExtensionFormMetrics.placement(
+            anchor: anchor.frame,
+            popoverHeight: ExtensionFormMetrics.popoverHeight(
+                rows: matches.count, hasSearchField: true, headers: sectionCount),
+            containerHeight: anchor.containerHeight)
     }
 
     private func openList() -> KeyPress.Result {
@@ -165,7 +175,6 @@ struct ExtensionPickerField: View {
         guard open else { return }
         open = false
         query = ""
-        flipped = false
     }
 
     private func move(_ delta: Int) -> KeyPress.Result {

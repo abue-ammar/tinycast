@@ -87,6 +87,10 @@ struct ExtensionFormView: View {
                     .font(Theme.Typography.rowTrailing)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
+                    // Text with no chrome around it still occupies a control's height, so the
+                    // label beside it sits where every other row's label does.
+                    .padding(.vertical, ExtensionFormMetrics.verticalInset)
+                    .frame(minHeight: ExtensionFormMetrics.controlHeight, alignment: .leading)
             }
 
         case "Form.TextField", "Form.PasswordField":
@@ -103,7 +107,7 @@ struct ExtensionFormView: View {
             }
 
         case "Form.Checkbox":
-            labelled(field, showTitle: field.string("title") != nil, bare: true) {
+            labelled(field, showTitle: field.string("title") != nil) {
                 ExtensionCheckbox(
                     node: field, index: index, focus: $focused, onChange: onChange,
                     onSubmit: onSubmit)
@@ -186,15 +190,14 @@ struct ExtensionFormView: View {
     /// Raycast forms are label-left / control-right; the fixed label column keeps controls aligned.
     @ViewBuilder
     private func labelled<Content: View>(
-        _ field: RenderNode, showTitle: Bool = true, bare: Bool = false,
-        @ViewBuilder content: () -> Content
+        _ field: RenderNode, showTitle: Bool = true, @ViewBuilder content: () -> Content
     ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
-            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xxs) {
+        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.xxs) {
                 Spacer(minLength: 0)
                 Text(showTitle ? (field.string("title") ?? "") : "")
                     .font(Theme.Typography.rowTrailing)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.trailing)
                 // The info marker Raycast draws beside a label that carries one.
                 if let info = field.string("info"), !info.isEmpty {
@@ -205,6 +208,9 @@ struct ExtensionFormView: View {
                 }
             }
             .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
+            // Centred on the control's first line: Raycast centres a label against a one-line
+            // control and holds it level with the first line of a taller one.
+            .frame(height: ExtensionFormMetrics.controlHeight)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 content()
@@ -216,8 +222,6 @@ struct ExtensionFormView: View {
             }
             Spacer(minLength: 0)
         }
-        // The label sits on the control's own first line, which a tall control would otherwise
-        // pull it away from; the alignment guide below is what keeps the two on one baseline.
     }
 }
 
@@ -291,14 +295,10 @@ private struct ExtensionTextArea: View {
         TextEditor(text: $text)
             .font(Theme.Typography.rowTitle)
             .scrollContentBackground(.hidden)
-            // The editor insets its own text, so the chrome's inset is taken off here.
-            .padding(.horizontal, -5)
-            .padding(.vertical, Theme.Spacing.sm)
+            // The text system insets its own line fragments, which the chrome's inset then repeats.
+            .padding(.horizontal, -ExtensionFormMetrics.textViewGutter)
             .focused($focus, equals: index)
-            .extensionFieldChrome(
-                focused: focus == index, hovered: hovered,
-                height: ExtensionFormMetrics.textAreaHeight
-            )
+            .extensionFieldChrome(focused: focus == index, hovered: hovered, multiline: true)
             .onHover { hovered = $0 }
             .accessibilityLabel(Text(node.string("title") ?? "Text area"))
             .overlay(alignment: .topLeading) {
@@ -307,7 +307,7 @@ private struct ExtensionTextArea: View {
                         .font(Theme.Typography.rowTitle)
                         .foregroundStyle(Theme.Colors.textTertiary)
                         .padding(.horizontal, ExtensionFormMetrics.textInset)
-                        .padding(.vertical, Theme.Spacing.sm)
+                        .padding(.vertical, ExtensionFormMetrics.verticalInset)
                         .allowsHitTesting(false)
                 }
             }

@@ -285,6 +285,7 @@
 		867B82EDC8A12BBC51592786 /* Tooltip.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD4CE330F75BC5FE5EAD99E /* Tooltip.swift */; };
 		8696DC1B16B6618D22F804D5 /* AIChatState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC662BDA6856590DCF96B94 /* AIChatState.swift */; };
 		86C36C0885D5820E70184CF6 /* PaletteCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C004F2C2EFDD340A73C6AB02 /* PaletteCoordinator.swift */; };
+		873092D2A387C6760F356BC3 /* ExtensionControlAnchor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019D453A320D108758B18498 /* ExtensionControlAnchor.swift */; };
 		8855C67C7EE196E3F9EDE778 /* KeyCapChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5BA06E4CC7E8D40E3285F16 /* KeyCapChip.swift */; };
 		89872774514D83EC2BD60F1E /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0A68B2040582996EFBA877 /* CommandCatalog.swift */; };
 		89B3CC1AB417D04CE39FB70C /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E5F9675F2090C3AA9EEBF65 /* Appearance.swift */; };
@@ -434,7 +435,6 @@
 		D07983DDEA61E5F2B8681F01 /* QuicklinkCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CD7B0E866AEF486F9EC5E9 /* QuicklinkCoordinator.swift */; };
 		D07F272D0E095B6000D53716 /* NotesCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F5AFB680B55BBAFF2207F99 /* NotesCoordinator.swift */; };
 		D1F9C28CA4048480DB818EE9 /* LauncherList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132C5A534C02305C1A29CC74 /* LauncherList.swift */; };
-		D21D9D01252C6E86DAE90F71 /* ExtensionPopoverPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A7471B289F699DD2C94498 /* ExtensionPopoverPlacement.swift */; };
 		D37F4361928A38602002FAEF /* MCPSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00ECBD55353C83A7F4E93592 /* MCPSettingsSection.swift */; };
 		D39C8F6535F028FF79A19AE4 /* WindowLayoutEntryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F27259003BDECA2054FC67 /* WindowLayoutEntryPicker.swift */; };
 		D3F07F4AEBEAA489EDCD0763 /* FileSearchList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 463FE27F894A8777C8ACCF1D /* FileSearchList.swift */; };
@@ -522,6 +522,7 @@
 /* Begin PBXFileReference section */
 		00B475B5929CC0478EFAC7D8 /* UpdateFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateFailure.swift; sourceTree = "<group>"; };
 		00ECBD55353C83A7F4E93592 /* MCPSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSettingsSection.swift; sourceTree = "<group>"; };
+		019D453A320D108758B18498 /* ExtensionControlAnchor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionControlAnchor.swift; sourceTree = "<group>"; };
 		025D7D760DE2FD02C0D7D9D2 /* ColorFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorFormat.swift; sourceTree = "<group>"; };
 		0266BAF4643A4B5C41B600DE /* ExtensionColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionColors.swift; sourceTree = "<group>"; };
 		02BCAB1F3B6930FE0B819F6D /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
@@ -580,7 +581,6 @@
 		1F64FC06CB10BDF8CD044D64 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		201FCD08ACA933378876385B /* ClipboardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
 		209D951FDD587A040F1F76F3 /* PaletteWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteWindowController.swift; sourceTree = "<group>"; };
-		21A7471B289F699DD2C94498 /* ExtensionPopoverPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionPopoverPlacement.swift; sourceTree = "<group>"; };
 		220CECFE780E8BE18FAE0A1C /* ExtensionGridLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionGridLayout.swift; sourceTree = "<group>"; };
 		2258D4A6B6C22AB7C5D421BE /* DoubleTapMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleTapMonitor.swift; sourceTree = "<group>"; };
 		22701685D1187235DA195F3B /* LauncherOrder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherOrder.swift; sourceTree = "<group>"; };
@@ -2036,6 +2036,7 @@
 				0266BAF4643A4B5C41B600DE /* ExtensionColors.swift */,
 				52146CB01C791AB02518273D /* ExtensionCommandScreen.swift */,
 				5D2DDA019FE0EF38A91AA495 /* ExtensionCommandView.swift */,
+				019D453A320D108758B18498 /* ExtensionControlAnchor.swift */,
 				A0BAA0471DD8CE4352F45FED /* ExtensionCoordinator.swift */,
 				B6915B7D8E6816B7919F5CF4 /* ExtensionDateField.swift */,
 				2B0D967615846F9C4EC3E44F /* ExtensionDetailView.swift */,
@@ -2046,7 +2047,6 @@
 				7C0FB3A9CA762A7A8DB99BA6 /* ExtensionPaletteModifiers.swift */,
 				936C0D68CC32D90E590F712C /* ExtensionPickerField.swift */,
 				98936222ED20479CD0EC6304 /* ExtensionPickerPopover.swift */,
-				21A7471B289F699DD2C94498 /* ExtensionPopoverPlacement.swift */,
 				CCCBDD92DEAD780A1DC423CA /* ExtensionScreen.swift */,
 				A7751EBF0F632A123B4A2363 /* ExtensionTintColors.swift */,
 			);
@@ -2783,6 +2783,7 @@
 				4DA03A170E95F0D08E3569F9 /* ExtensionColors.swift in Sources */,
 				A5693BFABA85B873EC7F1E0B /* ExtensionCommandScreen.swift in Sources */,
 				B8CECD85524BCCCBC0CDC2B5 /* ExtensionCommandView.swift in Sources */,
+				873092D2A387C6760F356BC3 /* ExtensionControlAnchor.swift in Sources */,
 				1F0E7F2EF27CB82211EDCB4C /* ExtensionCoordinator.swift in Sources */,
 				533C229E97F9047A2DEC1A2B /* ExtensionDateExpression.swift in Sources */,
 				8A34168607D3C7EDD83CB485 /* ExtensionDateField.swift in Sources */,
@@ -2808,7 +2809,6 @@
 				2D51D92BE8EAB5440F4C8517 /* ExtensionPaletteModifiers.swift in Sources */,
 				8B265BFDDDDAFCC45B35BDCB /* ExtensionPickerField.swift in Sources */,
 				7BAA4A33C3635CC33DCDBDFB /* ExtensionPickerPopover.swift in Sources */,
-				D21D9D01252C6E86DAE90F71 /* ExtensionPopoverPlacement.swift in Sources */,
 				CF1015EA1573EFBBA647B93B /* ExtensionRegistriesSheet.swift in Sources */,
 				6FC9F74D9119AC25D178D748 /* ExtensionRegistry.swift in Sources */,
 				50A3CB2A348F8E03D467B169 /* ExtensionRuntime.swift in Sources */,

@@ -1,30 +1,35 @@
 import SwiftUI
 
 /// The rounded surface every form control shares, so a field, a picker and an area read alike.
-/// Written here, never in `DesignSystem»: how an extension's form looks is the feature's own.
+/// Written here, never in `DesignSystem`: how an extension's form looks is the feature's own.
 struct ExtensionFieldChrome: ViewModifier {
     var focused: Bool
     /// A control that opens a popover keeps its focused edge while the popover has the keyboard.
     var open = false
     /// Lit under the pointer, so a control that can be clicked says so before it is.
     var hovered = false
-    var height: CGFloat? = ExtensionFormMetrics.controlHeight
+    /// A one-line control centres its text; a text area starts at the top and grows down.
+    var multiline = false
+
+    private var height: CGFloat {
+        multiline ? ExtensionFormMetrics.textAreaHeight : ExtensionFormMetrics.controlHeight
+    }
 
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, ExtensionFormMetrics.textInset)
-            .frame(width: ExtensionFormMetrics.controlWidth, alignment: .leading)
-            .frame(height: height, alignment: .topLeading)
-            // A control is taller than its text, so the row's label would align to the box's top
-            // rather than to the words in it. This puts the baseline back on the first line.
-            .alignmentGuide(.firstTextBaseline) { _ in
-                ExtensionFormMetrics.firstLineBaseline
-            }
+            // The same vertical inset either way, so a text area's first line sits exactly where a
+            // one-line control's does and the label beside them agrees with both.
+            .padding(.vertical, ExtensionFormMetrics.verticalInset)
+            .frame(
+                width: ExtensionFormMetrics.controlWidth, height: height,
+                alignment: multiline ? .topLeading : .leading
+            )
             .background(
                 RoundedRectangle(
                     cornerRadius: ExtensionFormMetrics.cornerRadius, style: .continuous
                 )
-                .fill(hovered && !focused ? ExtensionColors.fieldHoverFill : ExtensionColors.fieldFill)
+                .fill(fill)
             )
             .overlay(
                 RoundedRectangle(
@@ -36,6 +41,10 @@ struct ExtensionFieldChrome: ViewModifier {
             .focusEffectDisabled()
     }
 
+    private var fill: Color {
+        hovered && !focused ? ExtensionColors.fieldHoverFill : ExtensionColors.fieldFill
+    }
+
     private var stroke: Color {
         if focused || open { return ExtensionColors.fieldFocusStroke }
         return hovered ? ExtensionColors.fieldHoverStroke : ExtensionColors.fieldStroke
@@ -45,12 +54,11 @@ struct ExtensionFieldChrome: ViewModifier {
 extension View {
     /// One control surface, so every row of a form lines up and reads as the same kind of thing.
     func extensionFieldChrome(
-        focused: Bool, open: Bool = false, hovered: Bool = false,
-        height: CGFloat? = ExtensionFormMetrics.controlHeight
+        focused: Bool, open: Bool = false, hovered: Bool = false, multiline: Bool = false
     ) -> some View {
         modifier(
             ExtensionFieldChrome(
-                focused: focused, open: open, hovered: hovered, height: height))
+                focused: focused, open: open, hovered: hovered, multiline: multiline))
     }
 }
 

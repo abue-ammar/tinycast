@@ -11,13 +11,18 @@ enum ExtensionFormMetrics {
     static let cornerRadius: CGFloat = 10
     /// Inset of a control's own text from its rounded edge.
     static let textInset: CGFloat = 10
+    /// The same top inset on every control, so a one-line field and a text area start their text
+    /// on the same line and one label serves both.
+    static let verticalInset: CGFloat = 7
+    /// `NSTextView`'s own line-fragment padding, taken back off so a text area's first character
+    /// sits under a text field's.
+    static let textViewGutter: CGFloat = 5
     /// The box a checkbox draws, and the gap to the label beside it.
     static let checkboxSize: CGFloat = 14
-    /// The gap between one labelled row and the next.
-    static let rowSpacing: CGFloat = 14
-    /// Where a control's first line of text sits from its top edge, which is what a row's label
-    /// aligns to: a tall control would otherwise drag the label to the top of the box.
-    static let firstLineBaseline: CGFloat = 21
+    /// The gap between one labelled row and the next, measured off Raycast's own form.
+    static let rowSpacing: CGFloat = 18
+    /// The gap a separator adds on each side, so a group reads apart from the one before it.
+    static let separatorSpacing: CGFloat = 4
     /// The gap between a control and the popover it opens, on whichever side it opens.
     static let popoverGap: CGFloat = 6
     static let popoverRowHeight: CGFloat = 32
