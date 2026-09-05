@@ -17,14 +17,15 @@ struct ExtensionFormView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                VStack(alignment: .leading, spacing: ExtensionFormMetrics.rowSpacing) {
                     ForEach(screen.fields) { field in
                         row(field)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.vertical, Theme.Spacing.md)
+                // Centred as a block, the way Raycast seats a form in its panel; the label column
+                // and the controls keep their own widths inside it.
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, ExtensionFormMetrics.formVerticalPadding)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -78,8 +79,12 @@ struct ExtensionFormView: View {
         case "Form.Separator":
             Rectangle()
                 .fill(Theme.Colors.separator)
-                .frame(height: 1)
-                .padding(.vertical, Theme.Spacing.xs)
+                // Spans the label column and the control together, as Raycast's rule does.
+                .frame(
+                    width: Theme.Size.formLabelWidth + Theme.Spacing.md
+                        + ExtensionFormMetrics.controlWidth,
+                    height: 1)
+                .padding(.vertical, ExtensionFormMetrics.separatorSpacing)
 
         case "Form.Description":
             labelled(field, showTitle: field.string("title") != nil) {
@@ -220,7 +225,6 @@ struct ExtensionFormView: View {
                         .foregroundStyle(.red)
                 }
             }
-            Spacer(minLength: 0)
         }
     }
 }

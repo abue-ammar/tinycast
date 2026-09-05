@@ -23,6 +23,8 @@ enum ExtensionFormMetrics {
     static let rowSpacing: CGFloat = 18
     /// The gap a separator adds on each side, so a group reads apart from the one before it.
     static let separatorSpacing: CGFloat = 4
+    /// Room above the first row and below the last, so neither touches the bars.
+    static let formVerticalPadding: CGFloat = 16
     /// The gap between a control and the popover it opens, on whichever side it opens.
     static let popoverGap: CGFloat = 6
     static let popoverRowHeight: CGFloat = 32
