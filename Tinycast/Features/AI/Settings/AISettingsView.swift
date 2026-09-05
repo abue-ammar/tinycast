@@ -291,7 +291,7 @@ struct AISettingsView: View {
     private var codexConnection: some View {
         if settings.enabledInstalledProviders.contains(.codex) {
             switch subscription.phase {
-        case .starting:
+            case .starting:
             LabeledContent {
                 providerActions { providerToggle(.codex) }
             } label: {
@@ -300,7 +300,7 @@ struct AISettingsView: View {
                     Text("Checking Codex…").foregroundStyle(.secondary)
                 }
             }
-        case .idle, .signedOut:
+            case .idle, .signedOut:
             LabeledContent {
                 providerActions {
                     Button("Copy Sign-In Command") { copySignInCommand(.codex) }
@@ -311,7 +311,7 @@ struct AISettingsView: View {
                 Text("Codex · Sign in required")
                 Text("Run codex login in Terminal, then check again.")
             }
-        case .connected:
+            case .connected:
             if let account = subscription.account {
                 LabeledContent {
                     providerActions {
@@ -330,7 +330,7 @@ struct AISettingsView: View {
                     Text(account.planTitle == "API key" ? "Codex API key" : "ChatGPT \(account.planTitle)")
                 }
             }
-        case .unavailable(let message):
+            case .unavailable(let message):
             LabeledContent {
                 providerActions {
                     Button("Install Codex CLI…") {
@@ -345,7 +345,7 @@ struct AISettingsView: View {
                 Text("Codex · Not installed")
                 Text(message)
             }
-        case .failed(let message):
+            case .failed(let message):
             LabeledContent {
                 providerActions {
                     Button("Try Again") { subscription.refresh() }
@@ -367,7 +367,7 @@ struct AISettingsView: View {
         let status = installedAI.status(for: kind)
         if settings.enabledInstalledProviders.contains(kind) {
             switch status.phase {
-        case .idle, .checking:
+            case .idle, .checking:
             LabeledContent {
                 providerActions { providerToggle(kind) }
             } label: {
@@ -376,7 +376,7 @@ struct AISettingsView: View {
                     Text("Checking \(kind.title)…").foregroundStyle(.secondary)
                 }
             }
-        case .ready:
+            case .ready:
             LabeledContent {
                 providerActions {
                     Button("Refresh") {
@@ -389,7 +389,7 @@ struct AISettingsView: View {
                 Text(status.version.map { "Version \($0) · \(modelCount(status.models))" }
                     ?? modelCount(status.models))
             }
-        case .signInRequired:
+            case .signInRequired:
             LabeledContent {
                 providerActions {
                     Button("Copy Sign-In Command") { copySignInCommand(kind) }
@@ -402,7 +402,7 @@ struct AISettingsView: View {
                 Text("\(kind.title) · Sign in required")
                 Text("Run \(kind.signInCommand) in Terminal, then check again.")
             }
-        case .notInstalled:
+            case .notInstalled:
             LabeledContent {
                 providerActions {
                     Button("Install…") { NSWorkspace.shared.open(kind.installURL) }
@@ -415,7 +415,7 @@ struct AISettingsView: View {
                 Text("\(kind.title) · Not installed")
                 Text("Tinycast could not find the \(kind.command) command.")
             }
-        case .failed(let message):
+            case .failed(let message):
             LabeledContent {
                 providerActions {
                     Button("Try Again") {
@@ -670,20 +670,8 @@ struct AISettingsView: View {
         }
     }
 
-    /// Opening the pane must not spawn installed helpers for a feature that is switched off.
     private func refreshInstalledAI() {
-        guard appSettings.aiEnabled else {
-            subscription.stop()
-            installedAI.stop()
-            return
-        }
-        let enabledProviders = settings.enabledInstalledProviders
-        if enabledProviders.contains(.codex) {
-            if subscription.phase == .idle { subscription.refresh() }
-        } else {
-            subscription.stop()
-        }
-        installedAI.refresh(enabledKinds: enabledProviders)
+        core.applyInstalledAILifecycle()
     }
 
     private func copySignInCommand(_ kind: InstalledAIKind) {

@@ -31,24 +31,12 @@ final class AIChatCoordinator {
         guard settings.aiEnabled else {
             // Before the handle closes: cancelling an open reply saves the conversation it ends.
             chat.startNewChat()
-            core.chatGPTSubscription.stop()
-            core.installedAI.stop()
+            core.applyInstalledAILifecycle()
             core.chatHistory.close()
             if palette.mode == .ai || palette.mode == .aiHistory { palette.prepare(mode: .launcher) }
             return
         }
-        let enabledProviders = core.aiSettings.enabledInstalledProviders
-        if enabledProviders.contains(.codex) {
-            if core.chatGPTSubscription.phase == .idle { core.chatGPTSubscription.refresh() }
-        } else {
-            core.chatGPTSubscription.stop()
-            core.aiSettings.disableInstalledModelSelection(for: .codex)
-        }
-        core.installedAI.refresh(enabledKinds: enabledProviders)
-        for kind in [InstalledAIKind.claude, .openCode]
-        where !enabledProviders.contains(kind) {
-            core.aiSettings.disableInstalledModelSelection(for: kind)
-        }
+        core.applyInstalledAILifecycle()
         // Deferred off the launch path like the clipboard's own read; history fills in behind it.
         Task {
             core.chatHistory.load()
@@ -381,20 +369,7 @@ final class AIChatCoordinator {
 
     @discardableResult
     func prepareModelSwitcher() -> Task<Void, Never> {
-        let enabledProviders = core.aiSettings.enabledInstalledProviders
-        if enabledProviders.contains(.codex) {
-            if core.chatGPTSubscription.phase == .idle {
-                core.chatGPTSubscription.refresh()
-            }
-        } else {
-            core.chatGPTSubscription.stop()
-            core.aiSettings.disableInstalledModelSelection(for: .codex)
-        }
-        for kind in [InstalledAIKind.claude, .openCode]
-        where !enabledProviders.contains(kind) {
-            core.aiSettings.disableInstalledModelSelection(for: kind)
-        }
-        return core.installedAI.refreshIfNeeded(enabledKinds: enabledProviders)
+        return core.applyInstalledAILifecycle()
     }
 
     func showSettings() {

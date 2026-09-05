@@ -7,16 +7,17 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
 
 ## Invariants
 
-- **AI is off out of the box, and off means fully off.** `AppSettings.aiEnabled` is the flag and
-  `AIChatCoordinator.applyEnabled()` is the only place that projects it: no `AI Chat` command in the
-  launcher, no history database opened or created, no Codex helper resident, no stop for it on Tab's
-  ring, and the palette leaves `.ai`. Turning it off cancels a streaming reply and drops the
-  transcript, but touches neither the saved conversations in `ai-chats.sqlite3` nor a Keychain key.
-  `aiEnabled` is excluded from settings backups like every other AI key, so an import can never arm
-  a feature it cannot configure.
+- **AI Chat is off out of the box, and off means fully off.** `AppSettings.aiEnabled` is the flag:
+  no `AI Chat` command in the launcher, no history database opened or created, no Codex helper for
+  Chat, no stop for it on Tab's ring, and the palette leaves `.ai`. Installed providers may still
+  remain available for Quick Actions, which has its own switch and route. Turning AI Chat off cancels
+  a streaming reply and drops the transcript, but touches neither the saved conversations in
+  `ai-chats.sqlite3` nor a Keychain key. `aiEnabled` is excluded from settings backups like every
+  other AI key, so an import can never arm a feature it cannot configure.
 - **Installed model discovery is per-provider.** Settings → AI → Providers keeps Codex, Claude and
-  OpenCode visible with an individual toggle for each. Turning one off cancels its check, clears its
-  catalog and releases its process; Apple Intelligence and saved API connections stay available.
+  OpenCode visible with an individual toggle for each, all off by default. Turning one off cancels
+  its check, clears its catalog and releases its process; Apple Intelligence is the default route when
+  available, and saved API connections stay available.
 - **Every request carries Tinycast's own preamble, and the user's text goes after it.**
   `AIInstructions.compose` builds `AIRequest.instructions`: a fixed preamble that tells the model
   where it is running and what the app can do, then whatever Settings → AI holds. The preamble

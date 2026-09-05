@@ -36,8 +36,10 @@ final class QuickActionCoordinator {
         appIndex.setCommandsVisible(Self.launcherCommands, settings.quickActionsEnabled)
         guard settings.quickActionsEnabled else {
             cancel()
+            core.applyInstalledAILifecycle()
             return
         }
+        core.applyInstalledAILifecycle()
         store.resolveModel(
             appleIntelligenceAvailable: core.aiSettings.isAppleIntelligenceAvailable(),
             fallback: core.aiSettings.defaultModel)

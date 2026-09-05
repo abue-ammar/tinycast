@@ -672,11 +672,9 @@ struct AIProviderTests {
         defer { discardSuite(suite, defaults) }
 
         let store = AISettingsStore(defaults: defaults, isAppleIntelligenceAvailable: { true })
-        expect(store.defaultModel == nil, "a fresh store chooses nothing on its own")
-        store.resolveDefaultModel()
         expect(
             store.defaultModel == .appleIntelligence,
-            "the on-device route is what an unconfigured Mac resolves to")
+            "the on-device route is the default on an unconfigured Mac")
 
         // A configured connection must not be displaced by resolution running a second time.
         let connectionID = UUID()
@@ -739,10 +737,14 @@ struct AIProviderTests {
         defer { discardSuite(suite, defaults) }
         let store = AISettingsStore(defaults: defaults)
         expect(
-            store.enabledInstalledProviders == Set(InstalledAIKind.allCases),
-            "installed providers are enabled by default")
+            store.enabledInstalledProviders.isEmpty,
+            "installed providers are disabled by default")
+        store.setInstalledProviderEnabled(true, for: .claude)
         store.setInstalledProviderEnabled(false, for: .openCode)
         let reopened = AISettingsStore(defaults: defaults)
+        expect(
+            reopened.enabledInstalledProviders == [.claude],
+            "an enabled provider survives a restart")
         expect(
             !reopened.enabledInstalledProviders.contains(.openCode),
             "a provider toggle survives a restart")

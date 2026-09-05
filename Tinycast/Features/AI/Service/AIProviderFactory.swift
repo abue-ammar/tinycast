@@ -34,11 +34,20 @@ enum AIProviderFactory {
             }
             return AppleIntelligenceProvider(guardrails: guardrails)
         case .codex(let model, let effort):
+            guard settings.enabledInstalledProviders.contains(.codex) else {
+                throw AIProviderError.unavailable("Codex is disabled in AI Settings.")
+            }
             return CodexInstalledProvider(
                 turns: subscription.turns, model: model, effort: effort)
         case .claude(let model, let effort):
+            guard settings.enabledInstalledProviders.contains(.claude) else {
+                throw AIProviderError.unavailable("Claude is disabled in AI Settings.")
+            }
             return try installedAI.provider(kind: .claude, model: model, effort: effort)
         case .openCode(let model, let effort):
+            guard settings.enabledInstalledProviders.contains(.openCode) else {
+                throw AIProviderError.unavailable("OpenCode is disabled in AI Settings.")
+            }
             return try installedAI.provider(kind: .openCode, model: model, effort: effort)
         case .api(let connectionID, let model):
             guard let connection = settings.connection(id: connectionID) else {

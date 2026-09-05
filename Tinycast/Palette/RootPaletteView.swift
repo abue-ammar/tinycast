@@ -732,16 +732,26 @@ struct RootPaletteView: View {
         let refreshTask = core.aiChatCoordinator.prepareModelSwitcher()
         let options = core.aiChatCoordinator.modelOptions
         let selected = core.aiSettings.defaultModel
-        let active =
-            selected.flatMap { selected in
-                options.firstIndex(where: { $0.matches(selected) })
-            } ?? 0
+        let active = aiModelMenuSelection(options: options, selected: selected)
         open(.aiModel, highlighting: active)
         Task { @MainActor in
             await refreshTask.value
             guard openMenu == .aiModel else { return }
+            menuSelection = aiModelMenuSelection(
+                options: core.aiChatCoordinator.modelOptions,
+                selected: core.aiSettings.defaultModel)
             syncMenuPanel(presenting: false)
         }
+    }
+
+    private func aiModelMenuSelection(
+        options: [AIModelOption], selected: AIModelSelection?
+    ) -> Int {
+        let offset = core.aiChatCoordinator.isModelCatalogLoading ? 1 : 0
+        let selectedIndex = selected.flatMap { selected in
+            options.firstIndex(where: { $0.matches(selected) })
+        } ?? 0
+        return offset + selectedIndex
     }
 
     private var headerMenuWidth: CGFloat {
@@ -835,6 +845,7 @@ struct RootPaletteView: View {
     /// The one activation path for a menu row: run its action, then close.
     private func activateMenuItem(_ index: Int) {
         guard let content = menuContent, (0..<content.rowCount).contains(index) else { return }
+        guard !content.isLoading(index) else { return }
         content.activate(index)
         closeMenus()
         // A mouse click on a row takes the caret with it; menus close back into the field.

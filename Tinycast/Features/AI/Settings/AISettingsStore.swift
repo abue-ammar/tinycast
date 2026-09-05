@@ -83,6 +83,9 @@ final class AISettingsStore {
         {
             defaultModel = firstAvailableSelection()
         }
+        if defaultModel == nil {
+            defaultModel = firstAvailableSelection()
+        }
     }
 
     func connection(id: UUID) -> AIConnection? {
@@ -249,7 +252,7 @@ final class AISettingsStore {
     private static func decodeEnabledInstalledProviders(_ data: Data?) -> Set<InstalledAIKind> {
         guard let data,
             let providers = try? JSONDecoder().decode([InstalledAIKind].self, from: data)
-        else { return Set(InstalledAIKind.allCases) }
+        else { return [] }
         return Set(providers)
     }
 }

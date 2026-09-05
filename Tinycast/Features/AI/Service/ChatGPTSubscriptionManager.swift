@@ -41,11 +41,14 @@ final class ChatGPTSubscriptionManager {
 
     var isConnected: Bool { account != nil && phase == .connected }
 
-    func refresh() {
+    @discardableResult
+    func refresh() -> Task<Void, Never> {
         // A check is under way the moment it is asked for, so `.idle` can mean nobody asked.
         if phase == .idle { phase = .starting }
-        runOperation { [weak self] in await self?.refreshNow() }
+        return runOperation { [weak self] in await self?.refreshNow() }
     }
+
+    func currentRefreshTask() -> Task<Void, Never> { operationTask ?? Task {} }
 
     /// Releases process, timers and state alike; `.idle` lets the next visit check again.
     func stop() {
@@ -75,9 +78,14 @@ final class ChatGPTSubscriptionManager {
         scheduleIdleShutdown()
     }
 
-    private func runOperation(_ operation: @escaping @MainActor () async -> Void) {
+    @discardableResult
+    private func runOperation(_ operation: @escaping @MainActor () async -> Void)
+        -> Task<Void, Never>
+    {
         operationTask?.cancel()
-        operationTask = Task { await operation() }
+        let task = Task { await operation() }
+        operationTask = task
+        return task
     }
 
     private func refreshNow() async {

@@ -21,14 +21,15 @@ final class InstalledAIManager {
 
     @discardableResult
     func refresh(enabledKinds: Set<InstalledAIKind> = [.claude, .openCode]) -> Task<Void, Never> {
+        var tasks: [Task<Void, Never>] = []
         for kind in [InstalledAIKind.claude, .openCode] {
             if enabledKinds.contains(kind) {
-                refresh(kind: kind)
+                tasks.append(refresh(kind: kind))
             } else {
                 stop(kind: kind)
             }
         }
-        return Task {}
+        return Task { for task in tasks { await task.value } }
     }
 
     @discardableResult
@@ -39,7 +40,7 @@ final class InstalledAIManager {
         let workspace = workspace
         let task = Task { [weak self] in
             guard let self else { return }
-            let result = await Task.detached { await Self.probe(kind, workspace: workspace) }.value
+            let result = await Self.probe(kind, workspace: workspace)
             guard !Task.isCancelled else { return }
             self.statuses[result.0] = result.1
         }
@@ -47,18 +48,23 @@ final class InstalledAIManager {
         return task
     }
 
-    func refreshIfNeeded(enabledKinds: Set<InstalledAIKind>) -> Task<Void, Never> {
-        let probeKinds = enabledKinds.intersection(Set([.claude, .openCode]))
-        let phases = probeKinds.map { status(for: $0).phase }
-        if probeKinds.isEmpty { return Task {} }
-        if phases.contains(.checking) {
-            return probeKinds.compactMap { refreshTasks[$0] }.first ?? Task {}
+    func ensure(enabledKinds: Set<InstalledAIKind>) -> Task<Void, Never> {
+        var tasks: [Task<Void, Never>] = []
+        for kind in [InstalledAIKind.claude, .openCode] {
+            guard enabledKinds.contains(kind) else {
+                stop(kind: kind)
+                continue
+            }
+            switch status(for: kind).phase {
+            case .idle:
+                tasks.append(refresh(kind: kind))
+            case .checking:
+                if let task = refreshTasks[kind] { tasks.append(task) }
+            case .ready, .signInRequired, .notInstalled, .failed:
+                break
+            }
         }
-        if phases.contains(.idle) {
-            refresh(enabledKinds: probeKinds)
-            return probeKinds.compactMap { refreshTasks[$0] }.first ?? Task {}
-        }
-        return Task {}
+        return Task { for task in tasks { await task.value } }
     }
 
     func stop() {
@@ -143,11 +149,35 @@ enum InstalledAIProbe {
         let output: String
     }
 
+    private final class ProcessHandle: @unchecked Sendable {
+        private let lock = NSLock()
+        private var process: Process?
+        private var cancelled = false
+
+        func set(_ process: Process) {
+            lock.lock()
+            self.process = process
+            let shouldTerminate = cancelled
+            lock.unlock()
+            if shouldTerminate { process.terminate() }
+        }
+
+        func cancel() {
+            lock.lock()
+            cancelled = true
+            let process = self.process
+            lock.unlock()
+            if let process, process.isRunning { process.terminate() }
+        }
+    }
+
     nonisolated static func run(
         executable: URL, arguments: [String], workspace: URL
     ) async -> Result {
-        await Task.detached {
-            try? FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        let handle = ProcessHandle()
+        return await withTaskCancellationHandler(operation: {
+            try? FileManager.default.createDirectory(
+                at: workspace, withIntermediateDirectories: true)
             let process = Process()
             let output = Pipe()
             process.executableURL = executable
@@ -157,6 +187,7 @@ enum InstalledAIProbe {
             process.standardOutput = output
             process.standardError = FileHandle.nullDevice
             do { try process.run() } catch { return Result(status: -1, output: "") }
+            handle.set(process)
             let watchdog = Task {
                 try? await Task.sleep(for: .seconds(10))
                 if process.isRunning { process.terminate() }
@@ -175,7 +206,9 @@ enum InstalledAIProbe {
             return Result(
                 status: process.terminationStatus,
                 output: String(bytes: data.prefix(2 * 1_048_576), encoding: .utf8) ?? "")
-        }.value
+        }, onCancel: {
+            handle.cancel()
+        })
     }
 
     nonisolated static func version(in output: String) -> String? {

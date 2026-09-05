@@ -351,6 +351,23 @@ final class AppCore {
         installedAI.stop()
     }
 
+    @discardableResult
+    func applyInstalledAILifecycle() -> Task<Void, Never> {
+        let enabledKinds = settings.aiEnabled || settings.quickActionsEnabled
+            ? aiSettings.enabledInstalledProviders : []
+        var tasks: [Task<Void, Never>] = []
+        if enabledKinds.contains(.codex) {
+            tasks.append(
+                chatGPTSubscription.phase == .idle
+                    ? chatGPTSubscription.refresh()
+                    : chatGPTSubscription.currentRefreshTask())
+        } else {
+            chatGPTSubscription.stop()
+        }
+        tasks.append(installedAI.ensure(enabledKinds: enabledKinds))
+        return Task { for task in tasks { await task.value } }
+    }
+
     func aiProvider() throws -> any AIProvider {
         try AIProviderFactory.make(
             settings: aiSettings, subscription: chatGPTSubscription, installedAI: installedAI)
