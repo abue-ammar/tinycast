@@ -47,37 +47,46 @@ enum SearchScopes {
         return result
     }
 
+    private static let scanKeys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey]
+    private static let scanKeySet: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey]
+
     /// `.app` is a leaf here — never descended into.
     private static func appBundles(under url: URL, subfolderDepth: Int) -> [URL] {
+        let fm = FileManager.default
         guard
-            let items = try? FileManager.default.contentsOfDirectory(
-                at: url.resolvingSymlinksInPath(),
-                includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles]
-            )
+            let items = (try? fm.contentsOfDirectory(
+                at: url, includingPropertiesForKeys: scanKeys, options: [.skipsHiddenFiles]))
+                ?? (try? fm.contentsOfDirectory(
+                    at: url.resolvingSymlinksInPath(),
+                    includingPropertiesForKeys: scanKeys,
+                    options: [.skipsHiddenFiles]))
         else { return [] }
 
         var result: [URL] = []
         for item in items {
-            let logicalURL = url.appendingPathComponent(item.lastPathComponent)
-            if logicalURL.pathExtension == "app" {
-                if FileManager.default.fileExists(atPath: logicalURL.path) {
-                    result.append(logicalURL)
+            let logicalItem = url.appendingPathComponent(item.lastPathComponent)
+            let isApp = logicalItem.pathExtension == "app"
+            let values = try? item.resourceValues(forKeys: scanKeySet)
+            let isSymlink = values?.isSymbolicLink == true
+
+            if isApp {
+                if !isSymlink || fm.fileExists(atPath: logicalItem.path) {
+                    result.append(logicalItem)
                 }
-            } else if subfolderDepth > 0, isDirectory(at: logicalURL) {
-                result.append(
-                    contentsOf: appBundles(
-                        under: logicalURL,
-                        subfolderDepth: subfolderDepth - 1))
+            } else if subfolderDepth > 0 {
+                if values?.isDirectory == true {
+                    result.append(
+                        contentsOf: appBundles(under: logicalItem, subfolderDepth: subfolderDepth - 1))
+                } else if isSymlink,
+                    (try? logicalItem.resolvingSymlinksInPath().resourceValues(forKeys: [.isDirectoryKey]))?
+                        .isDirectory == true
+                {
+                    result.append(
+                        contentsOf: appBundles(under: logicalItem, subfolderDepth: subfolderDepth - 1))
+                }
             }
         }
         return result
-    }
-
-    private static func isDirectory(at url: URL) -> Bool {
-        var isDir: ObjCBool = false
-        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-            && isDir.boolValue
     }
 
     private static func trimTrailingSlash(_ path: String) -> String {
