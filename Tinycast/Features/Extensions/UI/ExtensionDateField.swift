@@ -33,6 +33,13 @@ struct ExtensionDateField: View {
             query: query, now: Date(), calendar: .current, includesTime: includesTime)
     }
 
+    /// What the control does, then whatever the extension explains about the field.
+    private var hint: String {
+        let state = open ? "Showing dates" : "Opens a list of dates"
+        guard let info = node.string("info"), !info.isEmpty else { return state }
+        return state + ". " + info
+    }
+
     var body: some View {
         control
             .focusable()
@@ -100,7 +107,7 @@ struct ExtensionDateField: View {
         .accessibilityLabel(Text(node.string("title") ?? "Date"))
         // While open the control is an expression field, so it announces what is typed.
         .accessibilityValue(Text(open && !query.isEmpty ? query : label))
-        .accessibilityHint(Text(open ? "Showing dates" : "Opens a list of dates"))
+        .accessibilityHint(Text(hint))
         .accessibilityAddTraits(.isButton)
         .onHover { hovered = $0 }
         .onTapGesture {

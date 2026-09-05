@@ -7,7 +7,6 @@ enum ExtensionFormMetrics {
     static let controlHeight: CGFloat = 32
     /// A text area is a control that grew: same width and chrome, several lines tall.
     static let textAreaHeight: CGFloat = 78
-    static let cornerRadius: CGFloat = 10
     /// Inset of a control's own text from its rounded edge.
     static let textInset: CGFloat = 10
     /// One top inset everywhere, so a field and a text area start their text on one line.

@@ -8,6 +8,8 @@ struct ExtensionPickerField: View {
     let placeholder: String
     /// The field's own title, so the control announces what it is rather than as a chevron.
     let title: String
+    /// The field's own explanation, spoken after the state so both are heard.
+    let info: String?
     let assetsPath: String?
     let allowsMultipleSelection: Bool
     let index: Int?
@@ -32,6 +34,13 @@ struct ExtensionPickerField: View {
     private var announcedValue: String {
         guard open, !query.isEmpty else { return chosen.isEmpty ? placeholder : label }
         return chosen.isEmpty ? query : "\(label), searching \(query)"
+    }
+
+    /// What the control does, then whatever the extension explains about the field.
+    private var hint: String {
+        let state = open ? "Showing choices" : "Opens a list of choices"
+        guard let info, !info.isEmpty else { return state }
+        return state + ". " + info
     }
 
     /// What the closed control reads as: the chosen titles, or the placeholder.
@@ -146,7 +155,7 @@ struct ExtensionPickerField: View {
         .accessibilityLabel(Text(title))
         // While open the control is a search field, so it announces what is being typed.
         .accessibilityValue(Text(announcedValue))
-        .accessibilityHint(Text(open ? "Showing choices" : "Opens a list of choices"))
+        .accessibilityHint(Text(hint))
         .accessibilityAddTraits(.isButton)
         .onHover { hovered = $0 }
         .onTapGesture {

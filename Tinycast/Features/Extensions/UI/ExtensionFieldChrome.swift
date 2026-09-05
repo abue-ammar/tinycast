@@ -25,13 +25,13 @@ struct ExtensionFieldChrome: ViewModifier {
             )
             .background(
                 RoundedRectangle(
-                    cornerRadius: ExtensionFormMetrics.cornerRadius, style: .continuous
+                    cornerRadius: Theme.Radius.row, style: .continuous
                 )
                 .fill(fill)
             )
             .overlay(
                 RoundedRectangle(
-                    cornerRadius: ExtensionFormMetrics.cornerRadius, style: .continuous
+                    cornerRadius: Theme.Radius.row, style: .continuous
                 )
                 .strokeBorder(stroke, lineWidth: 1)
             )
