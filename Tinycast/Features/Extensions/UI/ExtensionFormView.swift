@@ -213,9 +213,9 @@ struct ExtensionFormView: View {
                 }
             }
             .frame(width: Theme.Size.formLabelWidth, alignment: .trailing)
-            // Centred on the control's first line: Raycast centres a label against a one-line
-            // control and holds it level with the first line of a taller one.
-            .frame(height: ExtensionFormMetrics.controlHeight)
+            // Centred against a one-line control's height, and free to grow past it: a label long
+            // enough to wrap must not be clipped to a single control's worth of room.
+            .frame(minHeight: ExtensionFormMetrics.controlHeight)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 content()
