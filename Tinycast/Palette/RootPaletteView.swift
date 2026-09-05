@@ -134,20 +134,30 @@ struct RootPaletteView: View {
 
     /// Every model configured for chat; selecting one updates the app-wide default route.
     private var aiModelContent: PopoverMenuContent {
-        let options = core.aiChatCoordinator.modelOptions
-        guard !options.isEmpty else {
+        let groups = core.aiChatCoordinator.modelGroups
+        let loading = core.aiChatCoordinator.isModelCatalogLoading
+        var items = groups.flatMap { group in
+            group.options.enumerated().map { index, option in
+                PopoverMenuItem(
+                    title: option.title, icon: option.menuIcon,
+                    sectionTitle: index == 0 ? group.title : nil)
+                {
+                    core.aiChatCoordinator.selectModel(option)
+                }
+            }
+        }
+        if loading {
+            items.insert(
+                PopoverMenuItem(title: "Loading models…", icon: .blank, isLoading: true) {}, at: 0)
+        }
+        guard !items.isEmpty else {
             return PopoverMenuContent(items: [
                 PopoverMenuItem(title: "Configure AI", systemImage: "slider.horizontal.3") {
                     core.aiChatCoordinator.showSettings()
                 }
             ])
         }
-        return PopoverMenuContent(
-            items: options.map { option in
-                PopoverMenuItem(title: option.menuTitle, icon: option.menuIcon) {
-                    core.aiChatCoordinator.selectModel(option)
-                }
-            })
+        return PopoverMenuContent(items: items)
     }
 
     /// The bottom-left app menu content (About / Support / Settings).
@@ -719,7 +729,7 @@ struct RootPaletteView: View {
             closeMenus()
             return
         }
-        core.aiChatCoordinator.prepareModelSwitcher()
+        let refreshTask = core.aiChatCoordinator.prepareModelSwitcher()
         let options = core.aiChatCoordinator.modelOptions
         let selected = core.aiSettings.defaultModel
         let active =
@@ -727,6 +737,11 @@ struct RootPaletteView: View {
                 options.firstIndex(where: { $0.matches(selected) })
             } ?? 0
         open(.aiModel, highlighting: active)
+        Task { @MainActor in
+            await refreshTask.value
+            guard openMenu == .aiModel else { return }
+            syncMenuPanel(presenting: false)
+        }
     }
 
     private var headerMenuWidth: CGFloat {

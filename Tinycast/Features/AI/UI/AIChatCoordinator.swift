@@ -37,6 +37,7 @@ final class AIChatCoordinator {
             if palette.mode == .ai || palette.mode == .aiHistory { palette.prepare(mode: .launcher) }
             return
         }
+        core.installedAI.refresh()
         // Deferred off the launch path like the clipboard's own read; history fills in behind it.
         Task {
             core.chatHistory.load()
@@ -276,9 +277,20 @@ final class AIChatCoordinator {
     }
 
     var modelOptions: [AIModelOption] {
+        modelGroups.flatMap(\.options)
+    }
+
+    var isModelCatalogLoading: Bool {
+        core.chatGPTSubscription.phase == .starting
+            || [InstalledAIKind.claude, .openCode].contains {
+                core.installedAI.status(for: $0).phase == .checking
+            }
+    }
+
+    var modelGroups: [AIModelOptionGroup] {
         let claude = core.installedAI.status(for: .claude)
         let openCode = core.installedAI.status(for: .openCode)
-        return AIModelOption.catalog(
+        return AIModelOption.groupedCatalog(
             appleIntelligence: core.aiSettings.isAppleIntelligenceAvailable(),
             codex: core.chatGPTSubscription.isConnected ? core.chatGPTSubscription.models : [],
             claude: claude.isReady ? claude.models : [],
@@ -351,11 +363,12 @@ final class AIChatCoordinator {
                 openCode: core.installedAI.status(for: .openCode).models))
     }
 
-    func prepareModelSwitcher() {
+    @discardableResult
+    func prepareModelSwitcher() -> Task<Void, Never> {
         if core.chatGPTSubscription.phase == .idle {
             core.chatGPTSubscription.refresh()
         }
-        core.installedAI.refresh()
+        return core.installedAI.refreshIfNeeded()
     }
 
     func showSettings() {

@@ -19,12 +19,13 @@ final class InstalledAIManager {
         statuses[kind] ?? InstalledAIStatus()
     }
 
-    func refresh() {
+    @discardableResult
+    func refresh() -> Task<Void, Never> {
         refreshTask?.cancel()
         for kind in [InstalledAIKind.claude, .openCode] {
             statuses[kind]?.phase = .checking
         }
-        refreshTask = Task { [weak self] in
+        let task = Task { [weak self] in
             guard let self else { return }
             let workspace = self.workspace
             let claude = Task.detached { await Self.probe(.claude, workspace: workspace) }
@@ -33,6 +34,15 @@ final class InstalledAIManager {
             guard !Task.isCancelled else { return }
             for (kind, status) in results { self.statuses[kind] = status }
         }
+        refreshTask = task
+        return task
+    }
+
+    func refreshIfNeeded() -> Task<Void, Never> {
+        let phases = [InstalledAIKind.claude, .openCode].map { status(for: $0).phase }
+        if phases.contains(.checking) { return refreshTask ?? Task {} }
+        if phases.contains(.idle) { return refresh() }
+        return Task {}
     }
 
     func stop() {
