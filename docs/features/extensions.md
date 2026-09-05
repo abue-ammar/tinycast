@@ -227,7 +227,8 @@ screens hold (see [palette.md](palette.md)).
   With its own borderless child panel it samples the desktop, and a picker and the actions menu are
   the same surface by construction rather than by matching. It keeps the panel's row pitch, icon
   slot and overflow fade, and a focused control takes the system accent edge that Settings and the
-  shortcut recorder already draw.
+  shortcut recorder already draw. Opening a long list reveals its current selection; updates to
+  row titles, icons, sections and date details refresh an open panel even when row IDs stay the same.
   Its metrics are restated in `ExtensionFormMetrics` rather than read off the panel: an extension's
   surfaces own their own, and a launcher change must never move a form.
 
@@ -252,7 +253,7 @@ screens hold (see [palette.md](palette.md)).
   A picker opens downward, or upward when the form's bottom edge would cut the list off, which is
   `ExtensionFormMetrics.placement` applied by `ExtensionListPlacement` against the palette's own
   frame in screen space, so a list can overhang the form's scroller but never the window. The
-  chevron points the way the list actually went.
+  chevron points the way the list actually went. Scrolling its control out of view closes the list.
 
   **React answers a keystroke a render late**, so a value echoed back mid-word is older than what has
   been typed since. Both text controls hold the last edit they dispatched and ignore every echo until

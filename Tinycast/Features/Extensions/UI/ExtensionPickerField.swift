@@ -119,6 +119,7 @@ struct ExtensionPickerField: View {
             }
             .onChange(of: open) { palette.noteControlListOpen(open) }
             .onChange(of: query) { typedAt = Date() }
+            .onScrollVisibilityChange { if !$0 { close() } }
             .onDisappear { if open { palette.noteControlListOpen(false) } }
             .onChange(of: focus) { _, focus in
                 // Focus leaving the field takes its list with it.
@@ -179,10 +180,19 @@ struct ExtensionPickerField: View {
     }
 
     /// What the hosted list draws; a change to any of it re-pushes the panel's tree.
-    private var revision: AnyHashable {
-        AnyHashable(
-            [query, String(highlighted), String(isDark), chosen.joined(separator: "\u{1}"),
-             matches.map(\.id).joined(separator: "\u{1}")])
+    private struct Revision: Equatable {
+        let query: String
+        let highlighted: Int
+        let isDark: Bool
+        let chosen: [String]
+        let items: [ExtensionPickerItem]
+        let assetsPath: String?
+    }
+
+    private var revision: Revision {
+        Revision(
+            query: query, highlighted: highlighted, isDark: isDark,
+            chosen: chosen, items: matches, assetsPath: assetsPath)
     }
 
     private func openList() -> KeyPress.Result {

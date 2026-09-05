@@ -72,7 +72,7 @@ struct ExtensionPickerList: View {
                 // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
                 .scrollIndicators(.never)
                 .overflowFade()
-                .onChange(of: selection) { proxy.scrollTo(selection) }
+                .onChange(of: selection, initial: true) { proxy.scrollTo(selection) }
             }
         }
     }

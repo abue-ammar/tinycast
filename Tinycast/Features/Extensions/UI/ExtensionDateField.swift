@@ -87,6 +87,7 @@ struct ExtensionDateField: View {
             }
             .onChange(of: open) { palette.noteControlListOpen(open) }
             .onChange(of: query) { typedAt = Date() }
+            .onScrollVisibilityChange { if !$0 { close() } }
             .onDisappear { if open { palette.noteControlListOpen(false) } }
             .onChange(of: focus) { _, focus in
                 if focus != index { close() }
@@ -133,8 +134,14 @@ struct ExtensionDateField: View {
     }
 
     /// What the hosted list draws; a change to any of it re-pushes the panel's tree.
-    private var revision: AnyHashable {
-        AnyHashable([query, String(highlighted)] + suggestions.map(\.title))
+    private struct Revision: Equatable {
+        let query: String
+        let highlighted: Int
+        let suggestions: [ExtensionDateExpression.Suggestion]
+    }
+
+    private var revision: Revision {
+        Revision(query: query, highlighted: highlighted, suggestions: suggestions)
     }
 
     private func typed(_ characters: String) -> KeyPress.Result {

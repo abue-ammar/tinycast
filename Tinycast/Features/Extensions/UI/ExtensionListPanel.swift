@@ -130,11 +130,11 @@ struct ExtensionWindowProbe: NSViewRepresentable {
 }
 
 /// Drives one control's list panel from the state the control already holds.
-private struct ExtensionListPanelModifier<List: View>: ViewModifier {
+private struct ExtensionListPanelModifier<List: View, Revision: Equatable>: ViewModifier {
     let open: Bool
     let height: CGFloat
     /// Whatever the drawn list depends on, so a keystroke that changes it repaints the panel.
-    let revision: AnyHashable
+    let revision: Revision
     @Binding var flipped: Bool
     let list: () -> List
 
@@ -147,7 +147,7 @@ private struct ExtensionListPanelModifier<List: View>: ViewModifier {
         let open: Bool
         let height: CGFloat
         let anchor: CGRect
-        let revision: AnyHashable
+        let revision: Revision
     }
 
     func body(content: Content) -> some View {
@@ -177,8 +177,8 @@ private struct ExtensionListPanelModifier<List: View>: ViewModifier {
 
 extension View {
     /// Opens this control's list in a window of its own, as the ⌘K menu is opened.
-    func extensionListPanel<List: View>(
-        open: Bool, height: CGFloat, revision: AnyHashable, flipped: Binding<Bool>,
+    func extensionListPanel<List: View, Revision: Equatable>(
+        open: Bool, height: CGFloat, revision: Revision, flipped: Binding<Bool>,
         @ViewBuilder list: @escaping () -> List
     ) -> some View {
         modifier(

@@ -355,7 +355,6 @@ private struct ExtensionCheckbox: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
-            // No field chrome: a checkbox is its own box, and a second one around it reads as a well.
             .frame(width: ExtensionFormMetrics.controlWidth, alignment: .leading)
             .frame(height: ExtensionFormMetrics.controlHeight)
             .contentShape(Rectangle())
