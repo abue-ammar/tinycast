@@ -57,9 +57,9 @@ enum ExtensionFormMetrics {
 
     /// The whole popover, list plus whatever chrome sits above it.
     static func popoverHeight(rows: Int, hasSearchField: Bool, headers: Int = 0) -> CGFloat {
-        let list = popoverListHeight(rows: rows, headers: headers)
+        // The panel is sized to this, so an empty list must still measure the row it draws.
+        let list = rows > 0 ? popoverListHeight(rows: rows, headers: headers) : popoverRowHeight
         let search = hasSearchField ? popoverSearchHeight : 0
-        // An empty list still draws its search row, so the popover never collapses to its padding.
         return list + search + popoverPadding * 2
     }
 

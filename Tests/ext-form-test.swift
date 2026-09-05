@@ -67,6 +67,10 @@ struct ExtensionFormTests {
             "and a headed list still caps at the visible rows",
             ExtensionFormMetrics.popoverListHeight(rows: 40, headers: 6)
                 == ExtensionFormMetrics.popoverRowsMaxHeight)
+        check(
+            "an empty list still measures the row it draws, since the panel is sized to this",
+            ExtensionFormMetrics.popoverHeight(rows: 0, hasSearchField: false)
+                == ExtensionFormMetrics.popoverRowHeight + ExtensionFormMetrics.popoverPadding * 2)
     }
 
     static func popoverPlacement() {

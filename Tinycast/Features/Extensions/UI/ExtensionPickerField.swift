@@ -21,6 +21,8 @@ struct ExtensionPickerField: View {
 
     @State private var open = false
     @State private var query = ""
+    /// When the query last changed, which is where the caret's blink restarts from.
+    @State private var typedAt = Date()
     @State private var highlighted = 0
     @State private var hovered = false
     /// Reported by the panel once it has placed itself, for the chevron that points its way.
@@ -87,7 +89,7 @@ struct ExtensionPickerField: View {
                     assetsPath: assetsPath, onSelect: { choose(at: $0) },
                     onHighlight: { highlighted = $0 })
             }
-            // One handler: the list is an overlay, which a press on the control never reaches.
+            // One handler: the list's panel never takes key, so every press lands here.
             .onKeyPress(phases: [.down, .repeat]) { press in
                 switch ExtensionListKey(press: press, listOpen: open) {
                 case .openList: return openList()
@@ -116,6 +118,7 @@ struct ExtensionPickerField: View {
                 }
             }
             .onChange(of: open) { palette.noteControlListOpen(open) }
+            .onChange(of: query) { typedAt = Date() }
             .onDisappear { if open { palette.noteControlListOpen(false) } }
             .onChange(of: focus) { _, focus in
                 // Focus leaving the field takes its list with it.
@@ -141,7 +144,7 @@ struct ExtensionPickerField: View {
                         .font(Theme.Typography.rowTitle)
                         .foregroundStyle(Theme.Colors.textTertiary)
                 }
-                ExtensionQueryText(query: query, prompt: "Search…")
+                ExtensionQueryText(query: query, prompt: "Search…", phase: typedAt)
             } else {
                 Text(label)
                     .font(Theme.Typography.rowTitle)
@@ -177,7 +180,9 @@ struct ExtensionPickerField: View {
 
     /// What the hosted list draws; a change to any of it re-pushes the panel's tree.
     private var revision: AnyHashable {
-        AnyHashable([query, String(highlighted), chosen.joined(separator: "\u{1}")])
+        AnyHashable(
+            [query, String(highlighted), String(isDark), chosen.joined(separator: "\u{1}"),
+             matches.map(\.id).joined(separator: "\u{1}")])
     }
 
     private func openList() -> KeyPress.Result {

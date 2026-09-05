@@ -412,6 +412,8 @@ struct RootPaletteView: View {
             guard press.modifiers.contains(.command),
                 ASCIIKeyboardLayout.matches(press.key, character: "k")
             else { return .ignored }
+            // A control's open list owns the screen, so a second panel may never open over it.
+            guard !vm.isControlListOpen else { return .handled }
             // The Actions menu has no anchor in the compact bar, so swallow ⌘K there.
             guard !isCollapsed else { return .handled }
             let screen = screen

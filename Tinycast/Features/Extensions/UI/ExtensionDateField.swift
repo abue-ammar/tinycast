@@ -10,6 +10,8 @@ struct ExtensionDateField: View {
 
     @State private var open = false
     @State private var query = ""
+    /// When the query last changed, which is where the caret's blink restarts from.
+    @State private var typedAt = Date()
     @State private var highlighted = 0
     @State private var hovered = false
     /// Reported by the panel once it has placed itself, for the chevron that points its way.
@@ -58,7 +60,7 @@ struct ExtensionDateField: View {
                     onSelect: { choose(rows, at: $0) },
                     onHighlight: { highlighted = $0 })
             }
-            // One handler: the list is an overlay, which a press on the control never reaches.
+            // One handler: the list's panel never takes key, so every press lands here.
             .onKeyPress(phases: [.down, .repeat]) { press in
                 switch ExtensionListKey(press: press, listOpen: open) {
                 case .openList: return openList()
@@ -84,6 +86,7 @@ struct ExtensionDateField: View {
                 }
             }
             .onChange(of: open) { palette.noteControlListOpen(open) }
+            .onChange(of: query) { typedAt = Date() }
             .onDisappear { if open { palette.noteControlListOpen(false) } }
             .onChange(of: focus) { _, focus in
                 if focus != index { close() }
@@ -97,7 +100,7 @@ struct ExtensionDateField: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
             // While the list is open the control is the expression field, caret and all.
             if open {
-                ExtensionQueryText(query: query, prompt: "tomorrow at 10am")
+                ExtensionQueryText(query: query, prompt: "tomorrow at 10am", phase: typedAt)
             } else {
                 Text(label)
                     .font(Theme.Typography.rowTitle)
@@ -130,7 +133,9 @@ struct ExtensionDateField: View {
     }
 
     /// What the hosted list draws; a change to any of it re-pushes the panel's tree.
-    private var revision: AnyHashable { AnyHashable([query, String(highlighted)]) }
+    private var revision: AnyHashable {
+        AnyHashable([query, String(highlighted)] + suggestions.map(\.title))
+    }
 
     private func typed(_ characters: String) -> KeyPress.Result {
         query += characters

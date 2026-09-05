@@ -34,10 +34,9 @@ final class ExtensionListPanel: NSPanel {
 
 /// Presents one control's list at a time in a panel hung off the palette window.
 @MainActor
-@Observable
 final class ExtensionListPanelController {
-    @ObservationIgnored private var panel: ExtensionListPanel?
-    @ObservationIgnored private var hosting: NSHostingView<AnyView>?
+    private var panel: ExtensionListPanel?
+    private var hosting: NSHostingView<AnyView>?
 
     func present(_ content: AnyView, frame: NSRect, parent: NSWindow, palette: PaletteState) {
         let panel = ensurePanel(state: palette)
@@ -58,9 +57,13 @@ final class ExtensionListPanelController {
     }
 
     func hide() {
-        guard let panel, panel.parent != nil || panel.isVisible else { return }
+        guard let panel else { return }
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)
+        // Dropped, not parked: the hosted tree captures the control that owns this controller.
+        panel.contentView = nil
+        hosting = nil
+        self.panel = nil
     }
 
     private func ensurePanel(state: PaletteState) -> ExtensionListPanel {
