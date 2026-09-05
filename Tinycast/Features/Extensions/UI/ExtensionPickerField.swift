@@ -64,42 +64,34 @@ struct ExtensionPickerField: View {
             // The chrome draws the focused edge, so AppKit's blue ring would be a second one.
             .focusEffectDisabled()
             .overlay(alignment: .topLeading) { popoverLayer }
-            // Every key the open list uses is claimed here: the popover is drawn in an overlay,
-            // which a key press from the focused control never travels into.
-            .onKeyPress(keys: [.upArrow], phases: [.down, .repeat]) { _ in
-                open ? move(-1) : .ignored
+            // One handler, not one per key: the popover is an overlay, so a press on the focused
+            // control never travels into it, and `ExtensionListKey` is the single place that says
+            // what a press means. Separate modifiers let a character rule shadow the delete rule,
+            // which is what stopped ⌫ from ever reaching the query.
+            .onKeyPress(phases: [.down, .repeat]) { press in
+                switch ExtensionListKey(press: press, listOpen: open) {
+                case .openList: return openList()
+                case .moveUp: return move(-1)
+                case .moveDown: return move(1)
+                case .commit:
+                    choose(at: highlighted)
+                    return .handled
+                case .dismiss:
+                    close()
+                    return .handled
+                case .append(let characters):
+                    query += characters
+                    highlighted = 0
+                    return .handled
+                case .deleteBackward:
+                    guard !query.isEmpty else { return .handled }
+                    query.removeLast()
+                    highlighted = 0
+                    return .handled
+                case .stepValue(let delta): return step(delta)
+                case .ignored: return .ignored
+                }
             }
-            .onKeyPress(keys: [.downArrow], phases: [.down, .repeat]) { _ in
-                open ? move(1) : openList()
-            }
-            .onKeyPress(.space) { open ? .ignored : openList() }
-            .onKeyPress(keys: [.return], phases: .down) { press in
-                guard press.modifiers.isEmpty else { return .ignored }
-                guard open else { return openList() }
-                choose(at: highlighted)
-                return .handled
-            }
-            .onKeyPress(.escape) {
-                guard open else { return .ignored }
-                close()
-                return .handled
-            }
-            // Typing filters the open list; the control stays first responder throughout.
-            .onKeyPress(characters: .alphanumerics.union(.whitespaces).union(.punctuationCharacters), phases: .down) { press in
-                guard open, press.modifiers.isEmpty, !press.characters.isEmpty else { return .ignored }
-                query += press.characters
-                highlighted = 0
-                return .handled
-            }
-            .onKeyPress(keys: [.delete], phases: [.down, .repeat]) { _ in
-                guard open, !query.isEmpty else { return .ignored }
-                query.removeLast()
-                highlighted = 0
-                return .handled
-            }
-            // Closed, the arrows step the value without opening — a short dropdown needs no list.
-            .onKeyPress(.leftArrow) { open ? .handled : step(-1) }
-            .onKeyPress(.rightArrow) { open ? .handled : step(1) }
             .onChange(of: open) { palette.noteControlListOpen(open) }
             .onDisappear { if open { palette.noteControlListOpen(false) } }
             .onChange(of: focus) { _, focus in

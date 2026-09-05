@@ -40,40 +40,28 @@ struct ExtensionDateField: View {
             .focused($focus, equals: index)
             .focusEffectDisabled()
             .overlay(alignment: .topLeading) { popoverLayer }
-            // Every key the open list uses is claimed here: the popover is an overlay, which a
-            // key press from the focused control never travels into.
-            .onKeyPress(keys: [.upArrow], phases: [.down, .repeat]) { _ in
-                open ? move(-1) : .ignored
-            }
-            .onKeyPress(keys: [.downArrow], phases: [.down, .repeat]) { _ in
-                open ? move(1) : openList()
-            }
-            .onKeyPress(.space) { open ? typed(" ") : openList() }
-            .onKeyPress(keys: [.return], phases: .down) { press in
-                guard press.modifiers.isEmpty else { return .ignored }
-                guard open else { return openList() }
-                choose(suggestions, at: highlighted)
-                return .handled
-            }
-            .onKeyPress(.escape) {
-                guard open else { return .ignored }
-                close()
-                return .handled
-            }
-            // An expression is typed straight into the control, which never gives up focus.
-            .onKeyPress(
-                characters: .alphanumerics.union(.punctuationCharacters), phases: .down
-            ) { press in
-                guard open, press.modifiers.isEmpty, !press.characters.isEmpty else {
-                    return .ignored
+            // One handler over `ExtensionListKey`, as the picker uses: the popover is an overlay,
+            // so a press on the focused control never travels into it.
+            .onKeyPress(phases: [.down, .repeat]) { press in
+                switch ExtensionListKey(press: press, listOpen: open) {
+                case .openList: return openList()
+                case .moveUp: return move(-1)
+                case .moveDown: return move(1)
+                case .commit:
+                    choose(suggestions, at: highlighted)
+                    return .handled
+                case .dismiss:
+                    close()
+                    return .handled
+                case .append(let characters): return typed(characters)
+                case .deleteBackward:
+                    guard !query.isEmpty else { return .handled }
+                    query.removeLast()
+                    highlighted = 0
+                    return .handled
+                // A date has no value to step: its arrows belong to the list or to nothing.
+                case .stepValue, .ignored: return .ignored
                 }
-                return typed(press.characters)
-            }
-            .onKeyPress(keys: [.delete], phases: [.down, .repeat]) { _ in
-                guard open, !query.isEmpty else { return .ignored }
-                query.removeLast()
-                highlighted = 0
-                return .handled
             }
             .onChange(of: open) { palette.noteControlListOpen(open) }
             .onDisappear { if open { palette.noteControlListOpen(false) } }

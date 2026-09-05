@@ -91,15 +91,15 @@ struct ExtensionPickerRow: View {
         Button(action: onActivate) {
             HStack(spacing: Theme.Spacing.sm) {
                 if let icon {
-                    ExtensionIconView(resolved: icon, size: 14)
+                    ExtensionIconView(resolved: icon, size: Theme.Size.menuIcon)
                 }
                 Text(title)
-                    .font(Theme.Typography.rowTitle)
+                    .font(Theme.Typography.menuRow)
                     .lineLimit(1)
                 Spacer(minLength: Theme.Spacing.sm)
                 if let detail {
                     Text(detail)
-                        .font(Theme.Typography.rowTrailing)
+                        .font(Theme.Typography.menuShortcut)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }

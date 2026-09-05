@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// The form's two pure rules: where a picker's list opens, and what a typed date means.
 @main
@@ -25,6 +26,7 @@ struct ExtensionFormTests {
         datePresets()
         dateParsing()
         dateSuggestions()
+        ExtensionListKeyTests.run(check: check)
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         print("\(passes) passed, \(failures) failed")

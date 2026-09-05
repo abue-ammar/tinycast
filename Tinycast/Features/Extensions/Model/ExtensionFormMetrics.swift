@@ -27,15 +27,17 @@ enum ExtensionFormMetrics {
     static let formVerticalPadding: CGFloat = 16
     /// The gap between a control and the popover it opens, on whichever side it opens.
     static let popoverGap: CGFloat = 6
-    static let popoverRowHeight: CGFloat = 32
+    /// The ⌘K panel's own row pitch, restated here rather than read from it: an extension's
+    /// surfaces own their metrics, and a launcher change must never move a form.
+    static let popoverRowHeight: CGFloat = 36
     static let popoverRowSpacing: CGFloat = 1
     /// A section heading inside a picker's list; shorter than a row, since it is a label.
     static let popoverSectionHeaderHeight: CGFloat = 24
     /// Six rows and half of the seventh, so a long list reads as scrollable rather than clipped.
     static let popoverVisibleRows: CGFloat = 6.5
-    static let popoverCornerRadius: CGFloat = 10
     /// The search or expression row a popover opens with, where it has one.
-    static let popoverSearchHeight: CGFloat = 34
+    static let popoverSearchHeight: CGFloat = 30
+    /// `Theme.Spacing.sm` on every side, matching the ⌘K panel's own inset.
     static let popoverPadding: CGFloat = 6
 
     /// Rounded: a half-row of an odd pitch lands the popover's edge on a half pixel.
