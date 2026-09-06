@@ -7,14 +7,30 @@ enum BundleLocalization {
         var codes: [String] = []
         var seen = Set<String>()
         for tag in preferred + ["en"] {
-            // loctable keys and .lproj folders both use underscores where a language tag uses "-".
-            let underscored = tag.replacingOccurrences(of: "-", with: "_")
             let bare = tag.split(separator: "-").first.map(String.init) ?? tag
-            for code in [tag, underscored, bare] where !code.isEmpty && seen.insert(code).inserted {
-                codes.append(code)
+            for form in [tag, regionForm(tag), bare].compactMap({ $0 }) {
+                // loctable keys and .lproj folders use underscores where a language tag uses "-".
+                let underscored = form.replacingOccurrences(of: "-", with: "_")
+                for code in [form, underscored]
+                where !code.isEmpty && seen.insert(code).inserted {
+                    codes.append(code)
+                }
             }
         }
         return codes
+    }
+
+    /// Apple keys a script-bearing tag by region alone, so a `zh-Hans-CN` Mac wants `zh_CN`.
+    private static func regionForm(_ tag: String) -> String? {
+        let subtags = tag.split(separator: "-")
+        guard subtags.contains(where: { $0.count == 4 && $0.allSatisfy(\.isLetter) })
+        else { return nil }
+        let language = Locale.Language(identifier: tag)
+        guard let code = language.languageCode?.identifier,
+            let region = language.region
+                ?? Locale.Language(identifier: language.maximalIdentifier).region
+        else { return nil }
+        return "\(code)-\(region.identifier)"
     }
 
     /// Every localized name the bundle carries, most preferred language first.
