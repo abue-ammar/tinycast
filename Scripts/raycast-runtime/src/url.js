@@ -319,6 +319,15 @@ function normalizeURLText(input) {
     .replace(/[\t\r\n]/g, "");
 }
 
+// encodeURI leaves ? # ~ intact, so a filename carrying one would parse back as query or fragment.
+export function pathToFileURL(input) {
+  const encoded = encodeURI(String(input)).replace(
+    /[?#~]/g,
+    (char) => "%" + char.charCodeAt(0).toString(16).toUpperCase(),
+  );
+  return new URL("file://" + encoded);
+}
+
 function isURL(value) {
   return Boolean(
     value?.href && value.protocol && value.auth === undefined && value.path === undefined,

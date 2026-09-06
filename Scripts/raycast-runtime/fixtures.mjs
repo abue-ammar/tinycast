@@ -172,7 +172,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Detail } from "@raycast/api";
 
 export default function Command() {
@@ -217,6 +217,11 @@ export default function Command() {
     fileURLToPath("file:///a:folder/.."),
     new URL("..", "file:///a:folder/child").href,
     new URL("..", "https://example.com/C:/child").href,
+    pathToFileURL("/tmp/My Image.png").href,
+    pathToFileURL("/tmp/a#b.png").href,
+    fileURLToPath(pathToFileURL("/tmp/a#b.png")),
+    fileURLToPath(pathToFileURL("/tmp/a?b.png")),
+    fileURLToPath(pathToFileURL("/Applications/Tinycast Beta.app")),
     errorCode(() => fileURLToPath("file:///tmp/a%2Fb")),
     errorCode(() => fileURLToPath("file://a%2Fb/tmp/a")),
     errorCode(() => fileURLToPath("file://example.com/tmp/a")),
@@ -567,6 +572,11 @@ export async function runFixtures() {
       "/a:folder/",
       "file:///a:folder/",
       "https://example.com/",
+      "file:///tmp/My%20Image.png",
+      "file:///tmp/a%23b.png",
+      "/tmp/a#b.png",
+      "/tmp/a?b.png",
+      "/Applications/Tinycast Beta.app",
       "ERR_INVALID_FILE_URL_PATH",
       "ERR_INVALID_URL",
       "ERR_INVALID_FILE_URL_HOST",

@@ -20,7 +20,7 @@ import {
   pipelinePromise,
 } from "./streams.js";
 import { ReadableStream, TransformStream, WritableStream } from "./web-streams.js";
-import { fileURLToPath, URL, URLSearchParams } from "./url.js";
+import { fileURLToPath, pathToFileURL, URL, URLSearchParams } from "./url.js";
 import { punycode } from "./punycode.js";
 
 // ─── path ───────────────────────────────────────────────────────────
@@ -1256,7 +1256,7 @@ export const nodeModules = {
   punycode,
   assert,
   string_decoder: { StringDecoder },
-  url: { URL, URLSearchParams, fileURLToPath, pathToFileURL: (input) => new URL("file://" + encodeURI(String(input))), parse: (text) => new URL(text), format: (value) => String(value), resolve: (from, to) => new URL(to, from).href },
+  url: { URL, URLSearchParams, fileURLToPath, pathToFileURL, parse: (text) => new URL(text), format: (value) => String(value), resolve: (from, to) => new URL(to, from).href },
   timers: { setTimeout, clearTimeout, setInterval, clearInterval, setImmediate, clearImmediate },
   "timers/promises": { setTimeout: (ms, value) => new Promise((resolve) => setTimeout(() => resolve(value), ms)) },
   perf_hooks: { performance: globalThis.performance },
