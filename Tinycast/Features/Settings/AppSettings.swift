@@ -123,6 +123,11 @@ final class AppSettings {
         didSet { defaults.set(searchScopes, forKey: Key.searchScopes.rawValue) }
     }
 
+    /// Ships on, unlike every other feature switch: a launcher is expected to keep history.
+    var clipboardEnabled: Bool {
+        didSet { defaults.set(clipboardEnabled, forKey: Key.clipboardEnabled.rawValue) }
+    }
+
     var clipboardRetention: ClipboardRetention {
         didSet {
             defaults.set(clipboardRetention.rawValue, forKey: Key.clipboardRetention.rawValue)
@@ -433,6 +438,10 @@ final class AppSettings {
     }
 
     init() {
+        // The only feature switch that defaults on, so absence has to outrank a stored `false`.
+        clipboardEnabled =
+            defaults.object(forKey: Key.clipboardEnabled.rawValue) == nil
+            || defaults.bool(forKey: Key.clipboardEnabled.rawValue)
         // `integer(forKey:)` returns 0 when unset, which no case matches.
         clipboardRetention =
             ClipboardRetention(rawValue: defaults.integer(forKey: Key.clipboardRetention.rawValue))

@@ -122,7 +122,8 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
         store: fallbacks, quicklinks: quicklinks, settings: settings, core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
-        clipboardStore: clipboardStore, palette: palette, windowController: windowController,
+        clipboardStore: clipboardStore, clipboardManager: clipboardManager, settings: settings,
+        appIndex: appIndex, palette: palette, windowController: windowController,
         paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var emojiCoordinator = EmojiCoordinator(
         frequentEmoji: frequentEmoji, settings: settings, windowController: windowController,
@@ -190,12 +191,8 @@ final class AppCore {
             applyAppearance()
             observeEffectiveAppearance()
 
-            clipboardStore.maxAge = settings.clipboardRetention.maxAge
-            // Defer the SQLite read + prune off the launch path; the palette fills in later.
-            Task { clipboardStore.load() }
-            clipboardManager.start()
-
             appIndex.start(settings: settings)
+            clipboardCoordinator.applyEnabled()
             extensions.start(appIndex: appIndex, coordinator: extensionCoordinator)
             extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
@@ -405,6 +402,8 @@ final class AppCore {
                 _ = $0.quicklinksEnabled
                 _ = $0.quicklinksShowInLauncher
             }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
+        track(
+            { _ = $0.clipboardEnabled }, reproject: { $0.clipboardCoordinator.applyEnabled() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })

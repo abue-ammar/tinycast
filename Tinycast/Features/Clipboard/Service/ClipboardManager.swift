@@ -20,6 +20,7 @@ final class ClipboardManager {
     private var timer: Timer?
     private var sessionTokens: [NotificationToken] = []
     private var lastChangeCount = 0
+    private var isCapturing = false
 
     init(store: ClipboardStore, settings: AppSettings) {
         self.store = store
@@ -32,8 +33,17 @@ final class ClipboardManager {
     }
 
     func start() {
+        guard !isCapturing else { return }
+        isCapturing = true
         installSessionObservers()
         startPolling()
+    }
+
+    /// Turning the feature off: the poller, the observers and the drain all go with it.
+    func stop() {
+        isCapturing = false
+        sessionTokens = []
+        stopPolling()
     }
 
     // Fast user switching: another session's clipboard isn't ours, so stop waking up for it.
@@ -60,7 +70,7 @@ final class ClipboardManager {
 
     // Re-baselining first is what stops a clip made in another session reading as new on resume.
     private func startPolling() {
-        guard timer == nil else { return }
+        guard isCapturing, timer == nil else { return }
         lastChangeCount = NSPasteboard.general.changeCount
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.poll() }
@@ -77,6 +87,7 @@ final class ClipboardManager {
 
     // Drain first: the real copy must reach history before we overwrite the pasteboard.
     func prepareForTinycastPasteboardMutation() {
+        guard isCapturing else { return }
         poll()
     }
 

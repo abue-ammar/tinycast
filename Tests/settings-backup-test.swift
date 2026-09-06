@@ -53,6 +53,9 @@ struct SettingsBackupTest {
             "user ignore patterns ride the settings backup",
             mirrored["fileSearchIgnorePatterns"] == .fileSearchIgnorePatterns)
         check("notes enablement rides the settings backup", mirrored["notesEnabled"] == .notesEnabled)
+        check(
+            "clipboard enablement rides the settings backup",
+            mirrored["clipboardEnabled"] == .clipboardEnabled)
 
         // Named one by one: a backup now carries content, so it is far likelier to be sent on.
         for key: AppSettingsKey in [

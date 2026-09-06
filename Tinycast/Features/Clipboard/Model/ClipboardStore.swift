@@ -156,14 +156,25 @@ final class ClipboardStore {
         imagesDir = base.appendingPathComponent("images", isDirectory: true)
         dbURL = base.appendingPathComponent("clipboard.sqlite3")
         try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
-        if !openDatabase() {
-            // Captured, not authored: discard a corrupt or outdated database and start over.
-            closeDatabase()
-            for suffix in ["", "-wal", "-shm"] {
-                try? FileManager.default.removeItem(atPath: dbURL.path + suffix)
-            }
-            if !openDatabase() { closeDatabase() }
+        open()
+    }
+
+    /// Idempotent, so the coordinator can re-open the file when the feature is switched back on.
+    func open() {
+        guard db == nil else { return }
+        if openDatabase() { return }
+        // Captured, not authored: discard a corrupt or outdated database and start over.
+        closeDatabase()
+        for suffix in ["", "-wal", "-shm"] {
+            try? FileManager.default.removeItem(atPath: dbURL.path + suffix)
         }
+        if !openDatabase() { closeDatabase() }
+    }
+
+    /// Every accessor is statement-guarded, so a closed store answers as an empty history.
+    func close() {
+        closeDatabase()
+        items = []
     }
 
     /// Application Support, not Caches: a history the OS may reclaim is not a history.

@@ -263,6 +263,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - ↵ pastes into the previous app; ⌥↵ pastes without closing the palette
 - A copy from an excluded app (Settings ▸ Clipboard ▸ Disabled Applications) is **not** recorded
 - Password-manager copies are still not recorded
+- Off (Settings ▸ Clipboard ▸ Enable Clipboard History): nothing new is recorded, the launcher row
+  and its shortcut are gone, the menu-bar row is gone, and Tab rings straight past the screen
+- Off then on again: existing clips come back; Clear history erases them while it is still off
 
 ### Launcher and icons
 

@@ -358,6 +358,9 @@ enum SettingsSearchCatalog {
             pane: .clipboard,
             keywords: ["paste", "history", "copy", "pasteboard"]),
         .init(
+            .clipboardClipboard, "Enable Clipboard History",
+            keywords: ["disable", "turn off", "monitor", "record", "privacy"]),
+        .init(
             .clipboardGlobalShortcuts, "Clipboard History",
             keywords: ["hotkey", "paste", "browser"]),
         .init(
