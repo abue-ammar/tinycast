@@ -39,6 +39,12 @@ provider protocol and the connections behind it.
 - **Quick Actions route themselves.** `quickActionModel` is a second routing decision, defaulting to
   Apple Intelligence and falling back to chat's model. A shortcut pressed all day should not bill an
   API every time, and that is not a choice chat's default can make on its behalf.
+- **Installed providers are ordinary routes.** The model picker reads the same live Codex, Claude and
+  OpenCode catalogs as AI Settings. Execution still goes through `AIProviderFactory`, so Quick Actions
+  inherit the same installed login, tool restrictions and process cleanup without owning CLI logic.
+- **The model picker is the AI picker.** Both panes render `AIModelOption.groupedCatalog`, with the
+  same provider sections, model labels and provider-supported reasoning levels. An installed-model
+  selection stores its effort in `quickActionModel`, independently of chat's effort.
 - **The reader's own text gets permissive guardrails.** `AppCore.quickActionProvider()` asks for
   `SystemLanguageModel.Guardrails.permissiveContentTransformations`. The default filter is tuned for
   a model writing fresh prose and refuses to transform text somebody already wrote, which is the

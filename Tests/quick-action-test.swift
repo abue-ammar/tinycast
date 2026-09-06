@@ -70,10 +70,10 @@ struct QuickActionTests {
 
         // Resolution never overrides a choice, and never re-runs over one.
         let connectionID = UUID()
-        store.select(.api(connection: connectionID, model: "m"))
+        store.select(.api(connection: connectionID, model: "m", effort: nil))
         store.resolveModel(appleIntelligenceAvailable: true, fallback: nil)
         expect(
-            store.model == .api(connection: connectionID, model: "m"),
+            store.model == .api(connection: connectionID, model: "m", effort: nil),
             "resolution leaves a route the reader chose alone")
 
         store.settings.setPreviewsResult(true, for: .fixGrammar)
@@ -82,7 +82,7 @@ struct QuickActionTests {
 
         let reopened = QuickActionSettingsStore(defaults: defaults)
         expect(
-            reopened.model == .api(connection: connectionID, model: "m"),
+            reopened.model == .api(connection: connectionID, model: "m", effort: nil),
             "the route survives a relaunch")
         expect(reopened.settings.previewsResult(.fixGrammar), "a preview choice survives a relaunch")
         expect(reopened.settings.targetLanguage == "de", "the target language survives a relaunch")
@@ -101,6 +101,37 @@ struct QuickActionTests {
         expect(
             onDevice.model == .appleIntelligence,
             "repair leaves a route that names no connection untouched")
+
+        onDevice.select(.claude(model: "old", effort: nil))
+        onDevice.repairInstalledModel(
+            available: [.claude(model: "sonnet", effort: nil)], unavailableSources: [],
+            fallback: .appleIntelligence)
+        expect(
+            onDevice.model == .claude(model: "sonnet", effort: nil),
+            "an installed model removed from the catalog moves to that command's first model")
+        onDevice.select(.openCode(model: "provider/old", effort: nil))
+        onDevice.repairInstalledModel(
+            available: [], unavailableSources: [.openCode], fallback: .appleIntelligence)
+        expect(
+            onDevice.model == .appleIntelligence,
+            "an unavailable installed command does not leave Quick Actions on a dead route")
+        onDevice.select(.claude(model: "haiku", effort: nil))
+        onDevice.repairInstalledModel(
+            available: [], unavailableSources: [.claude],
+            fallback: .claude(model: "sonnet", effort: nil))
+        expect(
+            onDevice.model == nil,
+            "an unavailable installed command is not replaced by another dead model")
+        onDevice.select(.codex(model: "gpt", effort: "high"))
+        let withEffort = QuickActionSettingsStore(defaults: defaults)
+        expect(
+            withEffort.model == .codex(model: "gpt", effort: "high"),
+            "Quick Actions persist their own Codex reasoning effort")
+        onDevice.select(.openCode(model: "provider/model", effort: "max"))
+        let withOpenCodeEffort = QuickActionSettingsStore(defaults: defaults)
+        expect(
+            withOpenCodeEffort.model == .openCode(model: "provider/model", effort: "max"),
+            "Quick Actions persist their own OpenCode reasoning effort")
     }
 
     static func everyActionDescribesItself() {

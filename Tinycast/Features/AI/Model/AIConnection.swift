@@ -35,6 +35,18 @@ enum AIProviderKind: String, CaseIterable, Codable, Identifiable, Sendable {
 }
 
 struct AIConnection: Codable, Equatable, Identifiable, Sendable {
+    struct ReasoningOptions: Codable, Equatable, Sendable {
+        let efforts: [String]
+        let defaultEffort: String?
+
+        func resolvedEffort(_ preferred: String?) -> String? {
+            guard !efforts.isEmpty else { return nil }
+            if let preferred, efforts.contains(preferred) { return preferred }
+            if let defaultEffort, efforts.contains(defaultEffort) { return defaultEffort }
+            return efforts.first
+        }
+    }
+
     let id: UUID
     var name: String
     var provider: AIProviderKind
@@ -42,10 +54,13 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     var models: [String]
     /// Models the catalog marked as taking images — only OpenRouter's says, so only it is gated.
     var visionModels: [String]
+    /// OpenRouter's per-model catalog metadata; absent for APIs that do not publish this contract.
+    var reasoningOptions: [String: ReasoningOptions]?
 
     init(
         id: UUID = UUID(), name: String = "", provider: AIProviderKind = .openAI,
-        baseURL: String? = nil, models: [String] = [], visionModels: [String] = []
+        baseURL: String? = nil, models: [String] = [], visionModels: [String] = [],
+        reasoningOptions: [String: ReasoningOptions]? = nil
     ) {
         self.id = id
         self.name = name
@@ -53,6 +68,7 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         self.baseURL = baseURL ?? provider.defaultBaseURL
         self.models = models
         self.visionModels = visionModels
+        self.reasoningOptions = reasoningOptions
     }
 
     var title: String {
@@ -76,38 +92,143 @@ struct AIModelCapabilities: Equatable, Sendable {
 
     static let none = AIModelCapabilities(images: false, webSearch: false, tools: false)
     static let chatGPT = AIModelCapabilities(images: true, webSearch: true, tools: false)
+    static let codex = AIModelCapabilities(images: true, webSearch: true, tools: false)
     /// The on-device model is text-only and reaches nothing, so it offers none of the three.
     static let appleIntelligence = AIModelCapabilities.none
 }
 
 enum AIModelSource: Codable, Equatable, Hashable, Sendable {
     case appleIntelligence
-    case chatGPT
+    case codex
+    case claude
+    case openCode
     case api(UUID)
 }
 
 enum AIModelSelection: Codable, Equatable, Hashable, Sendable {
     case appleIntelligence
-    case chatGPT(model: String, effort: String?)
-    case api(connection: UUID, model: String)
+    case codex(model: String, effort: String?)
+    case claude(model: String, effort: String?)
+    case openCode(model: String, effort: String?)
+    case api(connection: UUID, model: String, effort: String?)
 
     var source: AIModelSource {
         switch self {
         case .appleIntelligence: return .appleIntelligence
-        case .chatGPT: return .chatGPT
-        case .api(let connection, _): return .api(connection)
+        case .codex: return .codex
+        case .claude: return .claude
+        case .openCode: return .openCode
+        case .api(let connection, _, _): return .api(connection)
         }
     }
 
     var model: String {
         switch self {
         case .appleIntelligence: return AppleIntelligence.modelID
-        case .chatGPT(let model, _), .api(_, let model): return model
+        case .codex(let model, _), .claude(let model, _), .openCode(let model, _),
+            .api(_, let model, _):
+            return model
+        }
+    }
+
+    var effort: String? {
+        switch self {
+        case .codex(_, let effort), .claude(_, let effort), .openCode(_, let effort),
+            .api(_, _, let effort):
+            return effort
+        case .appleIntelligence:
+            return nil
+        }
+    }
+
+    func withEffort(_ effort: String?) -> AIModelSelection {
+        switch self {
+        case .codex(let model, _): return .codex(model: model, effort: effort)
+        case .claude(let model, _): return .claude(model: model, effort: effort)
+        case .openCode(let model, _): return .openCode(model: model, effort: effort)
+        case .api(let connection, let model, _):
+            return .api(connection: connection, model: model, effort: effort)
+        case .appleIntelligence: return self
         }
     }
 
     /// The one route with nothing to bill and nothing to configure, so it needs no capability gate.
     var isOnDevice: Bool { self == .appleIntelligence }
+
+    private enum CodingKeys: String, CodingKey {
+        case appleIntelligence
+        case codex
+        case chatGPT
+        case claude
+        case openCode
+        case api
+    }
+
+    private enum ValueKeys: String, CodingKey {
+        case model
+        case effort
+        case connection
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if container.contains(.appleIntelligence) {
+            self = .appleIntelligence
+            return
+        }
+        if container.contains(.codex) || container.contains(.chatGPT) {
+            let key: CodingKeys = container.contains(.codex) ? .codex : .chatGPT
+            let value = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: key)
+            self = .codex(
+                model: try value.decode(String.self, forKey: .model),
+                effort: try value.decodeIfPresent(String.self, forKey: .effort))
+            return
+        }
+        if container.contains(.claude) {
+            let value = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .claude)
+            self = .claude(
+                model: try value.decode(String.self, forKey: .model),
+                effort: try value.decodeIfPresent(String.self, forKey: .effort))
+            return
+        }
+        if container.contains(.openCode) {
+            let value = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .openCode)
+            self = .openCode(
+                model: try value.decode(String.self, forKey: .model),
+                effort: try value.decodeIfPresent(String.self, forKey: .effort))
+            return
+        }
+        let value = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .api)
+        self = .api(
+            connection: try value.decode(UUID.self, forKey: .connection),
+            model: try value.decode(String.self, forKey: .model),
+            effort: try value.decodeIfPresent(String.self, forKey: .effort))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .appleIntelligence:
+            _ = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .appleIntelligence)
+        case .codex(let model, let effort):
+            var value = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .codex)
+            try value.encode(model, forKey: .model)
+            try value.encodeIfPresent(effort, forKey: .effort)
+        case .claude(let model, let effort):
+            var value = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .claude)
+            try value.encode(model, forKey: .model)
+            try value.encodeIfPresent(effort, forKey: .effort)
+        case .openCode(let model, let effort):
+            var value = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .openCode)
+            try value.encode(model, forKey: .model)
+            try value.encodeIfPresent(effort, forKey: .effort)
+        case .api(let connection, let model, let effort):
+            var value = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .api)
+            try value.encode(connection, forKey: .connection)
+            try value.encode(model, forKey: .model)
+            try value.encodeIfPresent(effort, forKey: .effort)
+        }
+    }
 }
 
 struct AIHTTPConfiguration: Equatable, Sendable {
@@ -119,6 +240,14 @@ struct AIHTTPConfiguration: Equatable, Sendable {
     let provider: AIProviderKind
     let baseURL: URL
     let model: String
+    let effort: String?
+
+    init(provider: AIProviderKind, baseURL: URL, model: String, effort: String? = nil) {
+        self.provider = provider
+        self.baseURL = baseURL
+        self.model = model
+        self.effort = effort
+    }
 
     var shape: APIShape { provider.apiShape }
 

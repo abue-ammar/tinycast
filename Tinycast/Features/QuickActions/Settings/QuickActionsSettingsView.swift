@@ -63,7 +63,16 @@ struct QuickActionsSettingsView: View {
             store.resolveModel(
                 appleIntelligenceAvailable: aiSettings.isAppleIntelligenceAvailable(),
                 fallback: aiSettings.defaultModel)
+            core.applyInstalledAILifecycle()
         }
+        .onChange(of: appSettings.aiEnabled) { repairInstalledModel() }
+        .onChange(of: aiSettings.enabledInstalledProviders) {
+            core.applyInstalledAILifecycle()
+            repairInstalledModel()
+        }
+        .onChange(of: core.chatGPTSubscription.models) { repairInstalledModel() }
+        .onChange(of: core.chatGPTSubscription.phase) { repairInstalledModel() }
+        .onChange(of: core.installedAI.statuses) { repairInstalledModel() }
     }
 
     private var actionsSection: some View {
@@ -116,19 +125,18 @@ struct QuickActionsSettingsView: View {
 
     private var modelSection: some View {
         Section {
-            if modelChoices.isEmpty {
-                Label("No AI provider configured", systemImage: "sparkles")
-                    .foregroundStyle(.secondary)
-            } else {
-                Picker(selection: modelBinding) {
-                    ForEach(modelChoices) { choice in
-                        Text(choice.menuTitle).tag(Optional(choice.selection))
-                    }
-                } label: {
+            AIModelSelectionRows(
+                selection: store.model,
+                select: store.select,
+                modelLabel: {
                     SettingsRowTitle(.quickActionsModel, "Model")
                     Text("Used by every action except Translate.")
+                },
+                effortLabel: {
+                    SettingsRowTitle(.quickActionsModel, "Reasoning effort")
+                    Text("Applied when the selected model supports reasoning effort.")
                 }
-            }
+            )
         } header: {
             SettingsSectionHeader(.quickActionsModel)
         } footer: {
@@ -186,22 +194,45 @@ struct QuickActionsSettingsView: View {
             set: { visibility.setItemVisible($0, for: entry) })
     }
 
-    private var modelBinding: Binding<AIModelSelection?> {
-        Binding(get: { store.model }, set: { store.select($0) })
-    }
-
     private var languageBinding: Binding<String> {
         Binding(
             get: { store.settings.targetLanguage },
             set: { store.settings.targetLanguage = $0 })
     }
 
-    /// The same routes chat offers, flattened: Quick Actions has no reason to group them.
     private var modelChoices: [AIModelOption] {
-        AIModelOption.catalog(
-            appleIntelligence: aiSettings.isAppleIntelligenceAvailable(),
-            chatGPT: core.chatGPTSubscription.models,
-            connections: aiSettings.connections)
+        AIModelOption.availableGroups(
+            settings: aiSettings, subscription: core.chatGPTSubscription,
+            installedAI: core.installedAI
+        )
+        .flatMap(\.options)
+    }
+
+    private func repairInstalledModel() {
+        // Catalog rows name a route without an effort; a repaired selection must carry the default.
+        let options = modelChoices.map {
+            AIModelOption.withDefaultEffort(
+                $0.selection, settings: aiSettings, subscription: core.chatGPTSubscription,
+                installedAI: core.installedAI)
+        }
+        var unavailable = Set<AIModelSource>()
+        if !aiSettings.enabledInstalledProviders.contains(.codex)
+            || core.chatGPTSubscription.phase == .signedOut
+            || core.chatGPTSubscription.phase.isUnavailable
+        {
+            unavailable.insert(.codex)
+        }
+        for kind in [InstalledAIKind.claude, .openCode] {
+            let phase = core.installedAI.status(for: kind).phase
+            guard
+                !aiSettings.enabledInstalledProviders.contains(kind)
+                    || phase == .signInRequired || phase == .notInstalled
+            else { continue }
+            unavailable.insert(kind.source)
+        }
+        store.repairInstalledModel(
+            available: options, unavailableSources: unavailable,
+            fallback: aiSettings.defaultModel)
     }
 
     private struct InstructionsEditorSheet: View {

@@ -1,8 +1,7 @@
-import AppKit
 import Foundation
 import Observation
 
-/// Owns the private Codex app-server and the ChatGPT login; it only says whether a turn may start.
+/// Owns the app-server, reusing the account already configured in the user's Codex installation.
 @MainActor
 @Observable
 final class ChatGPTSubscriptionManager {
@@ -10,7 +9,6 @@ final class ChatGPTSubscriptionManager {
     private static let idleShutdown: Duration = .seconds(600)
 
     private let client: CodexAppServerClient
-    private let codexHome: URL
     let turns: CodexTurnRunner
 
     private(set) var phase = ChatGPTSubscription.Phase.idle
@@ -22,10 +20,8 @@ final class ChatGPTSubscriptionManager {
     @ObservationIgnored private var idleTask: Task<Void, Never>?
 
     init(supportDirectory: URL = AppPaths.applicationSupport()) {
-        let root = supportDirectory.appending(path: "ChatGPTSubscription", directoryHint: .isDirectory)
-        codexHome = root.appending(path: "CodexHome", directoryHint: .isDirectory)
+        let root = supportDirectory.appending(path: "InstalledAI/Codex", directoryHint: .isDirectory)
         client = CodexAppServerClient(
-            codexHome: codexHome,
             workspace: root.appending(path: "Workspace", directoryHint: .isDirectory))
         turns = CodexTurnRunner(client: client)
         turns.connect = { [weak self] in
@@ -45,59 +41,14 @@ final class ChatGPTSubscriptionManager {
 
     var isConnected: Bool { account != nil && phase == .connected }
 
-    /// With the file credential store, a completed sign-in is exactly this file.
-    private var hasStoredLogin: Bool {
-        FileManager.default.fileExists(atPath: codexHome.appending(path: "auth.json").path)
-    }
-
-    func refresh() {
+    @discardableResult
+    func refresh() -> Task<Void, Never> {
         // A check is under way the moment it is asked for, so `.idle` can mean nobody asked.
         if phase == .idle { phase = .starting }
-        runOperation { [weak self] in await self?.refreshNow() }
+        return runOperation { [weak self] in await self?.refreshNow() }
     }
 
-    func connect(openURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
-        runOperation { [weak self] in
-            guard let self else { return }
-            // A sign-in can fail or be abandoned in the browser, so arm on every outcome.
-            defer { self.scheduleIdleShutdown() }
-            self.phase = .starting
-            do {
-                try await self.client.start()
-                let response = try await self.client.request(
-                    method: "account/login/start",
-                    params: [
-                        "type": "chatgpt",
-                        "useHostedLoginSuccessPage": true,
-                        "appBrand": "chatgpt"
-                    ])
-                guard let urlString = response["authUrl"]?.stringValue,
-                    let url = URL(string: urlString), openURL(url)
-                else {
-                    self.phase = .failed("The ChatGPT sign-in page could not be opened.")
-                    return
-                }
-                self.phase = .waitingForBrowser
-            } catch {
-                self.apply(error)
-            }
-        }
-    }
-
-    func logout() {
-        runOperation { [weak self] in
-            guard let self else { return }
-            do {
-                try await self.client.start()
-                _ = try await self.client.request(method: "account/logout")
-                self.forget()
-                self.phase = .signedOut
-                self.client.stop()
-            } catch {
-                self.apply(error)
-            }
-        }
-    }
+    func currentRefreshTask() -> Task<Void, Never> { operationTask ?? Task {} }
 
     /// Releases process, timers and state alike; `.idle` lets the next visit check again.
     func stop() {
@@ -118,7 +69,7 @@ final class ChatGPTSubscriptionManager {
             await loadModelsAndLimits()
         }
         guard account != nil else {
-            throw AIProviderError.unavailable("Connect ChatGPT in Settings first.")
+            throw AIProviderError.unavailable("Sign in with `codex login`, then check Codex again.")
         }
     }
 
@@ -127,18 +78,19 @@ final class ChatGPTSubscriptionManager {
         scheduleIdleShutdown()
     }
 
-    private func runOperation(_ operation: @escaping @MainActor () async -> Void) {
+    @discardableResult
+    private func runOperation(
+        _ operation: @escaping @MainActor () async -> Void
+    )
+        -> Task<Void, Never>
+    {
         operationTask?.cancel()
-        operationTask = Task { await operation() }
+        let task = Task { await operation() }
+        operationTask = task
+        return task
     }
 
-    /// Never spawns for an account that was never signed in: the picker and Settings ask often.
     private func refreshNow() async {
-        guard hasStoredLogin || client.isRunning else {
-            forget()
-            phase = .signedOut
-            return
-        }
         phase = .starting
         do {
             try await client.start()
@@ -161,8 +113,6 @@ final class ChatGPTSubscriptionManager {
         idleTask = Task { [weak self] in
             try? await Task.sleep(for: Self.idleShutdown)
             guard !Task.isCancelled, let self, !self.turns.isActive else { return }
-            // A sign-in that lapsed here is over: say so rather than wait on a stopped server.
-            if self.phase == .waitingForBrowser { self.phase = .signedOut }
             self.turns.reset()
             self.client.stop()
         }
@@ -176,8 +126,8 @@ final class ChatGPTSubscriptionManager {
                 guard let raw = value.objectValue, let id = raw["model"]?.stringValue else {
                     return nil
                 }
-                let efforts = (raw["supportedReasoningEfforts"]?.arrayValue ?? []).compactMap {
-                    effort -> ChatGPTSubscription.Effort? in
+                let rawEfforts = raw["supportedReasoningEfforts"]?.arrayValue ?? []
+                let efforts = rawEfforts.compactMap { effort -> ChatGPTSubscription.Effort? in
                     guard let raw = effort.objectValue,
                         let id = raw["reasoningEffort"]?.stringValue
                     else { return nil }
@@ -227,27 +177,19 @@ final class ChatGPTSubscriptionManager {
     private func restoreAccount() async throws -> Bool {
         let response = try await client.request(
             method: "account/read", params: ["refreshToken": false])
-        guard let rawAccount = response["account"]?.objectValue,
-            rawAccount["type"]?.stringValue == "chatgpt"
-        else {
+        guard let rawAccount = response["account"]?.objectValue else {
             forget()
             return false
         }
+        let type = rawAccount["type"]?.stringValue ?? "unknown"
         account = ChatGPTSubscription.Account(
             email: rawAccount["email"]?.stringValue,
-            plan: rawAccount["planType"]?.stringValue ?? "unknown")
+            plan: rawAccount["planType"]?.stringValue ?? type)
         return true
     }
 
     private func handleNotification(method: String, params: [String: JSONValue]) {
         switch method {
-        case "account/login/completed":
-            if params["success"]?.boolValue == true {
-                runOperation { [weak self] in await self?.refreshNow() }
-            } else {
-                phase = .failed(
-                    params["error"]?.stringValue ?? "ChatGPT sign-in did not complete.")
-            }
         case "account/updated":
             runOperation { [weak self] in await self?.refreshNow() }
         default:
@@ -280,12 +222,12 @@ final class ChatGPTSubscriptionManager {
         if error is AIProviderError { return error }
         let message =
             (error as? LocalizedError)?.errorDescription
-            ?? "The ChatGPT connection failed."
+            ?? "The Codex connection failed."
         return AIProviderError.responseFailed(message)
     }
 }
 
-struct ChatGPTSubscriptionProvider: AIProvider {
+struct CodexInstalledProvider: AIProvider {
     let turns: CodexTurnRunner
     let model: String
     let effort: String?

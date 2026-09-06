@@ -67,6 +67,7 @@ for (const line of lines()) {
     if (method === "thread/start") {
         emit({ id: requestID, result: { thread: { id: THREAD } } });
     } else if (method === "turn/start") {
+        record(`turn-params:${JSON.stringify(message.params ?? {})}`);
         mark("turn-start-received");
         awaitMark("stop-landed");
         emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });

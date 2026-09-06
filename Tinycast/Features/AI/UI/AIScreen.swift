@@ -219,3 +219,20 @@ struct AIModelButton: View {
         .fixedSize(horizontal: true, vertical: false)
     }
 }
+
+struct AIReasoningButton: View {
+    let title: String
+    let isOpen: Bool
+    let action: () -> Void
+
+    var body: some View {
+        HeaderMenuButton(
+            title: title,
+            systemImage: "brain",
+            isOpen: isOpen,
+            help: "Change reasoning effort",
+            action: action
+        )
+        .fixedSize(horizontal: true, vertical: false)
+    }
+}

@@ -134,18 +134,41 @@ struct RootPaletteView: View {
 
     /// Every model configured for chat; selecting one updates the app-wide default route.
     private var aiModelContent: PopoverMenuContent {
-        let options = core.aiChatCoordinator.modelOptions
-        guard !options.isEmpty else {
+        let groups = core.aiChatCoordinator.modelGroups
+        let loading = core.aiChatCoordinator.isModelCatalogLoading
+        var items = groups.flatMap { group in
+            group.options.enumerated().map { index, option in
+                PopoverMenuItem(
+                    title: option.title, icon: option.menuIcon,
+                    sectionTitle: index == 0 ? group.title : nil
+                ) {
+                    core.aiChatCoordinator.selectModel(option)
+                }
+            }
+        }
+        if loading {
+            items.insert(
+                PopoverMenuItem(title: "Loading models…", icon: .blank, isLoading: true) {}, at: 0)
+        }
+        guard !items.isEmpty else {
             return PopoverMenuContent(items: [
                 PopoverMenuItem(title: "Configure AI", systemImage: "slider.horizontal.3") {
                     core.aiChatCoordinator.showSettings()
                 }
             ])
         }
+        return PopoverMenuContent(items: items)
+    }
+
+    private var aiReasoningContent: PopoverMenuContent {
+        let selected = core.aiSettings.defaultModel?.effort
         return PopoverMenuContent(
-            items: options.map { option in
-                PopoverMenuItem(title: option.menuTitle, icon: option.menuIcon) {
-                    core.aiChatCoordinator.selectModel(option)
+            items: core.aiChatCoordinator.reasoningEfforts.map { effort in
+                PopoverMenuItem(
+                    title: effort.title, icon: .blank,
+                    detail: effort.id == selected ? "✓" : nil
+                ) {
+                    core.aiChatCoordinator.selectReasoningEffort(effort)
                 }
             })
     }
@@ -183,6 +206,10 @@ struct RootPaletteView: View {
         case .aiModel:
             return PaletteMenuContent(
                 popover: aiModelContent, selection: $menuSelection,
+                width: headerMenuWidth, onActivate: activateMenuItem)
+        case .aiReasoning:
+            return PaletteMenuContent(
+                popover: aiReasoningContent, selection: $menuSelection,
                 width: headerMenuWidth, onActivate: activateMenuItem)
         case nil: return nil
         }
@@ -524,6 +551,13 @@ struct RootPaletteView: View {
                     icon: core.aiChatCoordinator.selectedModelIcon,
                     isOpen: openMenu == .aiModel,
                     action: toggleAIModel)
+                if !core.aiChatCoordinator.reasoningEfforts.isEmpty {
+                    headerGutter(width: Theme.Spacing.md)
+                    AIReasoningButton(
+                        title: core.aiChatCoordinator.selectedReasoningTitle,
+                        isOpen: openMenu == .aiReasoning,
+                        action: toggleAIReasoning)
+                }
             }
             // Compact pins favorites beside the field; expanded shows them as rows.
             if isCollapsed, settings.showFavoritesInCompactMode,
@@ -719,18 +753,52 @@ struct RootPaletteView: View {
             closeMenus()
             return
         }
-        core.aiChatCoordinator.prepareModelSwitcher()
+        let refreshTask = core.aiChatCoordinator.prepareModelSwitcher()
         let options = core.aiChatCoordinator.modelOptions
         let selected = core.aiSettings.defaultModel
+        let active = aiModelMenuSelection(options: options, selected: selected)
+        open(.aiModel, highlighting: active)
+        Task { @MainActor in
+            await refreshTask.value
+            guard openMenu == .aiModel else { return }
+            menuSelection = aiModelMenuSelection(
+                options: core.aiChatCoordinator.modelOptions,
+                selected: core.aiSettings.defaultModel)
+            syncMenuPanel(presenting: false)
+        }
+    }
+
+    private func toggleAIReasoning() {
+        if openMenu == .aiReasoning {
+            closeMenus()
+            return
+        }
+        let selected = core.aiSettings.defaultModel?.effort
         let active =
+            core.aiChatCoordinator.reasoningEfforts.firstIndex {
+                $0.id == selected
+            } ?? 0
+        open(.aiReasoning, highlighting: active)
+    }
+
+    private func aiModelMenuSelection(
+        options: [AIModelOption], selected: AIModelSelection?
+    ) -> Int {
+        // With nothing to choose yet, the loading row is the only row the menu has.
+        guard !options.isEmpty else { return 0 }
+        let offset = core.aiChatCoordinator.isModelCatalogLoading ? 1 : 0
+        let selectedIndex =
             selected.flatMap { selected in
                 options.firstIndex(where: { $0.matches(selected) })
             } ?? 0
-        open(.aiModel, highlighting: active)
+        return offset + selectedIndex
     }
 
     private var headerMenuWidth: CGFloat {
-        openMenu == .aiModel ? Theme.Size.menuWidth : Theme.Size.clipboardFilterMenuWidth
+        switch openMenu {
+        case .aiModel, .aiReasoning: Theme.Size.menuWidth
+        default: Theme.Size.clipboardFilterMenuWidth
+        }
     }
 
     /// Every open path lands here, so the highlight is always stated rather than left behind.
@@ -761,7 +829,7 @@ struct RootPaletteView: View {
         switch openMenu {
         case .app: .bottomLeading
         case .actions: .bottomTrailing
-        case .clipboardFilter, .aiModel: .belowHeaderTrailing
+        case .clipboardFilter, .aiModel, .aiReasoning: .belowHeaderTrailing
         case nil: nil
         }
     }
@@ -820,6 +888,7 @@ struct RootPaletteView: View {
     /// The one activation path for a menu row: run its action, then close.
     private func activateMenuItem(_ index: Int) {
         guard let content = menuContent, (0..<content.rowCount).contains(index) else { return }
+        guard !content.isLoading(index) else { return }
         content.activate(index)
         closeMenus()
         // A mouse click on a row takes the caret with it; menus close back into the field.
@@ -905,6 +974,7 @@ private enum OpenMenu {
     case app
     case clipboardFilter
     case aiModel
+    case aiReasoning
 }
 
 /// The footer's menu circle; hover lives here, so a sweep never re-renders the body.

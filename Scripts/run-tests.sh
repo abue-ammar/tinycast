@@ -294,6 +294,8 @@ run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
 run quick-action-test      Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \
+                           Tinycast/Features/AI/Model/ChatGPTSubscription.swift \
+                           Tinycast/Features/AI/Model/InstalledAI.swift \
                            Tinycast/Features/QuickActions/Model/*.swift \
                            Tinycast/Features/QuickActions/Settings/QuickActionSettingsStore.swift
 run apple-intelligence-test Tinycast/Features/Settings/AppSettingsKey.swift \
@@ -318,6 +320,10 @@ run slow codex-turn-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/AI/Service/CodexAppServerClient.swift \
                            Tinycast/Platform/ExecutableLocator.swift \
                            Tinycast/Features/AI/Service/CodexTurnRunner.swift
+run installed-ai-test     Tinycast/Features/AI/Model/*.swift \
+                          Tinycast/Features/AI/Service/AIProvider.swift \
+                          Tinycast/Platform/ExecutableLocator.swift \
+                          Tinycast/Features/AI/Service/InstalledCLIProvider.swift
 
 if [ "$emit_db" -eq 1 ]; then
     printf ']\n' >> "$DB"

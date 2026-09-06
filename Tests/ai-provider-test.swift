@@ -28,7 +28,9 @@ struct AIProviderTests {
         brokenStreamsFailLoudly()
         brandsResolveFromModelIDs()
         codexProtocolFramesRoundTrip()
+        installedCLIStreamsDecode()
         settingsPersistAndRepairSelections()
+        installedModelLoadingPreferencePersists()
         subscriptionSelectionsReconcile()
         onDeviceSelectionsRoundTripAndLead()
         conversationSettingsPersistAndDecide()
@@ -190,6 +192,15 @@ struct AIProviderTests {
                 provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
                 model: "gpt-5"))
         expect(plain["tools"] == nil, "a turn with no tools sends no tools key at all")
+
+        let router = AIRequestBody.make(
+            AIRequest(messages: [AIMessage(role: .user, text: "hi")]),
+            configuration: AIHTTPConfiguration(
+                provider: .openRouter, baseURL: URL(string: "https://openrouter.ai/api/v1")!,
+                model: "openai/gpt-5", effort: "low"))
+        expect(
+            (router["reasoning"] as? [String: String])?["effort"] == "low",
+            "OpenRouter receives the reasoning effort its catalog offered")
     }
 
     static func providerPresetsResolveEndpoints() {
@@ -271,7 +282,9 @@ struct AIProviderTests {
             {"data":[
                 {"id":"model-a"},
                 {"id":"model-b","name":"Model B",
-                 "architecture":{"input_modalities":["text","image"]}},
+                 "architecture":{"input_modalities":["text","image"]},
+                 "reasoning":{"supported_efforts":["high","medium","low"],
+                              "default_effort":"medium"}},
                 {"id":"model-a"}
             ]}
             """.utf8)
@@ -279,12 +292,18 @@ struct AIProviderTests {
         expect(
             openAIModels == [
                 .init(id: "model-a", name: "model-a"),
-                .init(id: "model-b", name: "Model B", inputModalities: ["text", "image"])
+                .init(
+                    id: "model-b", name: "Model B", inputModalities: ["text", "image"],
+                    reasoningOptions: .init(
+                        efforts: ["high", "medium", "low"], defaultEffort: "medium"))
             ],
             "OpenAI-compatible model lists are named and deduplicated")
         expect(
             openAIModels?.map(\.acceptsImages) == [nil, true],
             "only a catalog that lists modalities says whether a model takes images")
+        expect(
+            openAIModels?.last?.reasoningOptions?.resolvedEffort(nil) == "medium",
+            "OpenRouter reasoning metadata keeps the model's advertised default")
 
         let router = AIConnection(
             provider: .openRouter, models: ["model-a", "model-b"], visionModels: ["model-b"])
@@ -656,28 +675,31 @@ struct AIProviderTests {
             "the on-device selection is its own source")
         expect(
             AIModelSelection.appleIntelligence.isOnDevice
-                && !AIModelSelection.chatGPT(model: "gpt-5", effort: nil).isOnDevice,
+                && !AIModelSelection.codex(model: "gpt-5", effort: nil).isOnDevice,
             "only the on-device selection reads as on device")
 
-        // Data written before this route existed decodes to nothing; there is no migration.
+        let legacy = Data(#"{"chatGPT":{"model":"gpt-5","effort":"high"}}"#.utf8)
+        expect(
+            (try? JSONDecoder().decode(AIModelSelection.self, from: legacy))
+                == .codex(model: "gpt-5", effort: "high"),
+            "the old ChatGPT selection migrates to the installed Codex route")
+
         let suite = "AIProviderTests.onDevice"
         let defaults = isolatedDefaults(suite)
         defer { discardSuite(suite, defaults) }
 
         let store = AISettingsStore(defaults: defaults, isAppleIntelligenceAvailable: { true })
-        expect(store.defaultModel == nil, "a fresh store chooses nothing on its own")
-        store.resolveDefaultModel()
         expect(
             store.defaultModel == .appleIntelligence,
-            "the on-device route is what an unconfigured Mac resolves to")
+            "the on-device route is the default on an unconfigured Mac")
 
         // A configured connection must not be displaced by resolution running a second time.
         let connectionID = UUID()
         store.save(AIConnection(id: connectionID, name: "Local", models: ["m"]))
-        store.select(.api(connection: connectionID, model: "m"))
+        store.select(.api(connection: connectionID, model: "m", effort: nil))
         store.resolveDefaultModel()
         expect(
-            store.defaultModel == .api(connection: connectionID, model: "m"),
+            store.defaultModel == .api(connection: connectionID, model: "m", effort: nil),
             "resolution never overrides a selection the reader made")
 
         // A removed connection falls forward to the route that is always configured.
@@ -702,7 +724,10 @@ struct AIProviderTests {
 
         var first = AIConnection(
             id: firstID, name: "  Work  ", provider: .openRouter,
-            models: [" model-a ", "model-a", "model-b"])
+            models: [" model-a ", "model-a", "model-b"],
+            reasoningOptions: [
+                "model-b": .init(efforts: ["medium", "low"], defaultEffort: "medium")
+            ])
         first.baseURL = " https://openrouter.ai/api/v1 "
         let store = AISettingsStore(defaults: defaults)
         store.save(first)
@@ -713,17 +738,38 @@ struct AIProviderTests {
             store.connections.first?.models == ["model-a", "model-b"],
             "models are trimmed and deduplicated")
         expect(
-            store.defaultModel == .api(connection: firstID, model: "model-a"),
+            store.defaultModel == .api(connection: firstID, model: "model-a", effort: nil),
             "the first saved model becomes the default")
-        store.select(.api(connection: firstID, model: "model-b"))
+        store.select(.api(connection: firstID, model: "model-b", effort: "low"))
 
         let reopened = AISettingsStore(defaults: defaults)
         expect(reopened.connections == store.connections, "connection metadata survives a restart")
         expect(reopened.defaultModel == store.defaultModel, "the default model survives a restart")
         reopened.removeConnection(id: firstID)
         expect(
-            reopened.defaultModel == .api(connection: secondID, model: "gemini-model"),
+            reopened.defaultModel
+                == .api(
+                    connection: secondID, model: "gemini-model", effort: nil),
             "removing the default connection falls forward to another API model")
+    }
+
+    static func installedModelLoadingPreferencePersists() {
+        let suite = "AIProviderTests.installedModelLoading"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+        let store = AISettingsStore(defaults: defaults)
+        expect(
+            store.enabledInstalledProviders.isEmpty,
+            "installed providers are disabled by default")
+        store.setInstalledProviderEnabled(true, for: .claude)
+        store.setInstalledProviderEnabled(false, for: .openCode)
+        let reopened = AISettingsStore(defaults: defaults)
+        expect(
+            reopened.enabledInstalledProviders == [.claude],
+            "an enabled provider survives a restart")
+        expect(
+            !reopened.enabledInstalledProviders.contains(.openCode),
+            "a provider toggle survives a restart")
     }
 
     static func subscriptionSelectionsReconcile() {
@@ -736,13 +782,53 @@ struct AIProviderTests {
             efforts: [
                 .init(id: "low", detail: nil), .init(id: "high", detail: nil)
             ], defaultEffort: "high", isDefault: true)
-        store.select(.chatGPT(model: "gpt", effort: "missing"))
-        store.reconcile(chatGPTModels: [model], isSignedOut: false)
+        store.select(.codex(model: "gpt", effort: "missing"))
+        store.reconcile(codexModels: [model], isUnavailable: false)
         expect(
-            store.defaultModel == .chatGPT(model: "gpt", effort: "high"),
+            store.defaultModel == .codex(model: "gpt", effort: "high"),
             "a removed reasoning tier falls back to the model default")
-        store.reconcile(chatGPTModels: [], isSignedOut: true)
-        expect(store.defaultModel == nil, "signing out clears an unusable subscription default")
+        store.reconcile(codexModels: [], isUnavailable: true)
+        expect(store.defaultModel == nil, "signing out clears an unusable Codex default")
+
+        store.select(.claude(model: "removed", effort: nil))
+        store.reconcile(
+            installed: .claude,
+            models: [InstalledAIModel(id: "sonnet", name: "Claude Sonnet")],
+            isUnavailable: false)
+        expect(
+            store.defaultModel == .claude(model: "sonnet", effort: nil),
+            "an installed catalog replaces a model alias that disappeared")
+        store.reconcile(installed: .claude, models: [], isUnavailable: true)
+        expect(store.defaultModel == nil, "signing out clears an unusable Claude default")
+    }
+
+    static func installedCLIStreamsDecode() {
+        let openCodeText = Data(
+            #"{"type":"text","sessionID":"ses_1","part":{"text":"Hello"}}"#.utf8)
+        expect(
+            InstalledAIStreamDecoder.decode(openCodeText, kind: .openCode)
+                == InstalledAIStreamFrame(events: [.text("Hello")], sessionID: "ses_1"),
+            "OpenCode text and its cleanup session decode together")
+        let openCodeFinish = Data(
+            #"{"type":"step_finish","part":{"tokens":{"input":12,"output":4}}}"#.utf8)
+        let openCodeFrame = InstalledAIStreamDecoder.decode(openCodeFinish, kind: .openCode)
+        expect(
+            openCodeFrame.events == [.usage(AIUsage(inputTokens: 12, outputTokens: 4))]
+                && openCodeFrame.completed,
+            "OpenCode completion reports usage and finishes")
+
+        let claudeText = Data(
+            #"{"type":"stream_event","event":{"delta":{"type":"text_delta","text":"Hi"}}}"#.utf8)
+        expect(
+            InstalledAIStreamDecoder.decode(claudeText, kind: .claude).events == [.text("Hi")],
+            "Claude partial text decodes without replaying its full assistant message")
+        let claudeFinish = Data(
+            #"{"type":"result","is_error":false,"usage":{"input_tokens":8,"output_tokens":3}}"#.utf8)
+        let claudeFrame = InstalledAIStreamDecoder.decode(claudeFinish, kind: .claude)
+        expect(
+            claudeFrame.events == [.usage(AIUsage(inputTokens: 8, outputTokens: 3))]
+                && claudeFrame.completed,
+            "Claude result usage ends the stream")
     }
 }
 

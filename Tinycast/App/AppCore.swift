@@ -53,6 +53,7 @@ final class AppCore {
     let mcp = MCPServerManager()
     let quickActionSettings = QuickActionSettingsStore()
     let chatGPTSubscription = ChatGPTSubscriptionManager()
+    let installedAI = InstalledAIManager()
 
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
@@ -347,11 +348,30 @@ final class AppCore {
         aiChat.cancel()
         chatGPTSubscription.stop()
         mcp.stop()
+        installedAI.stop()
+    }
+
+    @discardableResult
+    func applyInstalledAILifecycle() -> Task<Void, Never> {
+        let enabledKinds =
+            settings.aiEnabled || settings.quickActionsEnabled
+            ? aiSettings.enabledInstalledProviders : []
+        var tasks: [Task<Void, Never>] = []
+        if enabledKinds.contains(.codex) {
+            tasks.append(
+                chatGPTSubscription.phase == .idle
+                    ? chatGPTSubscription.refresh()
+                    : chatGPTSubscription.currentRefreshTask())
+        } else {
+            chatGPTSubscription.stop()
+        }
+        tasks.append(installedAI.ensure(enabledKinds: enabledKinds))
+        return Task { for task in tasks { await task.value } }
     }
 
     func aiProvider() throws -> any AIProvider {
         try AIProviderFactory.make(
-            settings: aiSettings, subscription: chatGPTSubscription)
+            settings: aiSettings, subscription: chatGPTSubscription, installedAI: installedAI)
     }
 
     /// Permissive guardrails: the text transformed is the reader's own, which `.default` refuses.
@@ -363,6 +383,7 @@ final class AppCore {
         }
         return try AIProviderFactory.make(
             selection: selection, settings: aiSettings, subscription: chatGPTSubscription,
+            installedAI: installedAI,
             guardrails: .permissiveContentTransformations)
     }
 

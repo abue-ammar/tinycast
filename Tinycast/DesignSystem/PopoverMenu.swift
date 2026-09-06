@@ -19,6 +19,8 @@ enum PopoverMenuIcon: Equatable {
 struct PopoverMenuItem {
     let title: String
     let icon: PopoverMenuIcon
+    let isLoading: Bool
+    var sectionTitle: String?
     var shortcut: String?
     /// A value the row states rather than a chord it runs — what a "Copy as" row copies.
     var detail: String?
@@ -27,11 +29,14 @@ struct PopoverMenuItem {
     let action: () -> Void
 
     init(
-        title: String, icon: PopoverMenuIcon, shortcut: String? = nil, detail: String? = nil,
+        title: String, icon: PopoverMenuIcon, isLoading: Bool = false, sectionTitle: String? = nil,
+        shortcut: String? = nil, detail: String? = nil,
         isDestructive: Bool = false, action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
+        self.isLoading = isLoading
+        self.sectionTitle = sectionTitle
         self.shortcut = shortcut
         self.detail = detail
         self.isDestructive = isDestructive
@@ -39,11 +44,13 @@ struct PopoverMenuItem {
     }
 
     init(
-        title: String, systemImage: String, shortcut: String? = nil, isDestructive: Bool = false,
+        title: String, systemImage: String, isLoading: Bool = false, sectionTitle: String? = nil,
+        shortcut: String? = nil, isDestructive: Bool = false,
         action: @escaping () -> Void
     ) {
         self.init(
-            title: title, icon: .symbol(systemImage), shortcut: shortcut,
+            title: title, icon: .symbol(systemImage), isLoading: isLoading,
+            sectionTitle: sectionTitle, shortcut: shortcut,
             isDestructive: isDestructive, action: action)
     }
 }
@@ -98,8 +105,13 @@ struct PopoverMenu: View {
                 VStack(alignment: .leading, spacing: Theme.Size.menuRowSpacing) {
                     // Index-as-id is stable: a menu's rows never reorder while it is open.
                     ForEach(items.indices, id: \.self) { index in
-                        PopoverMenuRow(item: items[index], selected: index == selection) {
-                            onActivate(index)
+                        VStack(alignment: .leading, spacing: 0) {
+                            if let sectionTitle = items[index].sectionTitle {
+                                sectionLabel(sectionTitle, isFirst: index == 0)
+                            }
+                            PopoverMenuRow(item: items[index], selected: index == selection) {
+                                onActivate(index)
+                            }
                         }
                         .id(index)
                         .onContinuousHover { if case .active = $0 { hover(index) } }
@@ -122,9 +134,31 @@ struct PopoverMenu: View {
 
     /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
     private var viewportHeight: CGFloat {
-        let count = CGFloat(items.count)
-        let pitch = Theme.Size.menuRowHeight + Theme.Size.menuRowSpacing
-        return min(count * pitch - Theme.Size.menuRowSpacing, Theme.Size.menuRowsMaxHeight)
+        let rows = CGFloat(items.count)
+        var contentHeight =
+            rows * Theme.Size.menuRowHeight + max(rows - 1, 0) * Theme.Size.menuRowSpacing
+        for (index, item) in items.enumerated() where item.sectionTitle != nil {
+            contentHeight += Theme.Size.menuSectionHeader + Theme.Spacing.xxs
+            if index > 0 { contentHeight += Theme.Spacing.md }
+        }
+        return min(contentHeight, Theme.Size.menuRowsMaxHeight)
+    }
+
+    /// Tighter below than above, so a header belongs to the rows under it, not between two groups.
+    private func sectionLabel(_ title: String, isFirst: Bool) -> some View {
+        Text(title)
+            .font(Theme.Typography.sectionHeader)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .frame(
+                maxWidth: .infinity, minHeight: Theme.Size.menuSectionHeader,
+                maxHeight: Theme.Size.menuSectionHeader, alignment: .leading
+            )
+            // `md`, matching a row's own inset, so header and icon share one edge.
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.top, isFirst ? 0 : Theme.Spacing.md)
+            .padding(.bottom, Theme.Spacing.xxs)
     }
 
     /// Armed only once the pointer has moved of its own accord, so a scroll past it lights nothing.
@@ -145,24 +179,30 @@ private struct PopoverMenuRow: View {
         Button(action: onActivate) {
             // `sm`, not `lg`: the icon slot carries its own slack, so the gap reads wider.
             HStack(spacing: Theme.Spacing.sm) {
-                switch item.icon {
-                case .blank:
-                    EmptyView()
-                case .symbol(let name):
-                    Image(systemName: name)
-                        .font(Theme.Typography.menuIcon)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
+                if item.isLoading {
+                    ProgressView()
+                        .controlSize(.small)
                         .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
-                case .asset(let name):
-                    Image(name)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
-                        .frame(width: Theme.Size.menuBrandIcon, height: Theme.Size.menuBrandIcon)
-                        .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
-                case .file(let path):
-                    MenuFileIcon(path: path)
+                } else {
+                    switch item.icon {
+                    case .blank:
+                        EmptyView()
+                    case .symbol(let name):
+                        Image(systemName: name)
+                            .font(Theme.Typography.menuIcon)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
+                            .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                    case .asset(let name):
+                        Image(name)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
+                            .frame(width: Theme.Size.menuBrandIcon, height: Theme.Size.menuBrandIcon)
+                            .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                    case .file(let path):
+                        MenuFileIcon(path: path)
+                    }
                 }
                 Text(item.title)
                     .font(Theme.Typography.menuRow)
@@ -199,6 +239,7 @@ private struct PopoverMenuRow: View {
             )
         }
         .buttonStyle(.plain)
+        .disabled(item.isLoading)
     }
 }
 

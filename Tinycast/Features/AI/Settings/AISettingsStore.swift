@@ -38,6 +38,17 @@ final class AISettingsStore {
             defaults.set(newChatAfter.rawValue, forKey: AppSettingsKey.aiNewChatAfter.rawValue)
         }
     }
+    var enabledInstalledProviders: Set<InstalledAIKind> {
+        didSet {
+            guard
+                let data = try? JSONEncoder().encode(
+                    enabledInstalledProviders.sorted(by: {
+                        $0.rawValue < $1.rawValue
+                    }))
+            else { return }
+            defaults.set(data, forKey: AppSettingsKey.aiInstalledProviders.rawValue)
+        }
+    }
 
     /// Asked each time: the model lands mid-session, and a flag read at launch would never notice.
     @ObservationIgnored let isAppleIntelligenceAvailable: @Sendable () -> Bool
@@ -68,9 +79,14 @@ final class AISettingsStore {
             AINewChatAfter(
                 rawValue: defaults.integer(forKey: AppSettingsKey.aiNewChatAfter.rawValue))
             ?? .fiveMinutes
-        if case .api(let connection, let model) = defaultModel,
+        enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
+            defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
+        if case .api(let connection, let model, _) = defaultModel,
             !connections.contains(where: { $0.id == connection && $0.models.contains(model) })
         {
+            defaultModel = firstAvailableSelection()
+        }
+        if defaultModel == nil {
             defaultModel = firstAvailableSelection()
         }
     }
@@ -80,7 +96,7 @@ final class AISettingsStore {
     }
 
     func select(_ selection: AIModelSelection) {
-        if case .api(let connection, let model) = selection {
+        if case .api(let connection, let model, _) = selection {
             guard self.connection(id: connection)?.models.contains(model) == true else { return }
         }
         defaultModel = selection
@@ -93,39 +109,79 @@ final class AISettingsStore {
         } else {
             connections.append(connection)
         }
-        if case .api(connection.id, let model) = defaultModel,
-            !connection.models.contains(model)
-        {
-            defaultModel = connection.models.first.map {
-                .api(connection: connection.id, model: $0)
+        if case .api(connection.id, let model, let effort) = defaultModel {
+            if connection.models.contains(model) {
+                defaultModel = .api(
+                    connection: connection.id, model: model,
+                    effort: connection.reasoningOptions?[model]?.resolvedEffort(effort))
+            } else {
+                defaultModel = connection.models.first.map {
+                    .api(
+                        connection: connection.id, model: $0,
+                        effort: connection.reasoningOptions?[$0]?.resolvedEffort(nil))
+                }
             }
         }
         if defaultModel == nil, let model = connection.models.first {
-            defaultModel = .api(connection: connection.id, model: model)
+            defaultModel = .api(
+                connection: connection.id, model: model,
+                effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
         }
     }
 
     func removeConnection(id: UUID) {
         connections.removeAll { $0.id == id }
-        guard case .api(id, _) = defaultModel else { return }
+        guard case .api(id, _, _) = defaultModel else { return }
         defaultModel = firstAvailableSelection()
     }
 
-    func reconcile(chatGPTModels models: [ChatGPTSubscription.Model], isSignedOut: Bool) {
-        guard case .chatGPT(let model, let effort) = defaultModel else { return }
-        if isSignedOut {
+    func reconcile(codexModels models: [ChatGPTSubscription.Model], isUnavailable: Bool) {
+        guard case .codex(let model, let effort) = defaultModel else { return }
+        if isUnavailable {
             defaultModel = firstAvailableSelection()
             return
         }
         guard !models.isEmpty else { return }
         if let match = models.first(where: { $0.id == model }) {
             let resolved = match.resolvedEffort(effort)
-            if resolved != effort { defaultModel = .chatGPT(model: model, effort: resolved) }
+            if resolved != effort { defaultModel = .codex(model: model, effort: resolved) }
             return
         }
         guard let replacement = models.first(where: \.isDefault) ?? models.first else { return }
-        defaultModel = .chatGPT(
+        defaultModel = .codex(
             model: replacement.id, effort: replacement.resolvedEffort(nil))
+    }
+
+    func reconcile(
+        installed kind: InstalledAIKind, models: [InstalledAIModel], isUnavailable: Bool
+    ) {
+        let selectedModel: String
+        switch (kind, defaultModel) {
+        case (.claude, .claude(let model, _)), (.openCode, .openCode(let model, _)):
+            selectedModel = model
+        default:
+            return
+        }
+        if isUnavailable {
+            defaultModel = firstAvailableSelection()
+            return
+        }
+        guard !models.isEmpty else { return }
+        if let match = models.first(where: { $0.id == selectedModel }) {
+            let resolved = match.resolvedEffort(defaultModel?.effort)
+            if resolved != defaultModel?.effort { defaultModel = defaultModel?.withEffort(resolved) }
+            return
+        }
+        guard let replacement = models.first else { return }
+        switch kind {
+        case .claude:
+            defaultModel = .claude(
+                model: replacement.id, effort: replacement.resolvedEffort(nil))
+        case .openCode:
+            defaultModel = .openCode(
+                model: replacement.id, effort: replacement.resolvedEffort(nil))
+        case .codex: break
+        }
     }
 
     /// Nothing chosen yet takes the route that needs no account, leaving a real stored selection.
@@ -134,12 +190,35 @@ final class AISettingsStore {
         defaultModel = selection
     }
 
+    func setInstalledProviderEnabled(_ enabled: Bool, for kind: InstalledAIKind) {
+        var providers = enabledInstalledProviders
+        if enabled {
+            providers.insert(kind)
+        } else {
+            providers.remove(kind)
+        }
+        enabledInstalledProviders = providers
+    }
+
+    func disableInstalledModelSelection(for kind: InstalledAIKind) {
+        guard let source = defaultModel?.source else { return }
+        let matches =
+            switch (kind, source) {
+            case (.codex, .codex), (.claude, .claude), (.openCode, .openCode): true
+            default: false
+            }
+        guard matches else { return }
+        defaultModel = firstAvailableSelection()
+    }
+
     /// The on-device model leads: free, private, always configured, so never a surprising landing.
     private func firstAvailableSelection() -> AIModelSelection? {
         if isAppleIntelligenceAvailable() { return .appleIntelligence }
         for connection in connections {
             if let model = connection.models.first {
-                return .api(connection: connection.id, model: model)
+                return .api(
+                    connection: connection.id, model: model,
+                    effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
             }
         }
         return nil
@@ -169,6 +248,10 @@ final class AISettingsStore {
             return model
         }
         connection.visionModels = connection.visionModels.filter(seen.contains)
+        connection.reasoningOptions = connection.reasoningOptions?.filter {
+            seen.contains($0.key) && !$0.value.efforts.isEmpty
+        }
+        if connection.reasoningOptions?.isEmpty == true { connection.reasoningOptions = nil }
         return connection
     }
 
@@ -182,5 +265,12 @@ final class AISettingsStore {
     private static func decodeDefaultModel(_ data: Data?) -> AIModelSelection? {
         guard let data else { return nil }
         return try? JSONDecoder().decode(AIModelSelection.self, from: data)
+    }
+
+    private static func decodeEnabledInstalledProviders(_ data: Data?) -> Set<InstalledAIKind> {
+        guard let data,
+            let providers = try? JSONDecoder().decode([InstalledAIKind].self, from: data)
+        else { return [] }
+        return Set(providers)
     }
 }

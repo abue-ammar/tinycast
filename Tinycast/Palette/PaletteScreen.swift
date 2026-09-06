@@ -9,15 +9,20 @@ enum PaletteAxis {
 /// A menu supplied by a palette screen, including its rendering and row activation.
 @MainActor struct PaletteMenuContent {
     let rowCount: Int
+    let isLoading: (Int) -> Bool
     /// Built on demand: `moveMenu` resolves the open menu on every arrow key.
     let view: () -> AnyView
     /// Bounds-checked by the caller against `rowCount`, so a row index is always one this menu has.
     let activate: (Int) -> Void
 
-    init(rowCount: Int, view: @escaping () -> AnyView, activate: @escaping (Int) -> Void) {
+    init(
+        rowCount: Int, view: @escaping () -> AnyView, activate: @escaping (Int) -> Void,
+        isLoading: @escaping (Int) -> Bool = { _ in false }
+    ) {
         self.rowCount = rowCount
         self.view = view
         self.activate = activate
+        self.isLoading = isLoading
     }
 
     init(
@@ -32,7 +37,8 @@ enum PaletteAxis {
                         header: popover.header, items: popover.items, selection: selection,
                         width: width, onActivate: onActivate))
             },
-            activate: { popover.items[$0].action() })
+            activate: { popover.items[$0].action() },
+            isLoading: { popover.items[$0].isLoading })
     }
 }
 

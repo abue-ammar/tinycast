@@ -27,6 +27,9 @@ enum AIRequestBody {
         if input.webSearch, configuration.provider == .openRouter {
             body["plugins"] = [["id": "web"]]
         }
+        if let effort = configuration.effort, configuration.provider == .openRouter {
+            body["reasoning"] = ["effort": effort]
+        }
         if !input.tools.isEmpty {
             body["tools"] = input.tools.map {
                 [

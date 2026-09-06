@@ -5,10 +5,14 @@ enum ChatGPTSubscription {
         case idle
         case starting
         case signedOut
-        case waitingForBrowser
         case connected
         case unavailable(String)
         case failed(String)
+
+        var isUnavailable: Bool {
+            if case .unavailable = self { return true }
+            return false
+        }
     }
 
     struct Account: Equatable, Sendable {
@@ -26,7 +30,8 @@ enum ChatGPTSubscription {
             case "self_serve_business_usage_based", "business": return "Business"
             case "enterprise_cbp_usage_based", "enterprise": return "Enterprise"
             case "edu": return "Edu"
-            default: return "ChatGPT"
+            case "apiKey", "api_key": return "API key"
+            default: return "Account"
             }
         }
     }

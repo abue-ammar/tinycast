@@ -27,7 +27,6 @@ final class CodexTurnRunner {
     private var activeTurnID: String?
     /// A Stop that beat the turn's ID arms its thread; the first ID to name it spends the Stop.
     private var pendingInterruptThreadID: String?
-    private var appliedEffort: String?
 
     init(client: CodexAppServerClient) {
         self.client = client
@@ -54,10 +53,8 @@ final class CodexTurnRunner {
         interruptActiveTurn()
     }
 
-    /// Drops the live turn and the effort in the server's config; the next turn rewrites it.
     func reset() {
         interruptActiveTurn()
-        appliedEffort = nil
     }
 
     func handle(method: String, params: [String: JSONValue]) {
@@ -95,7 +92,7 @@ final class CodexTurnRunner {
                 activeContinuation?.finish(
                     throwing: AIProviderError.responseFailed(
                         turn["error"]?.objectValue?["message"]?.stringValue
-                            ?? "ChatGPT could not finish the response."))
+                            ?? "Codex could not finish the response."))
             default:
                 activeContinuation?.finish(
                     throwing: AIProviderError.responseFailed("The response was interrupted."))
@@ -106,7 +103,7 @@ final class CodexTurnRunner {
             activeContinuation?.finish(
                 throwing: AIProviderError.responseFailed(
                     params["error"]?.objectValue?["message"]?.stringValue
-                        ?? "ChatGPT returned an error."))
+                        ?? "Codex returned an error."))
             clearActiveTurn()
         default:
             break
@@ -153,7 +150,7 @@ final class CodexTurnRunner {
             try Task.checkCancellation()
             guard !model.isEmpty else {
                 throw AIProviderError.unavailable(
-                    "No ChatGPT model is available for this account.")
+                    "No Codex model is available for this account.")
             }
             activeContinuation?.finish(
                 throwing: AIProviderError.responseFailed(
@@ -164,18 +161,7 @@ final class CodexTurnRunner {
 
             guard models.isEmpty || models.contains(where: { $0.id == model }) else {
                 throw AIProviderError.unavailable(
-                    "\(model) is no longer available — choose another model in Settings.")
-            }
-
-            if let effort, effort != appliedEffort {
-                _ = try await client.request(
-                    method: "config/value/write",
-                    params: [
-                        "keyPath": "model_reasoning_effort",
-                        "value": effort,
-                        "mergeStrategy": "replace"
-                    ])
-                appliedEffort = effort
+                    "\(model) is no longer available. Choose another model in Settings.")
             }
 
             let threadResponse = try await client.request(
@@ -186,7 +172,7 @@ final class CodexTurnRunner {
                     "approvalPolicy": "never",
                     "sandbox": "read-only",
                     "ephemeral": true,
-                    // Thread-scoped, in Tinycast's private Codex home: never the user's ~/.codex.
+                    // Thread-scoped so this request never writes the user's saved web-search choice.
                     "config": ["web_search": request.webSearch ? "live" : "disabled"],
                     "developerInstructions": developerInstructions(for: request)
                 ])
@@ -207,16 +193,17 @@ final class CodexTurnRunner {
                     params: ["threadId": threadID, "items": history])
             }
             // An unstructured child survives Stop, so the turn ID it returns can be interrupted.
+            var turnParameters: [String: Any] = [
+                "threadId": threadID,
+                "model": model,
+                "approvalPolicy": "never",
+                "sandboxPolicy": ["type": "readOnly", "networkAccess": false],
+                "input": turnInput(for: request.messages[promptIndex])
+            ]
+            if let effort { turnParameters["effort"] = effort }
             let turnTask = Task { [client] in
                 try await client.request(
-                    method: "turn/start",
-                    params: [
-                        "threadId": threadID,
-                        "model": model,
-                        "approvalPolicy": "never",
-                        "sandboxPolicy": ["type": "readOnly", "networkAccess": false],
-                        "input": turnInput(for: request.messages[promptIndex])
-                    ])
+                    method: "turn/start", params: turnParameters)
             }
             let turnID = try await turnTask.value["turn"]?.objectValue?["id"]?.stringValue
             guard activeToken === token, !Task.isCancelled else {
@@ -309,7 +296,7 @@ final class CodexTurnRunner {
     private func clearActiveTurn() {
         let wasLive = activeContinuation != nil
         activeContinuation?.finish(
-            throwing: AIProviderError.responseFailed("The ChatGPT connection was interrupted."))
+            throwing: AIProviderError.responseFailed("The Codex connection was interrupted."))
         activeContinuation = nil
         activeToken = nil
         activeThreadID = nil

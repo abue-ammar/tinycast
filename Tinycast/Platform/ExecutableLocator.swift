@@ -2,11 +2,14 @@ import Foundation
 
 /// Finds a user's CLI the way their Terminal would; the app's own PATH is Finder's.
 enum ExecutableLocator {
+    /// `extraHomePaths` are home-relative executable paths for installs that own no shared `bin`.
     nonisolated static func locate(
         _ command: String,
+        extraHomePaths: [String] = [],
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) async -> URL? {
-        if let url = wellKnown(command, environment: environment).first(where: isExecutable) {
+        let candidates = wellKnown(command, extraHomePaths: extraHomePaths, environment: environment)
+        if let url = candidates.first(where: isExecutable) {
             return url
         }
         guard let path = await loginShellLookup(command) else { return nil }
@@ -15,7 +18,7 @@ enum ExecutableLocator {
     }
 
     nonisolated private static func wellKnown(
-        _ command: String, environment: [String: String]
+        _ command: String, extraHomePaths: [String], environment: [String: String]
     ) -> [URL] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         var candidates = (environment["PATH"] ?? "")
@@ -27,6 +30,7 @@ enum ExecutableLocator {
         candidates += [".local/bin", ".npm-global/bin", ".volta/bin", ".bun/bin", ".cargo/bin"].map {
             home.appending(path: $0).appending(path: command)
         }
+        candidates += extraHomePaths.map { home.appending(path: $0) }
         candidates += nvmInstalls(command, in: home)
         return candidates
     }

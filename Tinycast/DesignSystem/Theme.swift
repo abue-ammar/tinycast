@@ -123,6 +123,8 @@ enum Theme {
         /// Stated, not padded: the cap below counts rows, so a capped menu would land mid-row.
         static let menuRowHeight: CGFloat = menuIcon + Spacing.md * 2
         static let menuRowSpacing: CGFloat = 1
+        /// Stated, not measured: `viewportHeight` counts headers, so a capped menu lands on a row.
+        static let menuSectionHeader: CGFloat = 16
         /// Six rows and half of the seventh, so a capped menu reads as scrollable, not clipped.
         static let menuVisibleRows: CGFloat = 6.5
         /// Rounded: a half-row of an odd pitch lands the glass edge on a half pixel.

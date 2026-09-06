@@ -6,6 +6,17 @@ enum AIModelDiscovery {
         let name: String
         /// `nil` when the catalog doesn't say; OpenRouter lists `text`, `image`, `file`, `audio`.
         var inputModalities: [String]? = nil
+        var reasoningOptions: AIConnection.ReasoningOptions?
+
+        init(
+            id: String, name: String, inputModalities: [String]? = nil,
+            reasoningOptions: AIConnection.ReasoningOptions? = nil
+        ) {
+            self.id = id
+            self.name = name
+            self.inputModalities = inputModalities
+            self.reasoningOptions = reasoningOptions
+        }
 
         var acceptsImages: Bool? { inputModalities?.contains("image") }
     }
@@ -76,7 +87,12 @@ enum AIModelDiscovery {
                 response.data.map {
                     Model(
                         id: $0.id, name: $0.name ?? $0.displayName ?? $0.id,
-                        inputModalities: $0.architecture?.inputModalities)
+                        inputModalities: $0.architecture?.inputModalities,
+                        reasoningOptions: $0.reasoning.map {
+                            AIConnection.ReasoningOptions(
+                                efforts: $0.supportedEfforts ?? [],
+                                defaultEffort: $0.defaultEffort)
+                        })
                 })
         case .gemini:
             let response = try JSONDecoder().decode(GeminiResponse.self, from: data)
@@ -158,7 +174,9 @@ enum AIModelDiscovery {
             guard !id.isEmpty, seen.insert(id).inserted else { return nil }
             let name = model.name.trimmingCharacters(in: .whitespacesAndNewlines)
             return Model(
-                id: id, name: name.isEmpty ? id : name, inputModalities: model.inputModalities)
+                id: id, name: name.isEmpty ? id : name,
+                inputModalities: model.inputModalities,
+                reasoningOptions: model.reasoningOptions)
         }
     }
 
@@ -180,14 +198,25 @@ enum AIModelDiscovery {
             }
         }
 
+        struct Reasoning: Decodable {
+            let supportedEfforts: [String]?
+            let defaultEffort: String?
+
+            enum CodingKeys: String, CodingKey {
+                case supportedEfforts = "supported_efforts"
+                case defaultEffort = "default_effort"
+            }
+        }
+
         struct Model: Decodable {
             let id: String
             let name: String?
             let displayName: String?
             let architecture: Architecture?
+            let reasoning: Reasoning?
 
             enum CodingKeys: String, CodingKey {
-                case id, name, architecture
+                case id, name, architecture, reasoning
                 case displayName = "display_name"
             }
         }
