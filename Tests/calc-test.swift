@@ -921,6 +921,38 @@ struct CalcTests {
         expectDisplayAt("next monday", "27 July")
         expectDisplayAt("last friday", "17 July")
         expectBadgesAt("tomorrow at 9am", source: "Friday, 24 July", target: "Saturday")
+        expectDisplayAt("next monday at 7:30 + 5", "27 July at 12:30 PM")
+        expectDisplayAt("next monday at 7:30 + 1 day 2h 15min - 1", "28 July at 8:45 AM")
+        expectDisplayAt("tomorrow at 23:30 + 1.5 hours", "26 July at 1:00 AM")
+        expectDisplayAt("3 days from next monday at 7:30", "30 July at 7:30 AM")
+        expectDisplayAt("1h 30min ago", "23 July at 10:48 PM")
+        expectDisplayAt("31.1.26 at 7:30 + 1 month", "28 February at 7:30 AM")
+        expectDisplayAt("29.2.24 + 1 year", "28 February, 2025")
+        expectDisplayAt("today + 1 year 2 months - 1 day", "23 September, 2027")
+        expectDisplayAt("1. jan + 1 + 1", "3 January")
+        expectDisplayAt("hours till tomorrow at 7:30", "31.2 hours")
+        expectDisplayAt("hours since yesterday at noon", "12.3 hours")
+        expectDisplayAt("next monday at 9:30 - next monday at 7:00", "2 hr 30 min")
+        expectDisplayAt("next monday at 9:30 - next monday at 7:00 to minutes", "150 min")
+        expectDisplayAt("2026-08-01 - 2026-07-24", "8 days")
+        expectDisplayAt("today at 9:30 - today at 7:00 to hours", "2.5 hr")
+        expectDisplayAt("now + 5 seconds", "24 July at 12:18:05 AM")
+        expectDisplayAt("next\u{a0}monday at\t7:30 + 5", "27 July at 12:30 PM")
+        expectDisplayAt("tomorrow - 5 weekdays", "20 July")
+        expectDisplayAt("today + 10000 weekdays", "21 November, 2064")
+        for query in ["tomorrow at 7:99", "tomorrow at 7::30", "today + 1.5 months",
+            "today + 1h 30", "today + -9223372036854775808 weekdays", "today + 9223372036854775807 weeks"]
+        {
+            expectNilAt(query)
+        }
+        var vienna = clock.calendar
+        vienna.timeZone = TimeZone(identifier: "Europe/Vienna")!
+        expectDisplayAt("2026-03-28 at 7:30 + 1 day", "29 March at 7:30 AM", calendar: vienna)
+        expectDisplayAt("2026-03-28 at 7:30 + 24 hours", "29 March at 8:30 AM", calendar: vienna)
+        expectDisplayAt("2026-03-29 at 7:30 - 2026-03-28 at 7:30 to hours", "23 hr", calendar: vienna)
+        expectDisplayAt("2026-10-24 at 7:30 + 1 day", "25 October at 7:30 AM", calendar: vienna)
+        expectDisplayAt("2026-10-25 at 7:30 - 2026-10-24 at 7:30 to hours", "25 hr", calendar: vienna)
+        expectDisplayAt("1:00 - 3:00", "-2 hr", calendar: vienna)
         // A lone date word is still an app search
         expectNilAt("tomorrow")
         expectNilAt("today")
@@ -1014,10 +1046,10 @@ struct CalcTests {
 
     // MARK: - Helpers
 
-    static func expectDisplayAt(_ query: String, _ expected: String) {
+    static func expectDisplayAt(_ query: String, _ expected: String, calendar: Calendar? = nil) {
         guard
             case .value(let display, _)? = CalcEngine.evaluate(
-                query, now: clock.now, calendar: clock.calendar)?.payload
+                query, now: clock.now, calendar: calendar ?? clock.calendar)?.payload
         else {
             fail(query, expected: expected, got: "nil / error")
             return

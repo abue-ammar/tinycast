@@ -111,18 +111,32 @@ notation: `1 IDR to USD` is `0.00005539 USD`, never `5.539e-05`.
 
 ## Dates and times
 
-Four grammars:
+Date and clock arithmetic:
 
 | Grammar                | Example                             |
 | ---------------------- | ----------------------------------- |
 | Time until a moment    | `hrs till 9am`, `days till 9april`  |
 | Time since a moment    | `days since 9jul`, `hrs since noon` |
-| A moment ± a duration  | `today + 3 weeks`, `now + 90 min`   |
-| Difference between two | `jul 4 - today`                     |
+| A moment ± a duration  | `next monday at 7:30 + 5`, `now + 90 min` |
+| Mixed durations        | `tomorrow at 7:30 + 1 day 2h 15min` |
+| Months and years       | `31.1.26 + 1 month`, `29.2.24 + 1 year` |
+| Difference between two | `jul 4 - today`, `9:30 - 7:00 to minutes` |
+| Duration from a moment | `3 days from next monday at 7:30`, `1.5 hours ago` |
 
 `till` takes the next occurrence, `since` the most recent past one; an absolute date ignores the
-bias. The difference grammar needs at least one operand containing a letter, so `5/2 - 1/2` stays
-arithmetic.
+bias. Plain fractions such as `5/2 - 1/2` stay arithmetic.
+
+A bare offset means hours when the moment includes a clock, and days otherwise.
+`next monday at 7:30 + 5` is Monday at 12:30 PM. Offsets chain left to right;
+`+ 1h 30min - 15min` adds 75 minutes. Fractional hours/minutes work; calendar units require whole counts.
+
+Month and year shifts follow the calendar: `31.1.26 + 1 month` lands on 28 February.
+`+ 1 day` preserves the wall clock across daylight saving; `+ 24 hours` adds elapsed time.
+Clock differences display a timespan or your chosen unit (`to hours`, `to minutes`, `in seconds`).
+Bare clocks share today's date when subtracted: `7:30 - 13:30` is `-6 hr`.
+
+`weekdays` / `business days` skip Saturday and Sunday in date arithmetic. Holidays are not counted.
+As a standalone conversion unit, `workdays` means eight hours.
 
 Two-digit years: 00–68 are 2000s, 69–99 are 1900s.
 

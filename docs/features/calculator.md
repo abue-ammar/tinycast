@@ -57,7 +57,7 @@ Date/time depends on the clock, so it takes an injected `now` / `calendar` — t
 uses the live clock, and `evaluate(_:now:calendar:)` lets `calc-test.swift` assert exact strings
 against a fixed clock.
 
-`CalcDateTime` recognizes four grammars:
+`CalcDateTime` recognizes these grammars:
 
 - **A** — duration until a moment: `hrs till 9am`, `days till 9april`
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
@@ -75,9 +75,8 @@ a `Friday` pill rather than repeating the weekday inside the date and badging it
 badge keeps its own weekday, since nothing else on the card carries it.
 
 A bare, recurring date or time resolves by _bias_: `till` takes the upcoming occurrence, `since` the
-most recent past one; an absolute date ignores the bias. Grammar D only engages when at least one
-operand contains a letter, because two letter-free operands (`5/2 - 1/2`) are equally valid as
-arithmetic and are left to the calculator rather than silently read as dates. Two-digit years expand
+most recent past one; an absolute date ignores the bias. Grammar D needs an unambiguous date/time signal: a letter, a clock, an ISO or dotted date,
+or an explicit time-unit target. Fraction-only operands (`5/2 - 1/2`) remain arithmetic. Two-digit years expand
 the way date pickers do — 00–68 to the 2000s, 69–99 to the 1900s.
 
 A **dotted** date is day-first (`19.2.27` is 19 February 2027), matching the convention that writes
@@ -104,6 +103,22 @@ A bare date takes the year it is **nearest**, not the next one — three days be
 date meant than the same day twelve months out. Grammar C shifts a moment, so it reads the year the
 same way and `25. aug` and `25. aug + 3` can never disagree. Grammar D measures _to_ a moment,
 where the documented forward bias still decides: `jul 4 - today` keeps looking ahead.
+
+`parseMoment` owns `at <time>` for every grammar, so `next monday at 7:30 + 5`,
+`hours till tomorrow at 7:30` and `3 days from next monday at 7:30` compose the same way.
+Explicit clock times survive day, month and year shifts. Invalid clock components and wall-clock times
+that do not exist during a DST jump stay silent. Repeated fall-back times use Calendar's first occurrence.
+
+Durations can combine (`1 day 2h 15min`) and use fractional hours/minutes when they resolve to whole
+seconds (`1.5 hours`). Days, weeks, weekdays, months and years require whole counts. Months and years
+use the injected Calendar, including end-of-month clamping: `31.1.26 + 1 month` is 28 February.
+A calendar day preserves the wall clock across DST; 24 hours is elapsed time and may change it.
+`ago` anchors sub-day durations to now and date-only durations to today.
+
+Subtracting moments with clock times produces a timespan; `to hours` / `to minutes` / `in seconds`
+selects an elapsed-time unit. Bare clocks in a difference share today's date, so `7:30 - 13:30`
+is `-6 hr` even when one clock has already passed. Date-only differences retain calendar-day counting;
+an explicit hours target measures elapsed time, so a DST day can be 23 or 25 hours.
 
 A bare number after a moment takes the unit that moment implies: hours off a clock time
 (`3:45pm + 5` → 8:45 PM), days off a date (`august 5 + 5` → 10 August). It is checked before the
@@ -270,15 +285,16 @@ carrying one would make the answer depend on which month you meant. Only a time 
 
 ## Workdays
 
-`workdays` is two separate things, and both avoid a calendar.
+`workdays` has two meanings; neither reads the user's calendar events.
 
 As a **unit** it is 8 hours, which answers `55h in workdays` and `3 workdays in hours`.
 
 As a **duration in date arithmetic** it counts days and skips weekends: `today + 5 business days`,
 `tomorrow + 10 work days`, `5 weekdays from now`, `august 26 2026 + 15 workdays`. `business day`,
 `work day`, `working day` and `weekday` are all the same phrase, written as one word or two.
-`addBusinessDays` steps a day at a time rather than doing arithmetic on weeks, which is what keeps a
-Saturday anchor honest — `saturday + 1 business day` is Monday, not Sunday.
+`addBusinessDays` aligns a weekend anchor first, jumps whole five-day workweeks as seven calendar
+days, then walks only the remainder. Work stays bounded even at the 10,000-day limit, in either
+direction; `saturday + 1 business day` still lands on Monday.
 
 Public holidays are deliberately not modelled in either. The only supported source is EventKit, and a
 calculator must never provoke its Full Calendar Access grant mid-keystroke — see the invariant above.
@@ -290,10 +306,9 @@ Juxtaposition means `*` at the same binding power as an explicit one (`4(2+3)` �
 with `6/2*(1+2)`. `CalcParser.parseExpression` checks it after `peekBinary()` fails and, unlike a real
 operator, consumes no token before parsing the right operand.
 
-The scalar side is deliberately narrow: only `(` or a name in `CalcParser.constants` / `functions`
-starts an implicit product. Adjacent _numbers_ never do — `5 3` stays an app search — and no unit or
+Only `(` or a name in `CalcParser.constants` / `functions` starts an implicit product. Adjacent _numbers_ never do — `5 3` stays an app search — and no unit or
 currency name is a constant or function, so `10km` keeps its own path. `QuantityParser.peekBinary`
-carries the same `(` rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
+carries the same rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
 `2*(3)kg`); adjacency there still means the composite-quantity `+` described above, never a product.
 
 ## Natural-language forms
