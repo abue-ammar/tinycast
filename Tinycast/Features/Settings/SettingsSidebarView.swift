@@ -41,7 +41,9 @@ struct SettingsSidebarView: View {
 
     @ViewBuilder private var found: some View {
         if results.isEmpty {
+            // Greedy: a finite max height here becomes a constraint that shrinks the whole window.
             ContentUnavailableView.search(text: query)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             // A second `List`, so result IDs and `SettingsTab` never share a selection namespace.
             List(selection: $highlighted) {
