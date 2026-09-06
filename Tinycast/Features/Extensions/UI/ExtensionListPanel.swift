@@ -154,7 +154,11 @@ private struct ExtensionListPanelModifier<List: View, Revision: Equatable>: View
         content
             .background { ExtensionWindowProbe { host = $0 } }
             // Global, not the form's space: the panel is placed in screen coordinates.
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { anchor = $0 }
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .global)
+            } action: {
+                anchor = $0
+            }
             .onChange(of: Key(open: open, height: height, anchor: anchor, revision: revision)) {
                 sync()
             }

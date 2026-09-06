@@ -115,12 +115,16 @@ struct ExtensionPickerField: View {
                 case .ignored: return .ignored
                 }
             }
-            .modifier(ExtensionFormKeys(
-                field: allowsMultipleSelection ? .tagPicker : .dropdown,
-                onActivate: {
-                    if open { choose(at: highlighted) } else { _ = openList() }
-                },
-                onSubmit: { close(); onSubmit() }))
+            .modifier(
+                ExtensionFormKeys(
+                    field: allowsMultipleSelection ? .tagPicker : .dropdown,
+                    onActivate: {
+                        if open { choose(at: highlighted) } else { _ = openList() }
+                    },
+                    onSubmit: {
+                        close(); onSubmit()
+                    })
+            )
             .onChange(of: open) { palette.noteControlListOpen(open) }
             .onChange(of: query) { typedAt = Date() }
             .onScrollVisibilityChange { if !$0 { close() } }

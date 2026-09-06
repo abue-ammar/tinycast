@@ -58,7 +58,8 @@ struct ExtensionPickerList: View {
                                     item.iconValue, assetsPath: assetsPath, isDark: isDark),
                                 checked: chosen.contains(item.value),
                                 selected: index == selection,
-                                onActivate: { onSelect(index) })
+                                onActivate: { onSelect(index) }
+                            )
                             .id(index)
                             .onHover { if $0 { onHighlight(index) } }
                         }
@@ -66,7 +67,8 @@ struct ExtensionPickerList: View {
                 }
                 .frame(
                     height: ExtensionFormMetrics.popoverListHeight(
-                        rows: items.count, headers: headerCount))
+                        rows: items.count, headers: headerCount)
+                )
                 // Without this a list shorter than the cap rubber-bands against nothing.
                 .scrollBounceBehavior(.basedOnSize)
                 // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.

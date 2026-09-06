@@ -229,7 +229,8 @@ struct ExtensionFormView: View {
         }
         .frame(
             width: Theme.Size.formLabelWidth + Theme.Spacing.md
-                + ExtensionFormMetrics.controlWidth)
+                + ExtensionFormMetrics.controlWidth
+        )
         .frame(maxWidth: .infinity)
         .offset(x: -(Theme.Size.formLabelWidth + Theme.Spacing.md) / 2)
     }

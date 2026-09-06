@@ -42,33 +42,53 @@ struct ExtensionFormTests {
             for key in ExtensionFormKey.enterKeys {
                 let expected: ExtensionFormKey.Action =
                     field == .text ? .consume : field == .textArea ? .ignored : .activate
-                check("Enter operates \(field)", ExtensionFormKey.resolve(
-                    field: field, key: key, modifiers: []) == expected)
-                check("Cmd-Enter submits from \(field)", ExtensionFormKey.resolve(
-                    field: field, key: key, modifiers: .command) == .submit)
-                check("holding Cmd-Enter never resubmits from \(field)", ExtensionFormKey.resolve(
-                    field: field, key: key, modifiers: .command, repeating: true) == .consume)
-                check("holding Enter cannot toggle or select twice in \(field)", ExtensionFormKey.resolve(
-                    field: field, key: key, modifiers: [], repeating: true)
-                    == (field == .textArea ? .ignored : .consume))
-                check("Actions menu retains Enter over \(field)", ExtensionFormKey.resolve(
-                    field: field, key: key, modifiers: [], menuOpen: true) == .ignored)
-                check("IME retains Enter over \(field)", ExtensionFormKey.resolve(
-                    field: field, key: key, modifiers: [], composing: true) == .ignored)
+                check(
+                    "Enter operates \(field)",
+                    ExtensionFormKey.resolve(
+                        field: field, key: key, modifiers: []) == expected)
+                check(
+                    "Cmd-Enter submits from \(field)",
+                    ExtensionFormKey.resolve(
+                        field: field, key: key, modifiers: .command) == .submit)
+                check(
+                    "holding Cmd-Enter never resubmits from \(field)",
+                    ExtensionFormKey.resolve(
+                        field: field, key: key, modifiers: .command, repeating: true) == .consume)
+                check(
+                    "holding Enter cannot toggle or select twice in \(field)",
+                    ExtensionFormKey.resolve(
+                        field: field, key: key, modifiers: [], repeating: true)
+                        == (field == .textArea ? .ignored : .consume))
+                check(
+                    "Actions menu retains Enter over \(field)",
+                    ExtensionFormKey.resolve(
+                        field: field, key: key, modifiers: [], menuOpen: true) == .ignored)
+                check(
+                    "IME retains Enter over \(field)",
+                    ExtensionFormKey.resolve(
+                        field: field, key: key, modifiers: [], composing: true) == .ignored)
                 for modifiers: EventModifiers in [.shift, .option, .control, [.command, .shift]] {
-                    check("modified Enter stays available for shortcuts in \(field)", ExtensionFormKey.resolve(
-                        field: field, key: key, modifiers: modifiers) == .ignored)
+                    check(
+                        "modified Enter stays available for shortcuts in \(field)",
+                        ExtensionFormKey.resolve(
+                            field: field, key: key, modifiers: modifiers) == .ignored)
                 }
             }
             let space: ExtensionFormKey.Action =
                 field == .checkbox || field == .filePicker ? .activate : .ignored
-            check("Space activates button-like controls in \(field)", ExtensionFormKey.resolve(
-                field: field, key: .space, modifiers: []) == space)
-            check("Ctrl-Space remains an input source shortcut in \(field)", ExtensionFormKey.resolve(
-                field: field, key: .space, modifiers: .control) == .ignored)
+            check(
+                "Space activates button-like controls in \(field)",
+                ExtensionFormKey.resolve(
+                    field: field, key: .space, modifiers: []) == space)
+            check(
+                "Ctrl-Space remains an input source shortcut in \(field)",
+                ExtensionFormKey.resolve(
+                    field: field, key: .space, modifiers: .control) == .ignored)
         }
-        check("descriptions and separators never activate", ExtensionFormKey.resolve(
-            field: .inert, key: .return, modifiers: []) == .ignored)
+        check(
+            "descriptions and separators never activate",
+            ExtensionFormKey.resolve(
+                field: .inert, key: .return, modifiers: []) == .ignored)
     }
 
     // MARK: - Geometry
@@ -88,7 +108,8 @@ struct ExtensionFormTests {
                 == ExtensionFormMetrics.popoverRowsMaxHeight)
         check(
             "the cap is a half row, so it reads as scrollable",
-            ExtensionFormMetrics.popoverVisibleRows != ExtensionFormMetrics.popoverVisibleRows
+            ExtensionFormMetrics.popoverVisibleRows
+                != ExtensionFormMetrics.popoverVisibleRows
                 .rounded())
         check(
             "a search row adds its own height",

@@ -39,7 +39,8 @@ struct ExtensionFormKeys: ViewModifier {
     @Environment(PaletteState.self) private var palette
 
     func body(content: Content) -> some View {
-        content.onKeyPress(keys: ExtensionFormKey.enterKeys.union([.space]), phases: [.down, .repeat]) { press in
+        content.onKeyPress(keys: ExtensionFormKey.enterKeys.union([.space]), phases: [.down, .repeat]) {
+            press in
             switch ExtensionFormKey.resolve(
                 field: field, key: press.key, modifiers: press.modifiers,
                 repeating: press.phase == .repeat, menuOpen: palette.menuOpen,

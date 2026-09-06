@@ -83,12 +83,16 @@ struct ExtensionDateField: View {
                 case .stepValue, .ignored: return .ignored
                 }
             }
-            .modifier(ExtensionFormKeys(
-                field: .datePicker,
-                onActivate: {
-                    if open { choose(suggestions, at: highlighted) } else { _ = openList() }
-                },
-                onSubmit: { close(); onSubmit() }))
+            .modifier(
+                ExtensionFormKeys(
+                    field: .datePicker,
+                    onActivate: {
+                        if open { choose(suggestions, at: highlighted) } else { _ = openList() }
+                    },
+                    onSubmit: {
+                        close(); onSubmit()
+                    })
+            )
             .onChange(of: open) { palette.noteControlListOpen(open) }
             .onChange(of: query) { typedAt = Date() }
             .onScrollVisibilityChange { if !$0 { close() } }
