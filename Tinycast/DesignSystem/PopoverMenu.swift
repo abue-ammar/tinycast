@@ -105,9 +105,9 @@ struct PopoverMenu: View {
                 VStack(alignment: .leading, spacing: Theme.Size.menuRowSpacing) {
                     // Index-as-id is stable: a menu's rows never reorder while it is open.
                     ForEach(items.indices, id: \.self) { index in
-                        VStack(alignment: .leading, spacing: Theme.Size.menuRowSpacing) {
+                        VStack(alignment: .leading, spacing: 0) {
                             if let sectionTitle = items[index].sectionTitle {
-                                sectionLabel(sectionTitle)
+                                sectionLabel(sectionTitle, isFirst: index == 0)
                             }
                             PopoverMenuRow(item: items[index], selected: index == selection) {
                                 onActivate(index)
@@ -135,23 +135,30 @@ struct PopoverMenu: View {
     /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
     private var viewportHeight: CGFloat {
         let rows = CGFloat(items.count)
-        let headers = CGFloat(items.count { $0.sectionTitle != nil })
-        let contentHeight = rows * Theme.Size.menuRowHeight
-            + headers * (Theme.Size.menuRowHeight + Theme.Size.menuRowSpacing)
-            + max(rows - 1, 0) * Theme.Size.menuRowSpacing
+        var contentHeight =
+            rows * Theme.Size.menuRowHeight + max(rows - 1, 0) * Theme.Size.menuRowSpacing
+        for (index, item) in items.enumerated() where item.sectionTitle != nil {
+            contentHeight += Theme.Size.menuSectionHeader + Theme.Spacing.xxs
+            if index > 0 { contentHeight += Theme.Spacing.md }
+        }
         return min(contentHeight, Theme.Size.menuRowsMaxHeight)
     }
 
-    private func sectionLabel(_ title: String) -> some View {
+    /// Tighter below than above, so a header belongs to the rows under it, not between two groups.
+    private func sectionLabel(_ title: String, isFirst: Bool) -> some View {
         Text(title)
             .font(Theme.Typography.sectionHeader)
             .foregroundStyle(.secondary)
             .lineLimit(1)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.bottom, Theme.Spacing.xs)
+            .truncationMode(.tail)
             .frame(
-                maxWidth: .infinity, minHeight: Theme.Size.menuRowHeight,
-                maxHeight: Theme.Size.menuRowHeight, alignment: .bottomLeading)
+                maxWidth: .infinity, minHeight: Theme.Size.menuSectionHeader,
+                maxHeight: Theme.Size.menuSectionHeader, alignment: .leading
+            )
+            // `md`, matching a row's own inset, so header and icon share one edge.
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.top, isFirst ? 0 : Theme.Spacing.md)
+            .padding(.bottom, Theme.Spacing.xxs)
     }
 
     /// Armed only once the pointer has moved of its own accord, so a scroll past it lights nothing.

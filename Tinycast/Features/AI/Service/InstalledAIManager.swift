@@ -19,6 +19,10 @@ final class InstalledAIManager {
         statuses[kind] ?? InstalledAIStatus()
     }
 
+    func models(for source: AIModelSource) -> [InstalledAIModel] {
+        source.installedKind.map { status(for: $0).models } ?? []
+    }
+
     @discardableResult
     func refresh(enabledKinds: Set<InstalledAIKind> = [.claude, .openCode]) -> Task<Void, Never> {
         var tasks: [Task<Void, Never>] = []
@@ -99,7 +103,10 @@ final class InstalledAIManager {
     nonisolated private static func probe(
         _ kind: InstalledAIKind, workspace: URL
     ) async -> (InstalledAIKind, InstalledAIStatus) {
-        guard let executable = await InstalledAIExecutableLocator.locate(kind) else {
+        guard
+            let executable = await ExecutableLocator.locate(
+                kind.command, extraHomePaths: kind.extraExecutablePaths)
+        else {
             return (kind, InstalledAIStatus(phase: .notInstalled))
         }
         let versionResult = await InstalledAIProbe.run(
@@ -109,7 +116,8 @@ final class InstalledAIManager {
                 kind,
                 InstalledAIStatus(
                     phase: .failed("The installed command could not run."),
-                    executable: executable))
+                    executable: executable)
+            )
         }
         let version = InstalledAIProbe.version(in: versionResult.output)
         switch kind {
@@ -123,7 +131,8 @@ final class InstalledAIManager {
                 InstalledAIStatus(
                     phase: auth.status == 0 && loggedIn ? .ready : .signInRequired,
                     version: version, executable: executable,
-                    models: loggedIn ? InstalledAIModel.claude : []))
+                    models: loggedIn ? InstalledAIModel.claude : [])
+            )
         case .openCode:
             let models = await InstalledAIProbe.run(
                 executable: executable, arguments: ["models", "--pure", "--verbose"],
@@ -133,7 +142,8 @@ final class InstalledAIManager {
                 kind,
                 InstalledAIStatus(
                     phase: models.status == 0 && !catalog.isEmpty ? .ready : .signInRequired,
-                    version: version, executable: executable, models: catalog))
+                    version: version, executable: executable, models: catalog)
+            )
         case .codex:
             return (kind, InstalledAIStatus(phase: .idle))
         }
@@ -175,40 +185,47 @@ enum InstalledAIProbe {
         executable: URL, arguments: [String], workspace: URL
     ) async -> Result {
         let handle = ProcessHandle()
-        return await withTaskCancellationHandler(operation: {
-            try? FileManager.default.createDirectory(
-                at: workspace, withIntermediateDirectories: true)
-            let process = Process()
-            let output = Pipe()
-            process.executableURL = executable
-            process.arguments = arguments
-            process.currentDirectoryURL = workspace
-            process.standardInput = FileHandle.nullDevice
-            process.standardOutput = output
-            process.standardError = FileHandle.nullDevice
-            do { try process.run() } catch { return Result(status: -1, output: "") }
-            handle.set(process)
-            let watchdog = Task {
-                try? await Task.sleep(for: .seconds(10))
-                if process.isRunning { process.terminate() }
-            }
-            var data = Data()
-            while data.count < Self.maximumOutputBytes {
-                let count = min(Self.readChunkBytes, Self.maximumOutputBytes - data.count)
-                guard let chunk = try? output.fileHandleForReading.read(upToCount: count),
-                    !chunk.isEmpty
-                else { break }
-                data.append(chunk)
-            }
-            if data.count == Self.maximumOutputBytes, process.isRunning { process.terminate() }
-            process.waitUntilExit()
-            watchdog.cancel()
-            return Result(
-                status: process.terminationStatus,
-                output: String(bytes: data.prefix(2 * 1_048_576), encoding: .utf8) ?? "")
-        }, onCancel: {
-            handle.cancel()
-        })
+        return await withTaskCancellationHandler(
+            operation: {
+                // Detached because the read loop and `waitUntilExit` block: never a pool thread.
+                await Task.detached {
+                    try? FileManager.default.createDirectory(
+                        at: workspace, withIntermediateDirectories: true)
+                    let process = Process()
+                    let output = Pipe()
+                    process.executableURL = executable
+                    process.arguments = arguments
+                    process.currentDirectoryURL = workspace
+                    process.standardInput = FileHandle.nullDevice
+                    process.standardOutput = output
+                    process.standardError = FileHandle.nullDevice
+                    do { try process.run() } catch { return Result(status: -1, output: "") }
+                    handle.set(process)
+                    let watchdog = Task {
+                        try? await Task.sleep(for: .seconds(10))
+                        if process.isRunning { process.terminate() }
+                    }
+                    var data = Data()
+                    while data.count < Self.maximumOutputBytes {
+                        let count = min(Self.readChunkBytes, Self.maximumOutputBytes - data.count)
+                        guard let chunk = try? output.fileHandleForReading.read(upToCount: count),
+                            !chunk.isEmpty
+                        else { break }
+                        data.append(chunk)
+                    }
+                    if data.count == Self.maximumOutputBytes, process.isRunning {
+                        process.terminate()
+                    }
+                    process.waitUntilExit()
+                    watchdog.cancel()
+                    return Result(
+                        status: process.terminationStatus,
+                        output: String(bytes: data, encoding: .utf8) ?? "")
+                }.value
+            },
+            onCancel: {
+                handle.cancel()
+            })
     }
 
     nonisolated static func version(in output: String) -> String? {

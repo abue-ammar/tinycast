@@ -29,6 +29,8 @@ private final class InstalledCLITurnRunner {
         "plan":{"permission":"deny"}}}
         """
 
+    private static let maximumPartialLineBytes = 8 * 1_048_576
+
     private final class TurnToken: Sendable {}
 
     private let kind: InstalledAIKind
@@ -85,7 +87,8 @@ private final class InstalledCLITurnRunner {
         if let configuredExecutable {
             resolvedExecutable = configuredExecutable
         } else {
-            resolvedExecutable = await InstalledAIExecutableLocator.locate(kind)
+            resolvedExecutable = await ExecutableLocator.locate(
+                kind.command, extraHomePaths: kind.extraExecutablePaths)
         }
         guard let executable = resolvedExecutable else {
             continuation.finish(
@@ -126,18 +129,13 @@ private final class InstalledCLITurnRunner {
             guard !data.isEmpty else { return }
             Task { @MainActor in self?.consumeError(data, token: token) }
         }
+        // Strong on purpose: the runner must outlive its provider to tear the turn down on exit.
         process.terminationHandler = { [self] process in
             let status = process.terminationStatus
             Task { @MainActor in self.didExit(status: status, token: token) }
         }
         do {
             try process.run()
-            self.process = process
-            activeExecutable = executable
-            self.token = token
-            self.continuation = continuation
-            try stdin.fileHandleForWriting.write(contentsOf: Data(prompt.utf8))
-            try stdin.fileHandleForWriting.close()
         } catch {
             stdout.fileHandleForReading.readabilityHandler = nil
             stderr.fileHandleForReading.readabilityHandler = nil
@@ -145,7 +143,17 @@ private final class InstalledCLITurnRunner {
             continuation.finish(
                 throwing: AIProviderError.responseFailed(
                     kind.title + " could not start: " + error.localizedDescription))
-            cleanup()
+            return
+        }
+        self.process = process
+        activeExecutable = executable
+        self.token = token
+        self.continuation = continuation
+        // A prompt past the pipe buffer blocks until the child drains it, so never on the main actor.
+        let input = stdin.fileHandleForWriting
+        Task.detached {
+            try? input.write(contentsOf: Data(prompt.utf8))
+            try? input.close()
         }
     }
 
@@ -160,12 +168,12 @@ private final class InstalledCLITurnRunner {
                 "--verbose",
                 "--include-partial-messages",
                 "--no-session-persistence",
-                "--bare",
                 "--disable-slash-commands",
                 "--tools", "",
                 "--disallowedTools", "*",
                 "--strict-mcp-config",
-                "--mcp-config", "{}",
+                // `--bare` is not among these: it refuses the OAuth sign-in this whole route reuses.
+                "--mcp-config", #"{"mcpServers":{}}"#,
                 "--no-chrome",
                 "--max-turns", "1",
                 "--system-prompt", Self.safetyInstructions
@@ -207,10 +215,12 @@ private final class InstalledCLITurnRunner {
     }
 
     private func prompt(for request: AIRequest) -> String? {
-        guard request.messages.contains(where: {
-            $0.role == .user
-                && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        }) else { return nil }
+        guard
+            request.messages.contains(where: {
+                $0.role == .user
+                    && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            })
+        else { return nil }
         var sections = [Self.safetyInstructions]
         if let instructions = request.instructions?.trimmingCharacters(in: .whitespacesAndNewlines),
             !instructions.isEmpty
@@ -241,9 +251,8 @@ private final class InstalledCLITurnRunner {
             guard !line.isEmpty else { continue }
             apply(InstalledAIStreamDecoder.decode(Data(line), kind: kind))
         }
-        guard outputBuffer.count <= 8 * 1_048_576 else {
+        if outputBuffer.count > Self.maximumPartialLineBytes {
             fail(kind.title + " returned an oversized response.")
-            return
         }
     }
 
@@ -270,7 +279,8 @@ private final class InstalledCLITurnRunner {
         if continuation != nil {
             let detail = (String(bytes: errorBuffer, encoding: .utf8) ?? "")
                 .replacingOccurrences(
-                    of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression)
+                    of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression
+                )
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let fallback = kind.title + " exited with status " + String(status) + "."
             fail(detail.isEmpty ? fallback : detail)

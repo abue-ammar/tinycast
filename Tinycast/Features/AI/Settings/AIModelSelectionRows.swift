@@ -23,13 +23,17 @@ struct AIModelSelectionRows<ModelLabel: View, EffortLabel: View>: View {
                         }
                     }
                 }
-            } label: { modelLabel() }
+            } label: {
+                modelLabel()
+            }
             if !efforts.isEmpty {
                 Picker(selection: effortBinding) {
                     ForEach(efforts) { effort in
                         Text(effort.title).tag(effort.id)
                     }
-                } label: { effortLabel() }
+                } label: {
+                    effortLabel()
+                }
             }
         }
     }
@@ -41,10 +45,8 @@ struct AIModelSelectionRows<ModelLabel: View, EffortLabel: View>: View {
 
     private var efforts: [ChatGPTSubscription.Effort] {
         AIModelOption.efforts(
-            for: selection, codex: subscription.models,
-            claude: installedAI.status(for: .claude).models,
-            openCode: installedAI.status(for: .openCode).models,
-            connections: settings.connections)
+            for: selection, settings: settings, subscription: subscription,
+            installedAI: installedAI)
     }
 
     private var modelBinding: Binding<AIModelSelection?> {
@@ -54,10 +56,8 @@ struct AIModelSelectionRows<ModelLabel: View, EffortLabel: View>: View {
                 select(
                     value.map {
                         AIModelOption.withDefaultEffort(
-                            $0, codex: subscription.models,
-                            claude: installedAI.status(for: .claude).models,
-                            openCode: installedAI.status(for: .openCode).models,
-                            connections: settings.connections)
+                            $0, settings: settings, subscription: subscription,
+                            installedAI: installedAI)
                     })
             })
     }

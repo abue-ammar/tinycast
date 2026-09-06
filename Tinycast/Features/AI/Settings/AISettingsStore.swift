@@ -40,9 +40,12 @@ final class AISettingsStore {
     }
     var enabledInstalledProviders: Set<InstalledAIKind> {
         didSet {
-            guard let data = try? JSONEncoder().encode(enabledInstalledProviders.sorted(by: {
-                $0.rawValue < $1.rawValue
-            })) else { return }
+            guard
+                let data = try? JSONEncoder().encode(
+                    enabledInstalledProviders.sorted(by: {
+                        $0.rawValue < $1.rawValue
+                    }))
+            else { return }
             defaults.set(data, forKey: AppSettingsKey.aiInstalledProviders.rawValue)
         }
     }
@@ -199,10 +202,11 @@ final class AISettingsStore {
 
     func disableInstalledModelSelection(for kind: InstalledAIKind) {
         guard let source = defaultModel?.source else { return }
-        let matches = switch (kind, source) {
-        case (.codex, .codex), (.claude, .claude), (.openCode, .openCode): true
-        default: false
-        }
+        let matches =
+            switch (kind, source) {
+            case (.codex, .codex), (.claude, .claude), (.openCode, .openCode): true
+            default: false
+            }
         guard matches else { return }
         defaultModel = firstAvailableSelection()
     }

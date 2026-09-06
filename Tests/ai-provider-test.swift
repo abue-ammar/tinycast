@@ -747,8 +747,9 @@ struct AIProviderTests {
         expect(reopened.defaultModel == store.defaultModel, "the default model survives a restart")
         reopened.removeConnection(id: firstID)
         expect(
-            reopened.defaultModel == .api(
-                connection: secondID, model: "gemini-model", effort: nil),
+            reopened.defaultModel
+                == .api(
+                    connection: secondID, model: "gemini-model", effort: nil),
             "removing the default connection falls forward to another API model")
     }
 

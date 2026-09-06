@@ -353,7 +353,8 @@ final class AppCore {
 
     @discardableResult
     func applyInstalledAILifecycle() -> Task<Void, Never> {
-        let enabledKinds = settings.aiEnabled || settings.quickActionsEnabled
+        let enabledKinds =
+            settings.aiEnabled || settings.quickActionsEnabled
             ? aiSettings.enabledInstalledProviders : []
         var tasks: [Task<Void, Never>] = []
         if enabledKinds.contains(.codex) {

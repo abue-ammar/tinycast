@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Owns app-server while reusing the account already configured in the user's Codex installation.
+/// Owns the app-server, reusing the account already configured in the user's Codex installation.
 @MainActor
 @Observable
 final class ChatGPTSubscriptionManager {
@@ -79,7 +79,9 @@ final class ChatGPTSubscriptionManager {
     }
 
     @discardableResult
-    private func runOperation(_ operation: @escaping @MainActor () async -> Void)
+    private func runOperation(
+        _ operation: @escaping @MainActor () async -> Void
+    )
         -> Task<Void, Never>
     {
         operationTask?.cancel()

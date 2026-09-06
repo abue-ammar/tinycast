@@ -140,8 +140,8 @@ struct RootPaletteView: View {
             group.options.enumerated().map { index, option in
                 PopoverMenuItem(
                     title: option.title, icon: option.menuIcon,
-                    sectionTitle: index == 0 ? group.title : nil)
-                {
+                    sectionTitle: index == 0 ? group.title : nil
+                ) {
                     core.aiChatCoordinator.selectModel(option)
                 }
             }
@@ -162,14 +162,15 @@ struct RootPaletteView: View {
 
     private var aiReasoningContent: PopoverMenuContent {
         let selected = core.aiSettings.defaultModel?.effort
-        return PopoverMenuContent(items: core.aiChatCoordinator.reasoningEfforts.map { effort in
-            PopoverMenuItem(
-                title: effort.title, icon: .blank,
-                detail: effort.id == selected ? "✓" : nil)
-            {
-                core.aiChatCoordinator.selectReasoningEffort(effort)
-            }
-        })
+        return PopoverMenuContent(
+            items: core.aiChatCoordinator.reasoningEfforts.map { effort in
+                PopoverMenuItem(
+                    title: effort.title, icon: .blank,
+                    detail: effort.id == selected ? "✓" : nil
+                ) {
+                    core.aiChatCoordinator.selectReasoningEffort(effort)
+                }
+            })
     }
 
     /// The bottom-left app menu content (About / Support / Settings).
@@ -773,19 +774,23 @@ struct RootPaletteView: View {
             return
         }
         let selected = core.aiSettings.defaultModel?.effort
-        let active = core.aiChatCoordinator.reasoningEfforts.firstIndex {
-            $0.id == selected
-        } ?? 0
+        let active =
+            core.aiChatCoordinator.reasoningEfforts.firstIndex {
+                $0.id == selected
+            } ?? 0
         open(.aiReasoning, highlighting: active)
     }
 
     private func aiModelMenuSelection(
         options: [AIModelOption], selected: AIModelSelection?
     ) -> Int {
+        // With nothing to choose yet, the loading row is the only row the menu has.
+        guard !options.isEmpty else { return 0 }
         let offset = core.aiChatCoordinator.isModelCatalogLoading ? 1 : 0
-        let selectedIndex = selected.flatMap { selected in
-            options.firstIndex(where: { $0.matches(selected) })
-        } ?? 0
+        let selectedIndex =
+            selected.flatMap { selected in
+                options.firstIndex(where: { $0.matches(selected) })
+            } ?? 0
         return offset + selectedIndex
     }
 

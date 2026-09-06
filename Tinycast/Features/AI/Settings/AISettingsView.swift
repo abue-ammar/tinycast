@@ -25,7 +25,9 @@ struct AISettingsView: View {
                     SettingsRowTitle(.aiAI, "Enable AI")
                     Text("Chat with the model you choose; nothing is loaded or sent until it is on.")
                 }
-                SettingsRow(title: "Providers", subtitle: providerSummary) {
+                SettingsRow(
+                    title: "Providers", subtitle: providerSummary, anchor: .aiProviders
+                ) {
                     Button("Manage…") { providersPresented = true }
                 }
             } header: {
@@ -36,6 +38,7 @@ struct AISettingsView: View {
                 .settingsEnabled(appSettings.aiEnabled)
 
             Group {
+                defaultModelSection
                 chatSection
                 conversationsSection
                 systemPromptSection
@@ -49,17 +52,59 @@ struct AISettingsView: View {
             providersSheet
         }
         .onAppear {
-            refreshInstalledAI()
+            core.applyInstalledAILifecycle()
         }
         // Switched on with the pane already open, provider status would otherwise stay empty.
-        .onChange(of: appSettings.aiEnabled) { refreshInstalledAI() }
+        .onChange(of: appSettings.aiEnabled) { core.applyInstalledAILifecycle() }
         .onChange(of: settings.enabledInstalledProviders) {
-            refreshInstalledAI()
+            core.applyInstalledAILifecycle()
             syncSelection()
         }
         .onChange(of: subscription.models) { syncSelection() }
         .onChange(of: subscription.phase) { syncSelection() }
         .onChange(of: installedAI.statuses) { syncSelection() }
+    }
+
+    private var defaultModelSection: some View {
+        Section {
+            // A Mac with nothing configured is the one that needs telling its free route is off.
+            if let reason = appleIntelligenceReason {
+                Label(reason, systemImage: "apple.intelligence")
+                    .foregroundStyle(.secondary)
+            }
+            AIModelSelectionRows(
+                selection: settings.defaultModel,
+                select: { $0.map(settings.select) },
+                modelLabel: {
+                    SettingsRowTitle(.aiDefault, "Default model")
+                    Text("Used by Tinycast features unless they ask you to choose another model.")
+                },
+                effortLabel: {
+                    SettingsRowTitle(.aiDefault, "Reasoning effort")
+                    Text("Applied when the default model supports reasoning effort.")
+                }
+            )
+        } header: {
+            SettingsSectionHeader(.aiDefault)
+        } footer: {
+            Text(defaultModelFooter)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var defaultModelFooter: String {
+        if settings.defaultModel?.isOnDevice == true {
+            return "Apple Intelligence runs on this Mac. No key, no account, and nothing leaves it."
+        }
+        return settings.defaultModel == nil
+            ? "Turn on Apple Intelligence, or add a provider above."
+            : "Tinycast contacts only the selected provider when an AI feature runs."
+    }
+
+    /// Why the on-device route is missing from the picker, or `nil` when it is there.
+    private var appleIntelligenceReason: String? {
+        settings.isAppleIntelligenceAvailable() ? nil : AppleIntelligenceProvider.status().message
     }
 
     private var providerSummary: String {
@@ -196,7 +241,7 @@ struct AISettingsView: View {
         }
         .onAppear {
             loadKeyStatuses()
-            refreshInstalledAI()
+            core.applyInstalledAILifecycle()
         }
     }
 
@@ -214,9 +259,7 @@ struct AISettingsView: View {
             installedConnection(.claude)
             installedConnection(.openCode)
         } header: {
-            SettingsSectionHeader(anchor: .aiChatGPTSubscription) {
-                Text("Installed AI")
-            }
+            SettingsSectionHeader(.aiInstalledAI)
         } footer: {
             Text(
                 "Tinycast uses the Codex, Claude and OpenCode commands already installed and signed "
@@ -232,70 +275,71 @@ struct AISettingsView: View {
         if settings.enabledInstalledProviders.contains(.codex) {
             switch subscription.phase {
             case .starting:
-            LabeledContent {
-                providerActions { providerToggle(.codex) }
-            } label: {
-                HStack {
-                    ProgressView().controlSize(.small)
-                    Text("Checking Codex…").foregroundStyle(.secondary)
+                LabeledContent {
+                    providerActions { providerToggle(.codex) }
+                } label: {
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text("Checking Codex…").foregroundStyle(.secondary)
+                    }
                 }
-            }
             case .idle, .signedOut:
-            LabeledContent {
-                providerActions {
-                    Button("Copy Sign-In Command") { copySignInCommand(.codex) }
-                    Button("Check Again") { subscription.refresh() }
-                    providerToggle(.codex)
-                }
-            } label: {
-                Text("Codex · Sign in required")
-                Text("Run codex login in Terminal, then check again.")
-            }
-            case .connected:
-            if let account = subscription.account {
                 LabeledContent {
                     providerActions {
-                        Button("Refresh") { subscription.refresh() }
+                        Button("Copy Sign-In Command") { copySignInCommand(.codex) }
+                        Button("Check Again") { subscription.refresh() }
                         providerToggle(.codex)
                     }
                 } label: {
-                    if let email = account.email {
-                        RedactedText(
-                            value: email,
-                            revealHelp: "Click to reveal the signed-in account",
-                            hideHelp: "Click to hide the signed-in account")
-                    } else {
-                        Text("Codex · Ready")
-                    }
-                    Text(account.planTitle == "API key" ? "Codex API key" : "ChatGPT \(account.planTitle)")
+                    Text("Codex · Sign in required")
+                    Text("Run codex login in Terminal, then check again.")
                 }
-            }
-            case .unavailable(let message):
-            LabeledContent {
-                providerActions {
-                    Button("Install Codex CLI…") {
-                        if let url = URL(string: "https://developers.openai.com/codex/cli") {
-                            NSWorkspace.shared.open(url)
+            case .connected:
+                if let account = subscription.account {
+                    LabeledContent {
+                        providerActions {
+                            Button("Refresh") { subscription.refresh() }
+                            providerToggle(.codex)
                         }
+                    } label: {
+                        if let email = account.email {
+                            RedactedText(
+                                value: email,
+                                revealHelp: "Click to reveal the signed-in account",
+                                hideHelp: "Click to hide the signed-in account")
+                        } else {
+                            Text("Codex · Ready")
+                        }
+                        Text(
+                            account.planTitle == "API key" ? "Codex API key" : "ChatGPT \(account.planTitle)")
                     }
-                    Button("Check Again") { subscription.refresh() }
-                    providerToggle(.codex)
                 }
-            } label: {
-                Text("Codex · Not installed")
-                Text(message)
-            }
+            case .unavailable(let message):
+                LabeledContent {
+                    providerActions {
+                        Button("Install Codex CLI…") {
+                            if let url = URL(string: "https://developers.openai.com/codex/cli") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                        Button("Check Again") { subscription.refresh() }
+                        providerToggle(.codex)
+                    }
+                } label: {
+                    Text("Codex · Not installed")
+                    Text(message)
+                }
             case .failed(let message):
-            LabeledContent {
-                providerActions {
-                    Button("Try Again") { subscription.refresh() }
-                    providerToggle(.codex)
+                LabeledContent {
+                    providerActions {
+                        Button("Try Again") { subscription.refresh() }
+                        providerToggle(.codex)
+                    }
+                } label: {
+                    Label("Codex check failed", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                    Text(message)
                 }
-            } label: {
-                Label("Codex check failed", systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
-                Text(message)
-            }
             }
         } else {
             disabledProvider(.codex)
@@ -308,66 +352,67 @@ struct AISettingsView: View {
         if settings.enabledInstalledProviders.contains(kind) {
             switch status.phase {
             case .idle, .checking:
-            LabeledContent {
-                providerActions { providerToggle(kind) }
-            } label: {
-                HStack {
-                    ProgressView().controlSize(.small)
-                    Text("Checking \(kind.title)…").foregroundStyle(.secondary)
+                LabeledContent {
+                    providerActions { providerToggle(kind) }
+                } label: {
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text("Checking \(kind.title)…").foregroundStyle(.secondary)
+                    }
                 }
-            }
             case .ready:
-            LabeledContent {
-                providerActions {
-                    Button("Refresh") {
-                        installedAI.refresh(kind: kind)
+                LabeledContent {
+                    providerActions {
+                        Button("Refresh") {
+                            installedAI.refresh(kind: kind)
+                        }
+                        providerToggle(kind)
                     }
-                    providerToggle(kind)
+                } label: {
+                    Text("\(kind.title) · Ready")
+                    Text(
+                        status.version.map { "Version \($0) · \(modelCount(status.models))" }
+                            ?? modelCount(status.models))
                 }
-            } label: {
-                Text("\(kind.title) · Ready")
-                Text(status.version.map { "Version \($0) · \(modelCount(status.models))" }
-                    ?? modelCount(status.models))
-            }
             case .signInRequired:
-            LabeledContent {
-                providerActions {
-                    Button("Copy Sign-In Command") { copySignInCommand(kind) }
-                    Button("Check Again") {
-                        installedAI.refresh(kind: kind)
+                LabeledContent {
+                    providerActions {
+                        Button("Copy Sign-In Command") { copySignInCommand(kind) }
+                        Button("Check Again") {
+                            installedAI.refresh(kind: kind)
+                        }
+                        providerToggle(kind)
                     }
-                    providerToggle(kind)
+                } label: {
+                    Text("\(kind.title) · Sign in required")
+                    Text("Run \(kind.signInCommand) in Terminal, then check again.")
                 }
-            } label: {
-                Text("\(kind.title) · Sign in required")
-                Text("Run \(kind.signInCommand) in Terminal, then check again.")
-            }
             case .notInstalled:
-            LabeledContent {
-                providerActions {
-                    Button("Install…") { NSWorkspace.shared.open(kind.installURL) }
-                    Button("Check Again") {
-                        installedAI.refresh(kind: kind)
+                LabeledContent {
+                    providerActions {
+                        Button("Install…") { NSWorkspace.shared.open(kind.installURL) }
+                        Button("Check Again") {
+                            installedAI.refresh(kind: kind)
+                        }
+                        providerToggle(kind)
                     }
-                    providerToggle(kind)
+                } label: {
+                    Text("\(kind.title) · Not installed")
+                    Text("Tinycast could not find the \(kind.command) command.")
                 }
-            } label: {
-                Text("\(kind.title) · Not installed")
-                Text("Tinycast could not find the \(kind.command) command.")
-            }
             case .failed(let message):
-            LabeledContent {
-                providerActions {
-                    Button("Try Again") {
-                        installedAI.refresh(kind: kind)
+                LabeledContent {
+                    providerActions {
+                        Button("Try Again") {
+                            installedAI.refresh(kind: kind)
+                        }
+                        providerToggle(kind)
                     }
-                    providerToggle(kind)
+                } label: {
+                    Label("\(kind.title) check failed", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                    Text(message)
                 }
-            } label: {
-                Label("\(kind.title) check failed", systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
-                Text(message)
-            }
             }
         } else {
             disabledProvider(kind)
@@ -397,9 +442,10 @@ struct AISettingsView: View {
             "Enable \(kind.title)",
             isOn: Binding(
                 get: { settings.enabledInstalledProviders.contains(kind) },
-                set: { settings.setInstalledProviderEnabled($0, for: kind) }))
-            .labelsHidden()
-            .toggleStyle(.switch)
+                set: { settings.setInstalledProviderEnabled($0, for: kind) })
+        )
+        .labelsHidden()
+        .toggleStyle(.switch)
     }
 
     private var apiConnectionsSection: some View {
@@ -540,10 +586,6 @@ struct AISettingsView: View {
         } catch {
             keyError = true
         }
-    }
-
-    private func refreshInstalledAI() {
-        core.applyInstalledAILifecycle()
     }
 
     private func copySignInCommand(_ kind: InstalledAIKind) {

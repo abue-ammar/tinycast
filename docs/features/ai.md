@@ -74,8 +74,9 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
   conversation. `installed-ai-test` runs the Claude and OpenCode adapters against real subprocess
   stubs and pins their safety boundaries.
-- **Claude and OpenCode are text transports, not agents.** Claude runs bare for one turn with no tools,
-  MCP servers, browser integration, slash commands or persisted session. OpenCode runs `--pure` with
+- **Claude and OpenCode are text transports, not agents.** Claude runs one turn with no tools, MCP
+  servers, browser integration, slash commands or persisted session — but never `--bare`, which reads
+  neither OAuth nor the keychain and so refuses the very sign-in this route reuses. OpenCode runs `--pure` with
   deny-all permissions, disabled sharing and a private working directory; Tinycast deletes the session
   recorded in its JSON stream after each turn. Neither route offers images or web search.
 - **Chat is a palette screen, not another window** — including its lifetime. The launcher command
@@ -391,12 +392,13 @@ width and clipped the search field well short of the button.
 ## Settings and backup boundary
 
 Settings → AI is a normal grouped `Form` inside Tinycast's existing Settings window. Its top AI
-section owns the feature switch and the **Providers → Manage…** action. Model and reasoning choices
-live in the AI Chat header. Provider management opens as a sheet, where **Installed AI** reports
-Codex, Claude and OpenCode separately as checking, ready, sign-in required, missing or failed. It
-never contains a credential field: installation and sign-in happen in each command's own flow.
-**API Connections** remains the explicit Keychain-backed path in that sheet. The chat header chooses
-the chat model, while Quick Actions keeps its own model selection.
+section owns the feature switch and the **Providers → Manage…** action, and **Default model** below
+it picks the app-wide route and its reasoning effort. Provider management opens as a sheet, where
+**Installed AI** reports Codex, Claude and OpenCode separately as checking, ready, sign-in required,
+missing or failed. It never contains a credential field: installation and sign-in happen in each
+command's own flow. **API Connections** remains the explicit Keychain-backed path in that sheet. The
+chat header changes the same default without a trip to Settings, while Quick Actions keeps its own
+model selection.
 
 The signed-in Codex address is the one thing on the pane that names a person, and a Settings pane
 is what gets screenshotted into a bug report or left on screen in a recording, so `RedactedText`

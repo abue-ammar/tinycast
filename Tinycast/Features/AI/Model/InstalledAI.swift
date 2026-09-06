@@ -31,11 +31,36 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
+    /// The one install that puts its command outside every shared `bin` the locator already walks.
+    var extraExecutablePaths: [String] {
+        self == .claude ? [".claude/local/claude"] : []
+    }
+
+    var source: AIModelSource {
+        switch self {
+        case .codex: return .codex
+        case .claude: return .claude
+        case .openCode: return .openCode
+        }
+    }
+
     var signInCommand: String {
         switch self {
         case .codex: return "codex login"
         case .claude: return "claude auth login"
         case .openCode: return "opencode auth login"
+        }
+    }
+}
+
+extension AIModelSource {
+    /// The installed command behind this source, or `nil` for the two routes Tinycast reaches itself.
+    var installedKind: InstalledAIKind? {
+        switch self {
+        case .codex: return .codex
+        case .claude: return .claude
+        case .openCode: return .openCode
+        case .appleIntelligence, .api: return nil
         }
     }
 }

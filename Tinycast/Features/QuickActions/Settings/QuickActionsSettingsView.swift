@@ -203,12 +203,18 @@ struct QuickActionsSettingsView: View {
     private var modelChoices: [AIModelOption] {
         AIModelOption.availableGroups(
             settings: aiSettings, subscription: core.chatGPTSubscription,
-            installedAI: core.installedAI)
-            .flatMap(\.options)
+            installedAI: core.installedAI
+        )
+        .flatMap(\.options)
     }
 
     private func repairInstalledModel() {
-        let options = modelChoices.map(\.selection)
+        // Catalog rows name a route without an effort; a repaired selection must carry the default.
+        let options = modelChoices.map {
+            AIModelOption.withDefaultEffort(
+                $0.selection, settings: aiSettings, subscription: core.chatGPTSubscription,
+                installedAI: core.installedAI)
+        }
         var unavailable = Set<AIModelSource>()
         if !aiSettings.enabledInstalledProviders.contains(.codex)
             || core.chatGPTSubscription.phase == .signedOut
@@ -217,14 +223,12 @@ struct QuickActionsSettingsView: View {
             unavailable.insert(.codex)
         }
         for kind in [InstalledAIKind.claude, .openCode] {
-            guard aiSettings.enabledInstalledProviders.contains(kind)
-            else {
-                unavailable.insert(kind == .claude ? .claude : .openCode)
-                continue
-            }
             let phase = core.installedAI.status(for: kind).phase
-            guard phase == .signInRequired || phase == .notInstalled else { continue }
-            unavailable.insert(kind == .claude ? .claude : .openCode)
+            guard
+                !aiSettings.enabledInstalledProviders.contains(kind)
+                    || phase == .signInRequired || phase == .notInstalled
+            else { continue }
+            unavailable.insert(kind.source)
         }
         store.repairInstalledModel(
             available: options, unavailableSources: unavailable,

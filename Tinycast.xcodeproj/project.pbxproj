@@ -327,7 +327,6 @@
 		A7CEBFBFBB46554ACAD73CFB /* QuicklinkArgumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3044106BC42824C79E1803 /* QuicklinkArgumentsView.swift */; };
 		A7D7F8F64B0937D20D97F428 /* ExtensionAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D755EEABA1DA9CA4CE2D0B4F /* ExtensionAppearance.swift */; };
 		A7F4CD74AEBEFF9F07103CD7 /* EmojiIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 316A544BF6628C0465DE28D8 /* EmojiIndex.swift */; };
-		A8DF98D6A838ADF321577EEA /* CodexExecutableLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE6F8E3FA640C6F2B1AA8FE /* CodexExecutableLocator.swift */; };
 		A9B237874D2DC49A184FF9B0 /* SettingsSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3F48BE32ACD7799661EBF9 /* SettingsSearchField.swift */; };
 		AA52F01D3A91899CCEAF7851 /* ColorCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D763A801000029271E4CADA4 /* ColorCard.swift */; };
 		AAFD2C9276D38719E85B675F /* Memo.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB76FDBFE1E306C2A5B1A29B /* Memo.swift */; };
@@ -515,7 +514,6 @@
 		0E099C50FF0B6A0069CAC5BF /* CommandOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandOutputView.swift; sourceTree = "<group>"; };
 		0EDB1EEB97CC5F6B0B81FFD6 /* LauncherRankingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherRankingStore.swift; sourceTree = "<group>"; };
 		0F5AFB680B55BBAFF2207F99 /* NotesCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesCoordinator.swift; sourceTree = "<group>"; };
-		0FE6F8E3FA640C6F2B1AA8FE /* CodexExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexExecutableLocator.swift; sourceTree = "<group>"; };
 		106F9FEF3F0C36E0C5686DA7 /* AIRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequest.swift; sourceTree = "<group>"; };
 		112551581ECF83B53D405334 /* BackupSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSettingsView.swift; sourceTree = "<group>"; };
 		121A2ACAEC4D2D25D3112634 /* LauncherItemsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherItemsSection.swift; sourceTree = "<group>"; };
@@ -2246,7 +2244,6 @@
 				943495E91C0D09B633746515 /* ChatGPTSubscriptionManager.swift */,
 				B715A0256D2D0DDE1D28FC98 /* ChatHistoryStore.swift */,
 				7355ACD6D1BE7BC7FCA26BD2 /* CodexAppServerClient.swift */,
-				0FE6F8E3FA640C6F2B1AA8FE /* CodexExecutableLocator.swift */,
 				1E82DD04042376EBDEF3E84C /* CodexTurnRunner.swift */,
 				096F955B26BAEE5AED65B559 /* HTTPAIProvider.swift */,
 				AD0BCEEE45732BE94136EEA8 /* InstalledAIManager.swift */,
@@ -2553,7 +2550,6 @@
 				03C41F6394089BAEC7E630D6 /* ClipboardView.swift in Sources */,
 				0F6F56C49B3D2CBA233F12F3 /* CodexAppServerClient.swift in Sources */,
 				688C7D9EE32D3D556184869E /* CodexAppServerProtocol.swift in Sources */,
-				A8DF98D6A838ADF321577EEA /* CodexExecutableLocator.swift in Sources */,
 				C4479572F65559306118A9F0 /* CodexTurnRunner.swift in Sources */,
 				AA52F01D3A91899CCEAF7851 /* ColorCard.swift in Sources */,
 				5D77D1868F3F915D3EB99125 /* ColorFormat.swift in Sources */,

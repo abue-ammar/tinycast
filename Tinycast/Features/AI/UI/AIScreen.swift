@@ -231,7 +231,8 @@ struct AIReasoningButton: View {
             systemImage: "brain",
             isOpen: isOpen,
             help: "Change reasoning effort",
-            action: action)
+            action: action
+        )
         .fixedSize(horizontal: true, vertical: false)
     }
 }

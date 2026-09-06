@@ -53,7 +53,7 @@ final class QuickActionSettingsStore {
         available: [AIModelSelection], unavailableSources: Set<AIModelSource>,
         fallback: AIModelSelection?
     ) {
-        guard let model, [.codex, .claude, .openCode].contains(model.source) else { return }
+        guard let model, model.source.installedKind != nil else { return }
         let sourceModels = available.filter { $0.source == model.source }
         if sourceModels.contains(where: { $0.model == model.model }) { return }
         if let replacement = sourceModels.first {

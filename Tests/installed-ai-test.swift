@@ -23,7 +23,8 @@ struct InstalledAITests {
         defer { fixture.tearDown() }
         openCodeCatalogCarriesModelVariants()
         await openCodeRunsWithoutToolsAndDeletesItsSession(fixture)
-        await claudeRunsBareWithoutToolsOrHistory(fixture)
+        await claudeRunsWithoutToolsOrHistory(fixture)
+        claudeMCPConfigNamesNoServers(fixture)
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -74,21 +75,38 @@ struct InstalledAITests {
         fixture.expectPrompt("opencode-prompt.log")
     }
 
-    private static func claudeRunsBareWithoutToolsOrHistory(_ fixture: Fixture) async {
+    private static func claudeRunsWithoutToolsOrHistory(_ fixture: Fixture) async {
         let events = await fixture.events(kind: .claude, model: "sonnet", effort: "xhigh")
         expect(events.contains(.text("Claude reply")), "Claude text reaches the provider stream")
         expect(events.last == .finished, "Claude finishes the provider stream")
         let arguments = fixture.read("claude-args.log")
         for flag in [
-            "--bare", "--no-session-persistence", "--disable-slash-commands", "--tools",
+            "--no-session-persistence", "--disable-slash-commands", "--tools",
             "--disallowedTools", "--strict-mcp-config", "--no-chrome"
         ] {
             expect(arguments.contains(flag), "Claude runs with \(flag)")
         }
+        // `--bare` reads neither OAuth nor the keychain, so it refuses the sign-in this route reuses.
+        expect(!arguments.contains("--bare"), "Claude never runs with --bare")
         expect(
             arguments.contains("--effort") && arguments.contains("xhigh"),
             "Claude receives the chosen reasoning effort")
         fixture.expectPrompt("claude-prompt.log")
+    }
+
+    /// The CLI rejects a bare `{}` before the turn starts, and a stub argv would never notice.
+    private static func claudeMCPConfigNamesNoServers(_ fixture: Fixture) {
+        let argv = fixture.arguments("claude-args.log")
+        guard let index = argv.firstIndex(of: "--mcp-config"), index + 1 < argv.count,
+            let data = argv[index + 1].data(using: .utf8),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            expect(false, "Claude passes a decodable --mcp-config object")
+            return
+        }
+        expect(
+            object.count == 1 && object["mcpServers"] is [String: Any],
+            "Claude's --mcp-config declares an empty mcpServers record")
     }
 }
 
@@ -154,6 +172,14 @@ private final class Fixture {
                 && prompt.contains("First question") && prompt.contains("First answer")
                 && prompt.contains("Final question"),
             "the installed CLI receives instructions and conversation history through stdin")
+    }
+
+    func arguments(_ name: String) -> [String] {
+        guard let line = read(name).split(separator: "\n").first,
+            let data = line.data(using: .utf8),
+            let argv = try? JSONDecoder().decode([String].self, from: data)
+        else { return [] }
+        return argv
     }
 
     func read(_ name: String) -> String {
