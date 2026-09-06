@@ -156,6 +156,15 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         core.palette.prepare(mode: .launcher)
     }
 
+    /// Pop to root without waiting out the timeout, which is what `closeAndPopToRoot` promises.
+    func popToRootNow() {
+        // The authorizing exception is the timer's too: a browser round trip must find its screen.
+        guard !core.extensions.isAuthorizing else { return }
+        popToRootTimer?.invalidate()
+        popToRootTimer = nil
+        popToRoot()
+    }
+
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
     func consumePreservedState() -> Bool {
         guard let timer = popToRootTimer else { return false }
@@ -261,7 +270,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onFieldEditorFocused = { [weak self] context in
             self?.core.inputSourceSwitcher.applySession(to: context)
         }
-        // Backspace in an empty search backs out of a sub-screen to a fresh root.
+        // Backspace in an empty search takes the same back step Escape and the chevron take.
         panel.onBareBackspace = { [weak self] in
             guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
             else { return false }
@@ -275,15 +284,15 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 core.palette.selection = 0
                 return true
             }
-            if core.palette.mode == .aiHistory {
-                core.palette.prepare(mode: .ai)
-                return true
-            }
             if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
                 return true
             }
-            core.palette.prepare(mode: .launcher)
-            return true
+            // An extension owns the step until its own stack is empty, exactly as Escape leaves it.
+            if core.palette.mode == .extensionCommand {
+                core.extensionCoordinator.exitExtensionScreen()
+                return true
+            }
+            return core.palette.pop()
         }
         installPasteMonitor()
         // Handled at the panel: the field editor or a missing main menu eats these first.
@@ -295,7 +304,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 self.core.palette.noteFavoriteSlot(index)
                 return true
             }
-            // Escape has no character, so it matches by key code.
+            // Pop to Root Search (⌘⎋): Escape has no character, so it matches by key code.
             if Int(event.keyCode) == kVK_Escape {
                 self.core.palette.prepare(mode: .launcher)
                 return true

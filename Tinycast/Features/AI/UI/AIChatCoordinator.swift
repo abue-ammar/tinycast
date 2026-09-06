@@ -142,18 +142,20 @@ final class AIChatCoordinator {
             .flatMap { core.mcpCoordinator.server(slug: $0) }
     }
 
+    /// A new chat replaces the screen, so whatever opened the old one is still there to go back to.
     func startNewChat() {
         chat.startNewChat()
-        palette.prepare(mode: .ai)
+        palette.replace(mode: .ai)
     }
 
     func showHistory() {
-        palette.prepare(mode: .aiHistory)
+        palette.push(mode: .aiHistory)
     }
 
+    /// History was pushed from chat, so opening one comes back up rather than descending again.
     func openChat(id: UUID) {
         guard chat.open(id: id) else { return }
-        palette.prepare(mode: .ai)
+        if !palette.pop() { palette.prepare(mode: .ai) }
     }
 
     func deleteChat(id: UUID) {

@@ -418,7 +418,8 @@ struct RootPaletteView: View {
                 if vm.isControlListOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
                     menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
-                    mode: vm.mode)
+                    mode: vm.mode, canGoBack: vm.canGoBack,
+                    behavior: settings.escapeKeyBehavior)
                 {
                 case .closeMenu:
                     closeMenus()
@@ -428,10 +429,14 @@ struct RootPaletteView: View {
                     vm.query = ""
                 case .exitExtensionScreen:
                     core.extensionCoordinator.exitExtensionScreen()
-                case .exitToLauncher:
-                    exitToLauncher()
+                case .goBack:
+                    goBack()
                 case .hidePalette:
                     core.paletteCoordinator.hidePalette()
+                    // The option's own name promises the reset does not wait out the timeout.
+                    if settings.escapeKeyBehavior == .closeAndPopToRoot {
+                        core.paletteCoordinator.popToRootNow()
+                    }
                 }
                 return .handled
             }
@@ -572,9 +577,9 @@ struct RootPaletteView: View {
         HStack(alignment: .center, spacing: 0) {
             // Matches the list rows and section headers' own indent below.
             headerGutter(width: Theme.Spacing.md * 2)
-            // Sub-screens of the root search, so their header icon is a back chevron.
-            if vm.mode != .launcher {
-                Button(action: navigateBack) {
+            // A chevron is drawn only where it leads somewhere; elsewhere the screen names itself.
+            if hasBackStep {
+                Button(action: goBack) {
                     Image(systemName: "chevron.left")
                         .font(Theme.Typography.headerIcon)
                         .symbolRenderingMode(.hierarchical)
@@ -583,6 +588,7 @@ struct RootPaletteView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .tooltip(backTooltip)
             } else {
                 Image(systemName: vm.mode.systemImage)
                     .font(Theme.Typography.headerIcon)
@@ -1083,21 +1089,26 @@ struct RootPaletteView: View {
         open(.argumentOptions, highlighting: 0)
     }
 
-    private func navigateBack() {
-        if vm.mode == .aiHistory {
-            vm.prepare(mode: .ai)
-        } else {
-            exitToLauncher()
-        }
+    /// A back affordance may never close the window: it is drawn only over a screen to return to.
+    private var hasBackStep: Bool {
+        // An extension's own navigation is a step the palette's stack cannot see.
+        vm.canGoBack || (vm.mode == .extensionCommand && core.extensions.navigationDepth > 1)
     }
 
-    /// Back out to a fresh root search, the same reset `prepare` does on show.
-    private func exitToLauncher() {
+    /// Derived from the setting, never a literal, so a shown cap cannot drift from behaviour.
+    private var backTooltip: String {
+        let back = settings.escapeKeyBehavior == .popBackOrClose ? "⎋" : "⌫"
+        return "Go back \(back)  ·  Root search ⌘⎋"
+    }
+
+    /// The one back edge: the chevron, bare Backspace and Escape all land here.
+    private func goBack() {
+        // An extension owns the step until its own stack is empty, then it pops ours the same way.
         if vm.mode == .extensionCommand {
             core.extensionCoordinator.exitExtensionScreen()
             return
         }
-        vm.prepare(mode: .launcher)
+        if !vm.pop() { core.paletteCoordinator.hidePalette() }
     }
 
     private func activateSelection() {

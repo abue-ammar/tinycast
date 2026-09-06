@@ -177,6 +177,11 @@ final class AppSettings {
         didSet { defaults.set(popToRootTimeout.rawValue, forKey: Key.popToRootTimeout.rawValue) }
     }
 
+    /// What Escape does on an empty search field: pop one screen, or always close.
+    var escapeKeyBehavior: EscapeKeyBehavior {
+        didSet { defaults.set(escapeKeyBehavior.rawValue, forKey: Key.escapeKeyBehavior.rawValue) }
+    }
+
     /// Follow macOS, or pin Tinycast to one appearance. Applied by `AppCore.applyAppearance()`.
     var appearance: AppAppearance {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance.rawValue) }
@@ -486,6 +491,9 @@ final class AppSettings {
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout.rawValue))
             ?? .immediately
+        escapeKeyBehavior =
+            defaults.string(forKey: Key.escapeKeyBehavior.rawValue)
+            .flatMap { EscapeKeyBehavior(rawValue: $0) } ?? .popBackOrClose
         appearance =
             defaults.string(forKey: Key.appearance.rawValue).flatMap(AppAppearance.init) ?? .system
         compactMode = defaults.bool(forKey: Key.compactMode.rawValue)

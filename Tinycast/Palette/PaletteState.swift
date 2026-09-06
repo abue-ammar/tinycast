@@ -11,6 +11,8 @@ final class PaletteState {
     var isComposing = false
     /// The clipboard screen's type filter, reset with the rest of the screen state on each summon.
     var clipboardFilter: ClipboardFilter = .all
+    /// The screens this one was pushed over; a summon starts a new stack, a mode switch pushes.
+    var navigation = PaletteNavigationStack()
     /// Ordering out leaves the SwiftUI tree mounted, so a media preview needs this to stop playing.
     private(set) var isVisible = false
     /// Changes every time the palette is shown so the search field can re-focus.
@@ -60,8 +62,48 @@ final class PaletteState {
         isVisible = visible
     }
 
+    /// Become the root: every screen underneath is dropped, so Escape here closes the palette.
     func prepare(mode: PaletteMode) {
+        replace(mode: mode)
+        navigation.reset()
+    }
+
+    /// Swap this screen for another without descending; whatever sits underneath is left alone.
+    func replace(mode: PaletteMode) {
         self.mode = mode
+        resetScreen()
+    }
+
+    /// Descend to `mode`, keeping this screen underneath for Escape, Backspace and the chevron.
+    func push(mode: PaletteMode) {
+        navigation.push(
+            PaletteFrame(
+                mode: self.mode, query: query, selection: selection,
+                clipboardFilter: clipboardFilter))
+        self.mode = mode
+        resetScreen()
+    }
+
+    /// Restore the screen underneath. False means there was none, so the caller closes instead.
+    @discardableResult
+    func pop() -> Bool {
+        guard let frame = navigation.pop() else { return false }
+        // A bumped `resetToken` snaps lists to the top, throwing the selection just restored away.
+        let keptResetToken = resetToken
+        mode = frame.mode
+        resetScreen()
+        resetToken = keptResetToken
+        query = frame.query
+        selection = frame.selection
+        clipboardFilter = frame.clipboardFilter
+        followToken = UUID()
+        return true
+    }
+
+    var canGoBack: Bool { navigation.canGoBack }
+
+    /// Everything a screen change clears, whether it roots, descends or comes back.
+    private func resetScreen() {
         query = ""
         selection = 0
         isComposing = false

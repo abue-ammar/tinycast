@@ -55,6 +55,10 @@ enum RaycastImport {
                 settings.popToRootSeconds = secs
                 hasSettings = true
             }
+            if options.contains(.popToRoot), let behavior = backup.settings?.escapeKeyBehavior {
+                settings.escapeKeyBehavior = behavior
+                hasSettings = true
+            }
             if options.contains(.compactMode) {
                 if let compact = backup.settings?.compactMode {
                     settings.compactMode = compact

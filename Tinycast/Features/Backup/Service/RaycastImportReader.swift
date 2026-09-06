@@ -69,6 +69,12 @@ enum RaycastImportReader {
             data.popToRootSeconds = timeout.rawValue
             mapped = true
         }
+        if let raw = general?["escapeKeyBehavior"] as? String,
+            let behavior = EscapeKeyBehavior(raycastValue: raw)
+        {
+            data.escapeKeyBehavior = behavior.rawValue
+            mapped = true
+        }
         // Raycast's window mode is a string; we only have the compact toggle.
         if let mode = general?["windowMode"] as? String {
             data.compactMode = (mode == "compact")

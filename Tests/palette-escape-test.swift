@@ -16,81 +16,94 @@ struct PaletteEscapeTests {
         }
     }
 
+    /// The default behaviour, where Escape is the back key.
+    static func back(
+        menuOpen: Bool = false, argumentFocused: Bool = false, query: String = "",
+        mode: PaletteMode, canGoBack: Bool = false
+    ) -> PaletteEscapeAction {
+        PaletteEscapeAction.resolve(
+            menuOpen: menuOpen, argumentFocused: argumentFocused, query: query, mode: mode,
+            canGoBack: canGoBack, behavior: .popBackOrClose)
+    }
+
+    /// The opt-in behaviour, where Escape always closes and Backspace carries the back step.
+    static func close(
+        menuOpen: Bool = false, argumentFocused: Bool = false, query: String = "",
+        mode: PaletteMode, canGoBack: Bool = false
+    ) -> PaletteEscapeAction {
+        PaletteEscapeAction.resolve(
+            menuOpen: menuOpen, argumentFocused: argumentFocused, query: query, mode: mode,
+            canGoBack: canGoBack, behavior: .closeAndPopToRoot)
+    }
+
+    /// Every screen Escape can land on, so a new mode cannot quietly skip the table below.
+    static let screens: [PaletteMode] = [
+        .launcher, .clipboard, .ai, .aiHistory, .uninstall, .extensionCommand,
+        .customCommandArguments
+    ]
+
     static func main() {
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: true, argumentFocused: false, query: "notes", mode: .launcher),
-            .closeMenu,
-            "an open menu closes before anything else")
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "notes", mode: .launcher),
-            .clearQuery,
-            "a typed launcher query clears before the palette hides")
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "notes", mode: .extensionCommand),
-            .clearQuery,
-            "a typed extension query clears before the extension screen exits")
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "", mode: .extensionCommand),
-            .exitExtensionScreen,
-            "an empty extension query exits the extension screen")
-        expect(
-            PaletteEscapeAction.resolve(menuOpen: false, argumentFocused: false, query: "", mode: .launcher),
-            .hidePalette,
-            "an empty launcher query hides the palette")
-        // The two surfaces where the field is not a search field: an argument answer, a chat draft.
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "blue",
-                mode: .customCommandArguments),
-            .clearQuery,
-            "a half-typed argument clears before the pending command is abandoned")
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "", mode: .customCommandArguments),
-            .hidePalette,
-            "an empty argument field hides the palette, which cancels the pending command")
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "why is the sky", mode: .ai),
-            .clearQuery,
-            "an unsent chat draft clears before chat itself is left")
-        expect(
-            PaletteEscapeAction.resolve(menuOpen: false, argumentFocused: false, query: "", mode: .ai),
-            .exitToLauncher,
-            "an empty composer backs chat out to the launcher rather than hiding the palette")
-        expect(
-            PaletteEscapeAction.resolve(menuOpen: false, argumentFocused: false, query: "", mode: .clipboard),
-            .hidePalette,
-            "only chat backs out; an empty clipboard filter still hides the palette")
-        expect(
-            PaletteEscapeAction.resolve(menuOpen: true, argumentFocused: false, query: "", mode: .ai),
-            .closeMenu,
-            "a menu outranks the chat screen it is drawn over")
-        expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: true, argumentFocused: false, query: "", mode: .extensionCommand),
-            .closeMenu,
-            "a menu outranks the extension screen it is drawn over")
+        // The inner handlers outrank navigation, under either setting.
+        for mode in screens {
+            expect(back(menuOpen: true, mode: mode), .closeMenu, "a menu outranks \(mode)")
+            expect(close(menuOpen: true, mode: mode), .closeMenu, "a menu outranks \(mode) when closing")
+            expect(
+                back(menuOpen: true, query: "typed", mode: mode, canGoBack: true), .closeMenu,
+                "a menu outranks even a typed query on \(mode)")
+        }
+
         // An inline argument field is deeper than the query that found the command.
         expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: true, query: "search", mode: .launcher),
-            .leaveArgumentField,
+            back(argumentFocused: true, query: "search", mode: .launcher), .leaveArgumentField,
             "an argument field hands focus back before the query that found it clears")
         expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: true, query: "", mode: .launcher),
-            .leaveArgumentField,
+            back(argumentFocused: true, mode: .launcher), .leaveArgumentField,
             "an empty query does not let the argument field skip its own step")
         expect(
-            PaletteEscapeAction.resolve(
-                menuOpen: true, argumentFocused: true, query: "search", mode: .launcher),
-            .closeMenu,
+            close(argumentFocused: true, mode: .launcher, canGoBack: true), .leaveArgumentField,
+            "the argument field is an inner handler, so closing never outranks it")
+        expect(
+            back(menuOpen: true, argumentFocused: true, query: "search", mode: .launcher), .closeMenu,
             "a menu still outranks the argument field beneath it")
+
+        // A typed field clears first, whatever is underneath and whichever setting is on.
+        for mode in screens {
+            for canGoBack in [false, true] {
+                expect(
+                    back(query: "typed", mode: mode, canGoBack: canGoBack), .clearQuery,
+                    "a typed query on \(mode) clears before the screen is left")
+                expect(
+                    close(query: "typed", mode: mode, canGoBack: canGoBack), .clearQuery,
+                    "a typed query on \(mode) clears before the palette closes")
+            }
+        }
+
+        // Pop back or close: an empty field pops one screen, or closes at the bottom.
+        for mode in screens where mode != .extensionCommand {
+            expect(
+                back(mode: mode, canGoBack: false), .hidePalette,
+                "\(mode) reached by its own hotkey has nothing under it, so Escape closes")
+            expect(
+                back(mode: mode, canGoBack: true), .goBack,
+                "\(mode) reached from another screen goes back to it")
+        }
+
+        // An extension leaves through its own coordinator, which pops its inner stack first.
+        expect(
+            back(mode: .extensionCommand, canGoBack: false), .exitExtensionScreen,
+            "an extension screen exits through the extension, not the palette's stack")
+        expect(
+            back(mode: .extensionCommand, canGoBack: true), .exitExtensionScreen,
+            "a row-opened extension still exits through the extension, which then pops the stack")
+
+        // Close and pop to root: Escape stops navigating entirely, extensions included.
+        for mode in screens {
+            for canGoBack in [false, true] {
+                expect(
+                    close(mode: mode, canGoBack: canGoBack), .hidePalette,
+                    "\(mode) closes rather than going back when Escape is set to close")
+            }
+        }
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }

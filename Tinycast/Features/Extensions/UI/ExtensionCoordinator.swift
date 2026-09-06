@@ -145,11 +145,14 @@ final class ExtensionCoordinator {
         guard let (owner, command) = extensions.resolve(app) else { return }
         switch command.mode {
         case .view:
-            // Switch the palette over first, so the launching state is what the user sees.
-            palette.prepare(mode: .extensionCommand)
-            // A shortcut fires while hidden, where a view command has nowhere to render.
+            // A hidden palette has nowhere to render, so a shortcut-fired command summons a root.
             if !paletteCoordinator.isVisible {
                 paletteCoordinator.showPalette(mode: .extensionCommand)
+            } else if palette.mode == .extensionCommand {
+                // Stacking one command's screen on another would strand the stopped one on Escape.
+                palette.replace(mode: .extensionCommand)
+            } else {
+                palette.push(mode: .extensionCommand)
             }
             Task { await extensions.run(owner, command: command, arguments: arguments) }
         case .noView, .menuBar:
@@ -172,7 +175,8 @@ final class ExtensionCoordinator {
         Task {
             if await extensions.popNavigation() { return }
             await extensions.stop()
-            palette.prepare(mode: .launcher)
+            // A row-opened command has a screen underneath; one opened by its own hotkey does not.
+            if !palette.pop() { paletteCoordinator.hidePalette() }
         }
     }
 

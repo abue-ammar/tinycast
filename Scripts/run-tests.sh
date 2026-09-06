@@ -138,6 +138,7 @@ run ai-instructions-test   Tinycast/Features/AI/Model/AIInstructions.swift \
                            Tinycast/Features/AI/Model/AIPreamble.swift
 run hover-arming-test      Tinycast/Palette/HoverArming.swift \
                            Tinycast/Palette/PaletteState.swift \
+                           Tinycast/Palette/PaletteNavigationStack.swift \
                            Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
@@ -149,6 +150,19 @@ run hover-arming-test      Tinycast/Palette/HoverArming.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-escape-test    Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Palette/PaletteEscapeAction.swift \
+                           Tinycast/Features/Settings/EscapeKeyBehavior.swift \
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Tinycast/Features/CustomCommands/Model/CustomCommand.swift
+run palette-navigation-test Tinycast/Palette/PaletteNavigationStack.swift \
+                           Tinycast/Palette/PaletteState.swift \
+                           Tinycast/Palette/HoverArming.swift \
+                           Tinycast/Palette/PaletteMode.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorFormat.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
                            Tinycast/Features/Quicklinks/Model/Quicklink.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift
@@ -248,6 +262,7 @@ run notes-editor-test      Tinycast/Platform/Signposts.swift \
                            Tinycast/Features/Notes/UI/NoteTextView.swift \
                            Tinycast/Features/Notes/UI/NoteEditorView.swift
 run slow -O raycast-test   Tinycast/Features/Backup/Model/RaycastImportError.swift \
+                           Tinycast/Features/Settings/EscapeKeyBehavior.swift \
                            Tinycast/Features/Backup/Service/RaycastDecoder.swift \
                            Tinycast/Features/Backup/Service/Scrypt.swift \
                            Tinycast/Platform/Compression/Zlib.swift

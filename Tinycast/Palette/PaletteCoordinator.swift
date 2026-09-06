@@ -60,13 +60,15 @@ final class PaletteCoordinator {
         mode: PaletteMode, restoreAnyMode: Bool = false, seeding query: String? = nil
     ) {
         let preserved = windowController.consumePreservedState()
+        // Only a visible palette has somewhere to go back to; a summon is a new stack, not a push.
+        let pushes = windowController.isVisible && palette.mode != mode
         // A carried query always opens fresh: restoring the previous screen would drop it.
-        if let query {
-            palette.prepare(mode: mode)
-            palette.query = query
-        } else if !(preserved && (restoreAnyMode || palette.mode == mode)) {
+        if pushes {
+            palette.push(mode: mode)
+        } else if query != nil || !(preserved && (restoreAnyMode || palette.mode == mode)) {
             palette.prepare(mode: mode)
         }
+        if let query { palette.query = query }
         windowController.show()
         if palette.mode == .fileSearch { fileSearch.search(palette.query) }
         // Re-scan on open so an app uninstalled since the last scan drops out of the launcher.
@@ -76,6 +78,11 @@ final class PaletteCoordinator {
     func hidePalette(restoreFocus: Bool = true) {
         fileSearch.cancel()
         windowController.hide(restoreFocus: restoreFocus)
+    }
+
+    /// Drop the preserved screen at once, ignoring the Pop to Root Search timeout.
+    func popToRootNow() {
+        windowController.popToRootNow()
     }
 
     /// True for the slim compact bar: compact on, launcher root, empty, not overflowed.

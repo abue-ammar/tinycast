@@ -28,6 +28,7 @@ struct SettingsBackup: Codable {
         var emojiSkinTone: String?
         var showInMenuBar: Bool?
         var popToRootSeconds: Int?
+        var escapeKeyBehavior: String?
         var appearance: String?
         var compactMode: Bool?
         var showFavoritesInCompactMode: Bool?
@@ -119,6 +120,7 @@ extension SettingsBackup {
             showInMenuBar: UserDefaults.standard.object(forKey: SettingsKey.showInMenuBar) as? Bool
                 ?? true,
             popToRootSeconds: s.popToRootTimeout.rawValue,
+            escapeKeyBehavior: s.escapeKeyBehavior.rawValue,
             appearance: s.appearance.rawValue,
             compactMode: s.compactMode,
             showFavoritesInCompactMode: s.showFavoritesInCompactMode,
@@ -282,6 +284,10 @@ extension SettingsBackup {
         }
         if let secs = s.popToRootSeconds, let timeout = PopToRootTimeout(rawValue: secs) {
             settings.popToRootTimeout = timeout
+            count += 1
+        }
+        if let raw = s.escapeKeyBehavior, let behavior = EscapeKeyBehavior(rawValue: raw) {
+            settings.escapeKeyBehavior = behavior
             count += 1
         }
         if let raw = s.appearance, let appearance = AppAppearance(rawValue: raw) {

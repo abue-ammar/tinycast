@@ -155,6 +155,9 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Pop to Root Search",
             keywords: ["reset", "timeout", "back"]),
         .init(
+            .generalGeneral, "Escape Key Behavior",
+            keywords: ["esc", "back", "close", "root", "navigation", "keyboard"]),
+        .init(
             .generalGeneral, "Auto-switch input source",
             keywords: ["keyboard", "layout", "language", "abc"])
     ]

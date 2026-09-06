@@ -42,9 +42,31 @@ enum RaycastTests {
         decryption()
         gunzipSlices()
         gunzipCap()
+        escapeKeyBehavior()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
+    }
+
+    // MARK: - Settings mapping
+
+    /// A `.rayconfig` carries Raycast's own spelling, and only its own spelling.
+    static func escapeKeyBehavior() {
+        expect(
+            EscapeKeyBehavior(raycastValue: "pop-back-or-close") == .popBackOrClose,
+            "Raycast's default maps to going back")
+        expect(
+            EscapeKeyBehavior(raycastValue: "close-and-pop-to-root") == .closeAndPopToRoot,
+            "Raycast's other option maps to closing")
+        expect(
+            EscapeKeyBehavior(raycastValue: "popBackOrClose") == nil,
+            "our own raw value is not Raycast's spelling, so it is skipped")
+        expect(
+            EscapeKeyBehavior(raycastValue: "sometimes") == nil,
+            "an unknown behaviour is skipped rather than guessed at")
+        expect(
+            EscapeKeyBehavior(raycastValue: "") == nil,
+            "an empty behaviour is skipped rather than defaulted")
     }
 
     // MARK: - Fixtures
