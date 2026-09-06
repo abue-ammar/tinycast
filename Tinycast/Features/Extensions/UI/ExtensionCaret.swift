@@ -25,7 +25,7 @@ struct ExtensionCaret: View {
     }
 }
 
-/// The text a control-with-list is searched by: caret at the insertion point, prompt after it.
+/// The text a control-with-list is searched by; the caret overlays the insertion point.
 struct ExtensionQueryText: View {
     let query: String
     let prompt: String
@@ -33,23 +33,15 @@ struct ExtensionQueryText: View {
     let phase: Date
 
     var body: some View {
-        HStack(spacing: 0) {
-            if !query.isEmpty {
-                Text(query)
-                    .font(Theme.Typography.rowTitle)
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.head)
+        // No slot of its own: a field editor's caret sits over the text's edge, not beside it.
+        Text(query.isEmpty ? prompt : query)
+            .font(Theme.Typography.rowTitle)
+            .foregroundStyle(query.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
+            .lineLimit(1)
+            .truncationMode(.head)
+            .overlay(alignment: query.isEmpty ? .leading : .trailing) {
+                ExtensionCaret(phase: phase)
+                    .offset(x: query.isEmpty ? -ExtensionFormMetrics.caretPromptGap : 0)
             }
-            ExtensionCaret(phase: phase)
-            if query.isEmpty {
-                // After the caret, exactly as an empty field's prompt sits after its own.
-                Text(prompt)
-                    .font(Theme.Typography.rowTitle)
-                    .foregroundStyle(Theme.Colors.textTertiary)
-                    .lineLimit(1)
-                    .padding(.leading, ExtensionFormMetrics.caretPromptGap)
-            }
-        }
     }
 }
