@@ -40,7 +40,8 @@ struct ExtensionCommandView: View {
                     isLoading: screen.isLoading, assetsPath: assetsPath)
             case .form:
                 ExtensionFormView(
-                    screen: screen, assetsPath: assetsPath, onChange: onFieldChange,
+                    screen: screen, assetsPath: assetsPath, selection: selection, scroll: scroll,
+                    onSelect: onSelect, onChange: onFieldChange,
                     onSubmit: { onActivate(selection) })
             case .unsupported(let type):
                 if type.isEmpty {
@@ -157,8 +158,11 @@ struct ExtensionFeedbackOverlay: View {
 enum ExtensionActionsMenu {
     /// What the panel belongs to: the selected row, or the screen when the selection has outrun it.
     static func header(screen: ExtensionScreen, selection: Int) -> String? {
-        screen.items.indices.contains(selection)
-            ? screen.items[selection].node.string("title") : screen.navigationTitle
+        // A form's rows are its fields, and the panel acts on the form rather than on one field.
+        guard screen.kind != .form, screen.items.indices.contains(selection) else {
+            return screen.navigationTitle
+        }
+        return screen.items[selection].node.string("title")
     }
 
     /// Rows carry a resolved `ExtensionImage`; resolving per ↑/↓ would probe symbols on main.

@@ -48,9 +48,19 @@ enum PaletteAxis {
 
     var rows: [Row] { get }
     var primaryActionTitle: String { get }
+    /// True when the screen owns the keyboard, so the header's field is hidden and unfocused.
+    var hidesSearchField: Bool { get }
+    /// True when the footer and ⌘K still act with no rows — a form's action belongs to the screen.
+    var actsWithoutRows: Bool { get }
 
     /// False when the selection can't be acted on, which hides the footer pill and swallows ⌘K.
     func hasPrimaryAction(at selection: Int) -> Bool
+    /// False when ⌘K would open on nothing, which hides the Actions half of the footer group.
+    func hasActions(at selection: Int) -> Bool
+    /// True while the selected row edits with ↑/↓ itself, which leaves those keys to it.
+    func ownsVerticalKeys(at selection: Int) -> Bool
+    /// Where ⇥ goes inside the screen, or nil to leave the key to the palette's own ring.
+    func tabTarget(from selection: Int, backwards: Bool) -> Int?
     /// The ⌘K rows as the palette's own menu; nil when there are none.
     func actions(at selection: Int) -> PopoverMenuContent?
     /// Defaults to wrapping `actions(at:)`, so a screen implements one or the other.
@@ -74,6 +84,11 @@ enum PaletteAxis {
 
 extension PaletteScreen {
     func hasPrimaryAction(at selection: Int) -> Bool { true }
+    func hasActions(at selection: Int) -> Bool { true }
+    var hidesSearchField: Bool { false }
+    var actsWithoutRows: Bool { false }
+    func ownsVerticalKeys(at selection: Int) -> Bool { false }
+    func tabTarget(from selection: Int, backwards: Bool) -> Int? { nil }
     func actions(at selection: Int) -> PopoverMenuContent? { nil }
     func menuContent(
         at selection: Int, menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void

@@ -17,6 +17,10 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   Section headers are not selectable and never consume an index.
 - **While a footer menu is open the search field never resigns first responder.** Input is frozen
   instead; resigning shifts the text a point or two.
+- **The search field is never mounted conditionally.** A screen that owns the keyboard itself hides it
+  through `PaletteScreen.hidesSearchField` — opacity and hit testing, never an `if` — because
+  flipping a branch around it tears its field editor down. The header is simply left empty, and an
+  extension's `Form` is the one screen that does this today.
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`).
 - **Input-source switching is a palette session.** The source active at summon time is captured before
@@ -83,8 +87,9 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
 
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab rings the three
-surfaces a reader opens directly — launcher → AI chat → clipboard → launcher** — unless the selected
-row declares arguments, in which case it walks those fields first (see below); every other mode exits
+surfaces a reader opens directly — launcher → AI chat → clipboard → launcher** — unless the screen
+claims it through `tabTarget(from:backwards:)` (an extension's `Form` walks its own fields), or the
+selected row declares arguments, in which case it walks those fields first (see below); every other mode exits
 to the launcher rather than joining the ring, and is reached by a command or a global hotkey, with
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
 `aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced. **Escape clears a

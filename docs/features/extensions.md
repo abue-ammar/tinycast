@@ -194,7 +194,87 @@ screens hold (see [palette.md](palette.md)).
   The feature's own fills live in `ExtensionColors` — never in `Theme`.
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
   edit dispatches `onTinycastChange` and the resulting re-render is what updates the control, so
-  `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
+  `defaultValue`, a controlled `value`, and `ref.reset()` all behave. **A form takes the whole
+  keyboard**: its fields *are* the palette's rows, so the search field is hidden and the header left
+  empty. `ExtensionFormField` says what each `Form.*` node is —
+  which of them focus lands on, which keys the control keeps, and which need a focus ring drawn — and
+  `ExtensionScreen` publishes exactly the focusable ones as `items`, so ↑/↓, ⇥/⇧⇥ and the flat
+  selection all walk one order. ⇥ wraps at both ends, ↵ opens a closed picker then commits its choice,
+  while ⌘↵ submits the form from any field. Return and keypad Enter behave alike; holding either
+  never repeats an activation or submission. Space or ↵ toggles a checkbox and opens a file picker,
+  ←/→ step a dropdown's value and a tag picker's chips, and a text area keeps ↑/↓ for its own lines so
+  only ⇥ leaves it. A field marked `autoFocus`
+  is where the form opens, otherwise the first one. While a control holds focus
+  `PaletteState.isEditingField` is set, which is what keeps a bare backspace deleting text rather
+  than backing out of the command. The footer's Actions half is drawn only when the panel holds more
+  than the one action the ⌘↵ pill already runs, so a plain Submit-only form shows just the pill.
+
+  **Every control is drawn by the feature, none by SwiftUI's stock parts.** `ExtensionFieldChrome`
+  is the one rounded surface they all share and `ExtensionFormMetrics` the one place their geometry
+  is stated, so a field, a picker and a text area line up by construction. A `Picker` opens only to a
+  click and a `DatePicker` has no expression field, which is why neither is used.
+
+  A `Form.Dropdown` and a `Form.TagPicker` are the same control — `ExtensionPickerField` — differing
+  only in whether it holds one value or several. It drops `ExtensionPickerList`, a searchable list,
+  and **the control keeps first responder the whole time it is open**: the list is a separate window,
+  and a second field inside it would take focus off the control and close the list. So the
+  popover's search row renders the query rather than editing it, and every key — the arrows, ↵, ⎋,
+  ⌫ and each typed character — is claimed on the control. `PaletteState.isControlListOpen` is what
+  keeps the palette's own arrow and Escape handlers out of an open list; without it ↓ moved the
+  form's selection instead of the list's highlight.
+
+  **The list is hosted in a window of its own**, `ExtensionListPanel`, exactly as the ⌘K menu is by
+  `MenuPanelController`. Glass samples what lies behind the window it is in, so a list drawn as an
+  in-window overlay sampled the form and read as a different material however its fill was tuned.
+  With its own borderless child panel it samples the desktop, and a picker and the actions menu are
+  the same surface by construction rather than by matching. It keeps the panel's row pitch, icon
+  slot and overflow fade, and a focused control takes the system accent edge that Settings and the
+  shortcut recorder already draw. Opening a long list reveals its current selection; updates to
+  row titles, icons, sections and date details refresh an open panel even when row IDs stay the same.
+  Its metrics are restated in `ExtensionFormMetrics` rather than read off the panel: an extension's
+  surfaces own their own, and a launcher change must never move a form.
+
+  **The query is typed into the control, not into the list.** The one field editor belongs to the
+  palette's search field, so a picker draws its own caret (`ExtensionCaret`) and renders what has
+  been typed in place of its value — the text appears where the eye already is, and a multi-select
+  keeps its chosen values beside it. `ExtensionQueryText` overlays the caret on the text's edge, so
+  the prompt and the typed query start exactly where the closed control's value does, and the caret
+  is stepped by a timer at AppKit's own rate — a `repeatForever` animation fades where a real caret
+  switches. The list is results only.
+
+  **Form activation keys use `ExtensionFormKey`**, applied by `ExtensionFormKeys` to each field.
+  The palette defers to focused fields; an open Actions menu and IME composition keep precedence.
+  `ExtensionListKey` handles list navigation and search editing. A stack of
+  separate `onKeyPress` modifiers let a character rule shadow ⌫, and ⌫ arrives carrying U+007F
+  rather than the U+0008 SwiftUI's `.delete` names, so nothing was ever deleted from a search.
+  Both spellings are answered before characters are considered at all, and the rules are pure so
+  `ext-form-test` drives them.
+
+  `ExtensionDateField` is the same shape over `ExtensionDateExpression`, which parses what Raycast's
+  date field parses — "tomorrow at 10am", "in 3 days", "next friday", "25 dec" — and offers the same
+  presets. It is pure and takes its clock and calendar as parameters, so `ext-form-test` drives it
+  and the popover's flip-up rule directly.
+
+  A picker opens downward, or upward when the form's bottom edge would cut the list off, which is
+  `ExtensionFormMetrics.placement` applied by `ExtensionListPlacement` against the palette's own
+  frame in screen space, so a list can overhang the form's scroller but never the window. The
+  chevron points the way the list actually went. Scrolling its control out of view closes the list,
+  and so does a press on bare form, which the form catches behind its fields.
+
+  **React answers a keystroke a render late**, so a value echoed back mid-word is older than what has
+  been typed since. Both text controls hold the last edit they dispatched and ignore every echo until
+  it catches up; without that, typing at speed dropped characters — "Test from Codex" arrived as
+  "T Codex".
+
+  Every control carries its title as an accessibility label and its selection as a value, so a
+  picker announces "Difficulty, Easy" rather than the chevron it is drawn with. It reads under the
+  pointer as well as the keyboard: controls lift on hover, a list's rows highlight under the mouse
+  so both share one selection, and clicking a control takes focus as well as acting, which is what
+  lets the two be mixed mid-form.
+
+  `Tests/ext-form-test.swift` drives activation rules, geometry and the parser; earlier interaction checks used
+  a Form Lab extension covering every control, sectioned and empty and 40-option lists, validation
+  errors, wrapping labels, and forms taller than the palette, in both appearances.
 - **ActionPanel** — flattened (sections and submenus included) into `ExtensionActionsPanel`, the
   feature's own scrolling ⌘K panel. Its rows are `ExtensionActionItem`, not `PopoverMenuItem`: an
   action's `icon` is a full `ImageLike`, so it resolves through `ExtensionImage` like every other

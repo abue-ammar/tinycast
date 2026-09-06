@@ -261,11 +261,18 @@ run ext-cleanup-test       $E/Service/ExtensionCleanup.swift \
 run ext-store-test         $E/Model/ExtensionRegistry.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift
+run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
+                           $E/Model/ExtensionFormField.swift \
+                           $E/UI/ExtensionFormKey.swift \
+                           $E/Model/ExtensionDateExpression.swift \
+                           $E/UI/ExtensionListKey.swift \
+                           Tests/ext-list-key-test.swift
 run slow ext-test          -parse-as-library \
                            Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            $E/Model/ExtensionBootConfig.swift \
+                           $E/Model/ExtensionFormField.swift \
                            $E/Model/ExtensionGridLayout.swift \
                            $E/Model/ExtensionManifest.swift \
                            $E/Model/RenderNode.swift \
