@@ -177,8 +177,9 @@ subtracts them, and powers multiply them. `CalcUnits.baseUnits` resolves support
 ordinary units, so conversions and addition need no second representation. Derived results use base
 units unless a trailing conversion names another: `5m * 4m` → `20 m²`,
 `100km / 2h to km/h` → `50 km/h`, `90km/h * 20min to km` → `30 km`.
-Area, volume, speed, acceleration, force, pressure, energy, power, frequency, data rates and electrical
-units compose through this same path. Unsupported dimensions remain errors; arbitrary compound units are not stored.
+Area, volume, volume flow, speed, acceleration, force, pressure, energy, power, frequency, data rates
+and electrical units compose through this same path. Unsupported dimensions remain errors;
+arbitrary compound units are not stored.
 
 All factors share composable bases: cubic meters for volume and bytes per second for data rates.
 To add a dimension, declare its signature on `UnitCategory`, add its units to `byName`, and register
@@ -196,6 +197,13 @@ Identifiers check exact registered spellings before case folding, so SI mega sym
 The typed parser shares scalar constants and functions with `CalcParser`; `pi * (2m)^2`,
 `sqrt(25m2)` and `cbrt(8m3)` work without a geometry-specific grammar.
 
+Volume includes cubic millimeters through cubic meters, cubic inches/feet/yards, and mL/cL/dL/L.
+Bare cubic amounts auto-convert to liters or milliliters. Customary volumes use US liquid measures,
+including `fl oz` / `floz`; plain `oz` remains weight.
+Volume flow adds length³/time to the same dimension table, with `m³/s` as its base:
+`10l / 2min to l/min` → `5 L/min`, `10l/min * 30s to l` → `5 L`,
+`150l / 10l/min to duration` → `15 min`. Its units also include L/s, L/h, m³/h and gal/min (`gpm`).
+
 `to timespan` / `to duration` formats any evaluated time quantity, including
 `(1hr + 30min) to timespan` and `100km / 40km/h to duration`. It uses the typed parser directly.
 Affine temperatures may only be added or subtracted when both operands use the same scale; treating
@@ -209,10 +217,10 @@ An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace kee
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
 target makes the intent unambiguous (`273.15K to C`).
 
-A **slashed rate** (`km/h`, `m/s`, `mbit/s`) is one unit rather than a division, but only when the
-table knows the whole spelling: the tokenizer looks ahead from a letter run across a `/` to the next
-one and keeps them together only if `CalcUnits.byName` resolves the result. That is the same
-table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
+A **compound unit** (`km/h`, `m³/h`, `mbit/s`, `fl oz`) stays whole only when the table knows its
+spelling: the tokenizer looks ahead across `/` or whitespace between two alphanumeric runs,
+folds superscript powers, and keeps them together only if `CalcUnits.byName` resolves the result.
+That is the same table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
 `10 m / 2` still divide while `1 km/x` stays silent.
 
 Beyond the core four, `CalcParser.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),

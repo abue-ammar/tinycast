@@ -62,11 +62,29 @@ Derived results use base units unless you name a target with `to` / `in`.
 Power × minutes/hours naturally uses Wh/kWh; current × minutes/hours uses Ah/mAh.
 `m²` and `m2` mean square meters; `(2m)^2` squares the whole quantity.
 Use `pi * (2m)^2` for a circle's area and `sin(30deg) * 10m` for a triangle's opposite side.
-Cubic units accept `m³` / `m3`, `cm3`, `ft3`, `in3`, and `yd3`.
 
 `to timespan` also works for mixed durations: `(1hr + 30min) to timespan` → `1 hr 30 min`.
 Affine temperatures may only be added or subtracted within one scale; products involving
 temperatures and unsupported dimensions remain errors.
+
+## Volume and flow
+
+| You type | You get |
+| --- | --- |
+| `1m3` | `1,000 L` |
+| `1dm³ to l` | `1 L` |
+| `2m * 30cm * 40cm to l` | `240 L` |
+| `pi * (10cm)^2 * 30cm to l` | `9.424777961 L` (cylinder) |
+| `500l / (2m * 1m) to cm` | `25 cm` (tank depth) |
+| `10l / 2min to l/min` | `5 L/min` |
+| `10l/min * 30s to l` | `5 L` |
+| `150l / 10l/min to duration` | `15 min` |
+| `60l/min to m3/h` | `3.6 m³/h` |
+
+Cubic units accept `mm³`, `cm³`, `dm³`, `m³`, `in³`, `ft³`, and `yd³`, or a plain `3` instead of `³`.
+Liquid measures include `mL`, `cL`, `dL`, `L`, cups, tablespoons, teaspoons and US gallons/quarts/pints.
+Use `fl oz` / `floz` for US fluid ounces; plain `oz` is weight.
+Flow units include `L/s`, `L/min`, `L/h`, `m³/s`, `m³/h`, and `gal/min` (`gpm`, US gallons per minute).
 
 ## Electrical calculations
 

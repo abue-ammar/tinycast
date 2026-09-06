@@ -102,10 +102,9 @@ enum CalcTokenizer {
                             continue
                         }
                     }
-                    // A slashed rate ("km/h") is one unit, so it must beat the division operator.
-                    if let rate = slashedUnit(chars, i) {
-                        tokens.append(.ident(rate.name))
-                        i = rate.end
+                    if let unit = compoundUnit(chars, i) {
+                        tokens.append(.ident(unit.name))
+                        i = unit.end
                         continue
                     }
                 }
@@ -173,20 +172,21 @@ enum CalcTokenizer {
     }
 
     /// Only a spelling the table resolves, so `6/2(1+2)` keeps dividing.
-    private static func slashedUnit(_ chars: [Character], _ start: Int) -> (name: String, end: Int)? {
-        var numeratorEnd = start
-        while numeratorEnd < chars.count, chars[numeratorEnd].isLetter { numeratorEnd += 1 }
-        guard numeratorEnd < chars.count, chars[numeratorEnd] == "/" else { return nil }
-        var denominatorEnd = numeratorEnd + 1
-        while denominatorEnd < chars.count,
-            chars[denominatorEnd].isLetter || chars[denominatorEnd].isNumber
-        { denominatorEnd += 1 }
-        guard denominatorEnd > numeratorEnd + 1 else { return nil }
-        let name = String(chars[start..<denominatorEnd]).lowercased()
+    private static func compoundUnit(_ chars: [Character], _ start: Int) -> (name: String, end: Int)? {
+        var leftEnd = start
+        while leftEnd < chars.count, chars[leftEnd].isLetter || chars[leftEnd].isNumber { leftEnd += 1 }
+        guard leftEnd < chars.count, chars[leftEnd] == "/" || chars[leftEnd].isWhitespace else { return nil }
+        let separator = chars[leftEnd] == "/" ? "/" : " "
+        var rightStart = leftEnd + 1
+        while rightStart < chars.count, chars[rightStart].isWhitespace { rightStart += 1 }
+        var end = rightStart
+        while end < chars.count, chars[end].isLetter || chars[end].isNumber { end += 1 }
+        guard end > rightStart else { return nil }
+        let name = (String(chars[start..<leftEnd]) + separator + String(chars[rightStart..<end])).lowercased()
             .replacingOccurrences(of: "²", with: "2")
             .replacingOccurrences(of: "³", with: "3")
         guard CalcUnits.byName[name] != nil else { return nil }
-        return (name, denominatorEnd)
+        return (name, end)
     }
 
     /// Whether the `k` at `index` is a thousands suffix rather than Kelvin or a unit's head.

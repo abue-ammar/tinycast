@@ -3,7 +3,7 @@ import Foundation
 enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
     case angle, speed, pressure, dataRate, acceleration, force, energy, power, frequency
-    case electricCurrent, voltage, resistance, electricCharge
+    case electricCurrent, voltage, resistance, electricCharge, volumeFlow
 
     var displayName: String {
         switch self {
@@ -27,6 +27,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .voltage: return "Voltage"
         case .resistance: return "Resistance"
         case .electricCharge: return "Electric Charge"
+        case .volumeFlow: return "Volume Flow Rate"
         }
     }
 
@@ -50,6 +51,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .voltage: return CalcDimension(length: 2, mass: 1, time: -3, electricCurrent: -1)
         case .resistance: return CalcDimension(length: 2, mass: 1, time: -3, electricCurrent: -2)
         case .electricCharge: return CalcDimension(time: 1, electricCurrent: 1)
+        case .volumeFlow: return CalcDimension(length: 3, time: -1)
         case .temperature, .angle: return nil
         }
     }
@@ -77,7 +79,7 @@ enum CalcUnits {
         var units: [CalcDimension: UnitDef] = [:]
         for name in [
             "m", "kg", "s", "m2", "m3", "b", "m/s", "pa", "bps", "m/s2", "n", "j", "w", "hz",
-            "a", "v", "ohm", "as"
+            "a", "v", "ohm", "as", "m3/s"
         ] {
             if let unit = byName[name], let dimension = unit.category.dimension {
                 units[dimension] = unit
@@ -176,7 +178,7 @@ enum CalcUnits {
     static let autoTargets: [String: (to: String, compound: Bool)] = [
         // Length
         "mm": ("in", false), "cm": ("in", false), "m": ("ft", true), "km": ("mi", false),
-        "in": ("cm", false), "ft": ("m", false), "yd": ("m", false), "mi": ("km", false),
+        "dm": ("cm", false), "in": ("cm", false), "ft": ("m", false), "yd": ("m", false), "mi": ("km", false),
         // Weight
         "mg": ("g", false), "g": ("oz", false), "kg": ("lb", false), "oz": ("g", false),
         "lb": ("kg", false),
@@ -190,10 +192,16 @@ enum CalcUnits {
         "mm²": ("in2", false), "cm²": ("in2", false), "m²": ("ft2", false), "km²": ("mi2", false),
         "in²": ("cm2", false), "ft²": ("m2", false), "yd²": ("m2", false), "mi²": ("km2", false),
         "acre": ("m2", false), "ha": ("acre", false),
+        "dm²": ("cm2", false),
         // Volume
         "mL": ("floz", false), "L": ("gal", false), "cup": ("ml", false), "tbsp": ("ml", false),
         "tsp": ("ml", false), "gal": ("l", false), "qt": ("l", false), "pt": ("ml", false),
         "fl oz": ("ml", false),
+        "cL": ("ml", false), "dL": ("ml", false),
+        "mm³": ("ml", false), "cm³": ("ml", false), "dm³": ("l", false), "m³": ("l", false),
+        "in³": ("ml", false), "ft³": ("l", false), "yd³": ("l", false),
+        "L/s": ("l/min", false), "L/min": ("l/h", false), "L/h": ("l/min", false),
+        "m³/s": ("l/s", false), "m³/h": ("l/min", false), "gal/min": ("l/min", false),
         // Digital storage
         "bit": ("b", false), "B": ("bit", false), "kB": ("kib", false), "MB": ("mib", false),
         "GB": ("gib", false), "TB": ("tib", false), "PB": ("tb", false), "KiB": ("kb", false),
@@ -232,6 +240,9 @@ enum CalcUnits {
         add(
             UnitDef("cm", "Centimeters", .length, 0.01),
             ["cm", "centimeter", "centimeters", "centimetre", "centimetres"])
+        add(
+            UnitDef("dm", "Decimeters", .length, 0.1),
+            ["dm", "decimeter", "decimeters", "decimetre", "decimetres"])
         add(UnitDef("m", "Meters", .length, 1), ["m", "meter", "meters", "metre", "metres"])
         add(
             UnitDef("km", "Kilometers", .length, 1000),
@@ -274,6 +285,7 @@ enum CalcUnits {
         // Area (base: square meter). The tokenizer folds "²" to "2", so mm²/mm2 are one name.
         add(UnitDef("mm²", "Square Millimeters", .area, 1e-6), ["mm2", "sqmm"])
         add(UnitDef("cm²", "Square Centimeters", .area, 1e-4), ["cm2", "sqcm"])
+        add(UnitDef("dm²", "Square Decimeters", .area, 0.01), ["dm2", "sqdm"])
         add(UnitDef("m²", "Square Meters", .area, 1), ["m2", "sqm"])
         add(UnitDef("km²", "Square Kilometers", .area, 1e6), ["km2", "sqkm"])
         add(UnitDef("in²", "Square Inches", .area, 0.00064516), ["in2", "sqin"])
@@ -287,6 +299,12 @@ enum CalcUnits {
         add(
             UnitDef("mL", "Milliliters", .volume, 1e-6),
             ["ml", "milliliter", "milliliters", "millilitre", "millilitres"])
+        add(
+            UnitDef("cL", "Centiliters", .volume, 1e-5),
+            ["cl", "centiliter", "centiliters", "centilitre", "centilitres"])
+        add(
+            UnitDef("dL", "Deciliters", .volume, 1e-4),
+            ["dl", "deciliter", "deciliters", "decilitre", "decilitres"])
         add(UnitDef("L", "Liters", .volume, 0.001), ["l", "liter", "liters", "litre", "litres"])
         add(UnitDef("cup", "Cups", .volume, 0.0002365882365), ["cup", "cups"])
         add(
@@ -298,14 +316,22 @@ enum CalcUnits {
         add(UnitDef("gal", "Gallons", .volume, 0.003785411784), ["gal", "gallon", "gallons"])
         add(UnitDef("qt", "Quarts", .volume, 0.000946352946), ["qt", "quart", "quarts"])
         add(UnitDef("pt", "Pints", .volume, 0.000473176473), ["pt", "pint", "pints"])
-        add(UnitDef("fl oz", "Fluid Ounces", .volume, 0.0000295735295625), ["floz"])
+        add(UnitDef("fl oz", "Fluid Ounces", .volume, 0.0000295735295625), ["floz", "fl oz"])
 
         add(UnitDef("mm³", "Cubic Millimeters", .volume, 1e-9), ["mm3"])
         add(UnitDef("cm³", "Cubic Centimeters", .volume, 1e-6), ["cm3", "cc"])
+        add(UnitDef("dm³", "Cubic Decimeters", .volume, 0.001), ["dm3"])
         add(UnitDef("m³", "Cubic Meters", .volume, 1), ["m3"])
         add(UnitDef("in³", "Cubic Inches", .volume, 0.000016387064), ["in3"])
         add(UnitDef("ft³", "Cubic Feet", .volume, 0.028316846592), ["ft3"])
         add(UnitDef("yd³", "Cubic Yards", .volume, 0.764554857984), ["yd3"])
+
+        add(UnitDef("L/s", "Liters per Second", .volumeFlow, 0.001), ["l/s", "l/sec"])
+        add(UnitDef("L/min", "Liters per Minute", .volumeFlow, 0.001 / 60), ["l/min", "lpm"])
+        add(UnitDef("L/h", "Liters per Hour", .volumeFlow, 0.001 / 3600), ["l/h", "l/hr", "lph"])
+        add(UnitDef("m³/s", "Cubic Meters per Second", .volumeFlow, 1), ["m3/s", "m3/sec"])
+        add(UnitDef("m³/h", "Cubic Meters per Hour", .volumeFlow, 1.0 / 3600), ["m3/h", "m3/hr"])
+        add(UnitDef("gal/min", "Gallons per Minute", .volumeFlow, 0.003785411784 / 60), ["gal/min", "gpm"])
 
         // Digital storage (base: byte): kB/MB are SI (1000ⁿ), KiB/MiB are IEC (1024ⁿ).
         add(UnitDef("bit", "Bits", .digitalStorage, 0.125), ["bit", "bits"])
