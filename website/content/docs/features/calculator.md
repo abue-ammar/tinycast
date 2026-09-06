@@ -43,8 +43,28 @@ Percentages are relative for `+` and `-` (`10kg + 20%` → `12 kg`) and a fracti
 
 A bare quantity auto-converts: `1m` gives feet and inches, `1hr` gives 60 min.
 
-Multiplying two unit values is an error rather than a guess at a derived dimension. Affine
-temperatures may only be added or subtracted within one scale.
+Measurements combine into area, volume, speed and other physical quantities:
+
+| You type | You get |
+| --- | --- |
+| `5m * 4m` | `20 m²` |
+| `2m * 3m * 4m to l` | `24,000 L` |
+| `sqrt(25m2)` | `5 m` |
+| `100km / 2h to km/h` | `50 km/h` |
+| `90km/h * 20min to km` | `30 km` |
+| `100km / 40km/h to duration` | `2 hr 30 min` |
+| `1GB / 100mbps to s` | `80 s` |
+| `1500w * 2h to kwh` | `3 kWh` |
+| `1 / 20ms to hz` | `50 Hz` |
+
+Derived results use base units unless you name a target with `to` / `in`.
+`m²` and `m2` mean square meters; `(2m)^2` squares the whole quantity.
+Use `pi * (2m)^2` for a circle's area and `sin(30deg) * 10m` for a triangle's opposite side.
+Cubic units accept `m³` / `m3`, `cm3`, `ft3`, `in3`, and `yd3`.
+
+`to timespan` also works for mixed durations: `(1hr + 30min) to timespan` → `1 hr 30 min`.
+Affine temperatures may only be added or subtracted within one scale; products involving
+temperatures and unsupported dimensions remain errors.
 
 ## Currency and crypto
 

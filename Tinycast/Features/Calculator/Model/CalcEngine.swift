@@ -83,7 +83,10 @@ enum CalcEngine {
 
         if let base = baseConversion(tokens, query: query) { return base }
 
-        if let span = timespanConversion(tokens, query: query) { return span }
+        // Typed arithmetic first, so aliases such as `pounds` keep winning in multi-term exprs.
+        if let quantity = CalcQuantity.evaluate(tokens, query: query, rates: rates, region: region) {
+            return quantity
+        }
 
         // Conversions run before the numeric reject below: `m to ft`, `day s` carry no digit.
         if let conversion = CalcUnits.parseConversion(tokens) ?? CalcUnits.parseUnitPairConversion(tokens) {
@@ -104,11 +107,6 @@ enum CalcEngine {
                             "Cannot convert \(from.category.displayName) to \(to.category.displayName)."
                     ))
             }
-        }
-
-        // Typed arithmetic first, so aliases such as `pounds` keep winning in multi-term exprs.
-        if let quantity = CalcQuantity.evaluate(tokens, query: query, rates: rates, region: region) {
-            return quantity
         }
 
         // After units, so `10 pounds to kg` stays weight.
@@ -248,27 +246,6 @@ enum CalcEngine {
             sourceBadge: result.sourceBadge,
             targetBadge: result.targetBadge,
             payload: result.payload)
-    }
-
-    // MARK: - Timespans
-
-    private static func timespanConversion(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        guard tokens.count >= 3, case .ident(let target) = tokens[tokens.count - 1],
-            target == "timespan" || target == "duration",
-            CalcUnits.isConnector(tokens[tokens.count - 2]),
-            case .ident(let unitName) = tokens[tokens.count - 3],
-            let unit = CalcUnits.byName[unitName], unit.category == .time,
-            let amount = CalcParser.evaluate(Array(tokens[0..<(tokens.count - 3)]))
-        else { return nil }
-
-        let seconds = amount * unit.factor
-        guard seconds.isFinite else { return nil }
-        let text = CalcFormatter.timespan(seconds)
-        return CalcResult(
-            expression: "\(CalcFormatter.display(amount)) \(unit.symbol)",
-            sourceBadge: unit.name,
-            targetBadge: "Timespan",
-            payload: .value(display: text, copyText: text))
     }
 
     // MARK: - Number bases

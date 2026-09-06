@@ -179,9 +179,13 @@ enum CalcTokenizer {
         while numeratorEnd < chars.count, chars[numeratorEnd].isLetter { numeratorEnd += 1 }
         guard numeratorEnd < chars.count, chars[numeratorEnd] == "/" else { return nil }
         var denominatorEnd = numeratorEnd + 1
-        while denominatorEnd < chars.count, chars[denominatorEnd].isLetter { denominatorEnd += 1 }
+        while denominatorEnd < chars.count,
+            chars[denominatorEnd].isLetter || chars[denominatorEnd].isNumber
+        { denominatorEnd += 1 }
         guard denominatorEnd > numeratorEnd + 1 else { return nil }
         let name = String(chars[start..<denominatorEnd]).lowercased()
+            .replacingOccurrences(of: "²", with: "2")
+            .replacingOccurrences(of: "³", with: "3")
         guard CalcUnits.byName[name] != nil else { return nil }
         return (name, denominatorEnd)
     }
@@ -251,7 +255,7 @@ enum CalcParser {
     }
 
     // Capture-free closures, not C function refs, so every entry infers `@Sendable` in Swift 5.
-    fileprivate static let functions: [String: @Sendable (Double) -> Double] = [
+    static let functions: [String: @Sendable (Double) -> Double] = [
         "sqrt": { sqrt($0) }, "log": { log10($0) }, "ln": { log($0) }, "sin": { sin($0) },
         "cos": { cos($0) }, "tan": { tan($0) }, "abs": { abs($0) }, "floor": { floor($0) },
         "ceil": { ceil($0) }, "round": { $0.rounded() },
@@ -264,7 +268,7 @@ enum CalcParser {
         "sign": { $0 > 0 ? 1 : ($0 < 0 ? -1 : 0) }, "trunc": { $0.rounded(.towardZero) }
     ]
 
-    fileprivate static let constants: [String: Double] = [
+    static let constants: [String: Double] = [
         "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2
     ]
 

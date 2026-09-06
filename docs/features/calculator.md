@@ -40,20 +40,18 @@ in (see Currency below).
    `today + 3 weeks`)
 2. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
    because a zone phrase is words rather than calculator input
-3. Numeric reject
-4. Tokenize
-5. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
-6. Base conversion
-7. **Timespan** (`145 mins to timespan` → `2 hr 25 min`)
-8. Explicit unit conversion (`10km to mi`)
-9. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`,
-   `(20 sgd to usd) * 30`), which also answers a bare amount (`1 usd`, `1 btc`) in the Mac's own
-   currency
-10. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
-11. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
-   `CalcUnits.parseBareConversion` + the `autoTargets` map)
-12. Natural-language percent, ratio and list forms (`CalcPercent`)
-13. Plain arithmetic
+3. Tokenize, then preserve the complete prefix of a trailing binary operator
+4. Base conversion
+5. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
+   `100km / 2h to km/h`, `(1hr + 30min) to timespan`)
+6. Explicit unit conversion (`10km to mi`, `m to ft`, `day s`)
+7. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
+8. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
+9. Natural-language percent, ratio and list forms (`CalcPercent`)
+10. Numeric reject, then plain arithmetic
+
+Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a duration,
+not a scalar subsequently labeled milliseconds. Simple conversions still own their source badges.
 
 Date/time depends on the clock, so it takes an injected `now` / `calendar` — the public `evaluate(_:)`
 uses the live clock, and `evaluate(_:now:calendar:)` lets `calc-test.swift` assert exact strings
@@ -155,7 +153,23 @@ answering nothing.
 Once an operator is involved the answer stays in the units written, so `2 * 5kg` is `10 kg`. Only a
 bare quantity (`50cm`, `1m`) falls through to the keyword-less auto-conversion below.
 
-Derived dimensions are deliberately not guessed: multiplying two unit values returns a clear error.
+`CalcDimension` records length, mass, time and data exponents. Products add exponents, division
+subtracts them, and powers multiply them. `CalcUnits.baseUnits` resolves supported results back to
+ordinary units, so conversions and addition need no second representation. Derived results use base
+units unless a trailing conversion names another: `5m * 4m` → `20 m²`,
+`100km / 2h to km/h` → `50 km/h`, `90km/h * 20min to km` → `30 km`.
+Area, volume, speed, acceleration, force, pressure, energy, power, frequency and data rates compose
+through this same path. Unsupported dimensions remain errors; arbitrary compound units are not stored.
+
+All factors share composable bases: cubic meters for volume and bytes per second for data rates.
+To add a dimension, declare its signature on `UnitCategory`, add its units to `byName`, and register
+one output in `baseUnits`. A new unit within a category only needs a table entry.
+`m²` / `m2` and `m³` / `m3` name units; `(2m)^2` squares the entire quantity.
+The typed parser shares scalar constants and functions with `CalcParser`; `pi * (2m)^2`,
+`sqrt(25m2)` and `cbrt(8m3)` work without a geometry-specific grammar.
+
+`to timespan` / `to duration` formats any evaluated time quantity, including
+`(1hr + 30min) to timespan` and `100km / 40km/h to duration`. It uses the typed parser directly.
 Affine temperatures may only be added or subtracted when both operands use the same scale; treating
 an absolute Celsius/Fahrenheit value as a delta would silently produce physically incorrect answers.
 

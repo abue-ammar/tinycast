@@ -2,7 +2,7 @@ import Foundation
 
 enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
-    case angle, speed, pressure, dataRate
+    case angle, speed, pressure, dataRate, acceleration, force, energy, power, frequency
 
     var displayName: String {
         switch self {
@@ -17,6 +17,31 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .speed: return "Speed"
         case .pressure: return "Pressure"
         case .dataRate: return "Data Transfer Rate"
+        case .acceleration: return "Acceleration"
+        case .force: return "Force"
+        case .energy: return "Energy"
+        case .power: return "Power"
+        case .frequency: return "Frequency"
+        }
+    }
+
+    var dimension: CalcDimension? {
+        switch self {
+        case .length: return CalcDimension(length: 1)
+        case .weight: return CalcDimension(mass: 1)
+        case .time: return CalcDimension(time: 1)
+        case .area: return CalcDimension(length: 2)
+        case .volume: return CalcDimension(length: 3)
+        case .digitalStorage: return CalcDimension(data: 1)
+        case .speed: return CalcDimension(length: 1, time: -1)
+        case .pressure: return CalcDimension(length: -1, mass: 1, time: -2)
+        case .dataRate: return CalcDimension(time: -1, data: 1)
+        case .acceleration: return CalcDimension(length: 1, time: -2)
+        case .force: return CalcDimension(length: 1, mass: 1, time: -2)
+        case .energy: return CalcDimension(length: 2, mass: 1, time: -2)
+        case .power: return CalcDimension(length: 2, mass: 1, time: -3)
+        case .frequency: return CalcDimension(time: -1)
+        case .temperature, .angle: return nil
         }
     }
 }
@@ -39,6 +64,16 @@ struct UnitDef: Equatable, Sendable {
 }
 
 enum CalcUnits {
+    static let baseUnits: [CalcDimension: UnitDef] = {
+        var units: [CalcDimension: UnitDef] = [:]
+        for name in ["m", "kg", "s", "m2", "m3", "b", "m/s", "pa", "bps", "m/s2", "n", "j", "w", "hz"] {
+            if let unit = byName[name], let dimension = unit.category.dimension {
+                units[dimension] = unit
+            }
+        }
+        return units
+    }()
+
     enum ConversionParse: Equatable {
         case value(input: Double, from: UnitDef, to: UnitDef, output: Double)
         case mismatch(from: UnitDef, to: UnitDef)
@@ -221,22 +256,29 @@ enum CalcUnits {
         add(UnitDef("acre", "Acres", .area, 4046.8564224), ["acre", "acres"])
         add(UnitDef("ha", "Hectares", .area, 10000), ["ha", "hectare", "hectares"])
 
-        // Volume (base: liter; US customary)
+        // Volume (base: cubic meter; US customary)
         add(
-            UnitDef("mL", "Milliliters", .volume, 0.001),
+            UnitDef("mL", "Milliliters", .volume, 1e-6),
             ["ml", "milliliter", "milliliters", "millilitre", "millilitres"])
-        add(UnitDef("L", "Liters", .volume, 1), ["l", "liter", "liters", "litre", "litres"])
-        add(UnitDef("cup", "Cups", .volume, 0.2365882365), ["cup", "cups"])
+        add(UnitDef("L", "Liters", .volume, 0.001), ["l", "liter", "liters", "litre", "litres"])
+        add(UnitDef("cup", "Cups", .volume, 0.0002365882365), ["cup", "cups"])
         add(
-            UnitDef("tbsp", "Tablespoons", .volume, 0.01478676478125),
+            UnitDef("tbsp", "Tablespoons", .volume, 0.00001478676478125),
             ["tbsp", "tablespoon", "tablespoons"])
         add(
-            UnitDef("tsp", "Teaspoons", .volume, 0.00492892159375),
+            UnitDef("tsp", "Teaspoons", .volume, 0.00000492892159375),
             ["tsp", "teaspoon", "teaspoons"])
-        add(UnitDef("gal", "Gallons", .volume, 3.785411784), ["gal", "gallon", "gallons"])
-        add(UnitDef("qt", "Quarts", .volume, 0.946352946), ["qt", "quart", "quarts"])
-        add(UnitDef("pt", "Pints", .volume, 0.473176473), ["pt", "pint", "pints"])
-        add(UnitDef("fl oz", "Fluid Ounces", .volume, 0.0295735295625), ["floz"])
+        add(UnitDef("gal", "Gallons", .volume, 0.003785411784), ["gal", "gallon", "gallons"])
+        add(UnitDef("qt", "Quarts", .volume, 0.000946352946), ["qt", "quart", "quarts"])
+        add(UnitDef("pt", "Pints", .volume, 0.000473176473), ["pt", "pint", "pints"])
+        add(UnitDef("fl oz", "Fluid Ounces", .volume, 0.0000295735295625), ["floz"])
+
+        add(UnitDef("mm³", "Cubic Millimeters", .volume, 1e-9), ["mm3"])
+        add(UnitDef("cm³", "Cubic Centimeters", .volume, 1e-6), ["cm3", "cc"])
+        add(UnitDef("m³", "Cubic Meters", .volume, 1), ["m3"])
+        add(UnitDef("in³", "Cubic Inches", .volume, 0.000016387064), ["in3"])
+        add(UnitDef("ft³", "Cubic Feet", .volume, 0.028316846592), ["ft3"])
+        add(UnitDef("yd³", "Cubic Yards", .volume, 0.764554857984), ["yd3"])
 
         // Digital storage (base: byte): kB/MB are SI (1000ⁿ), KiB/MiB are IEC (1024ⁿ).
         add(UnitDef("bit", "Bits", .digitalStorage, 0.125), ["bit", "bits"])
@@ -286,12 +328,27 @@ enum CalcUnits {
         add(UnitDef("mmHg", "Millimeters of Mercury", .pressure, 133.322387415), ["mmhg"])
         add(UnitDef("Torr", "Torr", .pressure, 101325.0 / 760), ["torr"])
 
-        // Data transfer rate (base: bit/second) — SI (1000ⁿ) bit rates.
-        add(UnitDef("bps", "Bits per Second", .dataRate, 1), ["bps"])
-        add(UnitDef("Kbps", "Kilobits per Second", .dataRate, 1e3), ["kbps", "kbit/s", "kb/s"])
-        add(UnitDef("Mbps", "Megabits per Second", .dataRate, 1e6), ["mbps", "mbit/s", "mb/s"])
-        add(UnitDef("Gbps", "Gigabits per Second", .dataRate, 1e9), ["gbps", "gbit/s", "gb/s"])
-        add(UnitDef("Tbps", "Terabits per Second", .dataRate, 1e12), ["tbps", "tbit/s", "tb/s"])
+        // Data transfer rate (base: byte/second) — SI (1000ⁿ) bit rates.
+        add(UnitDef("bps", "Bits per Second", .dataRate, 1 / 8), ["bps"])
+        add(UnitDef("Kbps", "Kilobits per Second", .dataRate, 1e3 / 8), ["kbps", "kbit/s", "kb/s"])
+        add(UnitDef("Mbps", "Megabits per Second", .dataRate, 1e6 / 8), ["mbps", "mbit/s", "mb/s"])
+        add(UnitDef("Gbps", "Gigabits per Second", .dataRate, 1e9 / 8), ["gbps", "gbit/s", "gb/s"])
+        add(UnitDef("Tbps", "Terabits per Second", .dataRate, 1e12 / 8), ["tbps", "tbit/s", "tb/s"])
+
+        add(UnitDef("m/s²", "Meters per Second Squared", .acceleration, 1), ["m/s2", "mps2"])
+        add(UnitDef("N", "Newtons", .force, 1), ["n", "newton", "newtons"])
+        add(UnitDef("kN", "Kilonewtons", .force, 1000), ["kilonewton", "kilonewtons"])
+        add(UnitDef("J", "Joules", .energy, 1), ["j", "joule", "joules"])
+        add(UnitDef("kJ", "Kilojoules", .energy, 1000), ["kj", "kilojoule", "kilojoules"])
+        add(UnitDef("Wh", "Watt Hours", .energy, 3600), ["wh"])
+        add(UnitDef("kWh", "Kilowatt Hours", .energy, 3_600_000), ["kwh"])
+        add(UnitDef("cal", "Calories", .energy, 4.184), ["cal", "calorie", "calories"])
+        add(UnitDef("kcal", "Kilocalories", .energy, 4184), ["kcal", "kilocalorie", "kilocalories"])
+        add(UnitDef("W", "Watts", .power, 1), ["w", "watt", "watts"])
+        add(UnitDef("kW", "Kilowatts", .power, 1000), ["kw", "kilowatt", "kilowatts"])
+        add(UnitDef("Hz", "Hertz", .frequency, 1), ["hz", "hertz"])
+        add(UnitDef("kHz", "Kilohertz", .frequency, 1000), ["khz", "kilohertz"])
+        add(UnitDef("MHz", "Megahertz", .frequency, 1e6), ["mhz", "megahertz"])
 
         return table
     }()

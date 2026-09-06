@@ -7,7 +7,8 @@ enum CalcQuantity {
         preserveStandaloneUnit: Bool = false
     ) -> CalcResult? {
         let split = splitConversion(tokens)
-        if split.targetName != nil, isSimpleConversionSource(split.expressionTokens) {
+        if let target = split.targetName, target != "timespan", target != "duration",
+            isSimpleConversionSource(split.expressionTokens) {
             return nil
         }
 
@@ -33,6 +34,16 @@ enum CalcQuantity {
         }
 
         if let targetName = split.targetName {
+            if targetName == "timespan" || targetName == "duration" {
+                guard case .unit(let unit) = value.kind, unit.category == .time else { return nil }
+                let seconds = value.amount * unit.factor
+                guard seconds.isFinite else { return nil }
+                let text = CalcFormatter.timespan(seconds)
+                return CalcResult(
+                    expression: expressionText(split.expressionTokens),
+                    sourceBadge: parser.operationCount == 0 ? unit.name : "Expression",
+                    targetBadge: "Timespan", payload: .value(display: text, copyText: text))
+            }
             guard let output = parser.converted(value, to: targetName) else {
                 guard let message = parser.issue else { return nil }
                 return CalcResult(expression: query, payload: .error(message: message))
@@ -334,6 +345,11 @@ private struct QuantityParser {
             if case .op("(") = current {
                 return BinaryOp(op: "*", bindingPower: 20, rightBindingPower: 21, consumesToken: false)
             }
+            if case .ident(let name) = current,
+                CalcParser.constants[name] != nil || CalcParser.functions[name] != nil
+            {
+                return BinaryOp(op: "*", bindingPower: 20, rightBindingPower: 21, consumesToken: false)
+            }
             if !isScalar(left.kind), startsQuantity(current) {
                 return BinaryOp(op: "+", bindingPower: 10, rightBindingPower: 11, consumesToken: false)
             }
@@ -352,9 +368,8 @@ private struct QuantityParser {
         case "/":
             return divide(left, right)
         case "^":
-            guard isScalar(left.kind), isScalar(right.kind) else { return nil }
-            let output = pow(left.effective, right.effective)
-            return output.isFinite ? QuantityValue(amount: output, kind: .scalar) : nil
+            guard isScalar(right.kind) else { return nil }
+            return power(left, exponent: right.effective)
         default:
             return nil
         }
@@ -434,23 +449,48 @@ private struct QuantityParser {
         case (_, .scalar):
             return QuantityValue(
                 amount: left.effective * right.effective, kind: left.kind)
+        case (.unit(let lhs), .unit(let rhs)):
+            if let dimension = lhs.category.dimension, let other = rhs.category.dimension,
+                let result = derived(
+                    left.amount * lhs.factor * right.amount * rhs.factor,
+                    dimension: dimension.adding(other))
+            {
+                return result
+            }
+            return fail("Multiplication of these unit values is not supported.")
         default:
-            return fail("Multiplication of two unit values is not supported.")
+            return fail("Multiplication of these unit values is not supported.")
         }
     }
 
     private mutating func divide(
         _ left: QuantityValue, _ right: QuantityValue
     ) -> QuantityValue? {
+        guard right.effective != 0 else { return nil }
         switch (left.kind, right.kind) {
         case (.scalar, .scalar):
             return finiteDivision(left.effective, right.effective, kind: .scalar)
         case (.unit, .scalar), (.currency, .scalar):
             return finiteDivision(left.effective, right.effective, kind: left.kind)
-        case (.scalar, .unit), (.scalar, .currency):
+        case (.scalar, .unit(let unit)):
+            if let dimension = unit.category.dimension,
+                let result = derived(
+                    left.effective / (right.amount * unit.factor), dimension: dimension.raised(to: -1))
+            {
+                return result
+            }
+            return fail("Division by this unit value is not supported.")
+        case (.scalar, .currency):
             return fail("Division by a unit value is not supported.")
         case (.unit(let lhs), .unit(let rhs)):
-            guard lhs.category == rhs.category else {
+            if lhs.category != rhs.category {
+                if let dimension = lhs.category.dimension, let other = rhs.category.dimension,
+                    let result = derived(
+                        (left.amount * lhs.factor) / (right.amount * rhs.factor),
+                        dimension: dimension.adding(other, scale: -1))
+                {
+                    return result
+                }
                 return fail(
                     "Cannot divide \(lhs.category.displayName) by \(rhs.category.displayName).")
             }
@@ -468,6 +508,26 @@ private struct QuantityParser {
             return fail("Cannot divide \(lhs.category.displayName) by Currency.")
         case (.currency, .unit(let rhs)):
             return fail("Cannot divide Currency by \(rhs.category.displayName).")
+        }
+    }
+
+    private func derived(_ amount: Double, dimension: CalcDimension) -> QuantityValue? {
+        guard amount.isFinite else { return nil }
+        if dimension == .scalar { return QuantityValue(amount: amount, kind: .scalar) }
+        guard let unit = CalcUnits.baseUnits[dimension] else { return nil }
+        let output = amount / unit.factor
+        return output.isFinite ? QuantityValue(amount: output, kind: .unit(unit)) : nil
+    }
+
+    private func power(_ value: QuantityValue, exponent: Double) -> QuantityValue? {
+        switch value.kind {
+        case .scalar:
+            return derived(pow(value.effective, exponent), dimension: .scalar)
+        case .unit(let unit):
+            guard let dimension = unit.category.dimension else { return nil }
+            return derived(pow(value.amount * unit.factor, exponent), dimension: dimension.raised(to: exponent))
+        case .currency:
+            return nil
         }
     }
 
@@ -524,6 +584,34 @@ private struct QuantityParser {
         case .op("("):
             return parseGrouped()
         case .ident(let name):
+            if let constant = CalcParser.constants[name] {
+                position += 1
+                return QuantityValue(amount: constant, kind: .scalar)
+            }
+            if let function = CalcParser.functions[name] {
+                position += 1
+                guard let argument = parseOperand() else { return nil }
+                operationCount += 1
+                if isScalar(argument.kind) {
+                    return derived(function(argument.effective), dimension: .scalar)
+                }
+                if case .unit(let unit) = argument.kind, unit.category == .angle,
+                    ["sin", "cos", "tan", "cot", "sec", "csc"].contains(name)
+                {
+                    return derived(function(argument.amount * unit.factor), dimension: .scalar)
+                }
+                if name == "sqrt" { return power(argument, exponent: 0.5) }
+                if name == "cbrt" {
+                    guard let result = power(
+                        QuantityValue(amount: abs(argument.amount), kind: argument.kind), exponent: 1.0 / 3)
+                    else { return nil }
+                    return QuantityValue(amount: argument.amount < 0 ? -result.amount : result.amount, kind: result.kind)
+                }
+                if ["abs", "floor", "ceil", "round", "trunc"].contains(name) {
+                    return QuantityValue(amount: function(argument.amount), kind: argument.kind)
+                }
+                return nil
+            }
             guard CalcUnits.byName[name] == nil,
                 let definition = CalcCurrency.byName[name],
                 let amount = number(at: position + 1)
