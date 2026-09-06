@@ -7,6 +7,11 @@ struct CalcResult: Equatable, Sendable {
         case value(display: String, copyText: String)
         /// A friendly error, only for a clear conversion attempt — never a half-typed expression.
         case error(message: String)
+
+        static func number(_ value: Double, suffix: String = "") -> Self {
+            let text = CalcFormatter.copyText(value)
+            return .value(display: CalcFormatter.grouped(text) + suffix, copyText: text + suffix)
+        }
     }
 
     /// Normalized echo of what was evaluated, shown on the card's left side ("3×3", "10 km").
@@ -74,9 +79,7 @@ enum CalcEngine {
                 return CalcResult(
                     expression: query,
                     sourceBadge: "Expression", targetBadge: "Result",
-                    payload: .value(
-                        display: CalcFormatter.display(value),
-                        copyText: CalcFormatter.copyText(value)))
+                    payload: .number(value))
             }
             return nil
         }
@@ -96,9 +99,7 @@ enum CalcEngine {
                     expression: "\(CalcFormatter.display(input)) \(from.symbol)",
                     sourceBadge: from.name,
                     targetBadge: to.name,
-                    payload: .value(
-                        display: "\(CalcFormatter.display(output)) \(to.symbol)",
-                        copyText: "\(CalcFormatter.copyText(output)) \(to.symbol)"))
+                    payload: .number(output, suffix: " \(to.symbol)"))
             case .mismatch(let from, let to):
                 return CalcResult(
                     expression: query,
@@ -138,18 +139,18 @@ enum CalcEngine {
 
         // Keyword-less conversion: `1m` → feet+inches, `1hr` → 60 min.
         if let bare = CalcUnits.parseBareConversion(tokens) {
-            let display =
-                bare.compound
-                ? CalcFormatter.compoundFeetInches(bare.output)
-                : "\(CalcFormatter.display(bare.output)) \(bare.to.symbol)"
-            let copyText =
-                bare.compound
-                ? display : "\(CalcFormatter.copyText(bare.output)) \(bare.to.symbol)"
+            let payload: CalcResult.Payload
+            if bare.compound {
+                let text = CalcFormatter.compoundFeetInches(bare.output)
+                payload = .value(display: text, copyText: text)
+            } else {
+                payload = .number(bare.output, suffix: " \(bare.to.symbol)")
+            }
             return CalcResult(
                 expression: "\(CalcFormatter.display(bare.input)) \(bare.from.symbol)",
                 sourceBadge: bare.from.name,
                 targetBadge: bare.to.name,
-                payload: .value(display: display, copyText: copyText))
+                payload: payload)
         }
 
         // Natural-language percent: `20% off 500`, `50 as % of 200`.
@@ -166,9 +167,7 @@ enum CalcEngine {
             expression: prettyExpression(query),
             sourceBadge: "Expression",
             targetBadge: "Result",
-            payload: .value(
-                display: CalcFormatter.display(value),
-                copyText: CalcFormatter.copyText(value)))
+            payload: .number(value))
     }
 
     // MARK: - Partial expressions
@@ -203,9 +202,7 @@ enum CalcEngine {
         return CalcResult(
             expression: prettyExpression(query),
             sourceBadge: "Expression", targetBadge: "Result",
-            payload: .value(
-                display: CalcFormatter.display(value),
-                copyText: CalcFormatter.copyText(value)))
+            payload: .number(value))
     }
 
     private static func partialOperatorText(_ token: CalcToken) -> String? {

@@ -18,9 +18,7 @@ enum CalcPercent {
         else { return nil }
         let result = base * (1 - pct / 100)
         guard result.isFinite else { return nil }
-        return card(
-            query, CalcFormatter.display(result), CalcFormatter.copyText(result),
-            target: "Discounted")
+        return card(query, .number(result), target: "Discounted")
     }
 
     /// `<x> as % of <y>` → x / y × 100, rendered as a percentage (`50 as % of 200` → 25%).
@@ -32,19 +30,17 @@ enum CalcPercent {
         else { return nil }
         let ratio = x / y * 100
         guard ratio.isFinite else { return nil }
-        return card(
-            query, "\(CalcFormatter.display(ratio))%", "\(CalcFormatter.copyText(ratio))%",
-            target: "Percentage")
+        return card(query, .number(ratio, suffix: "%"), target: "Percentage")
     }
 
     private static func card(
-        _ query: String, _ display: String, _ copy: String, target: String = "Result"
+        _ query: String, _ payload: CalcResult.Payload, target: String = "Result"
     ) -> CalcResult {
         CalcResult(
             expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
             sourceBadge: "Expression",
             targetBadge: target,
-            payload: .value(display: display, copyText: copy))
+            payload: payload)
     }
 
     /// The tip alone, not the total: it is the number the phrase asks for.
@@ -57,8 +53,7 @@ enum CalcPercent {
         else { return nil }
         let amount = bill * pct / 100
         guard amount.isFinite else { return nil }
-        return card(
-            query, CalcFormatter.display(amount), CalcFormatter.copyText(amount), target: "Tip")
+        return card(query, .number(amount), target: "Tip")
     }
 
     private static func parseWhatPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
@@ -71,9 +66,7 @@ enum CalcPercent {
         else { return nil }
         let ratio = x / y * 100
         guard ratio.isFinite else { return nil }
-        return card(
-            query, "\(CalcFormatter.display(ratio))%", "\(CalcFormatter.copyText(ratio))%",
-            target: "Percentage")
+        return card(query, .number(ratio, suffix: "%"), target: "Percentage")
     }
 
     private static func parseIsPercentOfWhat(_ tokens: [CalcToken], query: String) -> CalcResult? {
@@ -86,8 +79,7 @@ enum CalcPercent {
         else { return nil }
         let whole = x / (pct / 100)
         guard whole.isFinite else { return nil }
-        return card(
-            query, CalcFormatter.display(whole), CalcFormatter.copyText(whole), target: "Total")
+        return card(query, .number(whole), target: "Total")
     }
 
     /// Integers only, so the reduced pair stays exact.
@@ -101,7 +93,7 @@ enum CalcPercent {
         let divisor = greatestCommonDivisor(abs(a), abs(b))
         guard divisor > 0 else { return nil }
         let text = "\(CalcFormatter.display(a / divisor)) : \(CalcFormatter.display(b / divisor))"
-        return card(query, text, text, target: "Ratio")
+        return card(query, .value(display: text, copyText: text), target: "Ratio")
     }
 
     private static func greatestCommonDivisor(_ a: Double, _ b: Double) -> Double {
@@ -117,9 +109,7 @@ enum CalcPercent {
         let values = splitList(Array(tokens[2...]))
         guard values.count >= 2, let result = aggregate.reduce(values), result.isFinite
         else { return nil }
-        return card(
-            query, CalcFormatter.display(result), CalcFormatter.copyText(result),
-            target: aggregate.name)
+        return card(query, .number(result), target: aggregate.name)
     }
 
     /// Snaps to a step, not to a digit count, so `nearest 5` means multiples of 5.
@@ -132,8 +122,7 @@ enum CalcPercent {
         else { return nil }
         let result = (value / step).rounded() * step
         guard result.isFinite else { return nil }
-        return card(
-            query, CalcFormatter.display(result), CalcFormatter.copyText(result), target: "Rounded")
+        return card(query, .number(result), target: "Rounded")
     }
 
     /// The badge names which reduction ran, so `min` and `max` are told apart on the card.

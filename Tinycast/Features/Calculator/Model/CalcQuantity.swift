@@ -57,9 +57,7 @@ enum CalcQuantity {
             return CalcResult(
                 expression: expressionText(split.expressionTokens),
                 sourceBadge: "Expression", targetBadge: "Result",
-                payload: .value(
-                    display: CalcFormatter.display(value.effective),
-                    copyText: CalcFormatter.copyText(value.effective)))
+                payload: .number(value.effective))
         case .unit(let unit):
             // A bare `50cm` auto-converts below; with an operator the typed units are kept.
             if !preserveStandaloneUnit, parser.operationCount == 0, parser.dimensionCount == 1,
@@ -116,9 +114,7 @@ enum CalcQuantity {
         CalcResult(
             expression: expression,
             sourceBadge: "Expression", targetBadge: unit.name,
-            payload: .value(
-                display: "\(CalcFormatter.display(amount)) \(unit.symbol)",
-                copyText: "\(CalcFormatter.copyText(amount)) \(unit.symbol)"))
+            payload: .number(amount, suffix: " \(unit.symbol)"))
     }
 
     private static func currencyResult(

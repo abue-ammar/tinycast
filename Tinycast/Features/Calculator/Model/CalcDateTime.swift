@@ -123,14 +123,12 @@ enum CalcDateTime {
         else { return nil }
         let date = moment.date
         let hasTime = moment.hasTime
-
+        let text = answerString(date, hasTime: hasTime, now: now, calendar: calendar)
         return CalcResult(
             expression: echo,
             sourceBadge: dateString(now, now: now, calendar: calendar),
             targetBadge: weekdayName(date, calendar: calendar),
-            payload: .value(
-                display: answerString(date, hasTime: hasTime, now: now, calendar: calendar),
-                copyText: answerString(date, hasTime: hasTime, now: now, calendar: calendar)))
+            payload: .value(display: text, copyText: text))
     }
 
     /// `9am`, `5:30pm`, `14:00` as a wall clock, with no bias applied.
@@ -173,13 +171,12 @@ enum CalcDateTime {
                 week.start, days: (weekday - calendar.firstWeekday + 7) % 7, calendar: calendar)
         else { return nil }
 
+        let text = answerString(result, hasTime: false, now: now, calendar: calendar)
         return CalcResult(
             expression: echo,
             sourceBadge: dateString(now, now: now, calendar: calendar),
             targetBadge: weekdayName(result, calendar: calendar),
-            payload: .value(
-                display: answerString(result, hasTime: false, now: now, calendar: calendar),
-                copyText: answerString(result, hasTime: false, now: now, calendar: calendar)))
+            payload: .value(display: text, copyText: text))
     }
 
     /// `5 weekdays from now`, `3 days from today`, `2 weeks ago` — the duration leads.
@@ -256,9 +253,7 @@ enum CalcDateTime {
             expression: echo,
             sourceBadge: unit.subDay ? timeString(start, calendar: calendar) : dateString(start, now: now, calendar: calendar),
             targetBadge: unit.subDay ? timeString(end, calendar: calendar) : dateString(end, now: now, calendar: calendar),
-            payload: .value(
-                display: "\(CalcFormatter.display(value)) \(word)",
-                copyText: "\(CalcFormatter.copyText(value)) \(word)"))
+            payload: .number(value, suffix: " \(word)"))
     }
 
     // MARK: - Grammars C & D: moment ± duration / moment − moment
@@ -311,27 +306,24 @@ enum CalcDateTime {
         }
         let hasTime = base.hasTime || other.hasTime
         let seconds = base.date.timeIntervalSince(other.date)
-        let text: String
-        let copy: String
+        let payload: CalcResult.Payload
         if let unit = targetUnit {
-            let value = seconds / unit.factor
-            text = "\(CalcFormatter.display(value)) \(unit.symbol)"
-            copy = "\(CalcFormatter.copyText(value)) \(unit.symbol)"
+            payload = .number(seconds / unit.factor, suffix: " \(unit.symbol)")
         } else if hasTime {
-            text = CalcFormatter.timespan(seconds)
-            copy = text
+            let text = CalcFormatter.timespan(seconds)
+            payload = .value(display: text, copyText: text)
         } else {
             let days = calendar.dateComponents(
                 [.day], from: calendar.startOfDay(for: other.date),
                 to: calendar.startOfDay(for: base.date)).day ?? 0
-            text = "\(days) \(abs(days) == 1 ? "day" : "days")"
-            copy = text
+            let text = "\(days) \(abs(days) == 1 ? "day" : "days")"
+            payload = .value(display: text, copyText: text)
         }
         return CalcResult(
             expression: echo,
             sourceBadge: momentString(base.date, hasTime: base.hasTime, now: now, calendar: calendar),
             targetBadge: targetUnit?.name ?? momentString(other.date, hasTime: other.hasTime, now: now, calendar: calendar),
-            payload: .value(display: text, copyText: copy))
+            payload: payload)
     }
 
     /// Nil unless every term is a duration, so grammar D still sees a trailing moment.

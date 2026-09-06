@@ -498,6 +498,8 @@ than `5.539e-05`.
 
 `CalcResult` carries an `expression` (left), a `display` / `copyText` payload (right), and optional
 `sourceBadge` / `targetBadge` word-name pills. `CalculatorCard` renders it as a two-column card.
+`Payload.number` rounds once, then groups that text for display; unit and percent suffixes share it.
+Date answers that display and copy identically also reuse their formatted text.
 
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
 the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
