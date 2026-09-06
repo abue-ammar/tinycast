@@ -562,7 +562,7 @@ struct SnippetsTests {
         let injector = TextInjector(clipboardManager: ClipboardManager(), settings: AppSettings())
         let backing = NSPasteboard(name: .init("tinycast-copy-tests-\(UUID().uuidString)"))
         defer { backing.releaseGlobally() }
-        let pasteboard = CountingPasteboard(backing: backing)
+        let pasteboard = StubPasteboard(backing: backing)
 
         func seed(_ text: String) {
             let item = NSPasteboardItem()
@@ -736,7 +736,7 @@ struct SnippetsTests {
 
         let backingPasteboard = NSPasteboard(
             name: .init("tinycast-snippets-tests-\(UUID().uuidString)"))
-        let pasteboard = CountingPasteboard(backing: backingPasteboard)
+        let pasteboard = StubPasteboard(backing: backingPasteboard)
         defer { backingPasteboard.releaseGlobally() }
         let customType = NSPasteboard.PasteboardType("com.example.custom")
         let firstItem = NSPasteboardItem()
@@ -753,17 +753,13 @@ struct SnippetsTests {
             text: "Temporary",
             pasteboard: pasteboard)
         check(
-            "temporary pasteboard ownership preserves the original item shape",
+            "the lent pasteboard carries the text and no representation of the original",
             lease?.isOwned == true
                 && pasteboard.string(forType: .string) == "Temporary"
-                && pasteboard.pasteboardItems?.count == 2
-                && pasteboard.pasteboardItems?[0].data(forType: customType)
-                    == Data([0, 1, 2, 3])
-                && pasteboard.pasteboardItems?[1].data(forType: secondType)
-                    == Data([4, 5, 6])
+                && pasteboard.pasteboardItems?.count == 1
+                && pasteboard.pasteboardItems?[0].data(forType: customType) == nil
+                && pasteboard.pasteboardItems?[0].data(forType: secondType) == nil
         )
-        let clearCountBeforeRestore = pasteboard.clearCount
-        let writeCountBeforeRestore = pasteboard.writeCount
         let restoreResult = lease?.restoreIfOwned()
         let restoredItems = pasteboard.pasteboardItems
         check(
@@ -774,9 +770,10 @@ struct SnippetsTests {
                 && restoredItems?[0].data(forType: customType) == Data([0, 1, 2, 3])
                 && restoredItems?[1].data(forType: secondType) == Data([4, 5, 6]))
         check(
-            "pasteboard restoration does not clear before a fallible write",
-            pasteboard.clearCount == clearCountBeforeRestore
-                && pasteboard.writeCount == writeCountBeforeRestore)
+            "pasteboard restoration leaves no Tinycast marker on the restored clipboard",
+            restoredItems?.allSatisfy {
+                !$0.types.contains(ClipboardManager.internalType)
+            } == true)
 
         pasteboard.writeFailuresRemaining = 1
         var recoveredMutationCount: Int?
@@ -1759,10 +1756,8 @@ struct SnippetsTests {
 }
 
 @MainActor
-private final class CountingPasteboard: PasteboardAccess {
+private final class StubPasteboard: PasteboardAccess {
     let backing: NSPasteboard
-    private(set) var clearCount = 0
-    private(set) var writeCount = 0
     var writeFailuresRemaining = 0
 
     init(backing: NSPasteboard) {
@@ -1774,12 +1769,10 @@ private final class CountingPasteboard: PasteboardAccess {
 
     @discardableResult
     func clearContents() -> Int {
-        clearCount += 1
-        return backing.clearContents()
+        backing.clearContents()
     }
 
     func writeObjects(_ objects: [any NSPasteboardWriting]) -> Bool {
-        writeCount += 1
         if writeFailuresRemaining > 0 {
             writeFailuresRemaining -= 1
             return false

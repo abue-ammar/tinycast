@@ -279,15 +279,25 @@ text and a scalar never exceeds four units on its own. The chunks post through t
 re-gated loop the deletions use, so a target that goes away mid-word stops the rest.
 
 Longer or multiline fallback text uses a temporary paste. Tinycast snapshots every item, type and data
-payload, takes temporary ownership with the same item shape, and changes only the first plain-text
-payload; restoration mutates that owned item back in place, never clearing the clipboard before a
-fallible restore. A pasteboard with no string of its own — empty, or image-first — **borrows** instead:
-Tinycast writes a single string item and restores by rewriting the snapshot, which is the one path that
-clears first, because there is no original string item left to write back into. Declining the loan
-there would have sent a long multiline expansion down the keystroke path a character at a time. The
-pasteboard change count is checked before restoration, so a newer copy is never overwritten, and the
-clipboard poller synchronizes to Tinycast's ownership changes so temporary or restored text is not
-added as new history.
+payload, then **lends a board holding nothing but the expansion** — one item carrying the plain text
+and Tinycast's own marker type — and restores by rewriting the snapshot whole.
+
+**The loan carries no other flavour of the old clipboard.** Keeping the original item's shape and
+swapping only its `.string` would leave `public.html`, `public.rtf` and the rest describing the
+*previous* copy, and a rich-text editor prefers those: ChatGPT's ProseMirror composer takes Chromium's
+`text/html` over its `text/plain`, so a snippet pasted over an HTML-bearing clipboard inserted the
+previous copy instead. A representation Tinycast cannot rewrite to mean the expansion is one it must
+not lend, and the whitelist of text-bearing UTIs it *could* rewrite would never be complete. Rewriting
+the snapshot therefore clears before a fallible write — the risk a same-shape loan bought off — which
+is the trade a correct paste is worth, and the items are built from the in-memory snapshot before the
+clear so the write has nothing left to fail on.
+
+An empty or image-only clipboard lends the same single item; declining the loan there would have sent
+a long multiline expansion down the keystroke path a character at a time. The pasteboard change count
+is checked before restoration, so a newer copy is never overwritten, and the clipboard poller
+synchronizes to Tinycast's ownership changes so temporary or restored text is not added as new history.
+Because the marker type lives only on the lent item, a restored clipboard carries none of it, and the
+poller keeps seeing the user's own copy.
 
 When Accessibility text state is readable, a long paste waits for evidence that the target changed.
 If the editor cannot expose post-paste text state, a successfully posted paste is accepted only after

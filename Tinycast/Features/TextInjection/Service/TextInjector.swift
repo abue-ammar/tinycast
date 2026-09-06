@@ -994,8 +994,6 @@ final class TemporaryPasteboardLease {
     private let pasteboard: any PasteboardAccess
     private let ownedChangeCount: Int
     private let original: PasteboardSnapshot
-    /// Set only when the clipboard already held a string, which restores in place at no cost.
-    private let temporaryItem: NSPasteboardItem?
     private var isFinished = false
 
     var isOwned: Bool {
@@ -1005,13 +1003,11 @@ final class TemporaryPasteboardLease {
     private init(
         pasteboard: any PasteboardAccess,
         ownedChangeCount: Int,
-        original: PasteboardSnapshot,
-        temporaryItem: NSPasteboardItem?
+        original: PasteboardSnapshot
     ) {
         self.pasteboard = pasteboard
         self.ownedChangeCount = ownedChangeCount
         self.original = original
-        self.temporaryItem = temporaryItem
     }
 
     static func begin(
@@ -1020,13 +1016,13 @@ final class TemporaryPasteboardLease {
         onMutation: (Int) -> Void = { _ in }
     ) -> TemporaryPasteboardLease? {
         guard let snapshot = PasteboardSnapshot(pasteboard: pasteboard),
-            let temporaryItems = snapshot.items(borrowingFor: text),
+            let temporaryItem = PasteboardSnapshot.temporaryItem(carrying: text),
             let originalItems = snapshot.pasteboardItems(),
             pasteboard.changeCount == snapshot.changeCount
         else { return nil }
 
         pasteboard.clearContents()
-        guard pasteboard.writeObjects(temporaryItems) else {
+        guard pasteboard.writeObjects([temporaryItem]) else {
             if originalItems.isEmpty || pasteboard.writeObjects(originalItems) {
                 onMutation(pasteboard.changeCount)
             }
@@ -1037,36 +1033,16 @@ final class TemporaryPasteboardLease {
         return TemporaryPasteboardLease(
             pasteboard: pasteboard,
             ownedChangeCount: ownedChangeCount,
-            original: snapshot,
-            temporaryItem: snapshot.firstStringData == nil ? nil : temporaryItems.first)
+            original: snapshot)
     }
 
+    /// The lent board holds nothing of the original, so restoring rewrites the snapshot whole.
     func restoreIfOwned() -> RestoreResult {
         guard !isFinished else { return .superseded }
         guard pasteboard.changeCount == ownedChangeCount else {
             isFinished = true
             return .superseded
         }
-        guard let temporaryItem, let originalStringData = original.firstStringData else {
-            return rewriteOriginal()
-        }
-        guard temporaryItem.setData(originalStringData, forType: .string) else {
-            if pasteboard.changeCount != ownedChangeCount {
-                isFinished = true
-                return .superseded
-            }
-            return .failed
-        }
-        guard pasteboard.changeCount == ownedChangeCount else {
-            isFinished = true
-            return .superseded
-        }
-        isFinished = true
-        return .restored(changeCount: ownedChangeCount)
-    }
-
-    /// A borrowed board has no original string to write back into, so the whole board is rewritten.
-    private func rewriteOriginal() -> RestoreResult {
         guard let items = original.pasteboardItems() else { return .failed }
         pasteboard.clearContents()
         isFinished = true
@@ -1104,33 +1080,21 @@ struct PasteboardSnapshot {
         self.changeCount = changeCount
     }
 
+    /// A kept `public.html` is the flavour a Chromium editor prefers, so we lend the text alone.
+    static func temporaryItem(carrying text: String) -> NSPasteboardItem? {
+        let item = NSPasteboardItem()
+        guard item.setString(text, forType: .string),
+            item.setData(Data(), forType: ClipboardManager.internalType)
+        else { return nil }
+        return item
+    }
+
     func pasteboardItems() -> [NSPasteboardItem]? {
-        makePasteboardItems(firstString: nil)
-    }
-
-    /// A board with no string of its own lends a fresh item instead of declining the loan.
-    func items(borrowingFor text: String) -> [NSPasteboardItem]? {
-        guard firstStringData != nil else {
-            let item = NSPasteboardItem()
-            guard item.setString(text, forType: .string),
-                item.setData(Data(), forType: ClipboardManager.internalType)
-            else { return nil }
-            return [item]
-        }
-        return makePasteboardItems(firstString: text)
-    }
-
-    private func makePasteboardItems(firstString: String?) -> [NSPasteboardItem]? {
         var pasteboardItems: [NSPasteboardItem] = []
         pasteboardItems.reserveCapacity(items.count)
-        for (index, item) in items.enumerated() {
+        for item in items {
             let pasteboardItem = NSPasteboardItem()
-            if index == 0, let firstString {
-                guard pasteboardItem.setString(firstString, forType: .string),
-                    pasteboardItem.setData(Data(), forType: ClipboardManager.internalType)
-                else { return nil }
-            }
-            for value in item.values where index != 0 || firstString == nil || value.type != .string {
+            for value in item.values {
                 guard pasteboardItem.setData(value.data, forType: value.type) else { return nil }
             }
             pasteboardItems.append(pasteboardItem)
