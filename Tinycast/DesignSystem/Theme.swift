@@ -34,6 +34,8 @@ enum Theme {
         /// The dialog and HUD surface, so a dialog reads as a sibling of the palette.
         static let dialog: CGFloat = 20
         static let thumbnail: CGFloat = 6
+        /// A pill holding a square thumbnail; a full capsule fights the thumbnail's own corners.
+        static let attachmentChip: CGFloat = 8
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
@@ -140,10 +142,16 @@ enum Theme {
         /// A sent image in the transcript; a staged one is a small preview in a composer pill.
         static let chatImageThumb: CGFloat = 96
         static let chatAttachmentGlyph: CGFloat = 16
-        /// Derived, so a preview pill measures exactly as a glyph pill does — see ai.md.
-        static let chatAttachmentThumb: CGFloat = chatAttachmentGlyph + Spacing.sm - Spacing.xxs
+        /// A staged file's preview in its pill, kept under the pill's height so it reads inside it.
+        static let chatAttachmentThumb: CGFloat = 18
+        /// The pill's remove button; small, but the whole reason a mispaste is recoverable.
+        static let chatAttachmentRemove: CGFloat = 14
+        /// Tighter than the gap inside the pill, so the thumbnail reads as filling it.
+        static let chatAttachmentInset: CGFloat = 3
         /// The clipboard preview's player; `VideoPlayer` expands unbounded without a height.
         static let clipboardMediaHeight: CGFloat = 260
+        /// The preview pane is ~460pt wide, so 900px stays crisp at 2× without over-decoding.
+        static let clipboardPreviewPixel: CGFloat = 900
         /// Opening size and the resize floor; tall enough that the sidebar's rows never scroll.
         static let settingsWindow = CGSize(width: 860, height: 700)
         /// Settings sidebar: a fixed column, wide enough for "Window Management".

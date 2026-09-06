@@ -240,7 +240,6 @@ final class ClipboardStore {
     func addFiles(_ paths: [String], sourceBundleID: String?) {
         // Only a single file can be a ⌘C repeat, which is the case `addText` also guards.
         if paths.count == 1, items.first?.kind == .file, items.first?.text == paths[0] { return }
-        guard !paths.isEmpty else { return }
         for path in paths {
             let item = ClipboardItem(filePath: path, sourceBundleID: sourceBundleID)
             if let stmt = insertStmt { Self.bindAndInsert(stmt, item) }

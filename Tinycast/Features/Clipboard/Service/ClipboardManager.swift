@@ -100,8 +100,7 @@ final class ClipboardManager {
     /// A Finder select-all must not insert ten thousand rows on one poll tick.
     nonisolated static let maxCapturedFiles = 32
 
-    /// A reference into a directory the OS reclaims is not a reference; those fall through.
-    /// Spelled without `/private`, which is what `resolvingSymlinksInPath` strips.
+    /// Reclaimable roots, without the `/private` that `resolvingSymlinksInPath` strips.
     nonisolated static let volatileRoots = [
         "/tmp/", "/var/tmp/", "/var/folders/", NSHomeDirectory() + "/Library/Caches/"
     ]
@@ -110,10 +109,8 @@ final class ClipboardManager {
     nonisolated static func fileURLs(
         on pasteboard: NSPasteboard, volatileRoots roots: [String] = volatileRoots
     ) -> [String]? {
-        let urls =
-            pasteboard.readObjects(
-                forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
-        let durable = (urls ?? []).filter { isDurable($0, roots: roots) }
+        let durable = PasteboardFiles.urls(on: pasteboard)
+            .filter { isDurable($0, roots: roots) }
             .prefix(maxCapturedFiles)
         // Nil rather than empty, so a copied `http` URL falls through and stays a link.
         guard !durable.isEmpty else { return nil }

@@ -82,9 +82,7 @@ final class AIChatState {
     /// Refused, not truncated: the composer is the last place an oversized turn can be explained.
     @discardableResult
     func attach(_ attachment: ChatAttachment) -> ChatAttachmentRefusal? {
-        guard !pendingAttachments.contains(where: { $0.payload == attachment.payload }) else {
-            return nil
-        }
+        // Deliberately not de-duped: pasting the same file twice means you wanted it twice.
         guard pendingAttachments.count < AIAttachmentBudget.maxCount else { return .count }
         guard
             AIAttachmentBudget.admits(
@@ -94,6 +92,10 @@ final class AIChatState {
         else { return .size }
         pendingAttachments.append(attachment)
         return nil
+    }
+
+    func removeAttachment(_ id: UUID) {
+        pendingAttachments.removeAll { $0.id == id }
     }
 
     @discardableResult
@@ -292,6 +294,7 @@ enum ChatAttachmentRefusal: Equatable, Sendable {
     case size
     case textTooLong
     case undecodable
+    case unreadable
     case unsupported(String)
     case imagesUnsupported
     case documentsUnsupported
@@ -305,6 +308,7 @@ enum ChatAttachmentRefusal: Equatable, Sendable {
             let limit = AIAttachmentBudget.maxInlinedTextBytes / 1_024
             return "That text file is too big to attach — \(limit) KB is the limit."
         case .undecodable: return "That file isn't text Tinycast can read."
+        case .unreadable: return "That file could not be read."
         case .unsupported(let ext):
             return "Tinycast can attach images, PDFs and text files, not .\(ext) files."
         case .imagesUnsupported: return "This model can't read images. Switch model to attach one."

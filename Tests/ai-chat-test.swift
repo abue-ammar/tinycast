@@ -367,8 +367,11 @@ struct AIChatTests {
         expect(AIAttachmentPolicy.kind(forFileName: "a.mp4") == nil, "and so is video")
         expect(AIAttachmentPolicy.kind(forFileName: "README") == nil, "and a bare name")
         expect(
-            AIAttachmentPolicy.mimeType(forFileName: "a.csv") == "text/csv",
-            "a mime type follows the extension")
+            AIAttachmentPolicy.mimeType(forFileName: "a.pdf") == AIAttachmentPolicy.pdfMIMEType,
+            "only a PDF gets a mime type a transport reads")
+        expect(
+            AIAttachmentPolicy.mimeType(forFileName: "a.csv") == "text/plain",
+            "an inlined file is text, whatever its extension")
     }
 
     static func historyRoundTripsAndRepairsInterruptedReplies() {

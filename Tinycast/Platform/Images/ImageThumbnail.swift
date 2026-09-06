@@ -3,42 +3,17 @@ import ImageIO
 
 /// Downsampled, memory-capped image loading: ImageIO decodes to exactly the size needed.
 enum ImageThumbnail {
-    /// `NSCache` is thread-safe but not `Sendable`, so assert the guarantee once here.
-    private final class ImageCache: NSCache<NSString, NSImage>, @unchecked Sendable {}
-
-    /// Row thumbnails, byte-bounded and kept warm, so re-opening draws instantly.
-    private static let rowCache: ImageCache = {
-        let cache = ImageCache()
-        cache.totalCostLimit = 8 * 1024 * 1024
-        return cache
-    }()
-
-    /// Large previews, byte-bounded and purged on close, so browsing memory stays flat.
-    private static let previewCache: ImageCache = {
-        let cache = ImageCache()
-        cache.totalCostLimit = 48 * 1024 * 1024
-        return cache
-    }()
-
-    /// Longest-edge size at or below which a decode is a "row" thumbnail; larger is a "preview".
-    private static let rowThreshold: CGFloat = 128
-
-    private static func pick(_ maxPixel: CGFloat) -> NSCache<NSString, NSImage> {
-        maxPixel <= rowThreshold ? rowCache : previewCache
-    }
-
-    private static func cacheKey(_ url: URL, _ maxPixel: CGFloat) -> NSString {
-        "\(url.path)#\(Int(maxPixel))" as NSString
-    }
+    private static let cache = ThumbnailCache(
+        rowBytes: 8 * 1024 * 1024, previewBytes: 48 * 1024 * 1024)
 
     /// Frees the preview bitmaps on dismiss; row thumbnails stay warm for a re-open.
     static func purgePreviews() {
-        previewCache.removeAllObjects()
+        cache.purgePreviews()
     }
 
     /// Cache-only, never touching disk, so a warm thumbnail renders on the same frame.
     static func cached(_ url: URL, maxPixel: CGFloat) -> NSImage? {
-        pick(maxPixel).object(forKey: cacheKey(url, maxPixel))
+        cache.cached(url, maxPixel: maxPixel)
     }
 
     /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
@@ -54,9 +29,7 @@ enum ImageThumbnail {
 
     /// A thumbnail capped at `maxPixel`, cached per path and size; decodes synchronously.
     static func load(_ url: URL, maxPixel: CGFloat) -> NSImage? {
-        let cache = pick(maxPixel)
-        let key = cacheKey(url, maxPixel)
-        if let cached = cache.object(forKey: key) { return cached }
+        if let cached = cached(url, maxPixel: maxPixel) { return cached }
 
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let options: [CFString: Any] = [
@@ -70,8 +43,8 @@ enum ImageThumbnail {
 
         let image = NSImage(
             cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-        // Cost = the decoded bitmap's real byte footprint, so `totalCostLimit` bounds actual RAM.
-        cache.setObject(image, forKey: key, cost: cgImage.bytesPerRow * cgImage.height)
+        cache.store(
+            image, for: url, maxPixel: maxPixel, cost: cgImage.bytesPerRow * cgImage.height)
         return image
     }
 
