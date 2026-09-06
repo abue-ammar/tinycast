@@ -97,6 +97,38 @@ final class ClipboardManager {
         lastChangeCount = changeCount
     }
 
+    /// A Finder select-all must not insert ten thousand rows on one poll tick.
+    nonisolated static let maxCapturedFiles = 32
+
+    /// A reference into a directory the OS reclaims is not a reference; those fall through.
+    /// Spelled without `/private`, which is what `resolvingSymlinksInPath` strips.
+    nonisolated static let volatileRoots = [
+        "/tmp/", "/var/tmp/", "/var/folders/", NSHomeDirectory() + "/Library/Caches/"
+    ]
+
+    /// Both parameters are injected environment facts, so a harness can drive its own scratch.
+    nonisolated static func fileURLs(
+        on pasteboard: NSPasteboard, volatileRoots roots: [String] = volatileRoots
+    ) -> [String]? {
+        let urls =
+            pasteboard.readObjects(
+                forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
+        let durable = (urls ?? []).filter { isDurable($0, roots: roots) }
+            .prefix(maxCapturedFiles)
+        // Nil rather than empty, so a copied `http` URL falls through and stays a link.
+        guard !durable.isEmpty else { return nil }
+        // Reversed on insert, so the first file copied ends up leading the history.
+        return durable.map(\.standardizedFileURL.path).reversed()
+    }
+
+    /// An app that stages a temp file beside better inline content must keep the inline content.
+    nonisolated private static func isDurable(_ url: URL, roots: [String]) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        var path = url.resolvingSymlinksInPath().path
+        if path.hasPrefix("/private/") { path.removeFirst("/private".count) }
+        return !roots.contains { path.hasPrefix($0) }
+    }
+
     private func poll() {
         let pb = NSPasteboard.general
         guard pb.changeCount != lastChangeCount else { return }
@@ -110,6 +142,12 @@ final class ClipboardManager {
         // The pasteboard carries no source, so attribute it to the frontmost app.
         let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         if let sourceBundleID, settings.clipboardDisabledApps.contains(sourceBundleID) { return }
+
+        // Ahead of the text branch: Finder puts the file's *name* on `.string` beside its URL.
+        if let paths = Self.fileURLs(on: pb) {
+            store.addFiles(paths, sourceBundleID: sourceBundleID)
+            return
+        }
 
         if let text = pb.string(forType: .string),
             !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

@@ -171,7 +171,8 @@ final class AIChatCoordinator {
         case .appleIntelligence?: return .appleIntelligence
         case .codex?: return .codex
         case .claude?, .openCode?:
-            return AIModelCapabilities(images: false, webSearch: false, tools: false)
+            return AIModelCapabilities(
+                images: false, documents: false, webSearch: false, tools: false)
         case .api(let connection, let model, _)?:
             return core.aiSettings.connection(id: connection)?.capabilities(for: model)
                 ?? AIModelCapabilities.none
@@ -185,55 +186,142 @@ final class AIChatCoordinator {
             ? AppleIntelligence.contextBudget : ChatSession.defaultTextBudget
     }
 
-    /// ⌘V stages a picture, decoded off-main; false hands the chord back to the field editor.
-    func attachPastedImage() -> Bool {
-        guard capabilities.images else { return false }
+    /// ⌘V stages a file, read off-main; false hands the chord back to the field editor.
+    func attachPastedFile() -> Bool {
         let pasteboard = NSPasteboard.general
-        let file = Self.pastedImageFile(on: pasteboard)
+        let files = Self.pastedFiles(on: pasteboard)
+        // A copied text selection often carries a TIFF too; only a board with no string is a picture.
         let pasted =
-            pasteboard.string(forType: .string) == nil
+            files.isEmpty && pasteboard.string(forType: .string) == nil
             ? pasteboard.availableType(from: [.png, .tiff]).flatMap { pasteboard.data(forType: $0) }
             : nil
-        guard file != nil || pasted != nil else { return false }
-        stage(file: file, pasted: pasted)
+        guard !files.isEmpty || pasted != nil else { return false }
+        if let refusal = unattachable(files) {
+            core.showMessage(refusal.message, tone: .neutral)
+            return true
+        }
+        if pasted != nil, !capabilities.images {
+            core.showMessage(ChatAttachmentRefusal.imagesUnsupported.message, tone: .neutral)
+            return true
+        }
+        stage(files: files, pasted: pasted)
         return true
     }
 
-    /// The file first, raw bytes as fallback; the chord is consumed, never pasting a path
-    private func stage(file: URL?, pasted: Data?) {
+    /// The first refusal the current route forces, so a paste explains itself rather than dropping.
+    private func unattachable(_ files: [URL]) -> ChatAttachmentRefusal? {
+        let can = capabilities
+        for file in files {
+            guard let kind = AIAttachmentPolicy.kind(forFileName: file.lastPathComponent) else {
+                return .unsupported(file.pathExtension.lowercased())
+            }
+            switch kind {
+            case .image where !can.images: return .imagesUnsupported
+            case .pdf where !can.documents: return .documentsUnsupported
+            default: continue
+            }
+        }
+        return nil
+    }
+
+    /// Files first, raw bytes as fallback; the chord is consumed, never pasting a path.
+    private func stage(files: [URL], pasted: Data?) {
         let generation = chat.stagingGeneration
         Task { [weak self] in
-            let staged = await Task.detached(priority: .userInitiated) { () -> (Data, String)? in
-                if let file, let bytes = try? Data(contentsOf: file),
-                    let png = Self.boundedPNG(bytes)
-                {
-                    return (png, file.lastPathComponent)
-                }
-                if let pasted, let png = Self.boundedPNG(pasted) { return (png, "Image") }
-                return nil
+            let staged = await Task.detached(priority: .userInitiated) { () -> [Staged] in
+                if !files.isEmpty { return files.compactMap(Self.read) }
+                guard let pasted, let png = Self.boundedPNG(pasted) else { return [] }
+                return [
+                    Staged(
+                        payload: .image(AIImage(data: png, mimeType: "image/png")),
+                        name: "Image", preview: Self.preview(png))
+                ]
             }.value
             guard let self else { return }
             guard generation == self.chat.stagingGeneration else {
                 core.showMessage(
-                    "That image was still loading and did not make it into the chat.",
+                    "That file was still loading and did not make it into the chat.",
                     tone: .neutral)
                 return
             }
-            guard let staged else {
-                core.showMessage("That image could not be read.", tone: .neutral)
+            guard !staged.isEmpty else {
+                core.showMessage("That file could not be read.", tone: .neutral)
                 return
             }
-            let attachment = ChatAttachment(
-                image: AIImage(data: staged.0, mimeType: "image/png"), name: staged.1)
-            if let refusal = chat.attach(attachment) {
-                core.showMessage(refusal.message, tone: .neutral)
+            for item in staged {
+                let attachment = ChatAttachment(
+                    payload: item.payload, name: item.name, preview: item.preview)
+                if let refusal = chat.attach(attachment) {
+                    core.showMessage(refusal.message, tone: .neutral)
+                    return
+                }
             }
         }
     }
 
-    private static func pastedImageFile(on pasteboard: NSPasteboard) -> URL? {
-        let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] ?? []
-        return urls.first { imageExtensions.contains($0.pathExtension.lowercased()) }
+    /// Carries what a staged file becomes across the detached read.
+    private struct Staged: Sendable {
+        let payload: ChatAttachment.Payload
+        let name: String
+        let preview: Data?
+    }
+
+    /// Sized before it is read, so a four-gigabyte CSV can never be slurped into memory.
+    nonisolated private static func read(_ file: URL) -> Staged? {
+        let name = file.lastPathComponent
+        guard let kind = AIAttachmentPolicy.kind(forFileName: name) else { return nil }
+        let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        let ceiling =
+            kind == .text ? AIAttachmentBudget.maxInlinedTextBytes : AIAttachmentBudget.maxBytes
+        guard size <= ceiling, let bytes = try? Data(contentsOf: file) else { return nil }
+        let mimeType = AIAttachmentPolicy.mimeType(forFileName: name)
+        switch kind {
+        case .image:
+            guard let png = boundedPNG(bytes) else { return nil }
+            return Staged(
+                payload: .image(AIImage(data: png, mimeType: "image/png")), name: name,
+                preview: preview(png))
+        case .pdf:
+            return Staged(
+                payload: .document(AIDocument(data: bytes, mimeType: mimeType, name: name)),
+                name: name, preview: nil)
+        case .text:
+            // Re-encoded from the decoded string, so undecodable bytes refuse rather than mojibake.
+            guard let decoded = String(data: bytes, encoding: .utf8) else { return nil }
+            return Staged(
+                payload: .document(
+                    AIDocument(data: Data(decoded.utf8), mimeType: mimeType, name: name)),
+                name: name, preview: nil)
+        }
+    }
+
+    /// The pill's thumbnail, encoded once here rather than decoded per keystroke in the header.
+    nonisolated private static func preview(_ png: Data) -> Data? {
+        guard let source = NSBitmapImageRep(data: png) else { return nil }
+        let edge: CGFloat = 40
+        let scale = min(1, edge / max(CGFloat(source.pixelsWide), CGFloat(source.pixelsHigh)))
+        let size = NSSize(
+            width: max(1, (CGFloat(source.pixelsWide) * scale).rounded()),
+            height: max(1, (CGFloat(source.pixelsHigh) * scale).rounded()))
+        guard
+            let scaled = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height),
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+            let context = NSGraphicsContext(bitmapImageRep: scaled)
+        else { return nil }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.imageInterpolation = .high
+        source.draw(in: NSRect(origin: .zero, size: size))
+        NSGraphicsContext.restoreGraphicsState()
+        return scaled.representation(using: .png, properties: [:])
+    }
+
+    /// `isFileURL` is load-bearing: without it an `https://…/a.png` reaches `Data(contentsOf:)`,
+    /// turning a keystroke into a network request.
+    private static func pastedFiles(on pasteboard: NSPasteboard) -> [URL] {
+        (pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] ?? []).filter(\.isFileURL)
     }
 
     /// Backspace on an empty composer takes the last staged image before it backs out of chat.
@@ -244,10 +332,6 @@ final class AIChatCoordinator {
     func clearAttachments() {
         chat.clearAttachments()
     }
-
-    private static let imageExtensions: Set<String> = [
-        "png", "jpg", "jpeg", "gif", "webp", "heic", "tiff", "bmp"
-    ]
 
     nonisolated private static let maxImageEdge: CGFloat = 1_568
 

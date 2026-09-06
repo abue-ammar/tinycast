@@ -71,6 +71,14 @@ enum BackupApplier {
                 id: UUID(), kind: .image, text: nil, imagePath: url.path,
                 createdAt: item.createdAt, sourceBundleID: item.sourceBundleID,
                 pinnedAt: item.pinnedAt)
+        case .file:
+            // A path from another Mac names nothing here, so the row is dropped rather than dead.
+            guard let path = item.text, FileManager.default.fileExists(atPath: path) else {
+                return nil
+            }
+            return ClipboardItem(
+                id: UUID(), kind: .file, text: path, imagePath: nil, createdAt: item.createdAt,
+                sourceBundleID: item.sourceBundleID, pinnedAt: item.pinnedAt)
         }
     }
 

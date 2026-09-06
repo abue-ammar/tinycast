@@ -181,6 +181,13 @@ private struct ChatMessageView: View {
                     }
                 }
             }
+            if !message.documents.isEmpty {
+                HStack(spacing: Theme.Spacing.sm) {
+                    ForEach(message.documents, id: \.self) { document in
+                        ChatDocumentChip(document: document)
+                    }
+                }
+            }
             if !message.text.isEmpty || !message.searches.isEmpty || !message.toolUses.isEmpty {
                 rendered
             }
@@ -205,6 +212,27 @@ private struct ChatMessageView: View {
         } else {
             Text(message.text)
         }
+    }
+}
+
+/// A sent document names itself: its bytes went to the model, not into the transcript's prose.
+private struct ChatDocumentChip: View {
+    let document: AIDocument
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            Image(systemName: "doc.richtext")
+                .font(Theme.Typography.chip)
+                .symbolRenderingMode(.hierarchical)
+            Text(document.name)
+                .font(Theme.Typography.chip)
+                .lineLimit(1)
+        }
+        .foregroundStyle(Theme.Colors.textSecondary)
+        .padding(.horizontal, Theme.Spacing.sm)
+        .padding(.vertical, Theme.Spacing.xxs)
+        .background(Capsule().fill(Theme.Colors.controlSurface))
+        .accessibilityLabel("Attached file \(document.name)")
     }
 }
 

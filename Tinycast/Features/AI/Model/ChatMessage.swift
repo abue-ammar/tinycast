@@ -18,6 +18,8 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     var state: State
     let sentAt: Date
     let images: [AIImage]
+    /// Sent PDFs; a text file is not one, its contents reached the model as text.
+    let documents: [AIDocument]
     /// Web searches the reply made, in order; each sits in the text where it happened.
     var searches: [ChatSearch]
     /// Tools the reply called, pinned the same way; the calls themselves never enter the context.
@@ -25,7 +27,8 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
 
     init(
         id: UUID = UUID(), role: Role, text: String, state: State = .complete,
-        sentAt: Date = Date(), images: [AIImage] = [], searches: [ChatSearch] = [],
+        sentAt: Date = Date(), images: [AIImage] = [], documents: [AIDocument] = [],
+        searches: [ChatSearch] = [],
         toolUses: [ChatToolUse] = []
     ) {
         self.id = id
@@ -34,6 +37,7 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         self.state = state
         self.sentAt = sentAt
         self.images = images
+        self.documents = documents
         self.searches = searches
         self.toolUses = toolUses
     }

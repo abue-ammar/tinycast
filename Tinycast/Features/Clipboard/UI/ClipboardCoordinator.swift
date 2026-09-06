@@ -61,13 +61,23 @@ final class ClipboardCoordinator {
         // A write promotes the item, so follow it and keep the moved row highlighted.
         if Paster.paste(item, store: clipboardStore, previousApp: previous) {
             selectClip(item)
+        } else {
+            reportUnavailable(item)
         }
     }
 
     func pasteKeepingWindowOpen(_ item: ClipboardItem) {
         if windowController.pasteKeepingWindowOpen(item, store: clipboardStore) {
             selectClip(item)
+        } else {
+            reportUnavailable(item)
         }
+    }
+
+    /// A write only fails on a vanished file, and a palette that just closes explains nothing.
+    private func reportUnavailable(_ item: ClipboardItem) {
+        guard item.kind == .file else { return }
+        core.showMessage("That file has moved or been deleted.", tone: .danger)
     }
 
     /// Both the ⌃⇧X chord and the menu row land here, so neither can skip the confirmation.
@@ -92,6 +102,8 @@ final class ClipboardCoordinator {
         paletteCoordinator.hidePalette(restoreFocus: false)
         if Paster.copy(item, store: clipboardStore) {
             selectClip(item)
+        } else {
+            reportUnavailable(item)
         }
     }
 
@@ -101,10 +113,34 @@ final class ClipboardCoordinator {
         Paster.copyPlainText(format.string(for: color))
     }
 
-    func revealClipboardImage(_ item: ClipboardItem) {
-        guard let url = clipboardStore.imageURL(for: item) else { return }
+    func revealClip(_ item: ClipboardItem) {
+        guard let url = clipURL(for: item) else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)
         AppLauncher.showInFinder(url)
+    }
+
+    func openClip(_ item: ClipboardItem) {
+        guard let url = clipURL(for: item) else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        AppLauncher.open(url)
+    }
+
+    /// Unmarked, so the path enters history like any other copy the reader meant to make.
+    func copyClipPath(_ item: ClipboardItem) {
+        guard let path = item.filePath else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Paster.copyPlainText(path)
+        core.showMessage("Copied path")
+    }
+
+    /// Nil once the file is gone, so every action reports rather than silently no-opping.
+    private func clipURL(for item: ClipboardItem) -> URL? {
+        let url = clipboardStore.imageURL(for: item) ?? clipboardStore.fileURL(for: item)
+        guard let url, FileManager.default.fileExists(atPath: url.path) else {
+            reportUnavailable(item)
+            return nil
+        }
+        return url
     }
 
     /// Pin or unpin an entry; the selection and scroll follow the row as it moves.

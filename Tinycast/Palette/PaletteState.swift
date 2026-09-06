@@ -11,6 +11,8 @@ final class PaletteState {
     var isComposing = false
     /// The clipboard screen's type filter, reset with the rest of the screen state on each summon.
     var clipboardFilter: ClipboardFilter = .all
+    /// Ordering out leaves the SwiftUI tree mounted, so a media preview needs this to stop playing.
+    private(set) var isVisible = false
     /// Changes every time the palette is shown so the search field can re-focus.
     var focusToken = UUID()
     /// Bumped only by `prepare`, so lists snap to the top even when nothing else changed.
@@ -43,6 +45,10 @@ final class PaletteState {
     @ObservationIgnored var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
     /// Fired when `menuOpen` flips, so the panel can hide the caret without a focus swap.
     @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
+
+    func noteVisible(_ visible: Bool) {
+        isVisible = visible
+    }
 
     func prepare(mode: PaletteMode) {
         self.mode = mode

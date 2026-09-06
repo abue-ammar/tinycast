@@ -137,9 +137,13 @@ enum Theme {
         static let menuBrandIcon: CGFloat = 14
         /// The same mark in a header bar button, matched to the callout symbol beside it.
         static let barBrandIcon: CGFloat = 12
-        /// A sent image in the transcript; a staged one is a glyph in a pill by the search text.
+        /// A sent image in the transcript; a staged one is a small preview in a composer pill.
         static let chatImageThumb: CGFloat = 96
         static let chatAttachmentGlyph: CGFloat = 16
+        /// Derived, so a preview pill measures exactly as a glyph pill does — see ai.md.
+        static let chatAttachmentThumb: CGFloat = chatAttachmentGlyph + Spacing.sm - Spacing.xxs
+        /// The clipboard preview's player; `VideoPlayer` expands unbounded without a height.
+        static let clipboardMediaHeight: CGFloat = 260
         /// Opening size and the resize floor; tall enough that the sidebar's rows never scroll.
         static let settingsWindow = CGSize(width: 860, height: 700)
         /// Settings sidebar: a fixed column, wide enough for "Window Management".

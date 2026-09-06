@@ -9,8 +9,8 @@ final class AIChatState {
     private(set) var isThinking = false
     private(set) var usage: AIUsage?
     private(set) var notice: String?
-    /// Images staged for the next message; they go out with whatever is typed next.
-    private(set) var pendingImages: [ChatAttachment] = []
+    /// Files staged for the next message; they go out with whatever is typed next.
+    private(set) var pendingAttachments: [ChatAttachment] = []
 
     /// Every path that consumes or drops the staged images moves this on, so a late decode knows
     @ObservationIgnored private(set) var stagingGeneration = 0
@@ -35,9 +35,12 @@ final class AIChatState {
         instructions: String? = nil, contextBudget: Int = ChatSession.defaultTextBudget
     ) -> Bool {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty || !pendingImages.isEmpty, !isStreaming else { return false }
+        guard !text.isEmpty || !pendingAttachments.isEmpty, !isStreaming else { return false }
         notice = nil
-        session.append(ChatMessage(role: .user, text: text, images: pendingImages.map(\.image)))
+        session.append(
+            ChatMessage(
+                role: .user, text: text, images: pendingAttachments.compactMap(\.image),
+                documents: pendingAttachments.compactMap(\.document)))
         clearStaging()
         let request = AIRequest(
             instructions: instructions,
@@ -79,19 +82,24 @@ final class AIChatState {
     /// Refused, not truncated: the composer is the last place an oversized turn can be explained.
     @discardableResult
     func attach(_ attachment: ChatAttachment) -> ChatAttachmentRefusal? {
-        guard !pendingImages.contains(where: { $0.image == attachment.image }) else { return nil }
-        guard pendingImages.count < AIAttachmentBudget.maxCount else { return .count }
-        guard AIAttachmentBudget.admits(pendingImages.map(\.image), adding: attachment.image) else {
-            return .size
+        guard !pendingAttachments.contains(where: { $0.payload == attachment.payload }) else {
+            return nil
         }
-        pendingImages.append(attachment)
+        guard pendingAttachments.count < AIAttachmentBudget.maxCount else { return .count }
+        guard
+            AIAttachmentBudget.admits(
+                images: pendingAttachments.compactMap(\.image),
+                documents: pendingAttachments.compactMap(\.document),
+                addingBytes: attachment.payload.byteCount)
+        else { return .size }
+        pendingAttachments.append(attachment)
         return nil
     }
 
     @discardableResult
     func removeLastAttachment() -> Bool {
-        guard !pendingImages.isEmpty else { return false }
-        pendingImages.removeLast()
+        guard !pendingAttachments.isEmpty else { return false }
+        pendingAttachments.removeLast()
         return true
     }
 
@@ -100,7 +108,7 @@ final class AIChatState {
     }
 
     private func clearStaging() {
-        pendingImages = []
+        pendingAttachments = []
         stagingGeneration += 1
     }
 
@@ -278,22 +286,70 @@ extension AIChatState {
     }
 }
 
-/// Why the composer would not take another picture; both limits are `AIAttachmentBudget`'s.
+/// Why the composer would not take another file; the limits are `AIAttachmentBudget`'s.
 enum ChatAttachmentRefusal: Equatable, Sendable {
     case count
     case size
+    case textTooLong
+    case undecodable
+    case unsupported(String)
+    case imagesUnsupported
+    case documentsUnsupported
 
     var message: String {
         switch self {
-        case .count: return "\(AIAttachmentBudget.maxCount) images is all one message can carry."
-        case .size: return "That image is too big for this message — send these first."
+        case .count:
+            return "\(AIAttachmentBudget.maxCount) attachments is all one message can carry."
+        case .size: return "That file is too big for this message — send these first."
+        case .textTooLong:
+            let limit = AIAttachmentBudget.maxInlinedTextBytes / 1_024
+            return "That text file is too big to attach — \(limit) KB is the limit."
+        case .undecodable: return "That file isn't text Tinycast can read."
+        case .unsupported(let ext):
+            return "Tinycast can attach images, PDFs and text files, not .\(ext) files."
+        case .imagesUnsupported: return "This model can't read images. Switch model to attach one."
+        case .documentsUnsupported:
+            return "This model can't read PDFs. Switch model, or paste the text instead."
         }
     }
 }
 
-/// A staged image with the name the chip shows; the name is for the composer only, not the wire.
+/// A staged file with the name and preview the chip shows; neither ever goes on the wire.
 struct ChatAttachment: Identifiable, Equatable, Sendable {
+    /// One staged list holds all three, so every lifetime rule applies to them alike.
+    enum Payload: Equatable, Sendable {
+        case image(AIImage)
+        case document(AIDocument)
+
+        var byteCount: Int {
+            switch self {
+            case .image(let image): return image.data.count
+            case .document(let document): return document.data.count
+            }
+        }
+    }
+
     let id = UUID()
-    let image: AIImage
+    let payload: Payload
     let name: String
+    /// A ~40px PNG, about a kilobyte: six cost less to decode than one keystroke's re-render.
+    let preview: Data?
+
+    var image: AIImage? {
+        guard case .image(let image) = payload else { return nil }
+        return image
+    }
+
+    var document: AIDocument? {
+        guard case .document(let document) = payload else { return nil }
+        return document
+    }
+
+    var kind: AIAttachmentPolicy.Kind {
+        switch payload {
+        case .image: return .image
+        case .document(let document):
+            return document.mimeType == AIAttachmentPolicy.pdfMIMEType ? .pdf : .text
+        }
+    }
 }

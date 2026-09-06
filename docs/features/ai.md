@@ -110,7 +110,8 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   one store where a delete alone frees pages without ever shrinking the file.
 - **Everything but the newest message is bounded.** `ChatSession.boundedContext` sends that message
   whole — truncating what someone just typed is worse than the provider's own error — keeps images
-  only on that turn and only up to `AIAttachmentBudget`, and walks older text newest-first into a
+  and documents only on that turn and only up to `AIAttachmentBudget`, inlining an attached text
+  file into that turn alone, and walks older text newest-first into a
   budget the *route* names: ~100 KB for a cloud endpoint, `AppleIntelligence.contextBudget` for the
   on-device model. Every transport funnels through `requestMessages(textBudget:)`, so no route can
   resend every image each turn or let history grow the payload as a chat goes on. The composer refuses a picture
@@ -324,19 +325,25 @@ model variant through `--variant`; it captures the returned session identifier, 
 `opencode session delete` after the process exits. Cancellation terminates the child process; only
 one installed-CLI turn can own a runner at a time.
 
-## Web search and images
+## Web search and attachments
 
-`AIRequest.webSearch` and `AIMessage.images` are provider-neutral; each route maps them itself:
+`AIRequest.webSearch`, `AIMessage.images` and `AIMessage.documents` are provider-neutral; each
+route maps them itself:
 
-| Route | Web search | Images | MCP tools |
-| --- | --- | --- | --- |
-| Apple Intelligence | never — it reaches nothing | never — the model is text-only | never |
-| Codex | thread-scoped `web_search` config | `image` input part | never — its tools are disabled by design |
-| Claude command | never | never | never |
-| OpenCode command | never | never | never |
-| OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | `tools` + `role: "tool"` turns |
-| OpenAI / Gemini / compatible | not offered | `image_url` part, assumed supported | `tools` + `role: "tool"` turns |
-| Anthropic | not offered | base64 `image` block | `tools` + `tool_use` / `tool_result` blocks |
+A text-ish file is deliberately absent from this table: it is inlined as text before any transport
+sees the turn, so every route — the on-device model and both CLIs included — takes one with no
+transport code at all.
+
+| Route | Web search | Images | PDFs | MCP tools |
+| --- | --- | --- | --- | --- |
+| Apple Intelligence | never — it reaches nothing | never — the model is text-only | never | never |
+| Codex | thread-scoped `web_search` config | `image` input part | never — the app-server takes no document part | never — its tools are disabled by design |
+| Claude command | never | never | never | never |
+| OpenCode command | never | never | never | never |
+| OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | never yet — its catalog publishes a `file` modality Tinycast does not read | `tools` + `role: "tool"` turns |
+| OpenAI | not offered | `image_url` part, assumed supported | `file` part with `filename` and a `file_data` data URL | `tools` + `role: "tool"` turns |
+| Gemini / compatible | not offered | `image_url` part, assumed supported | never — a gateway that has not implemented the part bills the upload before rejecting it | `tools` + `role: "tool"` turns |
+| Anthropic | not offered | base64 `image` block | base64 `document` block, ahead of the text block | `tools` + `tool_use` / `tool_result` blocks |
 
 A search is part of the reply, not a status: `item/started` for a `webSearch` item appends a
 `ChatSearch` to the streaming message pinned at the text length so far, `item/completed` (or the
@@ -356,11 +363,40 @@ doesn't simply returns the provider's error.
 Web search is a Settings → AI toggle, `aiWebSearch`, off by default: a prompt reaches a search engine
 only once the user has opted in.
 It's still excluded from backups — which Mac may send prompts to a search engine is that Mac's call.
-Nothing gates images: a model that takes them gets them, one that doesn't is never offered one.
+Nothing *guesses* at a capability: images ride on what the model's own catalog said, and a vendor
+API that does not take one simply returns its error. What is gated is only what a route provably
+cannot carry — a PDF to a text transport — refused at the composer with a HUD naming the reason.
+`AIModelCapabilities.documents` is true only for the two HTTP shapes whose bodies Tinycast writes;
+a gateway that has not implemented the `file` part would bill the upload before rejecting it, which
+is why documents are *not* assumed the way images are. An attachment is never dropped on the way
+out: answering a question about a document the model never received is the one outcome this must
+not produce.
 
-Attachments arrive by ⌘V. `PaletteWindowController`'s command-shortcut hook gives chat the chord
-first; a pasteboard holding an image file URL or a bare image (a screenshot) stages it as a
-`ChatAttachment`, while anything carrying text falls through to the field editor as a normal paste.
+Attachments arrive by ⌘V, in three kinds: an **image**, a **PDF** sent as a native document block,
+and a **text-ish file** whose contents are inlined as fenced, named text.
+`PaletteWindowController`'s command-shortcut hook gives chat the chord first; a pasteboard holding
+file URLs or a bare image (a screenshot) stages them, while anything else carrying text falls
+through to the field editor as a normal paste. **Only `isFileURL` URLs are read** — without that
+filter a copied `https://…/a.png` reaches `Data(contentsOf:)`, turning a keystroke into a network
+request. Every file is **sized before it is read**, so a huge CSV can never be slurped into memory.
+
+**A text file is inlined by `ChatSession.boundedContext`, never into `ChatMessage.text`.** That
+seam is load-bearing: `ChatSession.title` summarises the first user message, so folding a CSV into
+the stored text would make the dump the conversation's title in Chat History, its preview, and what
+the user bubble renders back. Inlining after the transcript and before the transport also means
+only the newest turn carries it, so a chat's payload cannot grow turn on turn. The block names the
+file and fences it with a run longer than any inside it, so a Markdown file holding its own fence
+cannot escape; a staged name is stripped of newlines and capped, so a file called
+`a\nAttached file: passwd` cannot forge a second header. Undecodable bytes are refused rather than
+guessed at, and a file past `AIAttachmentBudget.maxInlinedTextBytes` is refused rather than
+truncated — a silently truncated CSV is a lie the model then answers confidently.
+
+`AIAttachmentPolicy` is the one place deciding what may be attached and as what. It is pure and
+Foundation-only, so `ai-chat-test` pins it. It uses **extension allowlists rather than
+`UTType.conforms(to:)`**: a machine's installed apps declare types, so a conformance answer differs
+between two Macs and would make a harness machine-dependent — the exact environment coupling
+`Model/` exists to keep out. Adding a type is a one-line change; a type answer that differs per Mac
+is a bug you cannot reproduce.
 Images are re-encoded to PNG and bounded to 1568px on the long edge, off-main on a detached task so
 a display-sized screenshot does not decode on the keystroke; one past `AIAttachmentBudget` is refused
 with a HUD instead of being staged. Because that decode outlives the keystroke, it shares the staged
@@ -368,12 +404,21 @@ images' lifetime exactly: whatever consumes or clears them — a send, a new cha
 or leaving the conversation for another through history — disowns one still in flight and says so,
 rather than letting it surface on a later message. The counter that decides this sits on
 `AIChatState` beside the staged images, so a route that drops them cannot forget to move it. A
-staged image shows as a pill — a photo glyph plus file name, or "Image" for a screenshot; the row is
-too thin for a thumbnail to read — beside the typed text, through the same `headerAccessory` the
-launcher's argument fields use, so the field shrinks to its text and the chip
-follows it rather than the composer growing. Bare backspace on an empty composer removes the last
-chip before it backs out of chat; ⌘K → Remove Attachments clears them all. Sent images persist in
-`message_images` beside their message and render as thumbnails in the user bubble.
+staged attachment shows as a pill beside the typed text — an image carrying a small preview of
+itself, a PDF and a text file their own glyph, each followed by the file name, or "Image" for a
+screenshot. The preview is a ~1 KB PNG downsampled on the same detached task that encodes the
+attachment and carried on the staged attachment itself, so a header re-rendered per keystroke
+decodes nothing and there is no cache whose lifetime could drift from the staging counter's.
+`Theme.Size.chatAttachmentThumb` is *derived* from the glyph slot and the leading inset it gives
+up, so a preview pill measures exactly as a glyph pill does and `ComposerChip.width(of:)` — which
+`RootPaletteView.searchFieldWidth(for:)` subtracts from the search field — needs no second formula.
+Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to
+its text and the chip follows it rather than the composer growing. Bare backspace on an empty composer removes the last
+chip before it backs out of chat; ⌘K → Remove Attachments clears them all. Sent images persist in `message_images` and sent PDFs in `message_documents` beside their message;
+the bubble renders images as thumbnails and documents as the same named chips the composer showed.
+A text file is already in the message's text and needs no table. The schema is
+`CREATE TABLE IF NOT EXISTS` re-applied on every open, so the table needed no migration, and its
+`ON DELETE CASCADE` leaves `prune` unchanged.
 
 The switcher's glyph comes from the selection. Codex uses OpenAI's mark; Claude and OpenCode use their
 own marks; an API model resolves through its connection. It never depends on `modelOptions`, which for

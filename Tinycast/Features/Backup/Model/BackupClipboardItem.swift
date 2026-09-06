@@ -5,6 +5,7 @@ struct BackupClipboardItem: Codable, Sendable, Equatable {
     enum Kind: String, Codable, Sendable {
         case text
         case image
+        case file
     }
 
     var kind: Kind

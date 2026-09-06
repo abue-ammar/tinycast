@@ -15,6 +15,67 @@ struct AIProviderTests {
         }
     }
 
+    /// A wrong document shape must fail here rather than mid-conversation.
+    static func requestBodiesCarryDocuments() {
+        let pdf = AIDocument(
+            data: Data("%PDF-1.4".utf8), mimeType: "application/pdf", name: "report.pdf")
+        let image = AIImage(data: Data([0x89, 0x50]), mimeType: "image/png")
+        let turn = AIRequest(
+            messages: [
+                AIMessage(role: .user, text: "summarise", images: [image], documents: [pdf])
+            ])
+
+        let anthropic = AIRequestBody.make(
+            turn,
+            configuration: AIHTTPConfiguration(
+                provider: .anthropic, baseURL: URL(string: "https://api.anthropic.com")!,
+                model: "claude"))
+        let blocks =
+            (anthropic["messages"] as? [[String: Any]])?.first?["content"] as? [[String: Any]] ?? []
+        expect(
+            blocks.map { $0["type"] as? String } == ["image", "document", "text"],
+            "Anthropic takes image then document, with the text block last")
+        let source =
+            blocks.first { $0["type"] as? String == "document" }?["source"]
+            as? [String: Any]
+        expect(
+            source?["type"] as? String == "base64"
+                && source?["media_type"] as? String == "application/pdf",
+            "as a base64 document source naming its media type")
+        expect(
+            (source?["data"] as? String)?.contains("\n") == false,
+            "whose base64 carries no newlines")
+
+        let openAI = AIRequestBody.make(
+            turn,
+            configuration: AIHTTPConfiguration(
+                provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
+                model: "gpt"))
+        let parts =
+            (openAI["messages"] as? [[String: Any]])?.first?["content"] as? [[String: Any]] ?? []
+        expect(
+            parts.map { $0["type"] as? String } == ["text", "image_url", "file"],
+            "OpenAI keeps its text part first and appends the file part")
+        let file = parts.first { $0["type"] as? String == "file" }?["file"] as? [String: Any]
+        expect(
+            file?["filename"] as? String == "report.pdf",
+            "the file part names the document")
+        expect(
+            (file?["file_data"] as? String)?.hasPrefix("data:application/pdf;base64,") == true,
+            "and carries it as a data URL")
+
+        // A turn that is only a document must not collapse to the plain-string fast path.
+        let documentOnly = AIRequestBody.make(
+            AIRequest(messages: [AIMessage(role: .user, text: "", documents: [pdf])]),
+            configuration: AIHTTPConfiguration(
+                provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
+                model: "gpt"))
+        expect(
+            ((documentOnly["messages"] as? [[String: Any]])?.first?["content"]
+                as? [[String: Any]])?.count == 1,
+            "a document-only turn still sends, as content parts")
+    }
+
     static func main() {
         providerPresetsResolveEndpoints()
         modelCatalogBuildsProviderRequests()
@@ -27,6 +88,7 @@ struct AIProviderTests {
         capturedStreamsDecodeHoweverTheyArrive()
         brokenStreamsFailLoudly()
         brandsResolveFromModelIDs()
+        requestBodiesCarryDocuments()
         codexProtocolFramesRoundTrip()
         installedCLIStreamsDecode()
         settingsPersistAndRepairSelections()
