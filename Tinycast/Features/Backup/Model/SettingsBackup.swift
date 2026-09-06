@@ -15,6 +15,8 @@ struct SettingsBackup: Codable {
     /// Enums store by raw value, so an unknown one is ignored rather than failing.
     struct SettingsData: Codable {
         // Adding a field here means adding it to SettingsBackupCoverage too, or the harness fails.
+        // Carried, unlike the consent flags: recording your own copies grants no permission class.
+        var clipboardEnabled: Bool?
         var clipboardRetentionDays: Int?
         var clipboardDisabledApps: [String]?
         var launchAtLogin: Bool?
@@ -100,6 +102,7 @@ extension SettingsBackup {
         let s = core.settings
         var backup = SettingsBackup()
         backup.settings = SettingsData(
+            clipboardEnabled: s.clipboardEnabled,
             clipboardRetentionDays: s.clipboardRetention.rawValue,
             clipboardDisabledApps: s.clipboardDisabledApps,
             launchAtLogin: s.launchAtLogin,
@@ -219,6 +222,10 @@ extension SettingsBackup {
     private func applySettings(_ s: SettingsData, to core: AppCore) -> Int {
         let settings = core.settings
         var count = 0
+        if let flag = s.clipboardEnabled {
+            settings.clipboardEnabled = flag
+            count += 1
+        }
         if let days = s.clipboardRetentionDays, let retention = ClipboardRetention(rawValue: days) {
             settings.clipboardRetention = retention
             core.clipboardCoordinator.applyRetention(retention)

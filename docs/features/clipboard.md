@@ -2,6 +2,10 @@
 
 ## Invariants
 
+- **`clipboardEnabled` ships on — the only feature switch that does.** Absence of the key therefore
+  has to outrank a stored `false` in `AppSettings.init`, and off means fully off: the poller stops,
+  the SQLite file closes, the launcher command and its shortcut go, and Tab skips the screen.
+  `ClipboardCoordinator.applyEnabled()` is the single place that applies it.
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
   If the writer and the poller ever disagree, the app re-captures its own pastes in a loop.
 - **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so
@@ -22,6 +26,15 @@
 `ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
 re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the
 pasteboard and the poller skips anything carrying it.
+
+`stop()` is the off switch: it drops the timer and the fast-user-switching observers, and clears the
+`isCapturing` flag that `prepareForTinycastPasteboardMutation` reads — so a paste Tinycast performs
+itself no longer drains the pasteboard into history either.
+
+Existing clips survive being switched off, since a history is captured rather than authored and
+nothing else can put it back. **Clear history stays live with the feature off** —
+`ClipboardCoordinator.clearHistory()` reopens the file, empties it and closes it again — so a reader
+who turns the feature off can still erase what it kept.
 
 ## Store
 

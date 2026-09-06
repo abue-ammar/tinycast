@@ -11,6 +11,15 @@ struct ClipboardSettingsView: View {
         @Bindable var settings = settings
         return Form {
             Section {
+                Toggle(isOn: $settings.clipboardEnabled) {
+                    SettingsRowTitle(.clipboardClipboard, "Enable Clipboard History")
+                    Text("Record what you copy, so you can paste anything back from the browser.")
+                }
+            } header: {
+                SettingsSectionHeader(.clipboardClipboard)
+            }
+
+            Section {
                 SettingsRow(title: "Clipboard History", anchor: .clipboardGlobalShortcuts) {
                     ShortcutRecorder(action: .command(.clipboardHistory))
                 }
@@ -21,6 +30,7 @@ struct ClipboardSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .settingsEnabled(settings.clipboardEnabled)
 
             Section {
                 Picker(selection: $settings.clipboardRetention) {
@@ -37,6 +47,7 @@ struct ClipboardSettingsView: View {
             } header: {
                 SettingsSectionHeader(.clipboardHistory)
             }
+            .settingsEnabled(settings.clipboardEnabled)
 
             Section {
                 ForEach(settings.clipboardDisabledApps, id: \.self) { bundleID in
@@ -59,6 +70,7 @@ struct ClipboardSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .settingsEnabled(settings.clipboardEnabled)
 
             Section {
                 LabeledContent {
@@ -77,7 +89,7 @@ struct ClipboardSettingsView: View {
             titleVisibility: .visible
         ) {
             Button("Clear History", role: .destructive) {
-                core.clipboardStore.clearAll()
+                core.clipboardCoordinator.clearHistory()
             }
             Button("Cancel", role: .cancel) {}
         } message: {

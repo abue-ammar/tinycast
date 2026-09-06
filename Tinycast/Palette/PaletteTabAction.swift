@@ -9,11 +9,14 @@ enum PaletteTabAction: Equatable {
     /// The typed text is the question, so chat opens on the answer rather than an empty composer.
     case ask
 
-    static func resolve(mode: PaletteMode, aiEnabled: Bool) -> Self {
+    static func resolve(mode: PaletteMode, aiEnabled: Bool, clipboardEnabled: Bool) -> Self {
         switch mode {
-        // Turned off, chat is not a stop on the ring, which leaves the launcher ↔ clipboard flip.
-        case .launcher: return aiEnabled ? .ask : .carryQuery(.clipboard)
-        case .ai: return .freshScreen(.clipboard)
+        // A stop that is off leaves the ring, so Tab skips it rather than opening nothing.
+        case .launcher:
+            if aiEnabled { return .ask }
+            return clipboardEnabled ? .carryQuery(.clipboard) : .carryQuery(.launcher)
+        case .ai:
+            return clipboardEnabled ? .freshScreen(.clipboard) : .carryQuery(.launcher)
         case .clipboard: return .carryQuery(.launcher)
         default: return .carryQuery(.launcher)
         }

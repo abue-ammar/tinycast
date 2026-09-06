@@ -605,7 +605,9 @@ struct RootPaletteView: View {
     /// Resolved through `PaletteTabAction`, so the hint cannot promise the wrong destination.
     private var tabOpensChat: Bool {
         guard !isCollapsed, headerAccessory?.fieldNames.isEmpty ?? true else { return false }
-        return PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled) == .ask
+        return PaletteTabAction.resolve(
+            mode: vm.mode, aiEnabled: settings.aiEnabled,
+            clipboardEnabled: settings.clipboardEnabled) == .ask
     }
 
     /// The typed text's width, floored for the caret and capped so the strip stays on screen.
@@ -920,7 +922,10 @@ struct RootPaletteView: View {
 
     /// Crossing chat's edge opens a fresh screen, so a draft never lands in a list.
     private func cycleMode() {
-        switch PaletteTabAction.resolve(mode: vm.mode, aiEnabled: settings.aiEnabled) {
+        switch PaletteTabAction.resolve(
+            mode: vm.mode, aiEnabled: settings.aiEnabled,
+            clipboardEnabled: settings.clipboardEnabled)
+        {
         case .carryQuery(let mode): vm.mode = mode
         case .freshScreen(let mode): vm.prepare(mode: mode)
         case .ask: core.aiChatCoordinator.ask(vm.query)
