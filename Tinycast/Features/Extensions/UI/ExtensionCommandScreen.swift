@@ -62,7 +62,8 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     /// A form usually ships one Submit action, and a one-row ⌘K panel is noise beside its pill.
     func hasActions(at selection: Int) -> Bool {
-        ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).count > 1
+        guard isForm else { return true }
+        return ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).count > 1
     }
 
     /// A form's pill stands even with no field to land on: the action belongs to the screen.

@@ -371,7 +371,7 @@ struct RootPaletteView: View {
             return moveHorizontally(1) ? .handled : .ignored
         }
         // Plain ↵ runs an open menu's row or non-form selection; ⌘↵ submits forms.
-        .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")], phases: .down) { press in
+        .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
             if menuOpen, !command, !option {
@@ -649,7 +649,7 @@ struct RootPaletteView: View {
             clipboardEnabled: settings.clipboardEnabled) == .ask
     }
 
-    /// True when the screen took the keyboard over, so the header shows its title instead.
+    /// True when the screen took the keyboard over, which leaves the header empty beside the chevron.
     private var hidesSearchField: Bool { !isCollapsed && screen.hidesSearchField }
 
     /// The field, kept mounted and hidden rather than swapped: a branch would tear its editor down.
