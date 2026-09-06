@@ -108,6 +108,14 @@ struct RootPaletteView: View {
         return ExtensionScreen(tree: tree, query: vm.query)
     }
 
+    private func handleFormReturn(_ press: KeyPress) -> KeyPress.Result {
+        guard !vm.isEditingField, !vm.isComposing else { return .ignored }
+        let modifiers = press.modifiers.intersection([.command, .control, .option, .shift])
+        guard modifiers == .command else { return .ignored }
+        activateSelection()
+        return .handled
+    }
+
     private var isExtensionForm: Bool {
         vm.mode == .extensionCommand && extensionScreen.kind == .form
     }
@@ -363,18 +371,14 @@ struct RootPaletteView: View {
             return moveHorizontally(1) ? .handled : .ignored
         }
         // Plain ↵ runs an open menu's row or non-form selection; ⌘↵ submits forms.
-        .onKeyPress(keys: [.return], phases: .down) { press in
+        .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
             if menuOpen, !command, !option {
                 activateMenuItem(menuSelection)
                 return .handled
             }
-            if isExtensionForm {
-                guard command else { return .handled }
-                activateSelection()
-                return .handled
-            }
+            if isExtensionForm { return handleFormReturn(press) }
             guard command || option else {
                 guard !vm.isComposing else { return .ignored }
                 // The fallback for a hidden-field screen with no control focused to answer.

@@ -487,6 +487,7 @@
 		EAFC40D8851C50EB62198C7E /* InstalledAIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0BCEEE45732BE94136EEA8 /* InstalledAIManager.swift */; };
 		EBCDF88CD59A4B6F21F945C6 /* Quicklink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AA3385A84985A52E2DA3596 /* Quicklink.swift */; };
 		EBFD65E82A7633ECB132A4D4 /* RaycastDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DA2AB248B239E2EF9276187 /* RaycastDecoder.swift */; };
+		EC39E2815103B5C4BEE8AED6 /* ExtensionFormKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57640B0DA3F71E66CECA871C /* ExtensionFormKey.swift */; };
 		EDD7861202ECC1B0FA3B278E /* FileSearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7420F642776452B469182D0 /* FileSearchResult.swift */; };
 		EE6A9E899566ACCB8258D901 /* WindowManagementSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0A6DDC1C30A6E2C6DF7E7D /* WindowManagementSettingsView.swift */; };
 		EEB7F6A6AC8B53FDD607ED03 /* AIConversationOpenPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67CEAD8FAB5CD097D8F1C851 /* AIConversationOpenPolicy.swift */; };
@@ -698,6 +699,7 @@
 		54E48A8D5E2BC00E9E1CD5BF /* QuicklinkArgumentSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkArgumentSession.swift; sourceTree = "<group>"; };
 		56D6EE5144AEF889C95B3758 /* QuickActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionCoordinator.swift; sourceTree = "<group>"; };
 		570CE37C7133E28F7495ED91 /* MarkdownCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownCodeView.swift; sourceTree = "<group>"; };
+		57640B0DA3F71E66CECA871C /* ExtensionFormKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionFormKey.swift; sourceTree = "<group>"; };
 		57694B58B0A17CAC1D697FAA /* BundleNameCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleNameCache.swift; sourceTree = "<group>"; };
 		590A432CC25ED6372B453BFA /* ScheduleScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleScreen.swift; sourceTree = "<group>"; };
 		5A1E7B96668721F12170CD72 /* WindowActionMemory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowActionMemory.swift; sourceTree = "<group>"; };
@@ -2048,6 +2050,7 @@
 				2B0D967615846F9C4EC3E44F /* ExtensionDetailView.swift */,
 				D0C8025ED5F2833127E20C05 /* ExtensionFieldChrome.swift */,
 				D03E3DB2E1E28057B98FC1DF /* ExtensionFieldHint.swift */,
+				57640B0DA3F71E66CECA871C /* ExtensionFormKey.swift */,
 				045EC0C36F08176EE0304F49 /* ExtensionFormView.swift */,
 				32D20FAFD9F3CC0E5802A966 /* ExtensionImage.swift */,
 				BA90C7C0B97C4745B8F94C4B /* ExtensionListKey.swift */,
@@ -2801,6 +2804,7 @@
 				1B22A7E45ADF2FEA95957698 /* ExtensionFieldChrome.swift in Sources */,
 				54D00FB306E27EF791C2A1BE /* ExtensionFieldHint.swift in Sources */,
 				DA55ED3548C2D6C1EB9F205D /* ExtensionFormField.swift in Sources */,
+				EC39E2815103B5C4BEE8AED6 /* ExtensionFormKey.swift in Sources */,
 				A32BE15F664FB1215BE084BC /* ExtensionFormMetrics.swift in Sources */,
 				5D3E51C5FDA9EE53AFD12181 /* ExtensionFormView.swift in Sources */,
 				C9A7290682E9D0881713C009 /* ExtensionGridGeometry.swift in Sources */,

@@ -261,15 +261,7 @@ private struct ExtensionTextField: View {
         .focused($focus, equals: index)
         .extensionFieldChrome(focused: focus == index, hovered: hovered)
         .onHover { hovered = $0 }
-        .onKeyPress(keys: [.return], phases: .down) { press in
-            guard press.modifiers.isEmpty || press.modifiers.contains(.command) else {
-                return .ignored
-            }
-            if press.modifiers.contains(.command) {
-                onSubmit()
-            }
-            return .handled
-        }
+        .modifier(ExtensionFormKeys(field: .text, onActivate: {}, onSubmit: onSubmit))
         // The visible label is a Text in the row beside it, which the field cannot claim itself.
         .accessibilityLabel(Text(node.string("title") ?? node.string("placeholder") ?? "Text"))
         .extensionFieldHint(node.string("info"), error: node.string("error"))
@@ -319,11 +311,7 @@ private struct ExtensionTextArea: View {
             .focused($focus, equals: index)
             .extensionFieldChrome(focused: focus == index, hovered: hovered, multiline: true)
             .onHover { hovered = $0 }
-            .onKeyPress(keys: [.return], phases: .down) { press in
-                guard press.modifiers.contains(.command) else { return .ignored }
-                onSubmit()
-                return .handled
-            }
+            .modifier(ExtensionFormKeys(field: .textArea, onActivate: {}, onSubmit: onSubmit))
             .accessibilityLabel(Text(node.string("title") ?? "Text area"))
             .extensionFieldHint(node.string("info"), error: node.string("error"))
             .overlay(alignment: .topLeading) {
@@ -381,10 +369,6 @@ private struct ExtensionCheckbox: View {
         .focusEffectDisabled()
         .onHover { hovered = $0 }
         .onTapGesture { toggle() }
-        .onKeyPress(.space) {
-            toggle()
-            return .handled
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(node.string("label") ?? node.string("title") ?? "Checkbox"))
         // A toggle announces what it is and what it holds, not just that it can be pressed.
@@ -392,16 +376,7 @@ private struct ExtensionCheckbox: View {
         .accessibilityValue(Text(isOn ? "On" : "Off"))
         .extensionFieldHint(node.string("info"), error: node.string("error"))
         .accessibilityAction { toggle() }
-        .onKeyPress(keys: [.return], phases: .down) { press in
-            if press.modifiers.contains(.command) {
-                onSubmit()
-            } else if press.modifiers.isEmpty {
-                toggle()
-            } else {
-                return .ignored
-            }
-            return .handled
-        }
+        .modifier(ExtensionFormKeys(field: .checkbox, onActivate: toggle, onSubmit: onSubmit))
     }
 
     /// Drawn, not an SF Symbol pair: those differ in weight and jitter as they tick.
@@ -470,26 +445,13 @@ private struct ExtensionFilePicker: View {
         .focusEffectDisabled()
         .onHover { hovered = $0 }
         .onTapGesture { choose() }
-        .onKeyPress(.space) {
-            choose()
-            return .handled
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(node.string("title") ?? "File"))
         .accessibilityValue(Text(label))
         .accessibilityAddTraits(.isButton)
         .extensionFieldHint(node.string("info"), error: node.string("error"))
         .accessibilityAction { choose() }
-        .onKeyPress(keys: [.return], phases: .down) { press in
-            if press.modifiers.contains(.command) {
-                onSubmit()
-            } else if press.modifiers.isEmpty {
-                choose()
-            } else {
-                return .ignored
-            }
-            return .handled
-        }
+        .modifier(ExtensionFormKeys(field: .filePicker, onActivate: choose, onSubmit: onSubmit))
     }
 
     private func choose() {

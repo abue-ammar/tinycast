@@ -200,7 +200,8 @@ screens hold (see [palette.md](palette.md)).
   which of them focus lands on, which keys the control keeps, and which need a focus ring drawn — and
   `ExtensionScreen` publishes exactly the focusable ones as `items`, so ↑/↓, ⇥/⇧⇥ and the flat
   selection all walk one order. ⇥ wraps at both ends, ↵ opens a closed picker then commits its choice,
-  while ⌘↵ submits the form from any field. Space or ↵ toggles a checkbox and opens a file picker,
+  while ⌘↵ submits the form from any field. Return and keypad Enter behave alike; holding either
+  never repeats an activation or submission. Space or ↵ toggles a checkbox and opens a file picker,
   ←/→ step a dropdown's value and a tag picker's chips, and a text area keeps ↑/↓ for its own lines so
   only ⇥ leaves it. A field marked `autoFocus`
   is where the form opens, otherwise the first one. While a control holds focus
@@ -241,7 +242,9 @@ screens hold (see [palette.md](palette.md)).
   is stepped by a timer at AppKit's own rate — a `repeatForever` animation fades where a real caret
   switches. The list is results only.
 
-  **Every key an open list can receive is resolved in one place**, `ExtensionListKey`. A stack of
+  **Form activation keys use `ExtensionFormKey`**, applied by `ExtensionFormKeys` to each field.
+  The palette defers to focused fields; an open Actions menu and IME composition keep precedence.
+  `ExtensionListKey` handles list navigation and search editing. A stack of
   separate `onKeyPress` modifiers let a character rule shadow ⌫, and ⌫ arrives carrying U+007F
   rather than the U+0008 SwiftUI's `.delete` names, so nothing was ever deleted from a search.
   Both spellings are answered before characters are considered at all, and the rules are pure so
@@ -269,7 +272,7 @@ screens hold (see [palette.md](palette.md)).
   so both share one selection, and clicking a control takes focus as well as acting, which is what
   lets the two be mixed mid-form.
 
-  `Tests/ext-form-test.swift` drives the geometry and the parser; the interaction was checked against
+  `Tests/ext-form-test.swift` drives activation rules, geometry and the parser; earlier interaction checks used
   a Form Lab extension covering every control, sectioned and empty and 40-option lists, validation
   errors, wrapping labels, and forms taller than the palette, in both appearances.
 - **ActionPanel** — flattened (sections and submenus included) into `ExtensionActionsPanel`, the

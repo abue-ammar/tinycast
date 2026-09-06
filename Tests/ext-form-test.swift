@@ -27,10 +27,48 @@ struct ExtensionFormTests {
         dateParsing()
         dateSuggestions()
         ExtensionListKeyTests.run(check: check)
+        formActivation()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         print("\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    static func formActivation() {
+        let controls: [ExtensionFormField] = [
+            .text, .textArea, .checkbox, .dropdown, .tagPicker, .datePicker, .filePicker
+        ]
+        for field in controls {
+            for key in ExtensionFormKey.enterKeys {
+                let expected: ExtensionFormKey.Action =
+                    field == .text ? .consume : field == .textArea ? .ignored : .activate
+                check("Enter operates \(field)", ExtensionFormKey.resolve(
+                    field: field, key: key, modifiers: []) == expected)
+                check("Cmd-Enter submits from \(field)", ExtensionFormKey.resolve(
+                    field: field, key: key, modifiers: .command) == .submit)
+                check("holding Cmd-Enter never resubmits from \(field)", ExtensionFormKey.resolve(
+                    field: field, key: key, modifiers: .command, repeating: true) == .consume)
+                check("holding Enter cannot toggle or select twice in \(field)", ExtensionFormKey.resolve(
+                    field: field, key: key, modifiers: [], repeating: true)
+                    == (field == .textArea ? .ignored : .consume))
+                check("Actions menu retains Enter over \(field)", ExtensionFormKey.resolve(
+                    field: field, key: key, modifiers: [], menuOpen: true) == .ignored)
+                check("IME retains Enter over \(field)", ExtensionFormKey.resolve(
+                    field: field, key: key, modifiers: [], composing: true) == .ignored)
+                for modifiers: EventModifiers in [.shift, .option, .control, [.command, .shift]] {
+                    check("modified Enter stays available for shortcuts in \(field)", ExtensionFormKey.resolve(
+                        field: field, key: key, modifiers: modifiers) == .ignored)
+                }
+            }
+            let space: ExtensionFormKey.Action =
+                field == .checkbox || field == .filePicker ? .activate : .ignored
+            check("Space activates button-like controls in \(field)", ExtensionFormKey.resolve(
+                field: field, key: .space, modifiers: []) == space)
+            check("Ctrl-Space remains an input source shortcut in \(field)", ExtensionFormKey.resolve(
+                field: field, key: .space, modifiers: .control) == .ignored)
+        }
+        check("descriptions and separators never activate", ExtensionFormKey.resolve(
+            field: .inert, key: .return, modifiers: []) == .ignored)
     }
 
     // MARK: - Geometry

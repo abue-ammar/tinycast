@@ -262,6 +262,8 @@ run ext-store-test         $E/Model/ExtensionRegistry.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift
 run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
+                           $E/Model/ExtensionFormField.swift \
+                           $E/UI/ExtensionFormKey.swift \
                            $E/Model/ExtensionDateExpression.swift \
                            $E/UI/ExtensionListKey.swift \
                            Tests/ext-list-key-test.swift

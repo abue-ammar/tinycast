@@ -60,12 +60,9 @@ struct ExtensionDateField: View {
                     onSelect: { choose(rows, at: $0) },
                     onHighlight: { highlighted = $0 })
             }
-            // One handler: the list's panel never takes key, so every press lands here.
             .onKeyPress(phases: [.down, .repeat]) { press in
-                if press.key == .return, press.modifiers.contains(.command) {
-                    onSubmit()
-                    return .handled
-                }
+                guard !palette.menuOpen, !ExtensionFormKey.enterKeys.contains(press.key)
+                else { return .ignored }
                 switch ExtensionListKey(press: press, listOpen: open) {
                 case .openList: return openList()
                 case .moveUp: return move(-1)
@@ -86,6 +83,12 @@ struct ExtensionDateField: View {
                 case .stepValue, .ignored: return .ignored
                 }
             }
+            .modifier(ExtensionFormKeys(
+                field: .datePicker,
+                onActivate: {
+                    if open { choose(suggestions, at: highlighted) } else { _ = openList() }
+                },
+                onSubmit: { close(); onSubmit() }))
             .onChange(of: open) { palette.noteControlListOpen(open) }
             .onChange(of: query) { typedAt = Date() }
             .onScrollVisibilityChange { if !$0 { close() } }
