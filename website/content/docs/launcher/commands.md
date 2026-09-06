@@ -10,13 +10,13 @@ commands you write.
 
 These are Tinycast's own screens and operations, reachable by name from the launcher:
 
-Calculator History · Clipboard History · Search Emoji & Symbols · Search Files · Show Notes ·
-Create Note · Search Notes · Create Quicklink · Search Quicklinks · Import Quicklinks ·
+Calculator History · Clipboard History · Search Emoji & Symbols · Search Files · Open Camera ·
+Show Notes · Create Note · Search Notes · Create Quicklink · Search Quicklinks · Import Quicklinks ·
 Export Quicklinks · Export Backup · Import Backup · Import from Raycast · Settings ·
 About Tinycast · Quit Tinycast
 
-Six of them also carry their own global shortcut: Search Files, Clipboard History,
-Search Emoji & Symbols, Show Notes, Create Note and Search Notes.
+Seven of them also carry their own global shortcut: Search Files, Clipboard History,
+Search Emoji & Symbols, Open Camera, Show Notes, Create Note and Search Notes.
 
 Each row in **Settings → Commands** has a visibility checkbox, a shortcut recorder and an alias
 field. A command belonging to a disabled feature does nothing until you enable that feature.

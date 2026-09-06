@@ -17,7 +17,7 @@ events as searchable launcher entries.
   after the moment the switch was armed. Both are why `AutoJoinPolicy` takes `armedAt` and the
   already-joined set rather than reading a clock of its own.
 - **The camera settles before the panel opens, and stops after it closes.**
-  `CameraPreviewSession.start()` resolves access and blocks on `startRunning` first, then hands
+  `CameraSession.start()` resolves access and blocks on `startRunning` first, then hands
   `CameraPreviewController` a settled `Feed` — so the panel's first frame is live video rather than a
   stage it has to swap out, and the TCC prompt never takes key from a panel already up.
   `stop()` runs from the fade-out's completion, so the camera light never outlives the preview but
@@ -216,8 +216,9 @@ join(meeting)
 ```
 
 **The preview is itself a confirmation**, so it stands in for one when both are on rather than asking
-twice. `CameraPreviewPanel` sits at `.floating`, below a dialog's `.modalPanel`, so a failure report
-still lands on top of it.
+twice. `CameraPanel` sits at `.floating`, below a dialog's `.modalPanel`, so a failure report
+still lands on top of it. The session, the panel and the stage are the `Camera` feature's — see
+[camera.md](camera.md); only the join-specific controller and footer live here.
 
 ## Settings
 
