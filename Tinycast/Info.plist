@@ -66,7 +66,7 @@
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Tinycast uses automation to perform system actions you explicitly run.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Tinycast shows a camera preview so you can check yourself before joining a meeting.</string>
+	<string>Tinycast shows a camera preview so you can check yourself, and take a photo to the clipboard.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Tinycast reads today's and tomorrow's events so you can join a meeting from the palette.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>

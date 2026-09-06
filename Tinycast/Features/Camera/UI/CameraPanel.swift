@@ -1,10 +1,10 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// The join preview's panel; keys go through `sendEvent`, so ↵ and Esc need no focused subview.
-final class CameraPreviewPanel: NSPanel {
+/// A camera surface's panel; keys go through `sendEvent`, so ↵ and Esc need no focused subview.
+final class CameraPanel: NSPanel {
     enum Key {
-        case join
+        case primary
         case cancel
     }
 
@@ -43,11 +43,23 @@ final class CameraPreviewPanel: NSPanel {
         case kVK_Escape:
             onKey(.cancel)
         case kVK_Return, kVK_ANSI_KeypadEnter:
-            onKey(.join)
+            onKey(.primary)
         default:
             super.sendEvent(event)
         }
     }
+
+    /// Optically centred on the screen under the cursor, the same lift a dialog takes.
+    func centerOnCursorScreen() {
+        guard let visible = NSScreen.underCursor?.visibleFrame else { return }
+        let size = frame.size
+        setFrameOrigin(
+            NSPoint(
+                x: visible.midX - size.width / 2,
+                y: visible.midY - size.height / 2 + visible.height * Self.centerLift))
+    }
+
+    private static let centerLift: CGFloat = 0.08
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }

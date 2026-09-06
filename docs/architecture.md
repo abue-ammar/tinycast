@@ -34,7 +34,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ SystemActionRunner · QuicklinkLauncher · TextInjector ·             │
 │ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
 │ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor ·       │
-│ CalendarStore · MeetingLauncher · MeetingClock · CameraPreviewSession ·    │
+│ CalendarStore · MeetingLauncher · MeetingClock · CameraSession ·           │
 │ SupportReminderStore                                                       │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
@@ -132,10 +132,11 @@ driven imperatively from AppKit.
   height its content measured. Every route into it — the palette's menu circle, Settings → About, the
   menu bar, the launcher, and the 30-day reminder — lands on `showSupport()`, which is what moves the
   reminder's anchor. See [features/support.md](features/support.md).
-- **The camera preview** — a borderless, non-activating `CameraPreviewPanel` at `.floating`,
-  managed by `CameraPreviewController` and owned by `CalendarCoordinator` the way `NotesCoordinator`
-  owns its window. It gates a join and doubles as auto join's confirmation.
-  See [features/calendar.md](features/calendar.md).
+- **The camera surfaces** — a borderless, non-activating `CameraPanel` at `.floating`, in two
+  shapes over one `CameraSession`: `CameraPreviewController`, owned by `CalendarCoordinator`, gates a
+  join and doubles as auto join's confirmation; `CameraCoordinator`, owned by `AppCore`, is the
+  standalone `Open Camera` command. See [features/camera.md](features/camera.md) and
+  [features/calendar.md](features/calendar.md).
 - **HUDs** are separate, because a dialog asks and a HUD reports: `MessageHUDController` (the pill) and
   `VolumeHUDController` (the level box), both over a shared `HUDPresenter` that owns the
   one-at-a-time, auto-dismiss and fade policy. See [ui.md](ui.md#dialogs--hud).

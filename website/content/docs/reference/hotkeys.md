@@ -8,8 +8,8 @@ description: Recording global shortcuts, double-tap modifiers, and the Hyper key
 ## What can take a shortcut
 
 - The palette itself (**App Launcher**)
-- The built-in commands: Search Files, Clipboard History, Search Emoji & Symbols, Show Notes,
-  Create Note, Search Notes
+- The built-in commands: Search Files, Clipboard History, Search Emoji & Symbols, Open Camera,
+  Show Notes, Create Note, Search Notes
 - Every application, and every System Settings pane
 - Every quicklink, custom command and extension command
 - All 31 [system actions](/docs/launcher/system-actions)

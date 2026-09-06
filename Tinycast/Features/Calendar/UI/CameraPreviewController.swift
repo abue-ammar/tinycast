@@ -4,8 +4,8 @@ import SwiftUI
 /// Owns the check-yourself panel: one at a time, and the camera stops with it.
 @MainActor
 final class CameraPreviewController: NSObject, NSWindowDelegate {
-    private let session = CameraPreviewSession()
-    private var panel: CameraPreviewPanel?
+    private let session = CameraSession()
+    private var panel: CameraPanel?
     private var continuation: CheckedContinuation<Bool, Never>?
     /// Held across the camera warm-up too, so a chord repeating into it cannot stack previews.
     private var presenting = false
@@ -22,18 +22,18 @@ final class CameraPreviewController: NSObject, NSWindowDelegate {
         }
     }
 
-    private func show(meeting: MeetingEvent, now: Date, feed: CameraPreviewSession.Feed) {
+    private func show(meeting: MeetingEvent, now: Date, feed: CameraSession.Feed) {
         let view = CameraPreviewView(
             meeting: meeting, now: now, feed: feed,
             onJoin: { [weak self] in self?.finish(true) },
             onCancel: { [weak self] in self?.finish(false) })
         let hosting = NSHostingView(rootView: view)
         hosting.setFrameSize(hosting.fittingSize)
-        let panel = CameraPreviewPanel(content: hosting)
+        let panel = CameraPanel(content: hosting)
         panel.delegate = self
-        panel.onKey = { [weak self] key in self?.finish(key == .join) }
+        panel.onKey = { [weak self] key in self?.finish(key == .primary) }
         self.panel = panel
-        place(panel)
+        panel.centerOnCursorScreen()
         // Non-activating like the palette: key focus without pulling the user out of their app.
         panel.fadeIn(duration: Theme.Duration.enter) {
             panel.makeKeyAndOrderFront(nil)
@@ -56,18 +56,6 @@ final class CameraPreviewController: NSObject, NSWindowDelegate {
             session.stop()
         }
     }
-
-    private func place(_ panel: NSPanel) {
-        guard let visible = NSScreen.underCursor?.visibleFrame else { return }
-        let size = panel.frame.size
-        panel.setFrameOrigin(
-            NSPoint(
-                x: visible.midX - size.width / 2,
-                y: visible.midY - size.height / 2 + visible.height * Self.centerLift))
-    }
-
-    /// Optical centering, the same lift a dialog takes.
-    private static let centerLift: CGFloat = 0.08
 
     // MARK: - NSWindowDelegate
 
