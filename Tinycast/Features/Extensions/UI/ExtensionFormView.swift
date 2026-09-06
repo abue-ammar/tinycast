@@ -103,7 +103,8 @@ struct ExtensionFormView: View {
         case "Form.TextArea":
             labelled(field) {
                 ExtensionTextArea(
-                    node: field, index: index, focus: $focused, onChange: onChange)
+                    node: field, index: index, focus: $focused, onChange: onChange,
+                    onSubmit: onSubmit)
             }
 
         case "Form.Checkbox":
@@ -125,7 +126,7 @@ struct ExtensionFormView: View {
                     assetsPath: assetsPath,
                     allowsMultipleSelection: false,
                     index: index, focus: $focused,
-                    onChange: { onChange(field, $0.first ?? "") })
+                    onChange: { onChange(field, $0.first ?? "") }, onSubmit: onSubmit)
             }
 
         case "Form.TagPicker":
@@ -140,13 +141,14 @@ struct ExtensionFormView: View {
                     assetsPath: assetsPath,
                     allowsMultipleSelection: true,
                     index: index, focus: $focused,
-                    onChange: { onChange(field, $0) })
+                    onChange: { onChange(field, $0) }, onSubmit: onSubmit)
             }
 
         case "Form.DatePicker":
             labelled(field) {
                 ExtensionDateField(
-                    node: field, index: index, focus: $focused, onChange: onChange)
+                    node: field, index: index, focus: $focused, onChange: onChange,
+                    onSubmit: onSubmit)
             }
 
         case "Form.FilePicker":
@@ -259,7 +261,15 @@ private struct ExtensionTextField: View {
         .focused($focus, equals: index)
         .extensionFieldChrome(focused: focus == index, hovered: hovered)
         .onHover { hovered = $0 }
-        .onSubmit(onSubmit)
+        .onKeyPress(keys: [.return], phases: .down) { press in
+            guard press.modifiers.isEmpty || press.modifiers.contains(.command) else {
+                return .ignored
+            }
+            if press.modifiers.contains(.command) {
+                onSubmit()
+            }
+            return .handled
+        }
         // The visible label is a Text in the row beside it, which the field cannot claim itself.
         .accessibilityLabel(Text(node.string("title") ?? node.string("placeholder") ?? "Text"))
         .extensionFieldHint(node.string("info"), error: node.string("error"))
@@ -294,6 +304,7 @@ private struct ExtensionTextArea: View {
     let index: Int?
     @FocusState.Binding var focus: Int?
     let onChange: (RenderNode, Any) -> Void
+    let onSubmit: () -> Void
     @State private var text: String = ""
     /// The last edit dispatched; see `ExtensionTextField.adopt` for why an echo can be stale.
     @State private var sent: String?
@@ -308,6 +319,11 @@ private struct ExtensionTextArea: View {
             .focused($focus, equals: index)
             .extensionFieldChrome(focused: focus == index, hovered: hovered, multiline: true)
             .onHover { hovered = $0 }
+            .onKeyPress(keys: [.return], phases: .down) { press in
+                guard press.modifiers.contains(.command) else { return .ignored }
+                onSubmit()
+                return .handled
+            }
             .accessibilityLabel(Text(node.string("title") ?? "Text area"))
             .extensionFieldHint(node.string("info"), error: node.string("error"))
             .overlay(alignment: .topLeading) {
@@ -349,24 +365,22 @@ private struct ExtensionCheckbox: View {
     private var isOn: Bool { node.bool("value") ?? false }
 
     var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: Theme.Spacing.sm) {
-                box
-                Text(node.string("label") ?? "")
-                    .font(Theme.Typography.rowTitle)
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .frame(width: ExtensionFormMetrics.controlWidth, alignment: .leading)
-            .frame(height: ExtensionFormMetrics.controlHeight)
-            .contentShape(Rectangle())
+        HStack(spacing: Theme.Spacing.sm) {
+            box
+            Text(node.string("label") ?? "")
+                .font(Theme.Typography.rowTitle)
+                .foregroundStyle(Theme.Colors.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
+        .frame(width: ExtensionFormMetrics.controlWidth, alignment: .leading)
+        .frame(height: ExtensionFormMetrics.controlHeight)
+        .contentShape(Rectangle())
         .focusable()
         .focused($focus, equals: index)
         .focusEffectDisabled()
         .onHover { hovered = $0 }
+        .onTapGesture { toggle() }
         .onKeyPress(.space) {
             toggle()
             return .handled
@@ -377,9 +391,15 @@ private struct ExtensionCheckbox: View {
         .accessibilityAddTraits(isOn ? [.isToggle, .isSelected] : .isToggle)
         .accessibilityValue(Text(isOn ? "On" : "Off"))
         .extensionFieldHint(node.string("info"), error: node.string("error"))
+        .accessibilityAction { toggle() }
         .onKeyPress(keys: [.return], phases: .down) { press in
-            guard press.modifiers.isEmpty else { return .ignored }
-            onSubmit()
+            if press.modifiers.contains(.command) {
+                onSubmit()
+            } else if press.modifiers.isEmpty {
+                toggle()
+            } else {
+                return .ignored
+            }
             return .handled
         }
     }
@@ -433,25 +453,23 @@ private struct ExtensionFilePicker: View {
     }
 
     var body: some View {
-        Button(action: choose) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: "doc")
-                    .font(Theme.Typography.rowTrailing)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                Text(label)
-                    .font(Theme.Typography.rowTitle)
-                    .foregroundStyle(paths.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .extensionFieldChrome(focused: focus == index, hovered: hovered)
-            .contentShape(Rectangle())
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "doc")
+                .font(Theme.Typography.rowTrailing)
+                .foregroundStyle(Theme.Colors.textSecondary)
+            Text(label)
+                .font(Theme.Typography.rowTitle)
+                .foregroundStyle(paths.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
+        .extensionFieldChrome(focused: focus == index, hovered: hovered)
+        .contentShape(Rectangle())
         .focusable()
         .focused($focus, equals: index)
         .focusEffectDisabled()
         .onHover { hovered = $0 }
+        .onTapGesture { choose() }
         .onKeyPress(.space) {
             choose()
             return .handled
@@ -461,10 +479,15 @@ private struct ExtensionFilePicker: View {
         .accessibilityValue(Text(label))
         .accessibilityAddTraits(.isButton)
         .extensionFieldHint(node.string("info"), error: node.string("error"))
-        // ↵ submits the form as it does from every other control; space opens the panel.
+        .accessibilityAction { choose() }
         .onKeyPress(keys: [.return], phases: .down) { press in
-            guard press.modifiers.isEmpty else { return .ignored }
-            onSubmit()
+            if press.modifiers.contains(.command) {
+                onSubmit()
+            } else if press.modifiers.isEmpty {
+                choose()
+            } else {
+                return .ignored
+            }
             return .handled
         }
     }

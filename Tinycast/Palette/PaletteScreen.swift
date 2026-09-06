@@ -50,7 +50,7 @@ enum PaletteAxis {
     var primaryActionTitle: String { get }
     /// True when the screen owns the keyboard, so the header's field is hidden and unfocused.
     var hidesSearchField: Bool { get }
-    /// True when ↵ and ⌘K still act with no rows — a form's action belongs to the screen.
+    /// True when the footer and ⌘K still act with no rows — a form's action belongs to the screen.
     var actsWithoutRows: Bool { get }
 
     /// False when the selection can't be acted on, which hides the footer pill and swallows ⌘K.

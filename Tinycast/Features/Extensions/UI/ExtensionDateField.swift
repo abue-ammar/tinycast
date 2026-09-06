@@ -6,6 +6,7 @@ struct ExtensionDateField: View {
     let index: Int?
     @FocusState.Binding var focus: Int?
     let onChange: (RenderNode, Any) -> Void
+    let onSubmit: () -> Void
 
     @State private var open = false
     @State private var query = ""
@@ -61,6 +62,10 @@ struct ExtensionDateField: View {
             }
             // One handler: the list's panel never takes key, so every press lands here.
             .onKeyPress(phases: [.down, .repeat]) { press in
+                if press.key == .return, press.modifiers.contains(.command) {
+                    onSubmit()
+                    return .handled
+                }
                 switch ExtensionListKey(press: press, listOpen: open) {
                 case .openList: return openList()
                 case .moveUp: return move(-1)

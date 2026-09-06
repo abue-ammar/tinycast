@@ -21,7 +21,7 @@ struct ExtensionCommandScreen: PaletteScreen {
     /// A form owns the whole keyboard: its fields are the text, so the search field steps aside.
     var hidesSearchField: Bool { isForm }
 
-    /// ↵ submits a form whether or not it has a field to land on.
+    /// A form's primary action stands even with no field to land on.
     var actsWithoutRows: Bool { isForm }
 
     /// A text area edits with ↑/↓ itself, so only ⇥ leaves it.
@@ -60,12 +60,12 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }
 
-    /// A form usually ships one Submit action, and a one-row ⌘K panel is noise beside the ↵ pill.
+    /// A form usually ships one Submit action, and a one-row ⌘K panel is noise beside its pill.
     func hasActions(at selection: Int) -> Bool {
         ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).count > 1
     }
 
-    /// A form's ↵ pill stands even with no field to land on: the action belongs to the screen.
+    /// A form's pill stands even with no field to land on: the action belongs to the screen.
     var isForm: Bool {
         if case .form = screen.kind { return true }
         return false

@@ -460,10 +460,6 @@ struct ExtensionTests {
         check(
             "a text area keeps the vertical keys",
             ExtensionFormField(type: "Form.TextArea").ownsVerticalKeys)
-        check(
-            "a dropdown leaves ↵ to the form",
-            !ExtensionFormField(type: "Form.Dropdown").ownsReturn)
-
         let detail = ExtensionScreen(
             // Doubled delimiters: the heading contains `"#`, which closes a single-# string.
             tree: tree(##"{"id":2,"type":"Detail","props":{"markdown":"# Hi"},"children":[]}"##),

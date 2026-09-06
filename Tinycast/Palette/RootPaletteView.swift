@@ -108,6 +108,10 @@ struct RootPaletteView: View {
         return ExtensionScreen(tree: tree, query: vm.query)
     }
 
+    private var isExtensionForm: Bool {
+        vm.mode == .extensionCommand && extensionScreen.kind == .form
+    }
+
     /// Selection clamped into the results: one source for highlight, preview and activation.
     private func selection(count: Int) -> Int {
         count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
@@ -238,6 +242,7 @@ struct RootPaletteView: View {
             if !isCollapsed {
                 bottomBar(
                     pillLabel: screen.primaryActionTitle, showActionGroup: showActionGroup,
+                    formPrimaryShortcut: isExtensionForm,
                     showActions: screen.hasActions(at: sel))
             }
         }
@@ -357,12 +362,17 @@ struct RootPaletteView: View {
             if menuOpen { return .handled }
             return moveHorizontally(1) ? .handled : .ignored
         }
-        // Plain ↵ runs an open menu's row, else the selection; a modified ↵ always the selection's.
+        // Plain ↵ runs an open menu's row or non-form selection; ⌘↵ submits forms.
         .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
             if menuOpen, !command, !option {
                 activateMenuItem(menuSelection)
+                return .handled
+            }
+            if isExtensionForm {
+                guard command else { return .handled }
+                activateSelection()
                 return .handled
             }
             guard command || option else {
@@ -473,7 +483,8 @@ struct RootPaletteView: View {
             guard press.modifiers.contains(.command),
                 ASCIIKeyboardLayout.matches(press.key, character: "p")
             else { return .ignored }
-            guard !isCollapsed, vm.mode == .clipboard else { return .ignored }
+            let clipboardActive: Bool = !isCollapsed && vm.mode == .clipboard
+            guard clipboardActive else { return .ignored }
             toggleClipboardFilter()
             return .handled
         }
@@ -726,13 +737,17 @@ struct RootPaletteView: View {
         vm.mode == .uninstall ? Theme.Colors.destructive : .primary
     }
 
-    private func bottomBar(pillLabel: String, showActionGroup: Bool, showActions: Bool) -> some View {
+    private func bottomBar(
+        pillLabel: String, showActionGroup: Bool, formPrimaryShortcut: Bool, showActions: Bool
+    ) -> some View {
         // Floating controls, no bar; the edge dissolve ghosts the rows passing beneath.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
             if showActionGroup {
-                actionGroup(pillLabel: pillLabel, showActions: showActions)
+                actionGroup(
+                    pillLabel: pillLabel, formPrimaryShortcut: formPrimaryShortcut,
+                    showActions: showActions)
             }
         }
         .padding(.horizontal, Theme.Spacing.md)
@@ -747,14 +762,23 @@ struct RootPaletteView: View {
     }
 
     /// The footer control group: primary action and the Actions toggle sharing one glass capsule.
-    private func actionGroup(pillLabel: String, showActions: Bool) -> some View {
+    private func actionGroup(
+        pillLabel: String, formPrimaryShortcut: Bool, showActions: Bool
+    ) -> some View {
         HStack(spacing: 2) {
             BarButton(action: activateSelection) {
                 HStack(spacing: Theme.Spacing.sm) {
                     Text(pillLabel)
                         .font(Theme.Typography.bar)
                         .foregroundStyle(pillTint)
-                    KeyCapChip(text: "↵", style: .outline)
+                    if formPrimaryShortcut {
+                        HStack(spacing: Theme.Spacing.xxs) {
+                            KeyCapChip(text: "⌘", style: .outline)
+                            KeyCapChip(text: "↵", style: .outline)
+                        }
+                    } else {
+                        KeyCapChip(text: "↵", style: .outline)
+                    }
                 }
             }
             if showActions {
