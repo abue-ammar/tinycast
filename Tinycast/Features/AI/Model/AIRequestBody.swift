@@ -89,13 +89,17 @@ enum AIRequestBody {
                 }
             ]
         }
-        guard text != nil || !message.images.isEmpty else { return nil }
-        guard !message.images.isEmpty else {
+        let hasAttachments = !message.images.isEmpty || !message.documents.isEmpty
+        guard text != nil || hasAttachments else { return nil }
+        guard hasAttachments else {
             return ["role": message.role.rawValue, "content": text ?? ""]
         }
         var parts: [[String: Any]] = []
         if let text { parts.append(["type": "text", "text": text]) }
         parts += message.images.map { ["type": "image_url", "image_url": ["url": $0.dataURL]] }
+        parts += message.documents.map {
+            ["type": "file", "file": ["filename": $0.name, "file_data": $0.dataURL]]
+        }
         return ["role": message.role.rawValue, "content": parts]
     }
 
@@ -134,8 +138,9 @@ enum AIRequestBody {
             }
             return ["role": message.role.rawValue, "content": parts]
         }
-        guard text != nil || !message.images.isEmpty else { return nil }
-        guard !message.images.isEmpty else {
+        let hasAttachments = !message.images.isEmpty || !message.documents.isEmpty
+        guard text != nil || hasAttachments else { return nil }
+        guard hasAttachments else {
             return ["role": message.role.rawValue, "content": text ?? ""]
         }
         var parts: [[String: Any]] = message.images.map {
@@ -147,6 +152,16 @@ enum AIRequestBody {
                 ]
             ]
         }
+        parts += message.documents.map {
+            [
+                "type": "document",
+                "source": [
+                    "type": "base64", "media_type": $0.mimeType,
+                    "data": $0.data.base64EncodedString()
+                ]
+            ]
+        }
+        // Text stays last: a document block has to precede the instruction that refers to it.
         if let text { parts.append(["type": "text", "text": text]) }
         return ["role": message.role.rawValue, "content": parts]
     }

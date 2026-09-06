@@ -57,7 +57,12 @@ is the trap: a running Tinycast records every write to it as a genuine copy, so 
 lands in clipboard history looking like something the user copied. `notes-editor-test` seeded one on
 every run from #232 onward by calling the native `copy:`/`cut:`/`paste:` actions; it now drives the
 `writeSelection(to:types:)` and `readSelection(from:)` primitives those actions delegate to, against
-`NSPasteboard.withUniqueName()`. Same AppKit path, no shared side effect.
+`NSPasteboard.withUniqueName()`. Same AppKit path, no shared side effect. `pasteboard-test` is the
+second case, and it is why `ClipboardManager.fileURLs(on:volatileRoots:)` and `Paster.write(_:store:to:)`
+each take the thing they act on as a parameter: a seam that exists so the harness never has to reach
+for the shared board. Its scratch tree lives under `temporaryDirectory`, which is itself a volatile
+root, so the cases about *reading* files inject an empty root list and the one case about durability
+is the one that runs against the shipped roots.
 
 Never join a compile to its run with `&&` in a `set -e` script. `set -e` is specified to ignore a
 failing command in a non-final AND-OR list member, so `swiftc … && /tmp/x` swallows a compile error and
@@ -79,7 +84,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `app-name-test` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
 | `calc-test` | all of `Calculator/Model/` |
 | `calendar-test` | all of `Calendar/Model/` — link detection, the join window, the day buckets |
-| `clipboard-test` | `Clipboard/Model/ClipboardStore.swift` |
+| `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
+| `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |

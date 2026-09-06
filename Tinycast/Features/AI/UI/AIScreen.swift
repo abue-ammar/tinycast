@@ -34,9 +34,9 @@ struct AIScreen: PaletteScreen {
                     coordinator.copyLastResponse()
                 })
         }
-        if !chat.pendingImages.isEmpty {
+        if !chat.pendingAttachments.isEmpty {
             items.append(
-                PopoverMenuItem(title: "Remove Attachments", systemImage: "photo.badge.minus") {
+                PopoverMenuItem(title: "Remove Attachments", systemImage: "paperclip") {
                     coordinator.clearAttachments()
                 })
         }
@@ -67,7 +67,7 @@ struct AIScreen: PaletteScreen {
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
     ) -> PaletteHeaderAccessory? {
-        let attachments = chat.pendingImages
+        let attachments = chat.pendingAttachments
         let addressed = coordinator.addressedServer(in: vm.query)
         guard !attachments.isEmpty || addressed != nil else { return nil }
         let width =
@@ -156,11 +156,28 @@ private struct AIEmptyState: View {
     }
 }
 
-/// One pill beside the composer; the row is too thin for anything but a glyph and a word.
+/// One pill beside the composer, leading with a glyph or the attachment's own preview.
 private struct ComposerChip: View {
-    let symbol: String
+    /// A preview gives up leading inset to buy its extra size, so both pills measure alike.
+    enum Leading {
+        case symbol(String)
+        case preview(Data?, id: UUID)
+    }
+
+    let leading: Leading
     let label: String
 
+    init(symbol: String, label: String) {
+        self.leading = .symbol(symbol)
+        self.label = label
+    }
+
+    init(leading: Leading, label: String) {
+        self.leading = leading
+        self.label = label
+    }
+
+    /// Load-bearing: `RootPaletteView.searchFieldWidth(for:)` shrinks the field by exactly this.
     static func width(of label: String) -> CGFloat {
         let font = Theme.Typography.chipNSFont
         let text = (label as NSString).size(withAttributes: [.font: font]).width
@@ -169,22 +186,56 @@ private struct ComposerChip: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
-            Image(systemName: symbol)
-                .font(Theme.Typography.chip)
-                .symbolRenderingMode(.hierarchical)
-                .frame(width: Theme.Size.chatAttachmentGlyph)
+            switch leading {
+            case .symbol(let symbol):
+                Image(systemName: symbol)
+                    .font(Theme.Typography.chip)
+                    .symbolRenderingMode(.hierarchical)
+                    .frame(width: Theme.Size.chatAttachmentGlyph)
+            case .preview(let data, let id):
+                ComposerThumbnail(data: data, id: id)
+            }
             Text(label)
                 .font(Theme.Typography.chip)
                 .lineLimit(1)
         }
         .foregroundStyle(Theme.Colors.textSecondary)
-        .padding(.horizontal, Theme.Spacing.sm)
+        .padding(.leading, leadingInset)
+        .padding(.trailing, Theme.Spacing.sm)
         .padding(.vertical, Theme.Spacing.xxs)
         .background(Capsule().fill(Theme.Colors.controlSurface))
     }
+
+    private var leadingInset: CGFloat {
+        if case .preview = leading { return Theme.Spacing.xxs }
+        return Theme.Spacing.sm
+    }
 }
 
-/// Staged images sit after the typed text as named pills; the row is too thin for a thumbnail.
+/// Decoded once per attachment: `ForEach` keys on its id, so a per-keystroke re-render reuses it.
+private struct ComposerThumbnail: View {
+    let data: Data?
+    let id: UUID
+
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image).resizable().scaledToFill()
+            } else {
+                Image(systemName: "photo")
+                    .font(Theme.Typography.chip)
+                    .symbolRenderingMode(.hierarchical)
+            }
+        }
+        .frame(width: Theme.Size.chatAttachmentThumb, height: Theme.Size.chatAttachmentThumb)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
+        .task(id: id) { image = data.flatMap(NSImage.init(data:)) }
+    }
+}
+
+/// Staged files sit after the typed text as named pills, an image showing itself.
 private struct PendingAttachmentsChips: View {
     let attachments: [ChatAttachment]
 
@@ -195,8 +246,17 @@ private struct PendingAttachmentsChips: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             ForEach(attachments) { attachment in
-                ComposerChip(symbol: "photo", label: attachment.name)
+                ComposerChip(leading: leading(for: attachment), label: attachment.name)
+                    .accessibilityLabel("Attached file \(attachment.name)")
             }
+        }
+    }
+
+    private func leading(for attachment: ChatAttachment) -> ComposerChip.Leading {
+        switch attachment.kind {
+        case .image: return .preview(attachment.preview, id: attachment.id)
+        case .pdf: return .symbol("doc.richtext")
+        case .text: return .symbol("doc.plaintext")
         }
     }
 }

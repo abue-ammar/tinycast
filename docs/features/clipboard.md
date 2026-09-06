@@ -14,14 +14,38 @@
   captured rather than authored, and there is no UI for an unavailable clipboard — `QuicklinkStore`
   deliberately does the opposite. It is **not** a licence to treat the file as disposable: it lives in
   Application Support precisely because nothing else can put it back.
-- **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` stays
-  `text`/`image` — the two things capture can tell apart — so improving the classifier is a code
-  change rather than a database migration plus a backfill.
+- **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` holds
+  only what capture can tell apart on the pasteboard — `text`, `image`, `file` — so improving the
+  *classifier* stays a code change rather than a database migration plus a backfill, while a new
+  kind needs a new pasteboard type to justify it. `textForm` is nil for anything but `.text`, which
+  is what keeps a path shaped like `apple.com/report.pdf` out of the links.
+- **A `.file` entry references the file where it lies and never copies it.** Its absolute path is
+  the `text` column, so the trigram index finds it by name or by folder for free, and `imagePath`
+  stays nil — which is what keeps `prune`, `deleteBlob` and `owns` from ever reaching a file
+  Tinycast did not write. `kind` is a plain `TEXT` column, so the case cost no migration; an older
+  build simply fails to decode the row.
 - **A colour is parsed from the text on demand, never stored.** `ColorValue` is the single parser
   behind the clipboard's swatches and the launcher's colour card, so the two can never disagree
   about what counts as a colour or what it converts to.
 
 ## Poll-based capture
+
+**A file URL is read before the text**, because that is the whole of the bug this ordering fixes:
+Finder puts the file's *display name* on `public.utf8-plain-string` beside `public.file-url`, so a
+text-first poller records `IMG_1234.png` as prose. The read sits after the `internalType` and
+sensitive-type guards, which stay unconditional — a secret must never be recorded whatever shape it
+arrives in. A bare screenshot carries no file URL and still falls through to the `.png`/`.tiff`
+branch untouched.
+
+`ClipboardManager.fileURLs(on:volatileRoots:)` takes both the pasteboard and the roots as
+parameters, so `pasteboard-test` can drive an `NSPasteboard.withUniqueName()` and its own scratch
+tree: a harness that touched `NSPasteboard.general` would land in the reader's own running Tinycast
+as a genuine copy. It reads with `urlReadingFileURLsOnly`, so a copied `http` URL stays a link;
+returns nil rather than an empty array, so the text branch runs; caps a batch at
+`maxCapturedFiles`, so a Finder select-all cannot insert ten thousand rows on one tick; and
+**rejects a file under a volatile root** (`/tmp`, `/var/folders`, `~/Library/Caches`), because an
+app that stages a temp export beside better inline content must keep the inline content. Paths come
+back reversed so the *first* file copied ends up leading the history.
 
 `ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
 re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the
@@ -94,7 +118,7 @@ menu opens highlighting the *active* filter rather than the first row, the way a
 The filter is not gated on the list having rows: an over-narrow filter empties it, and the button is
 the way back out.
 
-`ClipboardFilter` owns the six cases and everything the UI needs from them — title, glyph, and the
+`ClipboardFilter` owns the seven cases and everything the UI needs from them — title, glyph, and the
 `emptyMessage` that stops "Clipboard history is empty" from appearing over a history that only looks
 empty. The cases are **exclusive**: a copied URL is a link, not a narrower kind of text, so *Text
 Only* means prose, and *Colors Only* takes `#FF5733` out of it.
@@ -212,3 +236,43 @@ partial index on `pinned_at` (`Tests/clipboard-test.swift` covers the shape). Th
 `pinned_at IS NOT NULL OR rowid >= ?` form reads better but cannot be driven from an index while
 holding row order, so it scans the whole table — ~12ms against ~1ms at 200k rows, on the main actor
 at launch.
+
+## Referenced files
+
+A file copied in Finder is recorded as a reference, never as a copy: Tinycast writes nothing to
+disk for it, and the row's path points at the original wherever it lies. That is the whole reason
+`imagePath` stays nil for a `.file` row — `owns()` is the one ownership rule, and a path it never
+sees can never be deleted by `deleteBlob` or a retention cut. `clipboard-test`'s
+`referencedFilesOutliveTheirRows` is the case that pins it, across `remove`, a retention cut and
+Clear History alike.
+
+**Pasting writes two flavours.** `public.file-url` so Finder, Mail and anything file-taking receive
+the *file*, and `.string` carrying the **path** — deliberately not Finder's own choice of the name,
+because a text field or Terminal almost always wants a path, a name is recoverable from a path and
+a path is not recoverable from a name. "A name arrived where a file was meant" is the bug being
+fixed, so it must not be reintroduced on the way out.
+
+**A vanished file is reported, never silently swallowed and never auto-deleted.** `Paster.write`
+returns false, the coordinator raises a HUD, and the row survives — history is a record of what
+happened, and the recorded path is still the answer to "where was it?". The preview says so in
+place, and the Path row keeps showing where the file used to be.
+
+`FilePreviewThumbnailer` is the row tile and the preview still. `QLThumbnailGenerator` is the only
+thing that renders a *content* thumbnail for any type — a video's poster frame, a PDF's first page
+— and with `representationTypes: .all` it falls back to the type icon itself, so every file paints
+something through one path. It copies `ImageThumbnail`'s shape exactly: two byte-bounded caches
+split at 128px, cost measured as the real bitmap footprint, and `purgePreviews()` called from
+`PaletteWindowController.hide()` beside the other two.
+
+**The player's teardown is the part with a lifetime to get wrong.** `orderOut` leaves the SwiftUI
+tree mounted, so `onDisappear` never fires on hide — which is exactly why `hide()` already has to
+purge caches by hand. `PaletteState.isVisible` is therefore the second half of the player's
+`.task(id:)` key, alongside the URL, so one mechanism covers both teardown triggers with no
+`onChange` racing it. Teardown calls `replaceCurrentItem(with: nil)` and not merely `pause()`: a
+paused `AVPlayer` still holds its asset reader and decoder open, which is how a 100 MB budget goes.
+Nothing ever autoplays — arrow-keying a list of twenty videos must not start twenty decodes.
+
+**A backup carries the path, never the bytes.** `BackupClipboardItem.file` exports `text` and no
+blob, a file already gone at export time is counted missing, and a restore drops a row whose path
+does not exist on this Mac — the same thing the Raycast import already does for an image path.
+Carrying file bytes would make a backup unbounded and defeat the point of referencing in place.

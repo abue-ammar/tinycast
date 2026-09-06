@@ -24,6 +24,12 @@ struct ClipboardTests {
         persistence()
         exportSeesPastTheMemoryWindow()
         importedImagesArriveOnce()
+        multiFileCopyMakesOneRowEach()
+        referencedFilesOutliveTheirRows()
+        filePathsAreNeverATextForm()
+        fileEntriesAreFoundByNameAndFolder()
+        fileKindClassification()
+        importedFilesArriveOncePerPath()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -532,6 +538,90 @@ struct ClipboardTests {
             let images =
                 (try? FileManager.default.contentsOfDirectory(atPath: store.imagesDir.path)) ?? []
             expect(images == ["blob.png"], "and no second copy of the blob")
+        }
+    }
+
+    /// One row per file, and the first file copied leads the history.
+    static func multiFileCopyMakesOneRowEach() {
+        withStore { store, _ in
+            store.addFiles(["/tmp/a.png", "/tmp/b.mov", "/tmp/c.pdf"], sourceBundleID: nil)
+            expect(store.items.count == 3, "three files make three rows")
+            expect(
+                store.items.map(\.filePath) == ["/tmp/c.pdf", "/tmp/b.mov", "/tmp/a.png"],
+                "and the reader inserts them newest-last")
+            store.addFiles(["/tmp/c.pdf"], sourceBundleID: nil)
+            expect(store.items.count == 3, "re-copying the leading file adds no row")
+        }
+    }
+
+    /// The one that matters: a file we only referenced is never ours to delete.
+    static func referencedFilesOutliveTheirRows() {
+        withStore { store, dir in
+            let outside = dir.appendingPathComponent("original.txt")
+            try? Data("keep me".utf8).write(to: outside)
+            store.addFiles([outside.path], sourceBundleID: nil)
+
+            store.remove(store.items[0])
+            expect(
+                FileManager.default.fileExists(atPath: outside.path),
+                "removing a row leaves the referenced file on disk")
+
+            store.addFiles([outside.path], sourceBundleID: nil)
+            store.maxAge = -1
+            store.enforceLimits()
+            expect(store.items.isEmpty, "a retention cut takes the row")
+            expect(
+                FileManager.default.fileExists(atPath: outside.path),
+                "but never the referenced file")
+
+            store.maxAge = 86_400
+            store.addFiles([outside.path], sourceBundleID: nil)
+            store.clearAll()
+            expect(
+                FileManager.default.fileExists(atPath: outside.path),
+                "and Clear History leaves it too")
+        }
+    }
+
+    /// A path is not prose: it must never be filed as a link, a colour or an address.
+    static func filePathsAreNeverATextForm() {
+        let item = ClipboardItem(filePath: "/Users/me/apple.com/#FF5733.txt", sourceBundleID: nil)
+        expect(item.textForm == nil, "a file entry has no text form")
+        expect(item.colorValue == nil, "and parses as no colour")
+        expect(!ClipboardFilter.link.matches(item), "so Links Only never shows it")
+        expect(!ClipboardFilter.text.matches(item), "nor does Text Only")
+        expect(ClipboardFilter.file.matches(item), "only Files Only does")
+    }
+
+    /// The path lives in `text`, so the trigram index finds a file by name or by folder.
+    static func fileEntriesAreFoundByNameAndFolder() {
+        withStore { store, _ in
+            store.addFiles(["/Users/me/Downloads/Quarterly Report.pdf"], sourceBundleID: nil)
+            expect(store.search("report", filter: .all).count == 1, "FTS finds it by name")
+            expect(store.search("downloads", filter: .all).count == 1, "and by folder")
+            expect(store.search("re", filter: .all).count == 1, "the sub-trigram fallback too")
+        }
+    }
+
+    static func fileKindClassification() {
+        expect(ClipboardFileKind.of(path: "/a/b.mov") == .movie, "a .mov is a movie")
+        expect(ClipboardFileKind.of(path: "/a/b.png") == .image, "a .png is an image")
+        expect(ClipboardFileKind.of(path: "/a/b.pdf") == .pdf, "a .pdf is a PDF")
+        expect(ClipboardFileKind.of(path: "/a/b.m4a") == .audio, "an .m4a is audio")
+        expect(ClipboardFileKind.of(path: "/a/README") == .other, "a bare name is not a folder")
+        expect(ClipboardFileKind.of(path: "/a/b", isDirectory: true) == .folder, "a folder is one")
+    }
+
+    /// `importKey` must key a file row off its path, or every file collides into one row.
+    static func importedFilesArriveOncePerPath() {
+        withStore { store, _ in
+            let a = ClipboardItem(filePath: "/tmp/one.pdf", sourceBundleID: nil)
+            let b = ClipboardItem(filePath: "/tmp/two.pdf", sourceBundleID: nil)
+            expect(store.importEntries([a, b]) == 2, "two distinct paths import as two rows")
+            expect(store.importEntries([a]) == 0, "and re-importing one adds nothing")
+            expect(
+                store.items.allSatisfy { $0.imagePath == nil },
+                "an imported file row is never adopted into imagesDir")
         }
     }
 

@@ -5,6 +5,7 @@ enum ClipboardFilter: CaseIterable, Sendable {
     case all
     case text
     case image
+    case file
     case color
     case link
     case email
@@ -14,6 +15,7 @@ enum ClipboardFilter: CaseIterable, Sendable {
         case .all: return "All Types"
         case .text: return "Text Only"
         case .image: return "Images Only"
+        case .file: return "Files Only"
         case .color: return "Colors Only"
         case .link: return "Links Only"
         case .email: return "Emails Only"
@@ -26,6 +28,7 @@ enum ClipboardFilter: CaseIterable, Sendable {
         case .all: return "list.bullet"
         case .text: return "textformat"
         case .image: return "photo"
+        case .file: return "doc"
         case .color: return "eyedropper"
         case .link: return "link"
         case .email: return "at"
@@ -38,6 +41,7 @@ enum ClipboardFilter: CaseIterable, Sendable {
         case .all: return "Clipboard history is empty"
         case .text: return "No text in clipboard history"
         case .image: return "No images in clipboard history"
+        case .file: return "No files in clipboard history"
         case .color: return "No colors in clipboard history"
         case .link: return "No links in clipboard history"
         case .email: return "No email addresses in clipboard history"
@@ -49,6 +53,7 @@ enum ClipboardFilter: CaseIterable, Sendable {
         switch self {
         case .all: return true
         case .image: return item.kind == .image
+        case .file: return item.kind == .file
         case .text: return item.textForm == .plain
         case .color: return item.textForm == .color
         case .link: return item.textForm == .link

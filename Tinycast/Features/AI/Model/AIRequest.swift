@@ -8,25 +8,53 @@ struct AIImage: Equatable, Hashable, Sendable {
     var dataURL: String { "data:\(mimeType);base64,\(data.base64EncodedString())" }
 }
 
+/// A file a route reads natively; a text-ish file never becomes one, it inlines as text instead.
+struct AIDocument: Equatable, Hashable, Sendable {
+    let data: Data
+    let mimeType: String
+    /// On the wire, unlike an image's: a model shown three PDFs needs to tell them apart.
+    let name: String
+
+    var dataURL: String { "data:\(mimeType);base64,\(data.base64EncodedString())" }
+}
+
 /// Requests cap near 25 MB and a data URL costs a third more, so the ceiling lives here.
 enum AIAttachmentBudget {
     static let maxCount = 6
     static let maxBytes = 10 * 1_048_576
+    /// Inlined text rides the newest turn, which is never trimmed, so it is capped before staging.
+    static let maxInlinedTextBytes = 32 * 1_024
 
-    /// Whether `images` can take `candidate` and stay inside both limits.
-    static func admits(_ images: [AIImage], adding candidate: AIImage) -> Bool {
-        images.count < maxCount
-            && images.reduce(candidate.data.count) { $0 + $1.data.count } <= maxBytes
+    /// Counted jointly: two independent ceilings would let six of each through.
+    static func admits(images: [AIImage], documents: [AIDocument], addingBytes bytes: Int) -> Bool {
+        let used =
+            images.reduce(0) { $0 + $1.data.count }
+            + documents.reduce(0) { $0 + $1.data.count }
+        return images.count + documents.count < maxCount && used + bytes <= maxBytes
     }
 
     /// The longest leading run that fits, for a turn assembled by any route but the composer.
-    static func bounded(_ images: [AIImage]) -> [AIImage] {
+    /// Images fill first, so a picture is never dropped in favour of a document behind it.
+    static func bounded(
+        _ images: [AIImage], _ documents: [AIDocument]
+    )
+        -> (images: [AIImage], documents: [AIDocument])
+    {
         var total = 0
-        return Array(
-            images.prefix(maxCount).prefix { image in
-                total += image.data.count
-                return total <= maxBytes
-            })
+        var count = 0
+        let keptImages = images.prefix { image in
+            guard count < maxCount, total + image.data.count <= maxBytes else { return false }
+            total += image.data.count
+            count += 1
+            return true
+        }
+        let keptDocuments = documents.prefix { document in
+            guard count < maxCount, total + document.data.count <= maxBytes else { return false }
+            total += document.data.count
+            count += 1
+            return true
+        }
+        return (Array(keptImages), Array(keptDocuments))
     }
 }
 
@@ -41,18 +69,21 @@ struct AIMessage: Equatable, Sendable {
     let role: Role
     let text: String
     let images: [AIImage]
+    /// Only a PDF ever lands here: a text-ish file is inlined into `text` before any transport.
+    let documents: [AIDocument]
     /// Assistant only: the calls this turn asked for, alongside whatever text came with them.
     let toolCalls: [AIToolCall]
     /// Tool only: the answer to one of them.
     let toolResult: AIToolResult?
 
     init(
-        role: Role, text: String, images: [AIImage] = [], toolCalls: [AIToolCall] = [],
-        toolResult: AIToolResult? = nil
+        role: Role, text: String, images: [AIImage] = [], documents: [AIDocument] = [],
+        toolCalls: [AIToolCall] = [], toolResult: AIToolResult? = nil
     ) {
         self.role = role
         self.text = text
         self.images = images
+        self.documents = documents
         self.toolCalls = toolCalls
         self.toolResult = toolResult
     }

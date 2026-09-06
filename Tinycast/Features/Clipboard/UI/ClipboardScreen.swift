@@ -163,10 +163,20 @@ enum ClipboardActionsMenu {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         }
-        if item.kind == .image {
+        if item.kind == .image || item.kind == .file {
             items.append(
                 PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
-                    core.clipboardCoordinator.revealClipboardImage(item)
+                    core.clipboardCoordinator.revealClip(item)
+                })
+        }
+        if item.kind == .file {
+            items.append(
+                PopoverMenuItem(title: "Open", systemImage: "arrow.up.forward.app") {
+                    core.clipboardCoordinator.openClip(item)
+                })
+            items.append(
+                PopoverMenuItem(title: "Copy Path", systemImage: "doc.on.clipboard") {
+                    core.clipboardCoordinator.copyClipPath(item)
                 })
         }
         items.append(
@@ -193,6 +203,7 @@ enum ClipboardActionsMenu {
                 separator: " ")
             return String(oneLine.prefix(40))
         case .image: return "Image"
+        case .file: return (item.filePath as NSString?)?.lastPathComponent ?? "File"
         }
     }
 }

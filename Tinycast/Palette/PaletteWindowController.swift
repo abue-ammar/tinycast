@@ -58,6 +58,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 preferredInputSourceID: core.settings.autoSwitchInputSourceID)
             // Events go stale while the palette is closed, and the countdown only ticks while up.
             core.calendarCoordinator.paletteDidShow()
+            core.palette.noteVisible(true)
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
@@ -73,6 +74,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel?.orderOut(nil)
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
+        core.palette.noteVisible(false)
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
         anchor = nil
         // The guides must never outlive the panel they point at.
@@ -80,6 +82,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         dropGuides.hide()
         // Drop the multi-MB preview bitmaps, so idle RAM returns near baseline.
         ImageThumbnail.purgePreviews()
+        FilePreviewThumbnailer.purgePreviews()
         IconCache.purgeFitted()
         schedulePopToRoot()
         guard restoreFocus else { return }
@@ -283,7 +286,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 self.core.paletteCoordinator.hidePalette()
                 return true
             case "v":
-                return self.core.palette.mode == .ai && self.core.aiChatCoordinator.attachPastedImage()
+                return self.core.palette.mode == .ai && self.core.aiChatCoordinator.attachPastedFile()
             default:
                 return false
             }

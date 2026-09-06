@@ -79,6 +79,8 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     func capabilities(for model: String) -> AIModelCapabilities {
         AIModelCapabilities(
             images: provider != .openRouter || visionModels.contains(model),
+            // Only the two shapes whose bodies Tinycast writes; a gateway bills the upload first.
+            documents: provider == .openAI || provider == .anthropic,
             webSearch: provider == .openRouter, tools: true)
     }
 }
@@ -86,13 +88,18 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
 /// What the picker can offer for a model: a vendor API takes images unless its catalog said no.
 struct AIModelCapabilities: Equatable, Sendable {
     let images: Bool
+    /// A PDF as a native block; four routes have no field for one, so it is refused, never dropped.
+    let documents: Bool
     let webSearch: Bool
     /// Only the two HTTP shapes; the Codex route declines tools and the on-device one has none.
     let tools: Bool
 
-    static let none = AIModelCapabilities(images: false, webSearch: false, tools: false)
-    static let chatGPT = AIModelCapabilities(images: true, webSearch: true, tools: false)
-    static let codex = AIModelCapabilities(images: true, webSearch: true, tools: false)
+    static let none = AIModelCapabilities(
+        images: false, documents: false, webSearch: false, tools: false)
+    static let chatGPT = AIModelCapabilities(
+        images: true, documents: false, webSearch: true, tools: false)
+    static let codex = AIModelCapabilities(
+        images: true, documents: false, webSearch: true, tools: false)
     /// The on-device model is text-only and reaches nothing, so it offers none of the three.
     static let appleIntelligence = AIModelCapabilities.none
 }

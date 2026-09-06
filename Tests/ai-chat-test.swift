@@ -20,6 +20,10 @@ struct AIChatTests {
         sessionSummariesAndRequests()
         requestsKeepOnlyBoundedContext()
         attachmentsStayInsideTheTurnBudget()
+        attachedTextInlinesOnlyIntoTheRequest()
+        onlyPDFsSurviveAsDocuments()
+        inlinedTextIsFencedAndNamed()
+        attachmentPolicyClassifiesWhatCanBeAttached()
         historyRoundTripsAndRepairsInterruptedReplies()
         savesRewriteOnlyTheStoredTail()
         crashRepairSurvivesTailSaves()
@@ -271,27 +275,100 @@ struct AIChatTests {
         let small = AIImage(data: Data(repeating: 7, count: 1_024), mimeType: "image/png")
         let staged = Array(repeating: small, count: AIAttachmentBudget.maxCount)
         expect(
-            !AIAttachmentBudget.admits(staged, adding: small),
-            "the composer stops at the number of images one message may carry")
+            !AIAttachmentBudget.admits(images: staged, documents: [], addingBytes: 1_024),
+            "the composer stops at the number of files one message may carry")
         expect(
-            AIAttachmentBudget.admits(staged.dropLast(), adding: small),
+            AIAttachmentBudget.admits(
+                images: Array(staged.dropLast()), documents: [], addingBytes: 1_024),
             "one under that count still fits")
+
+        let pdf = AIDocument(
+            data: Data(repeating: 3, count: 1_024), mimeType: "application/pdf", name: "a.pdf")
+        expect(
+            !AIAttachmentBudget.admits(
+                images: Array(staged.dropLast()), documents: [pdf], addingBytes: 1_024),
+            "the count is images and documents together, not one ceiling each")
+
+        expect(
+            AIAttachmentBudget.admits(
+                images: [], documents: [], addingBytes: AIAttachmentBudget.maxBytes),
+            "one file may spend the whole byte budget")
+        expect(
+            !AIAttachmentBudget.admits(
+                images: [small], documents: [], addingBytes: AIAttachmentBudget.maxBytes),
+            "bytes are counted across the turn, not per file")
+        expect(
+            !AIAttachmentBudget.admits(
+                images: [], documents: [pdf], addingBytes: AIAttachmentBudget.maxBytes),
+            "and a document's bytes count the same as a picture's")
 
         let heavy = AIImage(
             data: Data(repeating: 7, count: AIAttachmentBudget.maxBytes), mimeType: "image/png")
+        let cappedByCount = AIAttachmentBudget.bounded(staged + [small], [pdf])
         expect(
-            AIAttachmentBudget.admits([], adding: heavy),
-            "one picture may spend the whole byte budget")
+            cappedByCount.images.count == AIAttachmentBudget.maxCount
+                && cappedByCount.documents.isEmpty,
+            "the backstop drops what the joint count cannot carry")
         expect(
-            !AIAttachmentBudget.admits([small], adding: heavy),
-            "bytes are counted across the turn, not per picture")
+            AIAttachmentBudget.bounded([small, heavy, small], []).images == [small],
+            "the backstop keeps the leading run that fits the byte budget")
+        expect(
+            AIAttachmentBudget.bounded([heavy], [pdf]).documents.isEmpty,
+            "and images fill first, so a picture is never dropped for a document behind it")
+    }
+
+    /// A pasted file must not be able to become the conversation's title or its history preview.
+    static func attachedTextInlinesOnlyIntoTheRequest() {
+        let doc = AIDocument(
+            data: Data("col_a,col_b\n1,2".utf8), mimeType: "text/csv", name: "rows.csv")
+        var session = ChatSession()
+        session.append(ChatMessage(role: .user, text: "what is this?", documents: [doc]))
 
         expect(
-            AIAttachmentBudget.bounded(staged + [small]).count == AIAttachmentBudget.maxCount,
-            "the backstop drops what the count cannot carry")
+            session.messages.last?.text == "what is this?",
+            "the transcript keeps what the reader actually typed")
+        let sent = session.requestMessages().last?.text ?? ""
+        expect(sent.contains("Attached file: rows.csv"), "the request names the file")
+        expect(sent.contains("col_a,col_b"), "and carries its contents")
+        expect(sent.hasSuffix("what is this?"), "with the typed question after the attachment")
+    }
+
+    /// A text file is inlined, so only a PDF may reach a transport as a document block.
+    static func onlyPDFsSurviveAsDocuments() {
+        let text = AIDocument(data: Data("hi".utf8), mimeType: "text/plain", name: "a.txt")
+        let pdf = AIDocument(data: Data("%PDF".utf8), mimeType: "application/pdf", name: "b.pdf")
+        var session = ChatSession()
+        session.append(ChatMessage(role: .user, text: "read these", documents: [text, pdf]))
+        let sent = session.requestMessages().last
+        expect(sent?.documents == [pdf], "the text file inlines and the PDF stays a document")
+    }
+
+    /// A fence must out-length any run inside the file, or a Markdown file escapes its own block.
+    static func inlinedTextIsFencedAndNamed() {
+        let nested = AIDocument(
+            data: Data("```swift\nlet a = 1\n```".utf8), mimeType: "text/markdown",
+            name: "notes.md")
+        let out = AIAttachmentPolicy.prompt(text: "", documents: [nested])
+        expect(out.contains("````md"), "the fence out-lengths the longest run inside")
         expect(
-            AIAttachmentBudget.bounded([small, heavy, small]) == [small],
-            "the backstop keeps the leading run that fits the byte budget")
+            AIAttachmentPolicy.sanitized(name: "a\nAttached file: passwd").count <= 64,
+            "a newline in a name cannot forge a second header")
+        expect(
+            !AIAttachmentPolicy.sanitized(name: "a\nb").contains("\n"),
+            "newlines are stripped from a staged name")
+    }
+
+    static func attachmentPolicyClassifiesWhatCanBeAttached() {
+        expect(AIAttachmentPolicy.kind(forFileName: "a.PNG") == .image, "an image is an image")
+        expect(AIAttachmentPolicy.kind(forFileName: "a.pdf") == .pdf, "a PDF is a document")
+        expect(AIAttachmentPolicy.kind(forFileName: "a.md") == .text, "markdown inlines")
+        expect(AIAttachmentPolicy.kind(forFileName: "a.swift") == .text, "so does source")
+        expect(AIAttachmentPolicy.kind(forFileName: "a.zip") == nil, "an archive is refused")
+        expect(AIAttachmentPolicy.kind(forFileName: "a.mp4") == nil, "and so is video")
+        expect(AIAttachmentPolicy.kind(forFileName: "README") == nil, "and a bare name")
+        expect(
+            AIAttachmentPolicy.mimeType(forFileName: "a.csv") == "text/csv",
+            "a mime type follows the extension")
     }
 
     static func historyRoundTripsAndRepairsInterruptedReplies() {
@@ -669,15 +746,16 @@ struct AIChatTests {
             stamp += 1
             chat.attach(
                 ChatAttachment(
-                    image: AIImage(data: Data([0x89, UInt8(stamp)]), mimeType: "image/png"),
-                    name: "shot-\(stamp).png"))
+                    payload: .image(
+                        AIImage(data: Data([0x89, UInt8(stamp)]), mimeType: "image/png")),
+                    name: "shot-\(stamp).png", preview: nil))
         }
 
         let opening = AIChatState(history: store)
         stage(opening)
         let beforeOpen = opening.stagingGeneration
         expect(opening.open(id: saved), "a saved conversation opens")
-        expect(opening.pendingImages.isEmpty, "opening another conversation drops its staged images")
+        expect(opening.pendingAttachments.isEmpty, "opening another conversation drops its staged images")
         expect(
             opening.stagingGeneration != beforeOpen,
             "opening another conversation disowns a decode still in flight")
@@ -688,7 +766,7 @@ struct AIChatTests {
         let beforeSame = reopening.stagingGeneration
         expect(reopening.open(id: saved), "reopening the conversation already on screen succeeds")
         expect(
-            reopening.pendingImages.count == 1 && reopening.stagingGeneration == beforeSame,
+            reopening.pendingAttachments.count == 1 && reopening.stagingGeneration == beforeSame,
             "reopening the conversation already on screen keeps its staged images")
 
         let deleting = AIChatState(history: store)
@@ -697,22 +775,22 @@ struct AIChatTests {
         let beforeOther = deleting.stagingGeneration
         deleting.delete(id: UUID())
         expect(
-            deleting.pendingImages.count == 1 && deleting.stagingGeneration == beforeOther,
+            deleting.pendingAttachments.count == 1 && deleting.stagingGeneration == beforeOther,
             "deleting some other conversation leaves the composer alone")
         deleting.delete(id: saved)
-        expect(deleting.pendingImages.isEmpty, "deleting the open conversation drops its staged images")
+        expect(deleting.pendingAttachments.isEmpty, "deleting the open conversation drops its staged images")
 
         let clearingAll = AIChatState(history: store)
         stage(clearingAll)
         clearingAll.deleteAll()
-        expect(clearingAll.pendingImages.isEmpty, "Delete All drops the staged images")
+        expect(clearingAll.pendingAttachments.isEmpty, "Delete All drops the staged images")
 
         let starting = AIChatState(history: store)
         stage(starting)
         let beforeNew = starting.stagingGeneration
         starting.startNewChat()
         expect(
-            starting.pendingImages.isEmpty && starting.stagingGeneration != beforeNew,
+            starting.pendingAttachments.isEmpty && starting.stagingGeneration != beforeNew,
             "a new chat drops the staged images")
 
         let removing = AIChatState(history: store)

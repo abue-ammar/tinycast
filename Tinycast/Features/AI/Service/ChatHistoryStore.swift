@@ -37,6 +37,14 @@ final class ChatHistoryStore {
           data BLOB NOT NULL,
           PRIMARY KEY(message_id, position)
         );
+        CREATE TABLE IF NOT EXISTS message_documents(
+          message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+          position INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          mime_type TEXT NOT NULL,
+          data BLOB NOT NULL,
+          PRIMARY KEY(message_id, position)
+        );
         CREATE TABLE IF NOT EXISTS message_searches(
           message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
           position INTEGER NOT NULL,
@@ -128,6 +136,7 @@ final class ChatHistoryStore {
         defer { sqlite3_finalize(messagesStatement) }
         bind(id.uuidString, to: messagesStatement, at: 1)
         let images = images(forConversation: id, in: database)
+        let documents = documents(forConversation: id, in: database)
         let searches = searches(forConversation: id, in: database)
         let toolUses = toolUses(forConversation: id, in: database)
         var messages: [ChatMessage] = []
@@ -150,7 +159,8 @@ final class ChatHistoryStore {
                     id: messageID, role: role, text: body, state: state,
                     sentAt: Date(
                         timeIntervalSince1970: sqlite3_column_double(messagesStatement, 4)),
-                    images: images[messageID] ?? [], searches: searches[messageID] ?? [],
+                    images: images[messageID] ?? [], documents: documents[messageID] ?? [],
+                    searches: searches[messageID] ?? [],
                     toolUses: toolUses[messageID] ?? []))
         }
         return ChatSession(
@@ -292,7 +302,8 @@ final class ChatHistoryStore {
             sqlite3_clear_bindings(statement)
         }
         return session.messages[rewriteFrom...].allSatisfy {
-            saveImages(of: $0, in: database) && saveSearches(of: $0, in: database)
+            saveImages(of: $0, in: database) && saveDocuments(of: $0, in: database)
+                && saveSearches(of: $0, in: database)
                 && saveToolUses(of: $0, in: database)
         }
     }
@@ -422,6 +433,53 @@ final class ChatHistoryStore {
             sqlite3_clear_bindings(statement)
         }
         return true
+    }
+
+    private func saveDocuments(of message: ChatMessage, in database: OpaquePointer) -> Bool {
+        guard !message.documents.isEmpty else { return true }
+        let sql = """
+            INSERT INTO message_documents(message_id, position, name, mime_type, data)
+            VALUES(?, ?, ?, ?, ?);
+            """
+        guard let statement = prepare(sql, in: database) else { return false }
+        defer { sqlite3_finalize(statement) }
+        for (position, document) in message.documents.enumerated() {
+            bind(message.id.uuidString, to: statement, at: 1)
+            sqlite3_bind_int64(statement, 2, Int64(position))
+            bind(document.name, to: statement, at: 3)
+            bind(document.mimeType, to: statement, at: 4)
+            let bound = document.data.withUnsafeBytes { bytes in
+                sqlite3_bind_blob(
+                    statement, 5, bytes.baseAddress, Int32(bytes.count), chatSQLiteTransient)
+            }
+            guard bound == SQLITE_OK, sqlite3_step(statement) == SQLITE_DONE else { return false }
+            sqlite3_reset(statement)
+            sqlite3_clear_bindings(statement)
+        }
+        return true
+    }
+
+    private func documents(
+        forConversation id: UUID, in database: OpaquePointer
+    ) -> [UUID: [AIDocument]] {
+        let sql = """
+            SELECT d.message_id, d.name, d.mime_type, d.data FROM message_documents d
+            JOIN messages m ON m.id = d.message_id
+            WHERE m.conversation_id = ? ORDER BY d.message_id, d.position;
+            """
+        guard let statement = prepare(sql, in: database) else { return [:] }
+        defer { sqlite3_finalize(statement) }
+        bind(id.uuidString, to: statement, at: 1)
+        var documents: [UUID: [AIDocument]] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let messageID = UUID(uuidString: text(statement, 0)),
+                let bytes = sqlite3_column_blob(statement, 3)
+            else { continue }
+            let data = Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, 3)))
+            documents[messageID, default: []].append(
+                AIDocument(data: data, mimeType: text(statement, 2), name: text(statement, 1)))
+        }
+        return documents
     }
 
     private func images(

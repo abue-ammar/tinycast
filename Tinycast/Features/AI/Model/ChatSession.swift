@@ -41,7 +41,7 @@ struct ChatSession: Equatable, Sendable {
                 guard message.role == .user || message.state == .complete else { return nil }
                 return AIMessage(
                     role: message.role == .user ? .user : .assistant,
-                    text: message.text, images: message.images)
+                    text: message.text, images: message.images, documents: message.documents)
             }, textBudget: textBudget)
     }
 
@@ -67,9 +67,13 @@ struct ChatSession: Equatable, Sendable {
         // The slice opens with the user turn that prompted it; an orphaned reply reads as noise.
         while head.last?.role == .assistant { head.removeLast() }
         let prompt = messages[newest]
+        let kept = AIAttachmentBudget.bounded(prompt.images, prompt.documents)
+        // Inlined here, not in `ChatMessage.text`: the transcript's title is its first user text.
         let bounded = AIMessage(
-            role: prompt.role, text: prompt.text,
-            images: AIAttachmentBudget.bounded(prompt.images))
+            role: prompt.role,
+            text: AIAttachmentPolicy.prompt(text: prompt.text, documents: kept.documents),
+            images: kept.images,
+            documents: kept.documents.filter { $0.mimeType == AIAttachmentPolicy.pdfMIMEType })
         return head.reversed() + [bounded] + tail
     }
 
