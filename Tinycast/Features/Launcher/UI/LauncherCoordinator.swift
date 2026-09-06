@@ -11,6 +11,7 @@ final class LauncherCoordinator {
     private let systemActionCoordinator: SystemActionCoordinator
     private let quicklinkCoordinator: QuicklinkCoordinator
     private let windowCommandCoordinator: WindowCommandCoordinator
+    private let windowLayoutCoordinator: WindowLayoutCoordinator
     private let snippetCoordinator: SnippetCoordinator
     private let fileSearchCoordinator: FileSearchCoordinator
     private let notesCoordinator: NotesCoordinator
@@ -28,6 +29,7 @@ final class LauncherCoordinator {
         systemActionCoordinator: SystemActionCoordinator,
         quicklinkCoordinator: QuicklinkCoordinator,
         windowCommandCoordinator: WindowCommandCoordinator,
+        windowLayoutCoordinator: WindowLayoutCoordinator,
         snippetCoordinator: SnippetCoordinator,
         fileSearchCoordinator: FileSearchCoordinator,
         notesCoordinator: NotesCoordinator,
@@ -43,6 +45,7 @@ final class LauncherCoordinator {
         self.systemActionCoordinator = systemActionCoordinator
         self.quicklinkCoordinator = quicklinkCoordinator
         self.windowCommandCoordinator = windowCommandCoordinator
+        self.windowLayoutCoordinator = windowLayoutCoordinator
         self.snippetCoordinator = snippetCoordinator
         self.fileSearchCoordinator = fileSearchCoordinator
         self.notesCoordinator = notesCoordinator
@@ -89,6 +92,12 @@ final class LauncherCoordinator {
             windowCommandCoordinator.runWindowCommand(id: command.id)
             return
         }
+        if app.kind == .windowLayout {
+            // The coordinator hides the palette itself: a layout must not restore focus first.
+            guard let id = WindowLayout.id(fromEntryID: app.id) else { return }
+            windowLayoutCoordinator.runWindowLayout(id: id)
+            return
+        }
         // Before the palette hides: a view command takes the palette over rather than closing it.
         if app.kind == .extensionCommand {
             extensionCoordinator.runExtensionCommand(app, arguments: arguments)
@@ -116,7 +125,7 @@ final class LauncherCoordinator {
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
             snippetCoordinator.expandSnippet(id: snippetID, targetApp: previous)
-        case .command, .customCommand, .systemAction, .windowCommand, .quicklink,
+        case .command, .customCommand, .systemAction, .windowCommand, .windowLayout, .quicklink,
             .extensionCommand, .meeting:
             break  // handled above
         }
@@ -174,6 +183,12 @@ final class LauncherCoordinator {
         case .createSnippet:
             dismissPalette()
             snippetCoordinator.editSnippet(nil)
+        case .createWindowLayout:
+            dismissPalette()
+            windowLayoutCoordinator.editWindowLayout(nil)
+        case .captureWindowLayout:
+            dismissPalette()
+            windowLayoutCoordinator.captureWindowLayout()
         case .createQuicklink:
             dismissPalette()
             quicklinkCoordinator.editQuicklink(nil)

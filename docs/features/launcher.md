@@ -469,6 +469,14 @@ Settings › Window Management rather than a launcher-category pane of their own
 made for snippets. The feature ships off. See
 [window-management.md](window-management.md).
 
+## Window layouts
+
+`WindowLayoutStore` supplies its slice the way custom commands do, sorted by name, published
+immediately **before** the window commands so the two read as one family. Their per-layout shortcut
+and launcher checkbox live in Settings › Window Management beside the commands', and
+`windowLayoutsShowInLauncher` takes the section and its two commands out together. See
+[window-layouts.md](window-layouts.md).
+
 ## Quicklinks
 
 `QuicklinkStore` supplies its slice the same way custom commands do, sorted pinned-first then

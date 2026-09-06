@@ -60,6 +60,7 @@ extension SettingsAnchor {
 
     static let windowManagementWindowManagement = Self(
         tab: .windowManagement, title: "Window Management")
+    static let windowManagementLayouts = Self(tab: .windowManagement, title: "Window Layouts")
     static let windowManagementOptions = Self(tab: .windowManagement, title: "Options")
 
     static let clipboardClipboard = Self(tab: .clipboard, title: "Clipboard")

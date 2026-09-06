@@ -46,6 +46,7 @@ final class SettingsCoordinator {
             .environment(core.customCommands)
             .environment(core.snippetsStore)
             .environment(core.quicklinks)
+            .environment(core.windowLayouts)
             .environment(core.calendarStore)
             .environment(core.aiSettings)
             .environment(core.mcpSettings)

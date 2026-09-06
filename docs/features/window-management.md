@@ -10,17 +10,19 @@ entries and a still-registered shortcut moves nothing.
 
 ## Invariants
 
-- **`WindowLayout` works exclusively in AX space**, and `WindowMover.AXGeometry` is the only place that
+- **`WindowPlacementEngine` works exclusively in AX space**, and `AXScreens.AXGeometry` is the only place that
   converts — anchored on the **primary** display, never the window's own screen. See
   [Coordinate space](#coordinate-space); getting this wrong is invisible on one monitor and wrong on
   every mixed-size setup.
 - **Nothing in this feature touches `backingScaleFactor`.** All three of `NSScreen.frame`, `visibleFrame`
   and AX coordinates are in points, so mixed-DPI correctness is automatic.
-- **`WindowCommand.swift`, `WindowLayout.swift`, `WindowActionMemory.swift` and `SpaceGesture.swift`
+- **`WindowCommand.swift`, `WindowPlacementEngine.swift`, `WindowActionMemory.swift` and `SpaceGesture.swift`
   stay Foundation + CoreGraphics and pure** — no AX, no `NSScreen`, no clock (`WindowActionMemory`
   takes `now` as a parameter, `SpaceGesture` takes `timestamp`). Every `AXUIElement` call and the
-  Cocoa↔AX flip live in `WindowMover.swift`; every `CGEvent` call lives in `SpaceSwitcher.swift`.
-- **A Space command never reaches `WindowMover`.** `WindowLayout.placement` answers only for
+  Cocoa↔AX flip live in `Service/`; every `CGEvent` call lives in `SpaceSwitcher.swift`.
+- **`AXWindowAccess` is the one AX layer**, shared by the mover and the layout runner. Its `write` is
+  the size → position → size sequence: two copies of it would land a stubborn app two ways.
+- **A Space command never reaches `WindowMover`.** `WindowPlacementEngine.placement` answers only for
   `.geometry` and `.restore`, and `WindowCommandCoordinator` branches on `SpaceDirection` first — the
   mover requires a target app and a resolvable AX window, and a Space switch has neither.
 
@@ -28,12 +30,18 @@ entries and a still-registered shortcut moves nothing.
 
 | File                                             | Imports                      | Role                                                                |
 | ------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------- |
-| `Features/WindowManagement/WindowCommand.swift`      | Foundation                   | Catalog: id, name, symbol, kind, group, `cyclesOnRepeat`, `resizes` |
-| `Features/WindowManagement/WindowLayout.swift`       | Foundation + CoreGraphics    | **Pure.** Every frame the commands produce                          |
-| `Features/WindowManagement/WindowActionMemory.swift` | Foundation + CoreGraphics    | **Pure.** Per-window cycle position and restore point               |
-| `Features/WindowManagement/WindowMover.swift`        | AppKit + ApplicationServices | `@MainActor`. Every `AXUIElement` call and the coordinate flip      |
-| `Features/WindowManagement/SpaceGesture.swift`       | Foundation                   | **Pure.** The Dock-swipe field tables and the IOHID payload bytes   |
-| `Features/WindowManagement/SpaceSwitcher.swift`      | CoreGraphics                 | `@MainActor`. Every `CGEvent` call and the payload splice           |
+| `Model/WindowCommand.swift`          | Foundation                   | Catalog: id, name, symbol, kind, group, `cyclesOnRepeat`, `resizes` |
+| `Model/WindowPlacementEngine.swift`  | Foundation + CoreGraphics    | **Pure.** Every frame the commands produce                          |
+| `Model/WindowActionMemory.swift`     | Foundation + CoreGraphics    | **Pure.** Per-window cycle position and restore point               |
+| `Model/SpaceGesture.swift`           | Foundation                   | **Pure.** The Dock-swipe field tables and the IOHID payload bytes   |
+| `Service/AXWindowAccess.swift`       | AppKit + ApplicationServices | `@MainActor`. Every `AXUIElement` call, and the one write sequence  |
+| `Service/AXScreens.swift`            | AppKit + ColorSync           | `@MainActor`. `AXGeometry`, the one coordinate flip                 |
+| `Service/WindowMover.swift`          | AppKit + ApplicationServices | `@MainActor`. Command policy: cycle, restore, fullscreen            |
+| `Service/SpaceSwitcher.swift`        | CoreGraphics                 | `@MainActor`. Every `CGEvent` call and the payload splice           |
+| `UI/WindowCommandCoordinator.swift`  | AppKit                       | The one funnel from a palette row or a global hotkey                |
+
+The feature also owns **[Window Layouts](window-layouts.md)** — saved multi-display arrangements
+applied in one pass. They share this feature's switch, its Accessibility grant and its gap setting.
 
 The first three compile into `Tests/window-command-test.swift` and `SpaceGesture.swift` compiles into
 `Tests/space-gesture-test.swift`, so none of them may gain an AppKit, SwiftUI or `NSScreen`
@@ -42,13 +50,13 @@ reading a clock. CoreGraphics is needed only because `CGRect`'s `Equatable` conf
 overlay rather than in Foundation.
 
 Adding a command is four edits in `WindowCommand.swift` (a case in `ID`, plus `name`, `symbol` and
-`group` arms), an arm in `WindowLayout.placement` or `tileFractions`, and bumping
+`group` arms), an arm in `WindowPlacementEngine.placement` or `tileFractions`, and bumping
 `commands.count == 34` and its group count in the harness. A command opening a new family also needs
 a `Group` case and its `title` arm; `ID.allCases` stays in group order.
 
 ## Coordinate space
 
-**`WindowLayout` works exclusively in AX space**: global coordinates, top-left origin, +Y pointing
+**`WindowPlacementEngine` works exclusively in AX space**: global coordinates, top-left origin, +Y pointing
 _down_. `WindowMover.AXGeometry` is the only place that converts to and from Cocoa's bottom-left space.
 The visible consequence is that Top Half has `minY == visibleFrame.minY`, which the harness asserts
 specifically to stop a bottom-left convention creeping back in.
@@ -103,7 +111,7 @@ Both reduce to one question — _has the user moved this window themselves since
 `WindowActionMemory` answers it once. It is generic over the key so it stays Foundation-only: the app
 keys by `AXUIElement` (via `CFEqual`/`CFHash` plus the pid), the harness keys by `Int`.
 
-`decide` is a pure query returning the cycle step, which is then fed into `WindowLayout.Input.step` —
+`decide` is a pure query returning the cycle step, which is then fed into `WindowPlacementEngine.Input.step` —
 cycle state is never hidden inside the geometry. Its rules, in order:
 
 1. No record → step 0, capture the current frame as the restore point, `canRestore: false`.

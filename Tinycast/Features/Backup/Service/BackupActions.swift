@@ -247,6 +247,7 @@ enum BackupActions {
         if s.aliases > 0 { parts.append("\(s.aliases) aliases") }
         if s.customCommands > 0 { parts.append("\(s.customCommands) custom commands") }
         if s.quicklinks > 0 { parts.append("\(s.quicklinks) quicklinks") }
+        if s.windowLayouts > 0 { parts.append("\(s.windowLayouts) window layouts") }
         guard !parts.isEmpty else { return nil }
         return "Applied " + parts.joined(separator: ", ") + "."
     }

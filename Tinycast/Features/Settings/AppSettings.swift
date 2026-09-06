@@ -388,9 +388,17 @@ final class AppSettings {
         }
     }
 
-    /// Points between tiled windows and the screen edge; `WindowLayout` caps it.
+    /// Points between tiled windows and the screen edge; `WindowPlacementEngine` caps it.
     var windowGap: Int {
         didSet { defaults.set(windowGap, forKey: Key.windowGap.rawValue) }
+    }
+
+    /// Its own flag: hiding 34 command rows must not also hide the layouts you wrote.
+    var windowLayoutsShowInLauncher: Bool {
+        didSet {
+            defaults.set(
+                windowLayoutsShowInLauncher, forKey: Key.windowLayoutsShowInLauncher.rawValue)
+        }
     }
 
     /// Re-triggering a half steps it through ⅓ and ⅔ instead of re-applying the same frame.
@@ -559,6 +567,9 @@ final class AppSettings {
         // Unset reads as 0, which is the intended default anyway — no gap.
         windowGap = defaults.integer(forKey: Key.windowGap.rawValue)
         windowCycleOnRepeat = defaults.bool(forKey: Key.windowCycleOnRepeat.rawValue)
+        windowLayoutsShowInLauncher =
+            defaults.object(forKey: Key.windowLayoutsShowInLauncher.rawValue) == nil
+            || defaults.bool(forKey: Key.windowLayoutsShowInLauncher.rawValue)
         quicklinksEnabled = defaults.bool(forKey: Key.quicklinksEnabled.rawValue)
         quicklinksShowInLauncher =
             defaults.object(forKey: Key.quicklinksShowInLauncher.rawValue) == nil

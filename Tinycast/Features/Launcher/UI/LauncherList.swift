@@ -105,7 +105,7 @@ struct LauncherList: View {
         // Publication order, so rows match the flat index.
         let kinds: [AppEntry.Kind] = [
             .meeting, .application, .systemSettings, .extensionCommand, .quicklink, .snippet,
-            .systemAction, .windowCommand, .customCommand, .command
+            .systemAction, .windowLayout, .windowCommand, .customCommand, .command
         ]
         for kind in kinds {
             guard let group = grouped[kind], !group.isEmpty else { continue }
