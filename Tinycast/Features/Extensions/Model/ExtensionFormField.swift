@@ -27,12 +27,4 @@ enum ExtensionFormField: Equatable {
 
     /// A text area edits with ↑/↓, so the form leaves them to it and Tab is the way out.
     var ownsVerticalKeys: Bool { self == .textArea }
-
-    /// A control AppKit already rings needs none drawn; the rest would show no focus at all.
-    var needsFocusRing: Bool {
-        switch self {
-        case .textArea, .checkbox, .tagPicker, .filePicker: return true
-        case .text, .dropdown, .datePicker, .inert: return false
-        }
-    }
 }

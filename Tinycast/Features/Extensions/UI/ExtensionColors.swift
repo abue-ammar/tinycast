@@ -7,8 +7,6 @@ enum ExtensionColors {
     /// The system accent, as every other focused control in the app draws it.
     static let fieldFocusStroke = Color.accentColor
     static let fieldStroke = Theme.Colors.ramp(dark: 0.10, light: 0.10)
-    static let tagFill = Theme.Colors.ramp(dark: 0.05, light: 0.05)
-    static let tagSelectedStroke = Theme.Colors.ramp(dark: 0.30, light: 0.26)
     /// A checkbox's own edge, brighter than a field's: it is the control, not a container.
     static let checkboxStroke = Theme.Colors.ramp(dark: 0.26, light: 0.30)
     /// Under the pointer, matching the lift every other hoverable row in the app has.
