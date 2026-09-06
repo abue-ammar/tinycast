@@ -577,7 +577,10 @@ rather than a slot, so no favorite loses its digit to the overflow.
 
 Holding ⌘ swaps each numbered row's kind label for its chord. `PalettePanel` publishes the modifier
 into `PaletteState.commandHeld` from `.flagsChanged` and clears it in `resignKey` — not in `prepare`,
-which a re-show that preserves state skips entirely. **`AppRow` observes that flag itself**: reading
+which a re-show that preserves state skips entirely. The flag flips **400 ms after** the press, not
+on it: every ⌘ chord in the palette starts as a ⌘ press, so revealing on the down edge flashed the
+numbering under ⌘↵ and ⌘K. `noteCommandHeld` schedules the reveal and any release cancels it, so a
+chord's own tap never outlives its keystroke while a deliberate hold still lights every row. **`AppRow` observes that flag itself**: reading
 it any higher would attach it to `RootPaletteView`'s body and rebuild the whole palette on every ⌘
 press, where a row-level read re-runs only the handful of rows the `LazyVStack` has realized. The
 digit each row shows is carried on its `Row` case from the section build, so no row searches for its
