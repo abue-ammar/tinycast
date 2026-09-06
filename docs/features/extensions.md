@@ -485,6 +485,12 @@ pieces, so a progress callback reports how much has been written, never how much
 One shortcut inside `Transform`: it acknowledges a write as soon as `_transform` calls back rather
 than waiting for room on its readable side, so only a transform nobody reads from can grow unbounded.
 
+`url.fileURLToPath` decodes percent-escapes the way Node does on darwin, so an asset path carrying a
+space resolves to a file the image loader can open, and it rejects an encoded separator or a non-local
+host rather than returning a wrong path. Node's `windows` override is absent: Tinycast only runs on
+macOS, so drive-letter and UNC output would be unreachable. `url.pathToFileURL` escapes `?` and `#`
+so a filename holding either survives the round trip.
+
 A bundle that ships its own HTTP client rather than calling `fetch` — node-fetch travels inside
 `@raycast/utils`, and axios has a Node adapter — reaches the network through `http.request`, so the
 shim answers it: one request when the body ends, one response chunk when the bridge replies. The
