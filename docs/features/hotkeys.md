@@ -144,9 +144,13 @@ window — that is un-remapped HID behaviour, not something Tinycast can stop.
 
 Once remapped, Caps Lock arrives as **keyDown/keyUp** rather than `flagsChanged`. Both ends are
 converted into Left Control `flagsChanged` transitions, so everything downstream sees the Hyper chord
-move with the key rather than a swallowed press. A classic `IOHIDSystem` connection reads and drives
-the Caps Lock LED and lock state; it is used only by the explicit Quick Press toggle and the one-time
-unlatch when the remap is installed.
+move with the key rather than a swallowed press. That conversion is also why the **fn bit is scrubbed
+from both ends**: every function key reports `NX_SECONDARYFNMASK`, harmless on a keyDown but read as a
+real fn press once the event is a `flagsChanged`, which fired anything bound to fn on every Hyper
+press. Only the Hyper key's own two events are scrubbed, so Hyper+F-key and Hyper+arrow keep the fn
+bit they are entitled to. A classic `IOHIDSystem` connection reads and drives the Caps Lock LED and
+lock state; it is used only by the explicit Quick Press toggle and the one-time unlatch when the remap
+is installed.
 
 ### Press tracking uses toggle semantics
 
