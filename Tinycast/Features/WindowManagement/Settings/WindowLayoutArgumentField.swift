@@ -21,7 +21,8 @@ struct WindowLayoutArgumentField: View {
                     .focused($isURLFocused)
                     .focusEffectDisabled()
                     .layoutFieldChrome(isFocused: isURLFocused)
-                    .onSubmit { draft.setArgument(urlText) }
+                    // Live for the same reason the number fields are: ⌘↵ never blurs this field.
+                    .onChange(of: urlText) { _, typed in draft.setArgument(typed) }
             }
         }
     }

@@ -162,7 +162,9 @@ moment an app is picked, and a sheet sized to its content would resize under the
 - **A position cell is wider than its glyph, and carries the `contentShape`.** The glyph is a stroke,
   and a stroke is hittable only on the line. Each anchor's block spans half a pinned axis and all of
   a spanned one, so the nine cells read as nine distinct silhouettes.
-- **A number field never holds a bad value**: out of range clamps and shows the clamped number,
+- **Every field commits as it is typed**, so the preview moves with the keystroke and Save can
+  never write behind a value the field still holds — `⌘↵` blurs nothing. A number field still
+  never holds a bad value: out of range clamps and shows the clamped number on ↵ or focus loss,
   nonsense reverts. The inline error slot is therefore only for what a field cannot prevent — an
   empty or duplicate name, or a refused write.
 - **Save is `⌘↵`, not `.defaultAction`.** Plain ↵ belongs to whichever field has focus. The footer

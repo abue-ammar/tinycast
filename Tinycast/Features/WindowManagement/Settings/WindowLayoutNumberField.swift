@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// A suffixed numeric field. Holds its own text, commits on ↵ or focus loss, reverts on Escape.
+/// A suffixed numeric field. Commits every valid keystroke, clamps on ↵ or focus loss.
 struct WindowLayoutNumberField: View {
     let label: String
     /// The accessibility label's subject, since "W" reads as a letter.
@@ -39,8 +39,9 @@ struct WindowLayoutNumberField: View {
                 .focusEffectDisabled()
                 .onSubmit(commit)
                 .onExitCommand(perform: revert)
+                .onChange(of: text) { _, typed in commitIfValid(typed) }
                 .onChange(of: isFocused) { _, focused in if !focused { commit() } }
-                .onChange(of: value) { _, new in if !isFocused { text = String(new) } }
+                .onChange(of: value) { _, new in if number(text) != new { text = String(new) } }
             Divider()
                 .frame(height: Theme.Spacing.xl)
             Text(suffix)
@@ -53,9 +54,15 @@ struct WindowLayoutNumberField: View {
         .accessibilityValue("\(value) \(suffix)")
     }
 
+    /// Live, so the preview tracks typing and ⌘↵ cannot save behind a value still in the field.
+    private func commitIfValid(_ typed: String) {
+        guard let typed = number(typed), range.contains(typed) else { return }
+        onCommit(typed)
+    }
+
     /// A number outside the range clamps and shows the clamped value; nonsense reverts.
     private func commit() {
-        guard let typed = Int(text.trimmingCharacters(in: .whitespaces)) else { return revert() }
+        guard let typed = number(text) else { return revert() }
         let clamped = min(max(typed, range.lowerBound), range.upperBound)
         text = String(clamped)
         onCommit(clamped)
@@ -63,6 +70,10 @@ struct WindowLayoutNumberField: View {
 
     private func revert() {
         text = String(value)
+    }
+
+    private func number(_ text: String) -> Int? {
+        Int(text.trimmingCharacters(in: .whitespaces))
     }
 }
 
