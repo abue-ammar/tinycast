@@ -260,6 +260,7 @@ enum CalcUnits {
         add(UnitDef("ft", "Feet", .length, 0.3048), ["ft", "foot", "feet"])
         add(UnitDef("yd", "Yards", .length, 0.9144), ["yd", "yard", "yards"])
         add(UnitDef("mi", "Miles", .length, 1609.344), ["mi", "mile", "miles"])
+        add(UnitDef("nmi", "Nautical Miles", .length, 1852), ["nmi", "nauticalmile", "nauticalmiles"])
 
         add(UnitDef("px", "Pixels", .pixels, 1), ["px", "pixel", "pixels"])
         add(UnitDef("px²", "Square Pixels", .pixelArea, 1), ["px2"])
@@ -278,6 +279,10 @@ enum CalcUnits {
             ["kg", "kilogram", "kilograms", "kilo", "kilos"])
         add(UnitDef("oz", "Ounces", .weight, 0.028349523125), ["oz", "ounce", "ounces"])
         add(UnitDef("lb", "Pounds", .weight, 0.45359237), ["lb", "lbs", "pound", "pounds"])
+        add(UnitDef("t", "Tonnes", .weight, 1000), ["t", "ton", "tons", "tonne", "tonnes"])
+        add(UnitDef("st", "Stone", .weight, 6.35029318), ["st", "stone"])
+        add(UnitDef("short ton", "US Tons", .weight, 907.18474), ["shortton", "uston"])
+        add(UnitDef("long ton", "UK Tons", .weight, 1016.0469088), ["longton", "ukton"])
 
         // Temperature (base: Kelvin) — the only affine category.
         add(
@@ -441,6 +446,47 @@ enum CalcUnits {
         add(UnitDef("Hz", "Hertz", .frequency, 1), ["hz", "hertz"])
         add(UnitDef("kHz", "Kilohertz", .frequency, 1000), ["khz", "kilohertz"])
         add(UnitDef("MHz", "Megahertz", .frequency, 1e6), ["mhz", "megahertz"])
+
+        add(UnitDef("UK gal", "UK Gallons", .volume, 0.00454609), ["ukgal", "ukgallon", "ukgallons"])
+        add(UnitDef("UK qt", "UK Quarts", .volume, 0.0011365225), ["ukqt", "ukquart", "ukquarts"])
+        add(UnitDef("UK pt", "UK Pints", .volume, 0.00056826125), ["ukpt", "ukpint", "ukpints"])
+        add(UnitDef("UK fl oz", "UK Fluid Ounces", .volume, 0.0000284130625), ["ukfloz"])
+        add(UnitDef("hp", "Horsepower", .power, 745.6998715822702), ["hp", "horsepower"])
+        add(UnitDef("BTU", "British Thermal Units", .energy, 1055.05585262), ["btu"])
+        add(UnitDef("rpm", "Revolutions per Minute", .frequency, 1.0 / 60), ["rpm"])
+        add(UnitDef("lbf", "Pounds Force", .force, 4.4482216152605), ["lbf", "poundforce"])
+
+        for (prefix, name, factor) in [
+            ("p", "Pico", 1e-12), ("n", "Nano", 1e-9), ("µ", "Micro", 1e-6), ("m", "Milli", 1e-3),
+            ("c", "Centi", 1e-2), ("d", "Deci", 1e-1), ("k", "Kilo", 1e3), ("M", "Mega", 1e6),
+            ("G", "Giga", 1e9), ("T", "Tera", 1e12), ("P", "Peta", 1e15)
+        ] {
+            for key in ["m", "g", "s", "hz", "n", "j", "w", "pa"] {
+                guard let base = table[key] else { continue }
+                let symbol = prefix + base.symbol
+                let label = name + base.name.lowercased()
+                let unit = UnitDef(symbol, label, base.category, base.factor * factor)
+                let noun = label.lowercased()
+                var aliases = [symbol, noun, noun.hasSuffix("s") ? String(noun.dropLast()) : noun]
+                if prefix == "µ" { aliases += ["u" + base.symbol, "μ" + base.symbol] }
+                for alias in aliases where table[alias] == nil { table[alias] = unit }
+            }
+        }
+
+        for (prefix, label, factor) in [
+            ("", "", 1.0), ("k", "Kilo", 1e3), ("M", "Mega", 1e6), ("G", "Giga", 1e9), ("T", "Tera", 1e12),
+            ("Ki", "Kibi", 1024.0), ("Mi", "Mebi", 1048576.0), ("Gi", "Gibi", 1073741824.0),
+            ("Ti", "Tebi", 1099511627776.0)
+        ] {
+            let bytes = prefix + "B/s"
+            add(UnitDef(bytes, (label.isEmpty ? "Bytes" : label + "bytes") + " per Second", .dataRate, factor), [bytes])
+            if !prefix.isEmpty {
+                let bits = prefix + "bit"
+                add(UnitDef(bits, label + "bits", .digitalStorage, factor / 8), [bits])
+                let rate = bits + "/s"
+                add(UnitDef(rate, label + "bits per Second", .dataRate, factor / 8), [rate])
+            }
+        }
 
         return table
     }()

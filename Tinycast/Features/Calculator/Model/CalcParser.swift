@@ -178,9 +178,10 @@ enum CalcTokenizer {
         var end = rightStart
         while end < chars.count, chars[end].isLetter || chars[end].isNumber { end += 1 }
         guard end > rightStart else { return nil }
-        let name = (prefix + separator + String(chars[rightStart..<end])).lowercased()
+        let spelling = (prefix + separator + String(chars[rightStart..<end]))
             .replacingOccurrences(of: "²", with: "2")
             .replacingOccurrences(of: "³", with: "3")
+        let name = CalcUnits.byName[spelling] != nil ? spelling : spelling.lowercased()
         guard CalcUnits.byName[name] != nil else { return nil }
         return (name, end)
     }

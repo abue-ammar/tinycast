@@ -513,3 +513,15 @@ Date answers that display and copy identically also reuse their formatted text.
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
 the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
 `CalculatorHistoryStore`.
+
+## Additional units and transfer rates
+
+`MB/s` means megabytes per second; `Mbps` means megabits per second.
+`100Mbps to MB/s` gives `12.5 MB/s`, and `1GB / 10MB/s to s` gives `100 s`.
+Binary rates such as `MiB/s` and bit amounts such as `kbit` also work.
+SI prefixes expand for meters, grams, seconds, hertz, newtons, joules, watts and pascals,
+including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings.
+
+Other units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), mechanical horsepower (`hp`),
+BTU (international table), `rpm`, pound-force (`lbf`), US/UK tons and UK liquid measures
+(`ukgal`, `ukqt`, `ukpint`, `ukfloz`). Plain gallons and pints remain US measures.
