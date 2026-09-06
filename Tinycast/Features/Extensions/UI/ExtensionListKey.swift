@@ -11,8 +11,6 @@ enum ExtensionListKey: Equatable {
     case deleteBackward
     /// ←/→ on a closed single-select control, which steps its value without opening anything.
     case stepValue(Int)
-    /// ↵ on a closed control, which belongs to the form's own action rather than to the list.
-    case submitForm
     case ignored
 
     init(press: KeyPress, listOpen: Bool) {
@@ -31,8 +29,7 @@ enum ExtensionListKey: Equatable {
         switch key {
         case .upArrow: return listOpen ? .moveUp : .ignored
         case .downArrow: return listOpen ? .moveDown : .openList
-        // ↵ submits from a closed control, as it does from every other field; space opens.
-        case .return: return listOpen ? .commit : .submitForm
+        case .return: return listOpen ? .commit : .openList
         case .escape: return listOpen ? .dismiss : .ignored
         case .leftArrow: return listOpen ? .ignored : .stepValue(-1)
         case .rightArrow: return listOpen ? .ignored : .stepValue(1)

@@ -79,11 +79,7 @@ struct ExtensionFormView: View {
         case "Form.Separator":
             Rectangle()
                 .fill(Theme.Colors.separator)
-                // Spans the label column and the control together, as Raycast's rule does.
-                .frame(
-                    width: Theme.Size.formLabelWidth + Theme.Spacing.md
-                        + ExtensionFormMetrics.controlWidth,
-                    height: 1)
+                .frame(maxWidth: .infinity, minHeight: 1, maxHeight: 1)
                 .padding(.vertical, ExtensionFormMetrics.separatorSpacing)
 
         case "Form.Description":
@@ -129,8 +125,7 @@ struct ExtensionFormView: View {
                     assetsPath: assetsPath,
                     allowsMultipleSelection: false,
                     index: index, focus: $focused,
-                    onChange: { onChange(field, $0.first ?? "") },
-                    onSubmit: onSubmit)
+                    onChange: { onChange(field, $0.first ?? "") })
             }
 
         case "Form.TagPicker":
@@ -145,15 +140,13 @@ struct ExtensionFormView: View {
                     assetsPath: assetsPath,
                     allowsMultipleSelection: true,
                     index: index, focus: $focused,
-                    onChange: { onChange(field, $0) },
-                    onSubmit: onSubmit)
+                    onChange: { onChange(field, $0) })
             }
 
         case "Form.DatePicker":
             labelled(field) {
                 ExtensionDateField(
-                    node: field, index: index, focus: $focused, onChange: onChange,
-                    onSubmit: onSubmit)
+                    node: field, index: index, focus: $focused, onChange: onChange)
             }
 
         case "Form.FilePicker":
@@ -195,7 +188,7 @@ struct ExtensionFormView: View {
         return items
     }
 
-    /// Raycast forms are label-left / control-right; the fixed label column keeps controls aligned.
+    /// Labels sit left of controls without moving the control away from the palette centre.
     @ViewBuilder
     private func labelled<Content: View>(
         _ field: RenderNode, showTitle: Bool = true, @ViewBuilder content: () -> Content
@@ -232,6 +225,11 @@ struct ExtensionFormView: View {
                 }
             }
         }
+        .frame(
+            width: Theme.Size.formLabelWidth + Theme.Spacing.md
+                + ExtensionFormMetrics.controlWidth)
+        .frame(maxWidth: .infinity)
+        .offset(x: -(Theme.Size.formLabelWidth + Theme.Spacing.md) / 2)
     }
 }
 

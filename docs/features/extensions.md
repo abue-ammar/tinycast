@@ -199,9 +199,10 @@ screens hold (see [palette.md](palette.md)).
   empty. `ExtensionFormField` says what each `Form.*` node is —
   which of them focus lands on, which keys the control keeps, and which need a focus ring drawn — and
   `ExtensionScreen` publishes exactly the focusable ones as `items`, so ↑/↓, ⇥/⇧⇥ and the flat
-  selection all walk one order. ⇥ wraps at both ends, ↵ submits from any control that edits no text,
-  Space toggles a checkbox and opens a file picker, ←/→ step a dropdown's value and a tag picker's
-  chips, and a text area keeps ↑/↓ for its own lines so only ⇥ leaves it. A field marked `autoFocus`
+  selection all walk one order. ⇥ wraps at both ends, ↵ opens a closed picker then commits its choice,
+  while it submits from other non-text controls. Space toggles a checkbox and opens a file picker,
+  ←/→ step a dropdown's value and a tag picker's chips, and a text area keeps ↑/↓ for its own lines so
+  only ⇥ leaves it. A field marked `autoFocus`
   is where the form opens, otherwise the first one. While a control holds focus
   `PaletteState.isEditingField` is set, which is what keeps a bare backspace deleting text rather
   than backing out of the command. The footer's Actions half is drawn only when the panel holds more

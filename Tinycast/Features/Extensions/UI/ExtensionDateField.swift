@@ -6,7 +6,6 @@ struct ExtensionDateField: View {
     let index: Int?
     @FocusState.Binding var focus: Int?
     let onChange: (RenderNode, Any) -> Void
-    let onSubmit: () -> Void
 
     @State private var open = false
     @State private var query = ""
@@ -80,9 +79,6 @@ struct ExtensionDateField: View {
                     return .handled
                 // A date has no value to step: its arrows belong to the list or to nothing.
                 case .stepValue, .ignored: return .ignored
-                case .submitForm:
-                    onSubmit()
-                    return .handled
                 }
             }
             .onChange(of: open) { palette.noteControlListOpen(open) }

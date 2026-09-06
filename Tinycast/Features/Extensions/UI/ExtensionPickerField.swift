@@ -17,7 +17,6 @@ struct ExtensionPickerField: View {
     let index: Int?
     @FocusState.Binding var focus: Int?
     let onChange: ([String]) -> Void
-    let onSubmit: () -> Void
 
     @State private var open = false
     @State private var query = ""
@@ -111,9 +110,6 @@ struct ExtensionPickerField: View {
                     highlighted = 0
                     return .handled
                 case .stepValue(let delta): return step(delta)
-                case .submitForm:
-                    onSubmit()
-                    return .handled
                 case .ignored: return .ignored
                 }
             }
