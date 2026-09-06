@@ -234,14 +234,14 @@ private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
         func cached(_ url: URL, maxPixel: CGFloat) -> NSImage? {
             switch self {
             case .image: return ImageThumbnail.cached(url, maxPixel: maxPixel)
-            case .file: return FilePreviewThumbnailer.cached(url, maxPixel: maxPixel)
+            case .file: return FilePreviewThumbnail.cached(url, maxPixel: maxPixel)
             }
         }
 
         func loadAsync(_ url: URL, maxPixel: CGFloat) async -> NSImage? {
             switch self {
             case .image: return await ImageThumbnail.loadAsync(url, maxPixel: maxPixel)
-            case .file: return await FilePreviewThumbnailer.loadAsync(url, maxPixel: maxPixel)
+            case .file: return await FilePreviewThumbnail.loadAsync(url, maxPixel: maxPixel)
             }
         }
     }
@@ -278,9 +278,6 @@ private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
 }
 
 struct ClipboardPreview: View {
-    /// The preview pane is ~460pt wide, so 900px stays crisp at 2× without over-decoding.
-    private static let previewMaxPixel: CGFloat = 900
-
     let item: ClipboardItem?
     @Environment(ClipboardStore.self) private var store
 
@@ -312,7 +309,8 @@ struct ClipboardPreview: View {
                 }
             }
         case .image:
-            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) { image in
+            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Theme.Size.clipboardPreviewPixel) {
+                image in
                 image
                     .resizable()
                     .scaledToFit()
@@ -346,7 +344,6 @@ private struct ClipboardInfoSection: View {
         var pixelSize: CGSize?
         var fileBytes: Int?
         var typeName: String?
-        var fileExists = true
     }
 
     private struct InfoRow: Identifiable {
@@ -467,7 +464,6 @@ private struct ClipboardInfoSection: View {
             }
             if let filePath {
                 let fileURL = URL(fileURLWithPath: filePath)
-                details.fileExists = FileManager.default.fileExists(atPath: filePath)
                 let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .contentTypeKey])
                 details.fileBytes = values?.fileSize
                 details.typeName = values?.contentType?.localizedDescription

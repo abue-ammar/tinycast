@@ -94,6 +94,12 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   the AI fallback row — always starts a new chat and submits the text, because a question asked
   outright is not a summon: resuming a transcript to append an unrelated line to it would be the one
   reading of `Opens to` nobody wants. It is `showPalette(mode: .ai)` and `send`, never `showChat`.
+- **Staged files survive a re-summon; only the typed draft does not.** `applyOpenPolicy` treats a
+  pasted-but-unsent attachment as resident state: `Recent Conversation` will not open a saved chat
+  over one, and `A New Conversation` resets only a chat that actually has messages, since an empty
+  chat is already new and resetting it would drop the file for nothing. A file cost a read and a
+  decode, which is not the same as a half-typed line — that is still dropped by `prepare`.
+  Switching conversations through history still disowns them, which is the rule they belong to.
 - **`AIConversationOpenPolicy` is the whole rule, and it is pure.** `Recent Conversation` resumes the
   resident transcript, or reopens the newest saved one when nothing is resident, unless it has been
   idle past `Start a new conversation after`; `A New Conversation` always starts fresh. There is no
@@ -406,13 +412,18 @@ rather than letting it surface on a later message. The counter that decides this
 `AIChatState` beside the staged images, so a route that drops them cannot forget to move it. A
 staged attachment shows as a pill beside the typed text — an image carrying a small preview of
 itself, a PDF and a text file their own glyph, each followed by the file name, or "Image" for a
-screenshot. The preview is a ~1 KB PNG downsampled on the same detached task that encodes the
+screenshot. **Every kind is labelled**, images included: a bare thumbnail beside an ✕ reads as two
+stray marks rather than one pill, and the capsule needs something to wrap. The thumbnail is
+deliberately smaller than the pill's height for the same reason. Each pill carries its own ✕, so a
+mispaste is taken back without clearing the rest — ⌘K → Remove Attachments and bare backspace stay
+as the bulk and last-one routes. **Past two pills the rest collapse into a `+N` count**, because
+the strip's width is taken out of the search field: three named pills leave too little room to read
+what you are typing. The preview is a ~1 KB PNG downsampled on the same detached task that encodes the
 attachment and carried on the staged attachment itself, so a header re-rendered per keystroke
 decodes nothing and there is no cache whose lifetime could drift from the staging counter's.
-`Theme.Size.chatAttachmentThumb` is *derived* from the glyph slot and the leading inset it gives
-up, so a preview pill measures exactly as a glyph pill does and `ComposerChip.width(of:)` — which
-`RootPaletteView.searchFieldWidth(for:)` subtracts from the search field — needs no second formula.
-Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to
+Each pill states its own width through `AttachmentChip.width(for:)`, which
+`RootPaletteView.searchFieldWidth(for:)` subtracts from the search field — so the two must move
+together or the caret drifts. Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to
 its text and the chip follows it rather than the composer growing. Bare backspace on an empty composer removes the last
 chip before it backs out of chat; ⌘K → Remove Attachments clears them all. Sent images persist in `message_images` and sent PDFs in `message_documents` beside their message;
 the bubble renders images as thumbnails and documents as the same named chips the composer showed.

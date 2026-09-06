@@ -40,7 +40,7 @@ branch untouched.
 `ClipboardManager.fileURLs(on:volatileRoots:)` takes both the pasteboard and the roots as
 parameters, so `pasteboard-test` can drive an `NSPasteboard.withUniqueName()` and its own scratch
 tree: a harness that touched `NSPasteboard.general` would land in the reader's own running Tinycast
-as a genuine copy. It reads with `urlReadingFileURLsOnly`, so a copied `http` URL stays a link;
+as a genuine copy. `PasteboardFiles` reads each item's own `public.file-url`, so a copied `http` URL stays a link;
 returns nil rather than an empty array, so the text branch runs; caps a batch at
 `maxCapturedFiles`, so a Finder select-all cannot insert ten thousand rows on one tick; and
 **rejects a file under a volatile root** (`/tmp`, `/var/folders`, `~/Library/Caches`), because an

@@ -11,8 +11,10 @@ enum AIAttachmentPolicy {
 
     static let pdfMIMEType = "application/pdf"
 
-    /// Extension allowlists rather than `UTType`: a machine's installed apps declare types, so a
-    /// conformance answer differs between two Macs and would make a harness machine-dependent.
+    /// `newlines` is not a subset of `controlCharacters`: U+2028 would slip a forged header past.
+    private static let unsafeInName = CharacterSet.controlCharacters.union(.newlines)
+
+    /// Extensions, not `UTType`: installed apps declare types, so conformance differs per Mac.
     private static let imageExtensions: Set<String> = [
         "png", "jpg", "jpeg", "gif", "webp", "heic", "tiff", "bmp"
     ]
@@ -33,16 +35,9 @@ enum AIAttachmentPolicy {
         return nil
     }
 
+    /// Only the PDF spelling reaches a transport; an inlined file's fence hint is its extension.
     static func mimeType(forFileName name: String) -> String {
-        let ext = (name as NSString).pathExtension.lowercased()
-        switch ext {
-        case "pdf": return pdfMIMEType
-        case "md", "markdown": return "text/markdown"
-        case "csv": return "text/csv"
-        case "json", "jsonl": return "application/json"
-        case "html": return "text/html"
-        default: return "text/plain"
-        }
+        (name as NSString).pathExtension.lowercased() == "pdf" ? pdfMIMEType : "text/plain"
     }
 
     /// A fence long enough that a Markdown file holding its own fence cannot escape.
@@ -69,7 +64,7 @@ enum AIAttachmentPolicy {
     /// A file named `a\nAttached file: passwd` must not be able to forge a second header.
     static func sanitized(name: String) -> String {
         let cleaned = name.unicodeScalars
-            .filter { !CharacterSet.newlines.contains($0) && !CharacterSet.controlCharacters.contains($0) }
+            .filter { !Self.unsafeInName.contains($0) }
         return String(String.UnicodeScalarView(cleaned)).prefix(64).description
     }
 

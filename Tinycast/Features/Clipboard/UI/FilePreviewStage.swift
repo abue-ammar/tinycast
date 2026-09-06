@@ -3,22 +3,41 @@ import SwiftUI
 
 /// The preview pane's stage for a referenced file: a poster frame, or a player for media.
 struct FilePreviewStage: View {
-    /// The pane is ~460pt wide, so 900px stays crisp at 2× without over-decoding.
-    private static let previewMaxPixel: CGFloat = 900
-
     let path: String
 
+    /// One stat, off the render path: `body` re-runs per keystroke and must not touch the disk.
+    struct Probe: Equatable, Sendable {
+        var exists = false
+        var isDirectory = false
+    }
+
+    @State private var probe: Probe?
+
     private var url: URL { URL(fileURLWithPath: path) }
-    private var kind: ClipboardFileKind { ClipboardFileKind.of(path: path) }
 
     var body: some View {
-        if !FileManager.default.fileExists(atPath: path) {
-            MissingFileStage()
-        } else if kind.isPlayable {
-            MediaPreviewPlayer(url: url, isAudio: kind == .audio)
-        } else {
-            FileThumbnailStage(url: url, maxPixel: Self.previewMaxPixel, glyph: kind.systemImage)
+        stage.task(id: path) { probe = await Self.probe(path) }
+    }
+
+    @ViewBuilder private var stage: some View {
+        let kind = ClipboardFileKind.of(path: path, isDirectory: probe?.isDirectory ?? false)
+        switch probe {
+        case .some(let probe) where !probe.exists: MissingFileStage()
+        case .some where kind.isPlayable: MediaPreviewPlayer(url: url, isAudio: kind == .audio)
+        default:
+            FileThumbnailStage(
+                url: url, maxPixel: Theme.Size.clipboardPreviewPixel, glyph: kind.systemImage)
         }
+    }
+
+    nonisolated private static func probe(_ path: String) async -> Probe {
+        await Task.detached {
+            let url = URL(fileURLWithPath: path)
+            let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
+            return Probe(
+                exists: FileManager.default.fileExists(atPath: path),
+                isDirectory: values?.isDirectory == true)
+        }.value
     }
 }
 
@@ -64,12 +83,12 @@ private struct FileThumbnailStage: View {
             }
         }
         .task(id: url) {
-            if let hit = FilePreviewThumbnailer.cached(url, maxPixel: maxPixel) {
+            if let hit = FilePreviewThumbnail.cached(url, maxPixel: maxPixel) {
                 image = hit
                 return
             }
             image = nil
-            image = await FilePreviewThumbnailer.loadAsync(url, maxPixel: maxPixel)
+            image = await FilePreviewThumbnail.loadAsync(url, maxPixel: maxPixel)
         }
     }
 }
@@ -109,8 +128,7 @@ private struct MediaPreviewPlayer: View {
     }
 }
 
-/// `AVPlayerView`, not SwiftUI's `VideoPlayer`: that one traps in `getSuperclassMetadata` while
-/// instantiating its generic metadata, taking the whole app down the moment a clip is selected.
+/// `AVPlayerView`, since SwiftUI's `VideoPlayer` traps instantiating its own generic metadata.
 private struct PlayerSurface: NSViewRepresentable {
     let player: AVPlayer?
 
@@ -152,7 +170,7 @@ private struct AudioPoster: View {
             }
         }
         .task(id: url) {
-            image = await FilePreviewThumbnailer.loadAsync(url, maxPixel: 300)
+            image = await FilePreviewThumbnail.loadAsync(url, maxPixel: 300)
         }
     }
 }

@@ -175,14 +175,15 @@ private struct ChatMessageView: View {
     private var bubbleContent: some View {
         VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Theme.Spacing.sm) {
             if !message.images.isEmpty {
-                HStack(spacing: Theme.Spacing.sm) {
+                // Wider than the stack's own rhythm: two 96pt tiles at `sm` read as one blob.
+                HStack(spacing: Theme.Spacing.xl) {
                     ForEach(message.images, id: \.self) { image in
                         ChatImageThumbnail(image: image, edge: Theme.Size.chatImageThumb)
                     }
                 }
             }
             if !message.documents.isEmpty {
-                HStack(spacing: Theme.Spacing.sm) {
+                HStack(spacing: Theme.Spacing.md) {
                     ForEach(message.documents, id: \.self) { document in
                         ChatDocumentChip(document: document)
                     }
@@ -219,9 +220,11 @@ private struct ChatMessageView: View {
 private struct ChatDocumentChip: View {
     let document: AIDocument
 
+    private var isPDF: Bool { document.mimeType == AIAttachmentPolicy.pdfMIMEType }
+
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
-            Image(systemName: "doc.richtext")
+            Image(systemName: isPDF ? "doc.richtext" : "doc.plaintext")
                 .font(Theme.Typography.chip)
                 .symbolRenderingMode(.hierarchical)
             Text(document.name)

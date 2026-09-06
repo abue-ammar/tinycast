@@ -66,10 +66,21 @@ final class AIChatCoordinator {
     /// ⇥ and the AI fallback: a fresh chat that carries the question, already asked.
     func ask(_ prompt: String) {
         guard settings.aiEnabled else { return }
-        // Never the open policy: a question resumes nothing, and an empty one just opens a chat.
+        // No question is no reason to skip the open policy: this is a summon, not an ask.
+        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            showChat()
+            return
+        }
         chat.startNewChat()
         paletteCoordinator.showPalette(mode: .ai)
         send(prompt)
+    }
+
+    /// A file pasted at the launcher belongs in chat, never in a search for its name.
+    func attachPastedFileFromLauncher(files: [URL]) -> Bool {
+        guard settings.aiEnabled, !files.isEmpty else { return false }
+        showChat()
+        return attachPastedFile(files: files)
     }
 
     /// The one place deciding whether summoning resumes; Pop to Root only forgets the screen.
@@ -77,18 +88,21 @@ final class AIChatCoordinator {
         // A reply still arriving was asked for; resetting would discard the answer.
         guard !chat.isStreaming else { return }
         let recent = core.chatHistory.conversations.first
-        let isResident = !chat.session.messages.isEmpty
+        let hasTranscript = !chat.session.messages.isEmpty
+        // Staged files are unsent work: neither branch may throw them away on a plain re-summon.
+        let hasStaging = !chat.pendingAttachments.isEmpty
         // From history when nothing is resident, so the verdict still holds after a relaunch.
-        let lastActiveAt = isResident ? chat.session.updatedAt : recent?.updatedAt
+        let lastActiveAt = hasTranscript ? chat.session.updatedAt : recent?.updatedAt
         let decision = AIConversationOpenPolicy.decide(
             opensTo: core.aiSettings.opensTo, newAfter: core.aiSettings.newChatAfter,
             lastActiveAt: lastActiveAt, now: Date())
         switch decision {
         case .resume:
-            guard !isResident, let recent else { return }
+            guard !hasTranscript, !hasStaging, let recent else { return }
             chat.open(id: recent.id)
         case .startNew:
-            guard isResident else { return }
+            // An empty chat is already new; resetting it would only drop what is staged in it.
+            guard hasTranscript else { return }
             chat.startNewChat()
         }
     }
@@ -187,9 +201,8 @@ final class AIChatCoordinator {
     }
 
     /// ⌘V stages a file, read off-main; false hands the chord back to the field editor.
-    func attachPastedFile() -> Bool {
+    func attachPastedFile(files: [URL]) -> Bool {
         let pasteboard = NSPasteboard.general
-        let files = Self.pastedFiles(on: pasteboard)
         // A copied text selection often carries a TIFF too; only a board with no string is a picture.
         let pasted =
             files.isEmpty && pasteboard.string(forType: .string) == nil
@@ -228,13 +241,14 @@ final class AIChatCoordinator {
     private func stage(files: [URL], pasted: Data?) {
         let generation = chat.stagingGeneration
         Task { [weak self] in
-            let staged = await Task.detached(priority: .userInitiated) { () -> [Staged] in
-                if !files.isEmpty { return files.compactMap(Self.read) }
-                guard let pasted, let png = Self.boundedPNG(pasted) else { return [] }
+            let read = await Task.detached(priority: .userInitiated) { () -> [Read] in
+                if !files.isEmpty { return files.map(Self.read) }
+                guard let pasted, let png = Self.boundedPNG(pasted) else { return [.failed(.size)] }
                 return [
-                    Staged(
-                        payload: .image(AIImage(data: png, mimeType: "image/png")),
-                        name: "Image", preview: Self.preview(png))
+                    .staged(
+                        Staged(
+                            payload: .image(AIImage(data: png, mimeType: "image/png")),
+                            name: "Image", preview: Self.preview(png)))
                 ]
             }.value
             guard let self else { return }
@@ -244,16 +258,19 @@ final class AIChatCoordinator {
                     tone: .neutral)
                 return
             }
-            guard !staged.isEmpty else {
-                core.showMessage("That file could not be read.", tone: .neutral)
-                return
-            }
-            for item in staged {
-                let attachment = ChatAttachment(
-                    payload: item.payload, name: item.name, preview: item.preview)
-                if let refusal = chat.attach(attachment) {
+            // Stops at the first refusal so a mixed paste says which file it could not take.
+            for outcome in read {
+                switch outcome {
+                case .failed(let refusal):
                     core.showMessage(refusal.message, tone: .neutral)
                     return
+                case .staged(let item):
+                    let attachment = ChatAttachment(
+                        payload: item.payload, name: item.name, preview: item.preview)
+                    if let refusal = chat.attach(attachment) {
+                        core.showMessage(refusal.message, tone: .neutral)
+                        return
+                    }
                 }
             }
         }
@@ -266,32 +283,46 @@ final class AIChatCoordinator {
         let preview: Data?
     }
 
+    /// A refusal rather than a nil, so one bad file in a paste is named instead of vanishing.
+    private enum Read: Sendable {
+        case staged(Staged)
+        case failed(ChatAttachmentRefusal)
+    }
+
     /// Sized before it is read, so a four-gigabyte CSV can never be slurped into memory.
-    nonisolated private static func read(_ file: URL) -> Staged? {
+    nonisolated private static func read(_ file: URL) -> Read {
         let name = file.lastPathComponent
-        guard let kind = AIAttachmentPolicy.kind(forFileName: name) else { return nil }
+        guard let kind = AIAttachmentPolicy.kind(forFileName: name) else {
+            return .failed(.unsupported(file.pathExtension.lowercased()))
+        }
         let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         let ceiling =
             kind == .text ? AIAttachmentBudget.maxInlinedTextBytes : AIAttachmentBudget.maxBytes
-        guard size <= ceiling, let bytes = try? Data(contentsOf: file) else { return nil }
+        guard size <= ceiling else { return .failed(kind == .text ? .textTooLong : .size) }
+        guard let bytes = try? Data(contentsOf: file) else { return .failed(.unreadable) }
         let mimeType = AIAttachmentPolicy.mimeType(forFileName: name)
         switch kind {
         case .image:
-            guard let png = boundedPNG(bytes) else { return nil }
-            return Staged(
-                payload: .image(AIImage(data: png, mimeType: "image/png")), name: name,
-                preview: preview(png))
+            guard let png = boundedPNG(bytes) else { return .failed(.unreadable) }
+            return .staged(
+                Staged(
+                    payload: .image(AIImage(data: png, mimeType: "image/png")), name: name,
+                    preview: preview(png)))
         case .pdf:
-            return Staged(
-                payload: .document(AIDocument(data: bytes, mimeType: mimeType, name: name)),
-                name: name, preview: nil)
+            return .staged(
+                Staged(
+                    payload: .document(AIDocument(data: bytes, mimeType: mimeType, name: name)),
+                    name: name, preview: nil))
         case .text:
             // Re-encoded from the decoded string, so undecodable bytes refuse rather than mojibake.
-            guard let decoded = String(data: bytes, encoding: .utf8) else { return nil }
-            return Staged(
-                payload: .document(
-                    AIDocument(data: Data(decoded.utf8), mimeType: mimeType, name: name)),
-                name: name, preview: nil)
+            guard let decoded = String(data: bytes, encoding: .utf8) else {
+                return .failed(.undecodable)
+            }
+            return .staged(
+                Staged(
+                    payload: .document(
+                        AIDocument(data: Data(decoded.utf8), mimeType: mimeType, name: name)),
+                    name: name, preview: nil))
         }
     }
 
@@ -318,12 +349,6 @@ final class AIChatCoordinator {
         return scaled.representation(using: .png, properties: [:])
     }
 
-    /// `isFileURL` is load-bearing: without it an `https://…/a.png` reaches `Data(contentsOf:)`,
-    /// turning a keystroke into a network request.
-    private static func pastedFiles(on pasteboard: NSPasteboard) -> [URL] {
-        (pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] ?? []).filter(\.isFileURL)
-    }
-
     /// Backspace on an empty composer takes the last staged image before it backs out of chat.
     func removeLastAttachment() -> Bool {
         chat.removeLastAttachment()
@@ -331,6 +356,10 @@ final class AIChatCoordinator {
 
     func clearAttachments() {
         chat.clearAttachments()
+    }
+
+    func removeAttachment(_ id: UUID) {
+        chat.removeAttachment(id)
     }
 
     nonisolated private static let maxImageEdge: CGFloat = 1_568

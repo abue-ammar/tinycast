@@ -11,6 +11,7 @@ struct PasteboardTests {
 
     static func main() {
         finderCopyReadsAsAFileNotItsName()
+        everyFileFlavourIsRead()
         multipleFilesReadNewestLast()
         linksAndTextAreNotFiles()
         volatileAndMissingFilesFallThrough()
@@ -23,6 +24,47 @@ struct PasteboardTests {
     }
 
     // MARK: - Reading
+    /// One reader, every flavour: a board naming a file must never fall through to its name.
+    static func everyFileFlavourIsRead() {
+        withScratch { dir in
+            let file = dir.appendingPathComponent("Tinycast-Settings-2026-08-20.json")
+            try? Data("{}".utf8).write(to: file)
+
+            // Finder's real shape: one item carrying the URL and the display name together.
+            let item = NSPasteboardItem()
+            item.setData(file.dataRepresentation, forType: .fileURL)
+            item.setString(file.lastPathComponent, forType: .string)
+            let single = board()
+            single.writeObjects([item])
+            expect(
+                PasteboardFiles.urls(on: single) == [file],
+                "a URL and a display name on one item reads as the file")
+
+            // Some boards carry the URL as a string rather than as UTF-8 data.
+            let asString = NSPasteboardItem()
+            asString.setString(file.absoluteString, forType: .fileURL)
+            let stringBoard = board()
+            stringBoard.writeObjects([asString])
+            expect(
+                PasteboardFiles.urls(on: stringBoard) == [file],
+                "and so does one carrying the URL as a string")
+
+            // The pre-UTI flavour, still written by plenty of apps.
+            let legacy = board()
+            legacy.declareTypes([.init("NSFilenamesPboardType")], owner: nil)
+            legacy.setPropertyList([file.path], forType: .init("NSFilenamesPboardType"))
+            expect(
+                PasteboardFiles.urls(on: legacy) == [file],
+                "the legacy filenames flavour is read when no file URL is present")
+
+            let text = board()
+            text.declareTypes([.string], owner: nil)
+            text.setString("Tinycast-Settings-2026-08-20.json", forType: .string)
+            expect(
+                PasteboardFiles.urls(on: text).isEmpty,
+                "a bare file name is text, not a file")
+        }
+    }
 
     /// The reported bug: Finder puts the display name on `.string` beside `public.file-url`.
     static func finderCopyReadsAsAFileNotItsName() {
@@ -56,7 +98,7 @@ struct PasteboardTests {
         }
     }
 
-    /// `urlReadingFileURLsOnly` is what keeps a copied link a link.
+    /// Only a real file URL counts, so a copied link stays a link.
     static func linksAndTextAreNotFiles() {
         let pb = board()
         pb.declareTypes([.string], owner: nil)

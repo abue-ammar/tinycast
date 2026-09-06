@@ -81,7 +81,9 @@ struct AIScreen: PaletteScreen {
                     if let addressed {
                         ComposerChip(symbol: "wrench.and.screwdriver", label: "@\(addressed.slug)")
                     }
-                    PendingAttachmentsChips(attachments: attachments)
+                    PendingAttachmentsChips(
+                        attachments: attachments,
+                        onRemove: coordinator.removeAttachment)
                 }))
     }
 
@@ -156,26 +158,10 @@ private struct AIEmptyState: View {
     }
 }
 
-/// One pill beside the composer, leading with a glyph or the attachment's own preview.
+/// The MCP `@server` pill: a glyph and a word, unchanged by what attachments do.
 private struct ComposerChip: View {
-    /// A preview gives up leading inset to buy its extra size, so both pills measure alike.
-    enum Leading {
-        case symbol(String)
-        case preview(Data?, id: UUID)
-    }
-
-    let leading: Leading
+    let symbol: String
     let label: String
-
-    init(symbol: String, label: String) {
-        self.leading = .symbol(symbol)
-        self.label = label
-    }
-
-    init(leading: Leading, label: String) {
-        self.leading = leading
-        self.label = label
-    }
 
     /// Load-bearing: `RootPaletteView.searchFieldWidth(for:)` shrinks the field by exactly this.
     static func width(of label: String) -> CGFloat {
@@ -186,29 +172,92 @@ private struct ComposerChip: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
-            switch leading {
-            case .symbol(let symbol):
-                Image(systemName: symbol)
-                    .font(Theme.Typography.chip)
-                    .symbolRenderingMode(.hierarchical)
-                    .frame(width: Theme.Size.chatAttachmentGlyph)
-            case .preview(let data, let id):
-                ComposerThumbnail(data: data, id: id)
-            }
+            Image(systemName: symbol)
+                .font(Theme.Typography.chip)
+                .symbolRenderingMode(.hierarchical)
+                .frame(width: Theme.Size.chatAttachmentGlyph)
             Text(label)
                 .font(Theme.Typography.chip)
                 .lineLimit(1)
         }
         .foregroundStyle(Theme.Colors.textSecondary)
-        .padding(.leading, leadingInset)
-        .padding(.trailing, Theme.Spacing.sm)
+        .padding(.horizontal, Theme.Spacing.sm)
         .padding(.vertical, Theme.Spacing.xxs)
         .background(Capsule().fill(Theme.Colors.controlSurface))
     }
+}
 
-    private var leadingInset: CGFloat {
-        if case .preview = leading { return Theme.Spacing.xxs }
-        return Theme.Spacing.sm
+/// A staged file: an image states itself, a document names itself, and either can be taken back.
+private struct AttachmentChip: View {
+    let attachment: ChatAttachment
+    let onRemove: () -> Void
+
+    @State private var hovered = false
+
+    /// A long file name is middle-truncated here rather than by layout, so the width is knowable.
+    private static let nameLimit = 16
+
+    /// Every kind is labelled: a bare thumbnail beside an ✕ reads as two stray marks, not a pill.
+    private static func shortened(_ name: String) -> String {
+        guard name.count > nameLimit else { return name }
+        let head = name.prefix(nameLimit - 7)
+        let tail = name.suffix(6)
+        return "\(head)…\(tail)"
+    }
+
+    static func width(for attachment: ChatAttachment) -> CGFloat {
+        let text = (Self.shortened(attachment.name) as NSString).size(
+            withAttributes: [.font: Theme.Typography.chipNSFont]
+        ).width
+        return Theme.Size.chatAttachmentInset * 2 + Theme.Size.chatAttachmentThumb
+            + Theme.Spacing.sm + text + Theme.Spacing.sm + Theme.Size.chatAttachmentRemove
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            leading
+            Text(Self.shortened(attachment.name))
+                .font(Theme.Typography.chip)
+                .lineLimit(1)
+                .foregroundStyle(Theme.Colors.textSecondary)
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .semibold))
+                    .frame(
+                        width: Theme.Size.chatAttachmentRemove,
+                        height: Theme.Size.chatAttachmentRemove
+                    )
+                    .foregroundStyle(hovered ? Theme.Colors.textPrimary : Theme.Colors.textTertiary)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Remove \(attachment.name)")
+        }
+        // Inset under the inner gap, so the thumbnail reads as filling the pill.
+        .padding(.horizontal, Theme.Size.chatAttachmentInset)
+        .padding(.vertical, Theme.Size.chatAttachmentInset)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.attachmentChip, style: .continuous)
+                .fill(Theme.Colors.controlSurface)
+        )
+        .onHover { hovered = $0 }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Attached \(attachment.name)")
+    }
+
+    @ViewBuilder private var leading: some View {
+        switch attachment.kind {
+        case .image:
+            ComposerThumbnail(data: attachment.preview, id: attachment.id)
+        case .pdf, .text:
+            Image(systemName: attachment.kind == .pdf ? "doc.richtext" : "doc.plaintext")
+                .font(Theme.Typography.chip)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(
+                    width: Theme.Size.chatAttachmentThumb,
+                    height: Theme.Size.chatAttachmentThumb)
+        }
     }
 }
 
@@ -235,28 +284,54 @@ private struct ComposerThumbnail: View {
     }
 }
 
-/// Staged files sit after the typed text as named pills, an image showing itself.
+/// Staged files follow the typed text; past two they become a count, the width being the field's.
 private struct PendingAttachmentsChips: View {
     let attachments: [ChatAttachment]
+    let onRemove: (UUID) -> Void
+
+    /// Two, because a third chip plus its name leaves the field too narrow to read what you type.
+    private static let visibleLimit = 2
+
+    private static func visible(_ attachments: [ChatAttachment]) -> [ChatAttachment] {
+        Array(attachments.prefix(visibleLimit))
+    }
+
+    private static func overflowLabel(_ attachments: [ChatAttachment]) -> String? {
+        let hidden = attachments.count - visibleLimit
+        return hidden > 0 ? "+\(hidden)" : nil
+    }
 
     static func width(for attachments: [ChatAttachment]) -> CGFloat {
-        attachments.reduce(0) { $0 + ComposerChip.width(of: $1.name) }
+        var total = visible(attachments).reduce(0) { $0 + AttachmentChip.width(for: $1) }
+        total += CGFloat(max(0, visible(attachments).count - 1)) * Theme.Spacing.xs
+        if let label = overflowLabel(attachments) {
+            let text = (label as NSString).size(
+                withAttributes: [.font: Theme.Typography.chipNSFont]
+            ).width
+            total += Theme.Spacing.xs + text + Theme.Spacing.sm * 2
+        }
+        return total
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            ForEach(attachments) { attachment in
-                ComposerChip(leading: leading(for: attachment), label: attachment.name)
-                    .accessibilityLabel("Attached file \(attachment.name)")
+        HStack(spacing: Theme.Spacing.xs) {
+            ForEach(Self.visible(attachments)) { attachment in
+                AttachmentChip(attachment: attachment) { onRemove(attachment.id) }
             }
-        }
-    }
-
-    private func leading(for attachment: ChatAttachment) -> ComposerChip.Leading {
-        switch attachment.kind {
-        case .image: return .preview(attachment.preview, id: attachment.id)
-        case .pdf: return .symbol("doc.richtext")
-        case .text: return .symbol("doc.plaintext")
+            if let label = Self.overflowLabel(attachments) {
+                Text(label)
+                    .font(Theme.Typography.chip)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+                    .padding(.horizontal, Theme.Spacing.sm)
+                    .padding(.vertical, Theme.Spacing.xs)
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius: Theme.Radius.attachmentChip, style: .continuous
+                        ).fill(Theme.Colors.controlSurface)
+                    )
+                    .help("\(attachments.count) files attached")
+                    .accessibilityLabel("\(attachments.count) files attached")
+            }
         }
     }
 }
