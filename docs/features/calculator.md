@@ -106,6 +106,8 @@ where the documented forward bias still decides: `jul 4 - today` keeps looking a
 
 `parseMoment` owns `at <time>` for every grammar, so `next monday at 7:30 + 5`,
 `hours till tomorrow at 7:30` and `3 days from next monday at 7:30` compose the same way.
+The bias applies to the combined date and clock: after Friday midnight, `hours till friday at midnight`
+advances a week while `hours since friday at midnight` uses today's midnight.
 Explicit clock times survive day, month and year shifts. Invalid clock components and wall-clock times
 that do not exist during a DST jump stay silent. Repeated fall-back times use Calendar's first occurrence.
 

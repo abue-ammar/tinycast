@@ -402,10 +402,27 @@ enum CalcDateTime {
         _ phrase: String, now: Date, calendar: Calendar, bias: MomentBias = .future
     ) -> Moment? {
         if let range = phrase.range(of: " at ") {
+            let dayPhrase = String(phrase[..<range.lowerBound])
+            let atoms = atomize(dayPhrase)
+            let recurring = weekdayByName[dayPhrase] != nil || monthByName[dayPhrase] != nil
+                || (atoms.count == 2 && namesADay(dayPhrase))
+                || (atoms.count == 1 && dayPhrase.split(separator: "/").count == 2)
             guard let clock = parseMeridiemClock(String(phrase[range.upperBound...])),
-                let day = parseMoment(String(phrase[..<range.lowerBound]), now: now, calendar: calendar, bias: bias),
-                let date = calendar.date(bySettingHour: clock.hour, minute: clock.minute, second: 0, of: day.date),
-                calendar.isDate(date, inSameDayAs: day.date),
+                let day = parseMoment(
+                    dayPhrase, now: now, calendar: calendar, bias: recurring && bias != .nearest ? .future : bias)
+            else { return nil }
+            var anchor = day.date
+            if recurring, bias != .nearest,
+                let candidate = calendar.date(bySettingHour: clock.hour, minute: clock.minute, second: 0, of: anchor),
+                bias == .future ? candidate <= now : candidate > now
+            {
+                guard let reference = shift(now, days: bias == .future ? 1 : -1, calendar: calendar),
+                    let shifted = parseMoment(dayPhrase, now: reference, calendar: calendar, bias: bias)
+                else { return nil }
+                anchor = shifted.date
+            }
+            guard let date = calendar.date(bySettingHour: clock.hour, minute: clock.minute, second: 0, of: anchor),
+                calendar.isDate(date, inSameDayAs: anchor),
                 calendar.component(.hour, from: date) == clock.hour,
                 calendar.component(.minute, from: date) == clock.minute
             else { return nil }
