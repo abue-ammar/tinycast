@@ -337,7 +337,6 @@ enum CalcUnits {
 
         add(UnitDef("m/s²", "Meters per Second Squared", .acceleration, 1), ["m/s2", "mps2"])
         add(UnitDef("N", "Newtons", .force, 1), ["n", "newton", "newtons"])
-        add(UnitDef("kN", "Kilonewtons", .force, 1000), ["kilonewton", "kilonewtons"])
         add(UnitDef("J", "Joules", .energy, 1), ["j", "joule", "joules"])
         add(UnitDef("kJ", "Kilojoules", .energy, 1000), ["kj", "kilojoule", "kilojoules"])
         add(UnitDef("Wh", "Watt Hours", .energy, 3600), ["wh"])
