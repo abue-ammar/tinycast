@@ -220,6 +220,7 @@ target makes the intent unambiguous (`273.15K to C`).
 A **compound unit** (`km/h`, `m³/h`, `mbit/s`, `fl oz`) stays whole only when the table knows its
 spelling: the tokenizer looks ahead across `/` or whitespace between two alphanumeric runs,
 folds superscript powers, and keeps them together only if `CalcUnits.byName` resolves the result.
+The identifier's first scan supplies the currency prefix and compound-unit head without rescanning it.
 That is the same table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
 `10 m / 2` still divide while `1 km/x` stays silent.
 

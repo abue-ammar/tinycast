@@ -90,25 +90,16 @@ enum CalcTokenizer {
             }
 
             if ch.isLetter || ch == "°" {
-                // Split an attached currency prefix (`USD1K`) before the ident scanner eats it.
-                if ch.isLetter {
-                    var letterEnd = i
-                    while letterEnd < chars.count, chars[letterEnd].isLetter { letterEnd += 1 }
-                    if letterEnd < chars.count, isDigit(chars[letterEnd]) {
-                        let prefix = String(chars[i..<letterEnd]).lowercased()
-                        if CalcUnits.byName[prefix] == nil, CalcCurrency.byName[prefix] != nil {
-                            tokens.append(.ident(prefix))
-                            i = letterEnd
-                            continue
-                        }
-                    }
-                    if let unit = compoundUnit(chars, i) {
-                        tokens.append(.ident(unit.name))
-                        i = unit.end
+                let start = i
+                while i < chars.count, chars[i].isLetter { i += 1 }
+                var text = String(chars[start..<i])
+                if i < chars.count, isDigit(chars[i]) {
+                    let prefix = text.lowercased()
+                    if CalcUnits.byName[prefix] == nil, CalcCurrency.byName[prefix] != nil {
+                        tokens.append(.ident(prefix))
                         continue
                     }
                 }
-                var text = ""
                 while i < chars.count {
                     let c = chars[i]
                     if c.isLetter || c == "°" || isDigit(c) {
@@ -122,7 +113,12 @@ enum CalcTokenizer {
                     }
                     i += 1
                 }
-                tokens.append(.ident(CalcUnits.byName[text] != nil ? text : text.lowercased()))
+                if let unit = compoundUnit(chars, after: i, prefix: text) {
+                    tokens.append(.ident(unit.name))
+                    i = unit.end
+                } else {
+                    tokens.append(.ident(CalcUnits.byName[text] != nil ? text : text.lowercased()))
+                }
                 continue
             }
 
@@ -172,17 +168,17 @@ enum CalcTokenizer {
     }
 
     /// Only a spelling the table resolves, so `6/2(1+2)` keeps dividing.
-    private static func compoundUnit(_ chars: [Character], _ start: Int) -> (name: String, end: Int)? {
-        var leftEnd = start
-        while leftEnd < chars.count, chars[leftEnd].isLetter || chars[leftEnd].isNumber { leftEnd += 1 }
-        guard leftEnd < chars.count, chars[leftEnd] == "/" || chars[leftEnd].isWhitespace else { return nil }
-        let separator = chars[leftEnd] == "/" ? "/" : " "
-        var rightStart = leftEnd + 1
+    private static func compoundUnit(
+        _ chars: [Character], after index: Int, prefix: String
+    ) -> (name: String, end: Int)? {
+        guard index < chars.count, chars[index] == "/" || chars[index].isWhitespace else { return nil }
+        let separator = chars[index] == "/" ? "/" : " "
+        var rightStart = index + 1
         while rightStart < chars.count, chars[rightStart].isWhitespace { rightStart += 1 }
         var end = rightStart
         while end < chars.count, chars[end].isLetter || chars[end].isNumber { end += 1 }
         guard end > rightStart else { return nil }
-        let name = (String(chars[start..<leftEnd]) + separator + String(chars[rightStart..<end])).lowercased()
+        let name = (prefix + separator + String(chars[rightStart..<end])).lowercased()
             .replacingOccurrences(of: "²", with: "2")
             .replacingOccurrences(of: "³", with: "3")
         guard CalcUnits.byName[name] != nil else { return nil }
