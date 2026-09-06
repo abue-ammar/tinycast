@@ -239,12 +239,6 @@ enum SettingsSearchCatalog {
     private static let ai: [SettingsSearchEntry] = [
         .init(pane: .ai, keywords: ["chat", "llm", "model", "openai", "anthropic"]),
         .init(.aiAI, "Enable AI", keywords: ["chat", "llm"]),
-        .init(
-            .aiDefault, "Default model",
-            keywords: ["llm", "gpt", "claude"]),
-        .init(
-            .aiDefault, "Reasoning effort",
-            keywords: ["thinking", "chatgpt"]),
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
         .init(
             .aiConversations, "Opens to",

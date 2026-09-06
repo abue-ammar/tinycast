@@ -31,7 +31,6 @@ extension SettingsAnchor {
     static let fallbacksFallbacks = Self(tab: .fallbacks, title: "Fallbacks")
 
     static let aiAI = Self(tab: .ai, title: "AI")
-    static let aiDefault = Self(tab: .ai, title: "Default")
     static let aiChat = Self(tab: .ai, title: "Chat")
     static let aiConversations = Self(tab: .ai, title: "Conversations")
     static let aiSystemPrompt = Self(tab: .ai, title: "System prompt")
