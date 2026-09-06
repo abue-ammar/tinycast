@@ -1,7 +1,8 @@
 # AI providers and chat
 
-Tinycast has one app-wide provider layer for features that need text generation. Settings chooses the
-default model; callers ask `AppCore.aiProvider()` for the current provider and stream an `AIRequest`.
+Tinycast has one app-wide provider layer for features that need text generation. AI Chat chooses its
+model from the chat header; callers ask `AppCore.aiProvider()` for the current provider and stream an
+`AIRequest`.
 AI Chat is the first consumer and [Quick Actions](quick-actions.md) the second; the provider layer
 depends on neither, and Quick Actions carries its own route rather than borrowing this one.
 
@@ -34,7 +35,7 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
 - **Remote endpoints require HTTPS.** Plain HTTP is accepted only for `localhost`, `127.0.0.1` and
   `::1`, where a key is optional, and any other scheme is rejected outright — a loopback host does
   not excuse `ftp://`. `AIEndpointPolicy` is the one place that decides this.
-- **The default model is the routing decision.** It names the on-device model, a model exposed by the
+- **The chat model is the routing decision.** It names the on-device model, a model exposed by the
   installed Codex, Claude or OpenCode command, or one saved API connection and model. Installed
   routes also carry their reasoning effort when the selected model supports one. A removed route
   falls forward to the on-device model when this Mac
@@ -189,9 +190,9 @@ search; the shortcut keeps working while the command is hidden, and does nothing
 feature is off. The palette search field becomes the single-line composer. The footer pill and
 Return are one action, `activate`: Send, or Stop while a response streams — an empty composer sends
 nothing, so the pill never needs a disabled state. The header's trailing model switcher uses the
-same in-window menu control as Clipboard's type filter and changes the app-wide default route for
-the next message. For installed routes and OpenRouter models whose catalog reports the capability,
-it also shows the supported reasoning efforts and changes the app-wide effort for the next message.
+same in-window menu control as Clipboard's type filter and changes the chat route for the next
+message. For installed routes and OpenRouter models whose catalog reports the capability, it also
+shows the supported reasoning efforts and changes the chat effort for the next message.
 Other API routes keep their provider default because their model catalogs expose no portable effort
 contract. Neither change interrupts a response already streaming; stopping one is the pill's job,
 so the header never has to fit a third control beside the switcher.
@@ -390,12 +391,12 @@ width and clipped the search field well short of the button.
 ## Settings and backup boundary
 
 Settings → AI is a normal grouped `Form` inside Tinycast's existing Settings window. Its top AI
-section owns the feature switch and the **Providers → Manage…** action; model and reasoning choices
-stay together under **Default**. Provider management opens as a sheet, where **Installed AI** reports
+section owns the feature switch and the **Providers → Manage…** action. Model and reasoning choices
+live in the AI Chat header. Provider management opens as a sheet, where **Installed AI** reports
 Codex, Claude and OpenCode separately as checking, ready, sign-in required, missing or failed. It
 never contains a credential field: installation and sign-in happen in each command's own flow.
-**API Connections** remains the explicit Keychain-backed path in that sheet. The pane also chooses
-chat's default model, which is the fallback Quick Actions uses until its own pane names one.
+**API Connections** remains the explicit Keychain-backed path in that sheet. The chat header chooses
+the chat model, while Quick Actions keeps its own model selection.
 
 The signed-in Codex address is the one thing on the pane that names a person, and a Settings pane
 is what gets screenshotted into a bug report or left on screen in a recording, so `RedactedText`

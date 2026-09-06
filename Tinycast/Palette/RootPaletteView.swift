@@ -150,16 +150,6 @@ struct RootPaletteView: View {
             items.insert(
                 PopoverMenuItem(title: "Loading models…", icon: .blank, isLoading: true) {}, at: 0)
         }
-        let efforts = core.aiChatCoordinator.reasoningEfforts
-        items += efforts.enumerated().map { index, effort in
-            PopoverMenuItem(
-                title: effort.title, icon: .blank,
-                sectionTitle: index == 0 ? "Reasoning effort" : nil,
-                detail: effort.id == core.aiSettings.defaultModel?.effort ? "✓" : nil)
-            {
-                core.aiChatCoordinator.selectReasoningEffort(effort)
-            }
-        }
         guard !items.isEmpty else {
             return PopoverMenuContent(items: [
                 PopoverMenuItem(title: "Configure AI", systemImage: "slider.horizontal.3") {
@@ -168,6 +158,18 @@ struct RootPaletteView: View {
             ])
         }
         return PopoverMenuContent(items: items)
+    }
+
+    private var aiReasoningContent: PopoverMenuContent {
+        let selected = core.aiSettings.defaultModel?.effort
+        return PopoverMenuContent(items: core.aiChatCoordinator.reasoningEfforts.map { effort in
+            PopoverMenuItem(
+                title: effort.title, icon: .blank,
+                detail: effort.id == selected ? "✓" : nil)
+            {
+                core.aiChatCoordinator.selectReasoningEffort(effort)
+            }
+        })
     }
 
     /// The bottom-left app menu content (About / Support / Settings).
@@ -203,6 +205,10 @@ struct RootPaletteView: View {
         case .aiModel:
             return PaletteMenuContent(
                 popover: aiModelContent, selection: $menuSelection,
+                width: headerMenuWidth, onActivate: activateMenuItem)
+        case .aiReasoning:
+            return PaletteMenuContent(
+                popover: aiReasoningContent, selection: $menuSelection,
                 width: headerMenuWidth, onActivate: activateMenuItem)
         case nil: return nil
         }
@@ -544,6 +550,13 @@ struct RootPaletteView: View {
                     icon: core.aiChatCoordinator.selectedModelIcon,
                     isOpen: openMenu == .aiModel,
                     action: toggleAIModel)
+                if !core.aiChatCoordinator.reasoningEfforts.isEmpty {
+                    headerGutter(width: Theme.Spacing.md)
+                    AIReasoningButton(
+                        title: core.aiChatCoordinator.selectedReasoningTitle,
+                        isOpen: openMenu == .aiReasoning,
+                        action: toggleAIReasoning)
+                }
             }
             // Compact pins favorites beside the field; expanded shows them as rows.
             if isCollapsed, settings.showFavoritesInCompactMode,
@@ -754,6 +767,18 @@ struct RootPaletteView: View {
         }
     }
 
+    private func toggleAIReasoning() {
+        if openMenu == .aiReasoning {
+            closeMenus()
+            return
+        }
+        let selected = core.aiSettings.defaultModel?.effort
+        let active = core.aiChatCoordinator.reasoningEfforts.firstIndex {
+            $0.id == selected
+        } ?? 0
+        open(.aiReasoning, highlighting: active)
+    }
+
     private func aiModelMenuSelection(
         options: [AIModelOption], selected: AIModelSelection?
     ) -> Int {
@@ -765,7 +790,10 @@ struct RootPaletteView: View {
     }
 
     private var headerMenuWidth: CGFloat {
-        openMenu == .aiModel ? Theme.Size.menuWidth : Theme.Size.clipboardFilterMenuWidth
+        switch openMenu {
+        case .aiModel, .aiReasoning: Theme.Size.menuWidth
+        default: Theme.Size.clipboardFilterMenuWidth
+        }
     }
 
     /// Every open path lands here, so the highlight is always stated rather than left behind.
@@ -796,7 +824,7 @@ struct RootPaletteView: View {
         switch openMenu {
         case .app: .bottomLeading
         case .actions: .bottomTrailing
-        case .clipboardFilter, .aiModel: .belowHeaderTrailing
+        case .clipboardFilter, .aiModel, .aiReasoning: .belowHeaderTrailing
         case nil: nil
         }
     }
@@ -941,6 +969,7 @@ private enum OpenMenu {
     case app
     case clipboardFilter
     case aiModel
+    case aiReasoning
 }
 
 /// The footer's menu circle; hover lives here, so a sweep never re-renders the body.

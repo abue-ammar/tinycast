@@ -368,6 +368,13 @@ final class AIChatCoordinator {
             connections: core.aiSettings.connections)
     }
 
+    var selectedReasoningTitle: String {
+        guard let selected = core.aiSettings.defaultModel?.effort,
+            let effort = reasoningEfforts.first(where: { $0.id == selected })
+        else { return "Reasoning" }
+        return effort.title
+    }
+
     func selectReasoningEffort(_ effort: ChatGPTSubscription.Effort) {
         guard let selection = core.aiSettings.defaultModel else { return }
         core.aiSettings.select(selection.withEffort(effort.id))

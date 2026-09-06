@@ -36,7 +36,6 @@ struct AISettingsView: View {
                 .settingsEnabled(appSettings.aiEnabled)
 
             Group {
-                defaultModelSection
                 chatSection
                 conversationsSection
                 systemPromptSection
@@ -51,8 +50,6 @@ struct AISettingsView: View {
         }
         .onAppear {
             refreshInstalledAI()
-            // Whichever of this pane and the chat opens first leaves a real selection behind.
-            settings.resolveDefaultModel()
         }
         // Switched on with the pane already open, provider status would otherwise stay empty.
         .onChange(of: appSettings.aiEnabled) { refreshInstalledAI() }
@@ -63,48 +60,6 @@ struct AISettingsView: View {
         .onChange(of: subscription.models) { syncSelection() }
         .onChange(of: subscription.phase) { syncSelection() }
         .onChange(of: installedAI.statuses) { syncSelection() }
-    }
-
-    private var defaultModelSection: some View {
-        Section {
-            // A Mac with nothing configured is the one that needs telling its free route is off.
-            if let reason = appleIntelligenceReason {
-                Label(reason, systemImage: "apple.intelligence")
-                    .foregroundStyle(.secondary)
-            }
-            AIModelSelectionRows(
-                selection: settings.defaultModel,
-                select: { selection in
-                    guard let selection else { return }
-                    settings.select(selection)
-                },
-                modelLabel: {
-                    SettingsRowTitle(.aiDefault, "Default model")
-                    Text("Used by Tinycast features unless they ask you to choose another model.")
-                },
-                effortLabel: {
-                    SettingsRowTitle(.aiDefault, "Reasoning effort")
-                    Text("Applied when the default model supports reasoning effort.")
-                }
-            )
-        } header: {
-            SettingsSectionHeader(.aiDefault)
-        } footer: {
-            Text(defaultModelFooter)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var defaultModelFooter: String {
-        if settings.defaultModel?.isOnDevice == true {
-            return "Apple Intelligence runs on this Mac. No key, no account, and nothing leaves it."
-        }
-        return AIModelOption.availableGroups(
-            settings: settings, subscription: subscription, installedAI: installedAI
-        ).isEmpty
-            ? "Turn on Apple Intelligence, set up an installed provider, or add an API connection."
-            : "Tinycast contacts only the selected provider when an AI feature runs."
     }
 
     private var providerSummary: String {
@@ -119,11 +74,6 @@ struct AISettingsView: View {
             providers.append(count == 1 ? "1 API connection" : "\(count) API connections")
         }
         return providers.isEmpty ? "No external providers ready" : providers.joined(separator: ", ")
-    }
-
-    /// Why the on-device route is missing from the picker, or `nil` when it is there.
-    private var appleIntelligenceReason: String? {
-        settings.isAppleIntelligenceAvailable() ? nil : AppleIntelligenceProvider.status().message
     }
 
     private var chatSection: some View {
@@ -461,7 +411,6 @@ struct AISettingsView: View {
                 ForEach(settings.connections) { connection in
                     AIConnectionRow(
                         connection: connection,
-                        isDefault: settings.defaultModel?.source == .api(connection.id),
                         hasStoredKey: keyStatuses[connection.id] == true,
                         onEdit: { edit(connection) },
                         onRemove: { pendingRemoval = connection })
@@ -630,7 +579,6 @@ private struct AIConnectionEditorTarget: Identifiable {
 
 private struct AIConnectionRow: View {
     let connection: AIConnection
-    let isDefault: Bool
     let hasStoredKey: Bool
     let onEdit: () -> Void
     let onRemove: () -> Void
@@ -641,13 +589,8 @@ private struct AIConnectionRow: View {
             subtitle: "\(connection.provider.title) · \(keyStatus) · \(modelCount)"
         ) {
             Image(systemName: "sparkles")
-                .foregroundStyle(isDefault ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .foregroundStyle(.secondary)
         } trailing: {
-            if isDefault {
-                Text("Default")
-                    .font(.caption)
-                    .foregroundStyle(.tint)
-            }
             Button(action: onEdit) { Image(systemName: "pencil") }
                 .buttonStyle(.plain)
                 .help("Edit \(connection.title)")
