@@ -172,13 +172,13 @@ answering nothing.
 Once an operator is involved the answer stays in the units written, so `2 * 5kg` is `10 kg`. Only a
 bare quantity (`50cm`, `1m`) falls through to the keyword-less auto-conversion below.
 
-`CalcDimension` records length, mass, time, data and electric-current exponents. Products add exponents, division
+`CalcDimension` records length, mass, time, data, electric-current and pixel exponents. Products add exponents, division
 subtracts them, and powers multiply them. `CalcUnits.baseUnits` resolves supported results back to
 ordinary units, so conversions and addition need no second representation. Derived results use base
 units unless a trailing conversion names another: `5m * 4m` → `20 m²`,
 `100km / 2h to km/h` → `50 km/h`, `90km/h * 20min to km` → `30 km`.
 Area, volume, volume flow, speed, acceleration, force, pressure, energy, power, frequency, data rates
-and electrical units compose through this same path. Unsupported dimensions remain errors;
+and electrical and pixel units compose through this same path. Unsupported dimensions remain errors;
 arbitrary compound units are not stored.
 
 All factors share composable bases: cubic meters for volume and bytes per second for data rates.
@@ -203,6 +203,14 @@ including `fl oz` / `floz`; plain `oz` remains weight.
 Volume flow adds length³/time to the same dimension table, with `m³/s` as its base:
 `10l / 2min to l/min` → `5 L/min`, `10l/min * 30s to l` → `5 L`,
 `150l / 10l/min to duration` → `15 min`. Its units also include L/s, L/h, m³/h and gal/min (`gpm`).
+
+Pixels have their own dimension, so `3000px to cm` cannot assume a physical size.
+An explicit density supplies it: `3000px / 300ppi to inches` → `10 in`,
+`5in * 300ppi` → `1,500 px`, and `3000px / 10in` → `300 ppi`.
+Density defaults to `ppi` (also `px/in`); `px/cm`, `px/mm` and `px/m` are conversion targets.
+Square pixels (`px²` / `px2`) let the ordinary powers and roots calculate a display's diagonal:
+`sqrt((3840px)^2 + (2160px)^2) / 27in` → `163.1783089 ppi`.
+These are image pixels, not CSS's fixed reference pixels or printer dots.
 
 `to timespan` / `to duration` formats any evaluated time quantity, including
 `(1hr + 30min) to timespan` and `100km / 40km/h to duration`. It uses the typed parser directly.

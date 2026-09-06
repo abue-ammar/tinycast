@@ -4,6 +4,7 @@ struct CalcDimension: Hashable, Sendable {
     var time = 0.0
     var data = 0.0
     var electricCurrent = 0.0
+    var pixels = 0.0
 
     static let scalar = CalcDimension()
 
@@ -11,12 +12,13 @@ struct CalcDimension: Hashable, Sendable {
         Self(
             length: length + other.length * scale, mass: mass + other.mass * scale,
             time: time + other.time * scale, data: data + other.data * scale,
-            electricCurrent: electricCurrent + other.electricCurrent * scale)
+            electricCurrent: electricCurrent + other.electricCurrent * scale,
+            pixels: pixels + other.pixels * scale)
     }
 
     func raised(to power: Double) -> Self {
         Self(
             length: length * power, mass: mass * power, time: time * power, data: data * power,
-            electricCurrent: electricCurrent * power)
+            electricCurrent: electricCurrent * power, pixels: pixels * power)
     }
 }

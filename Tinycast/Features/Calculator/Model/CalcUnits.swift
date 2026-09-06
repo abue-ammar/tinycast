@@ -4,6 +4,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
     case angle, speed, pressure, dataRate, acceleration, force, energy, power, frequency
     case electricCurrent, voltage, resistance, electricCharge, volumeFlow
+    case pixels, pixelArea, pixelDensity
 
     var displayName: String {
         switch self {
@@ -28,6 +29,9 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .resistance: return "Resistance"
         case .electricCharge: return "Electric Charge"
         case .volumeFlow: return "Volume Flow Rate"
+        case .pixels: return "Pixels"
+        case .pixelArea: return "Pixel Area"
+        case .pixelDensity: return "Pixel Density"
         }
     }
 
@@ -52,6 +56,9 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .resistance: return CalcDimension(length: 2, mass: 1, time: -3, electricCurrent: -2)
         case .electricCharge: return CalcDimension(time: 1, electricCurrent: 1)
         case .volumeFlow: return CalcDimension(length: 3, time: -1)
+        case .pixels: return CalcDimension(pixels: 1)
+        case .pixelArea: return CalcDimension(pixels: 2)
+        case .pixelDensity: return CalcDimension(length: -1, pixels: 1)
         case .temperature, .angle: return nil
         }
     }
@@ -79,7 +86,7 @@ enum CalcUnits {
         var units: [CalcDimension: UnitDef] = [:]
         for name in [
             "m", "kg", "s", "m2", "m3", "b", "m/s", "pa", "bps", "m/s2", "n", "j", "w", "hz",
-            "a", "v", "ohm", "as", "m3/s"
+            "a", "v", "ohm", "as", "m3/s", "px", "px2", "ppi"
         ] {
             if let unit = byName[name], let dimension = unit.category.dimension {
                 units[dimension] = unit
@@ -224,7 +231,9 @@ enum CalcUnits {
         "A": ("ma", false), "mA": ("a", false), "µA": ("ma", false), "MA": ("a", false),
         "V": ("mv", false), "mV": ("v", false), "kV": ("v", false), "MV": ("kv", false),
         "Ω": ("kohm", false), "mΩ": ("ohm", false), "kΩ": ("ohm", false), "MΩ": ("kohm", false),
-        "As": ("ah", false), "Ah": ("mah", false), "mAh": ("ah", false), "MAh": ("ah", false)
+        "As": ("ah", false), "Ah": ("mah", false), "mAh": ("ah", false), "MAh": ("ah", false),
+        "ppi": ("px/cm", false), "px/cm": ("ppi", false),
+        "px/mm": ("ppi", false), "px/m": ("ppi", false)
     ]
 
     static let byName: [String: UnitDef] = {
@@ -251,6 +260,15 @@ enum CalcUnits {
         add(UnitDef("ft", "Feet", .length, 0.3048), ["ft", "foot", "feet"])
         add(UnitDef("yd", "Yards", .length, 0.9144), ["yd", "yard", "yards"])
         add(UnitDef("mi", "Miles", .length, 1609.344), ["mi", "mile", "miles"])
+
+        add(UnitDef("px", "Pixels", .pixels, 1), ["px", "pixel", "pixels"])
+        add(UnitDef("px²", "Square Pixels", .pixelArea, 1), ["px2"])
+        add(
+            UnitDef("ppi", "Pixels per Inch", .pixelDensity, 1 / 0.0254),
+            ["ppi", "px/in", "px/inch", "px/inches", "pixels/inch"])
+        add(UnitDef("px/cm", "Pixels per Centimeter", .pixelDensity, 100), ["px/cm"])
+        add(UnitDef("px/mm", "Pixels per Millimeter", .pixelDensity, 1000), ["px/mm"])
+        add(UnitDef("px/m", "Pixels per Meter", .pixelDensity, 1), ["px/m"])
 
         // Weight (base: kilogram)
         add(UnitDef("mg", "Milligrams", .weight, 1e-6), ["mg", "milligram", "milligrams"])

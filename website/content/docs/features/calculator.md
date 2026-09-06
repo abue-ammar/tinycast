@@ -103,6 +103,20 @@ Use `volt`, `amp`, `ohm`, `coulomb` or their listed symbols. Coulombs display as
 `C` continues to mean Celsius. SI mega symbols keep their case: `MW` is megawatts, `mW` is milliwatts.
 For power and energy, use `W` and `Wh` respectively; they are different dimensions.
 
+## Pixels and density
+
+| You type | You get |
+| --- | --- |
+| `3000px / 300ppi to inches` | `10 in` |
+| `5in * 300ppi` | `1,500 px` |
+| `3000px / 10in to ppi` | `300 ppi` |
+| `300ppi to px/cm` | `118.1102362 px/cm` |
+| `sqrt((3840px)^2 + (2160px)^2) / 27in` | `163.1783089 ppi` |
+
+Use `px`, `pixel` or `pixels`; density accepts `ppi`, `px/in`, `px/cm`, `px/mm` and `px/m`.
+Pixels have no fixed physical size, so supply a density when converting to inches or centimeters.
+The last example calculates a 27-inch, 3840×2160 display's density from its diagonal.
+
 ## Currency and crypto
 
 | You type                    | It means                    |
