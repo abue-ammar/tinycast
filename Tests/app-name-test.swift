@@ -92,6 +92,52 @@ struct AppNameTest {
             "two blank keys still fall back to the filename",
             blankBoth?.installedAppName == "Ghost")
 
+        func codes(_ preferred: [String]) -> [String] {
+            BundleLocalization.indexedLanguages(preferred)
+        }
+        check(
+            "a Simplified Chinese Mac looks up the zh_CN Apple actually keys by",
+            codes(["zh-Hans-CN"]).contains("zh_CN"))
+        check(
+            "a script-only tag maximizes to reach the same key",
+            codes(["zh-Hans"]).contains("zh_CN"))
+        check(
+            "Traditional Chinese resolves to its own region, not the mainland's",
+            codes(["zh-Hant-TW"]).contains("zh_TW") && !codes(["zh-Hant-TW"]).contains("zh_CN"))
+        check(
+            "English stays last so a Chinese reader still types \"Calendar\"",
+            codes(["zh-Hans-CN"]).last == "en")
+        check(
+            "a tag carrying no script is left exactly as it was",
+            codes(["pt-BR"]) == ["pt-BR", "pt_BR", "pt", "en"])
+
+        /// The whole path: a bundle translated only in its loctable, read as the scan reads it.
+        func makeLocalizedApp(_ fileName: String, table: [String: Any]) -> URL {
+            let url = root.appendingPathComponent(fileName)
+            let resources = url.appendingPathComponent("Contents/Resources")
+            try? fm.createDirectory(at: resources, withIntermediateDirectories: true)
+            let data = try? PropertyListSerialization.data(
+                fromPropertyList: table, format: .xml, options: 0)
+            try? data?.write(to: resources.appendingPathComponent("InfoPlist.loctable"))
+            return url
+        }
+
+        let monitor = makeLocalizedApp(
+            "Activity Monitor.app",
+            table: [
+                "zh_CN": ["CFBundleName": "活动监视器"],
+                "zh_TW": ["CFBundleName": "活動監視器"],
+                "en": ["CFBundleName": "Activity Monitor"]
+            ])
+        check(
+            "a loctable app is found by its Chinese name, English still indexed",
+            BundleLocalization.names(for: monitor, languages: codes(["zh-Hans-CN"]))
+                == ["活动监视器", "Activity Monitor"])
+        check(
+            "an English Mac indexes only the English name",
+            BundleLocalization.names(for: monitor, languages: codes(["en-US"]))
+                == ["Activity Monitor"])
+
         try? fm.removeItem(at: root)
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
