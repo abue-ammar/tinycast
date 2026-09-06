@@ -18,7 +18,8 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ SearchScopes · LauncherRankingStore · FileSearch{Query,Result,Scope} ·      │
 │ Calculator/* · EmojiCatalog · EmojiGridGeometry · SystemAction ·            │
 │ VolumeLevel ·                                                              │
-│ WindowCommand · WindowLayout · WindowActionMemory · PaletteRowIndex ·      │
+│ WindowCommand · WindowPlacementEngine · WindowActionMemory · WindowLayout/* ·      │
+│ PaletteRowIndex ·                                                          │
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
 │ Quicklink{,Destination,Store,Archive} · Notes/Model/* · Snippets/Model/* · │
 │ ShellCommandRunner · DoubleTap{Modifier,Detector} · ClipboardStore ·       │
@@ -30,6 +31,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 ┌─ EFFECT ─────────────────────────▼─────────────────────────────────────────┐
 │ All platform I/O, one folder per feature.                                  │
 │ AppIndex · SpotlightNames · FileSearchService · SettingsPaneScanner ·      │
+│ AXWindowAccess · AXScreens · WindowInventory · WindowLayoutRunner ·        │
 │ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │
 │ SystemActionRunner · QuicklinkLauncher · TextInjector ·             │
 │ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
@@ -219,8 +221,7 @@ Tests/              the standalone harnesses, one Swift file each
 Scripts/            run-tests.sh, the two data generators, packaging, formatting, editor setup
 ```
 
-A larger feature splits into all four sub-folders; a small one stays flat, as `Onboarding/` and
-`WindowManagement/` do. `HotKeys/` has no `Settings/` because its Shortcuts pane is part of the Settings
+A larger feature splits into all four sub-folders; a small one stays flat, as `Onboarding/` does. `HotKeys/` has no `Settings/` because its Shortcuts pane is part of the Settings
 shell rather than the feature.
 
 Every `SettingsTab` maps to one `…SettingsView`, and each is a stock `Form` with

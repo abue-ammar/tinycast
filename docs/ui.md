@@ -594,6 +594,38 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   a `LazyVStack` inside one Form row — 400 apps cost 55 ms and 69 views that way against 750 ms and
   2040 eager. Any other unbounded list must do the same.
 
+### The window-layout editor
+
+`Theme.Size.layoutEditorSheet` is **900 × 660, both stated**. The width less
+`layoutInspectorColumn` (300) leaves the preview two thirds of the sheet, and the canvas is greedy
+inside it — a fixed preview box would spend that third on margin. **The height is stated because the
+inspector grows**: picking an app reveals Argument, Size, Offset and Position, and an intrinsic
+sheet would jump out from under the pointer mid-click. The inspector scrolls if it ever overflows.
+
+Every inspector control — text field, dropdown, add button — is one `layoutFieldChrome`: a
+`Radius.barControl` rounded rect at `layoutControlHeight`, `cardFill` on `cardStroke`, accent-stroked
+while focused. A numeric field fills its half of the row rather than sizing to a stated width, so a
+value can never be cropped, and `layoutFieldUnit` keeps "%" and "pt" on one x.
+
+**The entry dropdown is a button and a popover, not a `Menu`**: a menu label stretches an `NSImage`
+out of aspect, which is what made the app icon smear. The rest of the app already picks apps this
+way (`AppPickerPopover`).
+
+In the position grid the **glyph floats in a wider cell** carrying the `contentShape`, so a click
+anywhere in the cell lands — a bare stroke is hittable only on the line itself. Each anchor's block
+takes half a pinned axis and all of a spanned one, which is what makes nine cells nine silhouettes
+rather than nine identical rectangles.
+
+`layoutPreviewGround` is **`adaptive`, never `ramp`**: a drawn display is dark in both appearances,
+and a ramp would invert it in Light. `layoutPreviewWindow` is white in both for the same reason — it
+sits on that always-dark plate. `Radius.glyph` (2) exists because `thumbnail` rounds a 10 pt square
+into a circle.
+
+The Save button draws a `⌘ ↵` cap, which the no-caps-on-buttons rule above otherwise forbids. That
+rule guards against a printed cap drifting from what `DialogPanel.sendEvent` handles separately; here
+the cap and the behaviour come from one `.keyboardShortcut`, so the drift is structurally impossible.
+See [features/window-layouts.md](features/window-layouts.md#the-editor).
+
 ### The shortcut recorder callout
 
 `ShortcutRecorder` is a **120pt** field showing only the binding — a combo's modifiers collapse into

@@ -9,6 +9,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case snippet
         case systemAction
         case windowCommand
+        case windowLayout
         case quicklink
         case extensionCommand
         case meeting
@@ -43,6 +44,10 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Window Command", sectionTitle: "Window Management",
                     openVerb: "Move Window", canRevealInFinder: false, isSymbolIcon: true)
+            case .windowLayout:
+                return KindDescriptor(
+                    label: "Window Layout", sectionTitle: "Window Layouts",
+                    openVerb: "Arrange Windows", canRevealInFinder: false, isSymbolIcon: true)
             case .quicklink:
                 return KindDescriptor(
                     label: "Quicklink", sectionTitle: "Quicklinks",
@@ -138,6 +143,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return SystemActionCatalog.action(forEntryID: id).map { .systemAction(id: $0.id) }
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id).map { .windowCommand(id: $0.id) }
+        case .windowLayout:
+            return WindowLayout.id(fromEntryID: id).map { .windowLayout(id: $0) }
         case .quicklink:
             return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
         case .snippet, .extensionCommand, .meeting:
@@ -166,6 +173,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol ?? "questionmark"
+        case .windowLayout: return WindowLayout.sfSymbol
         case .meeting: return "video.fill"
         case .application, .systemSettings, .extensionCommand: return "questionmark"
         }
@@ -182,6 +190,14 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 }
 
 extension AppEntry {
+    /// The one row a layout draws, wherever it is offered from.
+    init(_ layout: WindowLayout) {
+        self.init(
+            id: layout.entryID, name: layout.name,
+            url: URL(string: "tinycast://window-layout/" + layout.id.uuidString)!,
+            bundleID: nil, kind: .windowLayout, symbolName: layout.iconSymbol)
+    }
+
     /// The one row a quicklink draws, wherever it is offered from.
     init(_ quicklink: Quicklink) {
         self.init(
@@ -256,6 +272,7 @@ final class AppIndex {
     private var discoveredEntries: [AppEntry] = []
     private var customCommandEntries: [AppEntry] = []
     private var windowCommandEntries: [AppEntry] = []
+    private var windowLayoutEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
     private var extensionEntries: [AppEntry] = []
     private var meetingEntries: [AppEntry] = []
@@ -341,6 +358,14 @@ final class AppIndex {
         let entries = visible ? Self.allWindowCommandEntries : []
         guard entries != windowCommandEntries else { return }
         windowCommandEntries = entries
+        publishEntries()
+    }
+
+    /// Replaces the layout slice; a toggle can't split its entries from their section.
+    func setWindowLayouts(_ layouts: [WindowLayout]) {
+        let entries = layouts.sorted(by: WindowLayout.precedes).map(AppEntry.init)
+        guard entries != windowLayoutEntries else { return }
+        windowLayoutEntries = entries
         publishEntries()
     }
 
@@ -466,7 +491,8 @@ final class AppIndex {
             Self.named(meetingEntries) + discoveredEntries
             + Self.named(
                 extensionEntries + quicklinkEntries + snippetEntries + Self.systemActionEntries
-                    + windowCommandEntries + customCommandEntries + commandEntries)
+                    + windowLayoutEntries + windowCommandEntries + customCommandEntries
+                    + commandEntries)
         guard updated != apps else { return }
         apps = updated
         entriesRevision &+= 1

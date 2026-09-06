@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 
 /// Pure geometry, entirely in AX space. See docs/features/window-management.md#coordinate-space.
-enum WindowLayout {
+enum WindowPlacementEngine {
     /// A display, already converted to AX space by the caller.
     struct Screen: Equatable, Sendable {
         /// `CGDirectDisplayID` in the app; any stable value in tests.

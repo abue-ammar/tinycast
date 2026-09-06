@@ -29,20 +29,20 @@ struct WindowCommandTests {
     // MARK: - Fixtures
 
     /// The reference display: origin at the AX origin, evenly divisible by halves and thirds.
-    static let mainScreen = WindowLayout.Screen(
+    static let mainScreen = WindowPlacementEngine.Screen(
         id: 1, frame: CGRect(x: 0, y: 0, width: 1440, height: 900),
         visibleFrame: CGRect(x: 0, y: 0, width: 1440, height: 900))
 
-    static func screens(_ list: WindowLayout.Screen...) -> [WindowLayout.Screen] { list }
+    static func screens(_ list: WindowPlacementEngine.Screen...) -> [WindowPlacementEngine.Screen] { list }
 
     static func frame(
-        _ command: WindowCommand.ID, on screen: WindowLayout.Screen = mainScreen,
+        _ command: WindowCommand.ID, on screen: WindowPlacementEngine.Screen = mainScreen,
         window: CGRect = CGRect(x: 100, y: 100, width: 600, height: 400), gap: CGFloat = 0,
         step: Int = 0, restore: CGRect? = nil, lastTile: WindowCommand.ID? = nil,
-        allScreens: [WindowLayout.Screen]? = nil
+        allScreens: [WindowPlacementEngine.Screen]? = nil
     ) -> CGRect? {
-        WindowLayout.placement(
-            for: WindowLayout.Input(
+        WindowPlacementEngine.placement(
+            for: WindowPlacementEngine.Input(
                 command: command, windowFrame: window, screens: allScreens ?? [screen], gap: gap,
                 step: step, restoreFrame: restore, lastTileCommand: lastTile)
         )?.frame
@@ -115,8 +115,8 @@ struct WindowCommandTests {
             "only the two Space switches are space commands")
         expect(
             commands.filter { $0.kind == .space }.allSatisfy {
-                WindowLayout.placement(
-                    for: WindowLayout.Input(
+                WindowPlacementEngine.placement(
+                    for: WindowPlacementEngine.Input(
                         command: $0.id, windowFrame: mainScreen.frame, screens: [mainScreen],
                         gap: 0, step: 0, restoreFrame: nil, lastTileCommand: nil)) == nil
             },
@@ -138,10 +138,12 @@ struct WindowCommandTests {
         expect(grouped.first { $0.group == .spaces }?.commands.count == 2, "two space commands")
 
         expect(
-            WindowLayout.isTileCommand(.leftHalf) && WindowLayout.isTileCommand(.centerHalf),
+            WindowPlacementEngine.isTileCommand(.leftHalf)
+                && WindowPlacementEngine.isTileCommand(.centerHalf),
             "halves and center half are tiles")
         expect(
-            !WindowLayout.isTileCommand(.maximize) && !WindowLayout.isTileCommand(.moveLeft),
+            !WindowPlacementEngine.isTileCommand(.maximize)
+                && !WindowPlacementEngine.isTileCommand(.moveLeft),
             "free-floating commands are not tiles")
 
         // Fullscreen has no geometry: the mover branches before asking for a placement.
@@ -267,7 +269,7 @@ struct WindowCommandTests {
     static func testNonDivisible() {
         // 1366 is the tie case for fourths: a quarter of it lands exactly on .5.
         for width in [1441, 1000, 1367, 1366] as [CGFloat] {
-            let screen = WindowLayout.Screen(
+            let screen = WindowPlacementEngine.Screen(
                 id: 9, frame: CGRect(x: 0, y: 0, width: width, height: 901),
                 visibleFrame: CGRect(x: 0, y: 0, width: width, height: 901))
             let first = frame(.firstThird, on: screen)!
@@ -307,7 +309,7 @@ struct WindowCommandTests {
 
     static func testOffOriginScreens() {
         // A display up and to the right of the primary — negative Y in AX space.
-        let high = WindowLayout.Screen(
+        let high = WindowPlacementEngine.Screen(
             id: 2, frame: CGRect(x: 1920, y: -300, width: 2560, height: 1440),
             visibleFrame: CGRect(x: 1920, y: -300, width: 2560, height: 1440))
         expectRect(
@@ -318,7 +320,7 @@ struct WindowCommandTests {
                 == -300, "top half honours a negative minY")
 
         // A display left of and below the primary.
-        let low = WindowLayout.Screen(
+        let low = WindowPlacementEngine.Screen(
             id: 3, frame: CGRect(x: -1440, y: 200, width: 1440, height: 900),
             visibleFrame: CGRect(x: -1440, y: 200, width: 1440, height: 900))
         expectRect(
@@ -329,7 +331,7 @@ struct WindowCommandTests {
             low.visibleFrame, "maximize on a negative-X display")
 
         // A visible frame smaller than the full frame (menu bar and Dock reserved).
-        let reserved = WindowLayout.Screen(
+        let reserved = WindowPlacementEngine.Screen(
             id: 4, frame: CGRect(x: 0, y: 0, width: 1440, height: 900),
             visibleFrame: CGRect(x: 0, y: 25, width: 1440, height: 800))
         expectRect(
@@ -431,7 +433,7 @@ struct WindowCommandTests {
             frame(.reasonableSize, window: reasonable)!, reasonable, "reasonable size is idempotent")
 
         // Small displays never reach the cap, so the fraction is what shows.
-        let small = WindowLayout.Screen(
+        let small = WindowPlacementEngine.Screen(
             id: 7, frame: CGRect(x: 0, y: 0, width: 1280, height: 800),
             visibleFrame: CGRect(x: 0, y: 0, width: 1280, height: 800))
         expectRect(
@@ -439,7 +441,7 @@ struct WindowCommandTests {
             "reasonable size is uncapped on a small display")
 
         // Large ones do, which is what keeps the command display-independent.
-        let large = WindowLayout.Screen(
+        let large = WindowPlacementEngine.Screen(
             id: 8, frame: CGRect(x: 0, y: 0, width: 3840, height: 2160),
             visibleFrame: CGRect(x: 0, y: 0, width: 3840, height: 2160))
         let capped = frame(.reasonableSize, on: large)!
@@ -571,12 +573,12 @@ struct WindowCommandTests {
         expect(frame(.previousDisplay) == nil, "a single display makes Previous Display a no-op")
 
         let left = mainScreen
-        let right = WindowLayout.Screen(
+        let right = WindowPlacementEngine.Screen(
             id: 2, frame: CGRect(x: 1440, y: 0, width: 2560, height: 1440),
             visibleFrame: CGRect(x: 1440, y: 0, width: 2560, height: 1440))
         // Deliberately out of order, to prove the ordering is derived and not inherited.
         let both = screens(right, left)
-        expect(WindowLayout.ordered(both).map(\.id) == [1, 2], "displays order left-to-right")
+        expect(WindowPlacementEngine.ordered(both).map(\.id) == [1, 2], "displays order left-to-right")
 
         let leftHalfOnLeft = frame(.leftHalf, on: left)!
         let onRight = frame(
@@ -592,13 +594,13 @@ struct WindowCommandTests {
 
         // Wrapping in both directions.
         expect(
-            WindowLayout.placement(
-                for: WindowLayout.Input(
+            WindowPlacementEngine.placement(
+                for: WindowPlacementEngine.Input(
                     command: .previousDisplay, windowFrame: leftHalfOnLeft, screens: both)
             )?.screenID == 2, "previous from the first display wraps to the last")
         expect(
-            WindowLayout.placement(
-                for: WindowLayout.Input(command: .nextDisplay, windowFrame: onRight, screens: both)
+            WindowPlacementEngine.placement(
+                for: WindowPlacementEngine.Input(command: .nextDisplay, windowFrame: onRight, screens: both)
             )?.screenID == 1, "next from the last display wraps to the first")
 
         // A remembered tile is re-derived exactly on the destination, gaps included.
@@ -615,15 +617,15 @@ struct WindowCommandTests {
 
         // Screen resolution by overlap.
         expect(
-            WindowLayout.screen(
+            WindowPlacementEngine.screen(
                 containing: CGRect(x: 1150, y: 0, width: 500, height: 100), in: both)?.id == 1,
             "a straddling window belongs to the display showing more of it")
         expect(
-            WindowLayout.screen(
+            WindowPlacementEngine.screen(
                 containing: CGRect(x: 1300, y: 0, width: 500, height: 100), in: both)?.id == 2,
             "the overlap majority flips with the window")
         expect(
-            WindowLayout.screen(
+            WindowPlacementEngine.screen(
                 containing: CGRect(x: -5000, y: -5000, width: 100, height: 100), in: both) != nil,
             "a window off every display still resolves to one")
     }
@@ -834,19 +836,19 @@ struct WindowCommandTests {
     // MARK: - Fuzz
 
     static func testFuzz() {
-        let displays: [[WindowLayout.Screen]] = [
+        let displays: [[WindowPlacementEngine.Screen]] = [
             [mainScreen],
             [
                 mainScreen,
-                WindowLayout.Screen(
+                WindowPlacementEngine.Screen(
                     id: 2, frame: CGRect(x: 1440, y: -200, width: 2560, height: 1440),
                     visibleFrame: CGRect(x: 1440, y: -175, width: 2560, height: 1390))
             ],
             [
-                WindowLayout.Screen(
+                WindowPlacementEngine.Screen(
                     id: 5, frame: CGRect(x: 0, y: 0, width: 1024, height: 640),
                     visibleFrame: CGRect(x: 0, y: 25, width: 1024, height: 590)),
-                WindowLayout.Screen(
+                WindowPlacementEngine.Screen(
                     id: 6, frame: CGRect(x: -3840, y: 0, width: 3840, height: 2160),
                     visibleFrame: CGRect(x: -3840, y: 25, width: 3840, height: 2060))
             ]
@@ -866,11 +868,11 @@ struct WindowCommandTests {
             for window in windows {
                 for gap in gaps {
                     for command in WindowCommand.ID.allCases {
-                        let input = WindowLayout.Input(
+                        let input = WindowPlacementEngine.Input(
                             command: command, windowFrame: window, screens: screens, gap: gap,
                             step: 0, restoreFrame: window, lastTileCommand: nil)
                         // A nil placement is a legitimate quiet no-op, not a failure.
-                        guard let placement = WindowLayout.placement(for: input) else { continue }
+                        guard let placement = WindowPlacementEngine.placement(for: input) else { continue }
                         checked += 1
                         let rect = placement.frame
                         let label = "\(command.rawValue) gap \(gap) window \(window)"
@@ -892,12 +894,12 @@ struct WindowCommandTests {
                             problems.append("off-screen frame: \(label)")
                         }
                         // Determinism, and no drift when a command is applied twice at step 0.
-                        if WindowLayout.placement(for: input)?.frame != rect {
+                        if WindowPlacementEngine.placement(for: input)?.frame != rect {
                             problems.append("non-deterministic: \(label)")
                         }
                         var repeated = input
                         repeated.windowFrame = rect
-                        if let again = WindowLayout.placement(for: repeated)?.frame,
+                        if let again = WindowPlacementEngine.placement(for: repeated)?.frame,
                             command != .makeLarger, command != .makeSmaller, command != .moveLeft,
                             command != .moveRight, command != .moveUp, command != .moveDown,
                             command != .nextDisplay, command != .previousDisplay,

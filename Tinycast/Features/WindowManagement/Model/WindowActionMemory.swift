@@ -15,7 +15,7 @@ struct WindowActionMemory<Key: Hashable> {
     }
 
     struct Decision: Equatable, Sendable {
-        /// Cycle position for this press, fed straight into `WindowLayout.Input.step`.
+        /// Cycle position for this press, fed straight into `WindowPlacementEngine.Input.step`.
         var step: Int
         /// The frame `commit` should persist as this window's restore point.
         var restoreFrame: CGRect
@@ -64,7 +64,7 @@ struct WindowActionMemory<Key: Hashable> {
         }
 
         let lastTileCommand =
-            WindowLayout.isTileCommand(record.command) ? record.command : nil
+            WindowPlacementEngine.isTileCommand(record.command) ? record.command : nil
         let cycles = WindowCommandCatalog.command(id: command)?.cyclesOnRepeat ?? false
         let expired = cycleTimeout.map { now.timeIntervalSince(record.at) > $0 } ?? false
         let continues =

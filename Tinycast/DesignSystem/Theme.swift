@@ -34,6 +34,8 @@ enum Theme {
         /// The dialog and HUD surface, so a dialog reads as a sibling of the palette.
         static let dialog: CGFloat = 20
         static let thumbnail: CGFloat = 6
+        /// A shape small enough that `thumbnail` would round it into a circle.
+        static let glyph: CGFloat = 2
         /// A pill holding a square thumbnail; a full capsule fights the thumbnail's own corners.
         static let attachmentChip: CGFloat = 8
         static let card: CGFloat = 10
@@ -161,6 +163,24 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
         /// The sidebar's search field; matches a grouped `Form` row's control height.
         static let settingsSearchField: CGFloat = 28
+        /// The layout editor. Height is stated so selecting an entry cannot resize the sheet.
+        static let layoutEditorSheet = CGSize(width: 900, height: 660)
+        /// The inspector column; the preview takes the rest, keeping the split two-to-one.
+        static let layoutInspectorColumn: CGFloat = 300
+        /// The entry dropdown's list, wider than its button so a long app name still reads.
+        static let layoutEntryPopover: CGFloat = 260
+        /// An app icon inside a preview rect, small enough a narrow window still shows one.
+        static let layoutPreviewIcon: CGFloat = 22
+        /// A numbered display tab under the preview.
+        static let layoutDisplayTab: CGFloat = 24
+        /// Every inspector control — field, dropdown, add button — sits on this one height.
+        static let layoutControlHeight: CGFloat = 28
+        /// The unit slot in a numeric field, stated so "%" and "pt" put their digits on one x.
+        static let layoutFieldUnit: CGFloat = 16
+        static let layoutPositionGlyph = CGSize(width: 26, height: 19)
+        static let layoutPositionStroke: CGFloat = 1.5
+        /// A position cell's clickable row; the glyph floats inside it, so the whole cell hits.
+        static let layoutPositionCell: CGFloat = 34
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
         /// Label column of an extension's `Form`, so every field's input starts on one line.
@@ -289,6 +309,15 @@ enum Theme {
         static let cardFill = ramp(dark: 0.05, light: 0.04)
         static let cardStroke = ramp(dark: 0.10, light: 0.10)
         /// White in both: the frost brightens glass, and light glass needs more to read at all.
+        /// A window on the preview's plate. White in both, since the plate is always dark.
+        static let layoutPreviewWindow = adaptive(
+            dark: .srgbInk(1, alpha: 0.22), light: .srgbInk(1, alpha: 0.28))
+        /// The selected one, lifted enough to read as chosen before the accent stroke is seen.
+        static let layoutPreviewWindowSelected = adaptive(
+            dark: .srgbInk(1, alpha: 0.38), light: .srgbInk(1, alpha: 0.44))
+        /// The preview's plate: a display is dark in both appearances, so `adaptive`, not `ramp`.
+        static let layoutPreviewGround = adaptive(
+            dark: .srgbInk(0, alpha: 0.55), light: .srgbInk(0, alpha: 0.50))
         static let glassFrost = adaptive(dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(1, alpha: 0.25))
         /// The pill behind the header of the section a Settings search jumped to.
         static let searchFlash = Color.accentColor.opacity(0.35)
