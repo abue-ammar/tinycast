@@ -157,7 +157,7 @@ final class LauncherCoordinator {
             calendarCoordinator.createEvent()
         case .showNotes:
             dismissPalette()
-            notesCoordinator.show()
+            notesCoordinator.toggle()
         case .createNote:
             dismissPalette()
             notesCoordinator.createNote()

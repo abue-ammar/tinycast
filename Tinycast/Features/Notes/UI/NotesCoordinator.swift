@@ -103,8 +103,13 @@ final class NotesCoordinator {
         await store.flush()
     }
 
-    func show() {
-        request(.editor)
+    /// The command is a toggle, like every other surface: a second press puts the panel away.
+    func toggle() {
+        if windowController.isVisible {
+            hide()
+        } else {
+            request(.editor)
+        }
     }
 
     func createNote() {

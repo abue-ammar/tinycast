@@ -82,7 +82,7 @@ failed flush retains the draft for retry.
 
 ## Commands, switcher, and window
 
-- **Show Notes** selects the last active note and shows or focuses the panel without toggling it closed.
+- **Show Notes** toggles the panel: it selects the last active note and shows it, or hides a visible one.
 - **Create Note** creates and selects one unique Untitled note, including from an empty channel.
 - **Search Notes** shows the same panel with the switcher open and its search field focused.
 
