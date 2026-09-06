@@ -31,34 +31,37 @@ struct WindowLayoutEditorSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(title)
-                .font(.title2.weight(.bold))
-
-            HStack(alignment: .top, spacing: Theme.Spacing.xxl) {
-                WindowLayoutPreview(draft: draft, screens: screens, gap: previewGap)
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                previewColumn
+                Divider()
                 WindowLayoutInspector(draft: draft, displays: screens.map(\.display))
+                    .frame(width: Theme.Size.layoutInspectorColumn)
             }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
-
+            // Stated, never intrinsic: a sheet that grew as fields appeared would jump.
+            .frame(height: Theme.Size.layoutEditorSheet.height)
+            Divider()
             footer
         }
-        .padding(Theme.Spacing.xxl)
-        .frame(width: Theme.Size.layoutEditorSheet)
+        .frame(width: Theme.Size.layoutEditorSheet.width)
         .task {
-            // A display can be unplugged while the sheet is open; the canvas must not draw
-            // against geometry that is gone.
+            // A display can be unplugged mid-edit; the canvas must not draw geometry that is gone.
             for await _ in NotificationCenter.default.notifications(
                 named: NSApplication.didChangeScreenParametersNotification)
             {
                 screens = Self.connectedScreens()
             }
         }
+    }
+
+    private var previewColumn: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+            Text(title)
+                .font(.title2.weight(.bold))
+            WindowLayoutPreview(draft: draft, screens: screens, gap: previewGap)
+        }
+        .padding(Theme.Spacing.xxl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private static func connectedScreens() -> [WindowLayoutScreen] {
@@ -74,9 +77,16 @@ struct WindowLayoutEditorSheet: View {
         draft.usesPreferredGap ? CGFloat(settings.windowGap) : 0
     }
 
+    /// The error sits here rather than above the footer, so reporting one cannot resize the sheet.
     private var footer: some View {
-        HStack {
-            Spacer()
+        HStack(spacing: Theme.Spacing.xl) {
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 0)
             Button("Cancel") { dismiss() }
                 .keyboardShortcut(.cancelAction)
             Button(action: save) {
@@ -92,6 +102,8 @@ struct WindowLayoutEditorSheet: View {
             .keyboardShortcut(.return, modifiers: .command)
             .disabled(!draft.canSave)
         }
+        .padding(.horizontal, Theme.Spacing.xxl)
+        .padding(.vertical, Theme.Spacing.xl)
     }
 
     private func save() {

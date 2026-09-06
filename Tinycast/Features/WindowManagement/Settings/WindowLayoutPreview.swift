@@ -10,11 +10,9 @@ struct WindowLayoutPreview: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            // Greedy: the canvas letterboxes itself, so slack spent here is drawing, not margin.
             WindowLayoutPreviewCanvas(draft: draft, screen: selectedScreen, gap: gap)
-                .frame(
-                    width: Theme.Size.layoutPreview.width,
-                    height: Theme.Size.layoutPreview.height
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Beside the caption, not over the canvas: a tab must never cover a window rect.
             HStack(spacing: Theme.Spacing.md) {
@@ -25,8 +23,8 @@ struct WindowLayoutPreview: View {
                 Spacer(minLength: 0)
                 WindowLayoutDisplayTabs(draft: draft, displays: tabs)
             }
-            .frame(width: Theme.Size.layoutPreview.width)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var tabs: [WindowLayoutDisplay] {
@@ -55,6 +53,8 @@ struct WindowLayoutPreviewCanvas: View {
     let draft: WindowLayoutDraft
     let screen: WindowLayoutScreen?
     let gap: CGFloat
+
+    @Environment(AppIndex.self) private var appIndex
 
     var body: some View {
         GeometryReader { proxy in
@@ -131,15 +131,11 @@ struct WindowLayoutPreviewCanvas: View {
             .zIndex(isSelected ? 1 : 0)
     }
 
-    @ViewBuilder
+    /// Through the index's cache: a `urlForApplication` per rect would touch disk every keystroke.
     private func icon(for bundleID: String) -> some View {
-        if let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
-            .map({ NSWorkspace.shared.icon(forFile: $0.path) })
-        {
-            Image(nsImage: icon)
-                .resizable()
-                .frame(width: Theme.Size.layoutPreviewIcon, height: Theme.Size.layoutPreviewIcon)
-        }
+        Image(nsImage: AppPresentation.resolve(bundleID: bundleID, in: appIndex).icon)
+            .resizable()
+            .frame(width: Theme.Size.layoutPreviewIcon, height: Theme.Size.layoutPreviewIcon)
     }
 
     private var accessibilityDescription: String {

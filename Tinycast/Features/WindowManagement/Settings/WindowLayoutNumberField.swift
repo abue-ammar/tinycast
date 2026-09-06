@@ -28,7 +28,6 @@ struct WindowLayoutNumberField: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
         HStack(spacing: Theme.Spacing.sm) {
             Text(label)
                 .font(Theme.Typography.keyCap)
@@ -36,28 +35,23 @@ struct WindowLayoutNumberField: View {
             TextField("", text: $text)
                 .textFieldStyle(.plain)
                 .monospacedDigit()
-                .multilineTextAlignment(.trailing)
                 .focused($isFocused)
                 .focusEffectDisabled()
                 .onSubmit(commit)
                 .onExitCommand(perform: revert)
                 .onChange(of: isFocused) { _, focused in if !focused { commit() } }
                 .onChange(of: value) { _, new in if !isFocused { text = String(new) } }
+            Divider()
+                .frame(height: Theme.Spacing.xl)
             Text(suffix)
                 .font(Theme.Typography.keyCap)
                 .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(width: Theme.Size.layoutFieldUnit, alignment: .leading)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
-        .frame(width: Theme.Size.layoutNumberField + suffixWidth)
-        .background(shape.fill(Theme.Colors.cardFill))
-        .overlay(shape.stroke(isFocused ? Color.accentColor : Theme.Colors.cardStroke))
+        .layoutFieldChrome(isFocused: isFocused)
         .accessibilityLabel(name)
         .accessibilityValue("\(value) \(suffix)")
     }
-
-    /// "pt" needs more room than "%", and a resizing field would jog as the number changes.
-    private var suffixWidth: CGFloat { suffix.count > 1 ? 12 : 0 }
 
     /// A number outside the range clamps and shows the clamped value; nonsense reverts.
     private func commit() {
@@ -69,5 +63,17 @@ struct WindowLayoutNumberField: View {
 
     private func revert() {
         text = String(value)
+    }
+}
+
+extension View {
+    /// The inspector's one control surface, so a field, a dropdown and the add button match.
+    func layoutFieldChrome(isFocused: Bool = false) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.barControl, style: .continuous)
+        return padding(.horizontal, Theme.Spacing.md)
+            .frame(height: Theme.Size.layoutControlHeight)
+            .background(shape.fill(Theme.Colors.cardFill))
+            .overlay(shape.stroke(isFocused ? Color.accentColor : Theme.Colors.cardStroke))
+            .contentShape(shape)
     }
 }

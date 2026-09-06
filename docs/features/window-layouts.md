@@ -140,7 +140,9 @@ Capture never saves silently — the draft opens in the editor so it can be seen
 ## The editor
 
 A settings sheet at `Theme.Size.layoutEditorSheet`, presented from the Window Management pane so the
-two launcher commands can open it too. Two columns: a read-only preview, and the inspector.
+two launcher commands can open it too. Two columns split two to one: a read-only preview, and the
+inspector. Both the width and the height are stated — the inspector reveals four field groups the
+moment an app is picked, and a sheet sized to its content would resize under the pointer.
 
 - **The preview is handed its screens once** by the sheet and re-reads them only on
   `didChangeScreenParameters`. Resolving displays inside `body` would cost an AX round trip per
@@ -154,6 +156,12 @@ two launcher commands can open it too. Two columns: a read-only preview, and the
   The row shows a tab for every connected display *plus* any display an entry names, so a layout
   authored at a desk is still editable on the laptop. The entry picker is deliberately **not** scoped
   by the tab, for the same reason.
+- **The entry dropdown is a button and a popover, not a `Menu`.** A menu label stretches an
+  `NSImage` out of aspect, so the app icon beside it smeared; `AppPickerPopover` is the pattern the
+  rest of the app already uses to name an app.
+- **A position cell is wider than its glyph, and carries the `contentShape`.** The glyph is a stroke,
+  and a stroke is hittable only on the line. Each anchor's block spans half a pinned axis and all of
+  a spanned one, so the nine cells read as nine distinct silhouettes.
 - **A number field never holds a bad value**: out of range clamps and shows the clamped number,
   nonsense reverts. The inline error slot is therefore only for what a field cannot prevent — an
   empty or duplicate name, or a refused write.

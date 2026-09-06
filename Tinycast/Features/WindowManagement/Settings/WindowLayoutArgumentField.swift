@@ -8,6 +8,7 @@ struct WindowLayoutArgumentField: View {
     @Environment(QuicklinkStore.self) private var quicklinks
     @State private var isEditingURL = false
     @State private var urlText = ""
+    @FocusState private var isURLFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -16,7 +17,10 @@ struct WindowLayoutArgumentField: View {
             menu
             if isEditingURL {
                 TextField("https://example.com", text: $urlText)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .focused($isURLFocused)
+                    .focusEffectDisabled()
+                    .layoutFieldChrome(isFocused: isURLFocused)
                     .onSubmit { draft.setArgument(urlText) }
             }
         }
@@ -32,8 +36,7 @@ struct WindowLayoutArgumentField: View {
                 isEditingURL = true
             }
             if !quicklinks.quicklinks.isEmpty {
-                // The link is copied, not referenced: a run is one non-interactive pass, and a
-                // quicklink that later grows a placeholder would have nothing to prompt with.
+                // Copied, not referenced: a run is one pass, with nothing to prompt a placeholder.
                 Section("Quicklinks") {
                     ForEach(quicklinks.quicklinks) { quicklink in
                         Button(quicklink.name) {
@@ -55,9 +58,15 @@ struct WindowLayoutArgumentField: View {
                 } else {
                     Text("None").foregroundStyle(.secondary)
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: Theme.Spacing.sm)
+                Image(systemName: "chevron.down")
+                    .font(Theme.Typography.disclosure)
+                    .foregroundStyle(Theme.Colors.textSecondary)
             }
+            .layoutFieldChrome()
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
     }
 
     private func clear() {

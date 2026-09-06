@@ -6,49 +6,67 @@ struct WindowLayoutInspector: View {
     let draft: WindowLayoutDraft
     let displays: [WindowLayoutDisplay]
 
-    @Environment(AppIndex.self) private var appIndex
     @State private var showingIconPicker = false
-    @State private var showingAppPicker = false
+    @FocusState private var nameFocused: Bool
 
+    /// Arrangements and workplaces; never the menu bar's own glyph, which reads as the app.
     private static let iconSymbols = [
-        "macwindow.on.rectangle", "macwindow", "square.grid.2x2", "rectangle.split.2x1",
-        "rectangle.split.3x1", "sidebar.left", "display", "display.2", "laptopcomputer",
-        "desktopcomputer", "briefcase", "hammer", "chevron.left.forwardslash.chevron.right",
-        "paintbrush", "calendar", "video", "chart.bar", "terminal", "globe", "envelope",
-        "message", "music.note", "book", "person.2"
+        "rectangle.3.group", "square.grid.2x2", "rectangle.split.2x1", "rectangle.split.3x1",
+        "rectangle.split.1x2", "sidebar.left", "macwindow", "display", "display.2",
+        "laptopcomputer", "desktopcomputer", "briefcase", "hammer",
+        "chevron.left.forwardslash.chevron.right", "paintbrush", "calendar", "video", "chart.bar",
+        "terminal", "globe", "envelope", "message", "music.note", "book"
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            nameField
-            gapToggle
-            entryPicker
-            if draft.selectedEntry != nil {
-                argumentField
-                sizeFields
-                offsetFields
-                positionField
+        // Insurance only: at any normal text size every group fits the sheet's stated height.
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                nameField
+                gapToggle
+                Divider()
+                sectionLabel("Layout")
+                WindowLayoutEntryPicker(draft: draft, displays: displays)
+                if draft.selectedEntry != nil {
+                    WindowLayoutArgumentField(draft: draft)
+                    Divider()
+                    sizeFields
+                    offsetFields
+                    positionField
+                }
             }
-            Spacer(minLength: 0)
+            .padding(Theme.Spacing.xxl)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     // MARK: - Layout-wide
 
+    /// The picker lives inside the field's chrome, so name and icon read as the one control.
     private var nameField: some View {
         @Bindable var draft = draft
         return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Name")
-                .font(.callout.weight(.medium))
+            sectionLabel("Name")
             HStack(spacing: Theme.Spacing.sm) {
                 TextField("Office", text: $draft.name)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .focused($nameFocused)
+                    .focusEffectDisabled()
+                Divider()
+                    .frame(height: Theme.Spacing.xl)
                 Button {
                     showingIconPicker = true
                 } label: {
-                    SymbolImage(name: draft.symbol, size: 14)
+                    HStack(spacing: Theme.Spacing.xxs) {
+                        SymbolImage(name: draft.symbol, size: 13)
+                        Image(systemName: "chevron.down")
+                            .font(Theme.Typography.disclosure)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Choose an icon")
                 .popover(isPresented: $showingIconPicker, arrowEdge: .bottom) {
                     SymbolPicker(
@@ -59,84 +77,35 @@ struct WindowLayoutInspector: View {
                     }
                 }
             }
+            .layoutFieldChrome(isFocused: nameFocused)
         }
     }
 
     private var gapToggle: some View {
         @Bindable var draft = draft
-        return Toggle(isOn: $draft.usesPreferredGap) {
-            Text("Use preferred gap settings")
-            Text("Inset every window by the gap set above, as the tiling commands do.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        return HStack(alignment: .top, spacing: Theme.Spacing.xl) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text("Use preferred gap")
+                    .font(.callout.weight(.medium))
+                Text("Inset every window by the gap set above, as the tiling commands do.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            Toggle("", isOn: $draft.usesPreferredGap)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
         }
-        .toggleStyle(.checkbox)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - The entry being edited
 
-    private var entryPicker: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Layout")
-                .font(.callout.weight(.medium))
-            HStack(spacing: Theme.Spacing.sm) {
-                Button {
-                    showingAppPicker = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("Add an app to this layout")
-                .popover(isPresented: $showingAppPicker, arrowEdge: .bottom) {
-                    AppPickerPopover { bundleID in
-                        showingAppPicker = false
-                        guard let bundleID, let display = targetDisplay else { return }
-                        draft.addEntry(bundleID: bundleID, on: display)
-                    }
-                }
-                entryMenu
-            }
-        }
-    }
-
-    /// A `Menu`, not a `Picker`: a stock picker draws no app icon and cannot group by display.
-    private var entryMenu: some View {
-        Menu {
-            ForEach(draft.tabs(connected: displays), id: \.uuid) { display in
-                Section(display.name) {
-                    ForEach(draft.entries(onDisplay: display.uuid)) { entry in
-                        Button(appName(entry.bundleID)) { draft.select(entryID: entry.id) }
-                    }
-                }
-            }
-            if draft.selectedEntry != nil {
-                Divider()
-                Button("Remove This Entry", role: .destructive) { draft.removeSelectedEntry() }
-            }
-        } label: {
-            HStack(spacing: Theme.Spacing.sm) {
-                if let entry = draft.selectedEntry {
-                    let app = AppPresentation.resolve(bundleID: entry.bundleID, in: appIndex)
-                    Image(nsImage: app.icon)
-                        .resizable()
-                        .frame(width: 16, height: 16)
-                    Text(app.name).lineLimit(1)
-                } else {
-                    Text("No app yet").foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-            }
-        }
-        .disabled(draft.entries.isEmpty)
-    }
-
-    private var argumentField: some View {
-        WindowLayoutArgumentField(draft: draft)
-    }
-
     private var sizeFields: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Size")
-                .font(.callout.weight(.medium))
+            sectionLabel("Size")
             HStack(spacing: Theme.Spacing.md) {
                 WindowLayoutNumberField(
                     label: "W", name: "Width", suffix: "%",
@@ -154,8 +123,7 @@ struct WindowLayoutInspector: View {
 
     private var offsetFields: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Offset")
-                .font(.callout.weight(.medium))
+            sectionLabel("Offset")
             HStack(spacing: Theme.Spacing.md) {
                 WindowLayoutNumberField(
                     label: "X", name: "Horizontal offset", suffix: "pt",
@@ -171,25 +139,20 @@ struct WindowLayoutInspector: View {
 
     private var positionField: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Position")
-                .font(.callout.weight(.medium))
+            sectionLabel("Position")
             WindowLayoutPositionGrid(selection: entry.anchor, onSelect: draft.setAnchor)
         }
     }
 
     // MARK: - Helpers
 
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.callout.weight(.medium))
+    }
+
     /// Safe: every caller is behind a `draft.selectedEntry != nil` check.
     private var entry: WindowLayoutEntry {
         draft.selectedEntry ?? WindowLayoutEntry(bundleID: "", display: .init(uuid: "", name: ""))
-    }
-
-    private var targetDisplay: WindowLayoutDisplay? {
-        draft.tabs(connected: displays).first { $0.uuid == draft.selectedDisplayUUID }
-            ?? displays.first
-    }
-
-    private func appName(_ bundleID: String) -> String {
-        AppPresentation.resolve(bundleID: bundleID, in: appIndex).name
     }
 }

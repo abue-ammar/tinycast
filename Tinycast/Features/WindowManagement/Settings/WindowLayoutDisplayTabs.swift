@@ -4,7 +4,6 @@ import SwiftUI
 struct WindowLayoutDisplayTabs: View {
     let draft: WindowLayoutDraft
     let displays: [WindowLayoutDisplay]
-    @Environment(\.self) private var environment
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
@@ -23,9 +22,12 @@ struct WindowLayoutDisplayTabs: View {
         } label: {
             Text("\(ordinal)")
                 .font(Theme.Typography.keyCap)
+                .monospacedDigit()
+                .foregroundStyle(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
                 .frame(width: Theme.Size.layoutDisplayTab, height: Theme.Size.layoutDisplayTab)
                 .background(shape.fill(Theme.Colors.controlSurface))
                 .overlay(shape.stroke(isSelected ? Color.accentColor : Theme.Colors.border))
+                .contentShape(shape)
         }
         .buttonStyle(.plain)
         .help(display.name)
@@ -34,7 +36,7 @@ struct WindowLayoutDisplayTabs: View {
     }
 }
 
-/// The 3×3 anchor control: nine labelled buttons, each drawing where its window would sit.
+/// The 3×3 anchor control: nine cells, each drawing the corner of a screen its window would take.
 struct WindowLayoutPositionGrid: View {
     let selection: WindowLayoutAnchor
     let onSelect: (WindowLayoutAnchor) -> Void
@@ -53,28 +55,33 @@ struct WindowLayoutPositionGrid: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity)
         .accessibilityLabel("Position")
     }
 
     private func cell(_ anchor: WindowLayoutAnchor) -> some View {
         let isSelected = anchor == selection
-        let outer = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-        let side = Theme.Size.layoutPositionCell
-        // A `ZStack` alignment, not an overlay's: the glyph must sit in the corner it names.
+        let outline = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+        let glyph = Theme.Size.layoutPositionGlyph
+        let seat = RoundedRectangle(cornerRadius: Theme.Radius.barControl, style: .continuous)
         return Button {
             onSelect(anchor)
         } label: {
             ZStack(alignment: anchor.alignment) {
-                outer.stroke(isSelected ? Color.accentColor : Theme.Colors.border)
+                outline.stroke(lineWidth: Theme.Size.layoutPositionStroke)
                 RoundedRectangle(cornerRadius: Theme.Radius.glyph, style: .continuous)
-                    .fill(isSelected ? Color.accentColor : Theme.Colors.textTertiary)
                     .frame(
-                        width: side * Theme.Size.layoutPositionGlyph,
-                        height: side * Theme.Size.layoutPositionGlyph
+                        width: glyph.width * anchor.coverage.width,
+                        height: glyph.height * anchor.coverage.height
                     )
                     .padding(Theme.Spacing.xxs)
             }
-            .frame(width: side, height: side)
+            .frame(width: glyph.width, height: glyph.height)
+            .foregroundStyle(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textTertiary)
+            // The glyph floats in a wider seat, so a click anywhere in the cell lands on it.
+            .frame(maxWidth: .infinity, minHeight: Theme.Size.layoutPositionCell)
+            .background(seat.fill(isSelected ? Theme.Colors.selection : Color.clear))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(anchor.title)
@@ -85,6 +92,16 @@ struct WindowLayoutPositionGrid: View {
 
 /// SwiftUI's own alignment, so it stays out of `Model/` and the purity grep.
 extension WindowLayoutAnchor {
+    /// How much of the plate the block covers: a pinned axis takes half, a spanned one all of it.
+    fileprivate var coverage: CGSize {
+        switch self {
+        case .topLeft, .topRight, .bottomLeft, .bottomRight, .center:
+            return CGSize(width: 0.5, height: 0.5)
+        case .top, .bottom: return CGSize(width: 1, height: 0.5)
+        case .left, .right: return CGSize(width: 0.5, height: 1)
+        }
+    }
+
     fileprivate var alignment: Alignment {
         switch self {
         case .topLeft: return .topLeading

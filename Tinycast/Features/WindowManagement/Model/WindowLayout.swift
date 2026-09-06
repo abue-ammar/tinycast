@@ -90,8 +90,8 @@ struct WindowLayoutEntry: Codable, Hashable, Identifiable, Sendable {
 /// A saved arrangement: these apps, at these sizes, at these positions, on these displays.
 struct WindowLayout: Codable, Hashable, Identifiable, Sendable {
     static let entryIDPrefix = "window-layout:"
-    /// One glyph for every layout, so every surface reads as the same thing.
-    static let sfSymbol = "macwindow.on.rectangle"
+    /// One glyph for every layout, and never the menu bar's own, which reads as the app itself.
+    static let sfSymbol = "rectangle.3.group"
 
     let id: UUID
     var name: String

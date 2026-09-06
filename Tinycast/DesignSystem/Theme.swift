@@ -163,20 +163,24 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
         /// The sidebar's search field; matches a grouped `Form` row's control height.
         static let settingsSearchField: CGFloat = 28
-        /// The layout editor: two columns, so the single-column editor width holds neither.
-        static let layoutEditorSheet: CGFloat = 780
-        /// The layout preview's box; a display is letterboxed inside it, never stretched.
-        static let layoutPreview = CGSize(width: 360, height: 220)
+        /// The layout editor. Height is stated so selecting an entry cannot resize the sheet.
+        static let layoutEditorSheet = CGSize(width: 900, height: 660)
+        /// The inspector column; the preview takes the rest, keeping the split two-to-one.
+        static let layoutInspectorColumn: CGFloat = 300
+        /// The entry dropdown's list, wider than its button so a long app name still reads.
+        static let layoutEntryPopover: CGFloat = 260
         /// An app icon inside a preview rect, small enough a narrow window still shows one.
-        static let layoutPreviewIcon: CGFloat = 20
+        static let layoutPreviewIcon: CGFloat = 22
         /// A numbered display tab under the preview.
-        static let layoutDisplayTab: CGFloat = 22
-        /// One cell of the 3×3 position grid.
-        static let layoutPositionCell: CGFloat = 28
-        /// The filled sub-shape inside a position glyph, as a fraction of its cell.
-        static let layoutPositionGlyph: CGFloat = 0.38
-        /// A suffixed numeric field: three digits and a unit, no more.
-        static let layoutNumberField: CGFloat = 52
+        static let layoutDisplayTab: CGFloat = 24
+        /// Every inspector control — field, dropdown, add button — sits on this one height.
+        static let layoutControlHeight: CGFloat = 28
+        /// The unit slot in a numeric field, stated so "%" and "pt" put their digits on one x.
+        static let layoutFieldUnit: CGFloat = 16
+        static let layoutPositionGlyph = CGSize(width: 26, height: 19)
+        static let layoutPositionStroke: CGFloat = 1.5
+        /// A position cell's clickable row; the glyph floats inside it, so the whole cell hits.
+        static let layoutPositionCell: CGFloat = 34
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
         /// Label column of an extension's `Form`, so every field's input starts on one line.
