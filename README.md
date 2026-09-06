@@ -59,7 +59,7 @@ keep it actively maintained. GitHub Sponsors isn't available in my country, so p
 - **Notes** — an unlimited collection of plain Markdown files in one floating editor, searchable from
   the palette.
 - **Emoji picker** — a searchable emoji grid, one keystroke away.
-- **AI chat** — bring your own key, chat from the palette. Off out of the box, like every AI feature.
+- **AI chat** — use your own key or an installed AI account, chat from the palette. Off out of the box, like every AI feature.
 - **Quick Actions** — fix grammar, rewrite, translate or summarize the selected text in any app.
 - **Raycast extensions** — run the ones you already have natively, rendered as SwiftUI.
 - **Backup and import** — export your settings to a file, or import your setup from Raycast.
