@@ -3,6 +3,7 @@ import Foundation
 enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
     case angle, speed, pressure, dataRate, acceleration, force, energy, power, frequency
+    case electricCurrent, voltage, resistance, electricCharge
 
     var displayName: String {
         switch self {
@@ -22,6 +23,10 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .energy: return "Energy"
         case .power: return "Power"
         case .frequency: return "Frequency"
+        case .electricCurrent: return "Electric Current"
+        case .voltage: return "Voltage"
+        case .resistance: return "Resistance"
+        case .electricCharge: return "Electric Charge"
         }
     }
 
@@ -41,6 +46,10 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .energy: return CalcDimension(length: 2, mass: 1, time: -2)
         case .power: return CalcDimension(length: 2, mass: 1, time: -3)
         case .frequency: return CalcDimension(time: -1)
+        case .electricCurrent: return CalcDimension(electricCurrent: 1)
+        case .voltage: return CalcDimension(length: 2, mass: 1, time: -3, electricCurrent: -1)
+        case .resistance: return CalcDimension(length: 2, mass: 1, time: -3, electricCurrent: -2)
+        case .electricCharge: return CalcDimension(time: 1, electricCurrent: 1)
         case .temperature, .angle: return nil
         }
     }
@@ -66,13 +75,26 @@ struct UnitDef: Equatable, Sendable {
 enum CalcUnits {
     static let baseUnits: [CalcDimension: UnitDef] = {
         var units: [CalcDimension: UnitDef] = [:]
-        for name in ["m", "kg", "s", "m2", "m3", "b", "m/s", "pa", "bps", "m/s2", "n", "j", "w", "hz"] {
+        for name in [
+            "m", "kg", "s", "m2", "m3", "b", "m/s", "pa", "bps", "m/s2", "n", "j", "w", "hz",
+            "a", "v", "ohm", "as"
+        ] {
             if let unit = byName[name], let dimension = unit.category.dimension {
                 units[dimension] = unit
             }
         }
         return units
     }()
+
+    static func productUnit(_ lhs: UnitDef, _ rhs: UnitDef) -> UnitDef? {
+        let (measure, duration) = lhs.category == .time ? (rhs, lhs) : (lhs, rhs)
+        guard duration.category == .time, duration.factor >= 60 else { return nil }
+        switch measure.category {
+        case .power: return byName[measure.factor >= 1000 ? "kwh" : "wh"]
+        case .electricCurrent: return byName[measure.factor <= 0.001 ? "mah" : "ah"]
+        default: return nil
+        }
+    }
 
     enum ConversionParse: Equatable {
         case value(input: Double, from: UnitDef, to: UnitDef, output: Double)
@@ -188,10 +210,15 @@ enum CalcUnits {
         "mmHg": ("psi", false), "Torr": ("psi", false),
         // Data transfer rate
         "Mbps": ("kbps", false), "Gbps": ("mbps", false), "Kbps": ("bps", false),
-        "bps": ("kbps", false), "Tbps": ("gbps", false)
+        "bps": ("kbps", false), "Tbps": ("gbps", false),
+        "Wh": ("kwh", false), "mWh": ("wh", false), "kWh": ("wh", false), "MWh": ("kwh", false),
+        "W": ("kw", false), "mW": ("w", false), "kW": ("w", false), "MW": ("kw", false),
+        "A": ("ma", false), "mA": ("a", false), "µA": ("ma", false), "MA": ("a", false),
+        "V": ("mv", false), "mV": ("v", false), "kV": ("v", false), "MV": ("kv", false),
+        "Ω": ("kohm", false), "mΩ": ("ohm", false), "kΩ": ("ohm", false), "MΩ": ("kohm", false),
+        "As": ("ah", false), "Ah": ("mah", false), "mAh": ("ah", false), "MAh": ("ah", false)
     ]
 
-    /// Lookup by lowercased, `²`-folded name (the tokenizer's ident form).
     static let byName: [String: UnitDef] = {
         var table: [String: UnitDef] = [:]
         func add(_ def: UnitDef, _ names: [String]) {
@@ -340,11 +367,33 @@ enum CalcUnits {
         add(UnitDef("J", "Joules", .energy, 1), ["j", "joule", "joules"])
         add(UnitDef("kJ", "Kilojoules", .energy, 1000), ["kj", "kilojoule", "kilojoules"])
         add(UnitDef("Wh", "Watt Hours", .energy, 3600), ["wh"])
+        add(UnitDef("mWh", "Milliwatt Hours", .energy, 3.6), ["mwh"])
         add(UnitDef("kWh", "Kilowatt Hours", .energy, 3_600_000), ["kwh"])
+        add(UnitDef("MWh", "Megawatt Hours", .energy, 3.6e9), ["MWh", "megawatthour", "megawatthours"])
         add(UnitDef("cal", "Calories", .energy, 4.184), ["cal", "calorie", "calories"])
         add(UnitDef("kcal", "Kilocalories", .energy, 4184), ["kcal", "kilocalorie", "kilocalories"])
         add(UnitDef("W", "Watts", .power, 1), ["w", "watt", "watts"])
+        add(UnitDef("mW", "Milliwatts", .power, 0.001), ["mw", "milliwatt", "milliwatts"])
         add(UnitDef("kW", "Kilowatts", .power, 1000), ["kw", "kilowatt", "kilowatts"])
+        add(UnitDef("MW", "Megawatts", .power, 1e6), ["MW", "megawatt", "megawatts"])
+        add(UnitDef("A", "Amperes", .electricCurrent, 1), ["a", "amp", "amps", "ampere", "amperes"])
+        add(
+            UnitDef("mA", "Milliamperes", .electricCurrent, 0.001),
+            ["ma", "milliamp", "milliamps", "milliampere", "milliamperes"])
+        add(UnitDef("MA", "Megaamperes", .electricCurrent, 1e6), ["MA", "megaamp", "megaamps"])
+        add(UnitDef("µA", "Microamperes", .electricCurrent, 1e-6), ["ua", "µa", "μa", "microamp", "microamps"])
+        add(UnitDef("V", "Volts", .voltage, 1), ["v", "volt", "volts"])
+        add(UnitDef("mV", "Millivolts", .voltage, 0.001), ["mv", "millivolt", "millivolts"])
+        add(UnitDef("kV", "Kilovolts", .voltage, 1000), ["kv", "kilovolt", "kilovolts"])
+        add(UnitDef("MV", "Megavolts", .voltage, 1e6), ["MV", "megavolt", "megavolts"])
+        add(UnitDef("Ω", "Ohms", .resistance, 1), ["ω", "ohm", "ohms"])
+        add(UnitDef("mΩ", "Milliohms", .resistance, 0.001), ["mω", "milliohm", "milliohms"])
+        add(UnitDef("kΩ", "Kilohms", .resistance, 1000), ["kω", "kohm", "kohms", "kilohm", "kilohms"])
+        add(UnitDef("MΩ", "Megohms", .resistance, 1e6), ["MΩ", "megohm", "megohms"])
+        add(UnitDef("As", "Coulombs", .electricCharge, 1), ["as", "coulomb", "coulombs"])
+        add(UnitDef("Ah", "Ampere Hours", .electricCharge, 3600), ["ah", "amphour", "amphours"])
+        add(UnitDef("mAh", "Milliampere Hours", .electricCharge, 3.6), ["mah", "milliamphour", "milliamphours"])
+        add(UnitDef("MAh", "Megaampere Hours", .electricCharge, 3.6e9), ["MAh"])
         add(UnitDef("Hz", "Hertz", .frequency, 1), ["hz", "hertz"])
         add(UnitDef("kHz", "Kilohertz", .frequency, 1000), ["khz", "kilohertz"])
         add(UnitDef("MHz", "Megahertz", .frequency, 1e6), ["mhz", "megahertz"])

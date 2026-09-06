@@ -6,7 +6,6 @@ enum CalcToken: Equatable, Sendable {
     case compactNumber(Double)
     /// Radix-prefixed integer literal (0xff / 0b1010 / 0o777), kept exact for base conversion.
     case intLiteral(UInt64, radix: Int)
-    /// Lowercased word; `²`/`³` fold to "2"/"3" so `m²` matches `m2`, while `°` is kept.
     case ident(String)
     case op(Character)  // + - * / ^ ! % ( )
     case arrow  // -> or →
@@ -124,7 +123,7 @@ enum CalcTokenizer {
                     }
                     i += 1
                 }
-                tokens.append(.ident(text.lowercased()))
+                tokens.append(.ident(CalcUnits.byName[text] != nil ? text : text.lowercased()))
                 continue
             }
 

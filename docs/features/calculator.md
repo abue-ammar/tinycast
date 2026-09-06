@@ -159,8 +159,10 @@ pounds. A conversion suffix overrides it entirely (`10kg + 500g to lb`).
 
 Adjacency is the exception. `5 feet 3 inches` and `1hr 30min` are one quantity in composite notation,
 not a sum, so they answer in the _leading_ unit (`5.25 ft`, `1.5 hr`). `QuantityParser.peekBinary`
-already distinguishes the two — it reports `consumesToken: false` for the invisible `+` between
-adjacent quantities — and `addOrSubtract` keys the unit choice off exactly that flag.
+distinguishes the two — it reports `consumesToken: false` for the invisible `+` between adjacent
+quantities — and `addOrSubtract` keys the unit choice off exactly that flag. Composite notation binds
+above multiplication, division and powers: `5w * 3h 30min` means `5w * (3h 30min)`, and
+`90km / 1h 30min` divides by the entire 90-minute duration. An explicit `+` keeps additive precedence.
 
 A bare number takes the unit it is written against: `5kg+5` is `10 kg`, `$10 + 5` is `15.00 USD`. Under
 adjacency the same input stays silent, because there a bare trailing number is a unit still being
@@ -170,18 +172,27 @@ answering nothing.
 Once an operator is involved the answer stays in the units written, so `2 * 5kg` is `10 kg`. Only a
 bare quantity (`50cm`, `1m`) falls through to the keyword-less auto-conversion below.
 
-`CalcDimension` records length, mass, time and data exponents. Products add exponents, division
+`CalcDimension` records length, mass, time, data and electric-current exponents. Products add exponents, division
 subtracts them, and powers multiply them. `CalcUnits.baseUnits` resolves supported results back to
 ordinary units, so conversions and addition need no second representation. Derived results use base
 units unless a trailing conversion names another: `5m * 4m` → `20 m²`,
 `100km / 2h to km/h` → `50 km/h`, `90km/h * 20min to km` → `30 km`.
-Area, volume, speed, acceleration, force, pressure, energy, power, frequency and data rates compose
-through this same path. Unsupported dimensions remain errors; arbitrary compound units are not stored.
+Area, volume, speed, acceleration, force, pressure, energy, power, frequency, data rates and electrical
+units compose through this same path. Unsupported dimensions remain errors; arbitrary compound units are not stored.
 
 All factors share composable bases: cubic meters for volume and bytes per second for data rates.
 To add a dimension, declare its signature on `UnitCategory`, add its units to `byName`, and register
 one output in `baseUnits`. A new unit within a category only needs a table entry.
 `m²` / `m2` and `m³` / `m3` name units; `(2m)^2` squares the entire quantity.
+`CalcUnits.productUnit` selects Wh/kWh for power multiplied by a minutes-or-larger time unit,
+and Ah/mAh for current multiplied by one; other derived products retain their base unit.
+Explicit conversion still overrides the selection. Electrical relations use the same dimensions:
+`12V * 2A` → `24 W`, `12V / 6ohm` → `2 A`, `12V / 2A` → `6 Ω`,
+`500mA * 3h 30min` → `1,750 mAh`, `12V * 2Ah to wh` → `24 Wh`.
+Charge's base symbol is `As` (ampere seconds), also named `coulomb`; `C` remains Celsius.
+
+Identifiers check exact registered spellings before case folding, so SI mega symbols (`MW`, `MΩ`,
+`MA`, `MV`, `MWh`, `MAh`) remain distinct from milli symbols. Spelled names remain case-insensitive.
 The typed parser shares scalar constants and functions with `CalcParser`; `pi * (2m)^2`,
 `sqrt(25m2)` and `cbrt(8m3)` work without a geometry-specific grammar.
 

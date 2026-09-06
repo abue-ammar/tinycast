@@ -279,6 +279,7 @@ private struct QuantityParser {
     var issue: String?
 
     private static let unaryBindingPower = 25
+    private static let compositeBindingPower = 40
 
     private var current: CalcToken? {
         position < tokens.count ? tokens[position] : nil
@@ -351,7 +352,9 @@ private struct QuantityParser {
                 return BinaryOp(op: "*", bindingPower: 20, rightBindingPower: 21, consumesToken: false)
             }
             if !isScalar(left.kind), startsQuantity(current) {
-                return BinaryOp(op: "+", bindingPower: 10, rightBindingPower: 11, consumesToken: false)
+                return BinaryOp(
+                    op: "+", bindingPower: Self.compositeBindingPower,
+                    rightBindingPower: Self.compositeBindingPower + 1, consumesToken: false)
             }
             return nil
         }
@@ -453,7 +456,7 @@ private struct QuantityParser {
             if let dimension = lhs.category.dimension, let other = rhs.category.dimension,
                 let result = derived(
                     left.amount * lhs.factor * right.amount * rhs.factor,
-                    dimension: dimension.adding(other))
+                    dimension: dimension.adding(other), unit: CalcUnits.productUnit(lhs, rhs))
             {
                 return result
             }
@@ -511,10 +514,10 @@ private struct QuantityParser {
         }
     }
 
-    private func derived(_ amount: Double, dimension: CalcDimension) -> QuantityValue? {
+    private func derived(_ amount: Double, dimension: CalcDimension, unit: UnitDef? = nil) -> QuantityValue? {
         guard amount.isFinite else { return nil }
         if dimension == .scalar { return QuantityValue(amount: amount, kind: .scalar) }
-        guard let unit = CalcUnits.baseUnits[dimension] else { return nil }
+        guard let unit = unit ?? CalcUnits.baseUnits[dimension] else { return nil }
         let output = amount / unit.factor
         return output.isFinite ? QuantityValue(amount: output, kind: .unit(unit)) : nil
     }

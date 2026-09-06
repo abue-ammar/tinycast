@@ -34,7 +34,8 @@ dividend: `-10 mod 3` is `-1`.
 | `10kg + 500g to lb` | pounds — a trailing `to` overrides everything |
 
 **Adjacency is composite notation, not addition.** `5 feet 3 inches` is `5.25 ft` and `1hr 30min` is
-`1.5 hr`, answered in the _leading_ unit.
+`1.5 hr`, answered in the _leading_ unit. Mixed quantities bind as one amount:
+`5w * 3h 30min` means `5w * (3h 30min)`, and `90km / 1h 30min` gives `60 km/h`.
 
 A bare number takes the unit written against it: `5kg+5` is `10 kg`, `$10 + 5` is `15.00 USD`.
 
@@ -58,6 +59,7 @@ Measurements combine into area, volume, speed and other physical quantities:
 | `1 / 20ms to hz` | `50 Hz` |
 
 Derived results use base units unless you name a target with `to` / `in`.
+Power × minutes/hours naturally uses Wh/kWh; current × minutes/hours uses Ah/mAh.
 `m²` and `m2` mean square meters; `(2m)^2` squares the whole quantity.
 Use `pi * (2m)^2` for a circle's area and `sin(30deg) * 10m` for a triangle's opposite side.
 Cubic units accept `m³` / `m3`, `cm3`, `ft3`, `in3`, and `yd3`.
@@ -65,6 +67,23 @@ Cubic units accept `m³` / `m3`, `cm3`, `ft3`, `in3`, and `yd3`.
 `to timespan` also works for mixed durations: `(1hr + 30min) to timespan` → `1 hr 30 min`.
 Affine temperatures may only be added or subtracted within one scale; products involving
 temperatures and unsupported dimensions remain errors.
+
+## Electrical calculations
+
+| You type | You get |
+| --- | --- |
+| `5 watt * 3h 30min` | `17.5 Wh` |
+| `5 watt * 3h 30min to kwh` | `0.0175 kWh` |
+| `12V * 2A` | `24 W` |
+| `12V / 6ohm` | `2 A` |
+| `12V / 2A` | `6 Ω` |
+| `500mA * 3h 30min` | `1,750 mAh` |
+| `2000mAh / 500mA to hours` | `4 hr` |
+| `12V * 2Ah to wh` | `24 Wh` |
+
+Use `volt`, `amp`, `ohm`, `coulomb` or their listed symbols. Coulombs display as `As` (ampere seconds);
+`C` continues to mean Celsius. SI mega symbols keep their case: `MW` is megawatts, `mW` is milliwatts.
+For power and energy, use `W` and `Wh` respectively; they are different dimensions.
 
 ## Currency and crypto
 
