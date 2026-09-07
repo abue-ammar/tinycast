@@ -2,11 +2,10 @@ import SwiftUI
 
 @MainActor
 enum ExtensionMenuBarImage {
-    static let size: CGFloat = 18
-
-    static func loadAdaptive(_ value: RenderValue?, assetsPath: String) async -> NSImage? {
-        guard let light = await load(value, assetsPath: assetsPath, isDark: false) else { return nil }
-        guard let dark = await load(value, assetsPath: assetsPath, isDark: true), !Task.isCancelled else { return light }
+    static func loadAdaptive(_ value: RenderValue?, assetsPath: String, size: CGFloat = 18) async -> NSImage? {
+        guard let light = await load(value, assetsPath: assetsPath, isDark: false, size: size) else { return nil }
+        guard let dark = await load(value, assetsPath: assetsPath, isDark: true, size: size), !Task.isCancelled
+        else { return light }
         let image = NSImage(size: light.size, flipped: false) { rect in
             let source = NSAppearance.currentDrawing().isDark ? dark : light
             source.draw(in: rect)
@@ -16,7 +15,7 @@ enum ExtensionMenuBarImage {
         return image
     }
 
-    static func load(_ value: RenderValue?, assetsPath: String, isDark: Bool) async -> NSImage? {
+    static func load(_ value: RenderValue?, assetsPath: String, isDark: Bool, size: CGFloat) async -> NSImage? {
         guard let resolved = ExtensionImage.resolve(value, assetsPath: assetsPath, isDark: isDark) else { return nil }
         let source: NSImage?
         var template = false
@@ -54,8 +53,21 @@ enum ExtensionMenuBarImage {
             }
             return true
         }
-        guard let pixels = result.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
-        let image = NSImage(cgImage: pixels, size: NSSize(width: size, height: size))
+        guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size * 2), pixelsHigh: Int(size * 2),
+                                             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+            let context = NSGraphicsContext(bitmapImageRep: bitmap)
+        else { return nil }
+        bitmap.size = NSSize(width: size, height: size)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.cgContext.scaleBy(x: 2, y: 2)
+        NSAppearance(named: isDark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+            result.draw(in: NSRect(x: 0, y: 0, width: size, height: size))
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        let image = NSImage(size: bitmap.size)
+        image.addRepresentation(bitmap)
         image.isTemplate = template
         return image
     }

@@ -7,15 +7,18 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     var onOpen: (() -> Void)?
     var onClose: (() -> Void)?
     var onAction: ((String, String, String) -> Void)?
-    var onDisable: (() -> Void)?
     private let status: NSStatusItem
     let menu = NSMenu()
     private let assetsPath: String
     private var snapshot: ExtensionMenuBarSnapshot?
     private var iconTask: Task<Void, Never>?
     private var menuImageTask: Task<Void, Never>?
+    private var deferredSnapshot: ExtensionMenuBarSnapshot?
+    private var content: [RenderNode] = []
+    private var images: [(value: RenderValue, image: NSImage?)] = []
+    private var menuSession: String?
 
-    private struct Action {
+    private struct Action: Equatable {
         let session: String
         let handler: String
     }
@@ -29,16 +32,18 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         status.button?.imagePosition = .imageLeading
         menu.autoenablesItems = false
         menu.delegate = self
-
     }
 
     func update(_ snapshot: ExtensionMenuBarSnapshot) {
-        let iconChanged = self.snapshot?.iconJSON != snapshot.iconJSON || self.snapshot == nil
+        if isOpen { deferredSnapshot = snapshot; return }
+        guard self.snapshot != snapshot else { return }
+        let previous = self.snapshot
         self.snapshot = snapshot
-        status.button?.title = snapshot.title ?? ""
-        status.button?.toolTip = snapshot.tooltip
+        if previous?.title != snapshot.title { status.button?.title = snapshot.title ?? "" }
+        if previous?.tooltip != snapshot.tooltip { status.button?.toolTip = snapshot.tooltip }
         status.button?.setAccessibilityLabel(snapshot.tooltip ?? snapshot.title ?? "Extension menu")
-        status.menu = snapshot.hasMenu ? menu : nil
+        if previous?.hasMenu != snapshot.hasMenu { status.menu = snapshot.hasMenu ? menu : nil }
+        let iconChanged = previous?.iconJSON != snapshot.iconJSON || previous == nil
         if iconChanged { loadIcon() }
     }
 
@@ -56,86 +61,131 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     }
 
     func showMenu(_ root: RenderNode, session: String) {
-        guard isOpen else { return }
+        if root.bool("isLoading") == true, !content.isEmpty { return }
+        menuSession = session
         menuImageTask?.cancel()
-        menu.removeAllItems()
-        var images: [(NSMenuItem, RenderValue)] = []
-        append(root.children, to: menu, session: session, images: &images)
-        appendDisableItem()
-        let assetsPath = self.assetsPath
-        let isDark = status.button?.effectiveAppearance.isDark ?? false
-        menuImageTask = Task {
-            for (item, value) in images {
-                guard !Task.isCancelled else { return }
-                let image = await ExtensionMenuBarImage.load(value, assetsPath: assetsPath, isDark: isDark)
-                guard !Task.isCancelled else { return }
-                item.image = image
-            }
+        let nodes = root.children
+        var values: [RenderValue] = []
+        collectIcons(nodes, into: &values)
+        if values.allSatisfy({ value in images.contains { $0.value == value } }) {
+            apply(nodes, session: session)
+            return
         }
+        let cached = images
+        let assetsPath = self.assetsPath
+        menuImageTask = Task { [weak self] in
+            var loaded: [(value: RenderValue, image: NSImage?)] = []
+            for value in values {
+                let image: NSImage?
+                if let existing = cached.first(where: { $0.value == value }) { image = existing.image } else {
+                    image = await ExtensionMenuBarImage.loadAdaptive(value, assetsPath: assetsPath, size: 14)
+                }
+                guard !Task.isCancelled else { return }
+                loaded.append((value, image))
+            }
+            guard let self else { return }
+            self.images = loaded
+            self.apply(nodes, session: self.menuSession == session ? session : nil)
+        }
+    }
+
+    private func collectIcons(_ nodes: [RenderNode], into values: inout [RenderValue]) {
+        for node in nodes {
+            if let icon = node.props["icon"], !values.contains(icon) { values.append(icon) }
+            collectIcons(node.children, into: &values)
+            if let alternate = node.node("alternate") { collectIcons([alternate], into: &values) }
+        }
+    }
+
+    private func apply(_ nodes: [RenderNode], session: String?) {
+        if isOpen, menu.size.width > menu.minimumWidth { menu.minimumWidth = menu.size.width }
+        reconcile(nodes, in: menu, session: session)
+        content = nodes
     }
 
     func showError(_ message: String) {
         status.button?.toolTip = message
-        guard isOpen else { return }
+        guard content.isEmpty else { return }
         menuImageTask?.cancel()
-        menu.removeAllItems()
-        let item = NSMenuItem(title: "Could not refresh", action: nil, keyEquivalent: "")
-        item.subtitle = message
-        item.isEnabled = false
-        menu.addItem(item)
-        appendDisableItem()
+        apply([RenderNode(id: -1, type: "MenuBarExtra.Item", props: [
+            "title": .string("Could not refresh"), "tooltip": .string(message)
+        ])], session: nil)
     }
 
-    private func append(_ nodes: [RenderNode], to menu: NSMenu, session: String,
-                        images: inout [(NSMenuItem, RenderValue)]) {
-        for node in nodes {
-            switch node.type {
-            case "MenuBarExtra.Section":
-                if !menu.items.isEmpty, menu.items.last?.isSeparatorItem == false { menu.addItem(.separator()) }
-                if let title = node.string("title"), !title.isEmpty { menu.addItem(.sectionHeader(title: title)) }
-                append(node.children, to: menu, session: session, images: &images)
-            case "MenuBarExtra.Separator":
-                menu.addItem(.separator())
-            case "MenuBarExtra.Item", "MenuBarExtra.Submenu":
-                let item = makeItem(node, session: session, images: &images)
-                if node.type == "MenuBarExtra.Submenu", !node.children.isEmpty {
-                    let submenu = NSMenu()
-                    submenu.autoenablesItems = false
-                    append(node.children, to: submenu, session: session, images: &images)
-                    item.submenu = submenu
-                    item.isEnabled = !submenu.items.isEmpty
+    private func reconcile(_ nodes: [RenderNode], in menu: NSMenu, session: String?) {
+        var entries: [(node: RenderNode, role: String, parent: RenderNode?)] = []
+        func flatten(_ nodes: [RenderNode]) {
+            for node in nodes {
+                switch node.type {
+                case "MenuBarExtra.Section":
+                    if !entries.isEmpty, entries.last?.role != "separator" {
+                        entries.append((node, "separator", nil))
+                    }
+                    if let title = node.string("title"), !title.isEmpty { entries.append((node, "header", nil)) }
+                    flatten(node.children)
+                case "MenuBarExtra.Separator": entries.append((node, "separator", nil))
+                case "MenuBarExtra.Item", "MenuBarExtra.Submenu":
+                    entries.append((node, "item", nil))
+                    if let alternate = node.node("alternate") { entries.append((alternate, "item", node)) }
+                default: break
                 }
-                menu.addItem(item)
-                if let alternate = node.node("alternate") {
-                    item.keyEquivalentModifierMask.remove(.option)
-                    let alternateItem = makeItem(alternate, session: session, images: &images)
-                    alternateItem.isAlternate = true
-                    alternateItem.keyEquivalent = item.keyEquivalent
-                    alternateItem.keyEquivalentModifierMask = item.keyEquivalentModifierMask.union(.option)
-                    menu.addItem(alternateItem)
-                }
-            default:
-                break
             }
         }
+        flatten(nodes)
+        for (index, entry) in entries.enumerated() {
+            let identifier = NSUserInterfaceItemIdentifier("\(entry.node.id)-\(entry.role)")
+            let item = menu.items.first { $0.identifier == identifier } ?? {
+                switch entry.role {
+                case "separator": return NSMenuItem.separator()
+                case "header": return NSMenuItem.sectionHeader(title: entry.node.string("title") ?? "")
+                default: return NSMenuItem(title: "", action: nil, keyEquivalent: "")
+                }
+            }()
+            if item.identifier != identifier { item.identifier = identifier }
+            if entry.role != "separator" { update(item, from: entry.node, session: session, parent: entry.parent) }
+            if menu.index(of: item) != index {
+                if item.menu === menu { menu.removeItem(item) }
+                menu.insertItem(item, at: index)
+            }
+        }
+        while menu.numberOfItems > entries.count { menu.removeItem(at: menu.numberOfItems - 1) }
     }
 
-    private func makeItem(_ node: RenderNode, session: String, images: inout [(NSMenuItem, RenderValue)]) -> NSMenuItem {
-        let item = NSMenuItem(title: node.string("title") ?? "", action: nil, keyEquivalent: "")
-        item.subtitle = node.string("subtitle")
-        item.toolTip = node.string("tooltip")
-        item.isEnabled = false
-        if let handler = node.handler("onAction") {
-            item.target = self
-            item.action = #selector(performAction(_:))
-            item.representedObject = Action(session: session, handler: handler)
-            item.isEnabled = true
+    private func update(_ item: NSMenuItem, from node: RenderNode, session: String?, parent: RenderNode?) {
+        let title = node.string("title") ?? ""
+        if item.isSectionHeader {
+            if item.title != title { item.title = title }
+        } else {
+            let attributed = NSMutableAttributedString(string: title, attributes: [.foregroundColor: NSColor.labelColor])
+            if let subtitle = node.string("subtitle"), !subtitle.isEmpty {
+                attributed.append(NSAttributedString(string: " " + subtitle,
+                                                       attributes: [.foregroundColor: NSColor.secondaryLabelColor]))
+            }
+            if item.attributedTitle != attributed { item.attributedTitle = attributed }
         }
-        if let icon = node.props["icon"] { images.append((item, icon)) }
-        let rawShortcut = node.object("shortcut") ?? [:]
+        if item.toolTip != node.string("tooltip") { item.toolTip = node.string("tooltip") }
+        let handler = node.handler("onAction")
+        if item.target !== self { item.target = self }
+        let selector = handler == nil ? nil : #selector(performAction(_:))
+        if item.action != selector { item.action = selector }
+        let action = session.flatMap { session in handler.map { Action(session: session, handler: $0) } }
+        if item.representedObject as? Action != action { item.representedObject = action }
+        let image = node.props["icon"].flatMap { icon in images.first { $0.value == icon }?.image }
+        if item.image !== image { item.image = image }
+        var enabled = handler != nil
+        if node.type == "MenuBarExtra.Submenu", !node.children.isEmpty {
+            let submenu = item.submenu ?? NSMenu()
+            submenu.autoenablesItems = false
+            reconcile(node.children, in: submenu, session: session)
+            if item.submenu !== submenu { item.submenu = submenu }
+            enabled = !submenu.items.isEmpty
+        } else if item.submenu != nil { item.submenu = nil }
+        if item.isEnabled != enabled { item.isEnabled = enabled }
+        let rawShortcut = (parent ?? node).object("shortcut") ?? [:]
         let shortcut = rawShortcut["macOS"]?.objectValue ?? rawShortcut
-        item.keyEquivalent = keyEquivalent(shortcut["key"]?.stringValue ?? "")
-        item.keyEquivalentModifierMask = (shortcut["modifiers"]?.arrayValue ?? []).reduce(into: []) { flags, value in
+        let key = keyEquivalent(shortcut["key"]?.stringValue ?? "")
+        if item.keyEquivalent != key { item.keyEquivalent = key }
+        var modifiers = (shortcut["modifiers"]?.arrayValue ?? []).reduce(into: NSEvent.ModifierFlags()) { flags, value in
             switch value.stringValue {
             case "cmd": flags.insert(.command)
             case "ctrl": flags.insert(.control)
@@ -144,17 +194,25 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             default: break
             }
         }
-        return item
+        if parent != nil { modifiers.insert(.option) } else if node.node("alternate") != nil { modifiers.remove(.option) }
+        if item.keyEquivalentModifierMask != modifiers { item.keyEquivalentModifierMask = modifiers }
+        if item.isAlternate != (parent != nil) { item.isAlternate = parent != nil }
     }
 
     private func keyEquivalent(_ key: String) -> String {
         switch key {
         case "return": return "\r"
+        case "enter": return "\u{3}"
         case "tab": return "\t"
         case "space": return " "
         case "escape": return "\u{1b}"
         case "backspace": return "\u{8}"
         case "delete": return "\u{7f}"
+        case "deleteForward": return "\u{f728}"
+        case "home": return "\u{f729}"
+        case "end": return "\u{f72b}"
+        case "pageUp": return "\u{f72c}"
+        case "pageDown": return "\u{f72d}"
         case "arrowUp": return "\u{f700}"
         case "arrowDown": return "\u{f701}"
         case "arrowLeft": return "\u{f702}"
@@ -170,41 +228,41 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         onAction?(action.session, action.handler, type)
     }
 
-    private func appendDisableItem() {
-        if !menu.items.isEmpty { menu.addItem(.separator()) }
-        let item = NSMenuItem(title: "Remove from Menu Bar", action: #selector(disable), keyEquivalent: "")
-        item.target = self
-        menu.addItem(item)
-    }
-
-    @objc private func disable() { onDisable?() }
-
     func menuWillOpen(_ menu: NSMenu) {
         isOpen = true
-        menu.removeAllItems()
-        let loading = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
-        loading.isEnabled = false
-        menu.addItem(loading)
-        appendDisableItem()
+        if menu.items.isEmpty {
+            let loading = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
+            loading.isEnabled = false
+            menu.addItem(loading)
+        }
         onOpen?()
     }
 
     func menuDidClose(_ menu: NSMenu) {
         isOpen = false
-        menuImageTask?.cancel()
+        menu.minimumWidth = 0
+        if let deferredSnapshot {
+            self.deferredSnapshot = nil
+            update(deferredSnapshot)
+        }
         onClose?()
     }
 
     func clearMenu() {
-        guard !isOpen else { return }
-        menu.removeAllItems()
+        menuSession = nil
+        func clearActions(_ menu: NSMenu) {
+            for item in menu.items {
+                item.representedObject = nil
+                if let submenu = item.submenu { clearActions(submenu) }
+            }
+        }
+        clearActions(menu)
     }
 
     func remove() {
         onOpen = nil
         onClose = nil
         onAction = nil
-        onDisable = nil
         menu.cancelTracking()
         menu.delegate = nil
         iconTask?.cancel()

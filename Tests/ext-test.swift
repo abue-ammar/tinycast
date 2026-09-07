@@ -256,7 +256,6 @@ struct ExtensionTests {
 
     @MainActor
     static func menuBarRuntimeChecks() async {
-        check("menu-bar mounts rather than running headless", ExtensionCommandMode.menuBar.runtimeName == "menu-bar")
         for (value, expected) in [("10m", 600.0), ("1h", 3600), ("1d", 86400), ("30s", 30), ("1s", 10)] {
             check("interval \(value)", ExtensionCommand.refreshInterval(value) == expected)
         }

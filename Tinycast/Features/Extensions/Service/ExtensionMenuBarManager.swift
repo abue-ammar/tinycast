@@ -36,14 +36,16 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         let id = UUID().uuidString
         let request: Request
         let owner: InstalledExtension
+        let mode: ExtensionCommandMode
         let execution: Execution
         var runtime: ExtensionRuntime { execution.runtime }
         var isLoading = true
         var actionRunning = false
 
-        init(request: Request, owner: InstalledExtension, execution: Execution) {
+        init(request: Request, owner: InstalledExtension, mode: ExtensionCommandMode, execution: Execution) {
             self.request = request
             self.owner = owner
+            self.mode = mode
             self.execution = execution
         }
     }
@@ -73,10 +75,12 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         scheduleRefresh()
     }
 
-    func activate(_ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:],
-                  type: ExtensionLaunchType = .userInitiated, context: [String: RenderValue] = [:]) {
+    func run(_ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:],
+             type: ExtensionLaunchType = .userInitiated, context: [String: RenderValue] = [:]) {
         let reference = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
-        if store.records[reference.entryID] == nil { store.set(.init(), for: reference.entryID) }
+        if command.mode == .menuBar, store.records[reference.entryID] == nil {
+            store.set(.init(), for: reference.entryID)
+        }
         enqueue(Request(reference: reference, type: type, arguments: arguments, context: context))
     }
 
@@ -90,9 +94,12 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     }
 
     func remove(extensionName: String) {
+        requests.removeAll { $0.reference.extensionName == extensionName }
+        if active?.owner.manifest.name == extensionName { finish() }
         for entryID in store.records.keys where ExtensionCommandRef(entryID: entryID)?.extensionName == extensionName {
             disable(entryID)
         }
+        runNext()
     }
 
     func stop() {
@@ -122,12 +129,15 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         guard active == nil, !requests.isEmpty else { return }
         let request = requests.removeFirst()
         let entryID = request.reference.entryID
-        guard let (owner, command) = resolve(request.reference), store.records[entryID] != nil
+        guard let (owner, command) = resolve(request.reference),
+            command.mode == .noView || store.records[entryID] != nil
         else { runNext(); return }
-        var record = store.records[entryID] ?? .init()
-        record.nextRefresh = command.interval.map { Date().addingTimeInterval($0) }
-        store.set(record, for: entryID)
-        scheduleRefresh()
+        if command.mode == .menuBar {
+            var record = store.records[entryID] ?? .init()
+            record.nextRefresh = command.interval.map { Date().addingTimeInterval($0) }
+            store.set(record, for: entryID)
+            scheduleRefresh()
+        }
 
         let missing = storage.missingRequiredPreferences(extension: owner.manifest.name,
                                                          schemas: owner.manifest.preferences + command.preferences)
@@ -144,12 +154,12 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         guard let execution = makeExecution(owner, request.type) else { runNext(); return }
         let runtime = execution.runtime
         runtime.setDelegate(self)
-        let session = Session(request: request, owner: owner, execution: execution)
+        let session = Session(request: request, owner: owner, mode: command.mode, execution: execution)
         active = session
         let support = supportDirectory.appendingPathComponent(ExtensionCatalog.safeName(owner.manifest.name))
         let context = ExtensionLaunchContext(
             extensionName: owner.manifest.name, extensionTitle: owner.title, commandName: command.name,
-            commandMode: .menuBar, assetsPath: owner.assetsPath, supportPath: support.path,
+            commandMode: command.mode, assetsPath: owner.assetsPath, supportPath: support.path,
             preferences: storage.resolvedPreferences(extension: owner.manifest.name,
                                                      schemas: owner.manifest.preferences + command.preferences),
             caches: storage.caches(extension: owner.manifest.name), arguments: command.completeArguments(request.arguments),
@@ -164,7 +174,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                 guard !Task.isCancelled else { return }
                 try await runtime.boot(config: .current(supportDirectory: support))
                 guard !Task.isCancelled else { runtime.shutdown(); return }
-                await runtime.start(session: session.id, code: code, file: bundle, mode: .menuBar, context: context)
+                await runtime.start(session: session.id, code: code, file: bundle, mode: command.mode, context: context)
             } catch {
                 self?.runtime(runtime, session: session.id, didFail: error.localizedDescription)
             }
@@ -200,7 +210,6 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                                               completesSession: true)
             }
         }
-        controller.onDisable = { [weak self] in self?.disable(reference.entryID) }
         controllers[reference.entryID] = controller
         return controller
     }
@@ -256,7 +265,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         guard let next = dates.min() else { return }
         refreshTask = Task { [weak self] in
             do { try await Task.sleep(for: .seconds(max(0, next.timeIntervalSinceNow)), tolerance: .seconds(1)) } catch { return }
-            guard let self else { return }
+            guard !Task.isCancelled, let self else { return }
             let due = self.store.records.filter { ($0.value.nextRefresh ?? .distantFuture) <= Date() }.map(\.key)
             for entryID in due {
                 guard let reference = ExtensionCommandRef(entryID: entryID), let (_, command) = self.resolve(reference)
@@ -278,12 +287,14 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             self.runtime(runtime, session: session, didFail: "A menu bar command must render MenuBarExtra or null.")
             return
         }
+        let wasLoading = active.isLoading
         active.isLoading = root?.bool("isLoading") == true
+        if !wasLoading, active.isLoading { armDeadline(active) }
         var record = store.records[reference.entryID] ?? .init()
         if let root {
             let snapshot = ExtensionMenuBarSnapshot(node: root)
             let controller = controller(for: reference, owner: active.owner)
-            controller.update(snapshot)
+            if !active.isLoading || record.snapshot == nil { controller.update(snapshot) }
             controller.showMenu(root, session: session)
             if !active.isLoading { record.snapshot = snapshot }
         } else {
@@ -307,6 +318,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     func runtime(_ runtime: ExtensionRuntime, session: String, didFinish: Void) {
         guard let active, active.id == session else { return }
         active.actionRunning = false
+        if active.mode == .noView { active.isLoading = false }
         releaseIfIdle()
     }
 

@@ -4,8 +4,6 @@ enum ExtensionCommandMode: String, Sendable, Codable {
     case view
     case noView = "no-view"
     case menuBar = "menu-bar"
-
-    var runtimeName: String { rawValue }
 }
 
 /// One entry from a manifest's `preferences` array.

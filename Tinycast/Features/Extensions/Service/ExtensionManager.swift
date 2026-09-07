@@ -100,7 +100,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                     let host = ExtensionMenuBarHost(owner: owner, launchType: type, storage: self.storage,
                                                     manager: self, coordinator: coordinator)
                     let bridge = self.bridge.scoped(to: host)
-                    return .init(runtime: ExtensionRuntime(hostAPI: bridge), stop: {
+                    return .init(runtime: ExtensionRuntime(hostAPI: bridge,
+                                                          priority: type == .background ? .utility : .userInitiated), stop: {
                         host.stop()
                         bridge.context = nil
                     })
@@ -318,11 +319,12 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         launchContext: [String: RenderValue] = [:]
     ) async {
         guard isEnabled else { return }
-        if command.mode == .menuBar {
-            menuBars?.activate(owner, command: command, arguments: arguments, type: launchType, context: launchContext)
+        if command.mode == .menuBar || (command.mode == .noView && launchType == .background) {
+            menuBars?.run(owner, command: command, arguments: arguments, type: launchType, context: launchContext)
             return
         }
         await stop()
+        guard isEnabled else { return }
         let schemas = owner.manifest.preferences + command.preferences
         let missing = storage.missingRequiredPreferences(
             extension: owner.manifest.name, schemas: schemas)

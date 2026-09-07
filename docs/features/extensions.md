@@ -178,8 +178,12 @@ shortcuts), and Option alternates. Items without actions and empty submenus are 
 receive `left-click` or `right-click`; keyboard activation is a left click. Asynchronous actions are
 awaited before teardown. Returning `null` removes the item while keeping its refresh schedule.
 
-On opening, the menu shows a loading row until its fresh context renders; cached handler IDs never
-reach a new context. The session stays alive while the menu is open. After a settled render or menu
+Native rows and small icons stay prepared between runs; their handler IDs are cleared on teardown.
+Opening reuses those rows while a fresh context loads, then rebinds its own callbacks. Only a menu
+without prepared content shows a loading row. Subtitles follow the title on the same line. React
+updates reconcile rows in place, prepare icons before display, and preserve settled content while
+loading. Button changes wait until the menu closes so its anchor does not move under the pointer.
+The session stays alive while the menu is open. After a settled render or menu
 closure, a 100 ms coalescing delay lets React commit effects and host calls drain before releasing the
 context. Loading and closed-menu actions have a 60-second deadline; an open, settled menu is exempt.
 This bounds asynchronous work, but cannot interrupt an extension stuck in synchronous JavaScript or a
@@ -187,12 +191,12 @@ blocking Node shim on the runtime queue.
 
 A saved button restores after relaunch without executing JavaScript; only its next due refresh boots
 the runtime. `extension-menu-bars.json` is channel-local Application Support data and is excluded from
-settings backups. **Remove from Menu Bar**, the command's toggle, uninstall, and disabling extensions
+settings backups. The command's **Show in menu bar** toggle, uninstall, and disabling extensions
 all tear down the corresponding native items and work. Removing a menu item leaves the extension's
 other commands installed. Only explicitly activated commands have saved records.
 
-`launchCommand` preserves `type`, arguments and JSON context. A background menu refresh leaves the
-palette alone; a user-initiated view launch from a menu opens the palette. Menu toasts are suppressed;
+`launchCommand` preserves `type`, arguments and JSON context. Background menu refreshes and explicit background `no-view` launches use the transient lane at utility
+priority and leave the palette alone; a user-initiated view launch from a menu opens the palette. Menu toasts are suppressed;
 errors are exposed through the menu and user-initiated failures also use the HUD. `updateCommandMetadata`
 and scheduled `no-view` refreshes remain unsupported.
 

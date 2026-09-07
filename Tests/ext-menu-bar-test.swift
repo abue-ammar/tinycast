@@ -30,7 +30,7 @@ extension ExtensionTests {
         let reference = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
         print("▶ Native menu lifecycle: \(owner.title) — \(command.title)")
         manager.synchronize([owner])
-        manager.activate(owner, command: command)
+        manager.run(owner, command: command)
         for _ in 0..<200 where manager.isRunning { await settle(50) }
         check("real command settles and unloads", !manager.isRunning && lastRuntime == nil)
         check("real command saves a native item", manager.store.records[reference.entryID]?.snapshot?.hasMenu == true)
@@ -64,6 +64,97 @@ extension ExtensionTests {
     }
 
     @MainActor
+    static func menuBarRenderingChecks() async {
+        let controller = ExtensionMenuBarController(entryID: "tinycast-fixture-rendering", assetsPath: "/tmp")
+        defer { controller.remove() }
+        let row = RenderNode(id: 2, type: "MenuBarExtra.Item", props: [
+            "title": .string("Weekly · 17%"), "subtitle": .string("resets in 5d"),
+            "icon": .string("star-16"), "onAction": .handler("refresh"),
+            "shortcut": .object(["macOS": .object(["key": .string("pageDown"),
+                                                   "modifiers": .array([.string("cmd")])])])
+        ])
+        let root = RenderNode(id: 1, type: "MenuBarExtra", children: [row])
+        controller.showMenu(root, session: "one")
+        await settle(200)
+        let item = controller.menu.items.first
+        check("menu is prepared while closed", item?.title == "Weekly · 17% resets in 5d" && item?.image?.size.width == 14,
+              "title=\(item?.title ?? "nil") image=\(String(describing: item?.image?.size))")
+        check("menu contains only extension rows", controller.menu.items.count == 1)
+        check("macOS named shortcut maps to native key", item?.keyEquivalent == "\u{f72d}"
+              && item?.keyEquivalentModifierMask == .command)
+        check("closed menu has inline secondary text", item?.attributedTitle?.string == "Weekly · 17% resets in 5d"
+              && item?.subtitle == nil)
+        controller.clearMenu()
+        check("unloading clears cached callbacks", item?.representedObject == nil)
+        controller.menuWillOpen(controller.menu)
+        check("opening keeps prepared rows", controller.menu.items.first === item)
+        let loading = RenderNode(id: 3, type: "MenuBarExtra", props: ["isLoading": .bool(true)], children: [])
+        controller.showMenu(loading, session: "two")
+        check("loading does not replace settled content", controller.menu.items.first === item)
+        controller.showMenu(root, session: "two")
+        check("fresh session rebinds existing rows", controller.menu.items.first === item && item?.representedObject != nil)
+        let image = item?.image
+        var changes = 0
+        let observation = NotificationCenter.default.addObserver(forName: NSMenu.didChangeItemNotification,
+                                                                  object: controller.menu, queue: nil) { _ in
+            MainActor.assumeIsolated { changes += 1 }
+        }
+        for _ in 0..<20 { controller.showMenu(root, session: "two") }
+        NotificationCenter.default.removeObserver(observation)
+        check("repeated renders preserve rows and icons", controller.menu.items.first === item && item?.image === image)
+        check("identical renders cause no native layout updates", changes == 0, "\(changes) menu notifications")
+        let props = row.props.merging(["subtitle": .string("resets in 4d")]) { _, value in value }
+        let updated = RenderNode(id: 2, type: row.type, props: props)
+        controller.showMenu(RenderNode(id: 1, type: root.type, children: [updated]), session: "two")
+        check("text changes update in place", controller.menu.items.first === item
+              && item?.attributedTitle?.string == "Weekly · 17% resets in 4d")
+        controller.menuDidClose(controller.menu)
+        controller.clearMenu()
+    }
+
+    @MainActor
+    final class DelayedMenuHost: ExtensionHostAPI {
+        var pending: [CheckedContinuation<String, Never>] = []
+        var huds: [String] = []
+
+        func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String {
+            if api == "clipboard" { return await withCheckedContinuation { pending.append($0) } }
+            if api == "feedback", method == "showHUD" { huds.append(arguments.first?.stringValue ?? "") }
+            return ""
+        }
+
+        func sessionEnded() {}
+    }
+
+    @MainActor
+    static func lateMenuResponseChecks() async {
+        let host = DelayedMenuHost()
+        let runtime = ExtensionRuntime(hostAPI: host, runtimeURL: runtimeURL())
+        defer {
+            runtime.shutdown()
+            for reply in host.pending { reply.resume(returning: "") }
+        }
+        let code = #"""
+            const { Clipboard, showHUD } = require("@raycast/api");
+            module.exports.default = async () => { await showHUD(await Clipboard.readText()); };
+            """#
+        let file = URL(fileURLWithPath: "/tmp/late-response.js")
+        for session in ["old", "new"] {
+            try? await runtime.boot(config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+            await runtime.start(session: session, code: code, file: file, mode: .noView, context: launchContext(mode: .noView))
+            await settle(100)
+            if session == "old" { runtime.shutdown() }
+        }
+        guard host.pending.count == 2 else { check("both host requests wait", false); return }
+        host.pending.removeFirst().resume(returning: #""old""#)
+        await settle(100)
+        check("late response cannot settle a fresh context", host.huds.isEmpty)
+        host.pending.removeFirst().resume(returning: #""new""#)
+        await settle(100)
+        check("fresh context receives only its own response", host.huds == ["new"])
+    }
+
+    @MainActor
     final class MenuHost: ExtensionHostAPI {
         let name: String
         let storage: ExtensionStorage
@@ -92,6 +183,8 @@ extension ExtensionTests {
     static func menuBarHostChecks() async {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)
+        await menuBarRenderingChecks()
+        await lateMenuResponseChecks()
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tinycast-menu-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
         let storage = ExtensionStorage(directory: directory.appendingPathComponent("storage"))
@@ -103,7 +196,7 @@ extension ExtensionTests {
               const [title, setTitle] = React.useState(environment.launchType);
               React.useEffect(() => { const timer = setTimeout(() => setLoading(false), 50);
                 return () => clearTimeout(timer); }, []);
-              return React.createElement(MenuBarExtra, { title, isLoading: loading, icon: "raycast-star" },
+              return React.createElement(MenuBarExtra, { title, isLoading: loading, icon: "star-16" },
                 React.createElement(MenuBarExtra.Section, { title: "Usage" },
                   React.createElement(MenuBarExtra.Item, { title: "Information", subtitle: "Details", tooltip: "Tip" }),
                   React.createElement(MenuBarExtra.Item, { title: "Refresh", shortcut: { key: "r", modifiers: ["cmd"] },
@@ -118,12 +211,12 @@ extension ExtensionTests {
                     React.createElement(MenuBarExtra.Item, { title: "Child", onAction() {} }))));
             };
             """#
-        func owner(_ name: String, code: String) -> InstalledExtension {
+        func owner(_ name: String, code: String, mode: String = "menu-bar") -> InstalledExtension {
             let path = directory.appendingPathComponent(name)
             try? FileManager.default.createDirectory(at: path, withIntermediateDirectories: true)
             try? code.write(to: path.appendingPathComponent("bar.js"), atomically: true, encoding: .utf8)
             let manifest = ExtensionManifest(json: ["name": name, "commands": [
-                ["name": "bar", "title": "Bar", "mode": "menu-bar", "interval": "10m", "disabledByDefault": true]
+                ["name": "bar", "title": "Bar", "mode": mode, "interval": "10m", "disabledByDefault": true]
             ]])!
             return InstalledExtension(manifest: manifest, directory: path)
         }
@@ -138,7 +231,13 @@ extension ExtensionTests {
               return React.createElement(MenuBarExtra, { title: "Loading", isLoading: true });
             };
             """#)
-        let installed = [first, second, empty, hanging]
+        let job = owner("job", code: #"""
+            const { LocalStorage, environment } = require("@raycast/api");
+            module.exports.default = async props => {
+              await LocalStorage.setItem("context", environment.launchType + ":" + props.launchContext.origin);
+            };
+            """#, mode: "no-view")
+        let installed = [first, second, empty, hanging, job]
         let firstRef = ExtensionCommandRef(extensionName: "first", commandName: "bar")
         var boots: [(String, ExtensionLaunchType)] = []
         var failures: [String] = []
@@ -158,7 +257,7 @@ extension ExtensionTests {
         defer { manager.stop() }
         manager.synchronize(installed)
         check("install does not run a menu command", boots.isEmpty && manager.store.records.isEmpty)
-        manager.activate(first, command: first.manifest.commands[0])
+        manager.run(first, command: first.manifest.commands[0])
         await settle(400)
         check("settled menu keeps only a snapshot", !manager.isRunning && lastRuntime == nil)
         check("manual launch snapshots title", manager.store.records[firstRef.entryID]?.snapshot?.title == "userInitiated")
@@ -170,9 +269,10 @@ extension ExtensionTests {
         check("opening a menu reloads its runtime", boots.count == 2 && manager.isRunning)
         let items = controller.menu.items
         check("native section header", items.first?.isSectionHeader == true && items.first?.title == "Usage")
-        check("informational row is disabled", items.first { $0.title == "Information" }?.isEnabled == false)
-        check("native subtitle and tooltip", items.first { $0.title == "Information" }?.subtitle == "Details"
-              && items.first { $0.title == "Information" }?.toolTip == "Tip")
+        check("informational row is disabled", items.first { $0.title == "Information Details" }?.isEnabled == false)
+        check("inline subtitle and tooltip", items.first { $0.title == "Information Details" }?.attributedTitle?.string
+              == "Information Details" && items.first { $0.title == "Information Details" }?.subtitle == nil
+              && items.first { $0.title == "Information Details" }?.toolTip == "Tip")
         check("empty submenu is disabled", items.first { $0.title == "Empty" }?.isEnabled == false)
         check("nested menu retains children", items.first { $0.title == "Nested" }?.submenu?.items.first?.title == "Child")
         let alternate = items.first { $0.title == "Alternate" }
@@ -208,21 +308,46 @@ extension ExtensionTests {
         await settle(150)
         check("restoring a saved item executes no JavaScript", boots.count == bootCount)
 
-        manager.activate(first, command: first.manifest.commands[0])
-        manager.activate(second, command: second.manifest.commands[0])
+        manager.run(first, command: first.manifest.commands[0])
+        manager.run(second, command: second.manifest.commands[0])
         await settle(750)
         check("queued refreshes finish serially", boots.suffix(2).map(\.0) == ["first", "second"] && !manager.isRunning)
-        manager.activate(empty, command: empty.manifest.commands[0])
+        manager.run(empty, command: empty.manifest.commands[0])
         await settle(300)
         check("null removes item without forgetting activation", manager.store.records["extension:empty/bar"] != nil
               && manager.store.records["extension:empty/bar"]?.snapshot == nil && !manager.isRunning)
-        manager.activate(hanging, command: hanging.manifest.commands[0])
+        let (foreground, _, recorder) = makeRuntime()
+        defer { foreground.shutdown() }
+        try? await foreground.boot(config: .current(supportDirectory: directory))
+        await foreground.start(session: "foreground", code: #"""
+            const React = require("react");
+            const { Detail } = require("@raycast/api");
+            module.exports.default = () => {
+              const [count, setCount] = React.useState(0);
+              React.useEffect(() => { setInterval(() => setCount(value => value + 1), 40); }, []);
+              return React.createElement(Detail, { markdown: String(count) });
+            };
+            """#, file: directory.appendingPathComponent("foreground.js"), mode: .view, context: launchContext())
+        await settle(100)
+        let foregroundRenders = recorder.trees.count
+        manager.run(job, command: job.manifest.commands[0], type: .background, context: ["origin": .string("menu")])
+        await settle(300)
+        check("background no-view receives scoped context", storage.localStorageValue(extension: "job", key: "context")
+              == .string("background:menu") && !manager.isRunning && lastRuntime == nil)
+        check("no-view launch creates no menu snapshot", manager.store.records["extension:job/bar"] == nil)
+        manager.run(first, command: first.manifest.commands[0], type: .background)
+        await settle(300)
+        check("foreground keeps rendering during background commands", recorder.trees.count > foregroundRenders + 3
+              && recorder.failures.isEmpty && !manager.isRunning)
+        foreground.shutdown()
+
+        manager.run(hanging, command: hanging.manifest.commands[0])
         await settle(150)
         manager.disable("extension:hanging/bar")
         await settle(150)
         check("disable cancels host requests", hosts.last?.didCancel == true && lastRuntime == nil)
         check("disable removes snapshot and schedule", manager.store.records["extension:hanging/bar"] == nil)
-        manager.activate(hanging, command: hanging.manifest.commands[0])
+        manager.run(hanging, command: hanging.manifest.commands[0])
         await settle(1250)
         check("loading timeout releases runtime", !manager.isRunning && lastRuntime == nil
               && failures.last?.contains("timed out") == true)

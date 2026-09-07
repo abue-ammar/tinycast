@@ -158,9 +158,11 @@ globalThis.__tinycast = {
     if (!session?.surface) return "0";
     try {
       const args = JSON.parse(argsJson || "[]").map(reviveArg);
-      return session.surface.dispatch(
+      const dispatched = session.surface.dispatch(
         handlerId, args, completesSession ? () => hostCalls.finished(sessionId) : undefined,
-      ) ? "1" : "0";
+      );
+      if (!dispatched && completesSession) hostCalls.finished(sessionId);
+      return dispatched ? "1" : "0";
     } catch (error) {
       session.fail(error);
       return "0";

@@ -40,8 +40,7 @@ Run a menu-bar command once to activate it. Its icon and title stay in the menu 
 interval controls background refresh. Opening the menu reloads the command; closing it releases the
 engine after any action finishes. Saved items return after restart without executing the extension.
 
-Use **Remove from Menu Bar** in the menu or **Show in menu bar** in the command's configuration to
-stop it. Installing an extension does not activate its menu-bar commands.
+Turn off **Show in menu bar** in the command's configuration to stop it. Installing an extension does not activate its menu-bar commands.
 
 ## Where to go next
 
