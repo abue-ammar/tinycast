@@ -244,25 +244,7 @@ struct BackupSettingsView: View {
             do {
                 let outcome = try await BackupActions.importRaycast(
                     core: core, file: file, passphrase: passphrase, options: selection)
-                var parts: [String] = []
-                if let applied = BackupActions.appliedText(outcome.summary) { parts.append(applied) }
-                if outcome.clipboardImported > 0 {
-                    parts.append("Imported \(outcome.clipboardImported) clipboard entries.")
-                }
-                if outcome.snippetsImported > 0 {
-                    let noun = outcome.snippetsImported == 1 ? "snippet" : "snippets"
-                    parts.append("Imported \(outcome.snippetsImported) \(noun).")
-                }
-                if let snippetsError = outcome.snippetsError {
-                    parts.append("Couldn’t import snippets: \(snippetsError)")
-                }
-                var message =
-                    parts.isEmpty
-                    ? BackupActions.nothingImportedText : parts.joined(separator: " ")
-                if outcome.missingImages > 0 {
-                    message += " \(outcome.missingImages) images were unavailable and skipped."
-                }
-                status = .success(message)
+                status = .success(BackupActions.raycastText(outcome))
                 passphrase = ""
             } catch {
                 status = .failure(error.localizedDescription)

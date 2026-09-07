@@ -83,7 +83,8 @@ normally prevents that, which is why `| raw` is a deliberate authoring choice an
 
 `{selectedText}` is accepted as an alias for `{selection}`, so a link pasted from Raycast's docs
 works unchanged. `{selection}` stays the canonical spelling and is the only one the editor's
-**Insert…** menu writes.
+**Insert…** menu writes. `{query}` is accepted as an alias for `{argument}` for the same reason;
+a Raycast import rewrites it to `{argument}` before the row is stored.
 
 ## The argument prompt
 
@@ -209,6 +210,13 @@ owns.
 Quicklinks and their bindings also ride in native settings backups, and the settings flags with them.
 Unlike `snippetsEnabled`, `quicklinksEnabled` grants no permission class and enables no listening, so
 excluding it would be cargo-culting.
+
+The encrypted `.rayconfig` flow in **Settings → Backup** can import Raycast's quicklinks as an
+independently selectable category. Tinycast reads `name`, `link`, `createdAt` and the optional
+`openWith` / `applicationId` from the export's `quicklinks.quicklinks` collection, resolving an app
+path through `openWithPlatforms` when the field is a platform id. Invalid entries are skipped; valid
+entries merge into the existing library the same way **Import Quicklinks** does. Importing at least
+one turns the feature on — the switch grants no permission class.
 
 ## Standalone harness
 
