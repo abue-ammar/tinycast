@@ -6,8 +6,8 @@ description: What Tinycast is, and the few minutes that set it up.
 Tinycast is a native macOS launcher that lives in the menu bar. Press a shortcut, a palette floats
 in over whatever you were doing, you type, and it gets out of the way.
 
-It is around 5 MB on disk and stays under 100 MB of memory, because it is SwiftUI and AppKit with
-zero third-party dependencies. There is no Electron, no account, no sign-in and no telemetry.
+It stays under 100 MB of memory, because it is SwiftUI and AppKit with zero third-party
+dependencies. There is no Electron, no account, no sign-in and no telemetry.
 
 ## Set it up
 

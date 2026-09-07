@@ -72,7 +72,7 @@ export const galleryItems: GalleryItem[] = [
     type: "image",
     src: "ram-usage.png",
     title: "Featherweight",
-    caption: "Under 100 MB of memory, a few megabytes on disk.",
+    caption: "Under 100 MB of memory, however long it stays open.",
     width: 2558,
     height: 1754,
   },
