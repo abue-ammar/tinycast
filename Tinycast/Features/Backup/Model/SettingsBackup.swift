@@ -19,6 +19,7 @@ struct SettingsBackup: Codable {
         // Carried, unlike the consent flags: recording your own copies grants no permission class.
         var clipboardEnabled: Bool?
         var clipboardRetentionDays: Int?
+        var clipboardDefaultAction: String?
         var clipboardDisabledApps: [String]?
         var launchAtLogin: Bool?
         var hyperKey: String?
@@ -108,6 +109,7 @@ extension SettingsBackup {
         backup.settings = SettingsData(
             clipboardEnabled: s.clipboardEnabled,
             clipboardRetentionDays: s.clipboardRetention.rawValue,
+            clipboardDefaultAction: s.clipboardDefaultAction.rawValue,
             clipboardDisabledApps: s.clipboardDisabledApps,
             launchAtLogin: s.launchAtLogin,
             hyperKey: s.hyperKey.rawValue,
@@ -248,6 +250,10 @@ extension SettingsBackup {
         }
         if let apps = s.clipboardDisabledApps {
             settings.clipboardDisabledApps = apps
+            count += 1
+        }
+        if let raw = s.clipboardDefaultAction, let action = ClipboardDefaultAction(rawValue: raw) {
+            settings.clipboardDefaultAction = action
             count += 1
         }
         if let launch = s.launchAtLogin {

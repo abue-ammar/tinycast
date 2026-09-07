@@ -99,6 +99,21 @@ enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// What ↵ does on a clipboard entry; ⌘↵ always does the other one.
+enum ClipboardDefaultAction: String, CaseIterable, Identifiable, Sendable {
+    case paste
+    case copy
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .paste: return "Paste"
+        case .copy: return "Copy to Clipboard"
+        }
+    }
+}
+
 /// SQLite-backed clipboard history. See docs/features/clipboard.md#store.
 @MainActor
 @Observable
