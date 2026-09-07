@@ -80,6 +80,12 @@ enum CalcTokenizer {
                 continue
             }
 
+            if ch == "x" || ch == "X", isMultiplicationX(chars, at: i, previous: tokens.last) {
+                tokens.append(.op(.multiply))
+                i += 1
+                continue
+            }
+
             if ch.isLetter || ch == "°" {
                 let start = i
                 while i < chars.count, chars[i].isLetter { i += 1 }
@@ -190,6 +196,43 @@ enum CalcTokenizer {
         case "b", "B": .binary
         case "o", "O": .octal
         default: nil
+        }
+    }
+
+    private static func isMultiplicationX(
+        _ chars: [Unicode.Scalar], at index: Int, previous: CalcToken?
+    ) -> Bool {
+        guard index > 0, !chars[index - 1].isLetter, let previous, endsOperand(previous) else {
+            return false
+        }
+        if index + 2 < chars.count,
+            ["o", "O"].contains(chars[index + 1]),
+            ["r", "R"].contains(chars[index + 2]),
+            index + 3 == chars.count || !chars[index + 3].isLetter {
+            return false
+        }
+        let attached = !chars[index - 1].isWhitespace
+        var next = index + 1
+        while next < chars.count, chars[next].isWhitespace { next += 1 }
+        guard next < chars.count else { return !attached }
+        switch chars[next] {
+        case ")", "!", "%", "^", "/", ",", "=", "*", "×", "÷", "−", "→":
+            return false
+        default:
+            return true
+        }
+    }
+
+    private static func endsOperand(_ token: CalcToken) -> Bool {
+        switch token {
+        case .number, .compactNumber, .intLiteral:
+            true
+        case .op(let op):
+            op == .close || op == .factorial || op == .percent
+        case .ident(let name):
+            !["to", "in", "of", "mod", "power", "and"].contains(name)
+        case .arrow, .comma:
+            false
         }
     }
 

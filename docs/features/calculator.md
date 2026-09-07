@@ -358,12 +358,16 @@ calculator must never provoke its Full Calendar Access grant mid-keystroke — s
 
 Juxtaposition means `*` at the same binding power as an explicit one (`4(2+3)` → 20, `2pi`,
 `2sqrt(9)`, `(2+3)(2+3)`), so it binds tighter than `+` and looser than `^`, and `6/2(1+2)` agrees
-with `6/2*(1+2)`. `CalcExpressionParser.peekBinary` recognizes it without consuming a token before parsing the right operand.
+with `6/2*(1+2)`. A lone `x` between operands is also multiplication, so `3x3`, `2xpi` and
+`$5 x 2` work alongside `×`. `CalcExpressionParser.peekBinary` recognizes juxtaposition without
+consuming a token before parsing the right operand.
 
 A parenthesis, constant, function or spoken root starts an implicit product (`2 square root of 9` → 6).
 Adjacent numbers never do — `5 3` stays an app search — and unit and currency names keep their own
-operand positions. The same rule covers typed values (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
-`2*(3)kg`); adjacent quantities still use the composite `+` described above.
+operand positions. The tokenizer only folds a lone `x` after an operand, keeping names such as `max`
+and incomplete hexadecimal input such as `0x` out of arithmetic. The same rule covers typed values
+(`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching `2*(3)kg`); adjacent quantities still use the
+composite `+` described above.
 
 ## Natural-language forms
 

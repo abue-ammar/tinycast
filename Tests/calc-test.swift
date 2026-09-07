@@ -102,9 +102,21 @@ struct CalcTests {
         expectDisplay("2sqrt(9)", "6")
         expectDisplay("2(3+1)+1", "9")  // implicit "*" binds like explicit "*", not looser
         expectDisplay("10π ^e", "224.5915772")  // and looser than "^"
+        expectDisplay("3x3", "9")
+        expectDisplay("3 x 3", "9")
+        expectDisplay("3X3", "9")
+        expectDisplay("3 x -2", "-6")
+        expectDisplay("2xpi", "6.283185307")
+        expectDisplay("6/2x(1+2)", "9")
+        expectDisplay("10 x", "10")
+        expectDisplay("$5 x 2", "10.00 USD")
+        expectNil("x")
+        expectNil("x3")
+        expectNil("3x")
         // Juxtaposition against a bracket carries the unit through, matching explicit "*"
         expectDisplay("2(3)kg", "6 kg")
         expectDisplay("2*(3)kg", "6 kg")
+        expectDisplay("2(3)kg x 2", "12 kg")
 
         // Scientific notation — only when the exponent hugs the mantissa
         expectDisplay("1e5", "100,000")
