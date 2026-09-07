@@ -80,9 +80,8 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.fileSearch` | `FileSearchScreen` | `FileSearchList` (see [file-search.md](file-search.md)) |
 | `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
-| `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
+| `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` + preview (see [quicklinks.md](quicklinks.md#search-quicklinks)) |
 | `.snippets` | `SnippetsScreen` | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets)) |
-| `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
 | `.customCommandArguments` | `CustomCommandArgumentsScreen` | `CustomCommandArgumentsView` (see [custom-commands.md](custom-commands.md#arguments)) |
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
 
@@ -111,25 +110,36 @@ dropped into a filter matches nothing. `.ask` is its own case rather than a `car
 the text is submitted, not seeded, and the hint reads the case back out (`== .ask`) instead of
 restating the rule.
 
-The two argument screens — `.quicklinkArguments` and `.customCommandArguments`, together
-`PaletteMode.isArgumentForm` — are the modes where the search field is not a search field: it _is_ the
-current argument's input, so its placeholder names that argument and ↵ submits rather than activating
-a row. Neither has rows, which is why `isArgumentForm` is what keeps the ↵ pill drawn. Their state
-lives on `AppCore.quicklinkArguments` and `AppCore.customCommandArguments`, the way `.uninstall`'s
-target lives on `UninstallSession`, and leaving the mode cancels the pending open or run. A bare
-backspace steps back an argument before it falls through to the usual exit-to-launcher; Escape erases
-the half-typed answer first, and a second press hides the palette, ending the pending work with it.
+`.customCommandArguments` — `PaletteMode.isArgumentForm` — is the one mode where the search field is
+not a search field: it _is_ the current argument's input, so its placeholder names that argument and ↵
+submits rather than activating a row. It has no rows, which is why `isArgumentForm` is what keeps the
+↵ pill drawn. Its state lives on `AppCore.customCommandArguments`, the way `.uninstall`'s target lives
+on `UninstallSession`, and leaving the mode cancels the pending run. A bare backspace steps back an
+argument before it falls through to the usual exit-to-launcher; Escape erases the half-typed answer
+first, and a second press hides the palette, ending the pending work with it. **Quicklinks used to be
+the other half of this pair and no longer are** — they collect their values in the header instead, so
+one surface asks for a row's arguments rather than two.
 
-### Inline command arguments
+### Inline row arguments
 
-An extension command can declare arguments, and they are typed **in the header, beside the search
-field** — not on a screen of their own. That costs the header its one simple rule, so it holds two
-invariants:
+A selected row can declare arguments, and they are typed **in the header, beside the search field** —
+not on a screen of their own. Two features answer this way, each owning its own strip: an extension
+command through `ExtensionArgumentsAccessory`, a quicklink through `QuicklinkArgumentsAccessory`. The
+palette knows neither: `PaletteScreen.headerAccessory(at:focus:)` hands back a `PaletteHeaderAccessory`
+— a width, the field names in Tab order, the first field still owed a value, a menu for a field that is
+chosen rather than typed, and an opaque view. That costs the header its one simple rule, so it holds
+these invariants:
 
 - The search field sits at **one structural position, always**. It is never moved inside an `if`:
   flipping the branch tears down its field editor, which drops first responder mid-navigation. Only
-  its *width* changes — it shrinks to the width of the typed text so the argument chips sit right
-  after it, as they do in Raycast.
+  its *width* changes — it is sized to its own text so the chips sit right after it, as they do in
+  Raycast.
+- **`Placement` is what a strip does to the field beside it.** `.afterQuery` (root search) drops the
+  prompt and squeezes the field to the typed text, so the chips follow what was typed and a glyph
+  anchors them to the row. `.besideSearchField` (a screen of its own, where that row is already
+  listed) keeps the prompt and sizes the field to it, so an empty field reads "Search quicklinks…"
+  with the chip after it and no glyph repeating the row below. One measurement serves both: the
+  field's own text, which is the prompt when nothing is typed and "" under `.afterQuery`.
 - Argument focus is its own `@FocusState`, `argumentFocused`, keyed by argument name. Every way out
   — moving the selection, Escape, Tab past the last field — goes through
   `returnFocusToSearchField()`, because the row that owned those fields is about to stop being
@@ -141,9 +151,16 @@ invariants:
   from one local value.
 - Returning focus this way leaves the query selected, because AppKit selects the whole string as the
   field editor comes back — here that is the wanted reset rather than the hazard it is under ↵.
+- A field declaring `options=` is **chosen, not typed**: it hands back a `PopoverMenuContent` and the
+  palette opens it as `OpenMenu.argumentOptions`, the same window every other menu uses. There is no
+  second dropdown control to keep in step, which is the whole reason the accessory vends a menu rather
+  than a view of its own.
 
 The typed values live on `PaletteState.commandArguments`, keyed by
 `PaletteState.argumentKey(entryID, name)`, and are cleared with the rest of the screen.
+`PaletteState.pendingArgumentEntryID` is how a *shortcut* reaches them: a quicklink opened with values
+still missing shows its own screen and names the row, and the header focuses that row's first empty
+field instead of the search field. It is set **after** `showPalette`, since `prepare` clears it.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
 match the visible row order**, including the card at index 0 when present — the calculator's (see

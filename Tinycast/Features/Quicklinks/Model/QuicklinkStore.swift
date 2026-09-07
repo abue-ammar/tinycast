@@ -67,6 +67,9 @@ final class QuicklinkStore {
         quicklinks = loaded.sorted(by: Quicklink.precedes)
     }
 
+    /// A disabled quicklink is offered nowhere, so every surface lists this rather than `quicklinks`.
+    var enabled: [Quicklink] { quicklinks.filter(\.isEnabled) }
+
     func quicklink(id: UUID) -> Quicklink? {
         quicklinks.first { $0.id == id }
     }

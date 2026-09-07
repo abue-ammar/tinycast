@@ -266,10 +266,11 @@ order name a live row across a rename or a reinstall.
 
 **A quicklink earns a fallback row by declaring a placeholder**, nothing else —
 `QuicklinkDestination.containsPlaceholder`. `openQuicklink(id:filling:)` assigns the query to the
-first *real* missing argument and leaves the rest to the argument form, which opens pre-filled
-through `QuicklinkArgumentSession.begin(values:)`. The seed never fills the **selection** prompt:
-that one is not an `{argument}` and is resolved by replacing the context, so seeding it through
-`userArguments` would silently do nothing.
+first declared argument and opens at once when that was the only one owed; anything still missing
+sends the row to Search Quicklinks with its header fields pre-filled (see
+[quicklinks.md](quicklinks.md#arguments)). The seed never fills the **selection** field: that one is
+not an `{argument}` and is resolved by replacing the context, so seeding it through `userArguments`
+would silently do nothing.
 
 **Run Shell Command carries its own switch, not the custom-command library's.** Turning off Custom
 Commands hides a library of saved commands; it says nothing about a shell line someone types

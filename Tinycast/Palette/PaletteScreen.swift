@@ -108,13 +108,38 @@ extension PaletteScreen {
 
 /// Controls beside the search field, in terms the palette can act on without knowing what they are.
 struct PaletteHeaderAccessory {
+    /// Where the strip sits, which is the whole of what it does to the search field beside it.
+    enum Placement {
+        /// Right after the typed text, which the field therefore shrinks to fit — root search.
+        case afterQuery
+        /// Beside a search field that stays a search field, prompt and full width intact.
+        case besideSearchField
+    }
+
     /// How much room the strip needs, so the search field can give it up.
     let width: CGFloat
     /// Focusable fields in visual order; Tab walks these before it leaves the header.
     let fieldNames: [String]
     /// The first field that still has to be filled before ↵ can act, if any.
     let firstIncompleteField: String?
+    /// A field whose value is chosen rather than typed hands back its menu; nil means free text.
+    let optionsMenu: (String) -> PopoverMenuContent?
+    let placement: Placement
     let view: AnyView
+
+    init(
+        width: CGFloat, fieldNames: [String], firstIncompleteField: String?,
+        optionsMenu: @escaping (String) -> PopoverMenuContent? = { _ in nil },
+        placement: Placement = .afterQuery,
+        view: AnyView
+    ) {
+        self.width = width
+        self.fieldNames = fieldNames
+        self.firstIncompleteField = firstIncompleteField
+        self.optionsMenu = optionsMenu
+        self.placement = placement
+        self.view = view
+    }
 
     /// Tab order: the next field, or nil once focus belongs back in the search field.
     func fieldAfter(_ current: String?) -> String? {

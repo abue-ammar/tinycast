@@ -120,6 +120,20 @@ enum SnippetTemplateEngine {
             ))
     }
 
+    /// The `{argument}`s a template declares, in written order — what a form has to ask for.
+    /// One with a `default=` answers itself, so it is not among them, exactly as expansion decides.
+    static func declaredArguments(in text: String) -> [MissingArgument] {
+        var declared: [MissingArgument] = []
+        var seen = Set<String>()
+        for segment in parseSegments(text) {
+            guard case .argument(let token, _, _) = segment, token.defaultValue == nil,
+                seen.insert(token.name).inserted
+            else { continue }
+            declared.append(MissingArgument(name: token.name, options: token.options))
+        }
+        return declared
+    }
+
     /// Whether the template reads the selection. Parsed, so a literal brace run doesn't count.
     static func usesSelection(_ text: String) -> Bool {
         parseSegments(text).contains { segment in

@@ -39,6 +39,11 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
 
     var isPinned: Bool { pinnedAt != nil }
 
+    /// The one glyph rule: the override, else what the detected destination suggests.
+    var symbol: String {
+        iconSymbol ?? QuicklinkDestination.detect(link)?.defaultSymbol ?? Self.sfSymbol
+    }
+
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
     static func id(fromEntryID entryID: String) -> UUID? {

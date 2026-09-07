@@ -42,7 +42,6 @@ final class AppCore {
     let fileSearch = FileSearchSession()
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
-    let quicklinkArguments = QuicklinkArgumentSession()
     let customCommandArguments = CustomCommandArgumentSession()
     let notesStore: NotesStore
     let extensions: ExtensionManager
@@ -70,7 +69,7 @@ final class AppCore {
         settingsCoordinator: settingsCoordinator,
         showMessage: { [unowned self] in self.showMessage($0) }, core: self)
     @ObservationIgnored private(set) lazy var quicklinkCoordinator = QuicklinkCoordinator(
-        store: quicklinks, argumentSession: quicklinkArguments, settings: settings,
+        store: quicklinks, settings: settings,
         appIndex: appIndex, injector: textInjector, hotKeys: hotKeys, favorites: favorites,
         visibility: visibility, ranking: launcherRanking, aliases: aliases,
         windowController: windowController,
@@ -519,7 +518,7 @@ final class AppCore {
             isRunningExtension: extensions.running != nil,
             isUninstalling: uninstall.isTrashing,
             isRecordingHotKey: hotKeys.recordingAction != nil,
-            isPromptingForArguments: quicklinkArguments.isActive || customCommandArguments.isActive,
+            isPromptingForArguments: customCommandArguments.isActive,
             isShowingDialog: isShowingDialog,
             isPaletteVisible: paletteCoordinator.isVisible)
     }

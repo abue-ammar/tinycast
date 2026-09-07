@@ -6,14 +6,13 @@ struct QuicklinkListScreen: PaletteScreen {
     let core: AppCore
     let vm: PaletteState
     let openActions: () -> Void
-
-    /// A disabled quicklink is offered nowhere, so it is absent here as it is from root search.
-    private var library: [Quicklink] { store.quicklinks.filter(\.isEnabled) }
+    /// Opens the palette's own menu for an `options=` field, keyed by argument name.
+    let openArgumentOptions: (String) -> Void
 
     var rows: [Quicklink] {
         let query = vm.query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return library }
-        return library.filter { $0.name.localizedCaseInsensitiveContains(query) }
+        guard !query.isEmpty else { return store.enabled }
+        return store.enabled.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
     var primaryActionTitle: String { "Open Quicklink" }
@@ -25,12 +24,26 @@ struct QuicklinkListScreen: PaletteScreen {
 
     func actions(at selection: Int) -> PopoverMenuContent? {
         guard let quicklink = quicklink(at: selection) else { return nil }
-        return QuicklinkActionsMenu.content(quicklink: quicklink, core: core)
+        return QuicklinkActionsMenu.content(
+            quicklink: quicklink, core: core,
+            values: QuicklinkArgumentsAccessory.values(for: quicklink, core: core, vm: vm))
     }
 
     func activate(at selection: Int) {
         guard let quicklink = quicklink(at: selection) else { return }
-        core.quicklinkCoordinator.openQuicklink(id: quicklink.id)
+        core.quicklinkCoordinator.openQuicklink(
+            id: quicklink.id,
+            values: QuicklinkArgumentsAccessory.values(for: quicklink, core: core, vm: vm))
+    }
+
+    /// The header's argument fields, which is where a templated link collects its values.
+    func headerAccessory(
+        at selection: Int, focus: FocusState<String?>.Binding
+    ) -> PaletteHeaderAccessory? {
+        QuicklinkArgumentsAccessory.make(
+            quicklink: quicklink(at: selection), core: core, vm: vm, focus: focus,
+            placement: .besideSearchField, onOpenOptions: openArgumentOptions,
+            onSubmit: { activate(at: selection) })
     }
 
     /// ⌘↵ bypasses a saved "open with" app; without one there is nothing to bypass.
@@ -38,7 +51,9 @@ struct QuicklinkListScreen: PaletteScreen {
         guard let quicklink = quicklink(at: selection), quicklink.openWithBundleID != nil else {
             return false
         }
-        core.quicklinkCoordinator.openQuicklink(id: quicklink.id, forcingDefaultApp: true)
+        core.quicklinkCoordinator.openQuicklink(
+            id: quicklink.id, forcingDefaultApp: true,
+            values: QuicklinkArgumentsAccessory.values(for: quicklink, core: core, vm: vm))
         return true
     }
 
@@ -64,21 +79,25 @@ struct QuicklinkListScreen: PaletteScreen {
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         let rows = rows
         if rows.isEmpty {
-            EmptyResults(text: library.isEmpty ? "No quicklinks yet" : "No matching quicklinks")
+            EmptyResults(text: store.enabled.isEmpty ? "No quicklinks yet" : "No matching quicklinks")
         } else {
-            QuicklinkList(
-                results: rows,
-                selectedID: rows.indices.contains(selection) ? rows[selection].id : nil,
-                scroll: scroll,
-                onSelect: { link in
-                    if let index = rows.firstIndex(of: link) { vm.selection = index }
-                },
-                onActivate: { activate(at: vm.selection) },
-                onActions: { link in
-                    if let index = rows.firstIndex(of: link) { vm.selection = index }
-                    openActions()
-                }
-            )
+            let selected = quicklink(at: selection)
+            HStack(spacing: 0) {
+                QuicklinkList(
+                    results: rows, selectedID: selected?.id, scroll: scroll,
+                    onSelect: { link in
+                        if let index = rows.firstIndex(of: link) { vm.selection = index }
+                    },
+                    onActivate: { activate(at: vm.selection) },
+                    onActions: { link in
+                        if let index = rows.firstIndex(of: link) { vm.selection = index }
+                        openActions()
+                    }
+                )
+                .frame(width: Theme.Size.clipboardListWidth)
+                Rectangle().fill(Theme.Colors.separator).frame(width: Theme.Size.hairline)
+                QuicklinkPreview(quicklink: selected)
+            }
         }
     }
 }
@@ -86,10 +105,13 @@ struct QuicklinkListScreen: PaletteScreen {
 /// The ⌘K menu for a quicklink row.
 @MainActor
 enum QuicklinkActionsMenu {
-    static func content(quicklink: Quicklink, core: AppCore) -> PopoverMenuContent {
+    /// `values` are the header's argument fields, so a menu row opens with what ↵ would have used.
+    static func content(
+        quicklink: Quicklink, core: AppCore, values: [String: String]
+    ) -> PopoverMenuContent {
         var items: [PopoverMenuItem] = [
-            PopoverMenuItem(title: "Open Quicklink", systemImage: symbol(quicklink), shortcut: "↵") {
-                core.quicklinkCoordinator.openQuicklink(id: quicklink.id)
+            PopoverMenuItem(title: "Open Quicklink", systemImage: quicklink.symbol, shortcut: "↵") {
+                core.quicklinkCoordinator.openQuicklink(id: quicklink.id, values: values)
             }
         ]
         // A flat menu has no picker, so the palette offers only the system-handler bypass.
@@ -99,7 +121,8 @@ enum QuicklinkActionsMenu {
                     title: "Open With Default App", systemImage: "arrow.up.forward.app",
                     shortcut: "⌘↵"
                 ) {
-                    core.quicklinkCoordinator.openQuicklink(id: quicklink.id, forcingDefaultApp: true)
+                    core.quicklinkCoordinator.openQuicklink(
+                        id: quicklink.id, forcingDefaultApp: true, values: values)
                 })
         }
         items.append(
@@ -146,10 +169,5 @@ enum QuicklinkActionsMenu {
                 Task { await core.quicklinkCoordinator.deleteQuicklink(id: quicklink.id) }
             })
         return PopoverMenuContent(header: quicklink.name, items: items)
-    }
-
-    private static func symbol(_ quicklink: Quicklink) -> String {
-        quicklink.iconSymbol ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol
-            ?? Quicklink.sfSymbol
     }
 }
