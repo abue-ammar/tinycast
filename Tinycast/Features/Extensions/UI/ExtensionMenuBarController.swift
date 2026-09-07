@@ -10,12 +10,17 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     private let status: NSStatusItem
     let menu = NSMenu()
     private let assetsPath: String
+    private let loadImage: (RenderValue?, String, CGFloat) async -> NSImage?
     private var snapshot: ExtensionMenuBarSnapshot?
     private var iconTask: Task<Void, Never>?
     private var menuImageTask: Task<Void, Never>?
     private var deferredSnapshot: ExtensionMenuBarSnapshot?
-    private var content: [RenderNode] = []
-    private var images: [(value: RenderValue, image: NSImage?)] = []
+    private var hasPreparedContent = false
+    private var images: [(value: RenderValue, image: NSImage)] = []
+    private var imageBindings: [(item: NSMenuItem, value: RenderValue)] = []
+    private var attemptedIcons: [RenderValue] = []
+    private let placeholder = NSImage(size: NSSize(width: 14, height: 14))
+    private var iconFailed = false
     private var menuSession: String?
 
     private struct Action: Equatable {
@@ -23,9 +28,13 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         let handler: String
     }
 
-    init(entryID: String, assetsPath: String, isVisible: Bool = true) {
+    init(entryID: String, assetsPath: String, isVisible: Bool = true,
+         loadImage: @escaping (RenderValue?, String, CGFloat) async -> NSImage? = {
+             await ExtensionMenuBarImage.loadAdaptive($0, assetsPath: $1, size: $2)
+         }) {
         self.entryID = entryID
         self.assetsPath = assetsPath
+        self.loadImage = loadImage
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         status.autosaveName = entryID
@@ -54,9 +63,12 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         iconTask?.cancel()
         guard let snapshot else { return }
         let assetsPath = self.assetsPath
+        let loadImage = self.loadImage
         iconTask = Task { [weak self] in
-            let image = await ExtensionMenuBarImage.loadAdaptive(snapshot.icon, assetsPath: assetsPath)
+            let image = await loadImage(snapshot.icon, assetsPath, 18)
             guard !Task.isCancelled, let self else { return }
+            self.iconTask = nil
+            self.iconFailed = snapshot.icon != nil && image == nil
             self.status.button?.image = image
                 ?? ((snapshot.title ?? "").isEmpty
                     ? NSImage(systemSymbolName: "puzzlepiece.extension", accessibilityDescription: nil) : nil)
@@ -64,52 +76,56 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     }
 
     func showMenu(_ root: RenderNode, session: String) {
-        if root.bool("isLoading") == true, !content.isEmpty { return }
-        menuSession = session
-        menuImageTask?.cancel()
-        let nodes = root.children
-        var values: [RenderValue] = []
-        collectIcons(nodes, into: &values)
-        if values.allSatisfy({ value in images.contains { $0.value == value } }) {
-            apply(nodes, session: session)
-            return
+        if menuSession != session {
+            clearMenu()
+            menuSession = session
+            menuImageTask?.cancel()
+            menuImageTask = nil
+            attemptedIcons.removeAll()
+            if iconFailed, iconTask == nil { loadIcon() }
         }
-        let cached = images
-        let assetsPath = self.assetsPath
-        menuImageTask = Task { [weak self] in
-            var loaded: [(value: RenderValue, image: NSImage?)] = []
-            for value in values {
-                let image: NSImage?
-                if let existing = cached.first(where: { $0.value == value }) { image = existing.image } else {
-                    image = await ExtensionMenuBarImage.loadAdaptive(value, assetsPath: assetsPath, size: 14)
-                }
-                guard !Task.isCancelled else { return }
-                loaded.append((value, image))
-            }
-            guard let self else { return }
-            self.images = loaded
-            self.apply(nodes, session: self.menuSession == session ? session : nil)
-        }
+        if root.bool("isLoading") != true || !hasPreparedContent { apply(root.children, session: session) }
+        loadMenuImages()
     }
 
-    private func collectIcons(_ nodes: [RenderNode], into values: inout [RenderValue]) {
-        for node in nodes {
-            if let icon = node.props["icon"], !values.contains(icon) { values.append(icon) }
-            collectIcons(node.children, into: &values)
-            if let alternate = node.node("alternate") { collectIcons([alternate], into: &values) }
+    private var nextIcon: RenderValue? {
+        imageBindings.first { binding in
+            !attemptedIcons.contains(binding.value) && !images.contains { $0.value == binding.value }
+        }?.value
+    }
+
+    private func loadMenuImages() {
+        guard menuImageTask == nil, nextIcon != nil else { return }
+        let assetsPath = self.assetsPath
+        let loadImage = self.loadImage
+        menuImageTask = Task { [weak self] in
+            while let value = self?.nextIcon {
+                self?.attemptedIcons.append(value)
+                let image = await loadImage(value, assetsPath, 14)
+                guard !Task.isCancelled, let self else { return }
+                guard let image, self.imageBindings.contains(where: { $0.value == value }) else { continue }
+                self.images.append((value, image))
+                for binding in self.imageBindings where binding.value == value {
+                    if binding.item.image !== image { binding.item.image = image }
+                }
+            }
+            self?.menuImageTask = nil
         }
     }
 
     private func apply(_ nodes: [RenderNode], session: String?) {
         if isOpen, menu.size.width > menu.minimumWidth { menu.minimumWidth = menu.size.width }
+        imageBindings.removeAll(keepingCapacity: true)
         reconcile(nodes, in: menu, session: session)
-        content = nodes
+        images.removeAll { cached in !imageBindings.contains { $0.value == cached.value } }
+        hasPreparedContent = !nodes.isEmpty
     }
 
     func showError(_ message: String) {
         status.button?.toolTip = message
-        guard content.isEmpty else { return }
+        guard !hasPreparedContent else { return }
         menuImageTask?.cancel()
+        menuImageTask = nil
         apply([RenderNode(id: -1, type: "MenuBarExtra.Item", props: [
             "title": .string("Could not refresh"), "tooltip": .string(message)
         ])], session: nil)
@@ -173,9 +189,12 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         if item.action != selector { item.action = selector }
         let action = session.flatMap { session in handler.map { Action(session: session, handler: $0) } }
         if item.representedObject as? Action != action { item.representedObject = action }
-        let image = node.props["icon"].flatMap { icon in images.first { $0.value == icon }?.image }
+        let image = node.props["icon"].map { icon in
+            imageBindings.append((item, icon))
+            return images.first { $0.value == icon }?.image ?? placeholder
+        }
         if item.image !== image { item.image = image }
-        var enabled = handler != nil
+        var enabled = action != nil
         if node.type == "MenuBarExtra.Submenu", !node.children.isEmpty {
             let submenu = item.submenu ?? NSMenu()
             submenu.autoenablesItems = false
@@ -264,6 +283,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         func clearActions(_ menu: NSMenu) {
             for item in menu.items {
                 item.representedObject = nil
+                if item.action != nil { item.isEnabled = false }
                 if let submenu = item.submenu { clearActions(submenu) }
             }
         }

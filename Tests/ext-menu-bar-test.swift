@@ -85,14 +85,15 @@ extension ExtensionTests {
         check("closed menu has inline secondary text", item?.attributedTitle?.string == "Weekly · 17% resets in 5d"
               && item?.subtitle == nil)
         controller.clearMenu()
-        check("unloading clears cached callbacks", item?.representedObject == nil)
+        check("unloading disables cached callbacks", item?.representedObject == nil && item?.isEnabled == false)
         controller.menuWillOpen(controller.menu)
         check("opening keeps prepared rows", controller.menu.items.first === item)
         let loading = RenderNode(id: 3, type: "MenuBarExtra", props: ["isLoading": .bool(true)], children: [])
         controller.showMenu(loading, session: "two")
-        check("loading does not replace settled content", controller.menu.items.first === item)
+        check("loading keeps settled rows disabled", controller.menu.items.first === item && item?.isEnabled == false)
         controller.showMenu(root, session: "two")
-        check("fresh session rebinds existing rows", controller.menu.items.first === item && item?.representedObject != nil)
+        check("fresh session rebinds existing rows", controller.menu.items.first === item
+              && item?.representedObject != nil && item?.isEnabled == true)
         let image = item?.image
         var changes = 0
         let observation = NotificationCenter.default.addObserver(forName: NSMenu.didChangeItemNotification,
@@ -110,6 +111,71 @@ extension ExtensionTests {
               && item?.attributedTitle?.string == "Weekly · 17% resets in 4d")
         controller.menuDidClose(controller.menu)
         controller.clearMenu()
+    }
+
+    @MainActor
+    static func menuBarImageChecks() async {
+        var pending: [CheckedContinuation<NSImage?, Never>] = []
+        let controller = ExtensionMenuBarController(entryID: "tinycast-fixture-slow-image", assetsPath: "/tmp",
+                                                     isVisible: false, loadImage: { _, _, _ in
+            await withCheckedContinuation { pending.append($0) }
+        })
+        defer { controller.remove() }
+        func root(_ icon: String) -> RenderNode {
+            RenderNode(id: 1, type: "MenuBarExtra", children: [
+                RenderNode(id: 2, type: "MenuBarExtra.Submenu", props: ["title": .string("Actions")], children: [
+                    RenderNode(id: 3, type: "MenuBarExtra.Item", props: [
+                        "title": .string("Run"), "icon": .string(icon), "onAction": .handler("run")
+                    ])
+                ])
+            ])
+        }
+        controller.showMenu(root("slow"), session: "one")
+        let item = controller.menu.items.first?.submenu?.items.first
+        let placeholder = item?.image
+        check("slow icons do not block text or actions", item?.title == "Run" && item?.isEnabled == true
+              && item?.representedObject != nil && placeholder?.size.width == 14)
+        await settle(20)
+        controller.showMenu(root("new"), session: "one")
+        let oldImage = NSImage(size: NSSize(width: 14, height: 14))
+        pending.removeFirst().resume(returning: oldImage)
+        await settle(20)
+        check("obsolete icon replies cannot replace current artwork", item?.image === placeholder && pending.count == 1)
+        controller.clearMenu()
+        check("unloading disables submenu actions", item?.isEnabled == false && item?.representedObject == nil)
+        let newImage = NSImage(size: NSSize(width: 14, height: 14))
+        pending.removeFirst().resume(returning: newImage)
+        await settle(20)
+        check("late images update rows without restoring expired callbacks", item?.image === newImage
+              && item?.isEnabled == false && item?.representedObject == nil)
+
+        var attempts: [CGFloat: Int] = [:]
+        let retry = ExtensionMenuBarController(entryID: "tinycast-fixture-retry-image", assetsPath: "/tmp",
+                                                isVisible: false, loadImage: { _, _, size in
+            attempts[size, default: 0] += 1
+            return attempts[size] == 1 ? nil : NSImage(size: NSSize(width: size, height: size))
+        })
+        defer { retry.remove() }
+        let snapshot = ExtensionMenuBarSnapshot(node: RenderNode(id: 0, type: "MenuBarExtra", props: [
+            "icon": .string("retry"), "title": .string("Usage")
+        ], children: root("retry").children))
+        retry.update(snapshot)
+        retry.showMenu(root("retry"), session: "one")
+        await settle(20)
+        for _ in 0..<20 {
+            retry.update(snapshot)
+            retry.showMenu(root("retry"), session: "one")
+        }
+        await settle(20)
+        check("failed icons are attempted once per session", attempts[14] == 1 && attempts[18] == 1)
+        retry.clearMenu()
+        retry.showMenu(root("retry"), session: "two")
+        await settle(20)
+        check("next session retries unchanged menu and status icons", attempts[14] == 2 && attempts[18] == 2)
+        retry.clearMenu()
+        retry.showMenu(root("retry"), session: "three")
+        await settle(20)
+        check("successful icons remain cached across sessions", attempts[14] == 2 && attempts[18] == 2)
     }
 
     @MainActor
@@ -184,6 +250,7 @@ extension ExtensionTests {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)
         await menuBarRenderingChecks()
+        await menuBarImageChecks()
         await lateMenuResponseChecks()
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tinycast-menu-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }

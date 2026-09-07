@@ -182,10 +182,11 @@ menu queues its runtime until the current work finishes. Returning `null` remove
 its refresh schedule.
 
 The status button opens a native popup tracking session; Escape, an outside click, or clicking the
-button again dismisses it. Native rows and small icons stay prepared between runs; their handler IDs are cleared on teardown.
-Opening reuses those rows while a fresh context loads, then rebinds its own callbacks. Only a menu
+button again dismisses it. Native rows and small icons stay prepared between runs; teardown clears
+handler IDs and disables actions until fresh callbacks bind, including submenu actions. Opening reuses
+those rows while a fresh context loads. Only a menu
 without prepared content shows a loading row. Subtitles follow the title on the same line. React
-updates reconcile rows in place, prepare icons before display, and preserve settled content while
+updates reconcile text and callbacks immediately, fill reserved icon slots asynchronously, and preserve settled content while
 loading. Button changes wait until the menu closes so its anchor does not move under the pointer.
 The session stays alive while the menu is open. After a settled render or menu
 closure, a 100 ms coalescing delay lets React commit effects and host calls drain before releasing the
@@ -205,7 +206,8 @@ priority and leave the palette alone; a user-initiated view launch from a menu o
 errors are exposed through the menu and user-initiated failures also use the HUD. `updateCommandMetadata`
 and scheduled `no-view` refreshes remain unsupported.
 
-Menu-bar icons retain small raster variants and let AppKit choose the drawing appearance. Do not
+Menu-bar icons retain successful small raster variants and let AppKit choose the drawing appearance.
+Failed loads retry on the next session, never on each React render. Native rows retain no render tree. Do not
 observe the status button's `effectiveAppearance` to redraw: AppKit temporarily changes it when
 rendering replicas, which would schedule another redraw indefinitely.
 
