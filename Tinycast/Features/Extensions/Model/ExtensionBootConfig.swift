@@ -74,6 +74,8 @@ struct ExtensionLaunchContext: Sendable {
     var launchType: ExtensionLaunchType = .userInitiated
     /// Injected, never read: a running command keeps what it booted with.
     var isDarkAppearance: Bool
+    var launchType: ExtensionLaunchType = .userInitiated
+    var launchContext: [String: RenderValue] = [:]
 
     func jsonString() -> String {
         var environment: [String: Any] = [
@@ -94,6 +96,7 @@ struct ExtensionLaunchContext: Sendable {
 
         var launchProps: [String: Any] = ["launchType": launchType.rawValue, "arguments": arguments]
         if let fallbackText { launchProps["fallbackText"] = fallbackText }
+        if !launchContext.isEmpty { launchProps["launchContext"] = launchContext.mapValues(\.jsonValue) }
 
         return ExtensionRuntime.jsonString(
             from: [
@@ -108,4 +111,9 @@ struct ExtensionLaunchContext: Sendable {
 enum ExtensionRuntimeVersion {
     /// The @raycast/api version the bundled shim tracks. Surfaced as `environment.raycastVersion`.
     static let raycastAPI = "2.0.3"
+}
+
+enum ExtensionLaunchType: String, Sendable {
+    case userInitiated
+    case background
 }

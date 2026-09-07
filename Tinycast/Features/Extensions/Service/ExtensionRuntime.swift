@@ -24,6 +24,8 @@ final class ExtensionRuntime: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.tinycast.extensions.js", qos: .userInitiated)
     private var context: JSContext?
     private var timers: [String: DispatchSourceTimer] = [:]
+    private var hostTasks: [String: Task<Void, Never>] = [:]
+    private var generation = UUID()
     private let nodeShims = ExtensionNodeShims()
 
     /// Set once at startup; read on the JS queue, so it is written before the runtime ever boots.
@@ -120,10 +122,10 @@ final class ExtensionRuntime: @unchecked Sendable {
     }
 
     /// Pre-encoded: `[Any]` isn't Sendable, so only the JSON string crosses onto the queue.
-    func dispatch(session: String, handler: String, payload: String) async {
+    func dispatch(session: String, handler: String, payload: String, completesSession: Bool = false) async {
         await onQueue { context in
             _ = context.objectForKeyedSubscript("__tinycast")?
-                .invokeMethod("dispatch", withArguments: [session, handler, payload])
+                .invokeMethod("dispatch", withArguments: [session, handler, payload, completesSession])
         }
     }
 
@@ -238,23 +240,30 @@ final class ExtensionRuntime: @unchecked Sendable {
         // Decode to `RenderValue` here so only `Sendable` values reach the main actor.
         let arguments = RenderValue.arguments(from: argsJSON)
         let hostAPI = self.hostAPI
-        Task { @MainActor in
+        let generation = self.generation
+        hostTasks[callId] = Task { @MainActor [weak self] in
+            guard !Task.isCancelled else { return }
             do {
                 let json = try await hostAPI.perform(
                     api: api, method: method, arguments: arguments)
-                await self.settle(callId: callId, ok: true, payload: json)
+                await self?.settle(callId: callId, generation: generation, ok: true, payload: json)
             } catch {
-                await self.settle(
-                    callId: callId, ok: false,
+                await self?.settle(
+                    callId: callId, generation: generation, ok: false,
                     payload: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
             }
         }
     }
 
-    private func settle(callId: String, ok: Bool, payload: String) async {
-        await onQueue { context in
-            _ = context.objectForKeyedSubscript("__tinycast")?
-                .invokeMethod("settle", withArguments: [callId, ok, payload])
+    private func settle(callId: String, generation: UUID, ok: Bool, payload: String) async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            queue.async {
+                defer { continuation.resume() }
+                guard generation == self.generation else { return }
+                self.hostTasks[callId] = nil
+                _ = self.context?.objectForKeyedSubscript("__tinycast")?
+                    .invokeMethod("settle", withArguments: [callId, ok, payload])
+            }
         }
     }
 
@@ -306,6 +315,9 @@ final class ExtensionRuntime: @unchecked Sendable {
         queue.async {
             for timer in self.timers.values { timer.cancel() }
             self.timers.removeAll()
+            for task in self.hostTasks.values { task.cancel() }
+            self.hostTasks.removeAll()
+            self.generation = UUID()
             self.context = nil
             self.nodeShims.closeFiles()
         }

@@ -117,8 +117,7 @@ globalThis.__tinycast = {
     return "ok";
   },
 
-  /// Load and start one command. `mode` is "view" or "no-view"; a view command's default export is a
-  /// component, a no-view command's is an async function.
+  // Menu-bar and view commands mount components; no-view commands await their default export.
   start(sessionId, code, filename, dirname, mode, contextJson) {
     const context = JSON.parse(contextJson || "{}");
     configureSystem(context);
@@ -133,7 +132,7 @@ globalThis.__tinycast = {
     try {
       const exports = evaluateCommonJS(code, filename, dirname);
       const entry = exports?.default ?? exports;
-      if (mode === "view") {
+      if (mode !== "no-view") {
         if (typeof entry !== "function") {
           throw new Error("A view command must default-export a React component.");
         }
@@ -154,12 +153,14 @@ globalThis.__tinycast = {
   },
 
   /// Route a UI event back to the callback it came from.
-  dispatch(sessionId, handlerId, argsJson) {
+  dispatch(sessionId, handlerId, argsJson, completesSession = false) {
     const session = sessions.get(sessionId);
     if (!session?.surface) return "0";
     try {
       const args = JSON.parse(argsJson || "[]").map(reviveArg);
-      return session.surface.dispatch(handlerId, args) ? "1" : "0";
+      return session.surface.dispatch(
+        handlerId, args, completesSession ? () => hostCalls.finished(sessionId) : undefined,
+      ) ? "1" : "0";
     } catch (error) {
       session.fail(error);
       return "0";

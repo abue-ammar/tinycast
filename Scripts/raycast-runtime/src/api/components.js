@@ -483,12 +483,13 @@ Action.InstallMCPServer = convenience("Action.InstallMCPServer", (props) => ({
   onAction: () => effects.unsupported("Action.InstallMCPServer"),
 }));
 
-// ─── Menu bar (not rendered — commands of mode "menu-bar" are reported unsupported) ──
+// ─── Menu bar ───────────────────────────────────────────────────────
 
 function MenuBarExtra(props) {
   return h("MenuBarExtra", omit(props, ["children"]), props.children);
 }
-MenuBarExtra.Item = Section("MenuBarExtra.Item");
+MenuBarExtra.Item = (props) =>
+  h("MenuBarExtra.Item", omit(props, ["children", "alternate"]), slot("alternate", props.alternate));
 MenuBarExtra.Submenu = Section("MenuBarExtra.Submenu");
 MenuBarExtra.Section = Section("MenuBarExtra.Section");
 MenuBarExtra.Separator = Section("MenuBarExtra.Separator");

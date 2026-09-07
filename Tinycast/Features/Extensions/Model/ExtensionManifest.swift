@@ -6,8 +6,7 @@ enum ExtensionCommandMode: String, Sendable, Codable {
     case noView = "no-view"
     case menuBar = "menu-bar"
 
-    /// The string the JS runtime expects (it only distinguishes mounted from headless).
-    var runtimeName: String { self == .view ? "view" : "no-view" }
+    var runtimeName: String { rawValue }
 
     var isSupported: Bool { self != .menuBar }
 
@@ -168,6 +167,7 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
     let keywords: [String]
     let icon: String?
     let disabledByDefault: Bool
+    let interval: TimeInterval?
     let preferences: [ExtensionPreferenceSchema]
     let arguments: [ExtensionCommandArgument]
 
@@ -181,6 +181,15 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
             complete[argument.name] = ""
         }
         return complete
+    }
+
+    static func refreshInterval(_ value: String?) -> TimeInterval? {
+        guard let value, let unit = value.last,
+            let amount = Double(value.dropLast()), amount.isFinite, amount > 0,
+            let multiplier: Double = ["s": 1, "m": 60, "h": 3600, "d": 86400][String(unit)]
+        else { return nil }
+        let seconds = amount * multiplier
+        return seconds.isFinite ? max(seconds, 10) : nil
     }
 
     init?(json: Any) {
@@ -197,6 +206,7 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
         keywords = dict["keywords"] as? [String] ?? []
         icon = dict["icon"] as? String
         disabledByDefault = dict["disabledByDefault"] as? Bool ?? false
+        interval = Self.refreshInterval(dict["interval"] as? String)
         preferences = (dict["preferences"] as? [Any] ?? []).compactMap(ExtensionPreferenceSchema.init(json:))
         arguments = (dict["arguments"] as? [Any] ?? []).compactMap(ExtensionCommandArgument.init(json:))
     }

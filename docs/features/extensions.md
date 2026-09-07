@@ -651,6 +651,9 @@ both generated wrappers and extensions that call a helper directly with `execFil
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`. A `no-view` command declaring `interval`
 (`"1m"`, `"12h"`, `"1d"`) also refreshes in the background — see below.
+The runtime also mounts `menu-bar` components,
+including alternate items and asynchronous action completion; native menu-bar hosting is not wired yet.
+Launch contexts can carry `background` and JSON launch context, and manifests retain refresh intervals.
 
 Measured against the 37 extensions installed in a real Raycast on the development machine: **32
 extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and

@@ -1138,6 +1138,48 @@ export async function runFixtures() {
     check("renders the resolved items", dump.includes("alpha") && dump.includes("beta"));
   });
 
+  await run("Menu bar hooks, alternates and async actions", `
+    import { MenuBarExtra } from "@raycast/api";
+    import { useEffect, useState } from "react";
+    function Alternate() {
+      const [title] = useState("Alternate");
+      return <MenuBarExtra.Item title={title} onAction={() => { globalThis.clicked = "alternate"; }} />;
+    }
+    export default function Command() {
+      const [loading, setLoading] = useState(true);
+      const [title, setTitle] = useState("Before");
+      useEffect(() => { setLoading(false); }, []);
+      return <MenuBarExtra title={title} isLoading={loading} tooltip="Usage">
+        <MenuBarExtra.Section title="Providers">
+          <MenuBarExtra.Item title="Refresh" alternate={<Alternate />} onAction={async (event) => {
+            await new Promise(resolve => setTimeout(resolve, 40));
+            globalThis.clicked = event.type;
+            setTitle("After");
+          }} />
+        </MenuBarExtra.Section>
+      </MenuBarExtra>;
+    }
+  `, "menu-bar", async (harness) => {
+    const tree = harness.state.trees.at(-1);
+    const root = findNode(tree, "MenuBarExtra");
+    const item = findNode(tree, "MenuBarExtra.Item");
+    check("menu-bar mounts hooks", root?.props.isLoading === false && !harness.state.finished);
+    check("alternate mounts through a slot", item?.props.alternate?.props.title === "Alternate");
+    check("alternate retains callback", typeof item?.props.alternate?.props.onAction?.$fn === "string");
+    harness.call(`__tinycast.dispatch("s1", ${JSON.stringify(item.props.onAction.$fn)}, '[{"type":"right-click"}]', true)`);
+    check("async action keeps session alive", !harness.state.finished);
+    await wait(100);
+    check("action receives click type", harness.call("globalThis.clicked") === "right-click");
+    check("async action completes", harness.state.finished);
+    check("action updates menu title", findNode(harness.state.trees.at(-1), "MenuBarExtra")?.props.title === "After");
+  });
+
+  await run("Menu bar can remove its item", `
+    export default function Command() { return null; }
+  `, "menu-bar", async (harness) => {
+    check("null commits an empty screen", harness.state.trees.length > 0 && !findNode(harness.state.trees.at(-1), "MenuBarExtra"));
+  });
+
   console.log("\n▶ Errors surface instead of crashing");
   const harness = createHarness();
   harness.boot(bootConfig());
