@@ -18,7 +18,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     private var hasPreparedContent = false
     private var images: [(value: RenderValue, image: NSImage)] = []
     private var imageBindings: [(item: NSMenuItem, value: RenderValue)] = []
-    private var attemptedIcons: [RenderValue] = []
+    private var failedIcons: [RenderValue] = []
     private let placeholder = NSImage(size: NSSize(width: 14, height: 14))
     private var iconFailed = false
     private var menuSession: String?
@@ -81,7 +81,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             menuSession = session
             menuImageTask?.cancel()
             menuImageTask = nil
-            attemptedIcons.removeAll()
+            failedIcons.removeAll()
             if iconFailed, iconTask == nil { loadIcon() }
         }
         if root.bool("isLoading") != true || !hasPreparedContent { apply(root.children, session: session) }
@@ -90,7 +90,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
 
     private var nextIcon: RenderValue? {
         imageBindings.first { binding in
-            !attemptedIcons.contains(binding.value) && !images.contains { $0.value == binding.value }
+            !failedIcons.contains(binding.value) && !images.contains { $0.value == binding.value }
         }?.value
     }
 
@@ -100,10 +100,10 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         let loadImage = self.loadImage
         menuImageTask = Task { [weak self] in
             while let value = self?.nextIcon {
-                self?.attemptedIcons.append(value)
                 let image = await loadImage(value, assetsPath, 14)
                 guard !Task.isCancelled, let self else { return }
-                guard let image, self.imageBindings.contains(where: { $0.value == value }) else { continue }
+                guard let image else { self.failedIcons.append(value); continue }
+                guard self.imageBindings.contains(where: { $0.value == value }) else { continue }
                 self.images.append((value, image))
                 for binding in self.imageBindings where binding.value == value {
                     if binding.item.image !== image { binding.item.image = image }

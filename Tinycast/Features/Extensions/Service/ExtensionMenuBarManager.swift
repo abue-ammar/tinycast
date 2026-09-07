@@ -22,6 +22,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     struct Execution {
         let runtime: ExtensionRuntime
         var stop: () -> Void
+        var enableInteraction: () -> Void = {}
     }
 
     var isRunning: Bool { active != nil }
@@ -43,12 +44,19 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         var runtime: ExtensionRuntime { execution.runtime }
         var isLoading = true
         var pendingActions = 0
+        var isInteractive: Bool
 
         init(request: Request, owner: InstalledExtension, mode: ExtensionCommandMode, execution: Execution) {
             self.request = request
             self.owner = owner
             self.mode = mode
             self.execution = execution
+            isInteractive = request.type == .userInitiated
+        }
+
+        func enableInteraction() {
+            isInteractive = true
+            execution.enableInteraction()
         }
     }
 
@@ -150,7 +158,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             let message = missing.isEmpty ? ExtensionLaunchError.notBuilt(command.title).localizedDescription
                 : ExtensionLaunchError.missingPreferences(missing).localizedDescription
             controllers[entryID]?.showError(message)
-            if request.type == .userInitiated {
+            if request.type == .userInitiated || controllers[entryID]?.isOpen == true {
                 onError(message, owner, !missing.isEmpty)
             }
             runNext()
@@ -161,6 +169,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         runtime.setDelegate(self)
         let session = Session(request: request, owner: owner, mode: command.mode, execution: execution)
         active = session
+        if controllers[entryID]?.isOpen == true { session.enableInteraction() }
         let support = supportDirectory.appendingPathComponent(ExtensionCatalog.safeName(owner.manifest.name))
         let context = ExtensionLaunchContext(
             extensionName: owner.manifest.name, extensionTitle: owner.title, commandName: command.name,
@@ -195,6 +204,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             guard let self else { return }
             if self.active?.request.reference == reference {
                 self.idleTask?.cancel()
+                self.active?.enableInteraction()
                 return
             }
             let queued = self.requests.firstIndex { $0.reference == reference && !$0.scheduled }
@@ -213,6 +223,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         controller.onAction = { [weak self] session, handler, type in
             guard let self, let active = self.active, active.id == session else { return }
             self.idleTask?.cancel()
+            active.enableInteraction()
             active.pendingActions += 1
             self.armDeadline(active)
             Task {
@@ -321,7 +332,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     func runtime(_ runtime: ExtensionRuntime, session: String, didFail message: String) {
         guard let active, active.id == session else { return }
         controllers[active.request.reference.entryID]?.showError(message)
-        if active.request.type == .userInitiated { onError(message, active.owner, false) }
+        if active.isInteractive { onError(message, active.owner, false) }
         finish()
         runNext()
     }

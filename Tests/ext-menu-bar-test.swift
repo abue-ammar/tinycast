@@ -176,6 +176,13 @@ extension ExtensionTests {
         retry.showMenu(root("retry"), session: "three")
         await settle(20)
         check("successful icons remain cached across sessions", attempts[14] == 2 && attempts[18] == 2)
+        retry.showMenu(root("other"), session: "three")
+        await settle(20)
+        retry.showMenu(root("retry"), session: "three")
+        let returningPlaceholder = retry.menu.items.first?.submenu?.items.first?.image
+        await settle(20)
+        check("returning to an evicted icon reloads it in the same session", attempts[14] == 4
+              && retry.menu.items.first?.submenu?.items.first?.image !== returningPlaceholder)
     }
 
     @MainActor
@@ -225,6 +232,7 @@ extension ExtensionTests {
         let name: String
         let storage: ExtensionStorage
         var didCancel = false
+        var isInteractive = false
 
         init(name: String, storage: ExtensionStorage) {
             self.name = name
@@ -232,6 +240,7 @@ extension ExtensionTests {
         }
 
         func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String {
+            if api == "feedback", method == "confirmAlert" { return isInteractive ? "true" : "false" }
             if api == "storage", method == "set", let key = arguments.first?.stringValue,
                 let value = arguments.dropFirst().first.flatMap(ExtensionStorage.StoredValue.init(renderValue:)) {
                 storage.setLocalStorage(extension: name, key: key, value: value)
@@ -257,7 +266,7 @@ extension ExtensionTests {
         let storage = ExtensionStorage(directory: directory.appendingPathComponent("storage"))
         let source = #"""
             const React = require("react");
-            const { MenuBarExtra, LocalStorage, environment } = require("@raycast/api");
+            const { MenuBarExtra, LocalStorage, environment, confirmAlert } = require("@raycast/api");
             module.exports.default = function(props) {
               const [loading, setLoading] = React.useState(true);
               const [title, setTitle] = React.useState(environment.launchType);
@@ -281,6 +290,9 @@ extension ExtensionTests {
                       setTitle("Updated");
                     } }),
                   React.createElement(MenuBarExtra.Submenu, { title: "Empty" }),
+                  React.createElement(MenuBarExtra.Item, { title: "Confirm", onAction: async () => {
+                    await LocalStorage.setItem("confirmed", await confirmAlert({ title: "Continue?" }));
+                  } }),
                   React.createElement(MenuBarExtra.Submenu, { title: "Nested" },
                     React.createElement(MenuBarExtra.Item, { title: "Child", onAction() {} }))));
             };
@@ -324,10 +336,11 @@ extension ExtensionTests {
             makeExecution: { owner, type in
                 boots.append((owner.manifest.name, type))
                 let host = MenuHost(name: owner.manifest.name, storage: storage)
+                host.isInteractive = type == .userInitiated
                 hosts.append(host)
                 let runtime = ExtensionRuntime(hostAPI: host, runtimeURL: runtimeURL())
                 lastRuntime = runtime
-                return .init(runtime: runtime, stop: {})
+                return .init(runtime: runtime, stop: {}, enableInteraction: { host.isInteractive = true })
             }, onError: { message, _, _ in failures.append(message) })
         defer { manager.stop() }
         manager.synchronize(installed)
@@ -407,6 +420,21 @@ extension ExtensionTests {
         check("scheduled refresh preserves an explicit background launch's payload",
               storage.localStorageValue(extension: "second", key: "launch") == .string("background:kept:payload")
               && !manager.isRunning)
+
+        manager.run(first, command: first.manifest.commands[0], type: .background)
+        let backgroundBoots = boots.count
+        check("background hosts begin without interactive prompts", hosts.last?.isInteractive == false)
+        controller.menuWillOpen(controller.menu)
+        await settle(200)
+        check("opening promotes the existing background host", boots.count == backgroundBoots
+              && hosts.last?.isInteractive == true)
+        if let index = controller.menu.items.firstIndex(where: { $0.title == "Confirm" }) {
+            controller.menuDidClose(controller.menu)
+            controller.menu.performActionForItem(at: index)
+            await settle(250)
+            check("actions can confirm after opening a background refresh",
+                  storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true) && !manager.isRunning)
+        } else { check("confirmation action exists", false) }
 
         var record = manager.store.records[firstRef.entryID]!
         record.nextRefresh = .distantPast

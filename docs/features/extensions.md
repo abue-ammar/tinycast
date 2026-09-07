@@ -180,6 +180,8 @@ receive `left-click` or `right-click`; keyboard activation is a left click. Asyn
 awaited before teardown, including overlapping actions after reopening the same menu. Opening another
 menu queues its runtime until the current work finishes. Returning `null` removes the item while keeping
 its refresh schedule.
+Opening during a background refresh reuses that session and enables interactive confirmations, HUDs
+and OAuth for its actions. Its original JavaScript launch type still describes how the session started.
 
 The status button opens a native popup tracking session; Escape, an outside click, or clicking the
 button again dismisses it. Native rows and small icons stay prepared between runs; teardown clears

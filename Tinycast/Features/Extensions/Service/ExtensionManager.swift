@@ -104,7 +104,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                                                           priority: type == .background ? .utility : .userInitiated), stop: {
                         host.stop()
                         bridge.context = nil
-                    })
+                    }, enableInteraction: { host.enableInteraction() })
                 },
                 onError: { [weak coordinator] message, owner, needsPreferences in
                     coordinator?.showHUD(message)

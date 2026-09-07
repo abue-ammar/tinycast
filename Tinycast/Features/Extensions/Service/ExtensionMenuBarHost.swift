@@ -4,7 +4,7 @@ import AppKit
 final class ExtensionMenuBarHost: ExtensionHostContext {
     let owner: InstalledExtension
     let storage: ExtensionStorage
-    private let launchType: ExtensionLaunchType
+    private var isInteractive: Bool
     private weak var manager: ExtensionManager?
     private weak var coordinator: ExtensionCoordinator?
     private let oauth = ExtensionOAuthSession()
@@ -12,7 +12,7 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     init(owner: InstalledExtension, launchType: ExtensionLaunchType, storage: ExtensionStorage,
          manager: ExtensionManager, coordinator: ExtensionCoordinator) {
         self.owner = owner
-        self.launchType = launchType
+        isInteractive = launchType == .userInitiated
         self.storage = storage
         self.manager = manager
         self.coordinator = coordinator
@@ -23,6 +23,7 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     var applicationURLs: [URL] { coordinator?.applicationURLs ?? [] }
 
     func stop() { oauth.cancel() }
+    func enableInteraction() { isInteractive = true }
     func closeMainWindow(clearRootSearch: Bool) {}
     func reopenPalette() { coordinator?.reopenPalette(hasRunningCommand: false) }
     func popToRoot() {}
@@ -33,11 +34,11 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     func hide(toast id: Int) {}
 
     func showHUD(_ text: String) {
-        if launchType == .userInitiated { coordinator?.showHUD(text) }
+        if isInteractive { coordinator?.showHUD(text) }
     }
 
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool {
-        guard launchType == .userInitiated else { return false }
+        guard isInteractive else { return false }
         return await coordinator?.confirmExtensionAlert(alert) ?? false
     }
 
@@ -56,7 +57,7 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     func launch(_ link: ExtensionDeepLink) throws { try manager?.launch(link) }
 
     func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult {
-        guard launchType == .userInitiated else { throw ExtensionHostError.unsupported("Background authorization") }
+        guard isInteractive else { throw ExtensionHostError.unsupported("Background authorization") }
         return try await oauth.authorize(options: options)
     }
 
