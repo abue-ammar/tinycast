@@ -31,7 +31,9 @@ enum CalcDateTime {
         }
 
         let query = lowered.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        if hasTimestamp, let result = parseTimestamp(query, echo: echo, now: now, calendar: calendar) {
+        if hasTimestamp || query.hasSuffix(" to date") && CalcTimestamp.looksLikeISO(query),
+            let result = parseTimestamp(query, echo: echo, now: now, calendar: calendar)
+        {
             return result
         }
         if hasUntil, let result = parseUntil(query, echo: echo, now: now, calendar: calendar) {
@@ -428,7 +430,9 @@ enum CalcDateTime {
                 payload: .value(display: CalcFormatter.grouped(text), copyText: text))
         }
         let source = query.hasSuffix(" to date") ? String(query.dropLast(8)) : query
-        guard CalcTimestamp.epochDate(source) != nil else { return nil }
+        guard CalcTimestamp.isoDate(source) != nil || CalcTimestamp.epochDate(source) != nil else {
+            return nil
+        }
         return bareMoment(source, echo: echo, now: now, calendar: calendar)
     }
 

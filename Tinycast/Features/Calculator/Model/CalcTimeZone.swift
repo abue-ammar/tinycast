@@ -204,6 +204,11 @@ enum CalcTimeZone {
         components.minute = clock.minute
         components.timeZone = zone
         guard let date = source.date(from: components) else { return nil }
+        let resolved = source.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        guard resolved.year == components.year, resolved.month == components.month,
+            resolved.day == components.day, resolved.hour == components.hour,
+            resolved.minute == components.minute
+        else { return nil }
         guard let ahead else { return SourceMoment(date: date, zone: zone) }
         guard let shifted = source.date(byAdding: ahead.component, value: ahead.count, to: date)
         else { return nil }

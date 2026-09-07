@@ -922,6 +922,7 @@ struct CalcTests {
         expectDisplayAt("unix 1234567890.125 to unix ms", "1,234,567,890,125")
         expectDisplayAt("1970-01-01T00:00:00Z + 1h to unix", "3,600")
         expectDisplayAt("unix 0 to date", "1 January, 1970 at 12:00 AM")
+        expectDisplayAt("1970-01-01T00:00:00Z to date", "1 January, 1970 at 12:00 AM")
         expectDisplayAt("1000 unix ms", "1 January, 1970 at 12:00:01 AM")
         expectDisplayAt("unix -1", "31 December, 1969 at 11:59:59 PM")
         expectDisplayAt("2026-07-24T07:30:00+02:00 + 30min", "24 July at 6:00 AM")
@@ -1143,6 +1144,8 @@ struct CalcTests {
         expectDisplayAt("2026-10-24 at 7:30 + 1 day", "25 October at 7:30 AM", calendar: vienna)
         expectDisplayAt("2026-10-25 at 7:30 - 2026-10-24 at 7:30 to hours", "25 hr", calendar: vienna)
         expectDisplayAt("1:00 - 3:00", "-2 hr", calendar: vienna)
+        let springNow = clock.calendar.date(from: DateComponents(year: 2026, month: 3, day: 29))!
+        expectNilAt("2:30am vienna in london", now: springNow, calendar: vienna)
         // A lone date word is still an app search
         expectNilAt("tomorrow")
         expectNilAt("today")
@@ -1257,8 +1260,8 @@ struct CalcTests {
         check(query + " [target badge]", expected: target, got: result.targetBadge ?? "nil")
     }
 
-    static func expectNilAt(_ query: String) {
-        if let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar) {
+    static func expectNilAt(_ query: String, now: Date = clock.now, calendar: Calendar? = nil) {
+        if let result = CalcEngine.evaluate(query, now: now, calendar: calendar ?? clock.calendar) {
             fail(query, expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1
