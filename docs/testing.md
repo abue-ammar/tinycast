@@ -180,22 +180,6 @@ The script then runs `Scripts/check-settings-search.js`, one check SwiftLint can
 marked by a `SettingsRowTitle`. Either gap compiles and reads fine, and fails only at runtime as a
 search result that navigates and then sits there.
 
-## Performance measurement
-
-The calculator comparison exports two pinned git revisions, compiles all three engines from their
-shipped sources, and runs them sequentially with fixed clock, calendar, locale, region and rates:
-
-```sh
-node Scripts/benchmark-calculator.mjs --main main --advanced feat/calculator-advanced --build
-```
-
-`build/calculator-comparison/report.md` contains medians and size totals; `results.json` retains every
-sample and complete output. `--build` includes arm64 Release bundles and calculator object sizes from
-link maps; omit it for the engine-only comparison. `--runs` and `--iterations` control repetitions.
-Groups where main returns different or unsupported answers are explicitly marked. First-evaluation
-timings use fresh processes and exclude process launch. See [calculator-performance.md](calculator-performance.md)
-for the recorded comparison and exact baseline revisions.
-
 `Platform/Signposts.swift` emits eight intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
 `AppIndex.scan`, `AppIndex.rank`, `PaletteWindowController.show`, `UninstallScanner.discover` and
 `UninstallScanner.measure`, `FileSearchService.search`, and `Notes.search`. Open the Time Profiler or
