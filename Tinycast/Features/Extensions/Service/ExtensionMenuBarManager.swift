@@ -232,6 +232,9 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                                               completesSession: true)
             }
         }
+        controller.onActionUnavailable = { [weak self] in
+            self?.onError("This menu item changed. Open the menu and try again.", owner, false)
+        }
         controllers[reference.entryID] = controller
         return controller
     }

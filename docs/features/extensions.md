@@ -185,8 +185,11 @@ and OAuth for its actions. Its original JavaScript launch type still describes h
 
 The status button opens a native popup tracking session; Escape, an outside click, or clicking the
 button again dismisses it. Native rows and small icons stay prepared between runs; teardown clears
-handler IDs and disables actions until fresh callbacks bind, including submenu actions. Opening reuses
-those rows while a fresh context loads. Only a menu
+handler IDs while preserving action appearance. A click before the new runtime is ready waits for a
+fresh callback with the same section/submenu path, label and shortcut, including an alternate's primary
+item. Changed or ambiguous items ask the user to reopen the menu instead of dispatching an old handler.
+Opening reuses those rows
+while a fresh context loads. Only a menu
 without prepared content shows a loading row. Subtitles follow the title on the same line. React
 updates reconcile text and callbacks immediately, fill reserved icon slots asynchronously, and preserve settled content while
 loading. Button changes wait until the menu closes so its anchor does not move under the pointer.

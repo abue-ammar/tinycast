@@ -7,6 +7,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     var onOpen: (() -> Void)?
     var onClose: (() -> Void)?
     var onAction: ((String, String, String) -> Void)?
+    var onActionUnavailable: (() -> Void)?
     private let status: NSStatusItem
     let menu = NSMenu()
     private let assetsPath: String
@@ -22,10 +23,24 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     private let placeholder = NSImage(size: NSSize(width: 14, height: 14))
     private var iconFailed = false
     private var menuSession: String?
+    private var pendingActions: [(identity: ItemIdentity, type: String)] = []
+    private var identities: [ObjectIdentifier: ItemIdentity] = [:]
 
     private struct Action: Equatable {
         let session: String
         let handler: String
+    }
+
+    private struct ItemIdentity: Equatable {
+        let path: [PathComponent]
+        let key: String
+        let modifiers: NSEvent.ModifierFlags
+        let isAlternate: Bool
+    }
+
+    private enum PathComponent: Equatable {
+        case item(String), section(String), submenu(String)
+        case primary(String, String)
     }
 
     init(entryID: String, assetsPath: String, isVisible: Bool = true,
@@ -77,7 +92,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
 
     func showMenu(_ root: RenderNode, session: String) {
         if menuSession != session {
-            clearMenu()
+            clearActions(in: menu)
             menuSession = session
             menuImageTask?.cancel()
             menuImageTask = nil
@@ -85,6 +100,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             if iconFailed, iconTask == nil { loadIcon() }
         }
         if root.bool("isLoading") != true || !hasPreparedContent { apply(root.children, session: session) }
+        if root.bool("isLoading") != true { dispatchPendingActions() }
         loadMenuImages()
     }
 
@@ -116,12 +132,14 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     private func apply(_ nodes: [RenderNode], session: String?) {
         if isOpen, menu.size.width > menu.minimumWidth { menu.minimumWidth = menu.size.width }
         imageBindings.removeAll(keepingCapacity: true)
-        reconcile(nodes, in: menu, session: session)
+        identities.removeAll(keepingCapacity: true)
+        reconcile(nodes, in: menu, session: session, path: [])
         images.removeAll { cached in !imageBindings.contains { $0.value == cached.value } }
         hasPreparedContent = !nodes.isEmpty
     }
 
     func showError(_ message: String) {
+        pendingActions.removeAll()
         status.button?.toolTip = message
         guard !hasPreparedContent else { return }
         menuImageTask?.cancel()
@@ -131,26 +149,29 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         ])], session: nil)
     }
 
-    private func reconcile(_ nodes: [RenderNode], in menu: NSMenu, session: String?) {
-        var entries: [(node: RenderNode, role: String, parent: RenderNode?)] = []
-        func flatten(_ nodes: [RenderNode]) {
+    private func reconcile(_ nodes: [RenderNode], in menu: NSMenu, session: String?, path: [PathComponent]) {
+        var entries: [(node: RenderNode, role: String, parent: RenderNode?, path: [PathComponent])] = []
+        func flatten(_ nodes: [RenderNode], path: [PathComponent]) {
             for node in nodes {
                 switch node.type {
                 case "MenuBarExtra.Section":
                     if !entries.isEmpty, entries.last?.role != "separator" {
-                        entries.append((node, "separator", nil))
+                        entries.append((node, "separator", nil, path))
                     }
-                    if let title = node.string("title"), !title.isEmpty { entries.append((node, "header", nil)) }
-                    flatten(node.children)
-                case "MenuBarExtra.Separator": entries.append((node, "separator", nil))
+                    if let title = node.string("title"), !title.isEmpty { entries.append((node, "header", nil, path)) }
+                    flatten(node.children, path: path + [.section(node.string("title") ?? "")])
+                case "MenuBarExtra.Separator": entries.append((node, "separator", nil, path))
                 case "MenuBarExtra.Item", "MenuBarExtra.Submenu":
-                    entries.append((node, "item", nil))
-                    if let alternate = node.node("alternate") { entries.append((alternate, "item", node)) }
+                    entries.append((node, "item", nil, path))
+                    if let alternate = node.node("alternate") {
+                        let primary = PathComponent.primary(node.string("title") ?? "", node.string("subtitle") ?? "")
+                        entries.append((alternate, "item", node, path + [primary]))
+                    }
                 default: break
                 }
             }
         }
-        flatten(nodes)
+        flatten(nodes, path: path)
         for (index, entry) in entries.enumerated() {
             let identifier = NSUserInterfaceItemIdentifier("\(entry.node.id)-\(entry.role)")
             let item = menu.items.first { $0.identifier == identifier } ?? {
@@ -161,7 +182,9 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
                 }
             }()
             if item.identifier != identifier { item.identifier = identifier }
-            if entry.role != "separator" { update(item, from: entry.node, session: session, parent: entry.parent) }
+            if entry.role != "separator" {
+                update(item, from: entry.node, session: session, parent: entry.parent, path: entry.path)
+            }
             if menu.index(of: item) != index {
                 if item.menu === menu { menu.removeItem(item) }
                 menu.insertItem(item, at: index)
@@ -170,7 +193,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         while menu.numberOfItems > entries.count { menu.removeItem(at: menu.numberOfItems - 1) }
     }
 
-    private func update(_ item: NSMenuItem, from node: RenderNode, session: String?, parent: RenderNode?) {
+    private func update(_ item: NSMenuItem, from node: RenderNode, session: String?, parent: RenderNode?, path: [PathComponent]) {
         let title = node.string("title") ?? ""
         if item.isSectionHeader {
             if item.title != title { item.title = title }
@@ -194,11 +217,11 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             return images.first { $0.value == icon }?.image ?? placeholder
         }
         if item.image !== image { item.image = image }
-        var enabled = action != nil
+        var enabled = handler != nil
         if node.type == "MenuBarExtra.Submenu", !node.children.isEmpty {
             let submenu = item.submenu ?? NSMenu()
             submenu.autoenablesItems = false
-            reconcile(node.children, in: submenu, session: session)
+            reconcile(node.children, in: submenu, session: session, path: path + [.submenu(item.title)])
             if item.submenu !== submenu { item.submenu = submenu }
             enabled = !submenu.items.isEmpty
         } else if item.submenu != nil { item.submenu = nil }
@@ -219,6 +242,10 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         if parent != nil { modifiers.insert(.option) } else if node.node("alternate") != nil { modifiers.remove(.option) }
         if item.keyEquivalentModifierMask != modifiers { item.keyEquivalentModifierMask = modifiers }
         if item.isAlternate != (parent != nil) { item.isAlternate = parent != nil }
+        if handler != nil {
+            identities[ObjectIdentifier(item)] = ItemIdentity(path: path + [.item(item.title)], key: key,
+                                                            modifiers: modifiers, isAlternate: parent != nil)
+        }
     }
 
     private func keyEquivalent(_ key: String) -> String {
@@ -244,10 +271,41 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func performAction(_ item: NSMenuItem) {
-        guard let action = item.representedObject as? Action else { return }
         let event = NSApp.currentEvent
         let type = event?.type == .rightMouseUp || event?.type == .rightMouseDown ? "right-click" : "left-click"
-        onAction?(action.session, action.handler, type)
+        if let action = item.representedObject as? Action {
+            onAction?(action.session, action.handler, type)
+        } else {
+            guard let identity = identities[ObjectIdentifier(item)],
+                actionItems(in: menu).filter({ identities[ObjectIdentifier($0)] == identity }).count == 1 else {
+                onActionUnavailable?()
+                return
+            }
+            pendingActions.append((identity, type))
+            onOpen?()
+        }
+    }
+
+    private func actionItems(in menu: NSMenu) -> [NSMenuItem] {
+        menu.items.flatMap { item in
+            if let submenu = item.submenu { return actionItems(in: submenu) }
+            return item.action == #selector(performAction(_:)) ? [item] : []
+        }
+    }
+
+    private func dispatchPendingActions() {
+        guard !pendingActions.isEmpty else { return }
+        let pending = pendingActions
+        pendingActions.removeAll()
+        let items = actionItems(in: menu)
+        var unavailable = false
+        for request in pending {
+            let matches = items.filter { identities[ObjectIdentifier($0)] == request.identity }
+            if matches.count == 1, let action = matches.first?.representedObject as? Action {
+                onAction?(action.session, action.handler, request.type)
+            } else { unavailable = true }
+        }
+        if unavailable { onActionUnavailable?() }
     }
 
     @objc private func toggleMenu() {
@@ -280,20 +338,23 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
 
     func clearMenu() {
         menuSession = nil
-        func clearActions(_ menu: NSMenu) {
-            for item in menu.items {
-                item.representedObject = nil
-                if item.action != nil { item.isEnabled = false }
-                if let submenu = item.submenu { clearActions(submenu) }
-            }
+        pendingActions.removeAll()
+        clearActions(in: menu)
+    }
+
+    private func clearActions(in menu: NSMenu) {
+        for item in menu.items {
+            item.representedObject = nil
+            if let submenu = item.submenu { clearActions(in: submenu) }
         }
-        clearActions(menu)
     }
 
     func remove() {
         onOpen = nil
         onClose = nil
         onAction = nil
+        onActionUnavailable = nil
+        pendingActions.removeAll()
         menu.cancelTracking()
         menu.delegate = nil
         iconTask?.cancel()

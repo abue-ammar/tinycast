@@ -37,6 +37,9 @@ extension ExtensionTests {
         let controller = manager.controller(for: reference, owner: owner)
         for cycle in 1...3 {
             controller.menuWillOpen(controller.menu)
+            let cachedActions = controller.menu.items.filter { $0.action != nil }
+            check("cycle \(cycle) cached actions are bright before boot", !cachedActions.isEmpty
+                  && cachedActions.allSatisfy { $0.isEnabled && $0.representedObject == nil })
             await settle(1500)
             let items = controller.menu.items
             check("cycle \(cycle) renders provider sections", items.contains { $0.isSectionHeader })
@@ -53,12 +56,13 @@ extension ExtensionTests {
             }
         }
         controller.menuWillOpen(controller.menu)
-        await settle(1500)
         if let index = controller.menu.items.firstIndex(where: { $0.title == "Open Provider Usage" }) {
             controller.menuDidClose(controller.menu)
             controller.menu.performActionForItem(at: index)
-            await settle(300)
-            check("real command dispatches launchCommand", hosts.last?.calls.contains("system.launchCommand") == true)
+            for _ in 0..<200 where manager.isRunning { await settle(50) }
+            check("real command queues an immediate launchCommand click",
+                  hosts.last?.calls.contains("system.launchCommand") == true
+                  && !manager.isRunning && lastRuntime == nil)
         }
         print("\(passes) passed, \(failures) failed; \(boots) fresh contexts")
     }
@@ -85,12 +89,13 @@ extension ExtensionTests {
         check("closed menu has inline secondary text", item?.attributedTitle?.string == "Weekly · 17% resets in 5d"
               && item?.subtitle == nil)
         controller.clearMenu()
-        check("unloading disables cached callbacks", item?.representedObject == nil && item?.isEnabled == false)
+        check("unloading preserves action appearance without callbacks",
+              item?.representedObject == nil && item?.isEnabled == true)
         controller.menuWillOpen(controller.menu)
         check("opening keeps prepared rows", controller.menu.items.first === item)
         let loading = RenderNode(id: 3, type: "MenuBarExtra", props: ["isLoading": .bool(true)], children: [])
         controller.showMenu(loading, session: "two")
-        check("loading keeps settled rows disabled", controller.menu.items.first === item && item?.isEnabled == false)
+        check("loading keeps settled actions bright", controller.menu.items.first === item && item?.isEnabled == true)
         controller.showMenu(root, session: "two")
         check("fresh session rebinds existing rows", controller.menu.items.first === item
               && item?.representedObject != nil && item?.isEnabled == true)
@@ -111,6 +116,104 @@ extension ExtensionTests {
               && item?.attributedTitle?.string == "Weekly · 17% resets in 4d")
         controller.menuDidClose(controller.menu)
         controller.clearMenu()
+    }
+
+    @MainActor
+    static func menuBarPendingActionChecks() {
+        let controller = ExtensionMenuBarController(entryID: "tinycast-fixture-pending-action", assetsPath: "/tmp",
+                                                     isVisible: false)
+        defer { controller.remove() }
+        var dispatched: [String] = []
+        var opens = 0
+        var unavailable = 0
+        controller.onAction = { dispatched.append("\($0):\($1):\($2)") }
+        controller.onOpen = { opens += 1 }
+        controller.onActionUnavailable = { unavailable += 1 }
+        func root(_ id: Int, title: String = "Run", duplicate: Bool = false) -> RenderNode {
+            let rows = (0..<(duplicate ? 2 : 1)).map { index in
+                RenderNode(id: id + index, type: "MenuBarExtra.Item", props: [
+                    "title": .string(title), "onAction": .handler("handler-\(id + index)")
+                ])
+            }
+            return RenderNode(id: id + 2, type: "MenuBarExtra", children: [
+                RenderNode(id: id + 3, type: "MenuBarExtra.Section", props: ["title": .string("Section")], children: [
+                    RenderNode(id: id + 4, type: "MenuBarExtra.Submenu", props: ["title": .string("Nested")], children: rows)
+                ])
+            ])
+        }
+        func click() {
+            let submenu = controller.menu.items.first { $0.submenu != nil }?.submenu
+            check("cached submenu has a usable action", submenu?.items.first?.isEnabled == true)
+            submenu?.performActionForItem(at: 0)
+        }
+        controller.showMenu(root(10), session: "old")
+        controller.clearMenu()
+        click()
+        check("cached clicks request a runtime without using stale handlers", dispatched.isEmpty && opens == 1)
+        controller.showMenu(RenderNode(id: 1, type: "MenuBarExtra", props: ["isLoading": .bool(true)]), session: "new")
+        check("cached click survives loading renders", dispatched.isEmpty)
+        controller.showMenu(root(100), session: "new")
+        check("pending click binds to the fresh handler despite new node IDs", dispatched == ["new:handler-100:left-click"])
+        controller.showMenu(root(100), session: "new")
+        check("pending click dispatches only once", dispatched.count == 1)
+
+        controller.clearMenu()
+        click()
+        controller.showMenu(root(100, title: "Different"), session: "changed")
+        check("a reused node ID cannot redirect a cached click", dispatched.count == 1 && unavailable == 1)
+        controller.showMenu(root(200), session: "before-duplicates")
+        controller.clearMenu()
+        click()
+        controller.showMenu(root(300, duplicate: true), session: "duplicates")
+        check("ambiguous fresh actions are rejected", dispatched.count == 1 && unavailable == 2)
+        controller.clearMenu()
+        let before = opens
+        click()
+        check("ambiguous cached actions are rejected before queuing", opens == before && unavailable == 3)
+
+        controller.showMenu(root(400), session: "before-error")
+        controller.clearMenu()
+        click()
+        controller.showError("Fixture failure")
+        controller.showMenu(root(500), session: "after-error")
+        check("failed refreshes discard pending clicks", dispatched.count == 1)
+        controller.clearMenu()
+        click()
+        controller.clearMenu()
+        controller.showMenu(root(600), session: "after-cancel")
+        check("shutdown discards pending clicks", dispatched.count == 1)
+
+        func section(_ name: String) -> RenderNode {
+            RenderNode(id: 1, type: "MenuBarExtra", children: [
+                RenderNode(id: 2, type: "MenuBarExtra.Section", props: ["title": .string(name)], children: [
+                    RenderNode(id: 3, type: "MenuBarExtra.Separator"),
+                    RenderNode(id: 4, type: "MenuBarExtra.Item", props: [
+                        "title": .string("Open"), "onAction": .handler(name)
+                    ])
+                ])
+            ])
+        }
+        controller.showMenu(section("Account A"), session: "account-a")
+        controller.clearMenu()
+        controller.menu.performActionForItem(at: 2)
+        controller.showMenu(section("Account B"), session: "account-b")
+        check("separators cannot hide a changed section from queued clicks", dispatched.count == 1 && unavailable == 4)
+
+        func alternate(_ primary: String) -> RenderNode {
+            RenderNode(id: 1, type: "MenuBarExtra", children: [
+                RenderNode(id: 2, type: "MenuBarExtra.Item", props: [
+                    "title": .string(primary), "onAction": .handler(primary),
+                    "alternate": .node(RenderNode(id: 3, type: "MenuBarExtra.Item", props: [
+                        "title": .string("Reveal in Finder"), "onAction": .handler("reveal-" + primary)
+                    ]))
+                ])
+            ])
+        }
+        controller.showMenu(alternate("Open File A"), session: "file-a")
+        controller.clearMenu()
+        controller.menu.performActionForItem(at: 1)
+        controller.showMenu(alternate("Open File B"), session: "file-b")
+        check("alternate clicks retain their primary item's identity", dispatched.count == 1 && unavailable == 5)
     }
 
     @MainActor
@@ -142,12 +245,12 @@ extension ExtensionTests {
         await settle(20)
         check("obsolete icon replies cannot replace current artwork", item?.image === placeholder && pending.count == 1)
         controller.clearMenu()
-        check("unloading disables submenu actions", item?.isEnabled == false && item?.representedObject == nil)
+        check("unloading preserves submenu action appearance", item?.isEnabled == true && item?.representedObject == nil)
         let newImage = NSImage(size: NSSize(width: 14, height: 14))
         pending.removeFirst().resume(returning: newImage)
         await settle(20)
         check("late images update rows without restoring expired callbacks", item?.image === newImage
-              && item?.isEnabled == false && item?.representedObject == nil)
+              && item?.isEnabled == true && item?.representedObject == nil)
 
         var attempts: [CGFloat: Int] = [:]
         let retry = ExtensionMenuBarController(entryID: "tinycast-fixture-retry-image", assetsPath: "/tmp",
@@ -259,6 +362,7 @@ extension ExtensionTests {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)
         await menuBarRenderingChecks()
+        menuBarPendingActionChecks()
         await menuBarImageChecks()
         await lateMenuResponseChecks()
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tinycast-menu-\(UUID())")
@@ -435,6 +539,20 @@ extension ExtensionTests {
             check("actions can confirm after opening a background refresh",
                   storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true) && !manager.isRunning)
         } else { check("confirmation action exists", false) }
+
+        storage.setLocalStorage(extension: "first", key: "confirmed", value: .bool(false))
+        let beforeEarlyClick = boots.count
+        controller.menuWillOpen(controller.menu)
+        if let index = controller.menu.items.firstIndex(where: { $0.title == "Confirm" }) {
+            let item = controller.menu.items[index]
+            check("opening a cached menu keeps actions bright before boot", item.isEnabled && item.representedObject == nil)
+            controller.menuDidClose(controller.menu)
+            controller.menu.performActionForItem(at: index)
+            await settle(400)
+            check("clicking immediately after opening runs the fresh action and unloads",
+                  storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true)
+                  && boots.count == beforeEarlyClick + 1 && !manager.isRunning && lastRuntime == nil)
+        } else { check("early confirmation action exists", false) }
 
         var record = manager.store.records[firstRef.entryID]!
         record.nextRefresh = .distantPast
