@@ -19,10 +19,12 @@ enum RaycastImportReader {
         let (clipboard, missing) = mapClipboard(json)
         let snippets = RaycastSnippetImport.parse(
             (json["snippets"] as? [String: Any])?["snippets"])
+        let quicklinks = RaycastQuicklinkImport.parse(json["quicklinks"])
         return RaycastImport.Result(
             backup: backup,
             clipboard: clipboard,
             snippets: snippets,
+            quicklinks: quicklinks,
             missingImages: missing)
     }
 

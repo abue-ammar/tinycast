@@ -1411,6 +1411,20 @@ struct SnippetsTests {
         check(
             "usesSelection parses rather than searches, so a malformed token does not count",
             !SnippetTemplateEngine.usesSelection("{selection offset=1}"))
+
+        // {query} is Raycast's spelling of {argument}.
+        check(
+            "query resolves as an argument named Argument",
+            expand("{query}", arguments: ["Argument": "hi"]).text == "hi")
+        check(
+            "the query alias is case-insensitive like every other token name",
+            expand("{Query}", arguments: ["Argument": "hi"]).text == "hi")
+        check(
+            "the query alias keeps named parameters",
+            expand("{query name=\"Keyword\"}", arguments: ["Keyword": "x"]).text == "x")
+        check(
+            "a parameter named query is still an argument, not the alias",
+            expand("{argument name=\"query\"}", arguments: ["query": "kept"]).text == "kept")
     }
 
     private static func testKeywordPolicy() {

@@ -20,6 +20,7 @@ struct RaycastImportSelection: View {
         .init(option: .menuBarVisibility, symbol: "menubar.rectangle", label: "Menu-bar icon"),
         .init(option: .clipboardHistory, symbol: "doc.on.clipboard", label: "Clipboard history"),
         .init(option: .snippets, symbol: "curlybraces", label: "Snippets"),
+        .init(option: .quicklinks, symbol: Quicklink.sfSymbol, label: "Quicklinks"),
         .init(option: .popToRoot, symbol: "arrow.uturn.backward", label: "Pop to root"),
         .init(option: .compactMode, symbol: "macwindow", label: "Compact mode")
     ]

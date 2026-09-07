@@ -15,6 +15,9 @@ enum BackupActions {
         var snippetsImported: Int
         /// Set when the snippet files couldn't be written; the rest of the import still applied.
         var snippetsError: String?
+        var quicklinksImported: Int
+        /// Set when the library wouldn't open; the rest of the import still applied.
+        var quicklinksError: String?
         var missingImages: Int
     }
 
@@ -155,6 +158,18 @@ enum BackupActions {
                 snippetsError = error.localizedDescription
             }
         }
+        var quicklinksImported = 0
+        var quicklinksError: String?
+        if !result.quicklinks.isEmpty {
+            if core.quicklinks.isAvailable {
+                quicklinksImported =
+                    core.quicklinkCoordinator.addImportedQuicklinks(result.quicklinks).count
+                // Opening a link grants no permission class, so landing a library turns the switch on.
+                if quicklinksImported > 0 { core.settings.quicklinksEnabled = true }
+            } else {
+                quicklinksError = QuicklinkError.storageUnavailable.errorDescription
+            }
+        }
         let summary = result.backup.apply(to: core)
         let imported =
             result.clipboard.isEmpty
@@ -164,6 +179,8 @@ enum BackupActions {
             clipboardImported: imported,
             snippetsImported: snippetsImported,
             snippetsError: snippetsError,
+            quicklinksImported: quicklinksImported,
+            quicklinksError: quicklinksError,
             missingImages: result.missingImages)
     }
 
@@ -199,10 +216,6 @@ enum BackupActions {
 
     // MARK: - Helpers
 
-    static func summaryText(_ s: SettingsBackup.ApplySummary) -> String {
-        appliedText(s) ?? nothingImportedText
-    }
-
     /// One sentence per category that actually moved, so an import is never silent.
     static func summaryText(_ summary: BackupApplier.Summary) -> String {
         var parts: [String] = []
@@ -236,6 +249,34 @@ enum BackupActions {
     }
 
     static let nothingImportedText = "Nothing to import from this file."
+
+    /// One sentence per Raycast category that actually moved, shared by the pane and onboarding.
+    static func raycastText(_ outcome: RaycastOutcome) -> String {
+        var parts: [String] = []
+        if let applied = appliedText(outcome.summary) { parts.append(applied) }
+        if outcome.clipboardImported > 0 {
+            parts.append("Imported \(outcome.clipboardImported) clipboard entries.")
+        }
+        if outcome.snippetsImported > 0 {
+            let noun = outcome.snippetsImported == 1 ? "snippet" : "snippets"
+            parts.append("Imported \(outcome.snippetsImported) \(noun).")
+        }
+        if let snippetsError = outcome.snippetsError {
+            parts.append("Couldn’t import snippets: \(snippetsError)")
+        }
+        if outcome.quicklinksImported > 0 {
+            let noun = outcome.quicklinksImported == 1 ? "quicklink" : "quicklinks"
+            parts.append("Imported \(outcome.quicklinksImported) \(noun).")
+        }
+        if let quicklinksError = outcome.quicklinksError {
+            parts.append("Couldn’t import quicklinks: \(quicklinksError)")
+        }
+        var message = parts.isEmpty ? nothingImportedText : parts.joined(separator: " ")
+        if outcome.missingImages > 0 {
+            message += " \(outcome.missingImages) images were unavailable and skipped."
+        }
+        return message
+    }
 
     /// nil when no settings applied, so a caller can compose one combined sentence.
     static func appliedText(_ s: SettingsBackup.ApplySummary) -> String? {

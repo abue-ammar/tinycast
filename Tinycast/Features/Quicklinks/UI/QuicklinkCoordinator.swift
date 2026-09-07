@@ -304,12 +304,18 @@ final class QuicklinkCoordinator {
         }
     }
 
+    /// Merges into the library the way Settings → Import does, so Raycast and JSON share one rule.
+    @discardableResult
+    func addImportedQuicklinks(_ incoming: [Quicklink]) -> [Quicklink] {
+        let merge = QuicklinkArchive.merge(incoming, into: store.quicklinks)
+        return store.append(merge.additions)
+    }
+
     func importQuicklinks() async {
         guard let url = BackupActions.chooseJSONFile() else { return }
         do {
             let incoming = try QuicklinkArchive.decode(Data(contentsOf: url))
-            let merge = QuicklinkArchive.merge(incoming, into: store.quicklinks)
-            let added = store.append(merge.additions)
+            let added = addImportedQuicklinks(incoming)
             // Everything offered was already here, so say so rather than "0 imported".
             guard !added.isEmpty else {
                 await core.showNotice(
@@ -318,7 +324,7 @@ final class QuicklinkCoordinator {
                     symbol: Quicklink.sfSymbol, tone: .neutral)
                 return
             }
-            let skipped = merge.skipped + (merge.additions.count - added.count)
+            let skipped = incoming.count - added.count
             let summary =
                 skipped == 0
                 ? "Imported \(added.count) quicklinks."

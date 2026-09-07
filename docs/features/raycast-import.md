@@ -30,7 +30,8 @@ key  = scrypt(passphrase, salt, N=16384, r=8, p=1, dkLen=32)
 
 The header carries `schemaVersion`, `iv` and `salt`, hex-encoded, 16 bytes each. `schemaVersion` is
 Raycast's own container number and is **3**; anything else is rejected. The payload is category-keyed
-JSON: `settings`, `clipboardHistory` and a top-level `snippets`, whose entries name themselves `title`.
+JSON: `settings`, `clipboardHistory`, a top-level `snippets` whose entries name themselves `title`,
+and a `quicklinks` object holding `quicklinks` plus `openWithPlatforms`.
 
 Raycast encrypts even when the user never chose a password — it generates one and stores it in the
 login keychain (service `Raycast`, account `export_passphrase`), viewable at Raycast → Settings →
@@ -44,7 +45,12 @@ An applications command hides the launched app's path after `::=::` in its id, r
 are `LayoutIndependent` key codes with named modifiers, and always import as a `.combo`: Raycast has no
 double-tap binding. A clipboard record's representations are nested and its timestamps carry fractional
 seconds; only an `image/*` representation whose file still exists becomes an image clip, and the rest
-are counted as missing rather than dropped silently.
+are counted as missing rather than dropped silently. Quicklinks land through `QuicklinkArchive.merge`,
+so they add to the library and never replace it. `{Query}` is rewritten to `{argument}`; an `openWith`
+app path (or a platform id in `openWithPlatforms`) resolves to a bundle ID the same way application
+hotkeys do. Raycast's ULID is discarded — each imported row gets a fresh UUID, as a JSON quicklink
+import already does. Importing at least one quicklink turns `quicklinksEnabled` on: opening a link
+grants no permission class.
 
 ## Layout
 

@@ -25,6 +25,7 @@ struct QuicklinkTests {
         archiveRoundTrip()
         archiveMerge()
         archiveAcceptsAHandWrittenFile()
+        raycastImport()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -386,6 +387,81 @@ struct QuicklinkTests {
         expect(
             throwsArchiveError(Data(#"{"version":1,"quicklinks":[]}"#.utf8)) == .empty,
             "an archive with no quicklinks is reported as empty rather than imported")
+    }
+
+    static func raycastImport() {
+        let bundleIDs = ["/Applications/Chrome.app": "com.google.Chrome"]
+        let stamped = Date(timeIntervalSince1970: 1_780_497_120)
+        let imported = RaycastQuicklinkImport.parse(
+            [
+                "schemaVersion": 1,
+                "openWithPlatforms": [
+                    ["id": "plat-1", "macos": "/Applications/Chrome.app"]
+                ],
+                "quicklinks": [
+                    [
+                        "name": " Search ",
+                        "link": " https://google.com/search?q={Query} ",
+                        "createdAt": "2026-06-03T14:32:00Z"
+                    ],
+                    [
+                        "name": "Dash",
+                        "link": "https://kapeli.com",
+                        "openWith": "/Applications/Chrome.app"
+                    ],
+                    [
+                        "name": "Via platform",
+                        "link": "https://via.example",
+                        "openWith": "plat-1"
+                    ],
+                    ["name": "Anna", "link": "https://annas-archive.org/search?q={query}"],
+                    [
+                        "name": "Named",
+                        "link": #"https://x.com?q={argument name="Keyword"}"#
+                    ],
+                    ["name": "  ", "link": "https://skip.example"],
+                    ["name": "No link"],
+                    ["name": "Missing Text"]
+                ]
+            ],
+            bundleIDForAppPath: { bundleIDs[$0] })
+
+        expect(
+            RaycastQuicklinkImport.parse(["quicklinks": []]).isEmpty,
+            "Raycast import ignores an empty container")
+        expect(
+            RaycastQuicklinkImport.parse(["foo": 1]).isEmpty,
+            "Raycast import ignores an unrecognized container")
+        expect(
+            imported.map(\.name) == ["Search", "Dash", "Via platform", "Anna", "Named"],
+            "Raycast import keeps valid entries and source order")
+        guard imported.count == 5 else { return }
+        expect(
+            imported[0].link == "https://google.com/search?q={argument}",
+            "Raycast import rewrites {Query} to {argument}")
+        expect(
+            imported[3].link == "https://annas-archive.org/search?q={argument}",
+            "Raycast import rewrites {query} the same way")
+        expect(
+            imported[4].link == #"https://x.com?q={argument name="Keyword"}"#,
+            "Raycast import leaves a real {argument} token alone")
+        expect(
+            imported[1].openWithBundleID == "com.google.Chrome"
+                && imported[2].openWithBundleID == "com.google.Chrome",
+            "Raycast import resolves an app path and a platform id through the same lookup")
+        expect(
+            imported[0].createdAt == stamped,
+            "Raycast import keeps the export's createdAt")
+
+        let bare = RaycastQuicklinkImport.parse([
+            ["name": "Bare", "link": "https://bare.example"]
+        ])
+        expect(bare.map(\.name) == ["Bare"], "a bare array still parses, matching snippets")
+        expect(
+            RaycastQuicklinkImport.rewrittenLink(
+                #"https://x.com?q={argument name="query"}"#)
+                == #"https://x.com?q={argument name="query"}"#,
+            "a parameter named query is not rewritten as the token")
     }
 
     // MARK: - Helpers

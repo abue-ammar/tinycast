@@ -399,14 +399,7 @@ final class OnboardingModel {
             do {
                 let outcome = try await BackupActions.importRaycast(
                     core: core, file: file, passphrase: passphrase, options: selection)
-                var message = BackupActions.summaryText(outcome.summary)
-                if outcome.clipboardImported > 0 {
-                    message += " Imported \(outcome.clipboardImported) clipboard entries."
-                }
-                if outcome.missingImages > 0 {
-                    message += " \(outcome.missingImages) images were unavailable and skipped."
-                }
-                status = .success(message)
+                status = .success(BackupActions.raycastText(outcome))
                 passphrase = ""
             } catch {
                 status = .failure(error.localizedDescription)

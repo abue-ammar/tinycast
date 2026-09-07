@@ -401,7 +401,8 @@ enum SnippetTemplateEngine {
         case "date", "time", "datetime", "day":
             guard let dateTime = parseDateTime(token) else { return nil }
             return .dateTime(dateTime, modifiers: modifiers)
-        case "argument":
+        // `query` is Raycast's spelling of the same token.
+        case "argument", "query":
             guard let argument = parseArgument(token) else { return nil }
             return .argument(argument, source: source, modifiers: modifiers)
         case "snippet":
