@@ -292,10 +292,11 @@ screens hold (see [palette.md](palette.md)).
   root, which would tear the command down before its `await confirmAlert(…)` ever returns.
 - **Command arguments** — a command declaring `arguments` shows inline fields sized to their
   placeholders, right after the typed text, exactly as Raycast does. Tab walks search field → each
-  argument → back; ↵ from any of them runs the command with the values as `props.arguments`; a blank
-  required argument blocks the launch and focuses the offending field. The fields get their own
-  `FocusState` rather than joining the search field's, so the palette's one always-attached `TextField`
-  (see [palette.md](palette.md)) keeps owning focus.
+  argument → back; typing an exact command title followed by Space hands focus directly to the first
+  field. ↵ from any field runs the command with the values as `props.arguments`; a blank required
+  argument blocks the launch and focuses the offending field. The fields get their own `FocusState`
+  rather than joining the search field's, so the palette's one always-attached `TextField` (see
+  [palette.md](palette.md)) keeps owning focus.
 
   Every declared argument is sent, **empty string when unfilled** (`ExtensionCommand.completeArguments`).
   That is Raycast's contract and extensions depend on it: `Number(args.seconds)` is `0` for `""` but

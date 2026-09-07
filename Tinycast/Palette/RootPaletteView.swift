@@ -277,9 +277,15 @@ struct RootPaletteView: View {
             searchFocused = !screen.hidesSearchField
             openMenu = nil
         }
-        .onChange(of: vm.query) {
+        .onChange(of: vm.query) { previousQuery, newQuery in
+            let argumentTarget = (screen as? LauncherScreen)?.argumentFocusTarget(
+                at: selection(in: screen), previousQuery: previousQuery, newQuery: newQuery)
             vm.selection = 0
             scroll = ScrollIntent(kind: .top)
+            if let argumentTarget {
+                argumentFocused = argumentTarget
+                searchFocused = false
+            }
             if vm.mode == .fileSearch { fileSearch.search(vm.query) }
             // A command that took over the search text filters its own list.
             if vm.mode == .extensionCommand, let handler = extensionScreen.searchTextHandler {

@@ -167,6 +167,16 @@ final class ExtensionCoordinator {
         return command.arguments
     }
 
+    func argumentFocusTarget(
+        for entry: AppEntry?, previousQuery: String, newQuery: String
+    ) -> String? {
+        guard let entry, entry.kind == .extensionCommand,
+            let (_, command) = extensions.resolve(entry)
+        else { return nil }
+        return command.firstArgumentNameAfterSpace(
+            previousQuery: previousQuery, newQuery: newQuery)
+    }
+
     /// Escape past an empty search field: pop the extension's own stack, then leave the command.
     func exitExtensionScreen() {
         Task {

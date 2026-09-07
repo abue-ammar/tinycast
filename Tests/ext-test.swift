@@ -250,6 +250,26 @@ struct ExtensionTests {
         check(
             "provided arguments survive completion",
             manifest.commands[3].completeArguments(["q": "hi"]) == ["q": "hi"])
+        check(
+            "Space after an exact command title focuses its first argument",
+            manifest.commands[3].firstArgumentNameAfterSpace(
+                previousQuery: "Args", newQuery: "Args ") == "q")
+        check(
+            "the exact command title comparison ignores case",
+            manifest.commands[3].firstArgumentNameAfterSpace(
+                previousQuery: "args", newQuery: "args ") == "q")
+        check(
+            "a partial command title keeps filtering",
+            manifest.commands[3].firstArgumentNameAfterSpace(
+                previousQuery: "Arg", newQuery: "Arg ") == nil)
+        check(
+            "ordinary edits do not steal argument focus",
+            manifest.commands[3].firstArgumentNameAfterSpace(
+                previousQuery: "Args", newQuery: "Args!") == nil)
+        check(
+            "a command without arguments keeps search focus",
+            manifest.commands[0].firstArgumentNameAfterSpace(
+                previousQuery: "Search", newQuery: "Search ") == nil)
 
         let prefs = Dictionary(uniqueKeysWithValues: manifest.preferences.map { ($0.name, $0) })
         check("password kind", prefs["token"]?.kind == .password)

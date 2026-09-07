@@ -156,6 +156,13 @@ struct LauncherScreen: PaletteScreen {
         return app
     }
 
+    func argumentFocusTarget(
+        at selection: Int, previousQuery: String, newQuery: String
+    ) -> String? {
+        core.extensionCoordinator.argumentFocusTarget(
+            for: entry(at: selection), previousQuery: previousQuery, newQuery: newQuery)
+    }
+
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
         case .calc, .meeting, .color: return true

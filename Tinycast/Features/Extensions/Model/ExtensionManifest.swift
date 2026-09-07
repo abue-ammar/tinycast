@@ -162,6 +162,16 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
         return complete
     }
 
+    /// Raycast hands an exact command-name query to its first argument when Space is appended.
+    func firstArgumentNameAfterSpace(previousQuery: String, newQuery: String) -> String? {
+        guard let first = arguments.first, newQuery.last == " ", newQuery.dropLast() == previousQuery
+        else { return nil }
+        let typedName = previousQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard typedName.compare(title, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        else { return nil }
+        return first.name
+    }
+
     init?(json: Any) {
         guard let dict = json as? [String: Any], let name = dict["name"] as? String,
             let title = dict["title"] as? String
