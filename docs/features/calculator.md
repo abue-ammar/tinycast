@@ -61,6 +61,11 @@ there is no second arithmetic parser or fallback evaluation of a completed scala
 constant catalog. Spoken roots use the typed parser too: `square root of 25m2` is `5 m`,
 and `cube root of -8m3` is `-2 m`.
 Dimensionless results can feed base conversion too: `2m / 2m to hex` is `0x1`.
+`CalcNumberBase` owns radix names and prefixes for both tokens and results. A conversion target is
+checked before evaluating its source, so an ordinary unit conversion never attempts radix arithmetic.
+Overflowing literals and intermediate arithmetic are rejected before comparisons can hide the overflow.
+When a trailing operator keeps a conversion visible, its input is reconstructed at full Double precision;
+display rounding never feeds back into evaluation.
 
 `UnitDef` is an immutable, Sendable reference shared by its aliases and parsed values. The catalog
 stores 148 base definitions as compact text records rather than repeated construction code, then adds

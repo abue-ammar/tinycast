@@ -61,11 +61,11 @@ enum CalcEngine {
 
         // A lone literal reads as an app search, so no card — except a radix one ("0xff").
         if tokens.count == 1 {
-            if case .intLiteral(let value, let radix) = tokens[0], radix != 10 {
+            if case .intLiteral(let value, let base) = tokens[0], base != .decimal {
                 let display = CalcFormatter.grouped(String(value))
                 return CalcResult(
                     expression: query,
-                    sourceBadge: "Hexadecimal", targetBadge: "Decimal",
+                    sourceBadge: base.name, targetBadge: "Decimal",
                     payload: .value(display: display, copyText: String(value)))
             }
             if case .compactNumber(let value) = tokens[0] {
@@ -206,15 +206,15 @@ enum CalcEngine {
         tokens.map { token in
             switch token {
             case .number(let value), .compactNumber(let value):
-                return CalcFormatter.copyText(value)
-            case .intLiteral(let value, let radix):
+                if let integer = Int64(exactly: value) { return String(integer) }
+                return String(value)
+            case .intLiteral(let value, let base):
                 // Keep the radix prefix so `0xff -` still reports a hex source, not a decimal one.
-                let prefix = [16: "0x", 2: "0b", 8: "0o"][radix] ?? ""
-                return prefix + String(value, radix: radix)
+                return base.prefix + String(value, radix: base.rawValue)
             case .ident(let name):
                 return name
             case .op(let op):
-                return String(op.rawValue)
+                return op.text
             case .arrow:
                 return "->"
             case .comma:
@@ -236,7 +236,7 @@ enum CalcEngine {
     /// `255 to hex`, `2*128 to hex`: an expression on the left, like `CalcUnits.parseConversion`.
     private static func baseConversion(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard tokens.count >= 3, CalcUnits.isConnector(tokens[tokens.count - 2]),
-            case .ident(let target) = tokens[tokens.count - 1]
+            case .ident(let name) = tokens[tokens.count - 1], let target = CalcNumberBase(name: name)
         else { return nil }
 
         let valueTokens = Array(tokens[0..<(tokens.count - 2)])
@@ -244,9 +244,9 @@ enum CalcEngine {
         let source: UInt64
         let sourceBadge: String
         let sourceText: String
-        if valueTokens.count == 1, case .intLiteral(let value, let radix) = valueTokens[0] {
+        if valueTokens.count == 1, case .intLiteral(let value, let base) = valueTokens[0] {
             source = value
-            sourceBadge = baseName(forRadix: radix)
+            sourceBadge = base.name
             sourceText = literalText
         } else if valueTokens.count == 1, let value = decimalLiteral(valueTokens[0]),
             value >= 0, value.rounded() == value, value <= 9_007_199_254_740_992
@@ -264,28 +264,12 @@ enum CalcEngine {
             return nil
         }
 
-        let output: String
-        let targetBadge: String
-        switch target {
-        case "hex", "hexadecimal":
-            output = "0x" + String(source, radix: 16, uppercase: true)
-            targetBadge = "Hexadecimal"
-        case "binary", "bin":
-            output = "0b" + String(source, radix: 2)
-            targetBadge = "Binary"
-        case "octal", "oct":
-            output = "0o" + String(source, radix: 8)
-            targetBadge = "Octal"
-        case "decimal", "dec":
-            output = CalcFormatter.grouped(String(source))
-            targetBadge = "Decimal"
-        default:
-            return nil
-        }
+        let output = target == .decimal ? CalcFormatter.grouped(String(source))
+            : target.prefix + String(source, radix: target.rawValue, uppercase: true)
         return CalcResult(
             expression: sourceText,
             sourceBadge: sourceBadge,
-            targetBadge: targetBadge,
+            targetBadge: target.name,
             payload: .value(
                 display: output, copyText: output.replacingOccurrences(of: ",", with: "")))
     }
@@ -295,15 +279,6 @@ enum CalcEngine {
         switch token {
         case .number(let value), .compactNumber(let value): return value
         default: return nil
-        }
-    }
-
-    private static func baseName(forRadix radix: Int) -> String {
-        switch radix {
-        case 16: return "Hexadecimal"
-        case 2: return "Binary"
-        case 8: return "Octal"
-        default: return "Decimal"
         }
     }
 

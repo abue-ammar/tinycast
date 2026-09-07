@@ -38,7 +38,7 @@ struct CalcExpressionParser {
     }
 
     private mutating func parseExpression(minBindingPower: Int) -> CalcValue? {
-        guard var left = parseOperand() else { return nil }
+        guard var left = parseOperand(), left.effective.isFinite else { return nil }
         if let target = peekAdditiveConversion() {
             position += 2
             operationCount += 1
@@ -51,7 +51,7 @@ struct CalcExpressionParser {
             guard
                 let right = parseExpression(minBindingPower: binary.rightBindingPower),
                 let combined = apply(
-                    binary.op, left, right, implicit: !binary.consumesToken)
+                    binary.op, left, right, implicit: !binary.consumesToken), combined.effective.isFinite
             else { return nil }
             left = combined
         }
@@ -116,7 +116,7 @@ struct CalcExpressionParser {
         guard !left.isBoolean, !right.isBoolean else { return nil }
         switch op {
         case .equal, .notEqual, .less, .greater, .lessEqual, .greaterEqual:
-            guard let amount = comparable(right, to: left) else { return nil }
+            guard let amount = comparable(right, to: left), amount.isFinite else { return nil }
             let result: Bool
             switch op {
             case .equal: result = left.effective == amount

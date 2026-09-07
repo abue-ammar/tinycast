@@ -119,6 +119,14 @@ struct CalcTests {
         expectDisplay("2e", "5.436563657")  // no digits after "e" — still 2 × Euler's e
         expectDisplay("1 e", "2.718281828")  // detached — never an exponent
         expectNil("1e400")  // overflows to infinity, so not calculator input
+        expectNil("1e308k")
+        expectNil("-1e308k")
+        expectNil("1e308k to hex")
+        expectNil("1e308 * 2 > 1")
+        expectNil("1e308m + 1e308m > 0m")
+        expectNil("1e308m == 1e308km")
+        expectNil("(1e308 * 2) ^ 0")
+        expectDisplay("1e305k", "1e+308")
         expectNil("1e5e5")
 
         // Percent
@@ -168,6 +176,15 @@ struct CalcTests {
         expectDisplay("2*5 km to mi", "6.213711922 mi")  // expression on the left side
 
         // Number bases
+        expectBadges("0b1010", source: "Binary", target: "Decimal")
+        expectBadges("0o17", source: "Octal", target: "Decimal")
+        expectBadges("0B1010 +", source: "Binary", target: "Decimal")
+        expectBadges("0O17 +", source: "Octal", target: "Decimal")
+        expectCopy("1.00000000004m to pm +", "1000000000040 pm")
+        expectCopy("1.00000000004m to pm **", "1000000000040 pm")
+        expectCopy("1.00000000004m to pm + =", "1000000000040 pm")
+        expectCopy("1.00000000004m to pm + +", "1000000000040 pm")
+        expectCopy("1.00000000004 * 1e12 to hex +", "0xE8D4A51028")
         expectDisplay("255 to hex", "0xFF")
         expectDisplay("255 to binary", "0b11111111")
         expectDisplay("0xff to decimal", "255")

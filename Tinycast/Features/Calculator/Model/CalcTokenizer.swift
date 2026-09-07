@@ -20,14 +20,13 @@ enum CalcTokenizer {
             }
 
             // Radix literals need ≥1 digit after the prefix, else "0" is a plain number.
-            if ch == "0", i + 2 < chars.count,
-                let radix = ["x": 16, "b": 2, "o": 8][String(chars[i + 1]).lowercased()]
-            {
+            if ch == "0", i + 2 < chars.count, let base = literalBase(chars[i + 1]) {
                 let start = i + 2
                 var end = start
                 while end < chars.count, chars[end].isASCII && Character(chars[end]).isHexDigit { end += 1 }
-                if end > start, let value = UInt64(String(String.UnicodeScalarView(chars[start..<end])), radix: radix) {
-                    tokens.append(.intLiteral(value, radix: radix))
+                if end > start,
+                    let value = UInt64(String(String.UnicodeScalarView(chars[start..<end])), radix: base.rawValue) {
+                    tokens.append(.intLiteral(value, base: base))
                     i = end
                     continue
                 }
@@ -69,7 +68,9 @@ enum CalcTokenizer {
                 guard let value = Double(text), value.isFinite else { return nil }
                 // Attached `k` is ×1,000; whitespace keeps Kelvin, and `10kg` stays a unit.
                 if i < chars.count, chars[i] == "k" || chars[i] == "K", isCompactSuffix(chars, i) {
-                    tokens.append(.compactNumber(value * 1_000))
+                    let scaled = value * 1_000
+                    guard scaled.isFinite else { return nil }
+                    tokens.append(.compactNumber(scaled))
                     i += 1
                 } else if isShorthand {
                     tokens.append(.compactNumber(value))
@@ -181,6 +182,15 @@ enum CalcTokenizer {
             i += 1
         }
         return tokens
+    }
+
+    private static func literalBase(_ prefix: Unicode.Scalar) -> CalcNumberBase? {
+        switch prefix {
+        case "x", "X": .hexadecimal
+        case "b", "B": .binary
+        case "o", "O": .octal
+        default: nil
+        }
     }
 
     /// Only a spelling the table resolves, so `6/2(1+2)` keeps dividing.
