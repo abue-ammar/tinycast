@@ -299,6 +299,15 @@ struct CalcTests {
         expectExpression("(10kg + 5kg) * 3%", "(10 kg + 5 kg) × 3%")
         expectExpression("-5kg + 2kg", "-5 kg + 2 kg")
         expectExpression("5 feet 3 inches", "5 ft 3 in")
+        // A function keeps its bracket, and a word operator keeps the sign on the operand it leads
+        expectExpression("hypot(3m,400cm)", "hypot(3 m, 400 cm)")
+        expectExpression("min(1km,999m)", "min(1 km, 999 m)")
+        expectExpression("round(2.567km,1)", "round(2.567 km, 1)")
+        expectExpression("2*sqrt(9)m", "2 × sqrt(9) m")
+        expectExpression("cube root of -8m3", "cube root of -8 m³")
+        expectExpression("15% of -2kg", "15% of -2 kg")
+        expectExpression("10kg - 5kg", "10 kg - 5 kg")
+        expectExpression("2 * 5feet 3inches", "2 × 5 ft 3 in")
         expectBadges("10kg + 5kg", source: "Expression", target: "Kilograms")
         expectDisplay("10kg + 10g", "10,010 g")  // issue #64, answered in the last unit typed
         expectDisplay("10kg + 500g", "10,500 g")
@@ -1143,9 +1152,10 @@ struct CalcTests {
         expectDisplayAt("next\u{a0}monday at\t7:30 + 5", "27 July at 12:30 PM")
         expectDisplayAt("tomorrow - 5 weekdays", "20 July")
         expectDisplayAt("today + 10000 weekdays", "21 November, 2064")
-        for query in ["tomorrow at 7:99", "tomorrow at 7::30", "today + 1.5 months",
-            "today + 1h 30", "today + -9223372036854775808 weekdays", "today + 9223372036854775807 weeks"]
-        {
+        for query in [
+            "tomorrow at 7:99", "tomorrow at 7::30", "today + 1.5 months",
+            "today + 1h 30", "today + -9223372036854775808 weekdays", "today + 9223372036854775807 weeks"
+        ] {
             expectNilAt(query)
         }
         var vienna = clock.calendar
@@ -1288,7 +1298,10 @@ struct CalcTests {
     static func expectBadges(
         _ query: String, source: String, target: String, region: String? = nil
     ) {
-        guard let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx, region: region) else {
+        guard
+            let result = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)
+        else {
             fail(label(query, region), expected: "\(source) → \(target)", got: "nil")
             return
         }
@@ -1323,7 +1336,9 @@ struct CalcTests {
     }
 
     static func expectError(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx)?.payload
+        guard
+            case .error(let message)? = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: fx)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -1333,8 +1348,9 @@ struct CalcTests {
 
     /// No snapshot has landed yet — first run, or still offline.
     static func expectErrorWithoutRates(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(
-            query, now: clock.now, calendar: clock.calendar, rates: nil)?.payload
+        guard
+            case .error(let message)? = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: nil)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -1343,7 +1359,10 @@ struct CalcTests {
     }
 
     static func expectExpression(_ query: String, _ expected: String, region: String? = nil) {
-        guard let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx, region: region) else {
+        guard
+            let result = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)
+        else {
             fail(label(query, region), expected: expected, got: "nil")
             return
         }
@@ -1373,7 +1392,9 @@ struct CalcTests {
     }
 
     static func expectNil(_ query: String, region: String? = nil) {
-        if let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx, region: region) {
+        if let result = CalcEngine.evaluate(
+            query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)
+        {
             fail(label(query, region), expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1

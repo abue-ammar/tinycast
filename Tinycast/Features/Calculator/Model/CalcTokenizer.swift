@@ -25,7 +25,9 @@ enum CalcTokenizer {
                 var end = start
                 while end < chars.count, chars[end].isASCII && Character(chars[end]).isHexDigit { end += 1 }
                 if end > start,
-                    let value = UInt64(String(String.UnicodeScalarView(chars[start..<end])), radix: base.rawValue) {
+                    let value = UInt64(
+                        String(String.UnicodeScalarView(chars[start..<end])), radix: base.rawValue)
+                {
                     tokens.append(.intLiteral(value, base: base))
                     i = end
                     continue
@@ -39,7 +41,8 @@ enum CalcTokenizer {
                     let c = chars[i]
                     if isDigit(c) {
                         text.unicodeScalars.append(c)
-                    } else if c == "," && functionDepth == nil && i + 1 < chars.count && isDigit(chars[i + 1]) {
+                    } else if c == "," && functionDepth == nil && i + 1 < chars.count && isDigit(chars[i + 1])
+                    {
                         // grouping separator between digits — skip
                     } else if c == "." && !seenDot {
                         seenDot = true
@@ -134,15 +137,16 @@ enum CalcTokenizer {
             }
 
             if i + 1 < chars.count {
-                let combined: CalcOperator? = switch (ch, chars[i + 1]) {
-                case ("<", "<"): .shiftLeft
-                case (">", ">"): .shiftRight
-                case ("=", "="): .equal
-                case ("!", "="): .notEqual
-                case ("<", "="): .lessEqual
-                case (">", "="): .greaterEqual
-                default: nil
-                }
+                let combined: CalcOperator? =
+                    switch (ch, chars[i + 1]) {
+                    case ("<", "<"): .shiftLeft
+                    case (">", ">"): .shiftRight
+                    case ("=", "="): .equal
+                    case ("!", "="): .notEqual
+                    case ("<", "="): .lessEqual
+                    case (">", "="): .greaterEqual
+                    default: nil
+                    }
                 if let op = combined {
                     tokens.append(.op(op))
                     i += 2
@@ -208,7 +212,8 @@ enum CalcTokenizer {
         if index + 2 < chars.count,
             ["o", "O"].contains(chars[index + 1]),
             ["r", "R"].contains(chars[index + 2]),
-            index + 3 == chars.count || !chars[index + 3].isLetter {
+            index + 3 == chars.count || !chars[index + 3].isLetter
+        {
             return false
         }
         let attached = !chars[index - 1].isWhitespace

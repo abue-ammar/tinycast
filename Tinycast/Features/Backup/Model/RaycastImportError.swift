@@ -12,7 +12,8 @@ enum RaycastImportError: LocalizedError {
         case .incorrectPassphrase: return "Incorrect passphrase, or the file is corrupted."
         case .corrupt: return "The Raycast export could not be read."
         case .tooLarge:
-            return "This export is too large to import. Clear some Raycast clipboard history and export again."
+            return
+                "This export is too large to import. Clear some Raycast clipboard history and export again."
         }
     }
 }

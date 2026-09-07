@@ -60,7 +60,9 @@ enum CalcMath {
                 var a = accumulator
                 var b = positive
                 while b != 0 { (a, b) = (b, a % b) }
-                if name == "gcd" { accumulator = a } else if a == 0 {
+                if name == "gcd" {
+                    accumulator = a
+                } else if a == 0 {
                     accumulator = 0
                 } else {
                     let product = (accumulator / a).multipliedReportingOverflow(by: positive)
@@ -88,7 +90,9 @@ enum CalcMath {
                 case "pow": result = pow(first, second)
                 case "root":
                     guard second != 0 else { return nil }
-                    result = first < 0 && second.truncatingRemainder(dividingBy: 2) != 0 && second.rounded() == second
+                    result =
+                        first < 0 && second.truncatingRemainder(dividingBy: 2) != 0
+                            && second.rounded() == second
                         ? -pow(-first, 1 / second) : pow(first, 1 / second)
                 case "fmod": result = first.truncatingRemainder(dividingBy: second)
                 default: return nil

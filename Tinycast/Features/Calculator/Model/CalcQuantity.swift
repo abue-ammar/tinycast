@@ -10,7 +10,8 @@ enum CalcQuantity {
         let split = splitConversion(tokens)
         if let target = split.targetName, target != "timespan", target != "duration",
             isSimpleConversionSource(split.expressionTokens),
-            CalcUnits.byName[target] != nil || CalcCurrency.byName[target] != nil {
+            CalcUnits.byName[target] != nil || CalcCurrency.byName[target] != nil
+        {
             return nil
         }
 
@@ -21,14 +22,17 @@ enum CalcQuantity {
         }
         if parser.dimensionCount == 0, !value.isBoolean {
             guard split.targetName == nil,
-                parser.operationCount > 0 || (!preserveStandaloneUnit && tokens.count > 1) else { return nil }
-            return CalcResult(expression: CalcFormatter.expression(query), sourceBadge: "Expression",
+                parser.operationCount > 0 || (!preserveStandaloneUnit && tokens.count > 1)
+            else { return nil }
+            return CalcResult(
+                expression: CalcFormatter.expression(query), sourceBadge: "Expression",
                 targetBadge: "Result", payload: .number(value.effective))
         }
         if value.isBoolean {
             guard split.targetName == nil else { return nil }
             let text = value.amount == 0 ? "false" : "true"
-            return CalcResult(expression: expressionText(split.expressionTokens), sourceBadge: "Expression",
+            return CalcResult(
+                expression: expressionText(split.expressionTokens), sourceBadge: "Expression",
                 targetBadge: "Boolean", payload: .value(display: text, copyText: text))
         }
 
@@ -79,7 +83,9 @@ enum CalcQuantity {
             {
                 return nil
             }
-            guard parser.operationCount > 0 || parser.dimensionCount > 1 || preserveStandaloneUnit else { return nil }
+            guard parser.operationCount > 0 || parser.dimensionCount > 1 || preserveStandaloneUnit else {
+                return nil
+            }
             return measurementResult(
                 value.amount, unit: unit, expression: expressionText(split.expressionTokens))
         case .currency(let definition):
@@ -165,14 +171,17 @@ enum CalcQuantity {
             if index + 2 == end, case .ident(let name) = tokens[index + 1] { return (index, name) }
             let target = Array(tokens[(index + 1)..<end])
             guard CalcUnitExpression.parse(target) != nil else { continue }
-            return (index, target.map { token in
-                switch token {
-                case .ident(let name): return name
-                case .op(let op): return String(op.rawValue)
-                case .number(let value): return CalcFormatter.copyText(value)
-                default: return ""
-                }
-            }.joined(separator: " "))
+            return (
+                index,
+                target.map { token in
+                    switch token {
+                    case .ident(let name): return name
+                    case .op(let op): return String(op.rawValue)
+                    case .number(let value): return CalcFormatter.copyText(value)
+                    default: return ""
+                    }
+                }.joined(separator: " ")
+            )
         }
         return nil
     }
@@ -230,6 +239,9 @@ enum CalcQuantity {
                 add(String(value))
             case .ident(let name):
                 add(CalcUnits.byName[name]?.symbol ?? CalcCurrency.byName[name]?.code ?? name)
+                attachNext =
+                    index + 1 < tokens.count && tokens[index + 1] == .op(.open)
+                    && CalcMath.isFunction(name)
             case .op(.open):
                 add("(")
                 attachNext = true
@@ -259,10 +271,16 @@ enum CalcQuantity {
     /// True when `+`/`-` negates the operand that follows rather than joining two of them.
     private static func isSign(at index: Int, _ tokens: [CalcToken]) -> Bool {
         guard index > 0 else { return true }
-        if case .op(let previous) = tokens[index - 1] {
+        switch tokens[index - 1] {
+        case .op(let previous):
             return previous != .close && previous != .percent && previous != .factorial
+        // A word operator (`of`, `mod`, `sqrt`) introduces an operand, so the sign belongs to it.
+        case .ident(let name):
+            return CalcUnits.byName[name] == nil && CalcCurrency.byName[name] == nil
+                && CalcMath.constants[name] == nil
+        default:
+            return false
         }
-        return false
     }
 
     static func numberValue(_ token: CalcToken) -> Double? {

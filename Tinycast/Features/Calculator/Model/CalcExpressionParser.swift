@@ -30,7 +30,8 @@ struct CalcExpressionParser {
         else { return nil }
         if case .unit(let unit) = value.kind, unit.category == .compound,
             let dimension = unit.dimension, dimension == .scalar || dimension == CalcDimension(currency: 1),
-            let simplified = derived(value.effective * unit.factor, dimension: dimension, unit: unit) {
+            let simplified = derived(value.effective * unit.factor, dimension: dimension, unit: unit)
+        {
             value = simplified
             operationCount += 1
         }
@@ -80,7 +81,8 @@ struct CalcExpressionParser {
         switch current {
         case .op(let op) where op.bindingPower != nil:
             let power = op.bindingPower ?? 0
-            return BinaryOp(op: op, bindingPower: power,
+            return BinaryOp(
+                op: op, bindingPower: power,
                 rightBindingPower: power + (op == .power ? 0 : 1), consumesToken: true)
         case .ident("mod"):
             return BinaryOp(op: .percent, bindingPower: 20, rightBindingPower: 21, consumesToken: true)
@@ -129,10 +131,12 @@ struct CalcExpressionParser {
             return CalcValue(amount: result ? 1 : 0, kind: .scalar, isBoolean: true)
         case .percent:
             guard isScalar(left.kind), isScalar(right.kind) else { return nil }
-            return CalcValue(amount: left.effective.truncatingRemainder(dividingBy: right.effective), kind: .scalar)
+            return CalcValue(
+                amount: left.effective.truncatingRemainder(dividingBy: right.effective), kind: .scalar)
         case .bitAnd, .bitOr, .bitXor, .shiftLeft, .shiftRight:
             guard isScalar(left.kind), isScalar(right.kind),
-                let result = CalcMath.bitwise(op, left.effective, right.effective) else { return nil }
+                let result = CalcMath.bitwise(op, left.effective, right.effective)
+            else { return nil }
             return CalcValue(amount: result, kind: .scalar)
         case .add, .subtract:
             return addOrSubtract(op, left, right, implicit: implicit)
@@ -172,7 +176,9 @@ struct CalcExpressionParser {
             }
             // Composite ("5 feet 3 inches") answers in its leading unit; `+`/`-` in the last.
             if implicit {
-                guard let converted = convertedMeasurement(right.amount, from: rhs, to: lhs) else { return nil }
+                guard let converted = convertedMeasurement(right.amount, from: rhs, to: lhs) else {
+                    return nil
+                }
                 return CalcValue(
                     amount: left.amount + direction * converted, kind: .unit(lhs))
             }
@@ -240,9 +246,11 @@ struct CalcExpressionParser {
             return finiteDivision(left.effective, right.effective, kind: left.kind)
         case (.scalar, .unit), (.scalar, .currency):
             guard let unit = arithmeticUnit(right.kind), let inverted = CalcUnitExpression.power(unit, -1),
-                let dimension = inverted.dimension else { return nil }
+                let dimension = inverted.dimension
+            else { return nil }
             if inverted.currency != nil { usedCurrencyRate = true }
-            return derived(left.effective / (right.effective * unit.factor), dimension: dimension,
+            return derived(
+                left.effective / (right.effective * unit.factor), dimension: dimension,
                 unit: CalcUnits.baseUnits[dimension] ?? inverted)
         case (.unit(let lhs), .unit(let rhs)):
             if !lhs.isCompatible(with: rhs) || lhs.currency != nil || rhs.currency != nil {
@@ -273,11 +281,15 @@ struct CalcExpressionParser {
 
     private mutating func combine(_ left: CalcValue, _ right: CalcValue, dividing: Bool) -> CalcValue? {
         guard let lhs = arithmeticUnit(left.kind), var rhs = arithmeticUnit(right.kind) else { return nil }
-        if lhs.currency == nil, rhs.currency == nil, let leftDimension = lhs.dimension, let rightDimension = rhs.dimension {
+        if lhs.currency == nil, rhs.currency == nil, let leftDimension = lhs.dimension,
+            let rightDimension = rhs.dimension
+        {
             let dimension = leftDimension.adding(rightDimension, scale: dividing ? -1 : 1)
             let unit = (dividing ? nil : CalcUnits.productUnit(lhs, rhs)) ?? CalcUnits.baseUnits[dimension]
             if dimension == .scalar || unit != nil {
-                let amount = dividing ? left.effective * lhs.factor / (right.effective * rhs.factor)
+                let amount =
+                    dividing
+                    ? left.effective * lhs.factor / (right.effective * rhs.factor)
                     : left.effective * lhs.factor * right.effective * rhs.factor
                 return derived(amount, dimension: dimension, unit: unit)
             }
@@ -287,18 +299,23 @@ struct CalcExpressionParser {
             guard let factor = convertedCurrency(1, from: source, to: target), let dimension = rhs.dimension
             else { return nil }
             amount *= pow(factor, dimension.currency)
-            rhs = UnitDef(rhs.symbol.replacingOccurrences(of: source.code, with: target.code), rhs.name,
+            rhs = UnitDef(
+                rhs.symbol.replacingOccurrences(of: source.code, with: target.code), rhs.name,
                 rhs.category, rhs.factor, dimension: dimension, currency: target)
         }
         guard let combined = CalcUnitExpression.combine(lhs, rhs, dividing: dividing),
-            let dimension = combined.dimension else {
+            let dimension = combined.dimension
+        else {
             return fail("Multiplication of these unit values is not supported.")
         }
         if lhs.currency != nil || rhs.currency != nil { usedCurrencyRate = true }
-        let base = dividing ? left.effective * lhs.factor / (amount * rhs.factor)
+        let base =
+            dividing
+            ? left.effective * lhs.factor / (amount * rhs.factor)
             : left.effective * lhs.factor * amount * rhs.factor
         let preferred = dividing ? nil : CalcUnits.productUnit(lhs, rhs)
-        return derived(base, dimension: dimension, unit: preferred ?? CalcUnits.baseUnits[dimension] ?? combined)
+        return derived(
+            base, dimension: dimension, unit: preferred ?? CalcUnits.baseUnits[dimension] ?? combined)
     }
 
     private func derived(_ amount: Double, dimension: CalcDimension, unit: UnitDef? = nil) -> CalcValue? {
@@ -319,7 +336,8 @@ struct CalcExpressionParser {
         case .unit(let unit):
             guard let dimension = unit.dimension else { return nil }
             let raised = dimension.raised(to: exponent)
-            return derived(pow(value.amount * unit.factor, exponent), dimension: raised,
+            return derived(
+                pow(value.amount * unit.factor, exponent), dimension: raised,
                 unit: CalcUnits.baseUnits[raised] ?? CalcUnitExpression.power(unit, exponent))
         case .currency:
             return nil
@@ -349,7 +367,8 @@ struct CalcExpressionParser {
                     let unit = arithmeticUnit(value.kind),
                     let next = CalcUnitExpression.factor(tokens, at: position + 1),
                     next.end == tokens.count || CalcQuantity.numberValue(tokens[next.end]) == nil,
-                    let combined = CalcUnitExpression.combine(unit, next.unit, dividing: op == .divide) else { return value }
+                    let combined = CalcUnitExpression.combine(unit, next.unit, dividing: op == .divide)
+                else { return value }
                 value.kind = .unit(combined)
                 if combined.currency != nil { usedCurrencyRate = true }
                 dimensionCount += 1
@@ -382,7 +401,8 @@ struct CalcExpressionParser {
             position += 1
             guard let value = parseExpression(minBindingPower: Self.unaryBindingPower),
                 isScalar(value.kind), !value.isBoolean,
-                let result = CalcMath.bitwise(.bitNot, value.effective) else { return nil }
+                let result = CalcMath.bitwise(.bitNot, value.effective)
+            else { return nil }
             return CalcValue(amount: result, kind: .scalar)
         case .op(.subtract):
             position += 1
@@ -391,19 +411,23 @@ struct CalcExpressionParser {
             return CalcValue(amount: -value.effective, kind: value.kind)
         case .op(.add):
             position += 1
-            guard let value = parseExpression(minBindingPower: Self.unaryBindingPower), !value.isBoolean else { return nil }
+            guard let value = parseExpression(minBindingPower: Self.unaryBindingPower), !value.isBoolean
+            else { return nil }
             return value
         case .op(.open):
             return parseGrouped()
         case .ident(let name):
             if name == "square" || name == "cube", position + 1 < tokens.count,
-                tokens[position + 1] == .ident("root") {
+                tokens[position + 1] == .ident("root")
+            {
                 position += 2
                 if current == .ident("of") { position += 1 }
                 guard let value = parseOperand(), !value.isBoolean else { return nil }
                 operationCount += 1
                 if name == "square" { return power(value, exponent: 0.5) }
-                guard let result = power(CalcValue(amount: abs(value.effective), kind: value.kind), exponent: 1.0 / 3)
+                guard
+                    let result = power(
+                        CalcValue(amount: abs(value.effective), kind: value.kind), exponent: 1.0 / 3)
                 else { return nil }
                 return CalcValue(amount: value.amount < 0 ? -result.amount : result.amount, kind: result.kind)
             }
@@ -411,7 +435,9 @@ struct CalcExpressionParser {
                 position += 1
                 return CalcValue(amount: constant, kind: .scalar)
             }
-            if CalcMath.multipleArguments.contains(name), position + 1 < tokens.count, tokens[position + 1] == .op(.open) {
+            if CalcMath.multipleArguments.contains(name), position + 1 < tokens.count,
+                tokens[position + 1] == .op(.open)
+            {
                 return parseFunction(name)
             }
             if let function = CalcMath.functions[name] {
@@ -428,10 +454,12 @@ struct CalcExpressionParser {
                 }
                 if name == "sqrt" { return power(argument, exponent: 0.5) }
                 if name == "cbrt" {
-                    guard let result = power(
-                        CalcValue(amount: abs(argument.amount), kind: argument.kind), exponent: 1.0 / 3)
+                    guard
+                        let result = power(
+                            CalcValue(amount: abs(argument.amount), kind: argument.kind), exponent: 1.0 / 3)
                     else { return nil }
-                    return CalcValue(amount: argument.amount < 0 ? -result.amount : result.amount, kind: result.kind)
+                    return CalcValue(
+                        amount: argument.amount < 0 ? -result.amount : result.amount, kind: result.kind)
                 }
                 if ["abs", "floor", "ceil", "round", "trunc"].contains(name) {
                     return CalcValue(amount: function(argument.amount), kind: argument.kind)
@@ -522,7 +550,8 @@ struct CalcExpressionParser {
             return CalcValue(amount: 1, kind: kind)
         }
         if position < end, case .ident = tokens[position],
-            let unit = CalcUnitExpression.parse(Array(tokens[position..<end])) {
+            let unit = CalcUnitExpression.parse(Array(tokens[position..<end]))
+        {
             position = end
             dimensionCount += 1
             if unit.currency != nil { usedCurrencyRate = true }

@@ -13,9 +13,11 @@ final class UnitDef: Equatable, Sendable {
     var dimension: CalcDimension? { derivedDimension ?? category.dimension }
 
     static func == (lhs: UnitDef, rhs: UnitDef) -> Bool {
-        lhs === rhs || (lhs.symbol == rhs.symbol && lhs.name == rhs.name && lhs.category == rhs.category
-            && lhs.factor == rhs.factor && lhs.offset == rhs.offset && lhs.derivedDimension == rhs.derivedDimension
-            && lhs.currency == rhs.currency)
+        lhs === rhs
+            || (lhs.symbol == rhs.symbol && lhs.name == rhs.name && lhs.category == rhs.category
+                && lhs.factor == rhs.factor && lhs.offset == rhs.offset
+                && lhs.derivedDimension == rhs.derivedDimension
+                && lhs.currency == rhs.currency)
     }
 
     func isCompatible(with other: UnitDef) -> Bool {

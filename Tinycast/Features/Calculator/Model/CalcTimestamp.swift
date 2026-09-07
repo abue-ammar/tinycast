@@ -14,11 +14,14 @@ enum CalcTimestamp {
     static func isoDate(_ text: String) -> Date? {
         guard looksLikeISO(text) else { return nil }
         let source = text as NSString
-        guard let match = isoPattern?.firstMatch(in: text, range: NSRange(location: 0, length: source.length)),
-            match.range.length == source.length else { return nil }
+        guard
+            let match = isoPattern?.firstMatch(in: text, range: NSRange(location: 0, length: source.length)),
+            match.range.length == source.length
+        else { return nil }
         let parts = (1...6).compactMap { Int(source.substring(with: match.range(at: $0))) }
         guard parts.count == 6, (1...9999).contains(parts[0]), (0...23).contains(parts[3]),
-            (0...59).contains(parts[4]), (0...59).contains(parts[5]) else { return nil }
+            (0...59).contains(parts[4]), (0...59).contains(parts[5])
+        else { return nil }
         let suffix = source.substring(with: match.range(at: 8))
         var offset = 0
         if suffix.count > 1 {
@@ -29,13 +32,15 @@ enum CalcTimestamp {
         guard let zone = TimeZone(secondsFromGMT: offset) else { return nil }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
-        let components = DateComponents(year: parts[0], month: parts[1], day: parts[2],
+        let components = DateComponents(
+            year: parts[0], month: parts[1], day: parts[2],
             hour: parts[3], minute: parts[4], second: parts[5])
         guard let date = calendar.date(from: components),
             calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date) == components
         else { return nil }
         let fraction = match.range(at: 7)
-        return date.addingTimeInterval(fraction.location == NSNotFound ? 0 : Double(source.substring(with: fraction)) ?? 0)
+        return date.addingTimeInterval(
+            fraction.location == NSNotFound ? 0 : Double(source.substring(with: fraction)) ?? 0)
     }
 
     static func epochDate(_ text: String) -> Date? {
@@ -47,10 +52,13 @@ enum CalcTimestamp {
             number = words[1]
         } else if words[1] == "unix" || words[1] == "timestamp" {
             number = words[0]
-        } else { return nil }
+        } else {
+            return nil
+        }
         let milliseconds = words.count == 3 && ["ms", "milliseconds"].contains(words[2])
         guard words.count == 2 || milliseconds || ["s", "seconds"].contains(words[2]),
-            let value = Double(number), value.isFinite else { return nil }
+            let value = Double(number), value.isFinite
+        else { return nil }
         let seconds = value / (milliseconds ? 1000 : 1)
         guard (-62_135_596_800..<253_402_300_800).contains(seconds) else { return nil }
         return Date(timeIntervalSince1970: seconds)

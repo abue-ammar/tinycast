@@ -44,7 +44,9 @@ enum CalcEngine {
     ) -> CalcResult? {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, query.count <= 256 else { return nil }
-        guard !query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) else { return nil }
+        guard !query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) else {
+            return nil
+        }
 
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) { return dateTime }
 
@@ -165,7 +167,8 @@ enum CalcEngine {
         let prefixTokens = Array(tokens.dropLast())
         guard !prefixTokens.isEmpty else { return nil }
         if prefixTokens.count == 1, let value = decimalLiteral(prefixTokens[0]) {
-            return CalcResult(expression: CalcFormatter.expression(query),
+            return CalcResult(
+                expression: CalcFormatter.expression(query),
                 sourceBadge: "Expression", targetBadge: "Result", payload: .number(value))
         }
 
@@ -264,7 +267,9 @@ enum CalcEngine {
             return nil
         }
 
-        let output = target == .decimal ? CalcFormatter.grouped(String(source))
+        let output =
+            target == .decimal
+            ? CalcFormatter.grouped(String(source))
             : target.prefix + String(source, radix: target.rawValue, uppercase: true)
         return CalcResult(
             expression: sourceText,

@@ -4,7 +4,8 @@ enum CalcUnitExpression {
     static func named(_ name: String) -> UnitDef? {
         if let unit = CalcUnits.byName[name] { return unit }
         guard let currency = CalcCurrency.byName[name] else { return nil }
-        return UnitDef(currency.code, currency.name, .compound, 1,
+        return UnitDef(
+            currency.code, currency.name, .compound, 1,
             dimension: CalcDimension(currency: 1), currency: currency)
     }
 
@@ -28,9 +29,11 @@ enum CalcUnitExpression {
         guard abs(dimension.currency) <= 1 else { return nil }
         let factor = dividing ? left.factor / right.factor : left.factor * right.factor
         guard factor.isFinite, factor > 0 else { return nil }
-        let rightSymbol = dividing && (right.symbol.contains("/") || right.symbol.contains("·"))
+        let rightSymbol =
+            dividing && (right.symbol.contains("/") || right.symbol.contains("·"))
             ? "(\(right.symbol))" : right.symbol
-        return UnitDef(left.symbol + (dividing ? "/" : "·") + rightSymbol,
+        return UnitDef(
+            left.symbol + (dividing ? "/" : "·") + rightSymbol,
             "Compound Units", .compound, factor, dimension: dimension,
             currency: dimension.currency == 0 ? nil : left.currency ?? right.currency)
     }
@@ -43,7 +46,8 @@ enum CalcUnitExpression {
         guard factor.isFinite, factor > 0 else { return nil }
         let symbol = unit.symbol.contains("/") || unit.symbol.contains("·") ? "(\(unit.symbol))" : unit.symbol
         let suffix = exponent == 2 ? "²" : exponent == 3 ? "³" : "^" + CalcFormatter.copyText(exponent)
-        return UnitDef(symbol + suffix, "Compound Units", .compound, factor, dimension: raised,
+        return UnitDef(
+            symbol + suffix, "Compound Units", .compound, factor, dimension: raised,
             currency: raised.currency == 0 ? nil : unit.currency)
     }
 
@@ -57,7 +61,9 @@ enum CalcUnitExpression {
             while current == .op(.multiply) || current == .op(.divide) {
                 let dividing = current == .op(.divide)
                 index += 1
-                guard let right = factor(), let result = combine(left, right, dividing: dividing) else { return nil }
+                guard let right = factor(), let result = combine(left, right, dividing: dividing) else {
+                    return nil
+                }
                 left = result
             }
             return left
@@ -73,7 +79,9 @@ enum CalcUnitExpression {
                 guard let found = expression(), current == .op(.close) else { return nil }
                 unit = found
                 index += 1
-            } else { return nil }
+            } else {
+                return nil
+            }
             guard current == .op(.power) else { return unit }
             index += 1
             let negative = current == .op(.subtract)

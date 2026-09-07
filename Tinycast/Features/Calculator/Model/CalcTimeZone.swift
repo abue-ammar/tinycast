@@ -5,7 +5,8 @@ enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
         guard raw.count <= 128, raw.contains(where: \.isWhitespace) else { return nil }
         let inputWords = raw.split(whereSeparator: \.isWhitespace)
-        guard inputWords.count >= 2, inputWords.contains(where: { connectors.contains($0.lowercased()) }) else {
+        guard inputWords.count >= 2, inputWords.contains(where: { connectors.contains($0.lowercased()) })
+        else {
             return nil
         }
         // The last word decides: `10 km to mi` carries a connector too.
