@@ -41,6 +41,7 @@ enum RaycastTests {
         recognition()
         decryption()
         gunzipSlices()
+        gunzipCap()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -184,5 +185,28 @@ enum RaycastTests {
             "a non-zero-index gzip slice decompresses instead of trapping")
         expect((try? Zlib.gunzip(gzippedJSON)) == plainJSON, "a zero-based gzip still works")
         expect((try? Zlib.gunzip(Data(repeating: 0x00, count: 32))) == nil, "non-gzip throws")
+    }
+
+    /// Built here, never committed: a fixture past the default cap cannot live in the repo.
+    static func gunzipCap() {
+        let oversized = Data(repeating: 0x5a, count: 70 * 1024 * 1024)
+        guard let gzipped = try? Zlib.gzip(oversized) else {
+            failures += 1
+            print("FAIL: the oversized fixture did not gzip")
+            return
+        }
+        do {
+            _ = try Zlib.gunzip(gzipped)
+            failures += 1
+            print("FAIL: a 70 MB payload passed the 64 MB default cap")
+        } catch ZlibError.tooLarge {
+            passes += 1
+        } catch {
+            failures += 1
+            print("FAIL: the default cap threw \(error), expected tooLarge")
+        }
+        expect(
+            (try? Zlib.gunzip(gzipped, maxOutput: 512 * 1024 * 1024))?.count == oversized.count,
+            "the same payload inflates under the 512 MB payload cap")
     }
 }
