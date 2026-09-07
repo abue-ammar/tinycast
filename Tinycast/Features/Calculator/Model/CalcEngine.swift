@@ -164,7 +164,7 @@ enum CalcEngine {
 
         guard let value = CalcParser.evaluate(tokens) else { return nil }
         return CalcResult(
-            expression: prettyExpression(query),
+            expression: CalcFormatter.expression(query),
             sourceBadge: "Expression",
             targetBadge: "Result",
             payload: .number(value))
@@ -195,12 +195,12 @@ enum CalcEngine {
         if let complete = evaluate(
             tokenQuery(prefixTokens), now: now, calendar: calendar, rates: rates, region: region)
         {
-            return replacingExpression(complete, with: prettyExpression(query))
+            return replacingExpression(complete, with: CalcFormatter.expression(query))
         }
 
         guard let value = CalcParser.evaluate(prefixTokens) else { return nil }
         return CalcResult(
-            expression: prettyExpression(query),
+            expression: CalcFormatter.expression(query),
             sourceBadge: "Expression", targetBadge: "Result",
             payload: .number(value))
     }
@@ -321,10 +321,4 @@ enum CalcEngine {
         }
     }
 
-    /// Card cleanup: collapse whitespace and prettify operators, else keep what the user wrote.
-    private static func prettyExpression(_ query: String) -> String {
-        query.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-            .replacingOccurrences(of: "*", with: "×")
-            .replacingOccurrences(of: "/", with: "÷")
-    }
 }

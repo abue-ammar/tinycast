@@ -48,7 +48,7 @@ in (see Currency below).
 7. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
 8. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
 9. Natural-language percent, ratio and list forms (`CalcPercent`)
-10. Numeric reject, then plain arithmetic
+10. Numeric reject, then plain arithmetic if the quantity parser has not already answered it
 
 Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a duration,
 not a scalar subsequently labeled milliseconds. Simple conversions still own their source badges.

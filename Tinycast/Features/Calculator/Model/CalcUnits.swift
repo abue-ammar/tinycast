@@ -78,8 +78,9 @@ struct UnitDef: Equatable, Sendable {
     var dimension: CalcDimension? { derivedDimension ?? category.dimension }
 
     func isCompatible(with other: Self) -> Bool {
-        if let dimension { return dimension == other.dimension }
-        return category == other.category
+        if category != .compound, category == other.category { return true }
+        guard let dimension else { return false }
+        return dimension == other.dimension
     }
 
     init(

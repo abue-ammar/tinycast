@@ -408,7 +408,11 @@ enum CalcDateTime {
                 guard let shifted = applyShifts(op, String(tail), to: moment, calendar: calendar) else { return nil }
                 moment = shifted
             }
-            guard let value = Int64(exactly: (moment.date.timeIntervalSince1970 * scale).rounded(.down))
+            let timestamp = moment.date.timeIntervalSince1970 * scale
+            let rounded = timestamp.rounded()
+            let tolerance = moment.date.timeIntervalSinceReferenceDate.ulp * scale
+            let whole = abs(timestamp - rounded) <= tolerance ? rounded : timestamp.rounded(.down)
+            guard let value = Int64(exactly: whole)
             else { return nil }
             let text = String(value)
             return CalcResult(expression: echo, sourceBadge: "Date",

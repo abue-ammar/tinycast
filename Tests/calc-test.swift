@@ -207,6 +207,8 @@ struct CalcTests {
         expectDisplay("5 mod 2 == 1", "true")
         expectExpression("1 << 8 == 256", "1 << 8 == 256")
         expectNil("(1 == 1)kg")
+        expectNil("-(1 == 1)")
+        expectNil("sqrt(1 == 1)")
 
         // Formatting: display grouped, copyText plain
         expectDisplay("1234567*1", "1,234,567")
@@ -877,6 +879,9 @@ struct CalcTests {
         expectDisplayAt("1970-01-01T00:00:00Z to unix", "0")
         expectDisplayAt("1970-01-01T01:00:00+01:00 to unix", "0")
         expectDisplayAt("1970-01-01T00:00:00.125Z to unix ms", "125")
+        expectDisplayAt("1970-01-01T00:00:00.002Z to unix ms", "2")
+        expectDisplayAt("1969-12-31T23:59:59.999Z to unix ms", "-1")
+        expectDisplayAt("unix 1234567890.125 to unix ms", "1,234,567,890,125")
         expectDisplayAt("1970-01-01T00:00:00Z + 1h to unix", "3,600")
         expectDisplayAt("unix 0 to date", "1 January, 1970 at 12:00 AM")
         expectDisplayAt("1000 unix ms", "1 January, 1970 at 12:00:01 AM")

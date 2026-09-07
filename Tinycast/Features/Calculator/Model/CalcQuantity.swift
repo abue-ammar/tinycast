@@ -18,7 +18,11 @@ enum CalcQuantity {
             guard let message = parser.issue else { return nil }
             return CalcResult(expression: query, payload: .error(message: message))
         }
-        guard parser.dimensionCount > 0 || value.isBoolean else { return nil }
+        if parser.dimensionCount == 0, !value.isBoolean {
+            guard split.targetName == nil, parser.operationCount > 0 else { return nil }
+            return CalcResult(expression: CalcFormatter.expression(query), sourceBadge: "Expression",
+                targetBadge: "Result", payload: .number(value.effective))
+        }
         if value.isBoolean {
             guard split.targetName == nil else { return nil }
             let text = value.amount == 0 ? "false" : "true"
@@ -665,12 +669,13 @@ private struct QuantityParser {
             return QuantityValue(amount: result, kind: .scalar)
         case .op("-"):
             position += 1
-            guard let value = parseExpression(minBindingPower: Self.unaryBindingPower)
+            guard let value = parseExpression(minBindingPower: Self.unaryBindingPower), !value.isBoolean
             else { return nil }
             return QuantityValue(amount: -value.effective, kind: value.kind)
         case .op("+"):
             position += 1
-            return parseExpression(minBindingPower: Self.unaryBindingPower)
+            guard let value = parseExpression(minBindingPower: Self.unaryBindingPower), !value.isBoolean else { return nil }
+            return value
         case .op("("):
             return parseGrouped()
         case .ident(let name):
@@ -683,7 +688,7 @@ private struct QuantityParser {
             }
             if let function = CalcParser.functions[name] {
                 position += 1
-                guard let argument = parseOperand() else { return nil }
+                guard let argument = parseOperand(), !argument.isBoolean else { return nil }
                 operationCount += 1
                 if isScalar(argument.kind) {
                     return derived(function(argument.effective), dimension: .scalar)

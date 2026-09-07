@@ -2,6 +2,12 @@ import Foundation
 
 /// Hand-rolled, locale-independent number formatting, so every locale renders identically.
 enum CalcFormatter {
+    static func expression(_ query: String) -> String {
+        query.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            .replacingOccurrences(of: "*", with: "×")
+            .replacingOccurrences(of: "/", with: "÷")
+    }
+
     /// Human-facing: ≤10 significant digits, trailing zeros trimmed, thousands separators.
     static func display(_ value: Double) -> String {
         grouped(copyText(value))
