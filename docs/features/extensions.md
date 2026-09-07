@@ -178,14 +178,16 @@ shortcuts), and Option alternates. Items without actions and empty submenus are 
 receive `left-click` or `right-click`; keyboard activation is a left click. Asynchronous actions are
 awaited before teardown. Returning `null` removes the item while keeping its refresh schedule.
 
-Native rows and small icons stay prepared between runs; their handler IDs are cleared on teardown.
+The status button opens a native popup tracking session; Escape, an outside click, or clicking the
+button again dismisses it. Native rows and small icons stay prepared between runs; their handler IDs are cleared on teardown.
 Opening reuses those rows while a fresh context loads, then rebinds its own callbacks. Only a menu
 without prepared content shows a loading row. Subtitles follow the title on the same line. React
 updates reconcile rows in place, prepare icons before display, and preserve settled content while
 loading. Button changes wait until the menu closes so its anchor does not move under the pointer.
 The session stays alive while the menu is open. After a settled render or menu
 closure, a 100 ms coalescing delay lets React commit effects and host calls drain before releasing the
-context. Loading and closed-menu actions have a 60-second deadline; an open, settled menu is exempt.
+context. The runtime queue drains temporary Objective-C objects after each work item, including
+context teardown. Loading and closed-menu actions have a 60-second deadline; an open, settled menu is exempt.
 This bounds asynchronous work, but cannot interrupt an extension stuck in synchronous JavaScript or a
 blocking Node shim on the runtime queue.
 
@@ -756,7 +758,8 @@ only way to reach a code path an extension gates on a preference with no manifes
 harnesses read the same three variables.
 
 For OpenCodex Usage, the native harness also exercises the actual menu renderer, three Refresh
-round-trips and the Provider Usage action, with live fetches but a recorded `launchCommand`:
+round-trips and the Provider Usage action, with live fetches but a recorded `launchCommand`. Harness
+status items stay hidden so a test run cannot interfere with the running app's menus:
 
 ```sh
 EXT_TEST_MENU_BAR=1 "${TMPDIR:-/tmp}/tinycast-harness/ext-test" \

@@ -7,6 +7,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     private let storage: ExtensionStorage
     private let supportDirectory: URL
     private let executionTimeout: Duration
+    private let showsStatusItems: Bool
     private let makeExecution: (InstalledExtension, ExtensionLaunchType) -> Execution?
     private let onError: (String, InstalledExtension, Bool) -> Void
     private var installed: [InstalledExtension] = []
@@ -51,11 +52,13 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     }
 
     init(storage: ExtensionStorage, file: URL, supportDirectory: URL, executionTimeout: Duration = .seconds(60),
+         showsStatusItems: Bool = true,
          makeExecution: @escaping (InstalledExtension, ExtensionLaunchType) -> Execution?,
          onError: @escaping (String, InstalledExtension, Bool) -> Void) {
         self.storage = storage
         self.supportDirectory = supportDirectory
         self.executionTimeout = executionTimeout
+        self.showsStatusItems = showsStatusItems
         self.makeExecution = makeExecution
         self.onError = onError
         store = ExtensionMenuBarStore(file: file)
@@ -184,7 +187,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
 
     func controller(for reference: ExtensionCommandRef, owner: InstalledExtension) -> ExtensionMenuBarController {
         if let controller = controllers[reference.entryID] { return controller }
-        let controller = ExtensionMenuBarController(entryID: reference.entryID, assetsPath: owner.assetsPath)
+        let controller = ExtensionMenuBarController(entryID: reference.entryID, assetsPath: owner.assetsPath,
+                                                     isVisible: showsStatusItems)
         controller.onOpen = { [weak self] in
             guard let self else { return }
             self.idleTask?.cancel()

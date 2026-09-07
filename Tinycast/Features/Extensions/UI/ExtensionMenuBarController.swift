@@ -23,12 +23,16 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         let handler: String
     }
 
-    init(entryID: String, assetsPath: String) {
+    init(entryID: String, assetsPath: String, isVisible: Bool = true) {
         self.entryID = entryID
         self.assetsPath = assetsPath
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         status.autosaveName = entryID
+        status.isVisible = isVisible
+        status.button?.target = self
+        status.button?.action = #selector(toggleMenu)
+        status.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
         status.button?.imagePosition = .imageLeading
         menu.autoenablesItems = false
         menu.delegate = self
@@ -42,7 +46,6 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         if previous?.title != snapshot.title { status.button?.title = snapshot.title ?? "" }
         if previous?.tooltip != snapshot.tooltip { status.button?.toolTip = snapshot.tooltip }
         status.button?.setAccessibilityLabel(snapshot.tooltip ?? snapshot.title ?? "Extension menu")
-        if previous?.hasMenu != snapshot.hasMenu { status.menu = snapshot.hasMenu ? menu : nil }
         let iconChanged = previous?.iconJSON != snapshot.iconJSON || previous == nil
         if iconChanged { loadIcon() }
     }
@@ -226,6 +229,14 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         let event = NSApp.currentEvent
         let type = event?.type == .rightMouseUp || event?.type == .rightMouseDown ? "right-click" : "left-click"
         onAction?(action.session, action.handler, type)
+    }
+
+    @objc private func toggleMenu() {
+        if isOpen { menu.cancelTracking(); return }
+        guard snapshot?.hasMenu == true, let button = status.button else { return }
+        button.highlight(true)
+        defer { button.highlight(false) }
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.minY), in: button)
     }
 
     func menuWillOpen(_ menu: NSMenu) {

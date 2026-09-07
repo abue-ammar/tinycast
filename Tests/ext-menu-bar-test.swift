@@ -17,7 +17,7 @@ extension ExtensionTests {
         weak var lastRuntime: ExtensionRuntime?
         let manager = ExtensionMenuBarManager(
             storage: storage, file: directory.appendingPathComponent("bars.json"),
-            supportDirectory: directory.appendingPathComponent("support"),
+            supportDirectory: directory.appendingPathComponent("support"), showsStatusItems: false,
             makeExecution: { _, _ in
                 boots += 1
                 let host = StubHost()
@@ -65,7 +65,7 @@ extension ExtensionTests {
 
     @MainActor
     static func menuBarRenderingChecks() async {
-        let controller = ExtensionMenuBarController(entryID: "tinycast-fixture-rendering", assetsPath: "/tmp")
+        let controller = ExtensionMenuBarController(entryID: "tinycast-fixture-rendering", assetsPath: "/tmp", isVisible: false)
         defer { controller.remove() }
         let row = RenderNode(id: 2, type: "MenuBarExtra.Item", props: [
             "title": .string("Weekly · 17%"), "subtitle": .string("resets in 5d"),
@@ -246,6 +246,7 @@ extension ExtensionTests {
         let manager = ExtensionMenuBarManager(
             storage: storage, file: directory.appendingPathComponent("bars.json"),
             supportDirectory: directory.appendingPathComponent("support"), executionTimeout: .seconds(1),
+            showsStatusItems: false,
             makeExecution: { owner, type in
                 boots.append((owner.manifest.name, type))
                 let host = MenuHost(name: owner.manifest.name, storage: storage)
