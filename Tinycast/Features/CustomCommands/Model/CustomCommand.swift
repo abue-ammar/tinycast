@@ -153,14 +153,27 @@ final class CustomCommandStore {
     // Takes a whole draft, so adding an option doesn't churn every call site.
     @discardableResult
     func add(_ draft: CustomCommand) throws -> CustomCommand {
-        let value = try validated(draft)
+        let value = try validated(draft, against: commands)
         commit(commands + [value])
         return value
     }
 
+    /// One commit for a whole import, and it returns how many of the drafts were new.
+    @discardableResult
+    func add(contentsOf drafts: [CustomCommand]) -> Int {
+        var updated = commands
+        let existing = commands.count
+        for draft in drafts {
+            guard let value = try? validated(draft, against: updated) else { continue }
+            updated.append(value)
+        }
+        commit(updated)
+        return updated.count - existing
+    }
+
     func update(_ draft: CustomCommand) throws {
         guard let index = commands.firstIndex(where: { $0.id == draft.id }) else { return }
-        let value = try validated(draft)
+        let value = try validated(draft, against: commands)
         var updated = commands
         updated[index] = value
         commit(updated)
@@ -192,7 +205,10 @@ final class CustomCommandStore {
         return updated.count
     }
 
-    private func validated(_ draft: CustomCommand) throws -> CustomCommand {
+    /// `existing` is what the name must be unique against: the library, or a batch in progress.
+    private func validated(
+        _ draft: CustomCommand, against existing: [CustomCommand]
+    ) throws -> CustomCommand {
         var value = draft
         value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         value.command = draft.command.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -205,7 +221,7 @@ final class CustomCommandStore {
             throw CustomCommandValidationError.invalidCharacter
         }
         guard
-            !commands.contains(where: {
+            !existing.contains(where: {
                 $0.id != value.id
                     && $0.name.compare(value.name, options: .caseInsensitive) == .orderedSame
             })

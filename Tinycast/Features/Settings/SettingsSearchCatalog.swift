@@ -202,7 +202,10 @@ enum SettingsSearchCatalog {
             keywords: ["script", "shell"]),
         .init(
             .commandsCustomCommands, "Add Custom Command",
-            keywords: ["new", "script", "shell", "shortcut"])
+            keywords: ["new", "script", "shell", "shortcut"]),
+        .init(
+            .commandsCustomCommands, "Import Raycast Scripts",
+            keywords: ["raycast", "script", "folder", "directory", "migrate"])
     ]
 
     private static let quicklinks: [SettingsSearchEntry] = [

@@ -213,6 +213,7 @@ run window-layout-test     Tinycast/Features/WindowManagement/Model/WindowComman
                            Tinycast/Features/WindowManagement/Model/WindowLayoutStore.swift
 run custom-command-test    Tinycast/Platform/PseudoTerminal.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
+                           Tinycast/Features/CustomCommands/Model/RaycastScriptImport.swift \
                            Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift \
                            Tinycast/Features/CustomCommands/Service/CustomCommandArgumentSession.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \

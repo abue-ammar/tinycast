@@ -48,10 +48,18 @@ struct CommandsSettingsView: View {
                 } label: {
                     SettingsRowTitle(.commandsCustomCommands, "Add Custom Command")
                 }
+                Button {
+                    Task { await core.customCommandCoordinator.importScriptDirectory() }
+                } label: {
+                    SettingsRowTitle(.commandsCustomCommands, "Import Raycast Scripts")
+                }
             } footer: {
-                Text("Name it, then give it a shortcut if you want one.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Name it, then give it a shortcut if you want one. Importing reads a folder of "
+                        + "Raycast script commands, one command per script."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             .settingsEnabled(settings.customCommandsEnabled)
         }
