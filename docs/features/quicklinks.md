@@ -102,7 +102,10 @@ straight off the template by `SnippetTemplateEngine.declaredArguments(in:)` — 
 is expanded and no clipboard is read to draw a chip — plus the synthetic **"Selected Text"** field when
 the setting says ask. An argument with a `default=` answers itself and is never asked for.
 `QuicklinkArgumentsAccessory` turns that list into the strip; a field declaring `options=` is chosen
-from the palette's own menu rather than typed. The strip is placed `.afterQuery` in root search — a
+from the palette's own menu rather than typed. **A chip marks nothing up front.** It draws like every
+other field until the caret has been in it and left it empty, and only then takes a red edge — a row
+you have not touched yet is not a row you owe anything on, which is how Raycast reads. The strip is
+given the row's identity, so that memory starts clean on the next quicklink. The strip is placed `.afterQuery` in root search — a
 glyph, then the chips, right after the typed text — and `.besideSearchField` on Search Quicklinks,
 where the field stays a filter with its prompt intact and the row below already carries the glyph.
 

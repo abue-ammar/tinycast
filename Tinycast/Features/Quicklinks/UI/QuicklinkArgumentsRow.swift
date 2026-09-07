@@ -12,6 +12,8 @@ struct QuicklinkArgumentsRow: View {
     let openOptions: (String) -> Void
     /// ↵ from inside a field opens the quicklink, like ↵ on the row itself.
     let onSubmit: () -> Void
+    /// Fields the caret has left behind. Nothing is owed until one was visited and not answered.
+    @State private var visited: Set<String> = []
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
@@ -24,17 +26,25 @@ struct QuicklinkArgumentsRow: View {
                 if argument.options.isEmpty {
                     ArgumentField(
                         argument: argument, text: value(argument.name),
-                        isFocused: focused == argument.name, onSubmit: onSubmit
+                        isFocused: focused == argument.name,
+                        isOwed: visited.contains(argument.name), onSubmit: onSubmit
                     )
                     .focused($focused, equals: argument.name)
                 } else {
                     ArgumentChoiceField(
                         argument: argument, text: value(argument.name),
                         isFocused: focused == argument.name,
+                        isOwed: visited.contains(argument.name),
                         onOpen: { openOptions(argument.name) }
                     )
                     .focused($focused, equals: argument.name)
                 }
+            }
+        }
+        // Only a field the caret has been in and left may say it is still owed a value.
+        .onChange(of: focused) { previous, _ in
+            if let previous, arguments.contains(where: { $0.name == previous }) {
+                visited.insert(previous)
             }
         }
     }
@@ -59,7 +69,8 @@ struct QuicklinkArgumentsRow: View {
 private struct ArgumentFieldChrome: ViewModifier {
     let argument: SnippetTemplateEngine.MissingArgument
     let isFocused: Bool
-    let isEmpty: Bool
+    /// Visited, left, and still empty — the only state that earns a warning edge.
+    let isOwed: Bool
     @Binding var hovered: Bool
 
     func body(content: Content) -> some View {
@@ -75,7 +86,7 @@ private struct ArgumentFieldChrome: ViewModifier {
                     .strokeBorder(stroke, lineWidth: 1)
             )
             .onHover { hovered = $0 }
-            .help("\(argument.name) — required")
+            .help(isOwed ? "\(argument.name) — required" : argument.name)
     }
 
     private var fill: Color {
@@ -84,10 +95,11 @@ private struct ArgumentFieldChrome: ViewModifier {
         return Theme.Colors.cardFill
     }
 
-    /// Focus reads as a brighter edge; a value still owed stays amber, as an unfilled field does.
+    /// Focus reads as a brighter edge. An untouched field looks like every other — Raycast marks
+    /// nothing up front — and only one left behind unanswered turns red.
     private var stroke: Color {
         if isFocused { return Color.accentColor }
-        if isEmpty { return Color.orange.opacity(0.45) }
+        if isOwed { return Theme.Colors.destructive.opacity(0.55) }
         return Theme.Colors.cardStroke
     }
 }
@@ -96,6 +108,7 @@ private struct ArgumentField: View {
     let argument: SnippetTemplateEngine.MissingArgument
     @Binding var text: String
     let isFocused: Bool
+    let isOwed: Bool
     let onSubmit: () -> Void
     @State private var hovered = false
 
@@ -111,7 +124,7 @@ private struct ArgumentField: View {
         .multilineTextAlignment(.center)
         .modifier(
             ArgumentFieldChrome(
-                argument: argument, isFocused: isFocused, isEmpty: text.isEmpty,
+                argument: argument, isFocused: isFocused, isOwed: isOwed && text.isEmpty,
                 hovered: $hovered))
     }
 }
@@ -121,6 +134,7 @@ private struct ArgumentChoiceField: View {
     let argument: SnippetTemplateEngine.MissingArgument
     @Binding var text: String
     let isFocused: Bool
+    let isOwed: Bool
     let onOpen: () -> Void
     @State private var hovered = false
 
@@ -139,7 +153,8 @@ private struct ArgumentChoiceField: View {
         }
         .modifier(
             ArgumentFieldChrome(
-                argument: argument, isFocused: isFocused, isEmpty: text.isEmpty, hovered: $hovered)
+                argument: argument, isFocused: isFocused, isOwed: isOwed && text.isEmpty,
+                hovered: $hovered)
         )
         .contentShape(Rectangle())
         .focusable()
