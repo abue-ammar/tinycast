@@ -396,9 +396,14 @@ struct RootPaletteView: View {
         .onKeyPress(.escape) {
             // An open list closes itself first, exactly as the ⌘K menu does.
             if vm.isControlListOpen { return .ignored }
-            switch PaletteEscapeAction.resolve(menuOpen: menuOpen, query: vm.query, mode: vm.mode) {
+            switch PaletteEscapeAction.resolve(
+                menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
+                mode: vm.mode)
+            {
             case .closeMenu:
                 closeMenus()
+            case .leaveArgumentField:
+                returnFocusToSearchField()
             case .clearQuery:
                 vm.query = ""
             case .exitExtensionScreen:
@@ -930,10 +935,7 @@ struct RootPaletteView: View {
         // A control editing with ↑/↓ keeps them; only ⇥ leaves it.
         guard !screen.ownsVerticalKeys(at: selection(in: screen)) else { return .ignored }
         // Moving off a command takes its argument fields with it, so hand focus back first.
-        if argumentFocused != nil {
-            argumentFocused = nil
-            searchFocused = true
-        }
+        if argumentFocused != nil { returnFocusToSearchField() }
         guard let next = screen.move(delta, axis: .vertical, from: selection(in: screen)) else {
             move(delta, in: screen)
             return .handled
@@ -1025,8 +1027,16 @@ struct RootPaletteView: View {
         guard let accessory = headerAccessory, !accessory.fieldNames.isEmpty else {
             return cycleMode()
         }
-        argumentFocused = accessory.fieldAfter(argumentFocused)
-        searchFocused = argumentFocused == nil
+        // Read from the local value: a `@FocusState` set in this tick still reads back stale.
+        let next = accessory.fieldAfter(argumentFocused)
+        argumentFocused = next
+        searchFocused = next == nil
+    }
+
+    /// AppKit selects the whole query as the field editor comes back, which is the wanted reset.
+    private func returnFocusToSearchField() {
+        argumentFocused = nil
+        searchFocused = true
     }
 
     private func navigateBack() {
