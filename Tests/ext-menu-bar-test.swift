@@ -71,6 +71,16 @@ extension ExtensionTests {
     static func menuBarRenderingChecks() async {
         let controller = ExtensionMenuBarController(entryID: "tinycast-fixture-rendering", assetsPath: "/tmp", isVisible: false)
         defer { controller.remove() }
+        controller.menuWillOpen(controller.menu)
+        check("opening callback does not change menu structure", controller.menu.items.isEmpty)
+        controller.menuDidClose(controller.menu)
+        controller.menuNeedsUpdate(controller.menu)
+        let placeholder = controller.menu.items.first
+        check("cold menu has content before opening", placeholder?.title == "Loading…"
+              && placeholder?.isEnabled == false && !controller.isOpen)
+        controller.menuNeedsUpdate(controller.menu)
+        check("repeated native preparation keeps one placeholder", controller.menu.items.count == 1
+              && controller.menu.items.first === placeholder)
         let row = RenderNode(id: 2, type: "MenuBarExtra.Item", props: [
             "title": .string("Weekly · 17%"), "subtitle": .string("resets in 5d"),
             "icon": .string("star-16"), "onAction": .handler("refresh"),
@@ -81,6 +91,8 @@ extension ExtensionTests {
         controller.showMenu(root, session: "one")
         await settle(200)
         let item = controller.menu.items.first
+        controller.menuNeedsUpdate(controller.menu)
+        check("native preparation preserves cached content", controller.menu.items.first === item)
         check("menu is prepared while closed", item?.title == "Weekly · 17% resets in 5d" && item?.image?.size.width == 14,
               "title=\(item?.title ?? "nil") image=\(String(describing: item?.image?.size))")
         check("menu contains only extension rows", controller.menu.items.count == 1)

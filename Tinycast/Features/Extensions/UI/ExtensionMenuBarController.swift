@@ -313,16 +313,21 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         guard snapshot?.hasMenu == true, let button = status.button else { return }
         button.highlight(true)
         defer { button.highlight(false) }
-        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.minY), in: button)
+        let bounds = button.bounds
+        let bottom = button.isFlipped ? bounds.maxY : bounds.minY
+        menu.popUp(positioning: nil, at: NSPoint(x: bounds.minX, y: bottom), in: button)
     }
 
-    func menuWillOpen(_ menu: NSMenu) {
-        isOpen = true
+    func menuNeedsUpdate(_ menu: NSMenu) {
         if menu.items.isEmpty {
             let loading = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
             loading.isEnabled = false
             menu.addItem(loading)
         }
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        isOpen = true
         onOpen?()
     }
 

@@ -183,16 +183,17 @@ its refresh schedule.
 Opening during a background refresh reuses that session and enables interactive confirmations, HUDs
 and OAuth for its actions. Its original JavaScript launch type still describes how the session started.
 
-The status button opens a native popup tracking session; Escape, an outside click, or clicking the
-button again dismisses it. Native rows and small icons stay prepared between runs; teardown clears
-handler IDs while preserving action appearance. A click before the new runtime is ready waits for a
+The status button opens a native popup tracking session anchored to its bottom edge in the button's
+coordinate system; Escape, an outside click, or clicking the button again dismisses it. Native rows and
+small icons stay prepared between runs; teardown clears handler IDs while preserving action appearance.
+A click before the new runtime is ready waits for a
 fresh callback with the same section/submenu path, label and shortcut, including an alternate's primary
 item. Changed or ambiguous items ask the user to reopen the menu instead of dispatching an old handler.
-Opening reuses those rows
-while a fresh context loads. Only a menu
-without prepared content shows a loading row. Subtitles follow the title on the same line. React
-updates reconcile text and callbacks immediately, fill reserved icon slots asynchronously, and preserve settled content while
-loading. Button changes wait until the menu closes so its anchor does not move under the pointer.
+Opening reuses those rows while a fresh context loads. Only a menu without prepared content shows a
+loading row, prepared before native menu sizing. Subtitles follow the title on the same line. React
+updates reconcile text and callbacks immediately, fill reserved icon slots asynchronously, and preserve
+settled content while loading. Button changes wait until the menu closes so its anchor does not move
+under the pointer.
 The session stays alive while the menu is open. After a settled render or menu
 closure, a 100 ms coalescing delay lets React commit effects and host calls drain before releasing the
 context. The runtime queue drains temporary Objective-C objects after each work item, including
