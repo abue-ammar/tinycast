@@ -99,8 +99,8 @@ is dropped while the actual error survives.
 ### Arguments
 
 A command may declare an ordered list of arguments, each a name and an optional/required flag. Running
-one opens `PaletteMode.customCommandArguments` — the same shape as the quicklink argument prompt: the
-palette's own search field _is_ the input, one argument at a time, with the field's placeholder naming
+one opens `PaletteMode.customCommandArguments`, the last screen of its kind: the palette's own search
+field _is_ the input, one argument at a time, with the field's placeholder naming
 the pending one and the body listing every argument, its `$n` slot, and what has been answered. ↵
 advances, a bare backspace steps back and refills the field, and Escape abandons the run. `↵` is held
 while a required argument is empty, which also hides the footer pill.

@@ -29,8 +29,10 @@ final class PaletteState {
     var forceExpanded = false
     /// The paste target, mirrored on every show; `prepare` resets the screen, not this.
     var pasteTarget: PasteTarget?
-    /// Values typed into an extension's inline argument fields, keyed by `argumentKey`.
+    /// Values typed into a row's inline argument fields, keyed by `argumentKey`.
     var commandArguments: [String: String] = [:]
+    /// Set when the palette opens to fill one row's fields; the header focuses the first empty one.
+    var pendingArgumentEntryID: String?
     /// True once ⌘ has been *held*, which numbers the favorite rows. The panel is the only writer.
     private(set) var commandHeld = false
     /// A chord is a tap, so the numbering waits out the tap before it claims the trailing labels.
@@ -66,6 +68,7 @@ final class PaletteState {
         isEditingField = false
         isControlListOpen = false
         commandArguments = [:]
+        pendingArgumentEntryID = nil
         clipboardFilter = .all
         forceExpanded = false
         dropHoverHighlight()

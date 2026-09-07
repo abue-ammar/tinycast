@@ -164,7 +164,7 @@ private struct QuicklinkSettingsRow: View {
 
     var body: some View {
         SettingsRow(title: quicklink.name, subtitle: quicklink.link) {
-            SymbolImage(name: symbol, size: 13)
+            SymbolImage(name: quicklink.symbol, size: 13)
         } trailing: {
             if quicklink.isPinned {
                 Image(systemName: "pin.fill")
@@ -206,10 +206,5 @@ private struct QuicklinkSettingsRow: View {
                 .help("Enabled")
                 .accessibilityLabel("Enable \(quicklink.name)")
         }
-    }
-
-    private var symbol: String {
-        quicklink.iconSymbol ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol
-            ?? Quicklink.sfSymbol
     }
 }

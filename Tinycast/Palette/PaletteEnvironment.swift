@@ -22,7 +22,6 @@ extension View {
             .environment(core.hotKeys)
             .environment(core.uninstall)
             .environment(core.quicklinks)
-            .environment(core.quicklinkArguments)
             .environment(core.customCommandArguments)
             .environment(core.snippetsStore)
             .environment(core.extensions)

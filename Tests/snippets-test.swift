@@ -1263,6 +1263,26 @@ struct SnippetsTests {
             expand("{argument name=\"Tone\" options=\", \"}").text
                 == "{argument name=\"Tone\" options=\", \"}")
 
+        // What the header's argument fields are built from, without expanding anything else.
+        check(
+            "declared arguments are listed in written order, once each",
+            SnippetTemplateEngine.declaredArguments(
+                in: "{argument name=\"Repo\"}/{argument name=\"Branch\"}?q={argument name=\"Repo\"}"
+            ).map(\.name) == ["Repo", "Branch"])
+        check(
+            "an argument that answers itself is never asked for",
+            SnippetTemplateEngine.declaredArguments(
+                in: "{argument name=\"Tone\" default=\"happy\"}"
+            ).isEmpty)
+        check(
+            "options travel with a declared argument as they do with a missing one",
+            SnippetTemplateEngine.declaredArguments(
+                in: "{argument name=\"Tone\" options=\"happy, sad\"}")
+                == [.init(name: "Tone", options: ["happy", "sad"])])
+        check(
+            "a template that reads only the clipboard declares no arguments",
+            SnippetTemplateEngine.declaredArguments(in: "https://x.dev/?q={clipboard}").isEmpty)
+
         // Raycast's snippet spelling resolves like Tinycast's.
         let child = record("/tmp/ph-child.md", Snippet(name: "Child", text: "nested"))
         let byName = record("/tmp/ph-name.md", Snippet(name: "ByName", text: "{snippet name=\"Child\"}"))

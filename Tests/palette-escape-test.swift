@@ -41,17 +41,18 @@ struct PaletteEscapeTests {
             PaletteEscapeAction.resolve(menuOpen: false, argumentFocused: false, query: "", mode: .launcher),
             .hidePalette,
             "an empty launcher query hides the palette")
-        // The two modes where the field is not a search field: an argument answer and a chat draft.
+        // The two surfaces where the field is not a search field: an argument answer, a chat draft.
         expect(
             PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "blue", mode: .quicklinkArguments),
+                menuOpen: false, argumentFocused: false, query: "blue",
+                mode: .customCommandArguments),
             .clearQuery,
-            "a half-typed argument clears before the pending quicklink is abandoned")
+            "a half-typed argument clears before the pending command is abandoned")
         expect(
             PaletteEscapeAction.resolve(
-                menuOpen: false, argumentFocused: false, query: "", mode: .quicklinkArguments),
+                menuOpen: false, argumentFocused: false, query: "", mode: .customCommandArguments),
             .hidePalette,
-            "an empty argument field hides the palette, which cancels the pending quicklink")
+            "an empty argument field hides the palette, which cancels the pending command")
         expect(
             PaletteEscapeAction.resolve(
                 menuOpen: false, argumentFocused: false, query: "why is the sky", mode: .ai),
