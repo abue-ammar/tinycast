@@ -2056,6 +2056,19 @@ $|dollar sign|xc|0|usd money currency
 №|numero sign|xs|0|number
 ¡|inverted exclamation mark|xs|0|spanish punctuation
 ¿|inverted question mark|xs|0|spanish punctuation
+◉|fisheye|xs|0|bullseye target circle dot
+◎|bullseye|xs|0|target circle ring
+#|number sign|xs|0|hash pound sharp
+*|asterisk|xs|0|star multiply wildcard
+@|at sign|xs|0|at arobase email
+&|ampersand|xs|0|and
+%|percent sign|xs|0|percent modulo
+⁉|exclamation question mark|xs|0|interrobang surprise
+‼|double exclamation mark|xs|0|bang emphasis
+℗|sound recording copyright|xs|0|phonogram copyright publishing
+℠|service mark|xs|0|servicemark trademark
+ª|feminine ordinal indicator|xs|0|feminine ordinal spanish
+º|masculine ordinal indicator|xs|0|masculine ordinal spanish portuguese
 ※|reference mark|xj|0|kome komejirushi note footnote annotation
 〃|ditto mark|xj|0|same repeat above
 〄|japanese industrial standard symbol|xj|0|jis
@@ -2102,5 +2115,28 @@ $|dollar sign|xc|0|usd money currency
 ﹂|vertical right corner bracket|xj|0|tategaki kagi quote close
 ﹃|vertical left white corner bracket|xj|0|tategaki quote open
 ﹄|vertical right white corner bracket|xj|0|tategaki quote close
+⌘|command key|xk|0|cmd looped square place of interest
+⌥|option key|xk|0|opt alt
+⌃|control key|xk|0|ctrl caret up arrowhead
+⎋|escape key|xk|0|esc
+⏎|return key|xk|0|enter newline carriage
+⌤|enter key|xk|0|enter numpad
+⌫|delete key|xk|0|backspace erase backward
+⌦|forward delete key|xk|0|delete forward fn
+⇥|tab key|xk|0|tab right
+⇤|backtab key|xk|0|shift tab left
+⇱|home key|xk|0|home corner
+⇲|end key|xk|0|end corner
+⇞|page up key|xk|0|pgup page up
+⇟|page down key|xk|0|pgdn page down
+⏏|eject key|xk|0|eject media disk
+⌧|clear key|xk|0|clear numpad
+⎙|print screen key|xk|0|print screen sysrq
+␣|space symbol|xk|0|space blank open box
+⌀|diameter sign|xk|0|diameter engineering average
+⌂|house|xk|0|home house
+⌨|keyboard|xk|0|keyboard
+⚙|gear|xk|0|settings cog preferences
+|apple logo|xk|0|apple logo private
 """
 }

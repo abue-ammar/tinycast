@@ -188,6 +188,19 @@ const SHAPES = [
   ["№", "numero sign", "number"],
   ["¡", "inverted exclamation mark", "spanish punctuation"],
   ["¿", "inverted question mark", "spanish punctuation"],
+  ["◉", "fisheye", "bullseye target circle dot"],
+  ["◎", "bullseye", "target circle ring"],
+  ["#", "number sign", "hash pound sharp"],
+  ["*", "asterisk", "star multiply wildcard"],
+  ["@", "at sign", "at arobase email"],
+  ["&", "ampersand", "and"],
+  ["%", "percent sign", "percent modulo"],
+  ["⁉", "exclamation question mark", "interrobang surprise"],
+  ["‼", "double exclamation mark", "bang emphasis"],
+  ["℗", "sound recording copyright", "phonogram copyright publishing"],
+  ["℠", "service mark", "servicemark trademark"],
+  ["ª", "feminine ordinal indicator", "feminine ordinal spanish"],
+  ["º", "masculine ordinal indicator", "masculine ordinal spanish portuguese"],
 ];
 // Everyday CJK punctuation — not Unicode emoji, so the upstream data never carries it.
 const CJK = [
@@ -238,12 +251,40 @@ const CJK = [
   ["﹃", "vertical left white corner bracket", "tategaki quote open"],
   ["﹄", "vertical right white corner bracket", "tategaki quote close"],
 ];
+// Mac keyboard keys and everyday technicals, all listed by the macOS character viewer.
+//  is Apple private-use (U+F8FF), so it never appears in Unicode data and is curated here.
+const KEYS = [
+  ["⌘", "command key", "cmd looped square place of interest"],
+  ["⌥", "option key", "opt alt"],
+  ["⌃", "control key", "ctrl caret up arrowhead"],
+  ["⎋", "escape key", "esc"],
+  ["⏎", "return key", "enter newline carriage"],
+  ["⌤", "enter key", "enter numpad"],
+  ["⌫", "delete key", "backspace erase backward"],
+  ["⌦", "forward delete key", "delete forward fn"],
+  ["⇥", "tab key", "tab right"],
+  ["⇤", "backtab key", "shift tab left"],
+  ["⇱", "home key", "home corner"],
+  ["⇲", "end key", "end corner"],
+  ["⇞", "page up key", "pgup page up"],
+  ["⇟", "page down key", "pgdn page down"],
+  ["⏏", "eject key", "eject media disk"],
+  ["⌧", "clear key", "clear numpad"],
+  ["⎙", "print screen key", "print screen sysrq"],
+  ["␣", "space symbol", "space blank open box"],
+  ["⌀", "diameter sign", "diameter engineering average"],
+  ["⌂", "house", "home house"],
+  ["⌨", "keyboard", "keyboard"],
+  ["⚙", "gear", "settings cog preferences"],
+  ["", "apple logo", "apple logo private"],
+];
 const SYMBOL_SECTIONS = [
   ["xa", ARROWS],
   ["xc", CURRENCY],
   ["xm", MATH],
   ["xs", SHAPES],
   ["xj", CJK],
+  ["xk", KEYS],
 ];
 
 const LINE_RE =
