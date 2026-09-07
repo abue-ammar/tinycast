@@ -7,6 +7,52 @@ final class ExtensionStorage {
         var localStorage: [String: StoredValue] = [:]
         var caches: [String: [String: String]] = [:]
         var preferences: [String: StoredValue] = [:]
+        /// `updateCommandMetadata` overrides and background-refresh bookkeeping, per command name.
+        var metadata: [String: CommandMetadata] = [:]
+
+        /// A file predating a key still loads; synthesis would discard the whole file instead.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            localStorage =
+                try container.decodeIfPresent([String: StoredValue].self, forKey: .localStorage)
+                ?? [:]
+            caches =
+                try container.decodeIfPresent([String: [String: String]].self, forKey: .caches)
+                ?? [:]
+            preferences =
+                try container.decodeIfPresent([String: StoredValue].self, forKey: .preferences)
+                ?? [:]
+            metadata =
+                try container.decodeIfPresent([String: CommandMetadata].self, forKey: .metadata)
+                ?? [:]
+        }
+
+        init() {}
+    }
+
+    /// What `updateCommandMetadata` wrote plus what the scheduler needs; backup-exempt by location.
+    struct CommandMetadata: Codable, Sendable, Equatable {
+        /// Set by `updateCommandMetadata`, cleared by `null`; nil falls back to the manifest subtitle.
+        var subtitle: String?
+        /// Off until the first manual run or the Settings toggle, exactly as in Raycast.
+        var backgroundEnabled = false
+        var lastRun: Date?
+        var lastError: String?
+        var consecutiveFailures = 0
+
+        /// Same tolerance as the store: a partial record keeps its defaults.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
+            backgroundEnabled =
+                try container.decodeIfPresent(Bool.self, forKey: .backgroundEnabled) ?? false
+            lastRun = try container.decodeIfPresent(Date.self, forKey: .lastRun)
+            lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
+            consecutiveFailures =
+                try container.decodeIfPresent(Int.self, forKey: .consecutiveFailures) ?? 0
+        }
+
+        init() {}
     }
 
     /// `LocalStorage` accepts strings, numbers and booleans and must return them with their type.
@@ -147,6 +193,50 @@ final class ExtensionStorage {
     func removeAll(extension name: String) {
         stores.removeValue(forKey: name)
         try? FileManager.default.removeItem(at: fileURL(for: name))
+    }
+
+    // MARK: - Command metadata
+
+    func commandMetadata(extension name: String, command: String) -> CommandMetadata {
+        store(for: name).metadata[command] ?? CommandMetadata()
+    }
+
+    func setSubtitle(_ subtitle: String?, extension name: String, command: String) {
+        mutate(name) { $0.metadata[command, default: CommandMetadata()].subtitle = subtitle }
+    }
+
+    func setBackgroundEnabled(_ enabled: Bool, extension name: String, command: String) {
+        mutate(name) { $0.metadata[command, default: CommandMetadata()].backgroundEnabled = enabled }
+    }
+
+    /// Disabling retires the last error with the schedule; a stale warning would outlive its cause.
+    func clearBackgroundError(extension name: String, command: String) {
+        mutate(name) {
+            $0.metadata[command, default: CommandMetadata()].lastError = nil
+            $0.metadata[command, default: CommandMetadata()].consecutiveFailures = 0
+        }
+    }
+
+    /// A manual run counts as a refresh, so the scheduler doesn't re-fire right behind it.
+    func activateBackgroundRefresh(extension name: String, command: String, now: Date) {
+        mutate(name) {
+            $0.metadata[command, default: CommandMetadata()].backgroundEnabled = true
+            $0.metadata[command, default: CommandMetadata()].lastRun = now
+        }
+    }
+
+    func recordBackgroundResult(
+        extension name: String, command: String, success: Bool, error: String?, now: Date
+    ) {
+        mutate(name) {
+            $0.metadata[command, default: CommandMetadata()].lastRun = now
+            $0.metadata[command, default: CommandMetadata()].lastError = success ? nil : error
+            if success {
+                $0.metadata[command, default: CommandMetadata()].consecutiveFailures = 0
+            } else {
+                $0.metadata[command, default: CommandMetadata()].consecutiveFailures += 1
+            }
+        }
     }
 
     // MARK: - Persistence

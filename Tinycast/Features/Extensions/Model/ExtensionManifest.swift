@@ -144,6 +144,9 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
     let subtitle: String?
     let description: String
     let mode: ExtensionCommandMode
+    let intervalRaw: String?
+    /// Parsed `interval`, clamped to the refresh floor; nil when the manifest sets no schedule.
+    let interval: TimeInterval?
     let keywords: [String]
     let icon: String?
     let disabledByDefault: Bool
@@ -171,6 +174,8 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
         subtitle = dict["subtitle"] as? String
         description = dict["description"] as? String ?? ""
         mode = ExtensionCommandMode(rawValue: dict["mode"] as? String ?? "view") ?? .view
+        intervalRaw = dict["interval"] as? String
+        interval = ExtensionRefreshPolicy.parse(intervalRaw)
         keywords = dict["keywords"] as? [String] ?? []
         icon = dict["icon"] as? String
         disabledByDefault = dict["disabledByDefault"] as? Bool ?? false

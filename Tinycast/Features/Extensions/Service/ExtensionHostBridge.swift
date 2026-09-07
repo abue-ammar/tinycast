@@ -6,6 +6,8 @@ import Foundation
 protocol ExtensionHostContext: AnyObject {
     /// The extension whose command is running — the namespace for storage, cache and preferences.
     var activeExtensionName: String? { get }
+    /// Background runs report no UI: toasts, HUDs and dialogs would fire on a timer.
+    var activeLaunchType: ExtensionLaunchType { get }
     var storage: ExtensionStorage { get }
     /// The app a paste would land in — the palette's recorded `previousApp`.
     var pasteTarget: NSRunningApplication? { get }
@@ -18,6 +20,8 @@ protocol ExtensionHostContext: AnyObject {
     func popToRoot()
     func clearSearchBar()
     func openPreferences(scope: String)
+    /// Persists a `subtitle` (or clears it on `null`); a missing key leaves it alone.
+    func updateCommandMetadata(subtitle: String?)
     func present(toast: ExtensionToast) -> Int
     func update(toast id: Int, with toast: ExtensionToast)
     func hide(toast id: Int)
@@ -262,6 +266,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     // MARK: - Window
 
     private func window(method: String, arguments: [RenderValue]) -> Any? {
+        guard context?.activeLaunchType != .background else { return nil }
         switch method {
         case "close":
             let options = arguments.first?.objectValue ?? [:]
@@ -282,6 +287,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     private func feedback(method: String, arguments: [RenderValue]) async throws -> Any? {
         guard let context else { throw ExtensionHostError.noActiveExtension }
+        guard context.activeLaunchType != .background else { return nil }
         switch method {
         case "showToast":
             guard let payload = arguments.first?.objectValue else { return nil }
@@ -375,7 +381,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             return nil
 
         case "updateCommandMetadata":
-            // Subtitle metadata only shows on menu-bar commands, which Tinycast doesn't run.
+            let fields = arguments.first?.objectValue ?? [:]
+            guard fields.keys.contains("subtitle") else { return nil }
+            context?.updateCommandMetadata(subtitle: fields["subtitle"]?.stringValue)
             return nil
 
         default:

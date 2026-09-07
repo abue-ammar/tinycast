@@ -89,7 +89,8 @@ struct ExtensionsSettingsView: View {
                 Label("What works", systemImage: "checkmark.circle")
                 Text(
                     "List, detail, form and grid commands, and ones that just run. Preferences, "
-                        + "arguments, storage, the clipboard, toasts, HUDs and OAuth sign-in.")
+                        + "arguments, storage, the clipboard, toasts, HUDs and OAuth sign-in. "
+                        + "No-view commands refresh their subtitle on their manifest interval.")
             }
             LabeledContent {
                 EmptyView()
@@ -527,6 +528,57 @@ private struct CommandRows: View {
             ExtensionPreferenceRow(
                 extensionName: installed.manifest.name, schema: schema, indent: Theme.Spacing.lg)
         }
+        if command.mode == .noView, command.intervalRaw != nil {
+            ExtensionRefreshRow(
+                extensionName: installed.manifest.name, command: command, indent: Theme.Spacing.lg)
+        }
+    }
+}
+
+/// One `no-view` command's background refresh: Raycast's interval preference, stored locally.
+private struct ExtensionRefreshRow: View {
+    let extensionName: String
+    let command: ExtensionCommand
+    var indent: CGFloat = 0
+    @Environment(AppCore.self) private var core
+
+    private static let relative: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.dateTimeStyle = .named
+        return formatter
+    }()
+
+    var body: some View {
+        // Read so the row re-renders after a background tick writes new metadata.
+        let tick = core.extensions.metadataRevision
+        let info = core.extensions.backgroundInfo(extension: extensionName, command: command.name)
+        return SettingsCardRow(
+            title: "Background refresh", detail: detail(for: info, tick: tick), indent: indent
+        ) {
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { info.backgroundEnabled }, set: { setEnabled($0) })
+            )
+            .labelsHidden()
+        }
+    }
+
+    private func detail(for info: ExtensionStorage.CommandMetadata, tick _: Int) -> String {
+        var detail = "Runs every \(command.intervalRaw ?? "?") in the background."
+        if let lastRun = info.lastRun {
+            detail += " Last refresh \(Self.relative.localizedString(for: lastRun, relativeTo: Date()))."
+        } else {
+            detail += " Hasn't refreshed yet."
+        }
+        if let error = info.lastError?.split(separator: "\n").first {
+            detail += " Last error: \(error)."
+        }
+        return detail
+    }
+
+    private func setEnabled(_ enabled: Bool) {
+        core.extensions.setBackgroundEnabled(enabled, extension: extensionName, command: command.name)
     }
 }
 
