@@ -53,7 +53,7 @@ enum RaycastDecoder {
             throw RaycastImportError.incorrectPassphrase
         }
 
-        guard let payload = try? Zlib.gunzip(payloadGzip) else {
+        guard let payload = try? Zlib.gunzip(payloadGzip, maxOutput: maximumPayloadLength) else {
             throw RaycastImportError.corrupt
         }
         return payload
@@ -63,6 +63,8 @@ enum RaycastDecoder {
     private static let containerSchemaVersion = 3
     private static let fixedHeaderLength = 12
     private static let maximumHeaderLength = 1024 * 1024
+    // AES already authenticated this stream; the cap is only a memory bound.
+    private static let maximumPayloadLength = 512 * 1024 * 1024
     private static let authenticationTagLength = 16
     private static let ivLength = 16
     private static let saltLength = 16

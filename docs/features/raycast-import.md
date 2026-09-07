@@ -16,6 +16,9 @@ between them are both gone, deleted rather than carried.
 - **Every scrypt derive costs seconds in the unoptimized harness.** `raycast-test` derives once for its
   fixture and keeps the cases that reach key derivation to the few that need it; anything testing the
   container's framing is written to fail before it.
+- **The payload gunzip cap is a memory bound, not a zip-bomb guard.** AES-GCM has already authenticated
+  those bytes. The unauthenticated header stays at 1 MB. A clipboard-heavy export decompresses past
+  64 MB, so the payload cap is 512 MB.
 
 ## Wire format
 
