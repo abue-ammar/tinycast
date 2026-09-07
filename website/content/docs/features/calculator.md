@@ -65,7 +65,8 @@ Use `pi * (2m)^2` for a circle's area and `sin(30deg) * 10m` for a triangle's op
 
 `to timespan` also works for mixed durations: `(1hr + 30min) to timespan` → `1 hr 30 min`.
 Affine temperatures may only be added or subtracted within one scale; products involving
-temperatures and unsupported dimensions remain errors.
+temperatures remain errors. Other units can form compound quantities: `2kg / 4m3` → `0.5 kg/m³`
+and `1kg/m3 to g/cm3` → `0.001 g/cm³`.
 
 ## Volume and flow
 
@@ -226,3 +227,33 @@ including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings
 Other units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), mechanical horsepower (`hp`),
 BTU (international table), `rpm`, pound-force (`lbf`), US/UK tons and UK liquid measures
 (`ukgal`, `ukqt`, `ukpint`, `ukfloz`). Plain gallons and pints remain US measures.
+
+## Functions and comparisons
+
+Functions accept comma-separated arguments: `hypot(3,4)`, `round(3.14159,2)`, `log(8,2)`,
+`gcd(12,18)`, `lcm(4,6)`, `atan2(1,1)`, `pow(2,10)` and `root(-8,3)`.
+A one-argument `log` remains base 10. `min`, `max`, `sum`, `avg`, `mean` and `average` accept lists,
+including compatible measurements: `sum(1km,500m)` gives `1.5 km`, and `hypot(3m,400cm)` gives `5 m`.
+`round(2.567km,1)` keeps the unit. Inside function arguments, commas separate values;
+write `1000` rather than `1,000` there.
+
+`==`, `!=`, `<`, `<=`, `>` and `>=` compare numbers or compatible measurements and return booleans.
+`1km == 1000m` is `true`; incompatible dimensions produce an error. Chained comparisons are rejected.
+Integer operands support `&`, `|`, `xor`, `~`, `<<` and `>>`; `^` remains exponentiation.
+Shifts require counts from 0 through 63. Bitwise operations, `gcd` and `lcm` require integers
+strictly between −2⁵³ and 2⁵³, including their results; larger values and fractions are rejected.
+
+
+## Compound prices and timestamps
+
+`100 USD / 4hr` gives `25 USD/hr`; multiplying by `8hr` gives `200.00 USD`.
+Compound targets work too: `25 USD/hr to EUR/min`. Arithmetic within one currency rate needs no
+exchange snapshot; changing currency uses the same injected rates as ordinary money conversions.
+A compound quantity can carry one currency factor or its reciprocal, but not currency squared.
+
+`now to unix` returns whole Unix seconds; `now to unix ms` returns whole milliseconds.
+`unix 0 to date` and `1000 unix ms` convert back to a local date/time.
+RFC 3339 input accepts an explicit `Z` or `±HH:MM` offset and optional fractional seconds:
+`2026-07-24T07:30:00+02:00 + 30min`, or `1970-01-01T01:00:00+01:00 to unix` → `0`.
+Dates use the local calendar for display and arithmetic. Impossible dates, leap seconds and trailing
+text are rejected; timestamp output rounds down to the requested unit and copies every integer digit.

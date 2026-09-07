@@ -9,7 +9,6 @@ enum CalcToken: Equatable, Sendable {
     case ident(String)
     case op(Character)  // + - * / ^ ! % ( )
     case arrow  // -> or →
-    /// Only `CalcPercent`'s list forms accept one; every other path rejects it.
     case comma
 }
 
@@ -19,6 +18,8 @@ enum CalcTokenizer {
         let chars = Array(input)
         var tokens: [CalcToken] = []
         var i = 0
+        var depth = 0
+        var functionDepth: Int?
 
         func isDigit(_ ch: Character) -> Bool { ch.isASCII && ch.isNumber }
 
@@ -50,7 +51,7 @@ enum CalcTokenizer {
                     let c = chars[i]
                     if isDigit(c) {
                         text.append(c)
-                    } else if c == "," && i + 1 < chars.count && isDigit(chars[i + 1]) {
+                    } else if c == "," && functionDepth == nil && i + 1 < chars.count && isDigit(chars[i + 1]) {
                         // grouping separator between digits — skip
                     } else if c == "." && !seenDot {
                         seenDot = true
@@ -136,8 +137,33 @@ enum CalcTokenizer {
                 continue
             }
 
+            if i + 1 < chars.count {
+                let combined: Character? = switch (ch, chars[i + 1]) {
+                case ("<", "<"): "«"
+                case (">", ">"): "»"
+                case ("=", "="): "≡"
+                case ("!", "="): "≠"
+                case ("<", "="): "≤"
+                case (">", "="): "≥"
+                default: nil
+                }
+                if let op = combined {
+                    tokens.append(.op(op))
+                    i += 2
+                    continue
+                }
+            }
+            if ch == "(" {
+                if functionDepth == nil, case .ident(let name)? = tokens.last, CalcMath.isFunction(name) {
+                    functionDepth = depth
+                }
+                depth += 1
+            } else if ch == ")" {
+                depth -= 1
+                if functionDepth == depth { functionDepth = nil }
+            }
             switch ch {
-            case "+", "(", ")", "!", "%", "^":
+            case "+", "(", ")", "!", "%", "^", "&", "|", "~", "<", ">", "≤", "≥", "≠", "⊻":
                 tokens.append(.op(ch))
             case ",":
                 tokens.append(.comma)
@@ -327,7 +353,7 @@ private struct Parser {
     private func impliesMultiplication() -> Bool {
         switch current {
         case .op("("): return true
-        case .ident(let name): return CalcParser.constants[name] != nil || CalcParser.functions[name] != nil
+        case .ident(let name): return CalcParser.constants[name] != nil || CalcMath.isFunction(name)
         default: return false
         }
     }
@@ -341,10 +367,11 @@ private struct Parser {
 
     private func peekBinary() -> BinaryOp? {
         switch current {
-        case .op(let op) where op == "+" || op == "-":
-            return BinaryOp(op: op, bindingPower: 10, rightBindingPower: 11)
-        case .op(let op) where op == "*" || op == "/":
-            return BinaryOp(op: op, bindingPower: Self.mulBP, rightBindingPower: Self.mulBP + 1)
+        case .op(let op) where CalcMath.bindingPower(op) != nil:
+            let power = CalcMath.bindingPower(op) ?? 0
+            return BinaryOp(op: op, bindingPower: power, rightBindingPower: power + (op == "^" ? 0 : 1))
+        case .ident("xor"):
+            return BinaryOp(op: "⊻", bindingPower: 6, rightBindingPower: 7)
         case .ident("of"):
             return BinaryOp(op: "*", bindingPower: Self.mulBP, rightBindingPower: Self.mulBP + 1)
         // Spelled-out only: "%" is already percent, and "20% - 5" gives no local signal.
@@ -353,8 +380,6 @@ private struct Parser {
         // Spoken form of `^`, right-associative like the symbol it spells.
         case .ident("power"):
             return BinaryOp(op: "^", bindingPower: 30, rightBindingPower: 30)
-        case .op("^"):
-            return BinaryOp(op: "^", bindingPower: 30, rightBindingPower: 30)  // right-associative: 2^3^2 = 512
         default: return nil
         }
     }
@@ -375,7 +400,9 @@ private struct Parser {
         case "/": result = lhs.effective / rhs.effective
         case "%": result = lhs.effective.truncatingRemainder(dividingBy: rhs.effective)
         case "^": result = pow(lhs.effective, rhs.effective)
-        default: return nil
+        default:
+            guard let value = CalcMath.bitwise(op, lhs.effective, rhs.effective) else { return nil }
+            result = value
         }
         return Value(value: result)
     }
@@ -404,6 +431,19 @@ private struct Parser {
         return value
     }
 
+    private mutating func parseFunction(_ name: String) -> Value? {
+        pos += 2
+        var values: [Double] = []
+        while true {
+            guard let value = parseExpression(minBP: 0) else { return nil }
+            values.append(value.effective)
+            if current == .op(")") { pos += 1; break }
+            guard current == .comma else { return nil }
+            pos += 1
+        }
+        return CalcMath.evaluate(name, values).map { Value(value: $0) }
+    }
+
     private mutating func parsePrefix() -> Value? {
         switch current {
         case .number(let n):
@@ -415,6 +455,11 @@ private struct Parser {
         case .intLiteral(let n, _):
             pos += 1
             return Value(value: Double(n))
+        case .op("~"):
+            pos += 1
+            guard let value = parseExpression(minBP: Self.unaryBP),
+                let result = CalcMath.bitwise("~", value.effective) else { return nil }
+            return Value(value: result)
         case .op("-"):
             pos += 1
             guard let operand = parseExpression(minBP: Self.unaryBP) else { return nil }
@@ -431,6 +476,9 @@ private struct Parser {
             if let constant = CalcParser.constants[name] {
                 pos += 1
                 return Value(value: constant)
+            }
+            if CalcMath.multipleArguments.contains(name), tokens.indices.contains(pos + 1), tokens[pos + 1] == .op("(") {
+                return parseFunction(name)
             }
             if let fn = CalcParser.functions[name] {
                 pos += 1

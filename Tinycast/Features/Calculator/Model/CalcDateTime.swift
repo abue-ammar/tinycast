@@ -21,15 +21,19 @@ enum CalcDateTime {
         let hasArith = signals.contains(.arithmetic)
         let hasFromAgo = signals.contains(.fromAgo)
         let hasIn = signals.contains(.inWord)
+        let hasTimestamp = signals.contains(.timestamp)
         // A named moment needs a qualifier: a lone `tomorrow` is an app search.
         let isBareMoment =
             signals.contains(.at) || signals.contains(.nextOrLast)
-            || (hasDigit && namesADay(lowered))
-        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment else {
+            || (hasDigit && namesADay(lowered)) || CalcTimestamp.looksLikeISO(lowered)
+        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment || hasTimestamp else {
             return nil
         }
 
         let query = lowered.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        if hasTimestamp, let result = parseTimestamp(query, echo: echo, now: now, calendar: calendar) {
+            return result
+        }
         if hasUntil, let result = parseUntil(query, echo: echo, now: now, calendar: calendar) {
             return result
         }
@@ -61,6 +65,7 @@ enum CalcDateTime {
         static let inWord = Signals(rawValue: 1 << 5)
         static let at = Signals(rawValue: 1 << 6)
         static let nextOrLast = Signals(rawValue: 1 << 7)
+        static let timestamp = Signals(rawValue: 1 << 8)
     }
 
     /// One walk of the query, so the gate costs a single pass rather than ten substring scans.
@@ -79,6 +84,7 @@ enum CalcDateTime {
             case "in": if !isFirst, !isLast { signals.insert(.inWord) }
             case "at": if !isFirst, !isLast { signals.insert(.at) }
             case "next", "last": if isFirst { signals.insert(.nextOrLast) }
+            case "unix", "timestamp": signals.insert(.timestamp)
             default: break
             }
         }
@@ -390,9 +396,36 @@ enum CalcDateTime {
         let hasTime: Bool
     }
 
+    private static func parseTimestamp(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        if let range = query.range(of: " to ", options: .backwards),
+            let scale = CalcTimestamp.scale(String(query[range.upperBound...])) {
+            let source = String(query[..<range.lowerBound])
+            let (term, op, tail) = splitTerm(source[...])
+            guard var moment = parseMoment(term, now: now, calendar: calendar, bias: .nearest) else { return nil }
+            if let op {
+                guard let shifted = applyShifts(op, String(tail), to: moment, calendar: calendar) else { return nil }
+                moment = shifted
+            }
+            guard let value = Int64(exactly: (moment.date.timeIntervalSince1970 * scale).rounded(.down))
+            else { return nil }
+            let text = String(value)
+            return CalcResult(expression: echo, sourceBadge: "Date",
+                targetBadge: scale == 1 ? "Unix Seconds" : "Unix Milliseconds",
+                payload: .value(display: CalcFormatter.grouped(text), copyText: text))
+        }
+        let source = query.hasSuffix(" to date") ? String(query.dropLast(8)) : query
+        guard CalcTimestamp.epochDate(source) != nil else { return nil }
+        return bareMoment(source, echo: echo, now: now, calendar: calendar)
+    }
+
     private static func parseMoment(
         _ phrase: String, now: Date, calendar: Calendar, bias: MomentBias = .future
     ) -> Moment? {
+        if let date = CalcTimestamp.isoDate(phrase) ?? CalcTimestamp.epochDate(phrase) {
+            return Moment(date: date, hasTime: true)
+        }
         if let range = phrase.range(of: " at ") {
             let dayPhrase = String(phrase[..<range.lowerBound])
             let atoms = atomize(dayPhrase)

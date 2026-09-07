@@ -4,7 +4,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
     case angle, speed, pressure, dataRate, acceleration, force, energy, power, frequency
     case electricCurrent, voltage, resistance, electricCharge, volumeFlow
-    case pixels, pixelArea, pixelDensity
+    case pixels, pixelArea, pixelDensity, compound
 
     var displayName: String {
         switch self {
@@ -29,6 +29,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .resistance: return "Resistance"
         case .electricCharge: return "Electric Charge"
         case .volumeFlow: return "Volume Flow Rate"
+        case .compound: return "Compound Units"
         case .pixels: return "Pixels"
         case .pixelArea: return "Pixel Area"
         case .pixelDensity: return "Pixel Density"
@@ -59,7 +60,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .pixels: return CalcDimension(pixels: 1)
         case .pixelArea: return CalcDimension(pixels: 2)
         case .pixelDensity: return CalcDimension(length: -1, pixels: 1)
-        case .temperature, .angle: return nil
+        case .temperature, .angle, .compound: return nil
         }
     }
 }
@@ -71,13 +72,27 @@ struct UnitDef: Equatable, Sendable {
     let category: UnitCategory
     let factor: Double
     let offset: Double
+    let derivedDimension: CalcDimension?
+    let currency: CurrencyDef?
 
-    init(_ symbol: String, _ name: String, _ category: UnitCategory, _ factor: Double, offset: Double = 0) {
+    var dimension: CalcDimension? { derivedDimension ?? category.dimension }
+
+    func isCompatible(with other: Self) -> Bool {
+        if let dimension { return dimension == other.dimension }
+        return category == other.category
+    }
+
+    init(
+        _ symbol: String, _ name: String, _ category: UnitCategory, _ factor: Double,
+        offset: Double = 0, dimension: CalcDimension? = nil, currency: CurrencyDef? = nil
+    ) {
         self.symbol = symbol
         self.name = name
         self.category = category
         self.factor = factor
         self.offset = offset
+        derivedDimension = dimension
+        self.currency = currency
     }
 }
 

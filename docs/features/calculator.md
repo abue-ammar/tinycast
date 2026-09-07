@@ -172,14 +172,15 @@ answering nothing.
 Once an operator is involved the answer stays in the units written, so `2 * 5kg` is `10 kg`. Only a
 bare quantity (`50cm`, `1m`) falls through to the keyword-less auto-conversion below.
 
-`CalcDimension` records length, mass, time, data, electric-current and pixel exponents. Products add exponents, division
+`CalcDimension` records length, mass, time, data, electric-current, pixel and currency exponents. Products add exponents, division
 subtracts them, and powers multiply them. `CalcUnits.baseUnits` resolves supported results back to
 ordinary units, so conversions and addition need no second representation. Derived results use base
 units unless a trailing conversion names another: `5m * 4m` → `20 m²`,
 `100km / 2h to km/h` → `50 km/h`, `90km/h * 20min to km` → `30 km`.
 Area, volume, volume flow, speed, acceleration, force, pressure, energy, power, frequency, data rates
-and electrical and pixel units compose through this same path. Unsupported dimensions remain errors;
-arbitrary compound units are not stored.
+and electrical and pixel units compose through this same path. `CalcUnitExpression` composes other
+dimensions from existing units, retaining their factors and symbols: `2kg / 4m3` → `0.5 kg/m³`,
+`1kg/m3 to g/cm3` → `0.001 g/cm³`. Temperature and angle stay outside compound products.
 
 All factors share composable bases: cubic meters for volume and bytes per second for data rates.
 To add a dimension, declare its signature on `UnitCategory`, add its units to `byName`, and register
@@ -354,9 +355,9 @@ and currency paths so a spelled-out word never outranks a measurement:
 - `average|sum|min|max of 10, 20, 30`, separated by `,` or `and`
 - `round 47 to nearest 5` → 45, snapping to a step rather than a digit count
 
-The list forms are the reason `CalcToken` carries a `comma` case. It is meaningful only here — every
-other path rejects it — and a comma **between digits** is still the grouping separator it always was,
-so `1,000 + 234` is unchanged and a bare `10,5` stays silent.
+`CalcToken.comma` separates these lists and function arguments. Outside function parentheses,
+a comma **between digits** remains a grouping separator, so `1,000 + 234` is unchanged and a bare
+`10,5` stays silent.
 
 Each of these badges what its number **is** — `Tip`, `Discounted`, `Percentage`, `Total`, `Ratio`,
 `Average`, `Sum`, `Minimum`, `Maximum`, `Rounded` — rather than the bare `Result` that says nothing
@@ -525,3 +526,33 @@ including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings
 Other units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), mechanical horsepower (`hp`),
 BTU (international table), `rpm`, pound-force (`lbf`), US/UK tons and UK liquid measures
 (`ukgal`, `ukqt`, `ukpint`, `ukfloz`). Plain gallons and pints remain US measures.
+
+## Functions and comparisons
+
+Functions accept comma-separated arguments: `hypot(3,4)`, `round(3.14159,2)`, `log(8,2)`,
+`gcd(12,18)`, `lcm(4,6)`, `atan2(1,1)`, `pow(2,10)` and `root(-8,3)`.
+A one-argument `log` remains base 10. `min`, `max`, `sum`, `avg`, `mean` and `average` accept lists,
+including compatible measurements: `sum(1km,500m)` gives `1.5 km`, and `hypot(3m,400cm)` gives `5 m`.
+`round(2.567km,1)` keeps the unit. Inside function arguments, commas separate values;
+write `1000` rather than `1,000` there.
+
+`==`, `!=`, `<`, `<=`, `>` and `>=` compare numbers or compatible measurements and return booleans.
+`1km == 1000m` is `true`; incompatible dimensions produce an error. Chained comparisons are rejected.
+Integer operands support `&`, `|`, `xor`, `~`, `<<` and `>>`; `^` remains exponentiation.
+Shifts require counts from 0 through 63. Bitwise operations, `gcd` and `lcm` require integers
+strictly between −2⁵³ and 2⁵³, including their results; larger values and fractions are rejected.
+
+
+## Compound prices and timestamps
+
+`100 USD / 4hr` gives `25 USD/hr`; multiplying by `8hr` gives `200.00 USD`.
+Compound targets work too: `25 USD/hr to EUR/min`. Arithmetic within one currency rate needs no
+exchange snapshot; changing currency uses the same injected rates as ordinary money conversions.
+A compound quantity can carry one currency factor or its reciprocal, but not currency squared.
+
+`now to unix` returns whole Unix seconds; `now to unix ms` returns whole milliseconds.
+`unix 0 to date` and `1000 unix ms` convert back to a local date/time.
+RFC 3339 input accepts an explicit `Z` or `±HH:MM` offset and optional fractional seconds:
+`2026-07-24T07:30:00+02:00 + 30min`, or `1970-01-01T01:00:00+01:00 to unix` → `0`.
+Dates use the local calendar for display and arithmetic. Impossible dates, leap seconds and trailing
+text are rejected; timestamp output rounds down to the requested unit and copies every integer digit.
