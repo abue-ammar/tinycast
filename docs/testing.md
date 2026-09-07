@@ -89,6 +89,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
+| `palette-navigation-test` | `Palette/PaletteNavigationStack.swift` and `PaletteState`'s `push`/`pop`/`prepare` — that going back restores the frame it stored |
+| `palette-escape-test` | `Palette/PaletteEscapeAction.swift`, `Settings/EscapeKeyBehavior.swift` — the whole decision table, both behaviours |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
 | `fallback-test` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
@@ -253,6 +255,16 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - Palette hotkey opens the launcher; pressing it again closes it; Escape clears a non-empty query,
   then hides on a second press; clicking away closes it
+- Escape walks back the way it came: a screen opened from a launcher row returns to it with the query
+  still typed and the row still selected; the same screen opened by its own hotkey hides instead
+- Chat → history → Escape lands on the chat, and Escape again on whatever opened the chat
+- A clipboard type filter, an open ⌘K menu and an extension form's dropdown each swallow the first
+  Escape without navigating; the extension's own sub-view pops before the palette's stack does
+- ⌘⎋ from any depth reaches a root search with an empty field — verify with the palette not frontmost
+- Bare Backspace on an empty field mirrors Escape's back step under both Escape Key Behavior values,
+  and inside a form field it deletes text without ever navigating
+- Set Escape Key Behavior to "Close and pop to root": every empty-field Escape hides and the next
+  summon is a fresh root whatever the Pop to Root Search timeout says
 - Reopening focuses the search field with an empty query, in the same position and at the same size
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - With a CJK IME: the placeholder clears as soon as composition starts and the composing text never
@@ -266,7 +278,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   System Actions, Window Management, Custom Commands, Commands
 - With a non-ASCII input source active, ⌘K opens Actions; ↑/↓ move it, ↵ activates, Escape closes it
 - While a menu is open, typing does **not** change the query and the caret is hidden
-- Tab toggles launcher ↔ clipboard; bare Backspace on an empty query backs out of a sub-screen
+- Tab toggles launcher ↔ clipboard, and stays lateral: Escape after a Tab does not walk the ring back
 - Launching an app focuses it; escaping the palette returns focus to the app you came from
 - Paste from clipboard history lands in that app, not in Tinycast
 - No flash, flicker or reflow on open, and row metrics unchanged

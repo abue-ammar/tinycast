@@ -56,10 +56,13 @@ only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 ## Screens
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.
-Showing the palette calls `prepare(mode:)`, which resets state and bumps `focusToken` (a UUID) so the
-SwiftUI search field re-focuses.
+Showing the palette calls `prepare(mode:)`, which resets state, empties the navigation stack and bumps
+`focusToken` (a UUID) so the SwiftUI search field re-focuses — unless the palette is already visible on
+another screen, in which case `showPalette` calls `push(mode:)` instead and the current screen becomes
+the one Escape goes back to.
 
-Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path: the
+Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path — the
+timer's, and `popToRootNow()`'s, which skips the wait for the `.closeAndPopToRoot` Escape: the
 palette returns to the launcher *and* chat starts a new conversation, at once or after
 `popToRootTimeout`, unless a re-summon inside that window consumes the pending reset first. An
 unfinished chat is a thing being done, exactly like a typed query, so the screen and the conversation
@@ -85,17 +88,38 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.customCommandArguments` | `CustomCommandArgumentsScreen` | `CustomCommandArgumentsView` (see [custom-commands.md](custom-commands.md#arguments)) |
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
 
-Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab rings the three
-surfaces a reader opens directly — launcher → AI chat → clipboard → launcher** — unless the screen
+Every mode but `.launcher` is a sub-screen, and what it backs out to is whatever the navigation stack
+holds under it. **Tab rings the three surfaces a reader opens directly — launcher → AI chat →
+clipboard → launcher** — unless the screen
 claims it through `tabTarget(from:backwards:)` (an extension's `Form` walks its own fields), or the
 selected row declares arguments, in which case it walks those fields first (see below); every other mode exits
 to the launcher rather than joining the ring, and is reached by a command or a global hotkey, with
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
 `aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced. **Escape clears a
-non-empty query before it leaves the screen**, so one press clears and the next leaves: chat backs
-out to the launcher, an extension screen exits itself, and anywhere else the palette hides. A focused
+non-empty query before it leaves the screen**, so one press clears and the next leaves. A focused
 inline argument field is a rung above the query, so Escape hands focus back to the search field
 first — the query that found the command is still there to be cleared by the next press.
+
+**Leaving is one rule: Escape pops one screen, and at the bottom of the stack popping means hiding.**
+`PaletteNavigationStack` holds a `PaletteFrame` — mode, query, selection, clipboard filter — for each
+screen underneath the current one, so going back restores the screen the reader last saw rather than a
+fresh one. Where a screen came from is decided by the summon and nothing else, in
+`PaletteCoordinator.showPalette`: a hidden palette starts a new stack, so a screen opened by its own
+hotkey is a root and Escape closes it; a visible palette pushes, so the same screen opened from a
+launcher row goes back to that row with the query still typed. Chat is not special — it joins the stack
+like every other screen. An extension screen still leaves through
+`ExtensionCoordinator.exitExtensionScreen`, which pops the extension's own navigation first and only
+then pops the palette's.
+
+The header chevron, a bare backspace and Escape are the same step by construction: all three call
+`RootPaletteView.goBack()`. The chevron is drawn only where that step leads somewhere — a screen with
+nothing under it shows its own icon instead, since a back arrow that dismisses the window is a lie.
+An extension counts its own navigation here, so a command with sub-views pushed keeps the chevron even
+at the bottom of the palette's stack. **`EscapeKeyBehavior`** (Settings ▸ General) chooses what an
+empty field's Escape does — `.popBackOrClose`, the default and the rule above, or
+`.closeAndPopToRoot`, which hides and resets to the root at once, leaving backspace and the chevron as
+the way back. The chevron's tooltip derives its key cap from the setting, so it cannot advertise a key
+the setting has taken away.
 
 The launcher advertises the first hop in the header — `AI Chat` beside a `⇥` cap, the footer's own
 pairing of a label with its key. It is drawn only when Tab really would open chat, a condition read
@@ -115,10 +139,10 @@ not a search field: it _is_ the current argument's input, so its placeholder nam
 submits rather than activating a row. It has no rows, which is why `isArgumentForm` is what keeps the
 ↵ pill drawn. Its state lives on `AppCore.customCommandArguments`, the way `.uninstall`'s target lives
 on `UninstallSession`, and leaving the mode cancels the pending run. A bare backspace steps back an
-argument before it falls through to the usual exit-to-launcher; Escape erases the half-typed answer
-first, and a second press hides the palette, ending the pending work with it. **Quicklinks used to be
-the other half of this pair and no longer are** — they collect their values in the header instead, so
-one surface asks for a row's arguments rather than two.
+argument before it falls through to the usual back step; Escape erases the half-typed answer first,
+and a second press pops to the screen underneath — or hides, when the form is the root — ending the
+pending work with it. **Quicklinks used to be the other half of this pair and no longer are** — they
+collect their values in the header instead, so one surface asks for a row's arguments rather than two.
 
 ### Inline row arguments
 
@@ -372,6 +396,8 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and a
 
 - **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
 - **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
+- **⌘⎋ — Pop to Root Search.** Escape carries no character, so `onCommandShortcut` matches it by key
+  code and calls `prepare(mode: .launcher)`, which empties the stack as well as the screen.
 - **The physical number-row slots.** `FavoriteSlots` matches ⌘1…⌘0 by key code before fixed command
   chords, then publishes the resolved position to the active screen. Only the launcher and clipboard
   screens intercept these slots; other screens keep their own ⌘-number shortcuts. The launcher's

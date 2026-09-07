@@ -8,7 +8,8 @@ between them are both gone, deleted rather than carried.
 
 - **`RaycastDecoder` stays platform-UI-free** so `raycast-test` compiles it standalone. Which is why the
   decoder returns the payload's own bytes and `RaycastImportReader`, not the decoder, validates them
-  against `PopToRootTimeout` / `EmojiSkinTone` / `HyperKeyPhysicalKey` / `KeyShortcut`.
+  against `PopToRootTimeout` / `EscapeKeyBehavior` / `EmojiSkinTone` / `HyperKeyPhysicalKey` /
+  `KeyShortcut`.
 - **Recognition is the container signature and nothing else.** `RaycastDecoder.isExport` needs no
   passphrase, so the Backup pane runs it the moment a file is chosen and a wrong passphrase reports a
   wrong passphrase instead of "not a Raycast export".
@@ -55,6 +56,12 @@ grants no permission class.
 Script commands are not in a `.rayconfig` — they are files in a folder Raycast points at — so they
 have their own importer, described in
 [custom-commands.md](custom-commands.md#importing-raycast-scripts).
+
+`escapeKeyBehavior` rides beside `popToRootTimeout` in the same `general` object, and imports under the
+same option — relabelled **Pop to root & Escape** — since Raycast writes the two back to back. Raycast
+spells it in kebab case, so `EscapeKeyBehavior(raycastValue:)` maps `pop-back-or-close` and
+`close-and-pop-to-root` and skips anything else: exact-match only, never clamped to the nearest, the
+same rule the timeout follows.
 
 ## Layout
 

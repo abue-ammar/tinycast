@@ -45,12 +45,13 @@ See [Hotkeys](/docs/reference/hotkeys#hyper-key).
 
 ### General
 
-| Setting                  | Options                                     | Default         |
-| ------------------------ | ------------------------------------------- | --------------- |
-| Launch at login          | —                                           | Off             |
-| Show in menu bar         | —                                           | **On**          |
-| Pop to Root Search       | Immediately · 5 · 15 · 30 · 60 · 90 seconds | **Immediately** |
-| Auto-switch input source | None, plus every enabled keyboard source    | **None**        |
+| Setting                  | Options                                     | Default               |
+| ------------------------ | ------------------------------------------- | --------------------- |
+| Launch at login          | —                                           | Off                   |
+| Show in menu bar         | —                                           | **On**                |
+| Pop to Root Search       | Immediately · 5 · 15 · 30 · 60 · 90 seconds | **Immediately**       |
+| Escape Key Behavior      | Pop back or close · Close and pop to root   | **Pop back or close** |
+| Auto-switch input source | None, plus every enabled keyboard source    | **None**              |
 
 Shortcuts keep working with the menu-bar icon hidden.
 

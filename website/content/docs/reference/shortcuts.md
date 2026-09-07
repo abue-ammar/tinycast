@@ -17,8 +17,9 @@ These are fixed and not configurable. For shortcuts you record yourself, see
 | <kbd>⌃</kbd><kbd>N</kbd> / <kbd>⌃</kbd><kbd>P</kbd> | Same as <kbd>↓</kbd> / <kbd>↑</kbd>           |
 | <kbd>⌃</kbd><kbd>F</kbd> / <kbd>⌃</kbd><kbd>B</kbd> | Same as <kbd>→</kbd> / <kbd>←</kbd>           |
 | <kbd>⇥</kbd>                                        | Cycle launcher ↔ clipboard, or walk arguments |
-| <kbd>⎋</kbd>                                        | Leave a screen, or dismiss                    |
+| <kbd>⎋</kbd>                                        | Go back a screen, or dismiss                  |
 | <kbd>⌫</kbd>                                        | On an empty field, step back a screen         |
+| <kbd>⌘</kbd><kbd>⎋</kbd>                            | Back to the root search                       |
 | <kbd>⌘</kbd><kbd>,</kbd>                            | Settings                                      |
 | <kbd>⌘</kbd><kbd>W</kbd>                            | Close the window                              |
 
