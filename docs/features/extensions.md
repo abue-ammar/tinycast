@@ -183,11 +183,11 @@ its refresh schedule.
 Opening during a background refresh reuses that session and enables interactive confirmations, HUDs
 and OAuth for its actions. Its original JavaScript launch type still describes how the session started.
 
-The status button opens a native popup tracking session anchored to its bottom edge in the button's
-coordinate system; Escape, an outside click, or clicking the button again dismisses it. Native rows and
-small icons stay prepared between runs; teardown clears handler IDs while preserving action appearance.
-A click before the new runtime is ready waits for a
-fresh callback with the same section/submenu path, label and shortcut, including an alternate's primary
+The status button opens a native popup tracking session anchored below its full menu-bar window in
+screen coordinates, allowing for the menu's top inset and native gap. Escape, an outside click, or
+clicking the button again dismisses it. Native rows and small icons stay prepared between runs;
+teardown clears handler IDs while preserving action appearance. A click before the new runtime is
+ready waits for a fresh callback with the same section/submenu path, label and shortcut, including an alternate's primary
 item. Changed or ambiguous items ask the user to reopen the menu instead of dispatching an old handler.
 Opening reuses those rows while a fresh context loads. Only a menu without prepared content shows a
 loading row, prepared before native menu sizing. Subtitles follow the title on the same line. React

@@ -2,6 +2,8 @@ import AppKit
 
 @MainActor
 final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
+    private static let menuTopInset: CGFloat = 5
+    private static let menuBarGap: CGFloat = 3
     let entryID: String
     private(set) var isOpen = false
     var onOpen: (() -> Void)?
@@ -310,12 +312,12 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func toggleMenu() {
         if isOpen { menu.cancelTracking(); return }
-        guard snapshot?.hasMenu == true, let button = status.button else { return }
+        guard snapshot?.hasMenu == true, let button = status.button, let window = button.window else { return }
         button.highlight(true)
         defer { button.highlight(false) }
-        let bounds = button.bounds
-        let bottom = button.isFlipped ? bounds.maxY : bounds.minY
-        menu.popUp(positioning: nil, at: NSPoint(x: bounds.minX, y: bottom), in: button)
+        let anchor = NSPoint(x: window.frame.minX,
+                             y: window.frame.minY - Self.menuTopInset - Self.menuBarGap)
+        menu.popUp(positioning: nil, at: anchor, in: nil)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
