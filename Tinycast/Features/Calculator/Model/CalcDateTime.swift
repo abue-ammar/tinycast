@@ -1,35 +1,42 @@
 import Foundation
 
-/// Natural-language date/time for the card. Four grammars; see docs/features/calculator.md.
 enum CalcDateTime {
     /// Which occurrence of a bare, recurring date/time a phrase resolves to.
     private enum MomentBias { case future, past, nearest }
 
     static func evaluate(
-        _ raw: String, now: Date = Date(), calendar: Calendar = .current
+        _ raw: String, now: Date, calendar: Calendar
     )
         -> CalcResult?
     {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let query = echo.lowercased()
-        guard !query.isEmpty else { return nil }
+        let lowered = echo.lowercased()
+        guard !lowered.isEmpty else { return nil }
 
         // One pass over the words, since an app search pays this on every keystroke.
-        let signals = keywordSignals(query)
+        let signals = keywordSignals(lowered)
         let hasDigit = signals.contains(.digit)
         let hasUntil = signals.contains(.until)
         let hasSince = signals.contains(.since)
-        let hasArith = signals.contains(.arithmetic)
+        let hasArith = signals.contains(.arithmetic) && signals.contains(.moment)
         let hasFromAgo = signals.contains(.fromAgo)
         let hasIn = signals.contains(.inWord)
+        let hasTimestamp = signals.contains(.timestamp)
         // A named moment needs a qualifier: a lone `tomorrow` is an app search.
         let isBareMoment =
             signals.contains(.at) || signals.contains(.nextOrLast)
-            || (hasDigit && namesADay(query))
-        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment else {
+            || (hasDigit && signals.contains(.dayName) && namesADay(lowered))
+            || CalcTimestamp.looksLikeISO(lowered)
+        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment || hasTimestamp else {
             return nil
         }
 
+        let query = lowered.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        if hasTimestamp || query.hasSuffix(" to date") && CalcTimestamp.looksLikeISO(query),
+            let result = parseTimestamp(query, echo: echo, now: now, calendar: calendar)
+        {
+            return result
+        }
         if hasUntil, let result = parseUntil(query, echo: echo, now: now, calendar: calendar) {
             return result
         }
@@ -61,16 +68,17 @@ enum CalcDateTime {
         static let inWord = Signals(rawValue: 1 << 5)
         static let at = Signals(rawValue: 1 << 6)
         static let nextOrLast = Signals(rawValue: 1 << 7)
+        static let timestamp = Signals(rawValue: 1 << 8)
+        static let moment = Signals(rawValue: 1 << 9)
+        static let dayName = Signals(rawValue: 1 << 10)
     }
 
-    /// One walk of the query, so the gate costs a single pass rather than ten substring scans.
     private static func keywordSignals(_ query: String) -> Signals {
         var signals: Signals = []
-        var word = ""
-        var index = 0
-        var isFirst = true
-
-        func classify(_ word: String, isFirst: Bool, isLast: Bool) {
+        let words = query.split(whereSeparator: \.isWhitespace)
+        for (index, word) in words.enumerated() {
+            let isFirst = index == 0
+            let isLast = index == words.count - 1
             switch word {
             case "till", "until", "til": if !isFirst, !isLast { signals.insert(.until) }
             case "since": if !isFirst, !isLast { signals.insert(.since) }
@@ -80,23 +88,30 @@ enum CalcDateTime {
             case "in": if !isFirst, !isLast { signals.insert(.inWord) }
             case "at": if !isFirst, !isLast { signals.insert(.at) }
             case "next", "last": if isFirst { signals.insert(.nextOrLast) }
+            case "unix", "timestamp": signals.formUnion([.timestamp, .moment])
             default: break
             }
-        }
-
-        for character in query {
-            if character.isNumber { signals.insert(.digit) }
-            if character.isWhitespace {
-                classify(word, isFirst: isFirst, isLast: false)
-                isFirst = isFirst && word.isEmpty
-                if !word.isEmpty { isFirst = false }
-                word = ""
-            } else {
-                word.append(character)
+            var dots = 0
+            var dashes = 0
+            for byte in word.utf8 {
+                if (48...57).contains(byte) { signals.insert(.digit) }
+                if byte == 46 { dots += 1 }
+                if byte == 45 { dashes += 1 }
+                if byte == 58 || byte == 47 { signals.insert(.moment) }
             }
-            index += 1
+            if dots >= 2 { signals.formUnion([.dayName, .moment]) }
+            if dashes >= 2 { signals.insert(.moment) }
+            for letters in word.utf8.split(whereSeparator: { !(97...122).contains($0) }) {
+                let name = String(bytes: letters, encoding: .utf8)!
+                if monthByName[name] != nil { signals.formUnion([.dayName, .moment]) }
+                if weekdayByName[name] != nil { signals.insert(.moment) }
+                switch name {
+                case "now", "today", "tomorrow", "yesterday", "noon", "midnight", "am", "pm":
+                    signals.insert(.moment)
+                default: break
+                }
+            }
         }
-        classify(word, isFirst: isFirst, isLast: true)
         return signals
     }
 
@@ -121,41 +136,22 @@ enum CalcDateTime {
     private static func bareMoment(
         _ query: String, echo: String, now: Date, calendar: Calendar
     ) -> CalcResult? {
-        var phrase = query
-        var clock: (hour: Int, minute: Int)?
-        // `at 9am` rides along, so the answer keeps the time it was given.
-        if let range = phrase.range(of: " at ") {
-            let tail = String(phrase[range.upperBound...]).trimmingCharacters(in: .whitespaces)
-            guard let parsed = parseMeridiemClock(tail) else { return nil }
-            clock = parsed
-            phrase = String(phrase[..<range.lowerBound])
-        }
-        // No `till` or `since` to lean on, so a bare date takes the year it is nearest.
-        guard let moment = parseMoment(phrase, now: now, calendar: calendar, bias: .nearest)
+        guard let moment = parseMoment(query, now: now, calendar: calendar, bias: .nearest)
         else { return nil }
-
-        var date = moment.date
-        var hasTime = moment.hasTime
-        if let clock {
-            guard
-                let set = calendar.date(
-                    bySettingHour: clock.hour, minute: clock.minute, second: 0, of: date)
-            else { return nil }
-            date = set
-            hasTime = true
-        }
-
+        let date = moment.date
+        let hasTime = moment.hasTime
+        let text = answerString(date, hasTime: hasTime, now: now, calendar: calendar)
         return CalcResult(
             expression: echo,
             sourceBadge: dateString(now, now: now, calendar: calendar),
             targetBadge: weekdayName(date, calendar: calendar),
-            payload: .value(
-                display: answerString(date, hasTime: hasTime, now: now, calendar: calendar),
-                copyText: answerString(date, hasTime: hasTime, now: now, calendar: calendar)))
+            payload: .value(display: text, copyText: text))
     }
 
     /// `9am`, `5:30pm`, `14:00` as a wall clock, with no bias applied.
     private static func parseMeridiemClock(_ text: String) -> (hour: Int, minute: Int)? {
+        if text == "noon" { return (12, 0) }
+        if text == "midnight" { return (0, 0) }
         var body = text
         var meridiem: String?
         for suffix in ["am", "pm"] where body.hasSuffix(suffix) {
@@ -178,7 +174,8 @@ enum CalcDateTime {
         guard let range = query.range(of: " in ") else { return nil }
         let head = String(query[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
         guard let weekday = weekdayByName[head],
-            let duration = parseDurationPhrase(String(query[range.upperBound...])),
+            let durations = parseDurations(String(query[range.upperBound...])),
+            durations.count == 1, let duration = durations.first,
             !duration.subDay, !duration.businessDays,
             let landing = calendar.date(
                 byAdding: duration.component, value: duration.count,
@@ -191,13 +188,12 @@ enum CalcDateTime {
                 week.start, days: (weekday - calendar.firstWeekday + 7) % 7, calendar: calendar)
         else { return nil }
 
+        let text = answerString(result, hasTime: false, now: now, calendar: calendar)
         return CalcResult(
             expression: echo,
             sourceBadge: dateString(now, now: now, calendar: calendar),
             targetBadge: weekdayName(result, calendar: calendar),
-            payload: .value(
-                display: answerString(result, hasTime: false, now: now, calendar: calendar),
-                copyText: answerString(result, hasTime: false, now: now, calendar: calendar)))
+            payload: .value(display: text, copyText: text))
     }
 
     /// `5 weekdays from now`, `3 days from today`, `2 weeks ago` — the duration leads.
@@ -213,24 +209,20 @@ enum CalcDateTime {
             sign = 1
         } else if query.hasSuffix(" ago") {
             durationText = String(query.dropLast(4))
-            anchorText = "today"
+            anchorText = ""
             sign = -1
         } else {
             return nil
         }
 
-        guard let duration = parseDurationPhrase(durationText), duration.count != .min,
-            let anchor = parseMoment(anchorText, now: now, calendar: calendar)
+        guard let durations = parseDurations(durationText) else { return nil }
+        let subDay = durations.contains(where: \.subDay)
+        let anchorPhrase = anchorText.isEmpty ? (subDay ? "now" : "today") : anchorText
+        guard let anchor = parseMoment(anchorPhrase, now: now, calendar: calendar),
+            let shifted = shift(anchor, by: durationText, op: sign < 0 ? "-" : "+", calendar: calendar)
         else { return nil }
-
-        let signed = duration.count * sign
-        let shifted =
-            duration.businessDays
-            ? addBusinessDays(signed, to: anchor.date, calendar: calendar)
-            : calendar.date(byAdding: duration.component, value: signed, to: anchor.date)
-        guard let result = shifted else { return nil }
-
-        let hasTime = anchor.hasTime && duration.subDay
+        let result = shifted.date
+        let hasTime = shifted.hasTime && (subDay || anchorPhrase != "now")
         let display = answerString(result, hasTime: hasTime, now: now, calendar: calendar)
         return CalcResult(
             expression: echo,
@@ -241,99 +233,47 @@ enum CalcDateTime {
                 display: display, copyText: display))
     }
 
-    // MARK: - Grammar A: duration until a moment
-
     private static func parseUntil(
         _ query: String, echo: String, now: Date, calendar: Calendar
-    )
-        -> CalcResult?
-    {
-        guard let connector = [" until ", " till ", " til "].first(where: query.contains) else {
-            return nil
-        }
-        let parts = query.components(separatedBy: connector)
-        guard parts.count == 2,
-            let unit = durationUnit(parts[0]),
-            let moment = parseMoment(parts[1], now: now, calendar: calendar)
-        else { return nil }
-
-        let reference = unit.subDay ? now : calendar.startOfDay(for: now)
-        let target = unit.subDay ? moment.date : calendar.startOfDay(for: moment.date)
-
-        let value: Double
-        switch unit.kind {
-        case .day:
-            value = Double(calendar.dateComponents([.day], from: reference, to: target).day ?? 0)
-        case .week:
-            let days = calendar.dateComponents([.day], from: reference, to: target).day ?? 0
-            value = Double(days) / 7
-        case .subSecond:
-            value = target.timeIntervalSince(reference) / unit.seconds
-        }
-
-        let word = value == 1 ? unit.singular : unit.plural
-        let source =
-            unit.subDay
-            ? timeString(now, calendar: calendar)
-            : dateString(reference, now: now, calendar: calendar)
-        let targetBadge =
-            unit.subDay
-            ? timeString(moment.date, calendar: calendar)
-            : dateString(target, now: now, calendar: calendar)
-
-        return CalcResult(
-            expression: echo,
-            sourceBadge: source,
-            targetBadge: targetBadge,
-            payload: .value(
-                display: "\(CalcFormatter.display(value)) \(word)",
-                copyText: "\(CalcFormatter.copyText(value)) \(word)"))
+    ) -> CalcResult? {
+        guard let connector = [" until ", " till ", " til "].first(where: query.contains) else { return nil }
+        return parseInterval(
+            query, connector: connector, past: false, echo: echo, now: now, calendar: calendar)
     }
-
-    // MARK: - Grammar B: duration since a past moment
 
     private static func parseSince(
         _ query: String, echo: String, now: Date, calendar: Calendar
-    )
-        -> CalcResult?
-    {
-        let parts = query.components(separatedBy: " since ")
-        guard parts.count == 2,
-            let unit = durationUnit(parts[0]),
-            let moment = parseMoment(parts[1], now: now, calendar: calendar, bias: .past)
+    ) -> CalcResult? {
+        parseInterval(query, connector: " since ", past: true, echo: echo, now: now, calendar: calendar)
+    }
+
+    private static func parseInterval(
+        _ query: String, connector: String, past: Bool, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        let parts = query.components(separatedBy: connector)
+        guard parts.count == 2, let unit = durationUnit(parts[0]),
+            let moment = parseMoment(parts[1], now: now, calendar: calendar, bias: past ? .past : .future)
         else { return nil }
-
         let reference = unit.subDay ? now : calendar.startOfDay(for: now)
-        let past = unit.subDay ? moment.date : calendar.startOfDay(for: moment.date)
-
+        let target = unit.subDay ? moment.date : calendar.startOfDay(for: moment.date)
+        let start = past ? target : reference
+        let end = past ? reference : target
         let value: Double
         switch unit.kind {
-        case .day:
-            value = Double(calendar.dateComponents([.day], from: past, to: reference).day ?? 0)
-        case .week:
-            let days = calendar.dateComponents([.day], from: past, to: reference).day ?? 0
-            value = Double(days) / 7
+        case .day, .week:
+            let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+            value = Double(days) / (unit.kind == .week ? 7 : 1)
         case .subSecond:
-            value = reference.timeIntervalSince(past) / unit.seconds
+            value = end.timeIntervalSince(start) / unit.seconds
         }
-
-        let word = value == 1 ? unit.singular : unit.plural
-        let source =
-            unit.subDay
-            ? timeString(past, calendar: calendar)
-            : dateString(past, now: now, calendar: calendar)
-        let targetBadge =
-            unit.subDay
-            ? timeString(now, calendar: calendar)
-            : dateString(reference, now: now, calendar: calendar)
-
+        let word = abs(value) == 1 ? unit.singular : unit.plural
         return CalcResult(
             expression: echo,
-            sourceBadge: source,
-            targetBadge: targetBadge,
-            payload: .value(
-                display: "\(CalcFormatter.display(value)) \(word)",
-                copyText: "\(CalcFormatter.copyText(value)) \(word)"))
+            sourceBadge: unit.subDay
+                ? timeString(start, calendar: calendar) : dateString(start, now: now, calendar: calendar),
+            targetBadge: unit.subDay
+                ? timeString(end, calendar: calendar) : dateString(end, now: now, calendar: calendar),
+            payload: .number(value, suffix: " \(word)"))
     }
 
     // MARK: - Grammars C & D: moment ± duration / moment − moment
@@ -341,29 +281,33 @@ enum CalcDateTime {
     private static func parseArithmetic(
         _ query: String, echo: String, now: Date, calendar: Calendar
     ) -> CalcResult? {
-        // Split on the earliest spaced operator; unspaced dashes (ISO dates, times) stay intact.
-        let plus = query.range(of: " + ")
-        let minus = query.range(of: " - ")
-        let (opRange, op): (Range<String.Index>, Character)
-        switch (plus, minus) {
-        case (let p?, let m?): (opRange, op) = p.lowerBound < m.lowerBound ? (p, "+") : (m, "-")
-        case (let p?, nil): (opRange, op) = (p, "+")
-        case (nil, let m?): (opRange, op) = (m, "-")
-        default: return nil
+        var expression = query
+        var targetUnit: UnitDef?
+        for connector in [" to ", " in "] {
+            if let range = expression.range(of: connector, options: .backwards),
+                let unit = CalcUnits.byName[String(expression[range.upperBound...])], unit.category == .time
+            {
+                targetUnit = unit
+                expression = String(expression[..<range.lowerBound])
+                break
+            }
+        }
+        let (left, operation, tail) = splitTerm(expression[...])
+        guard let op = operation else { return nil }
+        let right = String(tail)
+        let firstTerm = splitTerm(tail).term
+        let shifts = parseDurations(firstTerm) != nil || Double(firstTerm) != nil
+        guard var base = parseMoment(left, now: now, calendar: calendar, bias: shifts ? .nearest : .future)
+        else { return nil }
+        if !shifts, base.hasTime {
+            guard let local = parseMoment(left, now: now, calendar: calendar, bias: .nearest) else {
+                return nil
+            }
+            base = local
         }
 
-        let left = String(query[..<opRange.lowerBound])
-        let right = String(query[opRange.upperBound...])
-        // Nearest year for a shifted moment; a measured one keeps the forward bias.
-        let shifts =
-            parseDurationPhrase(right) != nil || Int(right.trimmingCharacters(in: .whitespaces)) != nil
-        guard
-            let base = parseMoment(
-                left, now: now, calendar: calendar, bias: shifts ? .nearest : .future)
-        else { return nil }
-
         // C: moment ± duration, chained left to right — every term after the first shifts again.
-        if let shifted = applyShifts(op, right, to: base, calendar: calendar) {
+        if targetUnit == nil, let shifted = applyShifts(op, right, to: base, calendar: calendar) {
             let display = answerString(
                 shifted.date, hasTime: shifted.hasTime, now: now, calendar: calendar)
             return CalcResult(
@@ -376,22 +320,36 @@ enum CalcDateTime {
 
         // D: moment − moment. Two letter-free operands (`5/2 - 1/2`) belong to the calculator.
         guard op == "-",
-            left.contains(where: \.isLetter) || right.contains(where: \.isLetter),
-            let other = parseMoment(right, now: now, calendar: calendar)
+            targetUnit != nil || base.hasTime || left.contains(where: \.isLetter)
+                || right.contains(where: \.isLetter) || left.contains("-") || isDottedDate(atomize(left)),
+            let other = parseMoment(
+                right, now: now, calendar: calendar, bias: base.hasTime ? .nearest : .future)
         else {
             return nil
         }
-        let days =
-            calendar.dateComponents(
-                [.day], from: calendar.startOfDay(for: other.date),
-                to: calendar.startOfDay(for: base.date)
-            ).day ?? 0
-        let word = abs(days) == 1 ? "day" : "days"
+        let hasTime = base.hasTime || other.hasTime
+        let seconds = base.date.timeIntervalSince(other.date)
+        let payload: CalcResult.Payload
+        if let unit = targetUnit {
+            payload = .number(seconds / unit.factor, suffix: " \(unit.symbol)")
+        } else if hasTime {
+            let text = CalcFormatter.timespan(seconds)
+            payload = .value(display: text, copyText: text)
+        } else {
+            let days =
+                calendar.dateComponents(
+                    [.day], from: calendar.startOfDay(for: other.date),
+                    to: calendar.startOfDay(for: base.date)
+                ).day ?? 0
+            let text = "\(days) \(abs(days) == 1 ? "day" : "days")"
+            payload = .value(display: text, copyText: text)
+        }
         return CalcResult(
             expression: echo,
-            sourceBadge: dateString(base.date, now: now, calendar: calendar),
-            targetBadge: dateString(other.date, now: now, calendar: calendar),
-            payload: .value(display: "\(days) \(word)", copyText: "\(days) \(word)"))
+            sourceBadge: momentString(base.date, hasTime: base.hasTime, now: now, calendar: calendar),
+            targetBadge: targetUnit?.name
+                ?? momentString(other.date, hasTime: other.hasTime, now: now, calendar: calendar),
+            payload: payload)
     }
 
     /// Nil unless every term is a duration, so grammar D still sees a trailing moment.
@@ -436,26 +394,19 @@ enum CalcDateTime {
         _ moment: Moment, by term: String, op: Character, calendar: Calendar
     ) -> Moment? {
         let trimmed = term.trimmingCharacters(in: .whitespaces)
-        if let count = Int(trimmed) {
-            // Negating Int.min traps; degrade to no card on that edge.
-            guard op == "+" || count != .min else { return nil }
-            let component: Calendar.Component = moment.hasTime ? .hour : .day
-            guard
-                let date = calendar.date(
-                    byAdding: component, value: op == "-" ? -count : count, to: moment.date)
-            else { return nil }
-            return Moment(date: date, hasTime: moment.hasTime)
+        let phrase = Double(trimmed) == nil ? trimmed : "\(trimmed) \(moment.hasTime ? "hours" : "days")"
+        guard let durations = parseDurations(phrase) else { return nil }
+        var result = moment
+        for duration in durations {
+            let signed = op == "-" ? -duration.count : duration.count
+            let date =
+                duration.businessDays
+                ? addBusinessDays(signed, to: result.date, calendar: calendar)
+                : calendar.date(byAdding: duration.component, value: signed, to: result.date)
+            guard let date, (1...9999).contains(calendar.component(.year, from: date)) else { return nil }
+            result = Moment(date: date, hasTime: result.hasTime || duration.subDay)
         }
-
-        guard let duration = parseDurationPhrase(trimmed), op == "+" || duration.count != .min
-        else { return nil }
-        let signed = op == "-" ? -duration.count : duration.count
-        let date =
-            duration.businessDays
-            ? addBusinessDays(signed, to: moment.date, calendar: calendar)
-            : calendar.date(byAdding: duration.component, value: signed, to: moment.date)
-        guard let date else { return nil }
-        return Moment(date: date, hasTime: moment.hasTime || duration.subDay)
+        return result
     }
 
     // MARK: - Moment parsing
@@ -466,9 +417,80 @@ enum CalcDateTime {
         let hasTime: Bool
     }
 
+    private static func parseTimestamp(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        if let range = query.range(of: " to ", options: .backwards),
+            let scale = CalcTimestamp.scale(String(query[range.upperBound...]))
+        {
+            let source = String(query[..<range.lowerBound])
+            let (term, op, tail) = splitTerm(source[...])
+            guard var moment = parseMoment(term, now: now, calendar: calendar, bias: .nearest) else {
+                return nil
+            }
+            if let op {
+                guard let shifted = applyShifts(op, String(tail), to: moment, calendar: calendar) else {
+                    return nil
+                }
+                moment = shifted
+            }
+            let timestamp = moment.date.timeIntervalSince1970 * scale
+            let rounded = timestamp.rounded()
+            let tolerance = moment.date.timeIntervalSinceReferenceDate.ulp * scale
+            let whole = abs(timestamp - rounded) <= tolerance ? rounded : timestamp.rounded(.down)
+            guard let value = Int64(exactly: whole)
+            else { return nil }
+            let text = String(value)
+            return CalcResult(
+                expression: echo, sourceBadge: "Date",
+                targetBadge: scale == 1 ? "Unix Seconds" : "Unix Milliseconds",
+                payload: .value(display: CalcFormatter.grouped(text), copyText: text))
+        }
+        let source = query.hasSuffix(" to date") ? String(query.dropLast(8)) : query
+        guard CalcTimestamp.isoDate(source) != nil || CalcTimestamp.epochDate(source) != nil else {
+            return nil
+        }
+        return bareMoment(source, echo: echo, now: now, calendar: calendar)
+    }
+
     private static func parseMoment(
         _ phrase: String, now: Date, calendar: Calendar, bias: MomentBias = .future
     ) -> Moment? {
+        if let date = CalcTimestamp.isoDate(phrase) ?? CalcTimestamp.epochDate(phrase) {
+            return Moment(date: date, hasTime: true)
+        }
+        if let range = phrase.range(of: " at ") {
+            let dayPhrase = String(phrase[..<range.lowerBound])
+            let atoms = atomize(dayPhrase)
+            let recurring =
+                weekdayByName[dayPhrase] != nil || monthByName[dayPhrase] != nil
+                || (atoms.count == 2 && namesADay(dayPhrase))
+                || (atoms.count == 1 && dayPhrase.split(separator: "/").count == 2)
+            guard let clock = parseMeridiemClock(String(phrase[range.upperBound...])),
+                let day = parseMoment(
+                    dayPhrase, now: now, calendar: calendar,
+                    bias: recurring && bias != .nearest ? .future : bias)
+            else { return nil }
+            var anchor = day.date
+            if recurring, bias != .nearest,
+                let candidate = calendar.date(
+                    bySettingHour: clock.hour, minute: clock.minute, second: 0, of: anchor),
+                bias == .future ? candidate <= now : candidate > now
+            {
+                guard let reference = shift(now, days: bias == .future ? 1 : -1, calendar: calendar),
+                    let shifted = parseMoment(dayPhrase, now: reference, calendar: calendar, bias: bias)
+                else { return nil }
+                anchor = shifted.date
+            }
+            guard
+                let date = calendar.date(
+                    bySettingHour: clock.hour, minute: clock.minute, second: 0, of: anchor),
+                calendar.isDate(date, inSameDayAs: anchor),
+                calendar.component(.hour, from: date) == clock.hour,
+                calendar.component(.minute, from: date) == clock.minute
+            else { return nil }
+            return Moment(date: date, hasTime: true)
+        }
         let atoms = atomize(phrase)
         switch atoms.count {
         case 1:
@@ -567,36 +589,30 @@ enum CalcDateTime {
             guard let (hour, minute) = parseClock(atom) else { return nil }
             return clockMoment(hour: hour, minute: minute, now: now, calendar: calendar, bias: bias)
         }
-        if atom.contains("-") {
-            let parts = atom.split(separator: "-").map(String.init)
-            guard parts.count == 3, let year = Int(parts[0]), year > 31,
-                let month = Int(parts[1]), let day = Int(parts[2]),
-                let date = makeDate(year, month, day, calendar)
-            else { return nil }
-            return Moment(date: date, hasTime: false)
+        let separator: Character = atom.contains("-") ? "-" : atom.contains("/") ? "/" : "."
+        let parts = atom.split(separator: separator)
+        guard (2...3).contains(parts.count), let first = Int(parts[0]), let second = Int(parts[1]) else {
+            return nil
         }
-        if atom.contains("/") {
-            let parts = atom.split(separator: "/").map(String.init)
-            if parts.count == 2, let month = Int(parts[0]), let day = Int(parts[1]) {
-                return monthDayMoment(
-                    month: month, day: day, now: now, calendar: calendar, bias: bias)
-            }
-            if parts.count == 3, let month = Int(parts[0]), let day = Int(parts[1]),
-                let year = Int(parts[2]), let date = makeDate(fullYear(year), month, day, calendar)
-            {
-                return Moment(date: date, hasTime: false)
-            }
+        if separator == "/", parts.count == 2 {
+            return monthDayMoment(month: first, day: second, now: now, calendar: calendar, bias: bias)
         }
-        // Dotted dates are day-first: `19.2.27` is 19 February, and the tail rejects versions.
-        if atom.contains(".") {
-            let parts = atom.split(separator: ".").map(String.init)
-            guard parts.count == 3, let day = Int(parts[0]), let month = Int(parts[1]),
-                let year = Int(parts[2]), parts[2].count == 2 || parts[2].count == 4,
-                let date = makeDate(fullYear(year), month, day, calendar)
-            else { return nil }
-            return Moment(date: date, hasTime: false)
+        guard parts.count == 3, let third = Int(parts[2]) else { return nil }
+        let year: Int
+        let month: Int
+        let day: Int
+        switch separator {
+        case "-":
+            guard first > 31 else { return nil }
+            (year, month, day) = (first, second, third)
+        case "/":
+            (year, month, day) = (fullYear(third), first, second)
+        default:
+            guard parts[2].count == 2 || parts[2].count == 4 else { return nil }
+            (year, month, day) = (fullYear(third), second, first)
         }
-        return nil
+        guard let date = makeDate(year, month, day, calendar) else { return nil }
+        return Moment(date: date, hasTime: false)
     }
 
     // MARK: - Moment builders
@@ -696,31 +712,44 @@ enum CalcDateTime {
         var businessDays = false
     }
 
-    /// `<n> <unit>` for date arithmetic; weeks fold to days so `date(byAdding:)` stays DST-safe.
-    private static func parseDurationPhrase(_ phrase: String) -> DurationPhrase? {
+    private static func parseDurations(_ phrase: String) -> [DurationPhrase]? {
         let atoms = atomize(phrase)
-        // "business days" / "work days" are two atoms after the count, one word or two.
-        if atoms.count >= 2, let count = Int(atoms[0]),
-            businessDayPhrases.contains(atoms.dropFirst().joined())
-        {
-            return DurationPhrase(count: count, component: .day, subDay: false, businessDays: true)
+        var durations: [DurationPhrase] = []
+        var index = 0
+        while index + 1 < atoms.count {
+            guard let amount = Double(atoms[index]), amount.isFinite else { return nil }
+            var name = atoms[index + 1]
+            index += 2
+            if index < atoms.count, businessDayPhrases.contains(name + atoms[index]) {
+                name += atoms[index]
+                index += 1
+            }
+            let component: Calendar.Component
+            let count: Double
+            let subDay: Bool
+            let businessDays = businessDayPhrases.contains(name)
+            if businessDays {
+                component = .day
+                count = amount
+                subDay = false
+            } else if ["mo", "month", "months", "yr", "year", "years"].contains(name) {
+                component = name.hasPrefix("mo") ? .month : .year
+                count = amount
+                subDay = false
+            } else if let unit = durationUnit(name) {
+                component = unit.subDay ? .second : .day
+                count = amount * (unit.subDay ? unit.seconds : unit.seconds / 86400)
+                subDay = unit.subDay
+                guard subDay || amount.rounded() == amount else { return nil }
+            } else {
+                return nil
+            }
+            guard let value = Int(exactly: count), value != .min else { return nil }
+            durations.append(
+                DurationPhrase(count: value, component: component, subDay: subDay, businessDays: businessDays)
+            )
         }
-        guard atoms.count == 2, let count = Int(atoms[0]) else { return nil }
-        switch atoms[1] {
-        case "s", "sec", "secs", "second", "seconds":
-            return DurationPhrase(count: count, component: .second, subDay: true)
-        case "min", "mins", "minute", "minutes":
-            return DurationPhrase(count: count, component: .minute, subDay: true)
-        case "h", "hr", "hrs", "hour", "hours":
-            return DurationPhrase(count: count, component: .hour, subDay: true)
-        case "d", "day", "days":
-            return DurationPhrase(count: count, component: .day, subDay: false)
-        case "wk", "week", "weeks":
-            // Absurd counts overflow the fold to days; degrade to no card rather than trap.
-            let (days, overflow) = count.multipliedReportingOverflow(by: 7)
-            return overflow ? nil : DurationPhrase(count: days, component: .day, subDay: false)
-        default: return nil
-        }
+        return index == atoms.count && !durations.isEmpty ? durations : nil
     }
 
     // MARK: - Formatting
@@ -753,7 +782,8 @@ enum CalcDateTime {
     }
 
     private static func timeString(_ date: Date, calendar: Calendar) -> String {
-        format(date, calendar: calendar, pattern: "h:mm a")
+        let pattern = calendar.component(.second, from: date) == 0 ? "h:mm a" : "h:mm:ss a"
+        return format(date, calendar: calendar, pattern: pattern)
     }
 
     /// The answer's own weekday, which the date itself never spells out.
@@ -809,8 +839,10 @@ enum CalcDateTime {
 
     private static func parseClock(_ atom: String) -> (hour: Int, minute: Int)? {
         if atom.contains(":") {
-            let parts = atom.split(separator: ":").map(String.init)
-            guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) else {
+            let parts = atom.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
+            guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]),
+                (0...59).contains(minute)
+            else {
                 return nil
             }
             return (hour, minute)
@@ -819,7 +851,7 @@ enum CalcDateTime {
         return (hour, 0)
     }
 
-    private static func makeDate(
+    @inline(never) private static func makeDate(
         _ year: Int, _ month: Int, _ day: Int, _ calendar: Calendar
     )
         -> Date?
@@ -840,12 +872,22 @@ enum CalcDateTime {
         calendar.date(byAdding: .day, value: days, to: date)
     }
 
-    /// Steps day by day, counting only Mon–Fri. Public holidays are deliberately not modelled.
+    /// Whole weeks jump at once; only the weekend alignment and remainder walk individual days.
     private static func addBusinessDays(_ count: Int, to date: Date, calendar: Calendar) -> Date? {
-        guard abs(count) <= 10_000 else { return nil }
+        guard (-10_000...10_000).contains(count) else { return nil }
         let step = count < 0 ? -1 : 1
         var remaining = abs(count)
         var cursor = date
+        while remaining > 0, isWeekend(cursor, calendar: calendar) {
+            guard let next = shift(cursor, days: step, calendar: calendar) else { return nil }
+            cursor = next
+            if !isWeekend(cursor, calendar: calendar) { remaining -= 1 }
+        }
+        guard let jumped = shift(cursor, days: remaining / 5 * 7 * step, calendar: calendar) else {
+            return nil
+        }
+        cursor = jumped
+        remaining %= 5
         while remaining > 0 {
             guard let next = shift(cursor, days: step, calendar: calendar) else { return nil }
             cursor = next

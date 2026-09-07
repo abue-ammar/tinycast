@@ -36,30 +36,52 @@ in (see Currency below).
 
 `CalcEngine.evaluate` runs:
 
+Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
+
 1. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
 2. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
    because a zone phrase is words rather than calculator input
-3. Numeric reject
-4. Tokenize
-5. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
-6. Base conversion
-7. **Timespan** (`145 mins to timespan` → `2 hr 25 min`)
-8. Explicit unit conversion (`10km to mi`)
-9. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`,
-   `(20 sgd to usd) * 30`), which also answers a bare amount (`1 usd`, `1 btc`) in the Mac's own
-   currency
-10. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
-11. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
-   `CalcUnits.parseBareConversion` + the `autoTargets` map)
-12. Natural-language percent, ratio and list forms (`CalcPercent`)
-13. Plain arithmetic
+3. Tokenize, then preserve the complete prefix of a trailing binary operator
+4. Base conversion
+5. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
+   `100km / 2h to km/h`, `(1hr + 30min) to timespan`)
+6. Explicit unit conversion (`10km to mi`, `m to ft`, `day s`)
+7. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
+8. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
+9. Natural-language percent, ratio and list forms (`CalcPercent`)
 
-Date/time depends on the clock, so it takes an injected `now` / `calendar` — the public `evaluate(_:)`
-uses the live clock, and `evaluate(_:now:calendar:)` lets `calc-test.swift` assert exact strings
-against a fixed clock.
+`CalcExpressionParser` is the sole precedence-climbing evaluator, returning `CalcValue` for numbers,
+measurements, currencies and booleans. `CalcQuantity` turns those values into cards and applies display
+policy. Scalar operands in conversions and percent phrases use the same parser's `scalar` projection;
+there is no second arithmetic parser or fallback evaluation of a completed scalar query.
 
-`CalcDateTime` recognizes four grammars:
+`CalcTokenizer` scans Unicode scalars, retaining canonical-equivalent accented currency names.
+`CalcOperator` owns operator identity, binding power and spelling; `CalcMath` owns the function and
+constant catalog. Spoken roots use the typed parser too: `square root of 25m2` is `5 m`,
+and `cube root of -8m3` is `-2 m`.
+Dimensionless results can feed base conversion too: `2m / 2m to hex` is `0x1`.
+`CalcNumberBase` owns radix names and prefixes for both tokens and results. A conversion target is
+checked before evaluating its source, so an ordinary unit conversion never attempts radix arithmetic.
+Overflowing literals and intermediate arithmetic are rejected before comparisons can hide the overflow.
+When a trailing operator keeps a conversion visible, its input is reconstructed at full Double precision;
+display rounding never feeds back into evaluation.
+
+`UnitDef` is an immutable, Sendable reference shared by its aliases and parsed values. The catalog
+stores 148 base definitions as compact text records rather than repeated construction code, then adds
+SI and transfer-rate prefixes once on first use. `CalcUnitCatalog` owns this data;
+`CalcUnits` owns conversion policy. Every one of the 675 aliases, labels, dimensions, scale factors
+and offsets was compared bit-for-bit with the previous advanced catalog.
+
+Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a duration,
+not a scalar subsequently labeled milliseconds. Simple conversions still own their source badges.
+
+Date/time takes an injected `now` / `calendar`. `CalcMemo` supplies the live clock and calendar at the
+UI boundary; the model and harness perform no ambient clock reads. Date arithmetic requires a moment
+signal, so ordinary numeric expressions skip calendar parsing. Numeric date components share one
+parser, while the separator still chooses ISO, month-first or day-first interpretation.
+
+`CalcDateTime` recognizes these grammars:
 
 - **A** — duration until a moment: `hrs till 9am`, `days till 9april`
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
@@ -77,9 +99,8 @@ a `Friday` pill rather than repeating the weekday inside the date and badging it
 badge keeps its own weekday, since nothing else on the card carries it.
 
 A bare, recurring date or time resolves by _bias_: `till` takes the upcoming occurrence, `since` the
-most recent past one; an absolute date ignores the bias. Grammar D only engages when at least one
-operand contains a letter, because two letter-free operands (`5/2 - 1/2`) are equally valid as
-arithmetic and are left to the calculator rather than silently read as dates. Two-digit years expand
+most recent past one; an absolute date ignores the bias. Grammar D needs an unambiguous date/time signal: a letter, a clock, an ISO or dotted date,
+or an explicit time-unit target. Fraction-only operands (`5/2 - 1/2`) remain arithmetic. Two-digit years expand
 the way date pickers do — 00–68 to the 2000s, 69–99 to the 1900s.
 
 A **dotted** date is day-first (`19.2.27` is 19 February 2027), matching the convention that writes
@@ -107,6 +128,24 @@ date meant than the same day twelve months out. Grammar C shifts a moment, so it
 same way and `25. aug` and `25. aug + 3` can never disagree. Grammar D measures _to_ a moment,
 where the documented forward bias still decides: `jul 4 - today` keeps looking ahead.
 
+`parseMoment` owns `at <time>` for every grammar, so `next monday at 7:30 + 5`,
+`hours till tomorrow at 7:30` and `3 days from next monday at 7:30` compose the same way.
+The bias applies to the combined date and clock: after Friday midnight, `hours till friday at midnight`
+advances a week while `hours since friday at midnight` uses today's midnight.
+Explicit clock times survive day, month and year shifts. Invalid clock components and wall-clock times
+that do not exist during a DST jump stay silent. Repeated fall-back times use Calendar's first occurrence.
+
+Durations can combine (`1 day 2h 15min`) and use fractional hours/minutes when they resolve to whole
+seconds (`1.5 hours`). Days, weeks, weekdays, months and years require whole counts. Months and years
+use the injected Calendar, including end-of-month clamping: `31.1.26 + 1 month` is 28 February.
+A calendar day preserves the wall clock across DST; 24 hours is elapsed time and may change it.
+`ago` anchors sub-day durations to now and date-only durations to today.
+
+Subtracting moments with clock times produces a timespan; `to hours` / `to minutes` / `in seconds`
+selects an elapsed-time unit. Bare clocks in a difference share today's date, so `7:30 - 13:30`
+is `-6 hr` even when one clock has already passed. Date-only differences retain calendar-day counting;
+an explicit hours target measures elapsed time, so a DST day can be 23 or 25 hours.
+
 A bare number after a moment takes the unit that moment implies: hours off a clock time
 (`3:45pm + 5` → 8:45 PM), days off a date (`august 5 + 5` → 10 August). It is checked before the
 spelled durations, since `5` names no unit of its own.
@@ -122,8 +161,8 @@ landing day, so `monday in 3 weeks` is that week's Monday whichever day you ask 
 `sunday in 1 week` lands at the end of that week rather than its start. It runs after every other
 grammar because `in` is also the unit connector, which is what keeps `10 in in cm` a conversion.
 
-`CalcQuantity` is a separate typed precedence parser rather than a mode added to the scalar
-`CalcParser`. Scalar `*` / `/` preserve the unit, compatible quantity division returns a scalar, and a
+`CalcExpressionParser` evaluates scalar and typed operands through one precedence grammar.
+Scalar `*` / `/` preserve the unit, compatible quantity division returns a scalar, and a
 trailing `to` / `in` converts the complete expression. A conversion inside parentheses is itself a
 quantity, so `(20 sgd to usd) * 30` converts then multiplies. Percentages keep relative semantics
 for addition (`10kg + 20%` → `12 kg`) and act as fractional scalars for multiplication and division
@@ -143,9 +182,11 @@ writing is the one you were thinking in. Chains are left-associative, so `1kg + 
 pounds. A conversion suffix overrides it entirely (`10kg + 500g to lb`).
 
 Adjacency is the exception. `5 feet 3 inches` and `1hr 30min` are one quantity in composite notation,
-not a sum, so they answer in the _leading_ unit (`5.25 ft`, `1.5 hr`). `QuantityParser.peekBinary`
-already distinguishes the two — it reports `consumesToken: false` for the invisible `+` between
-adjacent quantities — and `addOrSubtract` keys the unit choice off exactly that flag.
+not a sum, so they answer in the _leading_ unit (`5.25 ft`, `1.5 hr`). `CalcExpressionParser.peekBinary`
+distinguishes the two — it reports `consumesToken: false` for the invisible `+` between adjacent
+quantities — and `addOrSubtract` keys the unit choice off exactly that flag. Composite notation binds
+above multiplication, division and powers: `5w * 3h 30min` means `5w * (3h 30min)`, and
+`90km / 1h 30min` divides by the entire 90-minute duration. An explicit `+` keeps additive precedence.
 
 A bare number takes the unit it is written against: `5kg+5` is `10 kg`, `$10 + 5` is `15.00 USD`. Under
 adjacency the same input stays silent, because there a bare trailing number is a unit still being
@@ -155,7 +196,49 @@ answering nothing.
 Once an operator is involved the answer stays in the units written, so `2 * 5kg` is `10 kg`. Only a
 bare quantity (`50cm`, `1m`) falls through to the keyword-less auto-conversion below.
 
-Derived dimensions are deliberately not guessed: multiplying two unit values returns a clear error.
+`CalcDimension` records length, mass, time, data, electric-current, pixel and currency exponents. Products add exponents, division
+subtracts them, and powers multiply them. `CalcUnits.baseUnits` resolves supported results back to
+ordinary units, so conversions and addition need no second representation. Derived results use base
+units unless a trailing conversion names another: `5m * 4m` → `20 m²`,
+`100km / 2h to km/h` → `50 km/h`, `90km/h * 20min to km` → `30 km`.
+Area, volume, volume flow, speed, acceleration, force, pressure, energy, power, frequency, data rates
+and electrical and pixel units compose through this same path. `CalcUnitExpression` composes other
+dimensions from existing units, retaining their factors and symbols: `2kg / 4m3` → `0.5 kg/m³`,
+`1kg/m3 to g/cm3` → `0.001 g/cm³`. Temperature and angle stay outside compound products.
+
+All factors share composable bases: cubic meters for volume and bytes per second for data rates.
+To add a dimension, declare its signature on `UnitCategory`, add records to `CalcUnitCatalog`, and register
+one output in `baseUnits`. A new unit within a category only needs a table entry.
+`m²` / `m2` and `m³` / `m3` name units; `(2m)^2` squares the entire quantity.
+`CalcUnits.productUnit` selects Wh/kWh for power multiplied by a minutes-or-larger time unit,
+and Ah/mAh for current multiplied by one; other derived products retain their base unit.
+Explicit conversion still overrides the selection. Electrical relations use the same dimensions:
+`12V * 2A` → `24 W`, `12V / 6ohm` → `2 A`, `12V / 2A` → `6 Ω`,
+`500mA * 3h 30min` → `1,750 mAh`, `12V * 2Ah to wh` → `24 Wh`.
+Charge's base symbol is `As` (ampere seconds), also named `coulomb`; `C` remains Celsius.
+
+Identifiers check exact registered spellings before case folding, so SI mega symbols (`MW`, `MΩ`,
+`MA`, `MV`, `MWh`, `MAh`) remain distinct from milli symbols. Spelled names remain case-insensitive.
+The evaluator takes constants and functions from `CalcMath`; `pi * (2m)^2`,
+`sqrt(25m2)` and `cbrt(8m3)` work without a geometry-specific grammar.
+
+Volume includes cubic millimeters through cubic meters, cubic inches/feet/yards, and mL/cL/dL/L.
+Bare cubic amounts auto-convert to liters or milliliters. Customary volumes use US liquid measures,
+including `fl oz` / `floz`; plain `oz` remains weight.
+Volume flow adds length³/time to the same dimension table, with `m³/s` as its base:
+`10l / 2min to l/min` → `5 L/min`, `10l/min * 30s to l` → `5 L`,
+`150l / 10l/min to duration` → `15 min`. Its units also include L/s, L/h, m³/h and gal/min (`gpm`).
+
+Pixels have their own dimension, so `3000px to cm` cannot assume a physical size.
+An explicit density supplies it: `3000px / 300ppi to inches` → `10 in`,
+`5in * 300ppi` → `1,500 px`, and `3000px / 10in` → `300 ppi`.
+Density defaults to `ppi` (also `px/in`); `px/cm`, `px/mm` and `px/m` are conversion targets.
+Square pixels (`px²` / `px2`) let the ordinary powers and roots calculate a display's diagonal:
+`sqrt((3840px)^2 + (2160px)^2) / 27in` → `163.1783089 ppi`.
+These are image pixels, not CSS's fixed reference pixels or printer dots.
+
+`to timespan` / `to duration` formats any evaluated time quantity, including
+`(1hr + 30min) to timespan` and `100km / 40km/h to duration`. It uses the typed parser directly.
 Affine temperatures may only be added or subtracted when both operands use the same scale; treating
 an absolute Celsius/Fahrenheit value as a delta would silently produce physically incorrect answers.
 
@@ -167,13 +250,14 @@ An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace kee
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
 target makes the intent unambiguous (`273.15K to C`).
 
-A **slashed rate** (`km/h`, `m/s`, `mbit/s`) is one unit rather than a division, but only when the
-table knows the whole spelling: the tokenizer looks ahead from a letter run across a `/` to the next
-one and keeps them together only if `CalcUnits.byName` resolves the result. That is the same
-table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
+A **compound unit** (`km/h`, `m³/h`, `mbit/s`, `fl oz`) stays whole only when the table knows its
+spelling: the tokenizer looks ahead across `/` or whitespace between two alphanumeric runs,
+folds superscript powers, and keeps them together only if `CalcUnits.byName` resolves the result.
+The identifier's first scan supplies the currency prefix and compound-unit head without rescanning it.
+That is the same table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
 `10 m / 2` still divide while `1 km/x` stays silent.
 
-Beyond the core four, `CalcParser.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),
+Beyond the core four, `CalcMath.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),
 the inverses (`asin`/`arcsin` through `atan`), the hyperbolics (`sinh`, `acosh`, …) and
 `cbrt`/`exp`/`log2`/`sign`/`trunc`, alongside the `tau` and `phi` constants. `sec` is also the
 abbreviation for seconds, which costs nothing: a unit position resolves through `CalcUnits` long
@@ -256,15 +340,16 @@ carrying one would make the answer depend on which month you meant. Only a time 
 
 ## Workdays
 
-`workdays` is two separate things, and both avoid a calendar.
+`workdays` has two meanings; neither reads the user's calendar events.
 
 As a **unit** it is 8 hours, which answers `55h in workdays` and `3 workdays in hours`.
 
 As a **duration in date arithmetic** it counts days and skips weekends: `today + 5 business days`,
 `tomorrow + 10 work days`, `5 weekdays from now`, `august 26 2026 + 15 workdays`. `business day`,
 `work day`, `working day` and `weekday` are all the same phrase, written as one word or two.
-`addBusinessDays` steps a day at a time rather than doing arithmetic on weeks, which is what keeps a
-Saturday anchor honest — `saturday + 1 business day` is Monday, not Sunday.
+`addBusinessDays` aligns a weekend anchor first, jumps whole five-day workweeks as seven calendar
+days, then walks only the remainder. Work stays bounded even at the 10,000-day limit, in either
+direction; `saturday + 1 business day` still lands on Monday.
 
 Public holidays are deliberately not modelled in either. The only supported source is EventKit, and a
 calculator must never provoke its Full Calendar Access grant mid-keystroke — see the invariant above.
@@ -273,14 +358,16 @@ calculator must never provoke its Full Calendar Access grant mid-keystroke — s
 
 Juxtaposition means `*` at the same binding power as an explicit one (`4(2+3)` → 20, `2pi`,
 `2sqrt(9)`, `(2+3)(2+3)`), so it binds tighter than `+` and looser than `^`, and `6/2(1+2)` agrees
-with `6/2*(1+2)`. `CalcParser.parseExpression` checks it after `peekBinary()` fails and, unlike a real
-operator, consumes no token before parsing the right operand.
+with `6/2*(1+2)`. A lone `x` between operands is also multiplication, so `3x3`, `2xpi` and
+`$5 x 2` work alongside `×`. `CalcExpressionParser.peekBinary` recognizes juxtaposition without
+consuming a token before parsing the right operand.
 
-The scalar side is deliberately narrow: only `(` or a name in `CalcParser.constants` / `functions`
-starts an implicit product. Adjacent _numbers_ never do — `5 3` stays an app search — and no unit or
-currency name is a constant or function, so `10km` keeps its own path. `QuantityParser.peekBinary`
-carries the same `(` rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
-`2*(3)kg`); adjacency there still means the composite-quantity `+` described above, never a product.
+A parenthesis, constant, function or spoken root starts an implicit product (`2 square root of 9` → 6).
+Adjacent numbers never do — `5 3` stays an app search — and unit and currency names keep their own
+operand positions. The tokenizer only folds a lone `x` after an operand, keeping names such as `max`
+and incomplete hexadecimal input such as `0x` out of arithmetic. The same rule covers typed values
+(`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching `2*(3)kg`); adjacent quantities still use the
+composite `+` described above.
 
 ## Natural-language forms
 
@@ -295,9 +382,9 @@ and currency paths so a spelled-out word never outranks a measurement:
 - `average|sum|min|max of 10, 20, 30`, separated by `,` or `and`
 - `round 47 to nearest 5` → 45, snapping to a step rather than a digit count
 
-The list forms are the reason `CalcToken` carries a `comma` case. It is meaningful only here — every
-other path rejects it — and a comma **between digits** is still the grouping separator it always was,
-so `1,000 + 234` is unchanged and a bare `10,5` stays silent.
+`CalcToken.comma` separates these lists and function arguments. Outside function parentheses,
+a comma **between digits** remains a grouping separator, so `1,000 + 234` is unchanged and a bare
+`10,5` stays silent.
 
 Each of these badges what its number **is** — `Tip`, `Discounted`, `Percentage`, `Total`, `Ratio`,
 `Average`, `Sum`, `Minimum`, `Maximum`, `Rounded` — rather than the bare `Result` that says nothing
@@ -448,7 +535,51 @@ than `5.539e-05`.
 
 `CalcResult` carries an `expression` (left), a `display` / `copyText` payload (right), and optional
 `sourceBadge` / `targetBadge` word-name pills. `CalculatorCard` renders it as a two-column card.
+`Payload.number` rounds once, then groups that text for display; unit and percent suffixes share it.
+Date answers that display and copy identically also reuse their formatted text.
 
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
 the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
 `CalculatorHistoryStore`.
+
+## Additional units and transfer rates
+
+`MB/s` means megabytes per second; `Mbps` means megabits per second.
+`100Mbps to MB/s` gives `12.5 MB/s`, and `1GB / 10MB/s to s` gives `100 s`.
+Binary rates such as `MiB/s` and bit amounts such as `kbit` also work.
+SI prefixes expand for meters, grams, seconds, hertz, newtons, joules, watts and pascals,
+including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings.
+
+Other units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), mechanical horsepower (`hp`),
+BTU (international table), `rpm`, pound-force (`lbf`), US/UK tons and UK liquid measures
+(`ukgal`, `ukqt`, `ukpint`, `ukfloz`). Plain gallons and pints remain US measures.
+
+## Functions and comparisons
+
+Functions accept comma-separated arguments: `hypot(3,4)`, `round(3.14159,2)`, `log(8,2)`,
+`gcd(12,18)`, `lcm(4,6)`, `atan2(1,1)`, `pow(2,10)` and `root(-8,3)`.
+A one-argument `log` remains base 10. `min`, `max`, `sum`, `avg`, `mean` and `average` accept lists,
+including compatible measurements: `sum(1km,500m)` gives `1.5 km`, and `hypot(3m,400cm)` gives `5 m`.
+`round(2.567km,1)` keeps the unit. Inside function arguments, commas separate values;
+write `1000` rather than `1,000` there.
+
+`==`, `!=`, `<`, `<=`, `>` and `>=` compare numbers or compatible measurements and return booleans.
+`1km == 1000m` is `true`; incompatible dimensions produce an error. Chained comparisons are rejected.
+Integer operands support `&`, `|`, `xor`, `~`, `<<` and `>>`; `^` remains exponentiation.
+Shifts require counts from 0 through 63. Bitwise operations, `gcd` and `lcm` require integers
+strictly between −2⁵³ and 2⁵³, including their results; larger values and fractions are rejected.
+
+
+## Compound prices and timestamps
+
+`100 USD / 4hr` gives `25 USD/hr`; multiplying by `8hr` gives `200.00 USD`.
+Compound targets work too: `25 USD/hr to EUR/min`. Arithmetic within one currency rate needs no
+exchange snapshot; changing currency uses the same injected rates as ordinary money conversions.
+A compound quantity can carry one currency factor or its reciprocal, but not currency squared.
+
+`now to unix` returns whole Unix seconds; `now to unix ms` returns whole milliseconds.
+`unix 0 to date` and `1000 unix ms` convert back to a local date/time.
+RFC 3339 input accepts an explicit `Z` or `±HH:MM` offset and optional fractional seconds:
+`2026-07-24T07:30:00+02:00 + 30min`, or `1970-01-01T01:00:00+01:00 to unix` → `0`.
+Dates use the local calendar for display and arithmetic. Impossible dates, leap seconds and trailing
+text are rejected; timestamp output rounds down to the requested unit and copies every integer digit.

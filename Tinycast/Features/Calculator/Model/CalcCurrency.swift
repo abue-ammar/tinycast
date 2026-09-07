@@ -63,7 +63,7 @@ enum CalcCurrency {
             let input: Double
             if valueTokens.isEmpty {
                 input = 1
-            } else if let value = CalcParser.evaluate(valueTokens) {
+            } else if let value = CalcExpressionParser.scalar(valueTokens) {
                 input = value
             } else {
                 return nil

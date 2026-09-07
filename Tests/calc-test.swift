@@ -14,6 +14,27 @@ struct CalcTests {
         expectDisplay("100/4", "25")
         expectDisplay("2^10", "1,024")
         expectDisplay("2^3^2", "512")  // right-associative
+        expectDisplay("2 square root of 9", "6")
+        expectDisplay("square root of 25m2", "5 m")
+        expectDisplay("cube root of -8m3", "-2 m")
+        expectDisplay("cube root of 8%", "0.430886938")
+        expectDisplay("cube root of -8%", "-0.430886938")
+        expectDisplay("2 * (3 + 4) << 1", "28")
+        expectDisplay("1 ≤ 2", "true")
+        expectDisplay("2 ≠ 3", "true")
+        expectDisplay("2 ⊻ 3", "1")
+        expectDisplay("1µs to ns", "1,000 ns")
+        expectDisplay("1μs to ns", "1,000 ns")
+        expectDisplay("2\u{00A0}+\u{2009}2", "4")
+        expectError("10 colo\u{0301}n to usd", "No exchange rate for CRC.")
+        expectCopy("-9007199254740992 + 0", "-9007199254740992")
+        expectCopy("-0 * 1234", "0")
+        expectExpression("10k +", "10k +")
+        expectExpression("45+", "45+")
+        expectExpression("(2)+", "(2)+")
+        expectDisplay("2m / 2m to hex", "0x1")
+        expectDisplay(String(repeating: "1+", count: 100) + "1", "101")
+        expectNil(String(repeating: "1+", count: 128) + "1")
         expectDisplay("2**2", "4")  // "**" is an alias for "^" (Python/JS/shell spelling)
         expectDisplay("2**10", "1,024")
         expectDisplay("2**3**2", "512")  // right-associative, same as "^"
@@ -81,9 +102,21 @@ struct CalcTests {
         expectDisplay("2sqrt(9)", "6")
         expectDisplay("2(3+1)+1", "9")  // implicit "*" binds like explicit "*", not looser
         expectDisplay("10π ^e", "224.5915772")  // and looser than "^"
+        expectDisplay("3x3", "9")
+        expectDisplay("3 x 3", "9")
+        expectDisplay("3X3", "9")
+        expectDisplay("3 x -2", "-6")
+        expectDisplay("2xpi", "6.283185307")
+        expectDisplay("6/2x(1+2)", "9")
+        expectDisplay("10 x", "10")
+        expectDisplay("$5 x 2", "10.00 USD")
+        expectNil("x")
+        expectNil("x3")
+        expectNil("3x")
         // Juxtaposition against a bracket carries the unit through, matching explicit "*"
         expectDisplay("2(3)kg", "6 kg")
         expectDisplay("2*(3)kg", "6 kg")
+        expectDisplay("2(3)kg x 2", "12 kg")
 
         // Scientific notation — only when the exponent hugs the mantissa
         expectDisplay("1e5", "100,000")
@@ -98,6 +131,14 @@ struct CalcTests {
         expectDisplay("2e", "5.436563657")  // no digits after "e" — still 2 × Euler's e
         expectDisplay("1 e", "2.718281828")  // detached — never an exponent
         expectNil("1e400")  // overflows to infinity, so not calculator input
+        expectNil("1e308k")
+        expectNil("-1e308k")
+        expectNil("1e308k to hex")
+        expectNil("1e308 * 2 > 1")
+        expectNil("1e308m + 1e308m > 0m")
+        expectNil("1e308m == 1e308km")
+        expectNil("(1e308 * 2) ^ 0")
+        expectDisplay("1e305k", "1e+308")
         expectNil("1e5e5")
 
         // Percent
@@ -147,6 +188,15 @@ struct CalcTests {
         expectDisplay("2*5 km to mi", "6.213711922 mi")  // expression on the left side
 
         // Number bases
+        expectBadges("0b1010", source: "Binary", target: "Decimal")
+        expectBadges("0o17", source: "Octal", target: "Decimal")
+        expectBadges("0B1010 +", source: "Binary", target: "Decimal")
+        expectBadges("0O17 +", source: "Octal", target: "Decimal")
+        expectCopy("1.00000000004m to pm +", "1000000000040 pm")
+        expectCopy("1.00000000004m to pm **", "1000000000040 pm")
+        expectCopy("1.00000000004m to pm + =", "1000000000040 pm")
+        expectCopy("1.00000000004m to pm + +", "1000000000040 pm")
+        expectCopy("1.00000000004 * 1e12 to hex +", "0xE8D4A51028")
         expectDisplay("255 to hex", "0xFF")
         expectDisplay("255 to binary", "0b11111111")
         expectDisplay("0xff to decimal", "255")
@@ -172,6 +222,43 @@ struct CalcTests {
         expectNil("sqrt()")
         expectNil("2.5!")  // factorial needs an integer
         expectNil("")
+
+        expectDisplay("hypot(3,4)", "5")
+        expectDisplay("2hypot(3,4)", "10")
+        expectDisplay("round(3.14159,2)", "3.14")
+        expectDisplay("round(1234,-2)", "1,200")
+        expectDisplay("log(8,2)", "3")
+        expectDisplay("gcd(12,18,8)", "2")
+        expectDisplay("lcm(4,6)", "12")
+        expectDisplay("atan2(1,1)*4", "3.141592654")
+        expectDisplay("root(-8,3)", "-2")
+        expectDisplay("hypot(3m,400cm)", "5 m")
+        expectDisplay("min(1km,999m)", "0.999 km")
+        expectDisplay("sum(1km,500m)", "1.5 km")
+        expectDisplay("round(2.567km,1)", "2.6 km")
+        expectError("min(1km,1hr)", "Cannot compare values with different dimensions.")
+        expectNil("gcd(1.5,2)")
+        expectNil("lcm(9223372036854775807,2)")
+        expectNil("round(1,9999)")
+        expectDisplay("1 << 8", "256")
+        expectDisplay("256 >> 2", "64")
+        expectDisplay("6 & 3", "2")
+        expectDisplay("5 xor 3", "6")
+        expectDisplay("~1", "-2")
+        expectDisplay("1 | 2 == 3", "true")
+        expectDisplay("~1 == -2", "true")
+        expectDisplay("1km == 1000m", "true")
+        expectDisplay("30min >= 1hr", "false")
+        expectNil("1 << 64")
+        expectNil("1 << -1")
+        expectNil("1 << 63")
+        expectNil("9007199254740993 & 1")
+        expectNil("0x20000000000001 & 1")
+        expectDisplay("5 mod 2 == 1", "true")
+        expectExpression("1 << 8 == 256", "1 << 8 == 256")
+        expectNil("(1 == 1)kg")
+        expectNil("-(1 == 1)")
+        expectNil("sqrt(1 == 1)")
 
         // Formatting: display grouped, copyText plain
         expectDisplay("1234567*1", "1,234,567")
@@ -212,6 +299,15 @@ struct CalcTests {
         expectExpression("(10kg + 5kg) * 3%", "(10 kg + 5 kg) × 3%")
         expectExpression("-5kg + 2kg", "-5 kg + 2 kg")
         expectExpression("5 feet 3 inches", "5 ft 3 in")
+        // A function keeps its bracket, and a word operator keeps the sign on the operand it leads
+        expectExpression("hypot(3m,400cm)", "hypot(3 m, 400 cm)")
+        expectExpression("min(1km,999m)", "min(1 km, 999 m)")
+        expectExpression("round(2.567km,1)", "round(2.567 km, 1)")
+        expectExpression("2*sqrt(9)m", "2 × sqrt(9) m")
+        expectExpression("cube root of -8m3", "cube root of -8 m³")
+        expectExpression("15% of -2kg", "15% of -2 kg")
+        expectExpression("10kg - 5kg", "10 kg - 5 kg")
+        expectExpression("2 * 5feet 3inches", "2 × 5 ft 3 in")
         expectBadges("10kg + 5kg", source: "Expression", target: "Kilograms")
         expectDisplay("10kg + 10g", "10,010 g")  // issue #64, answered in the last unit typed
         expectDisplay("10kg + 500g", "10,500 g")
@@ -337,12 +433,131 @@ struct CalcTests {
         // Adjacency differs: a bare number there is a unit still being typed.
         expectNil("1hr 30")  // mid-way through "1hr 30min"
         expectNil("5 feet 3")  // mid-way through "5 feet 3 inches"
-        expectError(
-            "1kg * 1m",
-            "Multiplication of two unit values is not supported.")
-        expectError("1 / 1kg", "Division by a unit value is not supported.")
-        expectNil("(2m)^2")
-        expectNil("sqrt(4kg)")
+        expectDisplay("1kg * 1m", "1 kg·m")
+        expectDisplay("1cm/m", "0.01")
+        expectDisplay("sqrt(4m) to cm^0.5", "20 cm^0.5")
+        expectDisplay("1 kg/m3 to g/cm3", "0.001 g/cm³")
+        expectDisplay("10m * 2s to cm*s", "2,000 cm·s")
+        expectDisplay("2kg / 4m3", "0.5 kg/m³")
+        expectDisplay("1kg/m3 + 1g/cm3", "1.001 g/cm³")
+        expectDisplay("100 USD / 4hr", "25 USD/hr")
+        expectDisplay("25 USD/hr * 8hr", "200.00 USD")
+        expectDisplay("8hr * 25 USD/hr", "200.00 USD")
+        expectDisplay("25 USD/hr to EUR/min", "0.3833333333 EUR/min")
+        expectDisplay("25 USD/hr / 23 EUR/hr", "1")
+        expectErrorWithoutRates("25 USD/hr to EUR/hr", "Exchange rates unavailable — check your connection.")
+        expectError("2 celsius * 3m", "Multiplication of these unit values is not supported.")
+        expectDisplay("1 / 1kg", "1 kg^-1")
+        expectDisplay("(2m)^2", "4 m²")
+        expectDisplay("5m * 4m to ft2", "215.2782083 ft²")
+        expectDisplay("2m * 30cm", "0.6 m²")
+        expectDisplay("2m * 3m * 4m to l", "24,000 L")
+        expectDisplay("1 ft³ to l", "28.31684659 L")
+        expectDisplay("1m3", "1,000 L")
+        expectDisplay("1cm3", "1 mL")
+        expectDisplay("1dm³ to l", "1 L")
+        expectDisplay("(2dm)^3 to l", "8 L")
+        expectDisplay("1dL to cl", "10 cL")
+        expectDisplay("3 * 2cl 5ml to ml", "75 mL")
+        expectDisplay("1 fl oz to ml", "29.57352956 mL")
+        expectDisplay("250ml to fl oz", "8.453505675 fl oz")
+        expectDisplay("2m * 30cm * 40cm to l", "240 L")
+        expectDisplay("pi * (10cm)^2 * 30cm to l", "9.424777961 L")
+        expectDisplay("4/3 * pi * (10cm)^3 to l", "4.188790205 L")
+        expectDisplay("500l / (2m * 1m) to cm", "25 cm")
+        expectDisplay("cbrt(8l) to cm", "20 cm")
+        expectDisplay("10l / 2min to l/min", "5 L/min")
+        expectDisplay("10l/min * 30s to l", "5 L")
+        expectDisplay("150l / 10l/min to duration", "15 min")
+        expectDisplay("1m³/h to l/min", "16.66666667 L/min")
+        expectDisplay("60l/min to m3/h", "3.6 m³/h")
+        expectDisplay("2gpm to l/min", "7.570823568 L/min")
+        expectError("10l + 2l/min", "Cannot add Volume and Volume Flow Rate.")
+        expectNil("1m3/x")
+        expectDisplay("100 Mbps to MB/s", "12.5 MB/s")
+        expectDisplay("1 MiB/s to Mbps", "8.388608 Mbps")
+        expectDisplay("1GB / 10MB/s to s", "100 s")
+        expectDisplay("8kbit to B", "1,000 B")
+        expectDisplay("1um to nm", "1,000 nm")
+        expectDisplay("1 GHz to MHz", "1,000 MHz")
+        expectDisplay("500 microseconds to ms", "0.5 ms")
+        expectDisplay("1ton to kg", "1,000 kg")
+        expectDisplay("1stone to kg", "6.35029318 kg")
+        expectDisplay("1nmi to km", "1.852 km")
+        expectDisplay("1ukgal to l", "4.54609 L")
+        expectDisplay("1ukpint to ml", "568.26125 mL")
+        expectDisplay("100hp to kw", "74.56998716 kW")
+        expectDisplay("3000rpm to hz", "50 Hz")
+        expectDisplay("1btu to kj", "1.055055853 kJ")
+        expectDisplay("1lbf to n", "4.448221615 N")
+        expectDisplay("3000px / 300ppi to inches", "10 in")
+        expectDisplay("5in * 300PPI", "1,500 px")
+        expectCopy("5in * 300ppi", "1500 px")
+        expectDisplay("300ppi * 5in", "1,500 px")
+        expectDisplay("3000 pixels / 10in to ppi", "300 ppi")
+        expectBadges("3000px / 10in", source: "Expression", target: "Pixels per Inch")
+        expectDisplay("3000px / 300px/in to cm", "25.4 cm")
+        expectDisplay("300ppi to px/cm", "118.1102362 px/cm")
+        expectDisplay("100px/cm to ppi", "254 ppi")
+        expectDisplay("1px/mm to ppi", "25.4 ppi")
+        expectDisplay("100px/m * 1m", "100 px")
+        expectDisplay("300ppi", "118.1102362 px/cm")
+        expectDisplay("1920px * 1080px", "2,073,600 px²")
+        expectDisplay("sqrt(9px²)", "3 px")
+        expectDisplay("sqrt((3840px)^2 + (2160px)^2) / 27in", "163.1783089 ppi")
+        expectDisplay("(300ppi * 2.54cm) / 300px", "1")
+        expectError("3000px to cm", "Cannot convert Pixels to Length.")
+        expectError("10px + 1in", "Cannot add Pixels and Length.")
+        expectNil("3000px / 0ppi")
+        expectNil("pixels")
+        expectDisplay("20m2 / 4m", "5 m")
+        expectDisplay("sqrt(25m2)", "5 m")
+        expectDisplay("cbrt(-8m3)", "-2 m")
+        expectDisplay("pi * (2m)^2 to m2", "12.56637061 m²")
+        expectDisplay("sin(30deg) * 10m", "5 m")
+        expectDisplay("100km / 2h to km/h", "50 km/h")
+        expectDisplay("90km/h * 20min to km", "30 km")
+        expectDisplay("100km / 50km/h to h", "2 hr")
+        expectDisplay("1GB / 100mbps to s", "80 s")
+        expectDisplay("1500w * 2h to kwh", "3 kWh")
+        expectDisplay("5 watt * 3h 30min", "17.5 Wh")
+        expectDisplay("3h 30min * 5 watt", "17.5 Wh")
+        expectDisplay("5 watt * 3h 30min to kwh", "0.0175 kWh")
+        expectDisplay("5 watt * 3h 30min to j", "63,000 J")
+        expectCopy("5 watt * 3h 30min", "17.5 Wh")
+        expectDisplay("5w * 3h 30min + 2wh", "19.5 Wh")
+        expectDisplay("2kw * 3h 30min", "7 kWh")
+        expectDisplay("5w * 30s", "150 J")
+        expectDisplay("12V * 2A", "24 W")
+        expectDisplay("12V / 6ohm", "2 A")
+        expectDisplay("12V / 2A", "6 Ω")
+        expectDisplay("2A * 6Ω", "12 V")
+        expectDisplay("24W / 12V", "2 A")
+        expectDisplay("500mA * 3h 30min", "1,750 mAh")
+        expectDisplay("2000mAh / 500mA to hours", "4 hr")
+        expectDisplay("12V * 2Ah to wh", "24 Wh")
+        expectDisplay("10Wh / 5V to mah", "2,000 mAh")
+        expectDisplay("3600 coulombs to ah", "1 Ah")
+        expectDisplay("1mW to W", "0.001 W")
+        expectDisplay("500mA", "0.5 A")
+        expectDisplay("1MW to W", "1,000,000 W")
+        expectDisplay("1MWh to kwh", "1,000 kWh")
+        expectDisplay("1mΩ to ohm", "0.001 Ω")
+        expectDisplay("1MΩ to ohm", "1,000,000 Ω")
+        expectDisplay("2 * 5feet 3inches", "10.5 ft")
+        expectDisplay("90km / 1h 30min to km/h", "60 km/h")
+        expectDisplay("2 * 1h 30min 15s to s", "10,830 s")
+        expectError("5w * 3h + 30min", "Cannot add Energy and Time.")
+        expectNil("5w * 3h 30")
+        expectDisplay("10n / 2m2 to pa", "5 Pa")
+        expectDisplay("10m/s / 2s", "5 m/s²")
+        expectDisplay("2kg * 3m/s²", "6 N")
+        expectDisplay("1 / 20ms to hz", "50 Hz")
+        expectDisplay("(1hr + 30min) to timespan", "1 hr 30 min")
+        expectDisplay("100km / 40km/h to duration", "2 hr 30 min")
+        expectNil("1m / 0s")
+        expectDisplay("(2m)^0.5", "1.414213562 m^0.5")
+        expectDisplay("sqrt(4kg)", "2 kg^0.5")
         expectNil("1kg!")
         expectDisplay("10kg +", "10 kg")
         expectCopy("10kg +", "10 kg")
@@ -720,6 +935,22 @@ struct CalcTests {
         expectBadges("145 mins to timespan", source: "Minutes", target: "Timespan")
         expectNil("10 km to timespan")
 
+        expectDisplayAt("1970-01-01T00:00:00Z to unix", "0")
+        expectDisplayAt("1970-01-01T01:00:00+01:00 to unix", "0")
+        expectDisplayAt("1970-01-01T00:00:00.125Z to unix ms", "125")
+        expectDisplayAt("1970-01-01T00:00:00.002Z to unix ms", "2")
+        expectDisplayAt("1969-12-31T23:59:59.999Z to unix ms", "-1")
+        expectDisplayAt("unix 1234567890.125 to unix ms", "1,234,567,890,125")
+        expectDisplayAt("1970-01-01T00:00:00Z + 1h to unix", "3,600")
+        expectDisplayAt("unix 0 to date", "1 January, 1970 at 12:00 AM")
+        expectDisplayAt("1970-01-01T00:00:00Z to date", "1 January, 1970 at 12:00 AM")
+        expectDisplayAt("1000 unix ms", "1 January, 1970 at 12:00:01 AM")
+        expectDisplayAt("unix -1", "31 December, 1969 at 11:59:59 PM")
+        expectDisplayAt("2026-07-24T07:30:00+02:00 + 30min", "24 July at 6:00 AM")
+        expectNilAt("2026-02-30T00:00:00Z")
+        expectNilAt("2026-07-24T00:00:00Z junk")
+        expectNilAt("unix 1e30")
+
         // Time zones. The clock is UTC-pinned, so every one of these is exact.
         expectDisplayAt("time in tokyo", "9:18 AM")
         expectDisplayAt("time in sf", "5:18 PM (yesterday)")
@@ -899,6 +1130,44 @@ struct CalcTests {
         expectDisplayAt("next monday", "27 July")
         expectDisplayAt("last friday", "17 July")
         expectBadgesAt("tomorrow at 9am", source: "Friday, 24 July", target: "Saturday")
+        expectDisplayAt("next monday at 7:30 + 5", "27 July at 12:30 PM")
+        expectDisplayAt("next monday at 7:30 + 1 day 2h 15min - 1", "28 July at 8:45 AM")
+        expectDisplayAt("tomorrow at 23:30 + 1.5 hours", "26 July at 1:00 AM")
+        expectDisplayAt("3 days from next monday at 7:30", "30 July at 7:30 AM")
+        expectDisplayAt("1h 30min ago", "23 July at 10:48 PM")
+        expectDisplayAt("31.1.26 at 7:30 + 1 month", "28 February at 7:30 AM")
+        expectDisplayAt("29.2.24 + 1 year", "28 February, 2025")
+        expectDisplayAt("today + 1 year 2 months - 1 day", "23 September, 2027")
+        expectDisplayAt("1. jan + 1 + 1", "3 January")
+        expectDisplayAt("hours till tomorrow at 7:30", "31.2 hours")
+        expectDisplayAt("hours since yesterday at noon", "12.3 hours")
+        expectDisplayAt("hours till friday at midnight", "167.7 hours")
+        expectDisplayAt("hours since friday at midnight", "0.3 hours")
+        expectDisplayAt("hours till jul 24 at midnight", "8,759.7 hours")
+        expectDisplayAt("next monday at 9:30 - next monday at 7:00", "2 hr 30 min")
+        expectDisplayAt("next monday at 9:30 - next monday at 7:00 to minutes", "150 min")
+        expectDisplayAt("2026-08-01 - 2026-07-24", "8 days")
+        expectDisplayAt("today at 9:30 - today at 7:00 to hours", "2.5 hr")
+        expectDisplayAt("now + 5 seconds", "24 July at 12:18:05 AM")
+        expectDisplayAt("next\u{a0}monday at\t7:30 + 5", "27 July at 12:30 PM")
+        expectDisplayAt("tomorrow - 5 weekdays", "20 July")
+        expectDisplayAt("today + 10000 weekdays", "21 November, 2064")
+        for query in [
+            "tomorrow at 7:99", "tomorrow at 7::30", "today + 1.5 months",
+            "today + 1h 30", "today + -9223372036854775808 weekdays", "today + 9223372036854775807 weeks"
+        ] {
+            expectNilAt(query)
+        }
+        var vienna = clock.calendar
+        vienna.timeZone = TimeZone(identifier: "Europe/Vienna")!
+        expectDisplayAt("2026-03-28 at 7:30 + 1 day", "29 March at 7:30 AM", calendar: vienna)
+        expectDisplayAt("2026-03-28 at 7:30 + 24 hours", "29 March at 8:30 AM", calendar: vienna)
+        expectDisplayAt("2026-03-29 at 7:30 - 2026-03-28 at 7:30 to hours", "23 hr", calendar: vienna)
+        expectDisplayAt("2026-10-24 at 7:30 + 1 day", "25 October at 7:30 AM", calendar: vienna)
+        expectDisplayAt("2026-10-25 at 7:30 - 2026-10-24 at 7:30 to hours", "25 hr", calendar: vienna)
+        expectDisplayAt("1:00 - 3:00", "-2 hr", calendar: vienna)
+        let springNow = clock.calendar.date(from: DateComponents(year: 2026, month: 3, day: 29))!
+        expectNilAt("2:30am vienna in london", now: springNow, calendar: vienna)
         // A lone date word is still an app search
         expectNilAt("tomorrow")
         expectNilAt("today")
@@ -992,10 +1261,10 @@ struct CalcTests {
 
     // MARK: - Helpers
 
-    static func expectDisplayAt(_ query: String, _ expected: String) {
+    static func expectDisplayAt(_ query: String, _ expected: String, calendar: Calendar? = nil) {
         guard
             case .value(let display, _)? = CalcEngine.evaluate(
-                query, now: clock.now, calendar: clock.calendar)?.payload
+                query, now: clock.now, calendar: calendar ?? clock.calendar)?.payload
         else {
             fail(query, expected: expected, got: "nil / error")
             return
@@ -1013,8 +1282,8 @@ struct CalcTests {
         check(query + " [target badge]", expected: target, got: result.targetBadge ?? "nil")
     }
 
-    static func expectNilAt(_ query: String) {
-        if let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar) {
+    static func expectNilAt(_ query: String, now: Date = clock.now, calendar: Calendar? = nil) {
+        if let result = CalcEngine.evaluate(query, now: now, calendar: calendar ?? clock.calendar) {
             fail(query, expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1
@@ -1029,7 +1298,10 @@ struct CalcTests {
     static func expectBadges(
         _ query: String, source: String, target: String, region: String? = nil
     ) {
-        guard let result = CalcEngine.evaluate(query, rates: fx, region: region) else {
+        guard
+            let result = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)
+        else {
             fail(label(query, region), expected: "\(source) → \(target)", got: "nil")
             return
         }
@@ -1044,7 +1316,7 @@ struct CalcTests {
     static func expectDisplay(_ query: String, _ expected: String, region: String? = nil) {
         guard
             case .value(let display, _)? = CalcEngine.evaluate(
-                query, rates: fx, region: region)?.payload
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)?.payload
         else {
             fail(label(query, region), expected: expected, got: "nil / error")
             return
@@ -1055,7 +1327,7 @@ struct CalcTests {
     static func expectCopy(_ query: String, _ expected: String, region: String? = nil) {
         guard
             case .value(_, let copy)? = CalcEngine.evaluate(
-                query, rates: fx, region: region)?.payload
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)?.payload
         else {
             fail(label(query, region), expected: expected, got: "nil / error")
             return
@@ -1064,7 +1336,9 @@ struct CalcTests {
     }
 
     static func expectError(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, rates: fx)?.payload
+        guard
+            case .error(let message)? = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: fx)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -1074,7 +1348,9 @@ struct CalcTests {
 
     /// No snapshot has landed yet — first run, or still offline.
     static func expectErrorWithoutRates(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, rates: nil)?.payload
+        guard
+            case .error(let message)? = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: nil)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -1083,7 +1359,10 @@ struct CalcTests {
     }
 
     static func expectExpression(_ query: String, _ expected: String, region: String? = nil) {
-        guard let result = CalcEngine.evaluate(query, rates: fx, region: region) else {
+        guard
+            let result = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)
+        else {
             fail(label(query, region), expected: expected, got: "nil")
             return
         }
@@ -1113,7 +1392,9 @@ struct CalcTests {
     }
 
     static func expectNil(_ query: String, region: String? = nil) {
-        if let result = CalcEngine.evaluate(query, rates: fx, region: region) {
+        if let result = CalcEngine.evaluate(
+            query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)
+        {
             fail(label(query, region), expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1

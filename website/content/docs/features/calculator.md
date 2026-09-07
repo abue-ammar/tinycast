@@ -19,6 +19,9 @@ dividend: `-10 mod 3` is `-1`.
 `10k` is `10,000`. Scientific notation works — `1e5`, `5e-3km`, `3e+2` — while `2e` and `2 e` stay
 2 × Euler's _e_.
 
+Spoken roots accept measurements: `square root of 25m2` is `5 m`.
+Unit cancellation can feed number-base conversion: `2m / 2m to hex` is `0x1`.
+
 **A trailing operator keeps the last complete result visible.** `10 +` shows `10`, and
 `10kg + 500g +` shows `10,500 g`, so the card does not flicker while you type.
 
@@ -34,7 +37,8 @@ dividend: `-10 mod 3` is `-1`.
 | `10kg + 500g to lb` | pounds — a trailing `to` overrides everything |
 
 **Adjacency is composite notation, not addition.** `5 feet 3 inches` is `5.25 ft` and `1hr 30min` is
-`1.5 hr`, answered in the _leading_ unit.
+`1.5 hr`, answered in the _leading_ unit. Mixed quantities bind as one amount:
+`5w * 3h 30min` means `5w * (3h 30min)`, and `90km / 1h 30min` gives `60 km/h`.
 
 A bare number takes the unit written against it: `5kg+5` is `10 kg`, `$10 + 5` is `15.00 USD`.
 
@@ -43,8 +47,81 @@ Percentages are relative for `+` and `-` (`10kg + 20%` → `12 kg`) and a fracti
 
 A bare quantity auto-converts: `1m` gives feet and inches, `1hr` gives 60 min.
 
-Multiplying two unit values is an error rather than a guess at a derived dimension. Affine
-temperatures may only be added or subtracted within one scale.
+Measurements combine into area, volume, speed and other physical quantities:
+
+| You type | You get |
+| --- | --- |
+| `5m * 4m` | `20 m²` |
+| `2m * 3m * 4m to l` | `24,000 L` |
+| `sqrt(25m2)` | `5 m` |
+| `square root of 25m2` | `5 m` |
+| `cube root of -8m3` | `-2 m` |
+| `100km / 2h to km/h` | `50 km/h` |
+| `90km/h * 20min to km` | `30 km` |
+| `100km / 40km/h to duration` | `2 hr 30 min` |
+| `1GB / 100mbps to s` | `80 s` |
+| `1500w * 2h to kwh` | `3 kWh` |
+| `1 / 20ms to hz` | `50 Hz` |
+
+Derived results use base units unless you name a target with `to` / `in`.
+Power × minutes/hours naturally uses Wh/kWh; current × minutes/hours uses Ah/mAh.
+`m²` and `m2` mean square meters; `(2m)^2` squares the whole quantity.
+Use `pi * (2m)^2` for a circle's area and `sin(30deg) * 10m` for a triangle's opposite side.
+
+`to timespan` also works for mixed durations: `(1hr + 30min) to timespan` → `1 hr 30 min`.
+Affine temperatures may only be added or subtracted within one scale; products involving
+temperatures remain errors. Other units can form compound quantities: `2kg / 4m3` → `0.5 kg/m³`
+and `1kg/m3 to g/cm3` → `0.001 g/cm³`.
+
+## Volume and flow
+
+| You type | You get |
+| --- | --- |
+| `1m3` | `1,000 L` |
+| `1dm³ to l` | `1 L` |
+| `2m * 30cm * 40cm to l` | `240 L` |
+| `pi * (10cm)^2 * 30cm to l` | `9.424777961 L` (cylinder) |
+| `500l / (2m * 1m) to cm` | `25 cm` (tank depth) |
+| `10l / 2min to l/min` | `5 L/min` |
+| `10l/min * 30s to l` | `5 L` |
+| `150l / 10l/min to duration` | `15 min` |
+| `60l/min to m3/h` | `3.6 m³/h` |
+
+Cubic units accept `mm³`, `cm³`, `dm³`, `m³`, `in³`, `ft³`, and `yd³`, or a plain `3` instead of `³`.
+Liquid measures include `mL`, `cL`, `dL`, `L`, cups, tablespoons, teaspoons and US gallons/quarts/pints.
+Use `fl oz` / `floz` for US fluid ounces; plain `oz` is weight.
+Flow units include `L/s`, `L/min`, `L/h`, `m³/s`, `m³/h`, and `gal/min` (`gpm`, US gallons per minute).
+
+## Electrical calculations
+
+| You type | You get |
+| --- | --- |
+| `5 watt * 3h 30min` | `17.5 Wh` |
+| `5 watt * 3h 30min to kwh` | `0.0175 kWh` |
+| `12V * 2A` | `24 W` |
+| `12V / 6ohm` | `2 A` |
+| `12V / 2A` | `6 Ω` |
+| `500mA * 3h 30min` | `1,750 mAh` |
+| `2000mAh / 500mA to hours` | `4 hr` |
+| `12V * 2Ah to wh` | `24 Wh` |
+
+Use `volt`, `amp`, `ohm`, `coulomb` or their listed symbols. Coulombs display as `As` (ampere seconds);
+`C` continues to mean Celsius. SI mega symbols keep their case: `MW` is megawatts, `mW` is milliwatts.
+For power and energy, use `W` and `Wh` respectively; they are different dimensions.
+
+## Pixels and density
+
+| You type | You get |
+| --- | --- |
+| `3000px / 300ppi to inches` | `10 in` |
+| `5in * 300ppi` | `1,500 px` |
+| `3000px / 10in to ppi` | `300 ppi` |
+| `300ppi to px/cm` | `118.1102362 px/cm` |
+| `sqrt((3840px)^2 + (2160px)^2) / 27in` | `163.1783089 ppi` |
+
+Use `px`, `pixel` or `pixels`; density accepts `ppi`, `px/in`, `px/cm`, `px/mm` and `px/m`.
+Pixels have no fixed physical size, so supply a density when converting to inches or centimeters.
+The last example calculates a 27-inch, 3840×2160 display's density from its diagonal.
 
 ## Currency and crypto
 
@@ -91,18 +168,32 @@ notation: `1 IDR to USD` is `0.00005539 USD`, never `5.539e-05`.
 
 ## Dates and times
 
-Four grammars:
+Date and clock arithmetic:
 
 | Grammar                | Example                             |
 | ---------------------- | ----------------------------------- |
 | Time until a moment    | `hrs till 9am`, `days till 9april`  |
 | Time since a moment    | `days since 9jul`, `hrs since noon` |
-| A moment ± a duration  | `today + 3 weeks`, `now + 90 min`   |
-| Difference between two | `jul 4 - today`                     |
+| A moment ± a duration  | `next monday at 7:30 + 5`, `now + 90 min` |
+| Mixed durations        | `tomorrow at 7:30 + 1 day 2h 15min` |
+| Months and years       | `31.1.26 + 1 month`, `29.2.24 + 1 year` |
+| Difference between two | `jul 4 - today`, `9:30 - 7:00 to minutes` |
+| Duration from a moment | `3 days from next monday at 7:30`, `1.5 hours ago` |
 
 `till` takes the next occurrence, `since` the most recent past one; an absolute date ignores the
-bias. The difference grammar needs at least one operand containing a letter, so `5/2 - 1/2` stays
-arithmetic.
+bias. Plain fractions such as `5/2 - 1/2` stay arithmetic.
+
+A bare offset means hours when the moment includes a clock, and days otherwise.
+`next monday at 7:30 + 5` is Monday at 12:30 PM. Offsets chain left to right;
+`+ 1h 30min - 15min` adds 75 minutes. Fractional hours/minutes work; calendar units require whole counts.
+
+Month and year shifts follow the calendar: `31.1.26 + 1 month` lands on 28 February.
+`+ 1 day` preserves the wall clock across daylight saving; `+ 24 hours` adds elapsed time.
+Clock differences display a timespan or your chosen unit (`to hours`, `to minutes`, `in seconds`).
+Bare clocks share today's date when subtracted: `7:30 - 13:30` is `-6 hr`.
+
+`weekdays` / `business days` skip Saturday and Sunday in date arithmetic. Holidays are not counted.
+As a standalone conversion unit, `workdays` means eight hours.
 
 Two-digit years: 00–68 are 2000s, 69–99 are 1900s.
 
@@ -129,3 +220,45 @@ outside the <kbd>⇥</kbd> cycle; leave with <kbd>⎋</kbd> or a bare <kbd>⌫</
 | Copy Expression    | <kbd>⌘</kbd><kbd>↵</kbd>             |
 | Delete Entry       | <kbd>⌃</kbd><kbd>X</kbd>             |
 | Delete All Entries | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> |
+
+## Additional units and transfer rates
+
+`MB/s` means megabytes per second; `Mbps` means megabits per second.
+`100Mbps to MB/s` gives `12.5 MB/s`, and `1GB / 10MB/s to s` gives `100 s`.
+Binary rates such as `MiB/s` and bit amounts such as `kbit` also work.
+SI prefixes expand for meters, grams, seconds, hertz, newtons, joules, watts and pascals,
+including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings.
+
+Other units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), mechanical horsepower (`hp`),
+BTU (international table), `rpm`, pound-force (`lbf`), US/UK tons and UK liquid measures
+(`ukgal`, `ukqt`, `ukpint`, `ukfloz`). Plain gallons and pints remain US measures.
+
+## Functions and comparisons
+
+Functions accept comma-separated arguments: `hypot(3,4)`, `round(3.14159,2)`, `log(8,2)`,
+`gcd(12,18)`, `lcm(4,6)`, `atan2(1,1)`, `pow(2,10)` and `root(-8,3)`.
+A one-argument `log` remains base 10. `min`, `max`, `sum`, `avg`, `mean` and `average` accept lists,
+including compatible measurements: `sum(1km,500m)` gives `1.5 km`, and `hypot(3m,400cm)` gives `5 m`.
+`round(2.567km,1)` keeps the unit. Inside function arguments, commas separate values;
+write `1000` rather than `1,000` there.
+
+`==`, `!=`, `<`, `<=`, `>` and `>=` compare numbers or compatible measurements and return booleans.
+`1km == 1000m` is `true`; incompatible dimensions produce an error. Chained comparisons are rejected.
+Integer operands support `&`, `|`, `xor`, `~`, `<<` and `>>`; `^` remains exponentiation.
+Shifts require counts from 0 through 63. Bitwise operations, `gcd` and `lcm` require integers
+strictly between −2⁵³ and 2⁵³, including their results; larger values and fractions are rejected.
+
+
+## Compound prices and timestamps
+
+`100 USD / 4hr` gives `25 USD/hr`; multiplying by `8hr` gives `200.00 USD`.
+Compound targets work too: `25 USD/hr to EUR/min`. Arithmetic within one currency rate needs no
+exchange snapshot; changing currency uses the same injected rates as ordinary money conversions.
+A compound quantity can carry one currency factor or its reciprocal, but not currency squared.
+
+`now to unix` returns whole Unix seconds; `now to unix ms` returns whole milliseconds.
+`unix 0 to date` and `1000 unix ms` convert back to a local date/time.
+RFC 3339 input accepts an explicit `Z` or `±HH:MM` offset and optional fractional seconds:
+`2026-07-24T07:30:00+02:00 + 30min`, or `1970-01-01T01:00:00+01:00 to unix` → `0`.
+Dates use the local calendar for display and arithmetic. Impossible dates, leap seconds and trailing
+text are rejected; timestamp output rounds down to the requested unit and copies every integer digit.

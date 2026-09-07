@@ -3,12 +3,14 @@ import Foundation
 /// Clock time in another city. See docs/features/calculator.md.
 enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
-        // Every grammar carries a connector, so an app search stops before allocating.
-        guard raw.count <= 128, raw.contains(where: \.isWhitespace), hasConnector(raw) else {
+        guard raw.count <= 128, raw.contains(where: \.isWhitespace) else { return nil }
+        let inputWords = raw.split(whereSeparator: \.isWhitespace)
+        guard inputWords.count >= 2, inputWords.contains(where: { connectors.contains($0.lowercased()) })
+        else {
             return nil
         }
         // The last word decides: `10 km to mi` carries a connector too.
-        guard endsInZoneOrDuration(raw) else { return nil }
+        guard endsInZoneOrDuration(inputWords[inputWords.count - 1].lowercased()) else { return nil }
 
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !query.isEmpty else { return nil }
@@ -103,17 +105,7 @@ enum CalcTimeZone {
         let zone: TimeZone
     }
 
-    /// Checked before the query is split, which keeps `10 km to mi` out of the zone path.
-    private static func endsInZoneOrDuration(_ raw: String) -> Bool {
-        var tail = ""
-        for character in raw.reversed() {
-            if character.isWhitespace {
-                if !tail.isEmpty { break }
-                continue
-            }
-            tail.insert(Character(character.lowercased()), at: tail.startIndex)
-        }
-        guard !tail.isEmpty else { return false }
+    private static func endsInZoneOrDuration(_ tail: String) -> Bool {
         // Folded, because the identifiers carry no accents while `zürich` and `são paulo` do.
         let folded = tail.folding(options: [.diacriticInsensitive], locale: nil)
         if cities[folded] != nil || aliases[folded] != nil { return true }
@@ -141,20 +133,6 @@ enum CalcTimeZone {
         }
         return tails
     }()
-
-    /// Scans for a whole-word connector without lowercasing or splitting the whole query first.
-    private static func hasConnector(_ raw: String) -> Bool {
-        var word = ""
-        for character in raw {
-            if character.isWhitespace {
-                if Self.connectors.contains(word.lowercased()) { return true }
-                word = ""
-            } else {
-                word.append(character)
-            }
-        }
-        return Self.connectors.contains(word.lowercased())
-    }
 
     private static let connectors: Set<String> = ["in", "to", "at", "diff", "difference"]
 
@@ -227,6 +205,11 @@ enum CalcTimeZone {
         components.minute = clock.minute
         components.timeZone = zone
         guard let date = source.date(from: components) else { return nil }
+        let resolved = source.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        guard resolved.year == components.year, resolved.month == components.month,
+            resolved.day == components.day, resolved.hour == components.hour,
+            resolved.minute == components.minute
+        else { return nil }
         guard let ahead else { return SourceMoment(date: date, zone: zone) }
         guard let shifted = source.date(byAdding: ahead.component, value: ahead.count, to: date)
         else { return nil }

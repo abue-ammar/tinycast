@@ -201,6 +201,17 @@ swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
 Every query runs twice: once on the shipped rules and once with five extra user patterns, so the output
 says what the ignore list itself costs rather than only what Spotlight does.
 
+The calculator benchmark is deterministic — an injected clock, calendar and rate table — so it is a
+timing harness rather than an assertion one, and stays out of `run-tests.sh` for that reason:
+
+```sh
+swiftc -O -swift-version 6 Tinycast/Features/Calculator/Model/*.swift \
+    Tests/calc-performance.swift -o /tmp/calc-performance
+/tmp/calc-performance          # µs per query, by grammar
+/tmp/calc-performance --probe  # every answer as JSON, to diff two builds
+/tmp/calc-performance --cold "10kg to lb"   # first query, including catalog decode
+```
+
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the
 instrument then shows an interval that never closes.
