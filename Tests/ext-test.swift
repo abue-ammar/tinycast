@@ -198,6 +198,7 @@ struct ExtensionTests {
         await nodeContractChecks()
         await asyncComponentChecks()
         await menuBarRuntimeChecks()
+        await menuBarHostChecks()
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -341,8 +342,7 @@ struct ExtensionTests {
         check("commands", manifest.commands.count == 4, "\(manifest.commands.count)")
         check("view mode", manifest.commands[0].mode == .view)
         check("no-view mode", manifest.commands[1].mode == .noView)
-        check("menu-bar is unsupported", manifest.commands[2].mode.isSupported == false)
-        check("menu-bar explains itself", manifest.commands[2].mode.unsupportedReason != nil)
+        check("menu-bar mode", manifest.commands[2].mode == .menuBar)
         // Extensions branch on `environment.appearance`, so the host must not report a fixed one.
         check(
             "a dark host reports dark",
@@ -1679,13 +1679,17 @@ struct ExtensionTests {
             print("Not an extension: \(directory.path)")
             exit(1)
         }
-        let runnable = manifest.commands.filter { $0.mode.isSupported }
+        let runnable = manifest.commands
         guard
             let target = commandName.flatMap({ name in runnable.first { $0.name == name } })
                 ?? runnable.first
         else {
             print("No runnable command in \(manifest.title)")
             exit(1)
+        }
+        if target.mode == .menuBar, ProcessInfo.processInfo.environment["EXT_TEST_MENU_BAR"] != nil {
+            await runInstalledMenuBar(InstalledExtension(manifest: manifest, directory: directory), command: target)
+            exit(failures == 0 ? 0 : 1)
         }
         let bundle = directory.appendingPathComponent("\(target.name).js")
         guard let code = try? String(contentsOf: bundle, encoding: .utf8) else {

@@ -71,7 +71,6 @@ struct ExtensionLaunchContext: Sendable {
     var caches: [String: [String: String]]
     var arguments: [String: String]
     var fallbackText: String?
-    var launchType: ExtensionLaunchType = .userInitiated
     /// Injected, never read: a running command keeps what it booted with.
     var isDarkAppearance: Bool
     var launchType: ExtensionLaunchType = .userInitiated

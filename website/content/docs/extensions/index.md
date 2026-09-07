@@ -24,14 +24,24 @@ While it is off, no folder is scanned, nothing shows in the launcher and no Java
 
 ## The one ongoing cost
 
-**One command runs at a time, and a running command keeps a JavaScript engine in memory until you
-leave it.** That is the only ongoing cost Tinycast has.
+**One foreground command runs at a time, and it keeps a JavaScript engine in memory until you leave
+it.** Menu-bar commands use their own short-lived engine, released once a refresh finishes or the
+menu closes.
 
 Starting a command stops the one before and throws its engine away, so nothing carries over between
 runs. A fresh start takes about 7 ms once warm.
 
 The one exception is [background refresh](/docs/extensions/customising#background-refresh), which
 briefly runs a command on a schedule, and only if you turn it on.
+
+## Menu bar commands
+
+Run a menu-bar command once to activate it. Its icon and title stay in the menu bar, and its manifest
+interval controls background refresh. Opening the menu reloads the command; closing it releases the
+engine after any action finishes. Saved items return after restart without executing the extension.
+
+Use **Remove from Menu Bar** in the menu or **Show in menu bar** in the command's configuration to
+stop it. Installing an extension does not activate its menu-bar commands.
 
 ## Where to go next
 

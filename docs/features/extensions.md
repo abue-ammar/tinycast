@@ -12,12 +12,14 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 
 ## Invariants
 
-- **Exactly one command runs at a time, in its own `JSContext`.** Starting a command stops the previous
-  one and discards the whole context (`ExtensionRuntime.shutdown()`); the next launch boots a fresh one.
-  Never cancel timers globally to "clean up" instead — React's scheduler commits through `setTimeout`,
-  so that wedges every later session. Host calls carry no session id, so
-  `ExtensionManager.activeExtensionName` is what namespaces storage, cache and preferences; a second
-  concurrent session would need a session id threaded through the bridge first.
+- **One foreground command and one transient menu-bar command can run concurrently.** Each owns its
+  own `JSContext`. Foreground launches stop only the previous foreground command; menu refreshes are
+  serialized by `ExtensionMenuBarManager`. Every menu session has its own bridge and an immutable
+  extension namespace, so storage, preferences, OAuth and command launches cannot target the palette's
+  extension. Shutdown cancels pending host tasks; a generation check rejects replies from old contexts.
+- **An idle menu item holds no JavaScript.** Once `isLoading` clears, keep only the native button and
+  its snapshot. Reload a fresh context when its menu opens; retain it until the menu closes and any
+  asynchronous action and host calls finish. Never keep a context alive to preserve handlers.
 - **`ExtensionRuntime`'s `@unchecked Sendable` is load-bearing.** Every `JSContext` / `JSValue` touch
   happens on its private serial queue, and only plain `Sendable` values (`RenderValue`, `RenderTree`,
   JSON strings) cross in or out. Keep that boundary.
@@ -26,7 +28,8 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 - **`ExtensionScreen` is the only place extension row order is decided**, so the flat palette selection
   keeps matching the visible rows — the same invariant every other palette screen holds.
 - **Off means off.** `extensionsEnabled` is opt-in, and `ExtensionManager.setEnabled(false)` stops the
-  running command, discards the JS context, empties the installed set and clears the launcher rows;
+  foreground and menu commands, removes status items and refresh tasks, discards JS contexts, empties
+  the installed set and clears the launcher rows;
   `refresh()` returns early while it is off, so nothing is scanned and nothing is held. Enabling is also
   consent to run third-party code, so it confirms first and never rides a settings backup.
 - **`SymbolCatalog` reads a system bundle, not API.** The list comes from `CoreGlyphs.bundle` at
@@ -124,7 +127,12 @@ Two host-call flavours:
 | `Service/ExtensionCommandMetadataStore.swift` | every command's subtitle override and refresh bookkeeping, in one small file |
 | `Service/ExtensionCatalog.swift` | discovery on disk, install, uninstall, import-from-Raycast |
 | `Service/ExtensionCleanup.swift` | the build workspace's name, the launch sweep, and reclaiming orphans |
-| `Service/ExtensionManager.swift` | the single owner: installed set, the one running session, launcher entries |
+| `Service/ExtensionManager.swift` | the single owner: installed set, foreground session, menu-bar manager, launcher entries |
+| `Service/ExtensionMenuBarManager.swift` | serialized refreshes, short-lived menu sessions and their deadlines |
+| `Service/ExtensionMenuBarHost.swift` | immutable per-session namespace and menu-specific host behavior |
+| `Service/ExtensionMenuBarStore.swift` | active commands, button snapshots and next refresh dates |
+| `UI/ExtensionMenuBarController.swift` | native `NSStatusItem` and `NSMenu` rendering and dispatch |
+| `UI/ExtensionMenuBarImage.swift` | small native icons with light/dark variants |
 | `Model/ExtensionManifest.swift` | `package.json` → commands, preferences, arguments |
 | `Model/ExtensionRefreshPolicy.swift` | background-refresh decisions: interval parsing, due dates, backoff |
 | `Model/ExtensionLaunchType.swift` | `userInitiated` / `background`, mirroring `@raycast/api` `LaunchType` |
@@ -141,8 +149,9 @@ touch happens on one private serial queue, and only plain `Sendable` values cros
 (`RenderValue` for arguments, `RenderTree` for output, JSON strings for results). That keeps extension
 evaluation and the blocking shims off the main actor.
 
-**One command at a time, one context per command.** Starting a command stops whatever was running and
-throws the whole `JSContext` away; the next launch boots a fresh one (~7 ms warm, measured).
+**One foreground command at a time, one context per command.** Starting a foreground command stops
+its predecessor and throws the whole `JSContext` away; the next launch boots a fresh one (~7 ms warm,
+measured). Menu commands use a separate transient lane owned by the extension feature.
 
 Reusing a context was subtly broken. Timers are global and React's scheduler drives every commit
 through `setTimeout`, so cancelling an extension's leftover timers on teardown also cancelled the
@@ -151,9 +160,48 @@ committing. The symptom was a command that worked once and then hung on "Startin
 the timers alone instead leaks any interval an extension forgot to clear. Discarding the context avoids
 both, and as a bonus no module-level state in an extension bundle survives into its next run.
 
-Host calls carry no session id, so `ExtensionManager.activeExtensionName` is what namespaces storage,
-cache and preferences — the single-session rule is what makes that safe. It also matches the UI: the
-palette shows one screen.
+Each runtime owns its bridge. Foreground calls use `ExtensionManager.activeExtensionName`; a menu
+bridge uses `ExtensionMenuBarHost`'s captured extension name. A late response cannot settle a call
+in another context, even if JavaScript reused its numeric call ID.
+
+## Menu bar commands
+
+Run a `menu-bar` command once from the launcher, or turn on **Show in menu bar** in its configuration.
+Installation alone never runs it, including commands without `disabledByDefault`. The command's
+`interval` accepts seconds, minutes, hours and days, with Raycast's ten-second minimum. One sleeping
+Swift task wakes for the nearest deadline; refreshes never overlap, and waking from sleep does not
+replay missed intervals. Commands without an interval run only on request or when opening their menu.
+
+`MenuBarExtra` renders its title, icon and tooltip in a native `NSStatusItem`. Its menu supports items,
+submenus, section headers, separators, subtitles, tooltips, shortcuts (including macOS-specific
+shortcuts), and Option alternates. Items without actions and empty submenus are disabled. Actions
+receive `left-click` or `right-click`; keyboard activation is a left click. Asynchronous actions are
+awaited before teardown. Returning `null` removes the item while keeping its refresh schedule.
+
+On opening, the menu shows a loading row until its fresh context renders; cached handler IDs never
+reach a new context. The session stays alive while the menu is open. After a settled render or menu
+closure, a 100 ms coalescing delay lets React commit effects and host calls drain before releasing the
+context. Loading and closed-menu actions have a 60-second deadline; an open, settled menu is exempt.
+This bounds asynchronous work, but cannot interrupt an extension stuck in synchronous JavaScript or a
+blocking Node shim on the runtime queue.
+
+A saved button restores after relaunch without executing JavaScript; only its next due refresh boots
+the runtime. `extension-menu-bars.json` is channel-local Application Support data and is excluded from
+settings backups. **Remove from Menu Bar**, the command's toggle, uninstall, and disabling extensions
+all tear down the corresponding native items and work. Removing a menu item leaves the extension's
+other commands installed. Only explicitly activated commands have saved records.
+
+`launchCommand` preserves `type`, arguments and JSON context. A background menu refresh leaves the
+palette alone; a user-initiated view launch from a menu opens the palette. Menu toasts are suppressed;
+errors are exposed through the menu and user-initiated failures also use the HUD. `updateCommandMetadata`
+and scheduled `no-view` refreshes remain unsupported.
+
+Menu-bar icons retain small raster variants and let AppKit choose the drawing appearance. Do not
+observe the status button's `effectiveAppearance` to redraw: AppKit temporarily changes it when
+rendering replicas, which would schedule another redraw indefinitely.
+
+Reference contracts: [Menu Bar Commands](https://developers.raycast.com/api-reference/menu-bar-commands)
+and [Background Refresh](https://developers.raycast.com/information/lifecycle/background-refresh).
 
 ## Rendering
 
@@ -651,9 +699,8 @@ both generated wrappers and extensions that call a helper directly with `execFil
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`. A `no-view` command declaring `interval`
 (`"1m"`, `"12h"`, `"1d"`) also refreshes in the background — see below.
-The runtime also mounts `menu-bar` components,
-including alternate items and asynchronous action completion; native menu-bar hosting is not wired yet.
-Launch contexts can carry `background` and JSON launch context, and manifests retain refresh intervals.
+`menu-bar` commands render native menu extras with the lifecycle described above.
+Launch contexts also carry JSON `props.launchContext`.
 
 Measured against the 37 extensions installed in a real Raycast on the development machine: **32
 extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
@@ -664,7 +711,7 @@ OAuth extensions it excluded are not counted yet — re-measure before quoting t
 
 | Gap | Why |
 | --- | --- |
-| **`menu-bar` commands** | The launcher lists them and explains why they don't open. |
+| **Scheduled `no-view` refresh and `updateCommandMetadata`** | Only menu-bar commands have background scheduling. Subtitle metadata updates are not published to launcher entries. |
 | **Raycast's PKCE proxy (`oauth.raycast.com`)** | Extensions whose provider has no PKCE support exchange tokens through Raycast's proxy. `OAuth.PKCEClient` works; a provider that needs that proxy still fails. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **A WebSocket to a host with a certificate macOS distrusts** | `ws`'s `rejectUnauthorized: false` is ignored — URLSession validates the chain either way. |
@@ -704,6 +751,14 @@ prints the extension's own console output; `EXT_TEST_SETTLE_MS=8000` gives a slo
 only way to reach a code path an extension gates on a preference with no manifest default. Both
 harnesses read the same three variables.
 
+For OpenCodex Usage, the native harness also exercises the actual menu renderer, three Refresh
+round-trips and the Provider Usage action, with live fetches but a recorded `launchCommand`:
+
+```sh
+EXT_TEST_MENU_BAR=1 "${TMPDIR:-/tmp}/tinycast-harness/ext-test" \
+  "$HOME/Library/Application Support/com.tinycast.app.dev/extensions/opencodex-usage" usage-menu-bar
+```
+
 ### Debugging a failing extension
 
 1. Run it through `node test.mjs <dir>` for a full render-tree dump, then through `/tmp/ext-test <dir>`
@@ -728,6 +783,7 @@ never shares with an installed copy.
 | Command subtitle, refresh state | `extension-commands.json` | yes |
 | `environment.supportPath` | `extension-support/<safe name>/` | yes |
 | OAuth tokens | macOS Keychain (`com.tinycast.extensions.oauth`) | yes |
+| Menu-bar activation and snapshot | `extension-menu-bars.json` | yes |
 | Icon override | `UserDefaults` → `extensionAppearances` | yes |
 | Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |
 | Favorites, hidden items | `UserDefaults` → `favoriteApps`, `hiddenItemKeys` | yes |

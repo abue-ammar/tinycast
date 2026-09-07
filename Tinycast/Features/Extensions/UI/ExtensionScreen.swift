@@ -13,7 +13,7 @@ struct ExtensionScreen: Equatable {
         case grid(ExtensionGridLayout)
         case detail
         case form
-        /// A root component Tinycast doesn't render (`MenuBarExtra`), or nothing rendered yet.
+        /// A root component the palette does not render, or nothing rendered yet.
         case unsupported(String)
     }
 

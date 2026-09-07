@@ -122,7 +122,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `ext-store-test` | `Extensions/Model/` — the registry model and both registry APIs' parsers |
 | `ext-refresh-test` | `Extensions/Model/ExtensionRefreshPolicy.swift` — interval parsing, due dates, backoff, subtitle fallback, indicator state |
 | `ext-metadata-test` | `Extensions/Service/ExtensionCommandMetadataStore.swift` — round-trip, failure runs, uninstall |
-| `ext-test` | the extension runtime end to end — boots a real bundle in JavaScriptCore and renders it |
+| `ext-test` | the extension runtime and native menu-bar lifecycle — boots shipped sources in JavaScriptCore; `ext-menu-bar-test.swift` covers snapshot restoration, refresh serialization, async actions, disable and timeout cleanup |
 | `ext-icon-test` | `Extensions/Service/ExtensionIconCache.swift` — artwork sizing and its fallback |
 | `icon-cache-test` | `Platform/Images/IconCache.swift` — row sizing at 1×/2×, warm reuse, stamp and style invalidation, bitmap release, and that a row icon draws identically to the 96px one |
 | `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |

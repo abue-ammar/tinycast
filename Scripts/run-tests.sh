@@ -453,6 +453,14 @@ run ext-accessory-test     $E/Model/RenderNode.swift \
                            $E/Model/ExtensionSearchAccessory.swift \
                            $E/Service/ExtensionStorage.swift
 run slow ext-test          -parse-as-library \
+                           Tests/ext-menu-bar-test.swift \
+                           $E/Model/ExtensionLaunchError.swift \
+                           $E/Model/ExtensionMenuBarSnapshot.swift \
+                           $E/Service/ExtensionStorage.swift \
+                           $E/Service/ExtensionMenuBarStore.swift \
+                           $E/Service/ExtensionMenuBarManager.swift \
+                           $E/UI/ExtensionMenuBarController.swift \
+                           $E/UI/ExtensionMenuBarImage.swift \
                            Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/AppDisplayName.swift \
                            Tinycast/Platform/Images/IconCache.swift \

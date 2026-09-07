@@ -45,6 +45,8 @@ node-fetch work. Streams are the real thing, so pipelines like `fetch` → file 
 **Command modes.** `view` commands show in the palette. `no-view` commands run in the background with
 the palette closed. A `no-view` command with an `interval` can refresh on a schedule; see
 [Background refresh](/docs/extensions/customising#background-refresh).
+`menu-bar` commands draw native menu items and refresh on their manifest interval, holding no
+JavaScript between runs; see [Menu bar commands](/docs/extensions#menu-bar-commands).
 
 **`raycast://` links** stay inside Tinycast. A link to an installed extension command runs that
 command — from another app or the browser as well as from inside an extension — with its `arguments`,
@@ -55,7 +57,6 @@ the palette. Passing them on would launch Raycast itself.
 
 | Gap                                              | Why                                                                                     |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| **`menu-bar` commands**                          | The launcher lists them and explains why they do not open                               |
 | **Raycast's sign-in proxy**                      | Providers that need `oauth.raycast.com` to swap tokens still fail                       |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with nothing local to stand in. Using one fails with a clear reason    |
 | **WebSocket**                                    | Not available yet                                                                       |

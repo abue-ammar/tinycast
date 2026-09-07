@@ -1,20 +1,11 @@
 import Foundation
 
-/// Only `view` and `noView` run; the rest are recognised so the launcher can explain them.
 enum ExtensionCommandMode: String, Sendable, Codable {
     case view
     case noView = "no-view"
     case menuBar = "menu-bar"
 
     var runtimeName: String { rawValue }
-
-    var isSupported: Bool { self != .menuBar }
-
-    var unsupportedReason: String? {
-        self == .menuBar
-            ? "Menu bar commands aren't supported yet — Tinycast only runs view and no-view commands."
-            : nil
-    }
 }
 
 /// One entry from a manifest's `preferences` array.
@@ -167,7 +158,6 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
     let keywords: [String]
     let icon: String?
     let disabledByDefault: Bool
-    let interval: TimeInterval?
     let preferences: [ExtensionPreferenceSchema]
     let arguments: [ExtensionCommandArgument]
 
@@ -202,11 +192,10 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
         description = dict["description"] as? String ?? ""
         mode = ExtensionCommandMode(rawValue: dict["mode"] as? String ?? "view") ?? .view
         intervalRaw = dict["interval"] as? String
-        interval = ExtensionRefreshPolicy.parse(intervalRaw)
+        interval = mode == .menuBar ? Self.refreshInterval(intervalRaw) : ExtensionRefreshPolicy.parse(intervalRaw)
         keywords = dict["keywords"] as? [String] ?? []
         icon = dict["icon"] as? String
         disabledByDefault = dict["disabledByDefault"] as? Bool ?? false
-        interval = Self.refreshInterval(dict["interval"] as? String)
         preferences = (dict["preferences"] as? [Any] ?? []).compactMap(ExtensionPreferenceSchema.init(json:))
         arguments = (dict["arguments"] as? [Any] ?? []).compactMap(ExtensionCommandArgument.init(json:))
     }

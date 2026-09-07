@@ -26,6 +26,7 @@ final class ExtensionRuntime: @unchecked Sendable {
     private var timers: [String: DispatchSourceTimer] = [:]
     private var hostTasks: [String: Task<Void, Never>] = [:]
     private var generation = UUID()
+    private var idleWaiters: [CheckedContinuation<Void, Never>] = []
     private let nodeShims = ExtensionNodeShims()
 
     /// Set once at startup; read on the JS queue, so it is written before the runtime ever boots.
@@ -263,8 +264,27 @@ final class ExtensionRuntime: @unchecked Sendable {
                 self.hostTasks[callId] = nil
                 _ = self.context?.objectForKeyedSubscript("__tinycast")?
                     .invokeMethod("settle", withArguments: [callId, ok, payload])
+                if self.hostTasks.isEmpty { self.resumeIdleWaiters() }
             }
         }
+    }
+
+    func drainHostCalls() async {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                if self.hostTasks.isEmpty {
+                    continuation.resume()
+                } else {
+                    self.idleWaiters.append(continuation)
+                }
+            }
+        }
+    }
+
+    private func resumeIdleWaiters() {
+        let waiters = idleWaiters
+        idleWaiters.removeAll()
+        for waiter in waiters { waiter.resume() }
     }
 
     private func deliverRender(session: String, json: String) {
@@ -317,6 +337,7 @@ final class ExtensionRuntime: @unchecked Sendable {
             self.timers.removeAll()
             for task in self.hostTasks.values { task.cancel() }
             self.hostTasks.removeAll()
+            self.resumeIdleWaiters()
             self.generation = UUID()
             self.context = nil
             self.nodeShims.closeFiles()
