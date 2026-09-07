@@ -31,6 +31,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         var type: ExtensionLaunchType = .background
         var arguments: [String: String] = [:]
         var context: [String: RenderValue] = [:]
+        var scheduled = false
     }
 
     private final class Session {
@@ -41,7 +42,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         let execution: Execution
         var runtime: ExtensionRuntime { execution.runtime }
         var isLoading = true
-        var actionRunning = false
+        var pendingActions = 0
 
         init(request: Request, owner: InstalledExtension, mode: ExtensionCommandMode, execution: Execution) {
             self.request = request
@@ -123,7 +124,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     }
 
     private func enqueue(_ request: Request) {
-        requests.removeAll { $0.reference == request.reference }
+        if request.scheduled, requests.contains(where: { $0.reference == request.reference }) { return }
+        requests.removeAll { $0.reference == request.reference && $0.scheduled }
         requests.append(request)
         if active == nil { runNext() }
     }
@@ -191,11 +193,16 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                                                      isVisible: showsStatusItems)
         controller.onOpen = { [weak self] in
             guard let self else { return }
-            self.idleTask?.cancel()
-            if self.active?.request.reference == reference { self.finish() }
-            self.requests.removeAll { $0.reference == reference }
-            self.requests.insert(Request(reference: reference, type: .userInitiated), at: 0)
-            if self.active != nil { self.finish() }
+            if self.active?.request.reference == reference {
+                self.idleTask?.cancel()
+                return
+            }
+            let queued = self.requests.firstIndex { $0.reference == reference && !$0.scheduled }
+            let request = queued.map { self.requests.remove(at: $0) }
+                ?? Request(reference: reference, type: .userInitiated)
+            self.requests.removeAll { $0.reference == reference && $0.scheduled }
+            self.requests.insert(request, at: 0)
+            self.releaseIfIdle()
             self.runNext()
         }
         controller.onClose = { [weak self] in
@@ -206,7 +213,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         controller.onAction = { [weak self] session, handler, type in
             guard let self, let active = self.active, active.id == session else { return }
             self.idleTask?.cancel()
-            active.actionRunning = true
+            active.pendingActions += 1
             self.armDeadline(active)
             Task {
                 await active.runtime.dispatch(session: session, handler: handler,
@@ -225,21 +232,21 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             do { try await Task.sleep(for: timeout) } catch { return }
             guard let self, self.active?.id == session.id else { return }
             if self.controllers[session.request.reference.entryID]?.isOpen == true,
-                !session.isLoading, !session.actionRunning { return }
+                !session.isLoading, session.pendingActions == 0 { return }
             self.runtime(session.runtime, session: session.id, didFail: "The menu bar command timed out.")
         }
     }
 
     private func releaseIfIdle() {
         idleTask?.cancel()
-        guard let active, !active.isLoading, !active.actionRunning,
+        guard let active, !active.isLoading, active.pendingActions == 0,
             controllers[active.request.reference.entryID]?.isOpen != true
         else { return }
         idleTask = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
             await active.runtime.drainHostCalls()
             guard !Task.isCancelled, let self, self.active?.id == active.id,
-                !active.isLoading, !active.actionRunning,
+                !active.isLoading, active.pendingActions == 0,
                 self.controllers[active.request.reference.entryID]?.isOpen != true
             else { return }
             self.finish()
@@ -277,7 +284,9 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                 var record = self.store.records[entryID] ?? .init()
                 record.nextRefresh = command.interval.map { Date().addingTimeInterval($0) }
                 self.store.set(record, for: entryID)
-                if self.active?.request.reference != reference { self.enqueue(Request(reference: reference)) }
+                if self.active?.request.reference != reference {
+                    self.enqueue(Request(reference: reference, scheduled: true))
+                }
             }
             self.scheduleRefresh()
         }
@@ -321,7 +330,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didFinish: Void) {
         guard let active, active.id == session else { return }
-        active.actionRunning = false
+        active.pendingActions = max(0, active.pendingActions - 1)
         if active.mode == .noView { active.isLoading = false }
         releaseIfIdle()
     }

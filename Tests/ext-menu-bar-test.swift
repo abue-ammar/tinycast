@@ -191,9 +191,14 @@ extension ExtensionTests {
         let source = #"""
             const React = require("react");
             const { MenuBarExtra, LocalStorage, environment } = require("@raycast/api");
-            module.exports.default = function() {
+            module.exports.default = function(props) {
               const [loading, setLoading] = React.useState(true);
               const [title, setTitle] = React.useState(environment.launchType);
+              const actions = React.useRef(0);
+              React.useEffect(() => {
+                if (props.launchContext?.origin) LocalStorage.setItem("launch",
+                  environment.launchType + ":" + props.arguments.value + ":" + props.launchContext.origin);
+              }, []);
               React.useEffect(() => { const timer = setTimeout(() => setLoading(false), 50);
                 return () => clearTimeout(timer); }, []);
               return React.createElement(MenuBarExtra, { title, isLoading: loading, icon: "star-16" },
@@ -202,8 +207,10 @@ extension ExtensionTests {
                   React.createElement(MenuBarExtra.Item, { title: "Refresh", shortcut: { key: "r", modifiers: ["cmd"] },
                     alternate: React.createElement(MenuBarExtra.Item, { title: "Alternate", onAction() {} }),
                     onAction: async event => {
-                      await new Promise(resolve => setTimeout(resolve, 250));
+                      const action = ++actions.current;
+                      await new Promise(resolve => setTimeout(resolve, action === 1 ? 250 : 650));
                       await LocalStorage.setItem("clicked", event.type);
+                      await LocalStorage.setItem("completed", action);
                       setTitle("Updated");
                     } }),
                   React.createElement(MenuBarExtra.Submenu, { title: "Empty" }),
@@ -293,6 +300,46 @@ extension ExtensionTests {
                   manager.store.records[firstRef.entryID]?.snapshot?.title == "Updated"
                   && !manager.isRunning && lastRuntime == nil)
         } else { check("refresh action exists", false) }
+
+        controller.menuWillOpen(controller.menu)
+        await settle(200)
+        let beforeReopen = boots.count
+        if let index = controller.menu.items.firstIndex(where: { $0.title == "Refresh" }) {
+            controller.menuDidClose(controller.menu)
+            controller.menu.performActionForItem(at: index)
+            await settle(100)
+            controller.menuWillOpen(controller.menu)
+            check("reopening preserves an unfinished action's runtime", boots.count == beforeReopen)
+            controller.menu.performActionForItem(at: index)
+            controller.menuDidClose(controller.menu)
+        } else { check("refresh exists after reopening", false) }
+        let secondRef = ExtensionCommandRef(extensionName: "second", commandName: "bar")
+        manager.store.set(.init(), for: secondRef.entryID)
+        let secondController = manager.controller(for: secondRef, owner: second)
+        secondController.menuWillOpen(secondController.menu)
+        await settle(350)
+        check("another menu waits for every overlapping action", boots.count == beforeReopen && manager.isRunning)
+        await settle(550)
+        check("both actions finish before the queued menu opens", boots.last?.0 == "second"
+              && storage.localStorageValue(extension: "first", key: "completed") == .number(2))
+        secondController.menuDidClose(secondController.menu)
+        await settle(200)
+        check("reopened action sessions unload after closing", !manager.isRunning && lastRuntime == nil)
+
+        controller.menuWillOpen(controller.menu)
+        await settle(200)
+        manager.run(second, command: second.manifest.commands[0], arguments: ["value": "kept"],
+                    type: .background, context: ["origin": .string("payload")])
+        var secondRecord = manager.store.records[secondRef.entryID]!
+        secondRecord.nextRefresh = .distantPast
+        manager.store.set(secondRecord, for: secondRef.entryID)
+        manager.synchronize(installed)
+        await settle(100)
+        controller.menuDidClose(controller.menu)
+        await settle(550)
+        check("scheduled refresh preserves an explicit background launch's payload",
+              storage.localStorageValue(extension: "second", key: "launch") == .string("background:kept:payload")
+              && !manager.isRunning)
 
         var record = manager.store.records[firstRef.entryID]!
         record.nextRefresh = .distantPast

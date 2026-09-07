@@ -170,13 +170,16 @@ Run a `menu-bar` command once from the launcher, or turn on **Show in menu bar**
 Installation alone never runs it, including commands without `disabledByDefault`. The command's
 `interval` accepts seconds, minutes, hours and days, with Raycast's ten-second minimum. One sleeping
 Swift task wakes for the nearest deadline; refreshes never overlap, and waking from sleep does not
-replay missed intervals. Commands without an interval run only on request or when opening their menu.
+replay missed intervals. Scheduled refreshes coalesce without replacing queued explicit launches or
+their arguments and context. Commands without an interval run only on request or when opening their menu.
 
 `MenuBarExtra` renders its title, icon and tooltip in a native `NSStatusItem`. Its menu supports items,
 submenus, section headers, separators, subtitles, tooltips, shortcuts (including macOS-specific
 shortcuts), and Option alternates. Items without actions and empty submenus are disabled. Actions
 receive `left-click` or `right-click`; keyboard activation is a left click. Asynchronous actions are
-awaited before teardown. Returning `null` removes the item while keeping its refresh schedule.
+awaited before teardown, including overlapping actions after reopening the same menu. Opening another
+menu queues its runtime until the current work finishes. Returning `null` removes the item while keeping
+its refresh schedule.
 
 The status button opens a native popup tracking session; Escape, an outside click, or clicking the
 button again dismisses it. Native rows and small icons stay prepared between runs; their handler IDs are cleared on teardown.
