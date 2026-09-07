@@ -89,9 +89,15 @@ struct BackupSettingsView: View {
                     Text(raycastFileSubtitle)
                 }
                 LabeledContent {
-                    SecureField("Passphrase", text: $passphrase)
-                        .frame(width: 160)
-                        .onSubmit(runRaycastImport)
+                    SecureField(
+                        "Passphrase", text: $passphrase, prompt: Text("Export password")
+                    )
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    // LabeledContent right-aligns its value text, caret and all; a field reads left.
+                    .multilineTextAlignment(.leading)
+                    .frame(width: 160)
+                    .onSubmit(runRaycastImport)
                 } label: {
                     Text("Passphrase")
                     Text("The password you set when exporting from Raycast.")
