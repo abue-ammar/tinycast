@@ -251,3 +251,57 @@ Foundation-only harness. Verify by hand:
 12. **Run Again clears the log before the new run prints.** The view draws deltas, so it keys what
     it has drawn on the run's id as well as the trim counter — a fresh run starts back at revision
     zero, and keying on the counter alone left the previous run's output on screen.
+13. **Import Raycast Scripts** opens a folder chooser, then a warning dialog; Cancel there imports
+    nothing. A folder holding no script commands says so instead of reporting zero.
+14. Re-importing the same folder says nothing was left to import, rather than reporting zero.
+15. An imported command with arguments asks for them and the script receives them — the `"$@"`
+    forwarding has no harness coverage of the palette form that fills it.
+
+## Importing Raycast scripts
+
+**Settings → Commands → Import Raycast Scripts** reads a folder of
+[Raycast script commands](https://github.com/raycast/script-commands) and adds one custom command per
+script. It is a one-shot import, not a watched folder: the drafts become ordinary commands, editable
+and deletable like any other, and nothing keeps pointing back at the folder afterwards.
+
+`Model/RaycastScriptImport.swift` does the parsing, and stays Foundation-only like the rest of
+`Model/`. The scan is non-recursive and skips hidden files, matching Raycast's own script directories,
+and runs on a detached task because it opens every file in the folder.
+
+A file becomes a command only when it has **both** a shebang and an `@raycast.title`. Both are
+mandatory in Raycast's own format, so anything failing either is a helper script the user keeps
+alongside their commands, not a command — leaving them out is what lets one folder hold both. Only the
+first 8 KiB of a file is read: the shebang and the metadata block are always at the top, and a
+script's body can run to megabytes.
+
+| Directive | Becomes |
+| --- | --- |
+| `@raycast.title` | the command name, and the only thing fuzzy search matches |
+| `@raycast.mode` | `compact` / `fullOutput` turn **Show output** on; `silent` and `inline` leave it off |
+| `@raycast.needsConfirmation` | **Needs confirmation** |
+| `@raycast.argument1…3` | the [arguments](#arguments), named by each one's `placeholder` |
+| `@raycast.currentDirectoryPath` | **Run In**, otherwise the script's own folder |
+
+`@raycast.icon` is deliberately **not** imported. Raycast's icon is an emoji or an `.icns` path, and
+`iconSymbol` holds an SF Symbol name; there is nothing to map one onto the other, and rendering
+either would mean a second icon field on every surface that draws a command. Imported commands take
+the shared terminal glyph, and the editor's picker is there to change it.
+`@raycast.description`, `@raycast.packageName` and the authorship keys have nowhere to go and are
+dropped.
+
+The generated command text is the shebang's interpreter, the script's path single-quoted, and
+`"$@"`:
+
+```
+/bin/bash '/Users/me/scripts/chrome cdp.sh' "$@"
+```
+
+Naming the interpreter rather than executing the file means the import never has to `chmod` a user's
+script. The `"$@"` matters: [the runner](#execution-contract) puts argument values on **zsh's**
+positional list, so without forwarding them the script would see none — and forwarding them quoted is
+what keeps the [never-spliced invariant](#invariants) true across the extra hop.
+
+An import warns before it applies, the same as a backup carrying custom commands, and it goes in as
+one `CustomCommandStore.add(contentsOf:)` — one persist and one launcher rebuild for the whole folder
+rather than one per script. A name already in the library is skipped and counted, so re-importing a
+folder after adding one script to it adds only that script.

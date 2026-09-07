@@ -116,6 +116,134 @@ struct CustomCommandTests {
             "a record written before the enabled flag loads as enabled",
             CustomCommandStore(defaults: defaults).commands.first?.isEnabled == true)
 
+        // MARK: Batch add
+
+        var commits = 0
+        store.onChange = { _ in commits += 1 }
+        let batched = store.add(contentsOf: [
+            CustomCommand(name: "One", command: "/usr/bin/true"),
+            CustomCommand(name: "blanks", command: "/usr/bin/true"),
+            CustomCommand(name: "Two", command: "/usr/bin/true"),
+            CustomCommand(name: "one", command: "/usr/bin/false")
+        ])
+        store.onChange = nil
+        check("a batch add counts only the commands it added", batched == 2)
+        check("a whole batch is one commit", commits == 1)
+        check(
+            "a name colliding with the library or with the batch is dropped",
+            store.commands.map(\.name) == ["Blanks", "One", "Two"])
+
+        // MARK: Raycast script import
+
+        let shellSource = """
+            #!/bin/bash
+
+            # Required parameters:
+            # @raycast.schemaVersion 1
+            # @raycast.title Chrome CDP
+            # @raycast.mode silent
+
+            # Optional parameters:
+            # @raycast.icon 📘
+            # @raycast.needsConfirmation false
+
+            CDP_PORT=9222
+            # @raycast.mode fullOutput
+            """
+        let shellScript = RaycastScriptImport.command(
+            at: URL(fileURLWithPath: "/Users/me/scripts/chrome cdp.sh"), source: shellSource)
+        check("the title becomes the command name", shellScript?.name == "Chrome CDP")
+        check(
+            "the shebang names the interpreter and the path is one quoted word",
+            shellScript?.command == #"/bin/bash '/Users/me/scripts/chrome cdp.sh' "$@""#)
+        check("silent mode opens no output window", shellScript?.showsOutput == false)
+        check("needsConfirmation false stays off", shellScript?.requiresConfirmation == false)
+        check(
+            "a script runs in its own folder",
+            shellScript?.workingDirectory == "/Users/me/scripts")
+
+        let appleSource = """
+            #!/usr/bin/osascript
+
+            # @raycast.schemaVersion 1
+            # @raycast.title Facebook
+            # @raycast.mode fullOutput
+            # @raycast.needsConfirmation true
+            # @raycast.currentDirectoryPath ~/Sites
+            # @raycast.argument1 { "type": "text", "placeholder": "Profile" }
+            # @raycast.argument2 { "type": "text", "placeholder": "Tab", "optional": true }
+
+            tell application id "com.vivaldi.Vivaldi"
+            """
+        let appleScript = RaycastScriptImport.command(
+            at: URL(fileURLWithPath: "/tmp/facebook.applescript"), source: appleSource)
+        check(
+            "osascript comes from the shebang",
+            appleScript?.command == #"/usr/bin/osascript '/tmp/facebook.applescript' "$@""#)
+        check("an output mode opens the window", appleScript?.showsOutput == true)
+        check("needsConfirmation true is carried over", appleScript?.requiresConfirmation == true)
+        check(
+            "a declared directory wins over the script's folder",
+            appleScript?.workingDirectory == "~/Sites")
+        check(
+            "arguments come from their placeholders, in order",
+            appleScript?.arguments == [
+                CustomCommandArgument(name: "Profile"),
+                CustomCommandArgument(name: "Tab", isOptional: true)
+            ])
+
+        check(
+            "a file naming no interpreter is not a script command",
+            RaycastScriptImport.command(
+                at: URL(fileURLWithPath: "/tmp/notes.txt"), source: "# @raycast.title Notes\n")
+                == nil)
+        check(
+            "a script declaring no title is not a script command",
+            RaycastScriptImport.command(
+                at: URL(fileURLWithPath: "/tmp/helper.sh"),
+                source: "#!/bin/bash\n# @raycast.schemaVersion 1\necho hi\n") == nil)
+        check(
+            "the JavaScript template's // directives are read too",
+            RaycastScriptImport.command(
+                at: URL(fileURLWithPath: "/tmp/x.js"),
+                source: "#!/usr/bin/env node\n// @raycast.title Node\n")?.command
+                == #"/usr/bin/env node '/tmp/x.js' "$@""#)
+        check(
+            "a quote in the path cannot break out of the argument",
+            RaycastScriptImport.command(
+                at: URL(fileURLWithPath: "/tmp/it's here.sh"),
+                source: "#!/bin/zsh\n# @raycast.title Quoted\n")?.command
+                == #"/bin/zsh '/tmp/it'\''s here.sh' "$@""#)
+
+        let scriptDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-scripts-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(
+            at: scriptDirectory.appendingPathComponent("nested"), withIntermediateDirectories: true)
+        for (name, source) in [
+            ("b-second.sh", "#!/bin/bash\n# @raycast.title Second\n"),
+            ("a-first.sh", "#!/bin/bash\n# @raycast.title First\n"),
+            ("plain.txt", "just notes\n"),
+            (".hidden.sh", "#!/bin/bash\n# @raycast.title Hidden\n")
+        ] {
+            try? Data(source.utf8).write(to: scriptDirectory.appendingPathComponent(name))
+        }
+        check(
+            "a folder yields its script commands in name order and nothing else",
+            RaycastScriptImport.scan(directory: scriptDirectory).map(\.name) == ["First", "Second"])
+
+        // The whole run, through `"$@"`: an imported script reads its value as data, never as syntax.
+        try? Data("#!/bin/bash\n# @raycast.title Echo\nprintf '%s' \"$1\"\n".utf8).write(
+            to: scriptDirectory.appendingPathComponent("echo.sh"))
+        let imported = RaycastScriptImport.scan(directory: scriptDirectory).first { $0.name == "Echo" }
+        let forwarded = await ShellCommandRunner.run(
+            imported?.command ?? "", arguments: ["; touch /tmp/tinycast-import-should-not-exist"],
+            workingDirectory: imported?.workingDirectory)
+        check(
+            "an imported script receives its argument as one inert word",
+            forwarded.standardOutput == "; touch /tmp/tinycast-import-should-not-exist"
+                && !FileManager.default.fileExists(atPath: "/tmp/tinycast-import-should-not-exist"))
+        try? FileManager.default.removeItem(at: scriptDirectory)
+
         // MARK: Runner
 
         let succeeded = await ShellCommandRunner.run("/usr/bin/true")

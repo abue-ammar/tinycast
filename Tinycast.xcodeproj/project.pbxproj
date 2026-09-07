@@ -334,6 +334,7 @@
 		9BE84B47BCF0DA5552AB3591 /* CameraCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5873BB8728FD8BC5D256A21 /* CameraCoordinator.swift */; };
 		9DB09F96E6F8C226BD9AB1C9 /* SymbolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 387BE675F580496656E72559 /* SymbolCatalog.swift */; };
 		9DB4319C835DCF8C0723356D /* MenuBarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2902B904C7BD2FC23856EDB9 /* MenuBarItem.swift */; };
+		9DB73F12214137B60AE00828 /* RaycastScriptImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CF6A57ECFDA17248393EA8 /* RaycastScriptImport.swift */; };
 		9E4497ECAD183E5C2B49475B /* MeetingDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0599199132DAFBE12C59FBD /* MeetingDay.swift */; };
 		9E514EA8EB0408653AC3D1D9 /* BundleSignature.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3E30EFA3197FC5EF1E85C21 /* BundleSignature.swift */; };
 		9E5B694969D3F99BF7D0D9E1 /* ExtensionImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D20FAFD9F3CC0E5802A966 /* ExtensionImage.swift */; };
@@ -398,7 +399,6 @@
 		BAD4BEF8041665ACCF1CE460 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F64FC06CB10BDF8CD044D64 /* ScheduleView.swift */; };
 		BB1277D988169C0829374ACC /* QuickActionPanelState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E97E59C7338458DB797507 /* QuickActionPanelState.swift */; };
 		BBAB44C0E70AABE70A048889 /* QuicklinkArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = F616D2EE62AEC6782E77364D /* QuicklinkArchive.swift */; };
-		B5D92F0C81E3507F02D1C4E3 /* RaycastQuicklinkImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C81E9B70D24F6E91C0B3D2 /* RaycastQuicklinkImport.swift */; };
 		BC755BD99ECA1F2D382D5C94 /* SettingsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C845A6718CFBD1AFE93BA903 /* SettingsDetailView.swift */; };
 		BCA7E1C4BCF6F77634E54CA7 /* MeetingClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 474E6D9830E336752C79F461 /* MeetingClock.swift */; };
 		BD45A99F26C015BF00AC77D5 /* ApplicationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289FC415E1D1776DD1C4EB9E /* ApplicationsSettingsView.swift */; };
@@ -479,6 +479,7 @@
 		E268D74F0DEFFA598E2D02AA /* OnboardingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE6972F177922B1EB8831735 /* OnboardingCard.swift */; };
 		E29056264B57A3F0EC5F5698 /* SupportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97986EE62AE844FFCCD27449 /* SupportCoordinator.swift */; };
 		E29CF7293742DDCAE030682C /* SupportReminderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DE1ED405A53ECA5DED66AA1 /* SupportReminderStore.swift */; };
+		E448C90CF3076440A4FA2CE4 /* RaycastQuicklinkImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25EA21DCF61666DB736D5B82 /* RaycastQuicklinkImport.swift */; };
 		E457BC709D195B8F5D0C2A79 /* UninstallSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B6DAC3B9FF387367C3FAB4 /* UninstallSession.swift */; };
 		E4B18EBFFD009B2CAFF4BA9B /* PanelTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E25B87C692D5FEE1FBF994 /* PanelTransition.swift */; };
 		E4C40AC649B871B08B7F1B6E /* QuickActionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEEF20B209EEEAB7ED97DF36 /* QuickActionPanel.swift */; };
@@ -538,6 +539,7 @@
 
 /* Begin PBXFileReference section */
 		00B475B5929CC0478EFAC7D8 /* UpdateFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateFailure.swift; sourceTree = "<group>"; };
+		00CF6A57ECFDA17248393EA8 /* RaycastScriptImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastScriptImport.swift; sourceTree = "<group>"; };
 		00ECBD55353C83A7F4E93592 /* MCPSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSettingsSection.swift; sourceTree = "<group>"; };
 		025D7D760DE2FD02C0D7D9D2 /* ColorFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorFormat.swift; sourceTree = "<group>"; };
 		0266BAF4643A4B5C41B600DE /* ExtensionColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionColors.swift; sourceTree = "<group>"; };
@@ -604,6 +606,7 @@
 		23F7C8CBD0AA75D016DBFC06 /* SettingsPaneScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPaneScanner.swift; sourceTree = "<group>"; };
 		2438C33DEAF16B26E4F195EB /* ExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutableLocator.swift; sourceTree = "<group>"; };
 		2575583134BE03EA9FA719CD /* ActivationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationPolicy.swift; sourceTree = "<group>"; };
+		25EA21DCF61666DB736D5B82 /* RaycastQuicklinkImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastQuicklinkImport.swift; sourceTree = "<group>"; };
 		264B68DBB21C3752E39ECC29 /* NoteTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTitle.swift; sourceTree = "<group>"; };
 		26AD346C8FD5F2D4F00FF2B6 /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
 		27021D72339800AA6DA3D3FF /* AIScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIScreen.swift; sourceTree = "<group>"; };
@@ -1054,7 +1057,6 @@
 		F524FA7B33C0F861995EB1E6 /* QuicklinkArgumentsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkArgumentsScreen.swift; sourceTree = "<group>"; };
 		F58E564E6181EB15497E51CD /* SnippetTemplateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTemplateEngine.swift; sourceTree = "<group>"; };
 		F616D2EE62AEC6782E77364D /* QuicklinkArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkArchive.swift; sourceTree = "<group>"; };
-		A4C81E9B70D24F6E91C0B3D2 /* RaycastQuicklinkImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastQuicklinkImport.swift; sourceTree = "<group>"; };
 		F6C8B2F6592B65CB6576D247 /* ExtensionAppearancePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAppearancePicker.swift; sourceTree = "<group>"; };
 		F7420F642776452B469182D0 /* FileSearchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchResult.swift; sourceTree = "<group>"; };
 		F7EFE2C8A212D6979C43E9F7 /* RightClick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightClick.swift; sourceTree = "<group>"; };
@@ -1268,7 +1270,7 @@
 				F616D2EE62AEC6782E77364D /* QuicklinkArchive.swift */,
 				61FFFE3901140714D3A7BB4C /* QuicklinkDestination.swift */,
 				685FB7FD7E4E5BE6606440D0 /* QuicklinkStore.swift */,
-				A4C81E9B70D24F6E91C0B3D2 /* RaycastQuicklinkImport.swift */,
+				25EA21DCF61666DB736D5B82 /* RaycastQuicklinkImport.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -2493,6 +2495,7 @@
 			isa = PBXGroup;
 			children = (
 				DF0880635E294D9DF55BAADA /* CustomCommand.swift */,
+				00CF6A57ECFDA17248393EA8 /* RaycastScriptImport.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -3029,7 +3032,6 @@
 				3C23AEA2FDDB7BD61278BD77 /* QuickActionsSettingsView.swift in Sources */,
 				EBCDF88CD59A4B6F21F945C6 /* Quicklink.swift in Sources */,
 				BBAB44C0E70AABE70A048889 /* QuicklinkArchive.swift in Sources */,
-				B5D92F0C81E3507F02D1C4E3 /* RaycastQuicklinkImport.swift in Sources */,
 				DA1EE0A8933EADD357FCE32C /* QuicklinkArgumentSession.swift in Sources */,
 				244668334681070EB823FF13 /* QuicklinkArgumentsScreen.swift in Sources */,
 				A7CEBFBFBB46554ACAD73CFB /* QuicklinkArgumentsView.swift in Sources */,
@@ -3046,6 +3048,8 @@
 				A79B7385C6B6E6C67FDFB152 /* RaycastImportError.swift in Sources */,
 				46F5D522E6F5470D3694A218 /* RaycastImportReader.swift in Sources */,
 				22420E8A41685143315904F5 /* RaycastImportSelection.swift in Sources */,
+				E448C90CF3076440A4FA2CE4 /* RaycastQuicklinkImport.swift in Sources */,
+				9DB73F12214137B60AE00828 /* RaycastScriptImport.swift in Sources */,
 				478500C6465327947EBD9D61 /* RaycastSnippetImport.swift in Sources */,
 				F801D00F877421DC7045C5F3 /* RedactedPlaceholder.swift in Sources */,
 				E1A4472391E5AD3EE828202E /* RedactedText.swift in Sources */,

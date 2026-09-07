@@ -52,6 +52,10 @@ hotkeys do. Raycast's ULID is discarded — each imported row gets a fresh UUID,
 import already does. Importing at least one quicklink turns `quicklinksEnabled` on: opening a link
 grants no permission class.
 
+Script commands are not in a `.rayconfig` — they are files in a folder Raycast points at — so they
+have their own importer, described in
+[custom-commands.md](custom-commands.md#importing-raycast-scripts).
+
 ## Layout
 
 `RaycastDecoder` unwraps the container and returns Raycast's own values; `RaycastImportReader` turns
