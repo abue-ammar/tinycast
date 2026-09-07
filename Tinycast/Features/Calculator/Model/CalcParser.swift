@@ -91,6 +91,12 @@ enum CalcTokenizer {
             }
 
             if ch.isLetter || ch == "°" {
+                // A lone `x` between operands is the spoken `*`, never part of a word.
+                if ch == "x" || ch == "X", isStandaloneX(chars, i, previous: tokens.last) {
+                    tokens.append(.op("*"))
+                    i += 1
+                    continue
+                }
                 // Split an attached currency prefix (`USD1K`) before the ident scanner eats it.
                 if ch.isLetter {
                     var letterEnd = i
@@ -171,6 +177,33 @@ enum CalcTokenizer {
             i += 1
         }
         return tokens
+    }
+
+    /// A lone `x` reads as `*` only at a token boundary with a value to its left.
+    private static func isStandaloneX(
+        _ chars: [Character], _ index: Int, previous: CalcToken?
+    ) -> Bool {
+        if index > 0, chars[index - 1].isLetter { return false }
+        guard let previous, endsOperand(previous) else { return false }
+        let attached = !chars[index - 1].isWhitespace
+        var next = index + 1
+        while next < chars.count, chars[next].isWhitespace { next += 1 }
+        // An attached `x` with nothing after it is a half-typed `0x` prefix, not `*`.
+        guard next < chars.count else { return !attached }
+        switch chars[next] {
+        case ")", "!", "%", "^", "/", ",", "=", "*", "×", "÷", "−", "→": return false
+        default: return true
+        }
+    }
+
+    /// Whether a token can end a left operand, so `3 x 3` multiplies but `x 3` stays a search.
+    private static func endsOperand(_ token: CalcToken) -> Bool {
+        switch token {
+        case .number, .compactNumber, .intLiteral: return true
+        case .op(let op): return op == ")" || op == "!" || op == "%"
+        case .ident(let name): return !["to", "in", "of", "mod", "power", "and"].contains(name)
+        case .arrow, .comma: return false
+        }
     }
 
     /// Only a spelling the table resolves, so `6/2(1+2)` keeps dividing.

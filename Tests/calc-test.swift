@@ -74,6 +74,19 @@ struct CalcTests {
         expectDisplay("e^2", "7.389056099")
 
         // Implicit multiplication
+        // `x` reads as `*` between operands, attached or spaced, like Raycast
+        expectDisplay("3x3", "9")
+        expectDisplay("3 x 3", "9")
+        expectDisplay("3X3", "9")
+        expectDisplay("3 x -2", "-6")
+        expectDisplay("2xpi", "6.283185307")
+        expectDisplay("6/2x(1+2)", "9")
+        expectDisplay("10 x", "10")  // trailing operator keeps the prefix while typing
+        expectDisplay("$5 x 2", "10.00 USD")
+        expectDisplay("2(3)kg x 2", "12 kg")
+        expectNil("x")
+        expectNil("x3")
+        expectNil("3x")  // half-typed, not an operator yet
         expectDisplay("4(2+3)", "20")
         expectDisplay("(2+3)(2+3)", "25")
         expectDisplay("2pi", "6.283185307")

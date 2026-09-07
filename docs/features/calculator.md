@@ -276,6 +276,12 @@ Juxtaposition means `*` at the same binding power as an explicit one (`4(2+3)` �
 with `6/2*(1+2)`. `CalcParser.parseExpression` checks it after `peekBinary()` fails and, unlike a real
 operator, consumes no token before parsing the right operand.
 
+A lone `x` / `X` between operands is the same operator (`3x3`, `3 x 3` → 9, `2xpi`), folded in the
+tokenizer rather than the parser so the typed quantity path agrees (`$5 x 2`). It only fires at a
+token boundary with a value to its left, which is why `x`, `x3`, `max` and `hex` stay searches or
+words; an attached `x` with nothing after it stays silent too, so a half-typed `0x` prefix never
+flashes a card.
+
 The scalar side is deliberately narrow: only `(` or a name in `CalcParser.constants` / `functions`
 starts an implicit product. Adjacent _numbers_ never do — `5 3` stays an app search — and no unit or
 currency name is a constant or function, so `10km` keeps its own path. `QuantityParser.peekBinary`
