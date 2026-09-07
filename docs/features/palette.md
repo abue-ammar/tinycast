@@ -94,7 +94,9 @@ to the launcher rather than joining the ring, and is reached by a command or a g
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
 `aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced. **Escape clears a
 non-empty query before it leaves the screen**, so one press clears and the next leaves: chat backs
-out to the launcher, an extension screen exits itself, and anywhere else the palette hides.
+out to the launcher, an extension screen exits itself, and anywhere else the palette hides. A focused
+inline argument field is a rung above the query, so Escape hands focus back to the search field
+first — the query that found the command is still there to be cleared by the next press.
 
 The launcher advertises the first hop in the header — `AI Chat` beside a `⇥` cap, the footer's own
 pairing of a label with its key. It is drawn only when Tab really would open chat, a condition read
@@ -128,9 +130,17 @@ invariants:
   flipping the branch tears down its field editor, which drops first responder mid-navigation. Only
   its *width* changes — it shrinks to the width of the typed text so the argument chips sit right
   after it, as they do in Raycast.
-- Argument focus is its own `@FocusState`, `argumentFocused`, keyed by argument name. Moving the
-  selection hands focus back to the search field first, because the row that owned those fields is
-  about to stop being selected. ↵ on a blank required argument focuses it instead of launching.
+- Argument focus is its own `@FocusState`, `argumentFocused`, keyed by argument name. Every way out
+  — moving the selection, Escape, Tab past the last field — goes through
+  `returnFocusToSearchField()`, because the row that owned those fields is about to stop being
+  selected and a field that unmounts while focused leaves the panel with no first responder at all.
+  ↵ on a blank required argument focuses it instead of launching.
+- **Never read a `@FocusState` back in the tick that writes it.** It still reports the old field, so
+  `searchFocused = argumentFocused == nil` resolved to `false` and Tab out of the last argument
+  focused nothing; AppKit's key-view loop then answered the next presses instead. Both writes come
+  from one local value.
+- Returning focus this way leaves the query selected, because AppKit selects the whole string as the
+  field editor comes back — here that is the wanted reset rather than the hazard it is under ↵.
 
 The typed values live on `PaletteState.commandArguments`, keyed by
 `PaletteState.argumentKey(entryID, name)`, and are cleared with the rest of the screen.
