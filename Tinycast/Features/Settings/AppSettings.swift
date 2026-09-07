@@ -139,6 +139,14 @@ final class AppSettings {
         didSet { defaults.set(clipboardDisabledApps, forKey: Key.clipboardDisabledApps.rawValue) }
     }
 
+    /// What ↵ does on a clipboard entry; ⌘↵ always does the other one.
+    var clipboardDefaultAction: ClipboardDefaultAction {
+        didSet {
+            defaults.set(
+                clipboardDefaultAction.rawValue, forKey: Key.clipboardDefaultAction.rawValue)
+        }
+    }
+
     var launchAtLogin: Bool {
         didSet { LaunchAtLogin.set(launchAtLogin) }
     }
@@ -458,6 +466,9 @@ final class AppSettings {
         clipboardDisabledApps =
             defaults.stringArray(forKey: Key.clipboardDisabledApps.rawValue)
             ?? ["com.apple.keychainaccess", "com.apple.Passwords"]
+        clipboardDefaultAction =
+            defaults.string(forKey: Key.clipboardDefaultAction.rawValue)
+            .flatMap(ClipboardDefaultAction.init) ?? .paste
         launchAtLogin = LaunchAtLogin.isEnabled
         hyperKey =
             defaults.string(forKey: Key.hyperKey.rawValue).flatMap(HyperKeyPhysicalKey.init)

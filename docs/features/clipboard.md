@@ -6,6 +6,11 @@
   has to outrank a stored `false` in `AppSettings.init`, and off means fully off: the poller stops,
   the SQLite file closes, the launcher command and its shortcut go, and Tab skips the screen.
   `ClipboardCoordinator.applyEnabled()` is the single place that applies it.
+- **↵ and ⌘↵ are one swapped pair, and `ClipboardCoordinator.activate(_:inverted:)` is the only
+  place that reads which way round they sit.** `clipboardDefaultAction` names what ↵ does — paste
+  (the default) or copy — and ⌘↵ always does the other. ⌘1…⌘0 on a pin and a double-click go
+  through the same call, so no surface can drift from the setting; ⌥↵ pastes regardless, since
+  keeping the window open is a paste-only idea. The ⌘K menu puts the default first with the ↵ chip.
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
   If the writer and the poller ever disagree, the app re-captures its own pastes in a loop.
 - **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so

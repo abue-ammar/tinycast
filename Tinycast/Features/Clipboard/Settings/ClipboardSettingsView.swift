@@ -44,6 +44,14 @@ struct ClipboardSettingsView: View {
                 .onChange(of: settings.clipboardRetention) {
                     core.clipboardCoordinator.applyRetention(settings.clipboardRetention)
                 }
+                Picker(selection: $settings.clipboardDefaultAction) {
+                    ForEach(ClipboardDefaultAction.allCases) { action in
+                        Text(action.title).tag(action)
+                    }
+                } label: {
+                    SettingsRowTitle(.clipboardHistory, "Default action")
+                    Text("What ↵ does on an entry; ⌘↵ does the other one.")
+                }
             } header: {
                 SettingsSectionHeader(.clipboardHistory)
             }

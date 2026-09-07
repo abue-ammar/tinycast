@@ -55,6 +55,15 @@ final class ClipboardCoordinator {
         clipboardStore.enforceLimits()
     }
 
+    /// ↵ runs the configured default; ⌘↵ the other one, so the two chords stay a swapped pair.
+    func activate(_ item: ClipboardItem, inverted: Bool = false) {
+        if (settings.clipboardDefaultAction == .copy) != inverted {
+            copyToClipboard(item)
+        } else {
+            paste(item)
+        }
+    }
+
     func paste(_ item: ClipboardItem) {
         let previous = windowController.previousApp
         paletteCoordinator.hidePalette(restoreFocus: false)
