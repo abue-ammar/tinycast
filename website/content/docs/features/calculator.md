@@ -19,6 +19,9 @@ dividend: `-10 mod 3` is `-1`.
 `10k` is `10,000`. Scientific notation works — `1e5`, `5e-3km`, `3e+2` — while `2e` and `2 e` stay
 2 × Euler's _e_.
 
+Spoken roots accept measurements: `square root of 25m2` is `5 m`.
+Unit cancellation can feed number-base conversion: `2m / 2m to hex` is `0x1`.
+
 **A trailing operator keeps the last complete result visible.** `10 +` shows `10`, and
 `10kg + 500g +` shows `10,500 g`, so the card does not flicker while you type.
 
@@ -51,6 +54,8 @@ Measurements combine into area, volume, speed and other physical quantities:
 | `5m * 4m` | `20 m²` |
 | `2m * 3m * 4m to l` | `24,000 L` |
 | `sqrt(25m2)` | `5 m` |
+| `square root of 25m2` | `5 m` |
+| `cube root of -8m3` | `-2 m` |
 | `100km / 2h to km/h` | `50 km/h` |
 | `90km/h * 20min to km` | `30 km` |
 | `100km / 40km/h to duration` | `2 hr 30 min` |

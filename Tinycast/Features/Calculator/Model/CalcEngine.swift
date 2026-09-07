@@ -37,13 +37,6 @@ struct CalcResult: Equatable, Sendable {
 
 /// Raw query to answer, or nil when it isn't calculator input. See docs/features/calculator.md.
 enum CalcEngine {
-    /// Live clock. `rates` is nil until a snapshot lands, which the currency paths report as such.
-    static func evaluate(
-        _ raw: String, rates: CurrencyRates? = nil, region: String? = nil
-    ) -> CalcResult? {
-        evaluate(raw, now: Date(), calendar: .current, rates: rates, region: region)
-    }
-
     /// `now`/`calendar`/`region` are injected so every path is deterministic under the harness.
     static func evaluate(
         _ raw: String, now: Date, calendar: Calendar, rates: CurrencyRates? = nil,
@@ -51,8 +44,8 @@ enum CalcEngine {
     ) -> CalcResult? {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, query.count <= 256 else { return nil }
+        guard !query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) else { return nil }
 
-        // Date/time first: `hrs till july` carries no digit, so it precedes the numeric reject.
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) { return dateTime }
 
         // Before tokenizing: `5pm ldn in sf` is words, which the tokenizer would reject.
@@ -156,18 +149,7 @@ enum CalcEngine {
         // Natural-language percent: `20% off 500`, `50 as % of 200`.
         if let percent = CalcPercent.evaluate(tokens, query: query) { return percent }
 
-        // Cheap reject: plain math always carries a digit or a constant, so app searches skip it.
-        guard
-            query.contains(where: { $0.isASCII && $0.isNumber })
-                || query.lowercased().contains("e") || query.contains("π")
-        else { return nil }
-
-        guard let value = CalcParser.evaluate(tokens) else { return nil }
-        return CalcResult(
-            expression: CalcFormatter.expression(query),
-            sourceBadge: "Expression",
-            targetBadge: "Result",
-            payload: .number(value))
+        return nil
     }
 
     // MARK: - Partial expressions
@@ -182,6 +164,10 @@ enum CalcEngine {
         }
         let prefixTokens = Array(tokens.dropLast())
         guard !prefixTokens.isEmpty else { return nil }
+        if prefixTokens.count == 1, let value = decimalLiteral(prefixTokens[0]) {
+            return CalcResult(expression: CalcFormatter.expression(query),
+                sourceBadge: "Expression", targetBadge: "Result", payload: .number(value))
+        }
 
         if let quantity = CalcQuantity.evaluate(
             prefixTokens, query: tokenQuery(prefixTokens), rates: rates, region: region,
@@ -198,7 +184,7 @@ enum CalcEngine {
             return replacingExpression(complete, with: CalcFormatter.expression(query))
         }
 
-        guard let value = CalcParser.evaluate(prefixTokens) else { return nil }
+        guard let value = CalcExpressionParser.scalar(prefixTokens) else { return nil }
         return CalcResult(
             expression: CalcFormatter.expression(query),
             sourceBadge: "Expression", targetBadge: "Result",
@@ -208,9 +194,9 @@ enum CalcEngine {
     private static func partialOperatorText(_ token: CalcToken) -> String? {
         guard case .op(let op) = token else { return nil }
         switch op {
-        case "*": return "×"
-        case "/": return "÷"
-        case "+", "-", "^": return String(op)
+        case .multiply: return "×"
+        case .divide: return "÷"
+        case .add, .subtract, .power: return String(op.rawValue)
         default: return nil
         }
     }
@@ -228,7 +214,7 @@ enum CalcEngine {
             case .ident(let name):
                 return name
             case .op(let op):
-                return String(op)
+                return String(op.rawValue)
             case .arrow:
                 return "->"
             case .comma:
@@ -268,7 +254,7 @@ enum CalcEngine {
             source = UInt64(value)
             sourceBadge = "Decimal"
             sourceText = literalText
-        } else if let value = CalcParser.evaluate(valueTokens),
+        } else if let value = CalcExpressionParser.scalar(valueTokens),
             value >= 0, value.rounded() == value, value <= 9_007_199_254_740_992
         {
             source = UInt64(value)

@@ -36,6 +36,8 @@ in (see Currency below).
 
 `CalcEngine.evaluate` runs:
 
+Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
+
 1. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
 2. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
@@ -48,14 +50,31 @@ in (see Currency below).
 7. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
 8. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
 9. Natural-language percent, ratio and list forms (`CalcPercent`)
-10. Numeric reject, then plain arithmetic if the quantity parser has not already answered it
+
+`CalcExpressionParser` is the sole precedence-climbing evaluator, returning `CalcValue` for numbers,
+measurements, currencies and booleans. `CalcQuantity` turns those values into cards and applies display
+policy. Scalar operands in conversions and percent phrases use the same parser's `scalar` projection;
+there is no second arithmetic parser or fallback evaluation of a completed scalar query.
+
+`CalcTokenizer` scans Unicode scalars, retaining canonical-equivalent accented currency names.
+`CalcOperator` owns operator identity, binding power and spelling; `CalcMath` owns the function and
+constant catalog. Spoken roots use the typed parser too: `square root of 25m2` is `5 m`,
+and `cube root of -8m3` is `-2 m`.
+Dimensionless results can feed base conversion too: `2m / 2m to hex` is `0x1`.
+
+`UnitDef` is an immutable, Sendable reference shared by its aliases and parsed values. The catalog
+stores 148 base definitions as compact text records rather than repeated construction code, then adds
+SI and transfer-rate prefixes once on first use. `CalcUnitCatalog` owns this data;
+`CalcUnits` owns conversion policy. Every one of the 675 aliases, labels, dimensions, scale factors
+and offsets was compared bit-for-bit with the previous advanced catalog.
 
 Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a duration,
 not a scalar subsequently labeled milliseconds. Simple conversions still own their source badges.
 
-Date/time depends on the clock, so it takes an injected `now` / `calendar` — the public `evaluate(_:)`
-uses the live clock, and `evaluate(_:now:calendar:)` lets `calc-test.swift` assert exact strings
-against a fixed clock.
+Date/time takes an injected `now` / `calendar`. `CalcMemo` supplies the live clock and calendar at the
+UI boundary; the model and harness perform no ambient clock reads. Date arithmetic requires a moment
+signal, so ordinary numeric expressions skip calendar parsing. Numeric date components share one
+parser, while the separator still chooses ISO, month-first or day-first interpretation.
 
 `CalcDateTime` recognizes these grammars:
 
@@ -137,8 +156,8 @@ landing day, so `monday in 3 weeks` is that week's Monday whichever day you ask 
 `sunday in 1 week` lands at the end of that week rather than its start. It runs after every other
 grammar because `in` is also the unit connector, which is what keeps `10 in in cm` a conversion.
 
-`CalcQuantity` is a separate typed precedence parser rather than a mode added to the scalar
-`CalcParser`. Scalar `*` / `/` preserve the unit, compatible quantity division returns a scalar, and a
+`CalcExpressionParser` evaluates scalar and typed operands through one precedence grammar.
+Scalar `*` / `/` preserve the unit, compatible quantity division returns a scalar, and a
 trailing `to` / `in` converts the complete expression. A conversion inside parentheses is itself a
 quantity, so `(20 sgd to usd) * 30` converts then multiplies. Percentages keep relative semantics
 for addition (`10kg + 20%` → `12 kg`) and act as fractional scalars for multiplication and division
@@ -158,7 +177,7 @@ writing is the one you were thinking in. Chains are left-associative, so `1kg + 
 pounds. A conversion suffix overrides it entirely (`10kg + 500g to lb`).
 
 Adjacency is the exception. `5 feet 3 inches` and `1hr 30min` are one quantity in composite notation,
-not a sum, so they answer in the _leading_ unit (`5.25 ft`, `1.5 hr`). `QuantityParser.peekBinary`
+not a sum, so they answer in the _leading_ unit (`5.25 ft`, `1.5 hr`). `CalcExpressionParser.peekBinary`
 distinguishes the two — it reports `consumesToken: false` for the invisible `+` between adjacent
 quantities — and `addOrSubtract` keys the unit choice off exactly that flag. Composite notation binds
 above multiplication, division and powers: `5w * 3h 30min` means `5w * (3h 30min)`, and
@@ -183,7 +202,7 @@ dimensions from existing units, retaining their factors and symbols: `2kg / 4m3`
 `1kg/m3 to g/cm3` → `0.001 g/cm³`. Temperature and angle stay outside compound products.
 
 All factors share composable bases: cubic meters for volume and bytes per second for data rates.
-To add a dimension, declare its signature on `UnitCategory`, add its units to `byName`, and register
+To add a dimension, declare its signature on `UnitCategory`, add records to `CalcUnitCatalog`, and register
 one output in `baseUnits`. A new unit within a category only needs a table entry.
 `m²` / `m2` and `m³` / `m3` name units; `(2m)^2` squares the entire quantity.
 `CalcUnits.productUnit` selects Wh/kWh for power multiplied by a minutes-or-larger time unit,
@@ -195,7 +214,7 @@ Charge's base symbol is `As` (ampere seconds), also named `coulomb`; `C` remains
 
 Identifiers check exact registered spellings before case folding, so SI mega symbols (`MW`, `MΩ`,
 `MA`, `MV`, `MWh`, `MAh`) remain distinct from milli symbols. Spelled names remain case-insensitive.
-The typed parser shares scalar constants and functions with `CalcParser`; `pi * (2m)^2`,
+The evaluator takes constants and functions from `CalcMath`; `pi * (2m)^2`,
 `sqrt(25m2)` and `cbrt(8m3)` work without a geometry-specific grammar.
 
 Volume includes cubic millimeters through cubic meters, cubic inches/feet/yards, and mL/cL/dL/L.
@@ -233,7 +252,7 @@ The identifier's first scan supplies the currency prefix and compound-unit head 
 That is the same table-consulting lookahead the `USD1K` prefix split already uses, and it is why `6/2(1+2)` and
 `10 m / 2` still divide while `1 km/x` stays silent.
 
-Beyond the core four, `CalcParser.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),
+Beyond the core four, `CalcMath.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),
 the inverses (`asin`/`arcsin` through `atan`), the hyperbolics (`sinh`, `acosh`, …) and
 `cbrt`/`exp`/`log2`/`sign`/`trunc`, alongside the `tau` and `phi` constants. `sec` is also the
 abbreviation for seconds, which costs nothing: a unit position resolves through `CalcUnits` long
@@ -334,13 +353,12 @@ calculator must never provoke its Full Calendar Access grant mid-keystroke — s
 
 Juxtaposition means `*` at the same binding power as an explicit one (`4(2+3)` → 20, `2pi`,
 `2sqrt(9)`, `(2+3)(2+3)`), so it binds tighter than `+` and looser than `^`, and `6/2(1+2)` agrees
-with `6/2*(1+2)`. `CalcParser.parseExpression` checks it after `peekBinary()` fails and, unlike a real
-operator, consumes no token before parsing the right operand.
+with `6/2*(1+2)`. `CalcExpressionParser.peekBinary` recognizes it without consuming a token before parsing the right operand.
 
-Only `(` or a name in `CalcParser.constants` / `functions` starts an implicit product. Adjacent _numbers_ never do — `5 3` stays an app search — and no unit or
-currency name is a constant or function, so `10km` keeps its own path. `QuantityParser.peekBinary`
-carries the same rule so the typed side agrees (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
-`2*(3)kg`); adjacency there still means the composite-quantity `+` described above, never a product.
+A parenthesis, constant, function or spoken root starts an implicit product (`2 square root of 9` → 6).
+Adjacent numbers never do — `5 3` stays an app search — and unit and currency names keep their own
+operand positions. The same rule covers typed values (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching
+`2*(3)kg`); adjacent quantities still use the composite `+` described above.
 
 ## Natural-language forms
 

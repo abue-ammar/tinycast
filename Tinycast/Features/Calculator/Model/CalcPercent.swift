@@ -12,9 +12,9 @@ enum CalcPercent {
     /// `<pct>% off <value>` → the value reduced by pct percent (`20% off 500` → 400).
     private static func parseOff(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard let off = tokens.firstIndex(of: .ident("off")), off >= 2,
-            tokens[off - 1] == .op("%"),
-            let pct = CalcParser.evaluate(Array(tokens[0..<(off - 1)])),
-            let base = CalcParser.evaluate(Array(tokens[(off + 1)...]))
+            tokens[off - 1] == .op(.percent),
+            let pct = CalcExpressionParser.scalar(Array(tokens[0..<(off - 1)])),
+            let base = CalcExpressionParser.scalar(Array(tokens[(off + 1)...]))
         else { return nil }
         let result = base * (1 - pct / 100)
         guard result.isFinite else { return nil }
@@ -24,9 +24,9 @@ enum CalcPercent {
     /// `<x> as % of <y>` → x / y × 100, rendered as a percentage (`50 as % of 200` → 25%).
     private static func parseAsPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard let asIdx = tokens.firstIndex(of: .ident("as")), asIdx + 2 < tokens.count,
-            tokens[asIdx + 1] == .op("%"), tokens[asIdx + 2] == .ident("of"),
-            let x = CalcParser.evaluate(Array(tokens[0..<asIdx])),
-            let y = CalcParser.evaluate(Array(tokens[(asIdx + 3)...])), y != 0
+            tokens[asIdx + 1] == .op(.percent), tokens[asIdx + 2] == .ident("of"),
+            let x = CalcExpressionParser.scalar(Array(tokens[0..<asIdx])),
+            let y = CalcExpressionParser.scalar(Array(tokens[(asIdx + 3)...])), y != 0
         else { return nil }
         let ratio = x / y * 100
         guard ratio.isFinite else { return nil }
@@ -46,10 +46,10 @@ enum CalcPercent {
     /// The tip alone, not the total: it is the number the phrase asks for.
     private static func parseTip(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard let tip = tokens.firstIndex(of: .ident("tip")), tip >= 2,
-            tip + 2 < tokens.count, tokens[tip - 1] == .op("%"),
+            tip + 2 < tokens.count, tokens[tip - 1] == .op(.percent),
             tokens[tip + 1] == .ident("on") || tokens[tip + 1] == .ident("of"),
-            let pct = CalcParser.evaluate(Array(tokens[0..<(tip - 1)])),
-            let bill = CalcParser.evaluate(Array(tokens[(tip + 2)...]))
+            let pct = CalcExpressionParser.scalar(Array(tokens[0..<(tip - 1)])),
+            let bill = CalcExpressionParser.scalar(Array(tokens[(tip + 2)...]))
         else { return nil }
         let amount = bill * pct / 100
         guard amount.isFinite else { return nil }
@@ -59,10 +59,10 @@ enum CalcPercent {
     private static func parseWhatPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard let isIdx = tokens.firstIndex(of: .ident("is")), isIdx + 4 <= tokens.count,
             isIdx + 3 < tokens.count,
-            tokens[isIdx + 1] == .ident("what"), tokens[isIdx + 2] == .op("%"),
+            tokens[isIdx + 1] == .ident("what"), tokens[isIdx + 2] == .op(.percent),
             tokens[isIdx + 3] == .ident("of"),
-            let x = CalcParser.evaluate(Array(tokens[0..<isIdx])),
-            let y = CalcParser.evaluate(Array(tokens[(isIdx + 4)...])), y != 0
+            let x = CalcExpressionParser.scalar(Array(tokens[0..<isIdx])),
+            let y = CalcExpressionParser.scalar(Array(tokens[(isIdx + 4)...])), y != 0
         else { return nil }
         let ratio = x / y * 100
         guard ratio.isFinite else { return nil }
@@ -71,10 +71,10 @@ enum CalcPercent {
 
     private static func parseIsPercentOfWhat(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard tokens.count >= 6, tokens.last == .ident("what"),
-            tokens[tokens.count - 2] == .ident("of"), tokens[tokens.count - 3] == .op("%"),
+            tokens[tokens.count - 2] == .ident("of"), tokens[tokens.count - 3] == .op(.percent),
             let isIdx = tokens.firstIndex(of: .ident("is")),
-            let x = CalcParser.evaluate(Array(tokens[0..<isIdx])),
-            let pct = CalcParser.evaluate(Array(tokens[(isIdx + 1)..<(tokens.count - 3)])),
+            let x = CalcExpressionParser.scalar(Array(tokens[0..<isIdx])),
+            let pct = CalcExpressionParser.scalar(Array(tokens[(isIdx + 1)..<(tokens.count - 3)])),
             pct != 0
         else { return nil }
         let whole = x / (pct / 100)
@@ -86,8 +86,8 @@ enum CalcPercent {
     private static func parseRatio(_ tokens: [CalcToken], query: String) -> CalcResult? {
         guard tokens.count >= 5, tokens[0] == .ident("ratio"), tokens[1] == .ident("of"),
             let toIdx = tokens.firstIndex(of: .ident("to")),
-            let a = CalcParser.evaluate(Array(tokens[2..<toIdx])),
-            let b = CalcParser.evaluate(Array(tokens[(toIdx + 1)...])),
+            let a = CalcExpressionParser.scalar(Array(tokens[2..<toIdx])),
+            let b = CalcExpressionParser.scalar(Array(tokens[(toIdx + 1)...])),
             a.rounded() == a, b.rounded() == b, abs(a) <= 1e15, abs(b) <= 1e15, a != 0 || b != 0
         else { return nil }
         let divisor = greatestCommonDivisor(abs(a), abs(b))
@@ -117,8 +117,8 @@ enum CalcPercent {
         guard tokens.count >= 5, tokens[0] == .ident("round"),
             let toIdx = tokens.firstIndex(of: .ident("to")), toIdx + 2 < tokens.count,
             tokens[toIdx + 1] == .ident("nearest"),
-            let value = CalcParser.evaluate(Array(tokens[1..<toIdx])),
-            let step = CalcParser.evaluate(Array(tokens[(toIdx + 2)...])), step != 0
+            let value = CalcExpressionParser.scalar(Array(tokens[1..<toIdx])),
+            let step = CalcExpressionParser.scalar(Array(tokens[(toIdx + 2)...])), step != 0
         else { return nil }
         let result = (value / step).rounded() * step
         guard result.isFinite else { return nil }
@@ -147,14 +147,14 @@ enum CalcPercent {
         var current: [CalcToken] = []
         for token in tokens {
             if token == .comma || token == .ident("and") {
-                guard let value = CalcParser.evaluate(current) else { return [] }
+                guard let value = CalcExpressionParser.scalar(current) else { return [] }
                 values.append(value)
                 current = []
             } else {
                 current.append(token)
             }
         }
-        guard let last = CalcParser.evaluate(current) else { return [] }
+        guard let last = CalcExpressionParser.scalar(current) else { return [] }
         values.append(last)
         return values
     }

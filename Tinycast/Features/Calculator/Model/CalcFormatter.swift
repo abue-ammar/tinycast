@@ -21,7 +21,7 @@ enum CalcFormatter {
         let v = value == 0 ? 0 : value  // normalize -0
         // Past 2^53 the precision is genuinely gone, so exponent form is the honest answer there.
         if v.rounded() == v && abs(v) <= maxExactInteger {
-            return String(format: "%.0f", v)
+            return String(Int64(v))
         }
         return String(format: "%.10g", v)
     }
@@ -74,19 +74,19 @@ enum CalcFormatter {
 
     /// Insert `,` every three integer digits. Exponent-form strings pass through untouched.
     static func grouped(_ text: String) -> String {
-        guard !text.contains("e"), !text.contains("E") else { return text }
-        let sign = text.hasPrefix("-") ? "-" : ""
-        let unsigned = sign.isEmpty ? text : String(text.dropFirst())
-        let parts = unsigned.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
-        let intDigits = Array(parts[0])
-        guard intDigits.count > 3 else { return text }
-
-        var groupedInt = ""
-        for (i, digit) in intDigits.enumerated() {
-            if i > 0 && (intDigits.count - i) % 3 == 0 { groupedInt.append(",") }
-            groupedInt.append(digit)
+        let bytes = text.utf8
+        guard !bytes.contains(101), !bytes.contains(69) else { return text }
+        let signCount = bytes.first == 45 ? 1 : 0
+        let integer = bytes.prefix { $0 != 46 }
+        guard integer.count - signCount > 3 else { return text }
+        var output: [UInt8] = []
+        output.reserveCapacity(bytes.count + integer.count / 3)
+        for (index, byte) in bytes.enumerated() {
+            if index > signCount, index < integer.count, (integer.count - index) % 3 == 0 {
+                output.append(44)
+            }
+            output.append(byte)
         }
-        let fraction = parts.count > 1 ? "." + parts[1] : ""
-        return sign + groupedInt + fraction
+        return String(bytes: output, encoding: .utf8)!
     }
 }

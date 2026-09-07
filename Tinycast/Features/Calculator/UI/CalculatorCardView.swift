@@ -17,7 +17,7 @@ enum CalcMemo {
         if let cache, cache.query == query, cache.stamp == rates?.fetchedAt, cache.region == region {
             return cache.result
         }
-        let result = CalcEngine.evaluate(query, rates: rates, region: region)
+        let result = CalcEngine.evaluate(query, now: Date(), calendar: .current, rates: rates, region: region)
         cache = Cache(query: query, stamp: rates?.fetchedAt, region: region, result: result)
         return result
     }

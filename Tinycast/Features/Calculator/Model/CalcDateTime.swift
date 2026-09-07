@@ -5,7 +5,7 @@ enum CalcDateTime {
     private enum MomentBias { case future, past, nearest }
 
     static func evaluate(
-        _ raw: String, now: Date = Date(), calendar: Calendar = .current
+        _ raw: String, now: Date, calendar: Calendar
     )
         -> CalcResult?
     {
@@ -18,14 +18,14 @@ enum CalcDateTime {
         let hasDigit = signals.contains(.digit)
         let hasUntil = signals.contains(.until)
         let hasSince = signals.contains(.since)
-        let hasArith = signals.contains(.arithmetic)
+        let hasArith = signals.contains(.arithmetic) && signals.contains(.moment)
         let hasFromAgo = signals.contains(.fromAgo)
         let hasIn = signals.contains(.inWord)
         let hasTimestamp = signals.contains(.timestamp)
         // A named moment needs a qualifier: a lone `tomorrow` is an app search.
         let isBareMoment =
             signals.contains(.at) || signals.contains(.nextOrLast)
-            || (hasDigit && namesADay(lowered)) || CalcTimestamp.looksLikeISO(lowered)
+            || (hasDigit && signals.contains(.dayName) && namesADay(lowered)) || CalcTimestamp.looksLikeISO(lowered)
         guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment || hasTimestamp else {
             return nil
         }
@@ -66,15 +66,16 @@ enum CalcDateTime {
         static let at = Signals(rawValue: 1 << 6)
         static let nextOrLast = Signals(rawValue: 1 << 7)
         static let timestamp = Signals(rawValue: 1 << 8)
+        static let moment = Signals(rawValue: 1 << 9)
+        static let dayName = Signals(rawValue: 1 << 10)
     }
 
-    /// One walk of the query, so the gate costs a single pass rather than ten substring scans.
     private static func keywordSignals(_ query: String) -> Signals {
         var signals: Signals = []
-        var word = ""
-        var isFirst = true
-
-        func classify(_ word: String, isFirst: Bool, isLast: Bool) {
+        let words = query.split(whereSeparator: \.isWhitespace)
+        for (index, word) in words.enumerated() {
+            let isFirst = index == 0
+            let isLast = index == words.count - 1
             switch word {
             case "till", "until", "til": if !isFirst, !isLast { signals.insert(.until) }
             case "since": if !isFirst, !isLast { signals.insert(.since) }
@@ -84,23 +85,30 @@ enum CalcDateTime {
             case "in": if !isFirst, !isLast { signals.insert(.inWord) }
             case "at": if !isFirst, !isLast { signals.insert(.at) }
             case "next", "last": if isFirst { signals.insert(.nextOrLast) }
-            case "unix", "timestamp": signals.insert(.timestamp)
+            case "unix", "timestamp": signals.formUnion([.timestamp, .moment])
             default: break
             }
-        }
-
-        for character in query {
-            if character.isNumber { signals.insert(.digit) }
-            if character.isWhitespace {
-                classify(word, isFirst: isFirst, isLast: false)
-                isFirst = isFirst && word.isEmpty
-                if !word.isEmpty { isFirst = false }
-                word = ""
-            } else {
-                word.append(character)
+            var dots = 0
+            var dashes = 0
+            for byte in word.utf8 {
+                if (48...57).contains(byte) { signals.insert(.digit) }
+                if byte == 46 { dots += 1 }
+                if byte == 45 { dashes += 1 }
+                if byte == 58 || byte == 47 { signals.insert(.moment) }
+            }
+            if dots >= 2 { signals.formUnion([.dayName, .moment]) }
+            if dashes >= 2 { signals.insert(.moment) }
+            for letters in word.utf8.split(whereSeparator: { !(97...122).contains($0) }) {
+                let name = String(bytes: letters, encoding: .utf8)!
+                if monthByName[name] != nil { signals.formUnion([.dayName, .moment]) }
+                if weekdayByName[name] != nil { signals.insert(.moment) }
+                switch name {
+                case "now", "today", "tomorrow", "yesterday", "noon", "midnight", "am", "pm":
+                    signals.insert(.moment)
+                default: break
+                }
             }
         }
-        classify(word, isFirst: isFirst, isLast: true)
         return signals
     }
 
@@ -555,36 +563,28 @@ enum CalcDateTime {
             guard let (hour, minute) = parseClock(atom) else { return nil }
             return clockMoment(hour: hour, minute: minute, now: now, calendar: calendar, bias: bias)
         }
-        if atom.contains("-") {
-            let parts = atom.split(separator: "-").map(String.init)
-            guard parts.count == 3, let year = Int(parts[0]), year > 31,
-                let month = Int(parts[1]), let day = Int(parts[2]),
-                let date = makeDate(year, month, day, calendar)
-            else { return nil }
-            return Moment(date: date, hasTime: false)
+        let separator: Character = atom.contains("-") ? "-" : atom.contains("/") ? "/" : "."
+        let parts = atom.split(separator: separator)
+        guard (2...3).contains(parts.count), let first = Int(parts[0]), let second = Int(parts[1]) else { return nil }
+        if separator == "/", parts.count == 2 {
+            return monthDayMoment(month: first, day: second, now: now, calendar: calendar, bias: bias)
         }
-        if atom.contains("/") {
-            let parts = atom.split(separator: "/").map(String.init)
-            if parts.count == 2, let month = Int(parts[0]), let day = Int(parts[1]) {
-                return monthDayMoment(
-                    month: month, day: day, now: now, calendar: calendar, bias: bias)
-            }
-            if parts.count == 3, let month = Int(parts[0]), let day = Int(parts[1]),
-                let year = Int(parts[2]), let date = makeDate(fullYear(year), month, day, calendar)
-            {
-                return Moment(date: date, hasTime: false)
-            }
+        guard parts.count == 3, let third = Int(parts[2]) else { return nil }
+        let year: Int
+        let month: Int
+        let day: Int
+        switch separator {
+        case "-":
+            guard first > 31 else { return nil }
+            (year, month, day) = (first, second, third)
+        case "/":
+            (year, month, day) = (fullYear(third), first, second)
+        default:
+            guard parts[2].count == 2 || parts[2].count == 4 else { return nil }
+            (year, month, day) = (fullYear(third), second, first)
         }
-        // Dotted dates are day-first: `19.2.27` is 19 February, and the tail rejects versions.
-        if atom.contains(".") {
-            let parts = atom.split(separator: ".").map(String.init)
-            guard parts.count == 3, let day = Int(parts[0]), let month = Int(parts[1]),
-                let year = Int(parts[2]), parts[2].count == 2 || parts[2].count == 4,
-                let date = makeDate(fullYear(year), month, day, calendar)
-            else { return nil }
-            return Moment(date: date, hasTime: false)
-        }
-        return nil
+        guard let date = makeDate(year, month, day, calendar) else { return nil }
+        return Moment(date: date, hasTime: false)
     }
 
     // MARK: - Moment builders
@@ -821,7 +821,7 @@ enum CalcDateTime {
         return (hour, 0)
     }
 
-    private static func makeDate(
+    @inline(never) private static func makeDate(
         _ year: Int, _ month: Int, _ day: Int, _ calendar: Calendar
     )
         -> Date?

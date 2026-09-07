@@ -14,6 +14,27 @@ struct CalcTests {
         expectDisplay("100/4", "25")
         expectDisplay("2^10", "1,024")
         expectDisplay("2^3^2", "512")  // right-associative
+        expectDisplay("2 square root of 9", "6")
+        expectDisplay("square root of 25m2", "5 m")
+        expectDisplay("cube root of -8m3", "-2 m")
+        expectDisplay("cube root of 8%", "0.430886938")
+        expectDisplay("cube root of -8%", "-0.430886938")
+        expectDisplay("2 * (3 + 4) << 1", "28")
+        expectDisplay("1 ≤ 2", "true")
+        expectDisplay("2 ≠ 3", "true")
+        expectDisplay("2 ⊻ 3", "1")
+        expectDisplay("1µs to ns", "1,000 ns")
+        expectDisplay("1μs to ns", "1,000 ns")
+        expectDisplay("2\u{00A0}+\u{2009}2", "4")
+        expectError("10 colo\u{0301}n to usd", "No exchange rate for CRC.")
+        expectCopy("-9007199254740992 + 0", "-9007199254740992")
+        expectCopy("-0 * 1234", "0")
+        expectExpression("10k +", "10k +")
+        expectExpression("45+", "45+")
+        expectExpression("(2)+", "(2)+")
+        expectDisplay("2m / 2m to hex", "0x1")
+        expectDisplay(String(repeating: "1+", count: 100) + "1", "101")
+        expectNil(String(repeating: "1+", count: 128) + "1")
         expectDisplay("2**2", "4")  // "**" is an alias for "^" (Python/JS/shell spelling)
         expectDisplay("2**10", "1,024")
         expectDisplay("2**3**2", "512")  // right-associative, same as "^"
@@ -1235,7 +1256,7 @@ struct CalcTests {
     static func expectBadges(
         _ query: String, source: String, target: String, region: String? = nil
     ) {
-        guard let result = CalcEngine.evaluate(query, rates: fx, region: region) else {
+        guard let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx, region: region) else {
             fail(label(query, region), expected: "\(source) → \(target)", got: "nil")
             return
         }
@@ -1250,7 +1271,7 @@ struct CalcTests {
     static func expectDisplay(_ query: String, _ expected: String, region: String? = nil) {
         guard
             case .value(let display, _)? = CalcEngine.evaluate(
-                query, rates: fx, region: region)?.payload
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)?.payload
         else {
             fail(label(query, region), expected: expected, got: "nil / error")
             return
@@ -1261,7 +1282,7 @@ struct CalcTests {
     static func expectCopy(_ query: String, _ expected: String, region: String? = nil) {
         guard
             case .value(_, let copy)? = CalcEngine.evaluate(
-                query, rates: fx, region: region)?.payload
+                query, now: clock.now, calendar: clock.calendar, rates: fx, region: region)?.payload
         else {
             fail(label(query, region), expected: expected, got: "nil / error")
             return
@@ -1270,7 +1291,7 @@ struct CalcTests {
     }
 
     static func expectError(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, rates: fx)?.payload
+        guard case .error(let message)? = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -1280,7 +1301,8 @@ struct CalcTests {
 
     /// No snapshot has landed yet — first run, or still offline.
     static func expectErrorWithoutRates(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query, rates: nil)?.payload
+        guard case .error(let message)? = CalcEngine.evaluate(
+            query, now: clock.now, calendar: clock.calendar, rates: nil)?.payload
         else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
@@ -1289,7 +1311,7 @@ struct CalcTests {
     }
 
     static func expectExpression(_ query: String, _ expected: String, region: String? = nil) {
-        guard let result = CalcEngine.evaluate(query, rates: fx, region: region) else {
+        guard let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx, region: region) else {
             fail(label(query, region), expected: expected, got: "nil")
             return
         }
@@ -1319,7 +1341,7 @@ struct CalcTests {
     }
 
     static func expectNil(_ query: String, region: String? = nil) {
-        if let result = CalcEngine.evaluate(query, rates: fx, region: region) {
+        if let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: fx, region: region) {
             fail(label(query, region), expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1

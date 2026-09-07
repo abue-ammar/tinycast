@@ -1,6 +1,35 @@
 import Foundation
 
 enum CalcMath {
+    static let functions: [String: @Sendable (Double) -> Double] = [
+        "sqrt": { sqrt($0) }, "log": { log10($0) }, "ln": { log($0) }, "sin": { sin($0) },
+        "cos": { cos($0) }, "tan": { tan($0) }, "abs": { abs($0) }, "floor": { floor($0) },
+        "ceil": { ceil($0) }, "round": { $0.rounded() },
+        "cot": { 1 / tan($0) }, "sec": { 1 / cos($0) }, "csc": { 1 / sin($0) },
+        "asin": { asin($0) }, "acos": { acos($0) }, "atan": { atan($0) },
+        "arcsin": { asin($0) }, "arccos": { acos($0) }, "arctan": { atan($0) },
+        "sinh": { sinh($0) }, "cosh": { cosh($0) }, "tanh": { tanh($0) },
+        "asinh": { asinh($0) }, "acosh": { acosh($0) }, "atanh": { atanh($0) },
+        "cbrt": { cbrt($0) }, "exp": { exp($0) }, "log2": { log2($0) },
+        "sign": { $0 > 0 ? 1 : ($0 < 0 ? -1 : 0) }, "trunc": { $0.rounded(.towardZero) }
+    ]
+
+    static let constants: [String: Double] = [
+        "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2
+    ]
+
+    /// Factorial for non-negative integers; 170! is the last value representable as a Double.
+    static func factorial(_ value: Double) -> Double? {
+        guard value >= 0, value.rounded() == value, value <= 170 else { return nil }
+        var result = 1.0
+        var next = 2.0
+        while next <= value {
+            result *= next
+            next += 1
+        }
+        return result
+    }
+
     static let multipleArguments: Set<String> = [
         "hypot", "round", "log", "gcd", "lcm", "atan2", "pow", "root", "fmod",
         "min", "max", "sum", "avg", "mean", "average"
@@ -10,7 +39,7 @@ enum CalcMath {
     ]
 
     static func isFunction(_ name: String) -> Bool {
-        CalcParser.functions[name] != nil || multipleArguments.contains(name)
+        CalcMath.functions[name] != nil || multipleArguments.contains(name)
     }
 
     static func evaluate(_ name: String, _ values: [Double]) -> Double? {
@@ -41,7 +70,7 @@ enum CalcMath {
             }
             return abs(Double(accumulator)) < 9_007_199_254_740_992 ? Double(accumulator) : nil
         default:
-            if values.count == 1, let function = CalcParser.functions[name] {
+            if values.count == 1, let function = CalcMath.functions[name] {
                 result = function(first)
             } else {
                 guard values.count == 2 else { return nil }
@@ -69,48 +98,24 @@ enum CalcMath {
         return result.isFinite ? result : nil
     }
 
-    static func bindingPower(_ op: Character) -> Int? {
-        switch op {
-        case "≡", "≠", "<", ">", "≤", "≥": return 2
-        case "|": return 5
-        case "⊻": return 6
-        case "&": return 7
-        case "«", "»": return 8
-        case "+", "-": return 10
-        case "*", "/": return 20
-        case "^": return 30
-        default: return nil
-        }
-    }
-
     private static func exactInteger(_ value: Double) -> Int64? {
         guard abs(value) < 9_007_199_254_740_992 else { return nil }
         return Int64(exactly: value)
     }
 
-    static func operatorText(_ op: Character) -> String {
-        switch op {
-        case "≡": return "=="
-        case "«": return "<<"
-        case "»": return ">>"
-        case "⊻": return "xor"
-        default: return String(op)
-        }
-    }
-
-    static func bitwise(_ op: Character, _ left: Double, _ right: Double = 0) -> Double? {
+    static func bitwise(_ op: CalcOperator, _ left: Double, _ right: Double = 0) -> Double? {
         guard let lhs = exactInteger(left), let rhs = exactInteger(right) else { return nil }
         let result: Int64
         switch op {
-        case "&": result = lhs & rhs
-        case "|": result = lhs | rhs
-        case "⊻": result = lhs ^ rhs
-        case "~": result = ~lhs
-        case "«":
+        case .bitAnd: result = lhs & rhs
+        case .bitOr: result = lhs | rhs
+        case .bitXor: result = lhs ^ rhs
+        case .bitNot: result = ~lhs
+        case .shiftLeft:
             guard (0..<64).contains(rhs) else { return nil }
             result = lhs << rhs
             guard result >> rhs == lhs else { return nil }
-        case "»":
+        case .shiftRight:
             guard (0..<64).contains(rhs) else { return nil }
             result = lhs >> rhs
         default: return nil

@@ -54,8 +54,8 @@ enum CalcUnitExpression {
 
         mutating func expression() -> UnitDef? {
             guard var left = factor() else { return nil }
-            while current == .op("*") || current == .op("/") {
-                let dividing = current == .op("/")
+            while current == .op(.multiply) || current == .op(.divide) {
+                let dividing = current == .op(.divide)
                 index += 1
                 guard let right = factor(), let result = combine(left, right, dividing: dividing) else { return nil }
                 left = result
@@ -68,15 +68,15 @@ enum CalcUnitExpression {
             if case .ident(let name) = current, let found = named(name) {
                 unit = found
                 index += 1
-            } else if current == .op("(") {
+            } else if current == .op(.open) {
                 index += 1
-                guard let found = expression(), current == .op(")") else { return nil }
+                guard let found = expression(), current == .op(.close) else { return nil }
                 unit = found
                 index += 1
             } else { return nil }
-            guard current == .op("^") else { return unit }
+            guard current == .op(.power) else { return unit }
             index += 1
-            let negative = current == .op("-")
+            let negative = current == .op(.subtract)
             if negative { index += 1 }
             guard case .number(let number) = current, number <= 16 else { return nil }
             index += 1
