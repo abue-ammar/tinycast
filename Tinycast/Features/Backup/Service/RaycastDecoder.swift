@@ -53,10 +53,13 @@ enum RaycastDecoder {
             throw RaycastImportError.incorrectPassphrase
         }
 
-        guard let payload = try? Zlib.gunzip(payloadGzip, maxOutput: maximumPayloadLength) else {
+        do {
+            return try Zlib.gunzip(payloadGzip, maxOutput: maximumPayloadLength)
+        } catch ZlibError.tooLarge {
+            throw RaycastImportError.tooLarge
+        } catch {
             throw RaycastImportError.corrupt
         }
-        return payload
     }
 
     private static let magic = Data("RAYCFG3\n".utf8)
