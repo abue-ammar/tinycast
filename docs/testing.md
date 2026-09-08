@@ -109,6 +109,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `ext-test` | the extension runtime end to end — boots a real bundle in JavaScriptCore and renders it |
 | `ext-icon-test` | `Extensions/Service/ExtensionIconCache.swift` — artwork sizing and its fallback |
 | `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |
+| `text-diff-test` | `QuickActions/Model/TextDiffEngine.swift` — exact chunks, Unicode, ties, token-cap boundaries and fast paths |
 | `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
 | `backup-archive-test` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
 | `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
@@ -212,6 +213,10 @@ swiftc -O -swift-version 6 Tinycast/Features/Calculator/Model/*.swift \
 /tmp/calc-performance --probe  # every answer as JSON, to diff two builds
 /tmp/calc-performance --cold "10kg to lb"   # first query, including catalog decode
 ```
+
+`Tests/text-diff-performance.swift` is the same shape for `TextDiffEngine`: build it with `-O`
+against the engine, pass a token count, a workload (`dense`, `sparse`, `equal`, `empty`) and an
+iteration count for timings, or `--probe` to diff every chunk between two builds.
 
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the

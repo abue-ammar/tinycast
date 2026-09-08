@@ -8,7 +8,7 @@ enum TextDiffEngine: Sendable {
         case deleted(String)
     }
 
-    /// The LCS matrix is quadratic, so an unbounded diff of a long selection asks for gigabytes.
+    /// The matrix is quadratic, so an unbounded diff asks for gigabytes; a cell must fit `UInt16`.
     static let maxTokens = 4_000
 
     static func diff(original: String, modified: String) -> [Chunk] {
@@ -61,9 +61,9 @@ enum TextDiffEngine: Sendable {
         return tokens
     }
 
-    private static func longestCommonSubsequence(_ old: [String], _ new: [String]) -> [[Int]] {
+    private static func longestCommonSubsequence(_ old: [String], _ new: [String]) -> [[UInt16]] {
         var table = Array(
-            repeating: Array(repeating: 0, count: new.count + 1), count: old.count + 1)
+            repeating: Array(repeating: UInt16(0), count: new.count + 1), count: old.count + 1)
         for i in 0..<old.count {
             for j in 0..<new.count {
                 table[i + 1][j + 1] =

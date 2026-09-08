@@ -145,6 +145,8 @@ bar leaves text about 60% visible behind the title.
 
 `TextDiffEngine` shows what changed when the output is the input, edited. Its LCS matrix is
 quadratic, so past `maxTokens` a side it degrades to whole-text rather than asking for gigabytes.
+At the cap the matrix is the feature's largest allocation, so its cells are `UInt16` rather than
+`Int` — no LCS length can exceed `maxTokens`, and the six bytes an `Int` adds are 96 MB of zeroes.
 
 ## Reading the selection
 
@@ -206,4 +208,5 @@ failure handler, so automatic expansion stays silent as before.
 - Translate into a language that has not been downloaded: the panel offers the download, then
   translates.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.
-- Harness: `quick-action-test` (action metadata, prompt boundaries, preview choices, diffs).
+- Harnesses: `quick-action-test` (action metadata, prompt boundaries, preview choices, diffs) and
+  `text-diff-test` (exact chunks, Unicode, ties, token boundaries and fast paths).
