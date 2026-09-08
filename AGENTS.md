@@ -81,8 +81,10 @@ feature's doc, under its own `## Invariants`.
   keystroke listening.
 - **Extensions stay inside `Features/Extensions/`.** Every view, row, menu, geometry and sizing
   constant an extension needs is written and owned there — never added to `DesignSystem/`, never bolted
-  onto `Theme`, and never shared with another feature. An extension renders untrusted third-party code
-  whose shape we do not control, so it must never be able to force a change on a launcher surface.
+  onto `Theme`, and never lifted somewhere another feature can build on it. Another surface may render
+  one as an opaque box — `LauncherScreen` does exactly that with `ExtensionArgumentsAccessory` — but it
+  never reaches inside one. An extension renders untrusted third-party code whose shape we do not
+  control, so it must never be able to force a change on a launcher surface.
   **Duplicating a view or a piece of layout maths to keep it here is the correct trade**, and the one
   place the no-duplication rule yields. What *is* shared: `Theme`'s base tokens (spacing, radius,
   colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
