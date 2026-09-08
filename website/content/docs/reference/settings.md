@@ -50,6 +50,7 @@ See [Hotkeys](/docs/reference/hotkeys#hyper-key).
 | Launch at login          | —                                           | Off             |
 | Show in menu bar         | —                                           | **On**          |
 | Pop to Root Search       | Immediately · 5 · 15 · 30 · 60 · 90 seconds | **Immediately** |
+| Escape Key Behavior      | Navigate back or close window · Close window and pop to root | **Navigate back or close window** |
 | Auto-switch input source | None, plus every enabled keyboard source    | **None**        |
 
 Shortcuts keep working with the menu-bar icon hidden.

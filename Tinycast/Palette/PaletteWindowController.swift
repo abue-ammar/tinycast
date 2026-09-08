@@ -156,6 +156,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         core.palette.prepare(mode: .launcher)
     }
 
+    /// Skip the Pop to Root Search delay, for a close that means to reset as well as hide.
+    func popToRootNow() {
+        guard !core.extensions.isAuthorizing else { return }
+        popToRootTimer?.invalidate()
+        popToRootTimer = nil
+        popToRoot()
+    }
+
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
     func consumePreservedState() -> Bool {
         guard let timer = popToRootTimer else { return false }
@@ -261,10 +269,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onFieldEditorFocused = { [weak self] context in
             self?.core.inputSourceSwitcher.applySession(to: context)
         }
-        // Backspace in an empty search backs out of a sub-screen to a fresh root.
+        // Backspace in an empty search takes the same back step Escape does.
         panel.onBareBackspace = { [weak self] in
-            guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
-            else { return false }
+            guard let core = self?.core, core.palette.query.isEmpty else { return false }
             // A form field owns the key: the text it deletes is the field's, not a query's.
             if core.palette.isEditingField { return false }
             // The argument form steps back through the answers first, one key per field.
@@ -275,15 +282,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 core.palette.selection = 0
                 return true
             }
-            if core.palette.mode == .aiHistory {
-                core.palette.prepare(mode: .ai)
+            if core.palette.mode == .extensionCommand {
+                core.extensionCoordinator.exitExtensionScreen()
                 return true
             }
             if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
                 return true
             }
-            core.palette.prepare(mode: .launcher)
-            return true
+            return core.palette.pop()
         }
         installPasteMonitor()
         // Handled at the panel: the field editor or a missing main menu eats these first.

@@ -435,11 +435,11 @@ The switcher's glyph comes from the selection. Codex uses OpenAI's mark; Claude 
 own marks; an API model resolves through its connection. It never depends on `modelOptions`, which for
 Codex is empty until the app-server has answered `model/list`; opening the chat on a Codex model warms that list so the title is the
 display name from the first frame. Tab hands chat on to the clipboard, and Escape on an empty
-composer backs it out to the launcher; both go through `prepare`, so the unsent draft is dropped
-rather than carried into a field that would search it. History leaves by the ordinary sub-screen
-route — Tab carries its query to the launcher — because there the field really is a search. Neither
-exit touches the conversation: it lives on `AIChatState`, so Tab away and back resumes the same
-transcript.
+composer takes chat's own back step — to whatever opened it, or out of the palette when its hotkey
+did; either way the unsent draft is dropped rather than carried into a field that would search it.
+History is pushed over chat and pops back to it, and Tab carries its query to the launcher because
+there the field really is a search. Neither exit touches the conversation: it lives on `AIChatState`,
+so Tab away and back resumes the same transcript.
 
 The model switcher is `fixedSize` with its title shortened in `AIChatCoordinator` (26 characters,
 middle ellipsis) rather than truncated by layout: a flexible label claimed the row up to its max

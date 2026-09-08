@@ -418,7 +418,8 @@ struct RootPaletteView: View {
                 if vm.isControlListOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
                     menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
-                    mode: vm.mode)
+                    mode: vm.mode, canGoBack: vm.canGoBack,
+                    behavior: settings.escapeKeyBehavior)
                 {
                 case .closeMenu:
                     closeMenus()
@@ -428,10 +429,14 @@ struct RootPaletteView: View {
                     vm.query = ""
                 case .exitExtensionScreen:
                     core.extensionCoordinator.exitExtensionScreen()
-                case .exitToLauncher:
-                    exitToLauncher()
+                case .goBack:
+                    goBack()
                 case .hidePalette:
                     core.paletteCoordinator.hidePalette()
+                    // This behavior promises a root search on reopen, whatever the delay says.
+                    if settings.escapeKeyBehavior == .closeAndPopToRoot {
+                        core.paletteCoordinator.popToRootNow()
+                    }
                 }
                 return .handled
             }
@@ -572,9 +577,9 @@ struct RootPaletteView: View {
         HStack(alignment: .center, spacing: 0) {
             // Matches the list rows and section headers' own indent below.
             headerGutter(width: Theme.Spacing.md * 2)
-            // Sub-screens of the root search, so their header icon is a back chevron.
-            if vm.mode != .launcher {
-                Button(action: navigateBack) {
+            // Drawn only where it leads somewhere: a directly summoned screen is its own root.
+            if hasBackStep {
+                Button(action: goBack) {
                     Image(systemName: "chevron.left")
                         .font(Theme.Typography.headerIcon)
                         .symbolRenderingMode(.hierarchical)
@@ -1035,7 +1040,9 @@ struct RootPaletteView: View {
             mode: vm.mode, aiEnabled: settings.aiEnabled,
             clipboardEnabled: settings.clipboardEnabled)
         {
-        case .carryQuery(let mode): vm.mode = mode
+        case .carryQuery(let mode):
+            vm.mode = mode
+            vm.resetNavigation()
         case .freshScreen(let mode): vm.prepare(mode: mode)
         case .ask: core.aiChatCoordinator.ask(vm.query)
         }
@@ -1083,21 +1090,17 @@ struct RootPaletteView: View {
         open(.argumentOptions, highlighting: 0)
     }
 
-    private func navigateBack() {
-        if vm.mode == .aiHistory {
-            vm.prepare(mode: .ai)
-        } else {
-            exitToLauncher()
-        }
+    /// An extension keeps its own stack, so it can have a step back the palette cannot see.
+    private var hasBackStep: Bool {
+        vm.canGoBack || (vm.mode == .extensionCommand && extensions.navigationDepth > 1)
     }
 
-    /// Back out to a fresh root search, the same reset `prepare` does on show.
-    private func exitToLauncher() {
+    private func goBack() {
         if vm.mode == .extensionCommand {
             core.extensionCoordinator.exitExtensionScreen()
             return
         }
-        vm.prepare(mode: .launcher)
+        if !vm.pop() { core.paletteCoordinator.hidePalette() }
     }
 
     private func activateSelection() {
