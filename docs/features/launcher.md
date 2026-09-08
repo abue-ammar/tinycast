@@ -34,8 +34,9 @@ earliest scope wins).
 
 ## Search scopes
 
-`SearchScopes` (`Launcher/Model/SearchScopes.swift`) owns the paths; the list is user-editable in General
-Settings and persisted as `AppSettings.searchScopes`. A scope is either a directory or a single `.app`
+`SearchScopes` (`Launcher/Model/SearchScopes.swift`) owns the paths; the list is user-editable in
+Settings → Applications → Search Scopes and persisted as `AppSettings.searchScopes`.
+A scope is either a directory or a single `.app`
 bundle, stored tilde-abbreviated so the UI reads cleanly and a settings backup stays portable.
 
 Enumeration descends **one subfolder deep** — a scope's own `.app` children, plus any inside an
