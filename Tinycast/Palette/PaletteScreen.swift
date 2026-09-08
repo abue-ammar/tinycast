@@ -141,11 +141,12 @@ struct PaletteHeaderAccessory {
         self.view = view
     }
 
-    /// Tab order: the next field, or nil once focus belongs back in the search field.
-    func fieldAfter(_ current: String?) -> String? {
+    /// Adjacent Tab field, or nil once focus belongs back in the search field.
+    func field(after current: String?, backwards: Bool) -> String? {
         guard let current, let index = fieldNames.firstIndex(of: current) else {
-            return fieldNames.first
+            return backwards ? fieldNames.last : fieldNames.first
         }
-        return fieldNames.indices.contains(index + 1) ? fieldNames[index + 1] : nil
+        let next = index + (backwards ? -1 : 1)
+        return fieldNames.indices.contains(next) ? fieldNames[next] : nil
     }
 }

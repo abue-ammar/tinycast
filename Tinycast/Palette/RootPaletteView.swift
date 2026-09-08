@@ -275,7 +275,12 @@ struct RootPaletteView: View {
                         .allowsHitTesting(menuOpen)
                 }
                 // The menu lives in its own window; this only reports the one to hang it from.
-                .background(WindowReader { hostWindow = $0 })
+                .background(
+                    WindowReader {
+                        hostWindow = $0
+                        installHeaderArrowHandler(in: $0)
+                    }
+                )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .background(Theme.Colors.panelScrim)
@@ -340,7 +345,10 @@ struct RootPaletteView: View {
             }
             // The hosted tree is its own hierarchy, so the highlight has to be pushed into it.
             .onChange(of: menuSelection) { syncMenuPanel(presenting: false) }
-            .onDisappear { menuPanel.hide() }
+            .onDisappear {
+                menuPanel.hide()
+                (hostWindow as? PalettePanel)?.onHeaderFieldBoundaryArrow = nil
+            }
             .onAppear { searchFocused = !screen.hidesSearchField }
             .modifier(SearchFieldHiding(hidden: hidesSearchField, apply: applySearchFieldHiding))
             // Several paths flip `paletteIsCollapsed`, so resize the window to match.
@@ -1052,9 +1060,28 @@ struct RootPaletteView: View {
             return cycleMode()
         }
         // Read from the local value: a `@FocusState` set in this tick still reads back stale.
-        let next = accessory.fieldAfter(argumentFocused)
+        let next = accessory.field(after: argumentFocused, backwards: backwards)
         argumentFocused = next
         searchFocused = next == nil
+    }
+
+    /// Right at an inline field's end and Left at its start continue the same ring as Tab.
+    private func installHeaderArrowHandler(in window: NSWindow?) {
+        guard let panel = window as? PalettePanel else { return }
+        panel.onHeaderFieldBoundaryArrow = { boundary in
+            guard !menuOpen, !vm.isControlListOpen, !isCollapsed,
+                let accessory = headerAccessory, !accessory.fieldNames.isEmpty
+            else { return false }
+            switch boundary {
+            case .leading:
+                // Query's left edge keeps its normal caret behavior; an argument moves back.
+                guard argumentFocused != nil else { return false }
+                advanceTabFocus(backwards: true)
+            case .trailing:
+                advanceTabFocus(backwards: false)
+            }
+            return true
+        }
     }
 
     /// AppKit selects the whole query as the field editor comes back, which is the wanted reset.
