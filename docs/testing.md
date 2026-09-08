@@ -62,7 +62,8 @@ second case, and it is why `ClipboardManager.fileURLs(on:volatileRoots:)` and `P
 each take the thing they act on as a parameter: a seam that exists so the harness never has to reach
 for the shared board. Its scratch tree lives under `temporaryDirectory`, which is itself a volatile
 root, so the cases about *reading* files inject an empty root list and the one case about durability
-is the one that runs against the shipped roots.
+is the one that runs against the shipped roots. Both file URL and legacy filename boards also cover
+the capture cap, exact ordering, rejected prefixes, duplicates and symlinks using private fixtures.
 
 Never join a compile to its run with `&&` in a `set -e` script. `set -e` is specified to ignore a
 failing command in a non-final AND-OR list member, so `swiftc … && /tmp/x` swallows a compile error and
@@ -217,6 +218,19 @@ swiftc -O -swift-version 6 Tinycast/Features/Calculator/Model/*.swift \
 `Tests/text-diff-performance.swift` is the same shape for `TextDiffEngine`: build it with `-O`
 against the engine, pass a token count, a workload (`dense`, `sparse`, `equal`, `empty`) and an
 iteration count for timings, or `--probe` to diff every chunk between two builds.
+
+`Tests/clipboard-file-performance.swift` measures file capture with private pasteboards and temporary
+fixtures. It reports wall and process CPU time as JSON for modern and legacy formats, including
+32/1,000/10,000 durable files and rejected-input controls. Keep it outside `run-tests.sh`; compare
+three fresh processes per build with identical `-O` settings:
+
+```sh
+swiftc -O -swift-version 6 Tinycast/Platform/PasteboardFiles.swift \
+    Tinycast/Features/Clipboard/Model/{ClipboardStore,ClipboardFilter,ColorValue,ColorFormat,ColorSpaces}.swift \
+    Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
+    Tests/clipboard-file-performance.swift -o /tmp/clipboard-file-performance
+/tmp/clipboard-file-performance
+```
 
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the

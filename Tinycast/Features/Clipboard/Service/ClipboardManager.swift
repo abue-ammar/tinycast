@@ -109,9 +109,11 @@ final class ClipboardManager {
     nonisolated static func fileURLs(
         on pasteboard: NSPasteboard, volatileRoots roots: [String] = volatileRoots
     ) -> [String]? {
-        let durable = PasteboardFiles.urls(on: pasteboard)
-            .filter { isDurable($0, roots: roots) }
-            .prefix(maxCapturedFiles)
+        // Lazy, so a ten-thousand-file select-all stops checking the filesystem at the cap.
+        let durable = Array(
+            PasteboardFiles.urls(on: pasteboard).lazy
+                .filter { isDurable($0, roots: roots) }
+                .prefix(maxCapturedFiles))
         // Nil rather than empty, so a copied `http` URL falls through and stays a link.
         guard !durable.isEmpty else { return nil }
         // Reversed on insert, so the first file copied ends up leading the history.
