@@ -74,6 +74,7 @@ struct ExtensionLaunchContext: Sendable {
     var caches: [String: [String: String]]
     var arguments: [String: String]
     var fallbackText: String?
+    var launchType: ExtensionLaunchType = .userInitiated
     /// Injected, never read: a running command keeps what it booted with.
     var isDarkAppearance: Bool
 
@@ -89,12 +90,12 @@ struct ExtensionLaunchContext: Sendable {
             "raycastVersion": ExtensionRuntimeVersion.raycastAPI,
             "textSize": "medium",
             "appearance": isDarkAppearance ? "dark" : "light",
-            "launchType": "userInitiated",
+            "launchType": launchType.rawValue,
             "canAccess": false
         ]
         environment["ownerOrAuthorName"] = extensionTitle
 
-        var launchProps: [String: Any] = ["launchType": "userInitiated", "arguments": arguments]
+        var launchProps: [String: Any] = ["launchType": launchType.rawValue, "arguments": arguments]
         if let fallbackText { launchProps["fallbackText"] = fallbackText }
 
         return ExtensionRuntime.jsonString(

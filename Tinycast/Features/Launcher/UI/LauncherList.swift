@@ -269,6 +269,10 @@ private struct AppRow: View {
                 }
             }
             Spacer()
+            if let refresh = app.backgroundRefresh {
+                ExtensionRefreshIndicator(state: refresh)
+                    .font(Theme.Typography.rowTrailing)
+            }
             // Holding ⌘ turns the trailing label into the chord that launches this row.
             if let slot, palette.commandHeld {
                 HStack(spacing: Theme.Spacing.xxs) {

@@ -89,7 +89,8 @@ struct ExtensionsSettingsView: View {
                 Label("What works", systemImage: "checkmark.circle")
                 Text(
                     "List, detail, form and grid commands, and ones that just run. Preferences, "
-                        + "arguments, storage, the clipboard, toasts, HUDs and OAuth sign-in.")
+                        + "arguments, storage, the clipboard, toasts, HUDs and OAuth sign-in. "
+                        + "No-view commands refresh their subtitle on their manifest interval.")
             }
             LabeledContent {
                 EmptyView()
@@ -527,6 +528,58 @@ private struct CommandRows: View {
             ExtensionPreferenceRow(
                 extensionName: installed.manifest.name, schema: schema, indent: Theme.Spacing.lg)
         }
+        // The same predicate the scheduler runs on: an unparseable interval gets no toggle.
+        if ExtensionRefreshPolicy.isSchedulable(mode: command.mode, interval: command.interval),
+            let schedule = command.intervalRaw
+        {
+            ExtensionRefreshRow(
+                extensionName: installed.manifest.name, command: command, schedule: schedule,
+                indent: Theme.Spacing.lg)
+        }
+    }
+}
+
+/// One `no-view` command's background refresh: Raycast's interval preference, stored locally.
+private struct ExtensionRefreshRow: View {
+    let extensionName: String
+    let command: ExtensionCommand
+    let schedule: String
+    var indent: CGFloat = 0
+    @Environment(AppCore.self) private var core
+
+    private static let relative: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.dateTimeStyle = .named
+        return formatter
+    }()
+
+    var body: some View {
+        let info = core.extensions.backgroundInfo(extension: extensionName, command: command.name)
+        SettingsCardRow(title: "Background refresh", detail: detail(for: info), indent: indent) {
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { info.backgroundEnabled }, set: { setEnabled($0) })
+            )
+            .labelsHidden()
+        }
+    }
+
+    private func detail(for info: ExtensionCommandMetadata) -> String {
+        var detail = "Runs every \(schedule) in the background."
+        if let lastRun = info.lastRun {
+            detail += " Last refresh \(Self.relative.localizedString(for: lastRun, relativeTo: Date()))."
+        } else {
+            detail += " Hasn't refreshed yet."
+        }
+        if let error = info.lastError {
+            detail += " Last error: \(ExtensionRefreshPolicy.headline(error))."
+        }
+        return detail
+    }
+
+    private func setEnabled(_ enabled: Bool) {
+        core.extensions.setBackgroundEnabled(enabled, extension: extensionName, command: command.name)
     }
 }
 

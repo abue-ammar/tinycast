@@ -81,6 +81,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let kind: Kind
     /// Secondary label beside the name, for an entry whose name alone can't say what it acts on.
     var subtitle: String?
+    /// Background-refresh dot for a scheduled extension command; nil everywhere else.
+    var backgroundRefresh: ExtensionRefreshState?
     /// Other names as strong as the display name: a snippet's keyword, the name in an Info.plist.
     var matchAliases: [String] = []
     /// Per-item symbol, for the one kind whose glyph is the user's choice. Nil elsewhere.

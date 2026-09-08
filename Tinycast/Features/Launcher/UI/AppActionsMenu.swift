@@ -85,6 +85,22 @@ enum AppActionsMenu {
                 })
         }
         if app.kind == .extensionCommand {
+            if core.extensions.isBackgroundSchedulable(for: app) {
+                let enabled = core.extensions.isBackgroundEnabled(for: app)
+                items.append(
+                    PopoverMenuItem(
+                        title: enabled ? "Disable Background Refresh" : "Enable Background Refresh",
+                        systemImage: enabled ? "pause.circle" : "play.circle"
+                    ) {
+                        core.extensions.toggleBackgroundRefresh(for: app)
+                    })
+                if enabled {
+                    items.append(
+                        PopoverMenuItem(title: "Refresh Now", systemImage: "arrow.clockwise") {
+                            core.extensions.refreshNow(app)
+                        })
+                }
+            }
             items.append(
                 PopoverMenuItem(title: "Configure Extension", systemImage: "slider.horizontal.3") {
                     core.extensionCoordinator.showExtensionSettings(for: app)
