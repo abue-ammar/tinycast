@@ -126,9 +126,12 @@ and ⌘⎋ skips the whole stack for a fresh root search without closing the win
 `closeAndPopToRoot` an empty field closes the window and resets it immediately, whatever Pop to Root
 Search says. Clearing the query is still the first press either way.
 
-The header draws a back chevron **only where there is somewhere to go** — `canGoBack`, or an
-extension whose own `navigationDepth` is past 1 — so a directly summoned screen shows its own icon
-rather than a chevron that would close the window.
+The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
+slot means once you are off the root, and a slot that changed shape with provenance would read
+as two different controls. Where the click lands still depends on the stack — a pushed screen
+pops, a root one closes — so `backHelp` says which, rather than promising a step that is really
+a close. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
+`HeaderBackButton` keeps that hover state to itself so the header around it never re-renders.
 
 The launcher advertises the first hop in the header — `AI Chat` beside a `⇥` cap, the footer's own
 pairing of a label with its key. It is drawn only when Tab really would open chat, a condition read

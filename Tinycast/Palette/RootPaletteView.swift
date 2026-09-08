@@ -577,17 +577,9 @@ struct RootPaletteView: View {
         HStack(alignment: .center, spacing: 0) {
             // Matches the list rows and section headers' own indent below.
             headerGutter(width: Theme.Spacing.md * 2)
-            // Drawn only where it leads somewhere: a directly summoned screen is its own root.
-            if hasBackStep {
-                Button(action: goBack) {
-                    Image(systemName: "chevron.left")
-                        .font(Theme.Typography.headerIcon)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.secondary)
-                        .frame(width: Theme.Size.headerIconSlot)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+            // Every sub-screen leaves the same way, so the slot reads the same on all of them.
+            if vm.mode != .launcher {
+                HeaderBackButton(help: backHelp, action: goBack)
             } else {
                 Image(systemName: vm.mode.systemImage)
                     .font(Theme.Typography.headerIcon)
@@ -1095,6 +1087,12 @@ struct RootPaletteView: View {
         vm.canGoBack || (vm.mode == .extensionCommand && extensions.navigationDepth > 1)
     }
 
+    /// Never promises a step the click does not take: a root screen closes rather than backs.
+    private var backHelp: String {
+        let escape = hasBackStep ? "Esc to go back" : "Esc to close"
+        return "\(escape) or ⌘ Esc to go to root search"
+    }
+
     private func goBack() {
         if vm.mode == .extensionCommand {
             core.extensionCoordinator.exitExtensionScreen()
@@ -1158,6 +1156,28 @@ private struct MenuCircleButton: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .frosted(in: Circle())
+    }
+}
+
+/// Hover state lives here, so lighting the chevron never re-renders the header around it.
+private struct HeaderBackButton: View {
+    let help: String
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "chevron.left")
+                .font(Theme.Typography.headerIcon)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(hovered ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+                .frame(width: Theme.Size.headerIconSlot)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
+        .help(help)
     }
 }
 

@@ -229,6 +229,8 @@ enum Theme {
         static let exit: TimeInterval = 0.12
         /// Fade-in/out for a hover `Tooltip`.
         static let tooltip: TimeInterval = 0.15
+        /// A control lighting up under the pointer; short enough to feel like a response.
+        static let hover: TimeInterval = 0.12
         static let copyFeedback: TimeInterval = 1.2
         static let chatFooter: TimeInterval = 0.12
         /// A Settings search result scrolling its section into view, then the pulse that marks it.
