@@ -338,6 +338,7 @@ run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/JSONValue.swift \
                            Tinycast/Features/MCP/Model/*.swift \
                            Tinycast/Features/MCP/Settings/MCPSettingsStore.swift
+run -O text-diff-test      Tinycast/Features/QuickActions/Model/TextDiffEngine.swift
 run quick-action-test      Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \
