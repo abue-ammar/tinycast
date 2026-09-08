@@ -17,6 +17,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private let dropGuides = PaletteDropGuideController()
     /// ⌘V: `Edit ▸ Paste` claims it before `sendEvent` whenever the board also carries text.
     private var pasteMonitor: Any?
+    /// ⌘⎋: the window server claims it, so no keystroke is left for the responder chain to see.
+    private lazy var commandEscapeTap = CommandEscapeTap { [weak self] in
+        guard let self, self.panel?.isKeyWindow == true else { return false }
+        self.core.palette.prepare(mode: .launcher)
+        return true
+    }
 
     /// What a drag in flight needs: where home is, and whether releasing now would land there.
     private struct DragSession {
@@ -61,6 +67,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Events go stale while the palette is closed, and the countdown only ticks while up.
             core.calendarCoordinator.paletteDidShow()
             core.palette.noteVisible(true)
+            // Only while we are on screen: a system-wide tap has no business outliving the window.
+            commandEscapeTap.enable()
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
@@ -109,6 +117,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
         core.palette.noteVisible(false)
@@ -299,11 +308,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 let index = FavoriteSlots.index(forKeyCode: event.keyCode)
             {
                 self.core.palette.noteFavoriteSlot(index)
-                return true
-            }
-            // Escape has no character, so it matches by key code.
-            if Int(event.keyCode) == kVK_Escape {
-                self.core.palette.prepare(mode: .launcher)
                 return true
             }
             guard let character = Self.commandCharacter(from: event) else { return false }

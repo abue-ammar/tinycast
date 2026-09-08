@@ -400,8 +400,8 @@ left alone: the handler returns `.ignored` for them, and their own `onSubmit` st
 
 ## Chords `onKeyPress` never sees
 
-Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and all of them are handled in
-`PalettePanel.sendEvent` before `super` hands the event to the responder chain:
+Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Several kinds do not. All but the last are
+handled in `PalettePanel.sendEvent` before `super` hands the event to the responder chain:
 
 - **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
 - **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
@@ -414,12 +414,18 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and a
   `onKeyPress(keys: ["."])` never fires. Pin (⌘.) therefore arrives through `onCommandShortcut`,
   which bumps `PaletteState.pinChordToken`; `RootPaletteView` observes that and resolves the row
   through the current screen, so **which** row gets pinned still comes from `screen.rows` alone.
-  ⌘⎋ arrives the same way and matches by key code, Escape carrying no character: it
-  `prepare(mode: .launcher)`s, which is one chord back to the root search from any depth, window
-  still open.
+- **Chords the window server keeps for itself.** ⌘⎋ is the one that bites: macOS binds it before any
+  app sees it, so unlike ⌘. there is no keystroke left for `sendEvent` to intercept — a handler in
+  the responder chain compiles, runs never, and looks like a palette bug. `CommandEscapeTap` takes it
+  at the head of the HID stream instead, the one place earlier than the system's own binding, and
+  `prepare(mode: .launcher)`s: one chord back to the root search from any depth, window still open.
+  The tap is enabled only while the palette is on screen, watches `keyDown` alone, and declines the
+  chord whenever the panel is not key, so nothing else on the system loses ⌘⎋ to it. It is a
+  modifying tap, so it needs Accessibility — without that grant the chord is simply unavailable,
+  which is the only path this codebase has to it.
 
-Adding a chord that "does nothing" is almost always one of these three — check `sendEvent` before
-assuming the handler is wrong.
+Adding a chord that "does nothing" is almost always one of these — check `sendEvent`, and then
+whether macOS has claimed the chord, before assuming the handler is wrong.
 
 ## Emacs navigation chords
 

@@ -258,8 +258,11 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   and run it: Escape returns to the launcher **with the query still typed and the row still
   selected**, and the next press clears it. The same screen from its own global hotkey hides the
   palette instead, and shows its own header icon rather than a back chevron
-- ⌘⎋ from any depth lands on an empty root search with the window still open; a bare ⌫ in an empty
-  field walks the same path Escape does
+- ⌘⎋ from any depth lands on an empty root search with the window still open — **must be checked on
+  a real keyboard**: macOS claims the chord, so `CommandEscapeTap` is the only thing that delivers it
+  and it needs Accessibility granted to the running build. With the palette closed, ⌘⎋ still does
+  whatever macOS does with it
+- A bare ⌫ in an empty field walks the same path Escape does
 - General ▸ Escape Key Behavior set to `Close window and pop to root`: Escape on any screen closes
   the window, and reopening lands on the root search whatever Pop to Root Search says
 - Reopening focuses the search field with an empty query, in the same position and at the same size
