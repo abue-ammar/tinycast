@@ -50,7 +50,8 @@ returns nil rather than an empty array, so the text branch runs; caps a batch at
 `maxCapturedFiles`, so a Finder select-all cannot insert ten thousand rows on one tick; and
 **rejects a file under a volatile root** (`/tmp`, `/var/folders`, `~/Library/Caches`), because an
 app that stages a temp export beside better inline content must keep the inline content. Paths come
-back reversed so the *first* file copied ends up leading the history.
+back reversed so the *first* file copied ends up leading the history. Durability checks stop after
+32 accepted files; rejected paths do not consume the cap. Pasteboard decoding still reads all items.
 
 `ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
 re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the
