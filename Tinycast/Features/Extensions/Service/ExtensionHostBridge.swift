@@ -127,15 +127,16 @@ enum ExtensionHostError: LocalizedError {
 final class ExtensionHostBridge: ExtensionHostAPI {
     weak var context: ExtensionHostContext?
     private let clipboardStore: ClipboardStore
-    private let fetcher = ExtensionFetcher()
+    private let fetcher: ExtensionFetcher
     private let sockets = ExtensionWebSocketBridge()
 
-    init(clipboardStore: ClipboardStore) {
+    init(clipboardStore: ClipboardStore, fetcher: ExtensionFetcher = ExtensionFetcher()) {
         self.clipboardStore = clipboardStore
+        self.fetcher = fetcher
     }
 
     func scoped(to context: ExtensionHostContext) -> ExtensionHostBridge {
-        let bridge = ExtensionHostBridge(clipboardStore: clipboardStore)
+        let bridge = ExtensionHostBridge(clipboardStore: clipboardStore, fetcher: fetcher)
         bridge.context = context
         return bridge
     }

@@ -17,6 +17,9 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
   serialized by `ExtensionMenuBarManager`. Every menu session has its own bridge and an immutable
   extension namespace, so storage, preferences, OAuth and command launches cannot target the palette's
   extension. Shutdown cancels pending host tasks; a generation check rejects replies from old contexts.
+- **Bridges share one private HTTP transport, never execution state.** Cookies, credential storage and
+  URL caching are disabled. Individual task cancellation leaves other requests running; releasing the
+  fetcher invalidates its session so CFNetwork does not retain discarded connections and sessions.
 - **An idle menu item holds no JavaScript.** Once `isLoading` clears, keep only the native button and
   its snapshot. Reload a fresh context when its menu opens; retain it until the menu closes and any
   asynchronous action and host calls finish. Never keep a context alive to preserve handlers.

@@ -9,10 +9,13 @@ final class ExtensionFetcher: Sendable {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 60
         configuration.httpCookieStorage = nil
-        // Extensions cache through the Cache API; a shared URL cache would surprise them.
+        configuration.urlCredentialStorage = nil
+        configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         session = URLSession(configuration: configuration)
     }
+
+    deinit { session.invalidateAndCancel() }
 
     enum FetchError: LocalizedError {
         case badURL(String)
