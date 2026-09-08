@@ -144,16 +144,19 @@ final class AIChatCoordinator {
 
     func startNewChat() {
         chat.startNewChat()
-        palette.prepare(mode: .ai)
+        // A fresh conversation, not a fresh root: whatever opened chat is still behind it.
+        palette.replace(mode: .ai)
     }
 
     func showHistory() {
-        palette.prepare(mode: .aiHistory)
+        palette.push(mode: .aiHistory)
     }
 
     func openChat(id: UUID) {
         guard chat.open(id: id) else { return }
-        palette.prepare(mode: .ai)
+        // History is left behind rather than stacked under, so one back step leaves chat for good.
+        _ = palette.pop()
+        palette.replace(mode: .ai)
     }
 
     func deleteChat(id: UUID) {

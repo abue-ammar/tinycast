@@ -87,6 +87,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |
+| `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
@@ -253,6 +254,17 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - Palette hotkey opens the launcher; pressing it again closes it; Escape clears a non-empty query,
   then hides on a second press; clicking away closes it
+- Search a mode command (Clipboard History, Search Emoji, Search Quicklinks, Search Files, AI Chat)
+  and run it: Escape returns to the launcher **with the query still typed and the row still
+  selected**, and the next press clears it. The same screen from its own global hotkey hides the
+  palette instead, and shows its own header icon rather than a back chevron
+- ⌘⎋ from any depth lands on an empty root search with the window still open — **must be checked on
+  a real keyboard**: macOS claims the chord, so `CommandEscapeTap` is the only thing that delivers it
+  and it needs Accessibility granted to the running build. With the palette closed, ⌘⎋ still does
+  whatever macOS does with it
+- A bare ⌫ in an empty field walks the same path Escape does
+- General ▸ Escape Key Behavior set to `Close window and pop to root`: Escape on any screen closes
+  the window, and reopening lands on the root search whatever Pop to Root Search says
 - Reopening focuses the search field with an empty query, in the same position and at the same size
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - With a CJK IME: the placeholder clears as soon as composition starts and the composing text never

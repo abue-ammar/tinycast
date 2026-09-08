@@ -163,6 +163,14 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalGeneral, "Pop to Root Search")
                     Text("Reset to the launcher this long after the window closes.")
                 }
+                Picker(selection: $settings.escapeKeyBehavior) {
+                    ForEach(EscapeKeyBehavior.allCases) { behavior in
+                        Text(behavior.title).tag(behavior)
+                    }
+                } label: {
+                    SettingsRowTitle(.generalGeneral, "Escape Key Behavior")
+                    Text("What Escape does once the search field is already empty.")
+                }
                 // Empty only when TIS fails; one layout still lists, so the row stays put.
                 if !inputSources.isEmpty {
                     Picker(selection: $settings.autoSwitchInputSourceID) {

@@ -55,18 +55,25 @@ final class PaletteCoordinator {
         }
     }
 
+    /// A palette already up is being navigated, not summoned: the screen under it is the back step.
+    func navigate(to mode: PaletteMode) {
+        if windowController.isVisible, palette.mode != mode {
+            palette.push(mode: mode)
+        } else {
+            palette.prepare(mode: mode)
+        }
+    }
+
     /// Shows the palette, honoring Pop to Root Search. See docs/features/palette.md#state-flow.
     func showPalette(
         mode: PaletteMode, restoreAnyMode: Bool = false, seeding query: String? = nil
     ) {
         let preserved = windowController.consumePreservedState()
-        // A carried query always opens fresh: restoring the previous screen would drop it.
-        if let query {
-            palette.prepare(mode: mode)
-            palette.query = query
-        } else if !(preserved && (restoreAnyMode || palette.mode == mode)) {
-            palette.prepare(mode: mode)
+        // A carried query always opens the screen fresh: restoring the previous one would drop it.
+        if query != nil || !(preserved && (restoreAnyMode || palette.mode == mode)) {
+            navigate(to: mode)
         }
+        if let query { palette.query = query }
         windowController.show()
         if palette.mode == .fileSearch { fileSearch.search(palette.query) }
         // Re-scan on open so an app uninstalled since the last scan drops out of the launcher.
@@ -76,6 +83,11 @@ final class PaletteCoordinator {
     func hidePalette(restoreFocus: Bool = true) {
         fileSearch.cancel()
         windowController.hide(restoreFocus: restoreFocus)
+    }
+
+    /// Reset to the root search now rather than after the Pop to Root Search delay.
+    func popToRootNow() {
+        windowController.popToRootNow()
     }
 
     /// True for the slim compact bar: compact on, launcher root, empty, not overflowed.

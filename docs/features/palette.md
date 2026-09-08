@@ -57,7 +57,8 @@ only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.
 Showing the palette calls `prepare(mode:)`, which resets state and bumps `focusToken` (a UUID) so the
-SwiftUI search field re-focuses.
+SwiftUI search field re-focuses. `prepare` is one of four motions over the screen — see
+[Navigation](#navigation).
 
 Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path: the
 palette returns to the launcher *and* chat starts a new conversation, at once or after
@@ -85,17 +86,52 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.customCommandArguments` | `CustomCommandArgumentsScreen` | `CustomCommandArgumentsView` (see [custom-commands.md](custom-commands.md#arguments)) |
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
 
-Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab rings the three
-surfaces a reader opens directly — launcher → AI chat → clipboard → launcher** — unless the screen
-claims it through `tabTarget(from:backwards:)` (an extension's `Form` walks its own fields), or the
-selected row declares arguments, in which case it walks those fields first (see below); every other mode exits
-to the launcher rather than joining the ring, and is reached by a command or a global hotkey, with
+**Tab rings the three surfaces a reader opens directly — launcher → AI chat → clipboard → launcher**
+— unless the screen claims it through `tabTarget(from:backwards:)` (an extension's `Form` walks its
+own fields), or the selected row declares arguments, in which case it walks those fields first (see
+below); every other mode stays off the ring, and is reached by a command or a global hotkey, with
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
-`aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced. **Escape clears a
-non-empty query before it leaves the screen**, so one press clears and the next leaves: chat backs
-out to the launcher, an extension screen exits itself, and anywhere else the palette hides. A focused
-inline argument field is a rung above the query, so Escape hands focus back to the search field
-first — the query that found the command is still there to be cleared by the next press.
+`aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced.
+
+### Navigation
+
+**The summon decides where a screen sits, not the mode.** `PaletteCoordinator.navigate(to:)` is the
+one rule: a palette already on screen is being *navigated*, so the current screen is pushed and
+becomes the step back; a hidden one is being *summoned*, so the new screen is a root with nothing
+behind it. Every mode command and every global hotkey funnels through `showPalette`, which calls it —
+so typing "Clipboard History" at the root and pressing ↵ leaves a step back to the search that found
+it, while the Clipboard History hotkey does not. Nothing per-feature encodes this.
+
+`PaletteState` holds the screens below `mode` as `[PaletteFrame]` — mode, query and selection, enough
+that returning looks like never having left — and offers four motions over it:
+
+| Motion | Meaning |
+| --- | --- |
+| `prepare(mode:)` | become the root: open fresh, drop the stack |
+| `replace(mode:)` | swap the screen, keep what it was opened over (a new chat, not a new root) |
+| `push(mode:)` | open over the current screen, which a back step returns to |
+| `pop()` | restore the screen underneath; `false` when this one is the root |
+
+`pop()` bumps `followToken` rather than `resetToken`: the reset token exists to snap a list to the
+top, which would throw away the very selection being restored.
+
+**Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
+leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
+pushed screen pops, and a root hides the palette. A focused inline argument field is a rung above the
+query, so Escape hands focus back to the search field first — the query that found the command is
+still there to be cleared by the next press. A bare backspace in an empty field takes the same step,
+and ⌘⎋ skips the whole stack for a fresh root search without closing the window.
+
+`EscapeKeyBehavior` (General settings) can trade the walk back for the old behavior: under
+`closeAndPopToRoot` an empty field closes the window and resets it immediately, whatever Pop to Root
+Search says. Clearing the query is still the first press either way.
+
+The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
+slot means once you are off the root, and a slot that changed shape with provenance would read
+as two different controls. Where the click lands still depends on the stack — a pushed screen
+pops, a root one closes — so `backHelp` says which, rather than promising a step that is really
+a close. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
+`HeaderBackButton` keeps that hover state to itself so the header around it never re-renders.
 
 The launcher advertises the first hop in the header — `AI Chat` beside a `⇥` cap, the footer's own
 pairing of a label with its key. It is drawn only when Tab really would open chat, a condition read
@@ -115,7 +151,7 @@ not a search field: it _is_ the current argument's input, so its placeholder nam
 submits rather than activating a row. It has no rows, which is why `isArgumentForm` is what keeps the
 ↵ pill drawn. Its state lives on `AppCore.customCommandArguments`, the way `.uninstall`'s target lives
 on `UninstallSession`, and leaving the mode cancels the pending run. A bare backspace steps back an
-argument before it falls through to the usual exit-to-launcher; Escape erases the half-typed answer
+argument before it falls through to the usual back step; Escape erases the half-typed answer
 first, and a second press hides the palette, ending the pending work with it. **Quicklinks used to be
 the other half of this pair and no longer are** — they collect their values in the header instead, so
 one surface asks for a row's arguments rather than two.
@@ -367,8 +403,8 @@ left alone: the handler returns `.ignored` for them, and their own `onSubmit` st
 
 ## Chords `onKeyPress` never sees
 
-Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and all of them are handled in
-`PalettePanel.sendEvent` before `super` hands the event to the responder chain:
+Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Several kinds do not. All but the last are
+handled in `PalettePanel.sendEvent` before `super` hands the event to the responder chain:
 
 - **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
 - **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
@@ -381,9 +417,18 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and a
   `onKeyPress(keys: ["."])` never fires. Pin (⌘.) therefore arrives through `onCommandShortcut`,
   which bumps `PaletteState.pinChordToken`; `RootPaletteView` observes that and resolves the row
   through the current screen, so **which** row gets pinned still comes from `screen.rows` alone.
+- **Chords the window server keeps for itself.** ⌘⎋ is the one that bites: macOS binds it before any
+  app sees it, so unlike ⌘. there is no keystroke left for `sendEvent` to intercept — a handler in
+  the responder chain compiles, runs never, and looks like a palette bug. `CommandEscapeTap` takes it
+  at the head of the HID stream instead, the one place earlier than the system's own binding, and
+  `prepare(mode: .launcher)`s: one chord back to the root search from any depth, window still open.
+  The tap is enabled only while the palette is on screen, watches `keyDown` alone, and declines the
+  chord whenever the panel is not key, so nothing else on the system loses ⌘⎋ to it. It is a
+  modifying tap, so it needs Accessibility — without that grant the chord is simply unavailable,
+  which is the only path this codebase has to it.
 
-Adding a chord that "does nothing" is almost always one of these three — check `sendEvent` before
-assuming the handler is wrong.
+Adding a chord that "does nothing" is almost always one of these — check `sendEvent`, and then
+whether macOS has claimed the chord, before assuming the handler is wrong.
 
 ## Emacs navigation chords
 

@@ -146,7 +146,7 @@ final class ExtensionCoordinator {
         switch command.mode {
         case .view:
             // Switch the palette over first, so the launching state is what the user sees.
-            palette.prepare(mode: .extensionCommand)
+            paletteCoordinator.navigate(to: .extensionCommand)
             // A shortcut fires while hidden, where a view command has nowhere to render.
             if !paletteCoordinator.isVisible {
                 paletteCoordinator.showPalette(mode: .extensionCommand)
@@ -172,7 +172,7 @@ final class ExtensionCoordinator {
         Task {
             if await extensions.popNavigation() { return }
             await extensions.stop()
-            palette.prepare(mode: .launcher)
+            if !palette.pop() { paletteCoordinator.hidePalette() }
         }
     }
 

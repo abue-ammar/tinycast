@@ -17,6 +17,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private let dropGuides = PaletteDropGuideController()
     /// ⌘V: `Edit ▸ Paste` claims it before `sendEvent` whenever the board also carries text.
     private var pasteMonitor: Any?
+    /// ⌘⎋: the window server claims it, so no keystroke is left for the responder chain to see.
+    private lazy var commandEscapeTap = CommandEscapeTap { [weak self] in
+        guard let self, self.panel?.isKeyWindow == true else { return false }
+        self.core.palette.prepare(mode: .launcher)
+        return true
+    }
 
     /// What a drag in flight needs: where home is, and whether releasing now would land there.
     private struct DragSession {
@@ -61,6 +67,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Events go stale while the palette is closed, and the countdown only ticks while up.
             core.calendarCoordinator.paletteDidShow()
             core.palette.noteVisible(true)
+            // Only while we are on screen: a system-wide tap has no business outliving the window.
+            commandEscapeTap.enable()
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
@@ -109,6 +117,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
         core.palette.noteVisible(false)
@@ -154,6 +163,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
     private func popToRoot() {
         core.palette.prepare(mode: .launcher)
+    }
+
+    /// Skip the Pop to Root Search delay, for a close that means to reset as well as hide.
+    func popToRootNow() {
+        guard !core.extensions.isAuthorizing else { return }
+        popToRootTimer?.invalidate()
+        popToRootTimer = nil
+        popToRoot()
     }
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
@@ -261,10 +278,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onFieldEditorFocused = { [weak self] context in
             self?.core.inputSourceSwitcher.applySession(to: context)
         }
-        // Backspace in an empty search backs out of a sub-screen to a fresh root.
+        // Backspace in an empty search takes the same back step Escape does.
         panel.onBareBackspace = { [weak self] in
-            guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
-            else { return false }
+            guard let core = self?.core, core.palette.query.isEmpty else { return false }
             // A form field owns the key: the text it deletes is the field's, not a query's.
             if core.palette.isEditingField { return false }
             // The argument form steps back through the answers first, one key per field.
@@ -275,15 +291,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 core.palette.selection = 0
                 return true
             }
-            if core.palette.mode == .aiHistory {
-                core.palette.prepare(mode: .ai)
+            if core.palette.mode == .extensionCommand {
+                core.extensionCoordinator.exitExtensionScreen()
                 return true
             }
             if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
                 return true
             }
-            core.palette.prepare(mode: .launcher)
-            return true
+            return core.palette.pop()
         }
         installPasteMonitor()
         // Handled at the panel: the field editor or a missing main menu eats these first.
@@ -293,11 +308,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 let index = FavoriteSlots.index(forKeyCode: event.keyCode)
             {
                 self.core.palette.noteFavoriteSlot(index)
-                return true
-            }
-            // Escape has no character, so it matches by key code.
-            if Int(event.keyCode) == kVK_Escape {
-                self.core.palette.prepare(mode: .launcher)
                 return true
             }
             guard let character = Self.commandCharacter(from: event) else { return false }
