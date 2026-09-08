@@ -295,7 +295,9 @@ screens hold (see [palette.md](palette.md)).
   root, which would tear the command down before its `await confirmAlert(…)` ever returns.
 - **Command arguments** — a command declaring `arguments` shows inline fields sized to their
   placeholders, right after the typed text, exactly as Raycast does. Tab walks search field → each
-  argument → back; ↵ from any of them runs the command with the values as `props.arguments`; a blank
+  argument → back; Left/Right do the same only when their caret reaches a field boundary. Returning
+  to the search field selects its query, so Right first places the caret at its end and then enters
+  the first argument. ↵ from any of them runs the command with the values as `props.arguments`; a blank
   required argument blocks the launch and focuses the offending field. The fields get their own
   `FocusState` rather than joining the search field's, so the palette's one always-attached `TextField`
   (see [palette.md](palette.md)) keeps owning focus.

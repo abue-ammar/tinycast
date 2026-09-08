@@ -177,7 +177,7 @@ these invariants:
   with the chip after it and no glyph repeating the row below. One measurement serves both: the
   field's own text, which is the prompt when nothing is typed and "" under `.afterQuery`.
 - Argument focus is its own `@FocusState`, `argumentFocused`, keyed by argument name. Every way out
-  — moving the selection, Escape, Tab past the last field — goes through
+  of its ring — moving the selection, Escape, Tab past the last field, or an arrow at its edge — goes through
   `returnFocusToSearchField()`, because the row that owned those fields is about to stop being
   selected and a field that unmounts while focused leaves the panel with no first responder at all.
   ↵ on a blank required argument focuses it instead of launching.
