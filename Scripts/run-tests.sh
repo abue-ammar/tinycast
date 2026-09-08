@@ -288,18 +288,8 @@ run ext-refresh-test       $E/Model/ExtensionManifest.swift \
                            $E/Model/ExtensionLaunchType.swift \
                            $E/Model/ExtensionRefreshPolicy.swift \
                            $E/Model/ExtensionRefreshState.swift
-run ext-storage-test       Tinycast/Platform/Compression/Zlib.swift \
-                           $E/Model/ExtensionBootConfig.swift \
-                           $E/Model/ExtensionLaunchType.swift \
-                           $E/Model/ExtensionManifest.swift \
-                           $E/Model/ExtensionRefreshPolicy.swift \
-                           $E/Model/ExtensionRefreshState.swift \
-                           $E/Model/RenderNode.swift \
-                           $E/Service/ExtensionCatalog.swift \
-                           $E/Service/ExtensionFetcher.swift \
-                           $E/Service/ExtensionNodeShims.swift \
-                           $E/Service/ExtensionRuntime.swift \
-                           $E/Service/ExtensionStorage.swift
+run ext-metadata-test      $E/Model/ExtensionCommandMetadata.swift \
+                           $E/Service/ExtensionCommandMetadataStore.swift
 run ext-store-test         $E/Model/ExtensionRegistry.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift

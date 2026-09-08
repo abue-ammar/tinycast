@@ -67,8 +67,13 @@ enum ExtensionRefreshPolicy {
         schedulable: Bool, backgroundEnabled: Bool, lastError: String?
     ) -> ExtensionRefreshState? {
         guard schedulable else { return nil }
-        if let lastError { return .failed(lastError) }
+        // Failures arrive with a JS stack; the row hashes and diffs this, so keep the headline only.
+        if let lastError { return .failed(headline(lastError)) }
         return backgroundEnabled ? .active : .idle
+    }
+
+    static func headline(_ message: String) -> String {
+        String(message.split(separator: "\n").first ?? "Background refresh failed.")
     }
 
     /// `subtitle: null` clears back to the manifest; the stored override otherwise wins. A subtitle

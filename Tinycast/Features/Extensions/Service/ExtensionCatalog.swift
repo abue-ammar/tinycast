@@ -64,6 +64,11 @@ enum ExtensionCatalog {
         supportDirectory().appendingPathComponent("extension-data", isDirectory: true)
     }
 
+    /// Outside `extension-data`, whose every file the cleanup sweep reads as one extension's own.
+    static func commandMetadataFile() -> URL {
+        supportDirectory().appendingPathComponent("extension-commands.json", isDirectory: false)
+    }
+
     /// Per-extension `environment.supportPath` — an extension's own scratch directory.
     static func supportPath(for name: String) -> URL {
         supportRoot().appendingPathComponent(safeName(name), isDirectory: true)

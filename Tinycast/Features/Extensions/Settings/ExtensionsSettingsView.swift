@@ -528,9 +528,13 @@ private struct CommandRows: View {
             ExtensionPreferenceRow(
                 extensionName: installed.manifest.name, schema: schema, indent: Theme.Spacing.lg)
         }
-        if command.mode == .noView, command.intervalRaw != nil {
+        // The same predicate the scheduler runs on: an unparseable interval gets no toggle.
+        if ExtensionRefreshPolicy.isSchedulable(mode: command.mode, interval: command.interval),
+            let schedule = command.intervalRaw
+        {
             ExtensionRefreshRow(
-                extensionName: installed.manifest.name, command: command, indent: Theme.Spacing.lg)
+                extensionName: installed.manifest.name, command: command, schedule: schedule,
+                indent: Theme.Spacing.lg)
         }
     }
 }
@@ -539,6 +543,7 @@ private struct CommandRows: View {
 private struct ExtensionRefreshRow: View {
     let extensionName: String
     let command: ExtensionCommand
+    let schedule: String
     var indent: CGFloat = 0
     @Environment(AppCore.self) private var core
 
@@ -549,12 +554,8 @@ private struct ExtensionRefreshRow: View {
     }()
 
     var body: some View {
-        // Read so the row re-renders after a background tick writes new metadata.
-        let tick = core.extensions.metadataRevision
         let info = core.extensions.backgroundInfo(extension: extensionName, command: command.name)
-        return SettingsCardRow(
-            title: "Background refresh", detail: detail(for: info, tick: tick), indent: indent
-        ) {
+        SettingsCardRow(title: "Background refresh", detail: detail(for: info), indent: indent) {
             Toggle(
                 "",
                 isOn: Binding(
@@ -564,15 +565,15 @@ private struct ExtensionRefreshRow: View {
         }
     }
 
-    private func detail(for info: ExtensionStorage.CommandMetadata, tick _: Int) -> String {
-        var detail = "Runs every \(command.intervalRaw ?? "?") in the background."
+    private func detail(for info: ExtensionCommandMetadata) -> String {
+        var detail = "Runs every \(schedule) in the background."
         if let lastRun = info.lastRun {
             detail += " Last refresh \(Self.relative.localizedString(for: lastRun, relativeTo: Date()))."
         } else {
             detail += " Hasn't refreshed yet."
         }
-        if let error = info.lastError?.split(separator: "\n").first {
-            detail += " Last error: \(error)."
+        if let error = info.lastError {
+            detail += " Last error: \(ExtensionRefreshPolicy.headline(error))."
         }
         return detail
     }

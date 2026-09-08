@@ -114,7 +114,8 @@ Two host-call flavours:
 | `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus the async `exec` and the shared PATH resolver |
 | `Service/ExtensionOAuthKeychain.swift` | secure OAuth token storage backed by macOS Keychain |
 | `Service/ExtensionOAuthSession.swift` | PKCE state tracking, browser launch, and callback redirect resolution |
-| `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache`, preference values and command metadata (one JSON file each) |
+| `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
+| `Service/ExtensionCommandMetadataStore.swift` | every command's subtitle override and refresh bookkeeping, in one small file |
 | `Service/ExtensionCatalog.swift` | discovery on disk, install, uninstall, import-from-Raycast |
 | `Service/ExtensionCleanup.swift` | the build workspace's name, the launch sweep, and reclaiming orphans |
 | `Service/ExtensionManager.swift` | the single owner: installed set, the one running session, launcher entries |
@@ -442,9 +443,10 @@ Like Raycast, refresh is opt-in per command: off until the first manual run or t
 (Settings › Extensions › the command › Background refresh), which also shows the last refresh and the
 last error. The launcher row carries the state too: a dot while refresh is on, its dimmed twin
 while it is off, a warning with the error as its tooltip when the last background run failed, and
-the Actions menu offers Enable / Disable Background Refresh plus Refresh Now. The override lives in the extension's own
-`extension-data/<name>.json`, next to its `LocalStorage` — derived state, so no backup carries it —
-and uninstall removes it with everything else.
+the Actions menu offers Enable / Disable Background Refresh plus Refresh Now. The override lives in
+`extension-commands.json` — derived state, so no backup carries it — and uninstall removes an
+extension's records with everything else. Deliberately not in `extension-data/<name>.json`: drawing a
+launcher row reads every command's metadata, and that file holds the extension's whole `Cache`.
 
 The scheduler is one loop doing date math, not one timer per command: close ticks run as a single
 batch, installs share a deterministic phase so they don't re-fire in lockstep after sleep, and a wakeup
@@ -456,7 +458,7 @@ with nothing due costs a comparison. Three guards keep it cheap:
   window call, since those would fire on a timer.
 
 `ExtensionRefreshPolicy` is where the parsing, due dates and backoff live, driven by
-`Tests/ext-refresh-test.swift`. A `menu-bar` interval parses but never schedules, since menu-bar
+`Tests/ext-refresh-test.swift`; `Tests/ext-metadata-test.swift` covers the store behind it. A `menu-bar` interval parses but never schedules, since menu-bar
 commands don't run at all.
 
 ## What's supported
@@ -610,6 +612,7 @@ never shares with an installed copy.
 | --- | --- | --- |
 | The extension | `extensions/<name>/` | yes |
 | `LocalStorage`, `Cache`, preferences | `extension-data/<safe name>.json` | yes |
+| Command subtitle, refresh state | `extension-commands.json` | yes |
 | `environment.supportPath` | `extension-support/<safe name>/` | yes |
 | OAuth tokens | macOS Keychain (`com.tinycast.extensions.oauth`) | yes |
 | Icon override | `UserDefaults` → `extensionAppearances` | yes |

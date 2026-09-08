@@ -17,12 +17,7 @@ struct ExtensionRefreshIndicator: View {
         case .failed(let message):
             Image(systemName: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
-                .help(firstLine(message))
+                .help(message)
         }
-    }
-
-    /// Failures arrive with a JS stack; the tooltip wants the headline.
-    private func firstLine(_ message: String) -> String {
-        String(message.split(separator: "\n").first ?? "Background refresh failed.")
     }
 }

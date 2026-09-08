@@ -29,14 +29,13 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Whether the commands reach the launcher at all; independent of `isEnabled`.
     private(set) var showsInLauncher = true
 
-    /// Bumped whenever stored command metadata changes, so Settings rows re-read it.
-    private(set) var metadataRevision = 0
-
     var isAuthorizing: Bool { oauthSession.isAuthorizing }
 
     let storage: ExtensionStorage
     /// Extension-scoped state the launcher and Settings read through here, like `storage`.
     let appearances = ExtensionAppearanceStore()
+    private let commandMetadata = ExtensionCommandMetadataStore(
+        fileURL: ExtensionCatalog.commandMetadataFile())
     @ObservationIgnored private let runtime: ExtensionRuntime
     @ObservationIgnored private let bridge: ExtensionHostBridge
     @ObservationIgnored private let oauthSession = ExtensionOAuthSession()
@@ -138,7 +137,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         let appearance = appearances.appearance(for: owner.manifest.name)
         let reference = ExtensionCommandRef(
             extensionName: owner.manifest.name, commandName: command.name)
-        let metadata = storage.commandMetadata(
+        let metadata = commandMetadata.metadata(
             extension: owner.manifest.name, command: command.name)
         // A dropped `interval` retires the dot with it, however stale the stored flag is.
         let schedulable = ExtensionRefreshPolicy.isSchedulable(
@@ -246,6 +245,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         ExtensionOAuthKeychain.removeAllTokens(extensionName: installedExtension.manifest.name)
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
+        commandMetadata.removeAll(extension: installedExtension.manifest.name)
         appearances.set(nil, for: installedExtension.manifest.name)
         onDidUninstall?(entryIDs)
         await refresh()
@@ -325,9 +325,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
         // Raycast activates the schedule on first manual open; the run itself is the first refresh.
         if ExtensionRefreshPolicy.isSchedulable(mode: command.mode, interval: command.interval) {
-            storage.activateBackgroundRefresh(
+            commandMetadata.activateBackgroundRefresh(
                 extension: owner.manifest.name, command: command.name, now: Date())
-            metadataRevision &+= 1
             restartBackgroundLoop()
         }
 
@@ -405,14 +404,13 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     // MARK: - Background refresh
 
-    func backgroundInfo(extension name: String, command: String) -> ExtensionStorage.CommandMetadata {
-        storage.commandMetadata(extension: name, command: command)
+    func backgroundInfo(extension name: String, command: String) -> ExtensionCommandMetadata {
+        commandMetadata.metadata(extension: name, command: command)
     }
 
     func setBackgroundEnabled(_ enabled: Bool, extension name: String, command: String) {
-        storage.setBackgroundEnabled(enabled, extension: name, command: command)
-        if !enabled { storage.clearBackgroundError(extension: name, command: command) }
-        metadataRevision &+= 1
+        commandMetadata.setBackgroundEnabled(enabled, extension: name, command: command)
+        if !enabled { commandMetadata.clearBackgroundError(extension: name, command: command) }
         publishLauncherEntries()
         restartBackgroundLoop()
     }
@@ -425,7 +423,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     func isBackgroundEnabled(for entry: AppEntry) -> Bool {
         guard let reference = ExtensionCommandRef(entryID: entry.id) else { return false }
-        return storage.commandMetadata(
+        return commandMetadata.metadata(
             extension: reference.extensionName, command: reference.commandName
         ).backgroundEnabled
     }
@@ -434,7 +432,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard let reference = ExtensionCommandRef(entryID: entry.id),
             isBackgroundSchedulable(for: entry)
         else { return }
-        let enabled = storage.commandMetadata(
+        let enabled = commandMetadata.metadata(
             extension: reference.extensionName, command: reference.commandName
         ).backgroundEnabled
         setBackgroundEnabled(!enabled, extension: reference.extensionName, command: reference.commandName)
@@ -462,7 +460,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Whether any installed command currently wants background ticks.
     private var hasEnabledBackgroundCommands: Bool {
         schedulableCommands().contains { owner, command in
-            storage.commandMetadata(extension: owner.manifest.name, command: command.name)
+            commandMetadata.metadata(extension: owner.manifest.name, command: command.name)
                 .backgroundEnabled
         }
     }
@@ -506,7 +504,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         let due = schedulableCommands().filter { owner, command in
             let reference = ExtensionCommandRef(
                 extensionName: owner.manifest.name, commandName: command.name)
-            let metadata = storage.commandMetadata(
+            let metadata = commandMetadata.metadata(
                 extension: owner.manifest.name, command: command.name)
             guard metadata.backgroundEnabled, let interval = command.interval else { return false }
             return ExtensionRefreshPolicy.nextDue(
@@ -519,7 +517,6 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             guard !Task.isCancelled, isEnabled, running == nil else { break }
             await runInBackground(owner, command: command)
         }
-        storage.flush()
     }
 
     /// Capped, so an install or a toggle surfaces without anyone restarting the loop.
@@ -530,7 +527,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         for (owner, command) in schedulableCommands() {
             let reference = ExtensionCommandRef(
                 extensionName: owner.manifest.name, commandName: command.name)
-            let metadata = storage.commandMetadata(
+            let metadata = commandMetadata.metadata(
                 extension: owner.manifest.name, command: command.name)
             guard metadata.backgroundEnabled, let interval = command.interval else { continue }
             let due = ExtensionRefreshPolicy.nextDue(
@@ -560,18 +557,18 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         defer {
             // Gone mid-run means uninstalled: recording would resurrect its storage file.
             if extensionNamed(reference.extensionName) != nil {
-                storage.recordBackgroundResult(
+                commandMetadata.recordBackgroundResult(
                     extension: reference.extensionName, command: reference.commandName,
                     success: succeeded, error: succeeded ? nil : (backgroundFailure ?? "Timed out."),
                     now: Date())
             }
-            metadataRevision &+= 1
             backgroundSessionID = nil
             backgroundRef = nil
             backgroundFailure = nil
             backgroundContinuation = nil
             publishLauncherEntries()
             storage.flush()
+            commandMetadata.flush()
         }
 
         do {
@@ -605,8 +602,14 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         await withTaskGroup(of: Bool.self, returning: Bool.self) { group in
             group.addTask { [weak self] in await self?.backgroundSettled() ?? false }
             group.addTask { [weak self] in
-                try? await Task.sleep(for: .seconds(timeout))
-                await self?.timeOutBackground()
+                do {
+                    try await Task.sleep(for: .seconds(timeout))
+                } catch {
+                    // Cancelling the loop preempts the tick; only a real timeout is a failure.
+                    await self?.resumeBackground(with: true)
+                    return true
+                }
+                await self?.resumeBackground(with: false)
                 return false
             }
             defer { group.cancelAll() }
@@ -614,13 +617,9 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
     }
 
-    /// Suspends until the delegate resumes it; the timeout owns the only other resume.
+    /// Suspends until the run settles, times out, or is preempted; `resumeBackground` is every exit.
     private func backgroundSettled() async -> Bool {
         await withCheckedContinuation { continuation in backgroundContinuation = continuation }
-    }
-
-    private func timeOutBackground() {
-        resumeBackground(with: false)
     }
 
     /// Ends the in-flight background run as a success so its schedule survives the preemption.
@@ -633,7 +632,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         resumeBackground(with: true)
     }
 
-    /// Main-actor serial, so the delegate and the timeout cannot both resume.
+    /// Main-actor serial, so no two of those exits can resume the same continuation.
     private func resumeBackground(with result: Bool) {
         guard let continuation = backgroundContinuation else { return }
         backgroundContinuation = nil
@@ -731,9 +730,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// The running command's row metadata; a missing key leaves the subtitle alone.
     func updateCommandMetadata(subtitle: String?) {
         guard let reference = backgroundRef ?? running else { return }
-        storage.setSubtitle(
+        commandMetadata.setSubtitle(
             subtitle, extension: reference.extensionName, command: reference.commandName)
-        metadataRevision &+= 1
         publishLauncherEntries()
     }
 

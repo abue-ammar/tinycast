@@ -172,6 +172,11 @@ struct ExtensionRefreshTests {
                 schedulable: true, backgroundEnabled: true, lastError: "Timed out.")
                 == .failed("Timed out."),
             "an error replaces the dot until the next success")
+        expect(
+            ExtensionRefreshPolicy.indicator(
+                schedulable: true, backgroundEnabled: true,
+                lastError: "TypeError: x\n    at foo\n    at bar") == .failed("TypeError: x"),
+            "a JS stack is cut to its headline before it reaches the row")
     }
 
     static func launchTypesMatchTheJSContract() {
