@@ -164,6 +164,19 @@ screens hold (see [palette.md](palette.md)).
   whole signal. `ExtensionScreen.Item`
   carries both the flat `selection` index and the scroll id, and is the `ForEach` identity of the row
   and the grid cell alike — see the scroll-id rule in [ui.md](../ui.md#rows-selection-hover).
+- **Search-bar dropdown** — `List.Dropdown` and `Grid.Dropdown` draw as
+  `ExtensionSearchAccessoryButton` at the header's trailing edge and drop `ExtensionPickerList` as one
+  of the palette's `OpenMenu` cases, so the arrows, ↵, Escape and the click-away come from the one menu
+  path and no second key handler exists to disagree with it. `PaletteFilterAction` routes ⌘P, so a
+  command's own dropdown answers before Tinycast's clipboard filter can. The list is
+  `listWidth` (240) rather than a form picker's 360: it hangs off a chip, not a field.
+  **Swift owns the selection** — the runtime keeps `makeSearchDropdown` hook-free so an extension may
+  call `List.Dropdown({…})` directly — so `ExtensionManager.accessoryValues` keys it by render-node id
+  and `seedSearchBarAccessory` reports the opening choice through `onChange` on the first commit, as
+  Raycast does; without that, a command filtering its rows by the value renders nothing (issue #511).
+  A `value` prop makes it controlled: the extension holds it, nothing is seeded, nothing reported.
+  `storeValue` parks the pick in `ExtensionStorage.accessoryValues` — host UI state, outside the
+  `LocalStorage` namespace JavaScript reads, and gone when the extension is uninstalled.
 - **Grid tiles** — `ExtensionGridLayout` reads the `Grid`'s `columns`, `aspectRatio`, `fit` and `inset`
   and is the one place tile geometry is decided. A tile is a column wide and `aspectRatio` tall, and its
   content is scaled to that tile rather than drawn at an icon size, which is what makes an image-heavy

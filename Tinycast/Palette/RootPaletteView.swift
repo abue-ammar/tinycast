@@ -228,6 +228,9 @@ struct RootPaletteView: View {
             return PaletteMenuContent(
                 popover: popover, selection: $menuSelection, width: headerMenuWidth,
                 onActivate: activateMenuItem)
+        case .extensionAccessory:
+            return extensionCommandScreen?.searchAccessoryMenu(
+                menuSelection: $menuSelection, onActivate: activateMenuItem)
         case nil: return nil
         }
     }
@@ -525,9 +528,14 @@ struct RootPaletteView: View {
                 guard press.modifiers.contains(.command),
                     ASCIIKeyboardLayout.matches(press.key, character: "p")
                 else { return .ignored }
-                let clipboardActive: Bool = !isCollapsed && vm.mode == .clipboard
-                guard clipboardActive else { return .ignored }
-                toggleClipboardFilter()
+                switch PaletteFilterAction.resolve(
+                    collapsed: isCollapsed, mode: vm.mode,
+                    commandHasAccessory: extensionCommandScreen?.searchAccessory != nil)
+                {
+                case .extensionAccessory: toggleExtensionSearchAccessory()
+                case .clipboardFilter: toggleClipboardFilter()
+                case .ignored: return .ignored
+                }
                 return .handled
             }
             // ⇧⌘F mirrors the Add/Remove Favorites row, closing an open menu the way that row does.
@@ -643,6 +651,14 @@ struct RootPaletteView: View {
                     )
                 }
             }
+            if !isCollapsed, let command = extensionCommandScreen,
+                let accessory = command.searchAccessory
+            {
+                headerGutter(width: Theme.Spacing.md)
+                command.searchAccessoryButton(
+                    accessory, isOpen: openMenu == .extensionAccessory,
+                    action: toggleExtensionSearchAccessory)
+            }
             headerGutter(width: Theme.Spacing.md * 2)
         }
         // Identical metrics in both states, so typing can't move the search bar.
@@ -651,6 +667,12 @@ struct RootPaletteView: View {
         .frame(maxWidth: .infinity)
         // Set after the show, so the field it names is focused rather than the search field.
         .onChange(of: vm.pendingArgumentEntryID) { focusPendingArgument() }
+    }
+
+    /// Mode-gated ahead of the cast, which would otherwise cost every other mode a list build.
+    private var extensionCommandScreen: ExtensionCommandScreen? {
+        guard vm.mode == .extensionCommand else { return nil }
+        return screen as? ExtensionCommandScreen
     }
 
     /// Whichever screen offers one; the compact bar has no room for it.
@@ -861,6 +883,17 @@ struct RootPaletteView: View {
         open(.clipboardFilter, highlighting: active)
     }
 
+    /// Opens on the choice the dropdown holds, exactly as the clipboard filter opens on its own.
+    private func toggleExtensionSearchAccessory() {
+        if openMenu == .extensionAccessory {
+            closeMenus()
+            return
+        }
+        guard let accessory = extensionCommandScreen?.searchAccessory else { return }
+        let value = extensions.accessorySelection(accessory)
+        open(.extensionAccessory, highlighting: accessory.index(of: value))
+    }
+
     /// Opens on the selected model, mirroring the clipboard filter's active-row behavior.
     private func toggleAIModel() {
         if openMenu == .aiModel {
@@ -945,7 +978,7 @@ struct RootPaletteView: View {
         case .app: .bottomLeading
         case .actions: .bottomTrailing
         case .argumentOptions: .belowHeaderTrailing
-        case .clipboardFilter, .aiModel, .aiReasoning: .belowHeaderTrailing
+        case .clipboardFilter, .aiModel, .aiReasoning, .extensionAccessory: .belowHeaderTrailing
         case nil: nil
         }
     }
@@ -1146,6 +1179,7 @@ struct RootPaletteView: View {
 /// The palette's in-window menus. One optional of these is the whole "only one is open" invariant.
 private enum OpenMenu {
     case actions
+    case extensionAccessory
     /// An `options=` argument field's choices, hung under the header where the chip sits.
     case argumentOptions
     case app

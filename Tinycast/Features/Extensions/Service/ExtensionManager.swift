@@ -23,6 +23,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     private(set) var toasts: [ExtensionToast] = []
     /// Depth of the extension's own navigation stack; >1 means Escape should pop rather than close.
     private(set) var navigationDepth = 1
+    /// Each search-bar dropdown's choice, keyed by node so a pushed screen keeps its own.
+    private(set) var accessoryValues: [Int: String] = [:]
 
     /// Off means nothing scanned, published or held: the feature costs an unused stored property.
     private(set) var isEnabled = false
@@ -400,6 +402,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         running = nil
         toasts = []
         navigationDepth = 1
+        accessoryValues = [:]
     }
 
     // MARK: - Background refresh
@@ -647,6 +650,42 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         Task { await runtime.dispatch(session: sessionID, handler: handler, payload: payload) }
     }
 
+    // MARK: - Search-bar dropdowns
+
+    /// What the dropdown shows: the extension's own `value` when it controls one, else the pick.
+    func accessorySelection(_ accessory: ExtensionSearchAccessory) -> String? {
+        accessory.controlledValue ?? accessoryValues[accessory.nodeID]
+    }
+
+    /// A pick persists where the dropdown asked it to, then tells the extension, as Raycast does.
+    func chooseAccessorySelection(_ accessory: ExtensionSearchAccessory, value: String) {
+        accessoryValues[accessory.nodeID] = value
+        if let key = accessory.storageKey, let name = running?.extensionName {
+            storage.setAccessoryValue(extension: name, key: key, value: value)
+        }
+        guard let handler = accessory.onChange else { return }
+        dispatch(handler: handler, arguments: [value])
+    }
+
+    /// Raycast reports a dropdown's opening choice through `onChange`, and an extension that
+    /// filters its rows by that value draws nothing until it arrives. A controlled one needs none.
+    private func seedSearchBarAccessory(in tree: RenderTree) {
+        guard
+            let accessory = ExtensionSearchAccessory(
+                node: tree.activeRoot?.node("searchBarAccessory")),
+            accessory.controlledValue == nil, accessoryValues[accessory.nodeID] == nil,
+            let value = accessory.initialValue(stored: storedAccessoryValue(accessory))
+        else { return }
+        accessoryValues[accessory.nodeID] = value
+        guard let handler = accessory.onChange else { return }
+        dispatch(handler: handler, arguments: [value])
+    }
+
+    private func storedAccessoryValue(_ accessory: ExtensionSearchAccessory) -> String? {
+        guard let key = accessory.storageKey, let name = running?.extensionName else { return nil }
+        return storage.accessoryValue(extension: name, key: key)
+    }
+
     /// Pops the extension's stack; false when there is nothing to pop and the palette should close.
     func popNavigation() async -> Bool {
         guard let sessionID, navigationDepth > 1 else { return false }
@@ -663,6 +702,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard session == sessionID else { return }
         state = .rendered(tree)
         navigationDepth = tree.depth
+        seedSearchBarAccessory(in: tree)
     }
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didFail message: String) {

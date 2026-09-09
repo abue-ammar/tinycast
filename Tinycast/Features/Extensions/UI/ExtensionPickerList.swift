@@ -1,25 +1,18 @@
 import SwiftUI
 
-/// One choice offered by a picker's list.
-struct ExtensionPickerItem: Identifiable, Equatable {
-    let value: String
-    let title: String
-    var detail: String?
-    var iconValue: RenderValue?
-    /// The section this choice was declared under, drawn above the first of them.
-    var section: String?
-
-    var id: String { value }
-}
-
 /// The results a picker drops, styled as the ⌘K panel; the control above owns the query.
 struct ExtensionPickerList: View {
     @Environment(\.isDarkAppearance) private var isDark
+    /// Read for `hoverHighlightArmed`: a list landing under the pointer must light no row.
+    @Environment(PaletteState.self) private var palette
     let items: [ExtensionPickerItem]
     let selection: Int
     /// Values already chosen; a single-select picker passes the one it holds.
     let chosen: Set<String>
     let assetsPath: String?
+    /// Fixed, never intrinsic, so the list cannot jitter as its rows change. A form's picker
+    /// matches the field above it; a header dropdown hangs off a chip and drops narrower.
+    var width: CGFloat = ExtensionFormMetrics.controlWidth
     let onSelect: (Int) -> Void
     /// Moves the highlight under the pointer, so mouse and keyboard share one selection.
     let onHighlight: (Int) -> Void
@@ -29,7 +22,7 @@ struct ExtensionPickerList: View {
             list
         }
         .padding(Theme.Spacing.sm)
-        .frame(width: ExtensionFormMetrics.controlWidth)
+        .frame(width: width)
         .glassEffect(
             .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
         )
@@ -61,7 +54,7 @@ struct ExtensionPickerList: View {
                                 onActivate: { onSelect(index) }
                             )
                             .id(index)
-                            .onHover { if $0 { onHighlight(index) } }
+                            .onHover { if $0, palette.hoverHighlightArmed { onHighlight(index) } }
                         }
                     }
                 }
