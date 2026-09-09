@@ -15,6 +15,40 @@ enum PasteboardFiles {
         return paths.map { URL(fileURLWithPath: $0) }
     }
 
+    static func urls(
+        on pasteboard: NSPasteboard, limit: Int, matching predicate: (URL) -> Bool
+    ) -> [URL] {
+        guard limit > 0 else { return [] }
+        var result: [URL] = []
+        var hasFileURL = false
+        let items = pasteboard.pasteboardItems ?? []
+        var offset = 0
+        while offset < items.count {
+            let end = offset + min(limit, items.count - offset)
+            let batch = items[offset..<end].compactMap(url(from:))
+            hasFileURL = hasFileURL || !batch.isEmpty
+            for url in batch where predicate(url) {
+                result.append(url)
+                if result.count == limit { return result }
+            }
+            offset = end
+        }
+        guard !hasFileURL,
+            let paths = pasteboard.propertyList(forType: legacyFilenames) as? [String]
+        else { return result }
+        offset = 0
+        while offset < paths.count {
+            let end = offset + min(limit, paths.count - offset)
+            let batch = paths[offset..<end].map { URL(fileURLWithPath: $0) }
+            for url in batch where predicate(url) {
+                result.append(url)
+                if result.count == limit { return result }
+            }
+            offset = end
+        }
+        return result
+    }
+
     /// `public.file-url` arrives as UTF-8 data on most boards and as a string on some.
     private static func url(from item: NSPasteboardItem) -> URL? {
         if let data = item.data(forType: .fileURL),

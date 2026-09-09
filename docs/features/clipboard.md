@@ -51,7 +51,10 @@ returns nil rather than an empty array, so the text branch runs; caps a batch at
 **rejects a file under a volatile root** (`/tmp`, `/var/folders`, `~/Library/Caches`), because an
 app that stages a temp export beside better inline content must keep the inline content. Paths come
 back reversed so the *first* file copied ends up leading the history. Durability checks stop after
-32 accepted files; rejected paths do not consume the cap. Pasteboard decoding still reads all items.
+32 accepted files; rejected paths do not consume the cap. Capture decodes at most 32 pasteboard
+items at a time and stops requesting batches when the cap is reached. Even a rejected modern file
+URL suppresses the legacy filenames fallback. The uncapped `PasteboardFiles.urls(on:)` reader used
+by attachments still returns every file.
 
 `ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
 re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the

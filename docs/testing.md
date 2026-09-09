@@ -64,6 +64,9 @@ for the shared board. Its scratch tree lives under `temporaryDirectory`, which i
 root, so the cases about *reading* files inject an empty root list and the one case about durability
 is the one that runs against the shipped roots. Both file URL and legacy filename boards also cover
 the capture cap, exact ordering, rejected prefixes, duplicates and symlinks using private fixtures.
+The reader cases additionally cover predicate limits, modern/legacy precedence and uncapped extraction.
+Since macOS synthesizes modern items for a legacy write, a fixture-only subclass hides those items on
+one private board to exercise the raw legacy fallback without changing the production reader.
 
 Never join a compile to its run with `&&` in a `set -e` script. `set -e` is specified to ignore a
 failing command in a non-final AND-OR list member, so `swiftc … && /tmp/x` swallows a compile error and
@@ -223,7 +226,9 @@ iteration count for timings, or `--probe` to diff every chunk between two builds
 
 `Tests/clipboard-file-performance.swift` measures file capture with private pasteboards and temporary
 fixtures. It reports wall and process CPU time as JSON for modern and legacy formats, including
-32/1,000/10,000 durable files and rejected-input controls. Keep it outside `run-tests.sh`; compare
+32/1,000/10,000 durable files, rejected-input controls and uncapped-reader controls. A third format
+uses the same private-board fixture override to measure the raw legacy fallback explicitly.
+Keep it outside `run-tests.sh`; compare
 three fresh processes per build with identical `-O` settings:
 
 ```sh
