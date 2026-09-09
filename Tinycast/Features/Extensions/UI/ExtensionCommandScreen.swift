@@ -103,6 +103,47 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     func secondary(at selection: Int) -> Bool { false }
 
+    /// The `searchBarAccessory` dropdown; an empty one states and opens nothing, so it is none.
+    var searchAccessory: ExtensionSearchAccessory? {
+        guard let accessory = ExtensionSearchAccessory(node: screen.searchBarAccessory),
+            !accessory.items.isEmpty
+        else { return nil }
+        return accessory
+    }
+
+    /// The header control for it, as an opaque box the palette only seats and toggles.
+    func searchAccessoryButton(
+        _ accessory: ExtensionSearchAccessory, isOpen: Bool, action: @escaping () -> Void
+    ) -> AnyView {
+        AnyView(
+            ExtensionSearchAccessoryButton(
+                accessory: accessory, value: extensions.accessorySelection(accessory),
+                assetsPath: assetsPath, isOpen: isOpen, action: action))
+    }
+
+    /// Its choices as a palette menu, so the arrows, ↵, Escape and the click-away come free.
+    func searchAccessoryMenu(
+        menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent? {
+        guard let accessory = searchAccessory else { return nil }
+        let chosen = extensions.accessorySelection(accessory).map { Set([$0]) } ?? []
+        let assetsPath = assetsPath
+        let extensions = extensions
+        return PaletteMenuContent(
+            rowCount: accessory.items.count,
+            view: {
+                AnyView(
+                    ExtensionPickerList(
+                        items: accessory.items, selection: menuSelection.wrappedValue,
+                        chosen: chosen, assetsPath: assetsPath,
+                        width: ExtensionSearchAccessoryButton.listWidth, onSelect: onActivate,
+                        onHighlight: { menuSelection.wrappedValue = $0 }))
+            },
+            activate: { index in
+                extensions.chooseAccessorySelection(accessory, value: accessory.items[index].value)
+            })
+    }
+
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         AnyView(
             ExtensionCommandView(

@@ -346,18 +346,21 @@ the arrow outside it, and AppKit's own alternation over the field came straight 
 ## One menu at a time
 
 `RootPaletteView` holds a single `OpenMenu?` rather than a flag per menu, so "at most one is open" is
-structural instead of a pair of `onChange` handlers pushing each other closed. Three cases today —
-the ⌘K Actions menu (`.bottomTrailing`), the app menu (`.bottomLeading`) and the clipboard type
-filter (`.belowHeaderTrailing`, hung under its header button). `menuContent` resolves the open case to one
-`PaletteMenuContent` — a row count, a row action and a view built on demand — so ↑/↓, plain ↵, Esc and
-the click-away catcher serve every menu without knowing which is up. A screen supplies its rows as a
-`PopoverMenuContent` through `actions(at:)` and the default `menuContent` wraps them; a screen whose
-rows the palette's menu can't express overrides `menuContent` and hands over its own view instead —
-`ExtensionCommandScreen` is the only one, and the reason the seam exists (see
+structural instead of a pair of `onChange` handlers pushing each other closed. The ⌘K Actions menu
+hangs `.bottomTrailing`, the app menu `.bottomLeading`, and everything drawn as a header control —
+the clipboard type filter, the AI model and effort menus, an `options=` argument field's choices and
+a running command's `searchBarAccessory` dropdown — hangs `.belowHeaderTrailing`, under its own
+button. `menuContent` resolves the open case to one `PaletteMenuContent` — a row count, a row action
+and a view built on demand — so ↑/↓, plain ↵, Esc and the click-away catcher serve every menu without
+knowing which is up. A screen supplies its rows as a `PopoverMenuContent` through `actions(at:)` and
+the default `menuContent` wraps them; a screen whose rows the palette's menu can't express overrides
+`menuContent` and hands over its own view instead — `ExtensionCommandScreen` is the only one, for
+both its ⌘K panel and its search-bar dropdown, and the reason the seam exists (see
 [extensions.md](extensions.md)). The view is a closure because `moveMenu` resolves the open menu on
 every arrow key and needs the row count alone. Every open path goes through `open(_:highlighting:)`
-and states where the highlight starts: the first row, except the type filter, which opens on the
-active filter.
+and states where the highlight starts: the first row, except the pop-up-shaped menus — the type
+filter, the AI model and effort menus, an extension's search-bar dropdown — which open on the choice
+they already hold.
 
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.

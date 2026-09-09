@@ -188,6 +188,7 @@ struct ExtensionTests {
         actionIconChecks()
         oauthUnitChecks()
         await runtimeChecks()
+        await searchAccessoryRuntimeChecks()
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -895,6 +896,89 @@ struct ExtensionTests {
 
         await swiftHelperChecks()
         zlibChecks()
+    }
+
+    /// Drives a dropdown-filtered command from its empty first render to visible results.
+    @MainActor
+    static func searchAccessoryRuntimeChecks() async {
+        let (runtime, _, recorder) = makeRuntime()
+        do {
+            try await runtime.boot(
+                config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        } catch {
+            check("search accessory runtime boots", false, error.localizedDescription)
+            return
+        }
+
+        let command = """
+            "use strict";
+            const { List } = require("@raycast/api");
+            const React = require("react");
+            const h = React.createElement;
+            module.exports.default = function Command() {
+              const [type, setType] = React.useState(null);
+              const accessory = h(List.Dropdown, {
+                defaultValue: "all",
+                onChange: setType,
+              },
+                h(List.Dropdown.Item, { title: "All Types", value: "all" }),
+                h(List.Dropdown.Item, { title: "Folders", value: "folders" })
+              );
+              return h(List, { searchBarAccessory: accessory },
+                type ? h(List.Item, { title: "filter=" + type }) : null
+              );
+            };
+            """
+        await runtime.start(
+            session: "sAccessory", code: command,
+            file: URL(fileURLWithPath: "/tmp/search-accessory.js"), mode: .view,
+            context: launchContext())
+        await settle()
+
+        guard let firstTree = recorder.trees.last else {
+            check("dropdown-filtered command renders", false)
+            runtime.shutdown()
+            return
+        }
+        let firstScreen = ExtensionScreen(tree: firstTree, query: "")
+        check("dropdown-filtered command starts empty", firstScreen.items.isEmpty)
+        guard
+            let accessory = ExtensionSearchAccessory(
+                node: firstTree.activeRoot?.node("searchBarAccessory")),
+            let initialValue = accessory.initialValue(stored: nil),
+            let handler = accessory.onChange
+        else {
+            check("live dropdown exposes an initial dispatch", false)
+            runtime.shutdown()
+            return
+        }
+        check("live dropdown exposes an initial dispatch", initialValue == "all")
+        check("an uncontrolled dropdown leaves the value to Swift", accessory.controlledValue == nil)
+
+        await runtime.dispatch(
+            session: "sAccessory", handler: handler,
+            payload: ExtensionRuntime.jsonString(from: [initialValue]))
+        await settle()
+        let seededScreen = recorder.trees.last.map { ExtensionScreen(tree: $0, query: "") }
+        check(
+            "initial dropdown dispatch reveals filtered rows",
+            seededScreen?.items.first?.node.string("title") == "filter=all",
+            seededScreen?.items.first?.node.string("title") ?? "no row")
+
+        let renderCount = recorder.trees.count
+        await settle(50)
+        check(
+            "a seeded dropdown settles rather than re-rendering",
+            recorder.trees.count == renderCount,
+            "\(renderCount) → \(recorder.trees.count)")
+
+        // The node id is what the held pick is keyed by, so a re-render must not renumber it.
+        check(
+            "the dropdown keeps its node id across renders",
+            recorder.trees.last.flatMap {
+                ExtensionSearchAccessory(node: $0.activeRoot?.node("searchBarAccessory"))?.nodeID
+            } == accessory.nodeID)
+        await runtime.stop(session: "sAccessory")
     }
 
     /// Raycast's `swift:` wrapper chmods its bundled helper before spawning it: store zips ship it 644.

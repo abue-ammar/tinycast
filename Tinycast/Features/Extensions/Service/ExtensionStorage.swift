@@ -7,6 +7,28 @@ final class ExtensionStorage {
         var localStorage: [String: StoredValue] = [:]
         var caches: [String: [String: String]] = [:]
         var preferences: [String: StoredValue] = [:]
+        /// A search-bar dropdown's `storeValue` pick — host UI state, so not `LocalStorage`.
+        var accessoryValues: [String: String] = [:]
+
+        enum CodingKeys: String, CodingKey {
+            case localStorage, caches, preferences, accessoryValues
+        }
+
+        init() {}
+
+        /// Each section decodes on its own: one absent key must not take an extension's whole
+        /// store — API keys included — down with it, since a failed decode resets the file.
+        init(from decoder: Decoder) throws {
+            let store = try decoder.container(keyedBy: CodingKeys.self)
+            localStorage =
+                try store.decodeIfPresent([String: StoredValue].self, forKey: .localStorage) ?? [:]
+            caches =
+                try store.decodeIfPresent([String: [String: String]].self, forKey: .caches) ?? [:]
+            preferences =
+                try store.decodeIfPresent([String: StoredValue].self, forKey: .preferences) ?? [:]
+            accessoryValues =
+                try store.decodeIfPresent([String: String].self, forKey: .accessoryValues) ?? [:]
+        }
     }
 
     /// `LocalStorage` accepts strings, numbers and booleans and must return them with their type.
@@ -80,6 +102,16 @@ final class ExtensionStorage {
 
     func clearLocalStorage(extension name: String) {
         mutate(name) { $0.localStorage.removeAll() }
+    }
+
+    // MARK: - Search-bar dropdowns
+
+    func accessoryValue(extension name: String, key: String) -> String? {
+        store(for: name).accessoryValues[key]
+    }
+
+    func setAccessoryValue(extension name: String, key: String, value: String) {
+        mutate(name) { $0.accessoryValues[key] = value }
     }
 
     // MARK: - Cache

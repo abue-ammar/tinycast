@@ -185,6 +185,11 @@ run palette-navigation-test Tinycast/Palette/PaletteState.swift \
                            Tinycast/Features/Quicklinks/Model/Quicklink.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift
+run palette-filter-test    Tinycast/Palette/PaletteMode.swift \
+                           Tinycast/Palette/PaletteFilterAction.swift \
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Tinycast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-tab-test       Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Palette/PaletteTabAction.swift \
                            Tinycast/Features/Quicklinks/Model/Quicklink.swift \
@@ -319,6 +324,10 @@ run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
                            $E/Model/ExtensionDateExpression.swift \
                            $E/UI/ExtensionListKey.swift \
                            Tests/ext-list-key-test.swift
+run ext-accessory-test     $E/Model/RenderNode.swift \
+                           $E/Model/ExtensionPickerItem.swift \
+                           $E/Model/ExtensionSearchAccessory.swift \
+                           $E/Service/ExtensionStorage.swift
 run slow ext-test          -parse-as-library \
                            Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \
@@ -331,6 +340,8 @@ run slow ext-test          -parse-as-library \
                            $E/Model/ExtensionRefreshPolicy.swift \
                            $E/Model/ExtensionRefreshState.swift \
                            $E/Model/RenderNode.swift \
+                           $E/Model/ExtensionPickerItem.swift \
+                           $E/Model/ExtensionSearchAccessory.swift \
                            $E/Service/ExtensionCatalog.swift \
                            $E/Service/ExtensionFetcher.swift \
                            $E/Service/ExtensionIconCache.swift \
