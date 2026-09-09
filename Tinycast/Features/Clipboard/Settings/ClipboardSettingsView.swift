@@ -44,6 +44,10 @@ struct ClipboardSettingsView: View {
                 .onChange(of: settings.clipboardRetention) {
                     core.clipboardCoordinator.applyRetention(settings.clipboardRetention)
                 }
+                Toggle(isOn: $settings.clipboardTextSearchEnabled) {
+                    SettingsRowTitle(.clipboardHistory, "Search text in images and PDFs")
+                    Text("Recognize text on this Mac while idle and include it in clipboard searches.")
+                }
                 Picker(selection: $settings.clipboardDefaultAction) {
                     ForEach(ClipboardDefaultAction.allCases) { action in
                         Text(action.title).tag(action)

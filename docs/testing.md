@@ -21,6 +21,12 @@ what you touched.
 
 ## The harnesses
 
+`clipboard-search-test` compares immediate original-text results and settled OCR results with a
+separate ordering oracle across all type filters, old pins, short queries, promotion, deletion, late
+extraction, default-off/reopen/reenable behavior and cancelled queries. `clipboard-text-test` exercises
+real Apple Vision, embedded/scanned PDFs, lazy schema creation, persisted metadata, idle scheduling,
+worker cancellation and synchronous match preservation while pinning.
+
 ```sh
 ./Scripts/run-tests.sh              # all of them
 ./Scripts/run-tests.sh calc-test    # just one, while iterating
@@ -88,6 +94,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `app-name-test` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
 | `calc-test` | all of `Calculator/Model/` |
 | `calendar-test` | all of `Calendar/Model/` — link detection, the join window, the day buckets |
+| `clipboard-search-test` | Ordinary and OCR result ordering, opt-in lifecycle, cancellation, pins and type filters |
+| `clipboard-text-test` | Apple Vision image OCR, embedded/scanned PDF extraction, idle scheduling and cancellation |
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |

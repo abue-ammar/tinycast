@@ -83,7 +83,8 @@ A database that won't open is deleted and recreated (worst case the store degrad
 in-memory history).
 
 Image capture (TIFF→PNG re-encode + blob write) runs off the main actor via detached tasks; row
-inserts, search, and pruning stay on the main actor.
+inserts, original-text search, and pruning stay on the main actor.
+Image copy uses Foundation’s `mappedIfSafe` hint before publishing the original PNG and marker.
 
 **A backup reads the whole table, not `items`.** `forEachStoredItem(inDatabaseAt:)` is `nonisolated`
 and opens a second connection, because the resident window stops at 1000 rows while the table is
@@ -108,14 +109,60 @@ load everything — while the history is shorter than the window.
 Searching is trigram FTS, which needs **at least three characters**; shorter queries, and the
 no-database fallback path, filter the in-memory window instead. Results are memoized one query deep,
 with a second memo for the empty query, and both are invalidated whenever `items` changes.
-`promote` rewrites a row under the same id so it leads the history — stored order is rowid, so it is a
-delete plus re-insert inside one transaction, since `id` is `UNIQUE` and a crash between the two
-statements must not lose the row. The image blob is never touched.
+The original-text FTS query supplies its newest 200 history row IDs before materializing rows,
+retaining PERF-013's bounded query. Pins remain matched separately in memory, and the type filter
+applies after the limit. `promote` updates the row's timestamp and rowid atomically; an update trigger
+moves its original-text FTS entry. Its UUID, image blob and derived text survive, including while text
+recognition is disabled.
 
 Files under the store's own `imagesDir` are **owned**: pruned and deleted with their row. External
 references — an image imported from another app's cache — are left on disk when the row goes. A
 retention cut can strand hundreds of files, so those deletions run off the main actor to keep
 capture-time pruning from hitching.
+
+## Image and PDF text search
+
+**Search text in images and PDFs is off by default.** The per-machine switch is excluded from
+settings backups. A cold disabled launch creates no OCR schema, indexer, search task or Vision request,
+and loads no extracted strings. Existing derived data stays on disk when disabled and is reused on
+reenabling; deletion and retention still remove it with its original item.
+
+When both clipboard history and text search are enabled, `AppCore` creates its optional
+`ClipboardTextIndexer`. It extracts locally with Apple's Vision `RecognizeTextRequest`, starting one
+background-priority job after two seconds without input while the palette is hidden, then waiting
+again between items. Existing and imported history is backfilled, including rows beyond the resident
+window. Turning either switch off cancels the worker; reenabling waits for its cancellation to finish
+before starting another. No OCR recognition runs on the capture or search path.
+
+Images include owned clipboard PNGs and referenced image files. Referenced PDFs use PDFKit's embedded
+text page by page, with Vision OCR for pages without text. Mixed text-and-scan documents therefore
+remain searchable; images embedded on a page that already has text are not separately OCR'd. All
+processing stays on this Mac. Extracted text is search metadata, never the value pasted or copied.
+
+The derived `item_text` table and its trigram FTS index persist metadata without adding extracted
+strings to `ClipboardItem` or loading them into the resident history. Original text/path search returns
+immediately. A cancellable off-main SQLite query adds OCR-only matches for All, Images and Files;
+Text, Links, Emails and Colors never consult OCR. Type classification always uses original content.
+There is no spinner or skeleton. Pins lead in pin order, ordinary unpinned matches retain their order,
+and OCR-only unpinned matches of the active type fill remaining slots up to 200. OCR matches use history recency, not
+extraction order. This deliberately prioritizes ordinary matches over the prototype's combined
+recency ordering. Queries under three characters consult only the resident window and pins.
+
+Each query reader uses a 2 MiB SQLite cache budget and releases its connection after completion.
+Query/filter replacement, palette dismissal, disabling and history mutation cancel obsolete work; a request
+identity prevents late publication. Publication follows the selected item by UUID. Pinning and
+promotion keep known matches visible while refreshing. Clearing or reloading rotates the extraction
+generation, and a guarded insert cannot recreate a deleted entry. Backups stream original fields
+without loading OCR metadata. See the [opt-in measurements](../performance/results/clipboard-ocr-opt-in.md)
+for search latency, CPU and memory evidence and remaining validation.
+
+Work is bounded: files up to 32 MB, the first 64 PDF pages, a 4,194,304-pixel bitmap budget with a 4096-pixel maximum edge, and
+32 KB of extracted UTF-8 text per item. Empty, unsupported, oversized, locked or unreadable inputs are
+recorded as completed attempts so they cannot spin in the idle queue. Long bitmaps are recognized
+in overlapping 2048-pixel tiles; Vision's relative minimum text-height cutoff is disabled so it
+cannot discard small text on a tall screenshot or page. Referenced files are read once
+when indexed; later file edits do not refresh this historical search text. Backups carry the original
+content and references; restored entries derive their search text again.
 
 ## Type filter
 
@@ -219,13 +266,14 @@ Pins change four things:
   one "Pinned" section above the date buckets, in pin order with the oldest pin at the top, so a new
   pin joins the end of the section instead of displacing the ones already there. `items` itself stays
   in pure recency order; the display split is memoized next to the search memo and invalidated with
-  it. Pinned rows are matched **in memory**
+  it. Original text on pinned rows is matched **in memory**
   rather than taken from the FTS result, since the statement's `LIMIT` could otherwise drop one out
   of a busy query's matches — which holds because every pinned row is resident in `items`, however
-  old (`load` fetches them all, and neither the window trim nor pruning drops one).
+  old (`load` fetches them all, and neither the window trim nor pruning drops one). OCR metadata
+  for matching pins is queried separately off-main without the unpinned result limit.
 - **Unpinning re-recencies.** An unpinned row rejoins the history as its _newest_ entry (Raycast does
   the same) rather than dropping back into the date bucket it came from, which would scroll the list
-  out from under the selection. It's the same delete + re-insert `promote` uses.
+  out from under the selection. It uses the same atomic timestamp and rowid update as `promote`.
 - **Retention.** Pruning skips pinned rows (`AND pinned_at IS NULL`), so a pin outlives the retention
   window. "Clear History" still deletes everything.
 - **Selection.** Pinning lifts a row out of its date bucket, so `ClipboardCoordinator.togglePinnedClip` moves the

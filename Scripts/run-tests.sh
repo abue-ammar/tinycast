@@ -125,6 +125,10 @@ run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swif
                            Tinycast/Features/Clipboard/Model/ColorValue.swift \
                            Tinycast/Features/Clipboard/Model/ColorFormat.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift
+run clipboard-search-test  Tinycast/Features/Clipboard/Model/*.swift
+run clipboard-text-test    Tinycast/Features/Clipboard/Model/*.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift
 run pasteboard-test        Tinycast/Platform/PasteboardFiles.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \

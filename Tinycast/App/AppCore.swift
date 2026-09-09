@@ -12,6 +12,8 @@ final class AppCore {
     let quicklinks = QuicklinkStore()
     let windowLayouts = WindowLayoutStore()
     let clipboardStore = ClipboardStore()
+    @ObservationIgnored private var clipboardTextIndexer: ClipboardTextIndexer?
+    @ObservationIgnored private var clipboardTextTransition: Task<Void, Never>?
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
     let snippetListener = SnippetKeywordListener(
@@ -354,7 +356,44 @@ final class AppCore {
         await notesCoordinator.prepareForTermination()
     }
 
+    func applyClipboardTextSearch() {
+        guard settings.clipboardEnabled, settings.clipboardTextSearchEnabled else {
+            clipboardStore.onItemsChanged = nil
+            clipboardStore.onSearchResultsChanged = nil
+            clipboardStore.setTextSearchEnabled(false)
+            guard let indexer = clipboardTextIndexer, clipboardTextTransition == nil else { return }
+            indexer.stop()
+            clipboardTextTransition = Task { [weak self] in
+                await indexer.waitUntilStopped()
+                guard let self else { return }
+                self.clipboardTextIndexer = nil
+                self.clipboardTextTransition = nil
+                if !Task.isCancelled { self.applyClipboardTextSearch() }
+            }
+            return
+        }
+        guard clipboardTextIndexer == nil, clipboardTextTransition == nil else { return }
+        guard clipboardStore.setTextSearchEnabled(true) else {
+            showMessage("Couldn't enable text recognition for clipboard history.", tone: .danger)
+            return
+        }
+        clipboardStore.setTextSearchActive(palette.isVisible)
+        let indexer = ClipboardTextIndexer(
+            store: clipboardStore,
+            canRun: { [weak self] in
+                self?.palette.isVisible == false && ClipboardTextIndexer.isSystemIdle
+            })
+        clipboardTextIndexer = indexer
+        clipboardStore.onItemsChanged = { [weak indexer] in indexer?.schedule() }
+        clipboardStore.onSearchResultsChanged = { [weak self] query, previous, current in
+            self?.clipboardCoordinator.followSearchResults(query: query, previous: previous, current: current)
+        }
+        indexer.start()
+    }
+
     func prepareForTermination() {
+        clipboardTextTransition?.cancel()
+        clipboardTextIndexer?.stop()
         // Caps Lock first: its remap is the one teardown that outlives the process.
         hyperKeyTap.prepareForTermination()
         windowLayoutCoordinator.prepareForTermination()
@@ -429,6 +468,8 @@ final class AppCore {
             }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
         track(
             { _ = $0.clipboardEnabled }, reproject: { $0.clipboardCoordinator.applyEnabled() })
+        track(
+            { _ = $0.clipboardTextSearchEnabled }, reproject: { $0.applyClipboardTextSearch() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })

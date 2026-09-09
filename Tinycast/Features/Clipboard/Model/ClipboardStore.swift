@@ -121,10 +121,27 @@ final class ClipboardStore {
     /// Newest-first with pins in place, every pin resident. docs/features/clipboard.md
     private(set) var items: [ClipboardItem] = [] {
         didSet {
-            searchCache = nil
-            orderedCache = nil
+            if !textSearchMatches.isEmpty {
+                let current = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
+                textSearchMatches = textSearchMatches.map { current[$0.id] ?? $0 }
+            }
+            invalidateSearch(preservingMatches: true)
+            onItemsChanged?()
         }
     }
+    @ObservationIgnored var onItemsChanged: (() -> Void)?
+    @ObservationIgnored var onSearchResultsChanged: ((String, [ClipboardItem], [ClipboardItem]) -> Void)?
+    private(set) var extractionGeneration = UUID()
+    private var searchRevision = 0
+    private(set) var textSearchEnabled = false
+    @ObservationIgnored private var textSearchActive = true
+    @ObservationIgnored private var textSearchTask: Task<Void, Never>?
+    @ObservationIgnored private var textSearchNeedsRefresh = false
+    @ObservationIgnored private var textSearchQuery: String?
+    @ObservationIgnored private var textSearchFilter: ClipboardFilter?
+    @ObservationIgnored private var textSearchRequest: UUID?
+    @ObservationIgnored private var textSearchMatches: [ClipboardItem] = []
+
     var maxAge: TimeInterval = ClipboardRetention.threeMonths.maxAge
 
     /// One-entry memo so repeated renders reuse the FTS result; cleared when `items` changes.
@@ -161,6 +178,31 @@ final class ClipboardStore {
         CREATE TRIGGER IF NOT EXISTS items_ad AFTER DELETE ON items BEGIN
           INSERT INTO items_fts(items_fts, rowid, text) VALUES('delete', old.rowid, old.text);
         END;
+        CREATE TRIGGER IF NOT EXISTS items_au AFTER UPDATE OF rowid, text ON items BEGIN
+          INSERT INTO items_fts(items_fts, rowid, text) VALUES('delete', old.rowid, old.text);
+          INSERT INTO items_fts(rowid, text) VALUES(new.rowid, new.text);
+        END;
+        """
+
+    private static let extractionSchema = """
+        CREATE TABLE IF NOT EXISTS item_text(
+          item_id TEXT NOT NULL UNIQUE, text TEXT NOT NULL
+        );
+        CREATE VIRTUAL TABLE IF NOT EXISTS item_text_fts USING fts5(
+          text, content='item_text', content_rowid='rowid', tokenize='trigram'
+        );
+        CREATE TRIGGER IF NOT EXISTS item_text_ai AFTER INSERT ON item_text BEGIN
+          INSERT INTO item_text_fts(rowid, text) VALUES(new.rowid, new.text);
+        END;
+        CREATE TRIGGER IF NOT EXISTS item_text_ad AFTER DELETE ON item_text BEGIN
+          INSERT INTO item_text_fts(item_text_fts, rowid, text)
+            VALUES('delete', old.rowid, old.text);
+        END;
+        CREATE TRIGGER IF NOT EXISTS items_extract_ad AFTER DELETE ON items BEGIN
+          DELETE FROM item_text WHERE item_id = old.id;
+        END;
+        CREATE INDEX IF NOT EXISTS items_extract_candidates ON items(kind)
+          WHERE kind IN ('image', 'file');
         """
 
     /// Internal, not private: a backup names both to stream the table and adopt its blobs.
@@ -199,6 +241,8 @@ final class ClipboardStore {
 
     /// Every accessor is statement-guarded, so a closed store answers as an empty history.
     func close() {
+        setTextSearchEnabled(false)
+        extractionGeneration = UUID()
         closeDatabase()
         items = []
     }
@@ -213,10 +257,13 @@ final class ClipboardStore {
 
     // Isolated so teardown may touch the main-actor pointers; the release is already on main.
     isolated deinit {
+        textSearchTask?.cancel()
         closeDatabase()
     }
 
     func load() {
+        invalidateSearch()
+        extractionGeneration = UUID()
         guard let stmt = loadStmt else { return }
         sqlite3_bind_int64(stmt, 1, windowFloor())
         var loaded: [ClipboardItem] = []
@@ -296,6 +343,7 @@ final class ClipboardStore {
     }
 
     func remove(_ item: ClipboardItem) {
+        textSearchMatches.removeAll { $0.id == item.id }
         if let stmt = deleteByIDStmt {
             sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
@@ -307,10 +355,68 @@ final class ClipboardStore {
     }
 
     func clearAll() {
+        invalidateSearch()
+        extractionGeneration = UUID()
         if db != nil { sqlite3_exec(db, "DELETE FROM items", nil, nil, nil) }
         try? FileManager.default.removeItem(at: imagesDir)
         try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
         items = []
+    }
+
+    @discardableResult
+    func setTextSearchEnabled(_ enabled: Bool) -> Bool {
+        guard enabled != textSearchEnabled else { return true }
+        if enabled {
+            guard let db, sqlite3_exec(db, Self.extractionSchema, nil, nil, nil) == SQLITE_OK else {
+                return false
+            }
+        }
+        textSearchEnabled = enabled
+        extractionGeneration = UUID()
+        invalidateSearch()
+        searchRevision += 1
+        return true
+    }
+
+    func nextExtractionItem() -> ClipboardItem? {
+        guard textSearchEnabled else { return nil }
+        guard
+            let stmt = prepare(
+                """
+                SELECT id, kind, text, image_path, created_at, source_app, pinned_at
+                FROM items WHERE kind IN ('image', 'file')
+                  AND id NOT IN (SELECT item_id FROM item_text)
+                ORDER BY rowid DESC LIMIT 1
+                """)
+        else { return nil }
+        defer { sqlite3_finalize(stmt) }
+        return sqlite3_step(stmt) == SQLITE_ROW ? Self.row(stmt) : nil
+    }
+
+    @discardableResult
+    func setExtractedText(_ text: String, for item: ClipboardItem, generation: UUID) -> Bool {
+        guard textSearchEnabled, generation == extractionGeneration, let db,
+            Self.insertExtractedText(text, for: item.id, in: db)
+        else { return false }
+        invalidateSearch(preservingMatches: true)
+        searchRevision += 1
+        return true
+    }
+
+    @discardableResult
+    nonisolated private static func insertExtractedText(
+        _ text: String, for id: UUID, in db: OpaquePointer?
+    ) -> Bool {
+        var stmt: OpaquePointer?
+        let sql = """
+            INSERT OR IGNORE INTO item_text(item_id, text)
+            SELECT id, ?2 FROM items WHERE id = ?1 AND kind IN ('image', 'file')
+            """
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, id.uuidString, -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, text, -1, SQLITE_TRANSIENT)
+        return sqlite3_step(stmt) == SQLITE_DONE && sqlite3_changes(db) > 0
     }
 
     func imageURL(for item: ClipboardItem) -> URL? {
@@ -325,13 +431,15 @@ final class ClipboardStore {
 
     /// Display order for `query` under `filter`: pinned entries first, each block newest-first.
     func search(_ query: String, filter: ClipboardFilter) -> [ClipboardItem] {
+        _ = searchRevision
         let q = query.trimmingCharacters(in: .whitespaces)
+        updateTextSearch(q, filter: filter)
         // The filter joins the key: `rows` rebuilds per render, so a query-only memo goes stale.
         if let searchCache, searchCache.query == q, searchCache.filter == filter {
             return searchCache.result
         }
         // Filtering after the split leaves a matching pin in the Pinned section, in pin order.
-        let result = filter.apply(to: unfiltered(q))
+        let result = filter.apply(to: unfiltered(q, filter: filter))
         searchCache = (q, filter, result)
         return result
     }
@@ -347,10 +455,18 @@ final class ClipboardStore {
         return search(query, filter: filter).prefix(while: \.isPinned).dropFirst(index).first
     }
 
-    private func unfiltered(_ q: String) -> [ClipboardItem] {
+    private func unfiltered(_ q: String, filter: ClipboardFilter) -> [ClipboardItem] {
         guard !q.isEmpty else { return orderedItems }
         // Pins are matched in memory: all resident, and the LIMIT would otherwise drop one.
-        return pinnedItems.filter { $0.matches(q) } + runSearch(q).filter { !$0.isPinned }
+        let ordinary = pinnedItems.filter { $0.matches(q) } + runSearch(q).filter { !$0.isPinned }
+        guard !textSearchMatches.isEmpty else { return ordinary }
+        let ordinaryIDs = Set(ordinary.map(\.id))
+        let additional = textSearchMatches.filter { !ordinaryIDs.contains($0.id) }
+        let pins = (ordinary + additional).filter(\.isPinned)
+            .sorted { ($0.pinnedAt ?? .distantFuture) < ($1.pinnedAt ?? .distantFuture) }
+        let unpinned = ordinary.filter { !$0.isPinned }
+        let remaining = max(0, 200 - filter.apply(to: unpinned).count)
+        return pins + unpinned + filter.apply(to: additional.filter { !$0.isPinned }).prefix(remaining)
     }
 
     private func runSearch(_ q: String) -> [ClipboardItem] {
@@ -367,6 +483,128 @@ final class ClipboardStore {
         sqlite3_reset(stmt)
         sqlite3_clear_bindings(stmt)
         return status == SQLITE_DONE ? results : fallbackSearch(q)
+    }
+
+    private func invalidateSearch(preservingMatches: Bool = false) {
+        searchCache = nil
+        orderedCache = nil
+        textSearchTask?.cancel()
+        textSearchTask = nil
+        textSearchRequest = nil
+        textSearchNeedsRefresh = preservingMatches && textSearchQuery != nil
+        if !preservingMatches {
+            textSearchQuery = nil
+            textSearchFilter = nil
+            textSearchMatches = []
+        }
+    }
+
+    func setTextSearchActive(_ active: Bool) {
+        guard textSearchActive != active else { return }
+        textSearchActive = active
+        guard textSearchEnabled else { return }
+        invalidateSearch()
+        searchRevision += 1
+    }
+
+    private func updateTextSearch(_ query: String, filter: ClipboardFilter) {
+        guard textSearchEnabled, textSearchActive, !query.isEmpty,
+            filter == .all || filter == .image || filter == .file
+        else {
+            if textSearchQuery != nil { invalidateSearch() }
+            return
+        }
+        guard textSearchQuery != query || textSearchFilter != filter || textSearchNeedsRefresh else { return }
+        invalidateSearch(preservingMatches: textSearchQuery == query && textSearchFilter == filter)
+        textSearchNeedsRefresh = false
+        textSearchQuery = query
+        textSearchFilter = filter
+        let request = UUID()
+        textSearchRequest = request
+        let url = dbURL
+        let residentIDs = query.count < 3 ? Set(items.map(\.id)) : nil
+        textSearchTask = Task(priority: .userInitiated) { [weak self] in
+            let worker = Task.detached(priority: .userInitiated) {
+                Self.extractedMatches(in: url, query: query, filter: filter, residentIDs: residentIDs)
+            }
+            let matches = await withTaskCancellationHandler {
+                await worker.value
+            } onCancel: {
+                worker.cancel()
+            }
+            guard !Task.isCancelled, let self, self.textSearchRequest == request else { return }
+            let previous = self.searchCache
+            self.textSearchMatches = matches
+            self.textSearchTask = nil
+            self.searchCache = nil
+            self.searchRevision += 1
+            if let previous, previous.query == query {
+                let current = self.search(query, filter: previous.filter)
+                self.onSearchResultsChanged?(query, previous.result, current)
+            }
+        }
+    }
+
+    nonisolated private static func extractedMatches(
+        in url: URL, query: String, filter: ClipboardFilter, residentIDs: Set<UUID>?
+    ) -> [ClipboardItem] {
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
+            sqlite3_close_v2(db)
+            return []
+        }
+        defer { sqlite3_close_v2(db) }
+        sqlite3_exec(db, "PRAGMA cache_size=-2048", nil, nil, nil)
+        sqlite3_progress_handler(db, 1000, { _ in Task.isCancelled ? 1 : 0 }, nil)
+        let isShort = query.count < 3
+        let kind = filter == .image ? "i.kind = 'image'" : filter == .file ? "i.kind = 'file'" : "1"
+        let columns = "i.id, i.kind, i.text, i.image_path, i.created_at, i.source_app, i.pinned_at"
+        let sql =
+            isShort
+            ? """
+            SELECT \(columns), t.text FROM item_text t JOIN items i ON i.id = t.item_id
+            WHERE \(kind) AND (i.pinned_at IS NOT NULL OR i.rowid >= COALESCE(
+              (SELECT rowid FROM items WHERE pinned_at IS NULL ORDER BY rowid DESC LIMIT 1 OFFSET 999), 0))
+            ORDER BY i.pinned_at IS NULL, i.pinned_at, i.rowid DESC
+            """
+            : """
+            SELECT * FROM (
+              SELECT \(columns), NULL AS recognized, i.rowid AS rid FROM items i
+                WHERE i.pinned_at IS NULL AND i.rowid IN (
+                SELECT i.rowid FROM item_text_fts f
+                  JOIN item_text t ON t.rowid = f.rowid JOIN items i ON i.id = t.item_id
+                WHERE item_text_fts MATCH ?1 AND \(kind)
+                ORDER BY i.rowid DESC
+                LIMIT 200 + (SELECT COUNT(*) FROM items WHERE pinned_at IS NOT NULL)
+              )
+              UNION ALL
+              SELECT \(columns), t.text AS recognized, i.rowid AS rid
+                FROM items i JOIN item_text t ON t.item_id = i.id
+                WHERE i.pinned_at IS NOT NULL AND \(kind)
+            ) ORDER BY pinned_at IS NULL, pinned_at, rid DESC
+            """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        if !isShort {
+            let match = "\"" + query.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+            sqlite3_bind_text(stmt, 1, match, -1, SQLITE_TRANSIENT)
+        }
+        var matches: [ClipboardItem] = []
+        var unpinned = 0
+        while !Task.isCancelled, sqlite3_step(stmt) == SQLITE_ROW {
+            guard let item = row(stmt) else { continue }
+            if let residentIDs, !residentIDs.contains(item.id) { continue }
+            if isShort || item.isPinned,
+                columnString(stmt, 7)?.localizedCaseInsensitiveContains(query) != true
+            {
+                continue
+            }
+            matches.append(item)
+            if !item.isPinned { unpinned += 1 }
+            if unpinned == 200 { break }
+        }
+        return Task.isCancelled ? [] : matches
     }
 
     // MARK: - Private
@@ -393,7 +631,8 @@ final class ClipboardStore {
     /// The row keeps its place and gains a stamp, which heads the Pinned section.
     private func pin(_ item: ClipboardItem) {
         let stamp = Date()
-        let pinned = item.with(pinnedAt: stamp)
+        let current = items.first { $0.id == item.id } ?? item
+        let pinned = current.with(pinnedAt: stamp)
         if let stmt = pinStmt {
             sqlite3_bind_double(stmt, 1, stamp.timeIntervalSince1970)
             sqlite3_bind_text(stmt, 2, item.id.uuidString, -1, SQLITE_TRANSIENT)
@@ -415,19 +654,23 @@ final class ClipboardStore {
         reinsert(item.with(createdAt: Date(), pinnedAt: nil))
     }
 
-    /// Rewrite a row under the same id so it leads. See docs/features/clipboard.md#store.
     private func reinsert(_ updated: ClipboardItem) {
-        if let deleteStmt = deleteByIDStmt, let insertStmt {
-            // One transaction: `id` is UNIQUE, and a crash between the two must not lose it.
-            sqlite3_exec(db, "BEGIN", nil, nil, nil)
-            sqlite3_bind_text(deleteStmt, 1, updated.id.uuidString, -1, SQLITE_TRANSIENT)
-            sqlite3_step(deleteStmt)
-            sqlite3_reset(deleteStmt)
-            sqlite3_clear_bindings(deleteStmt)
-            Self.bindAndInsert(insertStmt, updated)
-            sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        if let stmt = prepare(
+            """
+            UPDATE items SET rowid = (SELECT COALESCE(MAX(rowid), 0) + 1 FROM items),
+              created_at = ?1, pinned_at = ?2 WHERE id = ?3
+            """)
+        {
+            sqlite3_bind_double(stmt, 1, updated.createdAt.timeIntervalSince1970)
+            if let stamp = updated.pinnedAt {
+                sqlite3_bind_double(stmt, 2, stamp.timeIntervalSince1970)
+            } else {
+                sqlite3_bind_null(stmt, 2)
+            }
+            sqlite3_bind_text(stmt, 3, updated.id.uuidString, -1, SQLITE_TRANSIENT)
+            sqlite3_step(stmt)
+            sqlite3_finalize(stmt)
         }
-        // Array ops also cover items surfaced by FTS from beyond the in-memory window.
         items.removeAll { $0.id == updated.id }
         items.insert(updated, at: 0)
         trimWindow()
@@ -483,6 +726,7 @@ final class ClipboardStore {
 
     private func prune() {
         let cutoff = Date().addingTimeInterval(-maxAge)
+        textSearchMatches.removeAll { $0.createdAt < cutoff && !$0.isPinned }
         if let imagesStmt = staleImagesStmt, let deleteStmt = deleteStaleStmt {
             sqlite3_bind_double(imagesStmt, 1, cutoff.timeIntervalSince1970)
             var staleOwnedPaths: [String] = []
@@ -496,6 +740,10 @@ final class ClipboardStore {
             sqlite3_clear_bindings(imagesStmt)
             sqlite3_bind_double(deleteStmt, 1, cutoff.timeIntervalSince1970)
             sqlite3_step(deleteStmt)
+            if sqlite3_changes(db) > 0 {
+                invalidateSearch(preservingMatches: true)
+                searchRevision += 1
+            }
             sqlite3_reset(deleteStmt)
             sqlite3_clear_bindings(deleteStmt)
             // A retention cut can strand hundreds of files, so delete them off the main actor.
@@ -541,8 +789,10 @@ final class ClipboardStore {
         searchStmt = prepare(
             """
             SELECT i.id, i.kind, i.text, i.image_path, i.created_at, i.source_app, i.pinned_at
-            FROM items_fts f JOIN items i ON i.rowid = f.rowid
-            WHERE items_fts MATCH ? ORDER BY f.rowid DESC LIMIT 200
+            FROM (
+              SELECT rowid FROM items_fts WHERE items_fts MATCH ?
+              ORDER BY rowid DESC LIMIT 200
+            ) f JOIN items i ON i.rowid = f.rowid ORDER BY f.rowid DESC
             """)
         deleteByIDStmt = prepare("DELETE FROM items WHERE id = ?")
         // Only ever sets a stamp: unpinning rewrites the whole row so it leads the history again.
