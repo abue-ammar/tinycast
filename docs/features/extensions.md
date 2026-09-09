@@ -206,9 +206,6 @@ context teardown. Loading and closed-menu actions have a 60-second deadline; an 
 This bounds asynchronous work, but cannot interrupt an extension stuck in synchronous JavaScript or a
 blocking Node shim on the runtime queue.
 
-The HTTP lifetime regression and 100-cycle memory check are recorded in the
-[menu memory investigation](../benchmarks/extension-menu-memory.md).
-
 A saved button restores after relaunch without executing JavaScript; only its next due refresh boots
 the runtime. `extension-menu-bars.json` is channel-local Application Support data and is excluded from
 settings backups. The command's **Show in menu bar** toggle, uninstall, and disabling extensions

@@ -229,7 +229,8 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         if item.isEnabled != enabled { item.isEnabled = enabled }
         let rawShortcut = (parent ?? node).object("shortcut") ?? [:]
         let shortcut = rawShortcut["macOS"]?.objectValue ?? rawShortcut
-        let key = keyEquivalent(shortcut["key"]?.stringValue ?? "")
+        let rawKey = shortcut["key"]?.stringValue ?? ""
+        let key = Self.namedKeys[rawKey] ?? rawKey.lowercased()
         if item.keyEquivalent != key { item.keyEquivalent = key }
         var modifiers = (shortcut["modifiers"]?.arrayValue ?? []).reduce(into: NSEvent.ModifierFlags()) { flags, value in
             switch value.stringValue {
@@ -249,27 +250,14 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         }
     }
 
-    private func keyEquivalent(_ key: String) -> String {
-        switch key {
-        case "return": return "\r"
-        case "enter": return "\u{3}"
-        case "tab": return "\t"
-        case "space": return " "
-        case "escape": return "\u{1b}"
-        case "backspace": return "\u{8}"
-        case "delete": return "\u{7f}"
-        case "deleteForward": return "\u{f728}"
-        case "home": return "\u{f729}"
-        case "end": return "\u{f72b}"
-        case "pageUp": return "\u{f72c}"
-        case "pageDown": return "\u{f72d}"
-        case "arrowUp": return "\u{f700}"
-        case "arrowDown": return "\u{f701}"
-        case "arrowLeft": return "\u{f702}"
-        case "arrowRight": return "\u{f703}"
-        default: return key.lowercased()
-        }
-    }
+    /// Raycast's named keys; anything else is the literal character it names.
+    private static let namedKeys = [
+        "return": "\r", "enter": "\u{3}", "tab": "\t", "space": " ", "escape": "\u{1b}",
+        "backspace": "\u{8}", "delete": "\u{7f}", "deleteForward": "\u{f728}",
+        "home": "\u{f729}", "end": "\u{f72b}", "pageUp": "\u{f72c}", "pageDown": "\u{f72d}",
+        "arrowUp": "\u{f700}", "arrowDown": "\u{f701}", "arrowLeft": "\u{f702}",
+        "arrowRight": "\u{f703}"
+    ]
 
     @objc private func performAction(_ item: NSMenuItem) {
         let event = NSApp.currentEvent
