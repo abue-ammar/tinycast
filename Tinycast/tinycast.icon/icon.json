@@ -1,20 +1,51 @@
 {
-  "fill": "automatic",
+  "fill": {
+    "solid": "srgb:0.00000,0.00000,0.00000,1.00000"
+  },
   "groups": [
     {
       "layers": [
         {
-          "image-name": "thunder.svg",
-          "name": "thunder"
+          "image-name": "ring.svg",
+          "name": "ring",
+          "fill": {
+            "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ],
+          "glass": false
+        },
+        {
+          "image-name": "background.svg",
+          "name": "background",
+          "fill": {
+            "solid": "srgb:0.00000,0.00000,0.00000,1.00000"
+          },
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.00000,0.00000,0.00000,1.00000"
+              }
+            }
+          ],
+          "glass": false
         }
       ],
       "shadow": {
         "kind": "neutral",
-        "opacity": 0.5
+        "opacity": 0
       },
+      "specular": false,
       "translucency": {
-        "enabled": true,
-        "value": 0.5
+        "enabled": false,
+        "value": 0
       }
     }
   ],

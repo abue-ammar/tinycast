@@ -53,6 +53,15 @@ These are the things that quietly break the look if changed. Preserve them unles
 
 ---
 
+## App identity
+
+The macOS app icon uses `tinycast.icon/Assets/ring.svg` over `background.svg`: a white ring on solid
+black, with Icon Composer glass, specular, shadow and translucency effects disabled. The layers have
+explicit dark fills to preserve their colors. The menu-bar item uses
+`MenuBarIcon.imageset`, an 18pt transparent ring template so macOS controls its contrast against the
+menu bar. The app icon's ring is larger and heavier; menu-bar proportions stay independently tuned.
+The ring is an outlined SVG path so Icon Composer's fill overrides preserve its hollow center.
+
 ## Tokens
 
 Source: `Tinycast/DesignSystem/Theme.swift`.
