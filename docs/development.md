@@ -107,9 +107,13 @@ It reads the source lists from `run-tests.sh` itself, so they cannot drift from 
 compiles. `Scripts/sync-lsp.sh` runs it too. Three things it has to get right, all of which fail
 silently otherwise: every path is absolute, because `sourcekit-lsp` resolves the command itself and does
 not apply `directory` to relative arguments; the command carries an explicit `-sdk`; and each entry
-claims **only its own harness** in `files`. The command still lists every shipped source it compiles, so
-symbols resolve inside the harness — but claiming those sources too would hand them this three-file
-command instead of the app's, and `.compile` is last-wins.
+claims **only files under `Tests/`** — its harness plus any helper compiled beside it. The command
+still lists every shipped source it compiles, so symbols resolve inside the harness, but claiming a
+shipped source too would hand it this three-file command instead of the app's, and `.compile` is
+last-wins.
+
+A benchmark that stays out of the suite still needs flags, so `run-tests.sh` registers it as
+`run index <name> <source...>`: `--index` emits its compile command and the runner never queues it.
 
 Re-run it after adding a harness, then **Swift: Restart LSP Server** from the Command Palette — an
 already-running server does not re-read `.compile`.
