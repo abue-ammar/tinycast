@@ -582,7 +582,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         let session = ExtensionBackgroundSession(reference: reference)
         backgroundSession = session
         defer {
-            // A preempted run owns no schedule, and a vanished one would resurrect its storage file.
+            // A preempted run owns no schedule, and a vanished one resurrects its storage file.
             if session.outcome != .cancelled, extensionNamed(reference.extensionName) != nil {
                 let error = session.outcome?.error
                 commandMetadata.recordBackgroundResult(
@@ -621,17 +621,14 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         await runtime.start(
             session: session.id, code: code, file: bundle, mode: command.mode, context: context)
         _ = await session.wait(timeout: ExtensionRefreshPolicy.timeout(interval: interval))
-        // An abort already tore the session down; touching the runtime here would take the
-        // manual run's fresh context with it.
+        // An abort already tore this down; shutting down here would take the replacement context.
         guard backgroundSession === session else { return }
         await runtime.stop(session: session.id)
         guard backgroundSession === session else { return }
         runtime.shutdown()
     }
 
-    /// Drops the in-flight run without recording it, so preemption leaves its schedule untouched.
-    /// Synchronous by design: `shutdown` is queued ahead of the caller's `boot`, where an awaited
-    /// teardown could instead land inside the context that replaced this one.
+    /// Drops the run unrecorded, and synchronously: an awaited teardown lands in the next context.
     private func abortBackgroundRun() {
         guard let session = backgroundSession else { return }
         backgroundSession = nil

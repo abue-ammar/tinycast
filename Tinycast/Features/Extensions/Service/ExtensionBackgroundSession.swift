@@ -1,7 +1,6 @@
 import Foundation
 
-/// One headless refresh, from launch to outcome. The outcome is buffered rather than signalled, so a
-/// command that finishes before anyone waits still reports what it did.
+/// One headless refresh: its outcome is buffered, so a run that settles before the wait reports.
 @MainActor
 final class ExtensionBackgroundSession {
     enum Outcome: Sendable, Equatable {

@@ -661,8 +661,7 @@ enum ExtensionBackgroundSessionTests {
         await realCommandChecks(check)
     }
 
-    /// End to end through JavaScriptCore, wired the way `runInBackground` wires it: a real no-view
-    /// command, the shipped delegate callbacks, and the outcome a schedule is recorded from.
+    /// End to end through JavaScriptCore, wired the way `runInBackground` wires it.
     static func realCommandChecks(_ check: (String, Bool, String) -> Void) async {
         let reference = ExtensionCommandRef(extensionName: "fixture", commandName: "status")
         let cases: [(String, String, ExtensionBackgroundSession.Outcome)] = [

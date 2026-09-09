@@ -59,7 +59,6 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         menu.autoenablesItems = false
         menu.delegate = self
         // AppKit owns tracking, which is what hands a click on another status item over to it.
-        // Attached before the first snapshot, so the click that starts a command still opens a menu.
         status.menu = menu
     }
 
