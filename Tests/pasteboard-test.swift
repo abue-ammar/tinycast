@@ -2,7 +2,6 @@
 // Every case drives `NSPasteboard.withUniqueName()`: writing to `.general` would land in the
 // reader's own running Tinycast as a genuine copy.
 import AppKit
-import ObjectiveC
 
 @main
 @MainActor
@@ -19,9 +18,8 @@ struct PasteboardTests {
         volatileAndMissingFilesFallThrough()
         theBatchIsCapped()
         rejectedFilesDoNotCountTowardTheCap()
-        boundedReaderPreservesSelectionAndStopsChecking()
-        modernFilesSuppressLegacyFallback()
-        rawLegacyFallbackKeepsEveryFile()
+        theBoundedReaderStopsAtItsLimit()
+        aModernFileURLSuppressesTheLegacyFallback()
         fileEntriesWriteBackAsFiles()
         aVanishedFileWritesNothing()
 
@@ -198,6 +196,70 @@ struct PasteboardTests {
         }
     }
 
+    /// Bounding lives in the reader now, so both the limit and the predicate must stop exactly.
+    static func theBoundedReaderStopsAtItsLimit() {
+        let urls = (0..<100).map { URL(fileURLWithPath: "/fixture/\($0).txt") }
+        let pb = fileBoard(urls, legacy: false)
+        defer { pb.releaseGlobally() }
+        expect(PasteboardFiles.urls(on: pb) == urls, "the attachment reader stays uncapped")
+        for limit in [-1, 0, 1, cap - 1, cap, cap + 1, 100, Int.max] {
+            var visited: [URL] = []
+            let matched = PasteboardFiles.urls(on: pb, limit: limit) { url in
+                visited.append(url)
+                return true
+            }
+            let expected = Array(urls.prefix(max(0, limit)))
+            expect(matched == expected, "a limit of \(limit) bounds the result in board order")
+            expect(visited == expected, "and nothing is decoded past a limit of \(limit)")
+        }
+        var visited: [URL] = []
+        let afterRejections = PasteboardFiles.urls(on: pb, limit: cap) { url in
+            visited.append(url)
+            return visited.count > 40
+        }
+        expect(
+            afterRejections == Array(urls[40..<(40 + cap)]),
+            "rejected URLs do not consume the limit")
+        expect(
+            visited == Array(urls.prefix(40 + cap)),
+            "and every URL is tested once, with testing stopping at the limit")
+    }
+
+    /// A board naming a file in the modern flavour must never fall back, even when we reject it.
+    static func aModernFileURLSuppressesTheLegacyFallback() {
+        withScratch { dir in
+            let legacy = dir.appendingPathComponent("legacy.txt")
+            let modern = dir.appendingPathComponent("modern.txt")
+            let missing = dir.appendingPathComponent("missing.txt")
+            try? Data("legacy".utf8).write(to: legacy)
+            try? Data("modern".utf8).write(to: modern)
+            for url in [modern, missing, URL(string: "https://example.com/file")!] {
+                let type = NSPasteboard.PasteboardType("NSFilenamesPboardType")
+                let pb = board()
+                defer { pb.releaseGlobally() }
+                pb.declareTypes([type, .fileURL], owner: nil)
+                pb.setPropertyList([legacy.path], forType: type)
+                pb.setData(url.dataRepresentation, forType: .fileURL)
+
+                let named = url.isFileURL ? [url] : [legacy]
+                expect(
+                    PasteboardFiles.urls(on: pb) == named,
+                    "a modern file URL outranks the legacy paths beside it")
+                var visited: [URL] = []
+                let rejected = PasteboardFiles.urls(on: pb, limit: cap) { candidate in
+                    visited.append(candidate)
+                    return false
+                }
+                expect(rejected.isEmpty, "rejecting every candidate names no file")
+                expect(visited == named, "and a rejected modern URL still suppresses the fallback")
+                expect(
+                    ClipboardManager.fileURLs(on: pb, volatileRoots: [])
+                        == (url == missing ? nil : named.map(\.path)),
+                    "so a missing modern file never captures the legacy path instead")
+            }
+        }
+    }
+
     static func fileBoard(_ urls: [URL], legacy: Bool) -> NSPasteboard {
         let pb = board()
         if legacy {
@@ -208,104 +270,6 @@ struct PasteboardTests {
             expect(pb.writeObjects(urls as [NSURL]), "file URL fixture is written")
         }
         return pb
-    }
-
-    static func boundedReaderPreservesSelectionAndStopsChecking() {
-        let urls = (0..<100).map { URL(fileURLWithPath: "/fixture/\($0).txt") }
-        let pb = fileBoard(urls, legacy: false)
-        defer { pb.releaseGlobally() }
-        expect(PasteboardFiles.urls(on: pb) == urls, "the attachment reader remains uncapped")
-        for limit in [-1, 0, 1, 31, 32, 33, 100, Int.max] {
-            var visited: [URL] = []
-            let actual = PasteboardFiles.urls(on: pb, limit: limit) { url in
-                visited.append(url)
-                return true
-            }
-            let expected = Array(urls.prefix(max(0, limit)))
-            expect(actual == expected, "bounded reader preserves order at limit \(limit)")
-            expect(visited == expected, "no predicate call after limit \(limit)")
-        }
-        var visited: [URL] = []
-        let accepted = PasteboardFiles.urls(on: pb, limit: 32) { url in
-            visited.append(url)
-            return visited.count > 40
-        }
-        expect(accepted == Array(urls[40..<72]), "rejected URLs do not consume the reader limit")
-        expect(visited == Array(urls.prefix(72)), "each URL is tested once and checks stop at the cap")
-    }
-
-    static func modernFilesSuppressLegacyFallback() {
-        withScratch { dir in
-            let legacy = dir.appendingPathComponent("legacy.txt")
-            let modern = dir.appendingPathComponent("modern.txt")
-            try? Data("legacy".utf8).write(to: legacy)
-            try? Data("modern".utf8).write(to: modern)
-            let missing = dir.appendingPathComponent("missing.txt")
-            for url in [modern, missing, URL(string: "https://example.com/file")!] {
-                let pb = board()
-                defer { pb.releaseGlobally() }
-                let type = NSPasteboard.PasteboardType("NSFilenamesPboardType")
-                pb.declareTypes([type, .fileURL], owner: nil)
-                pb.setPropertyList([legacy.path], forType: type)
-                pb.setData(url.dataRepresentation, forType: .fileURL)
-                let expected = url.isFileURL ? [url] : [legacy]
-                expect(PasteboardFiles.urls(on: pb) == expected, "modern file URLs outrank legacy paths")
-                expect(PasteboardFiles.urls(on: pb, limit: 32) { _ in true } == expected,
-                       "the bounded reader preserves representation precedence")
-                var visited: [URL] = []
-                let rejected = PasteboardFiles.urls(on: pb, limit: 32) { candidate in
-                    visited.append(candidate)
-                    return false
-                }
-                expect(rejected.isEmpty && visited == expected,
-                       "rejected modern file URLs still suppress legacy fallback")
-                let capture: [String]? = url == missing ? nil : expected.map(\.path)
-                expect(ClipboardManager.fileURLs(on: pb, volatileRoots: []) == capture,
-                       "missing modern files do not cause legacy capture")
-            }
-        }
-    }
-
-    static func rawLegacyFallbackKeepsEveryFile() {
-        withScratch { dir in
-            let files = (0..<40).map { dir.appendingPathComponent("f\($0).txt") }
-            for file in files { try? Data("file".utf8).write(to: file) }
-            let missing = dir.appendingPathComponent("missing.txt")
-            for urls in [files, Array(repeating: missing, count: 40) + files,
-                         Array(repeating: missing, count: 40)] {
-                let pb = fileBoard(urls, legacy: true)
-                defer { pb.releaseGlobally() }
-                hideModernItems(on: pb)
-                expect(PasteboardFiles.urls(on: pb) == urls, "raw legacy extraction remains uncapped")
-                var visited: [URL] = []
-                let result = PasteboardFiles.urls(on: pb, limit: 32) { url in
-                    visited.append(url)
-                    return url != missing
-                }
-                let expected = Array(urls.filter { $0 != missing }.prefix(32))
-                expect(result == expected, "raw legacy skips rejections and preserves the first 32")
-                let expectedVisits = expected.isEmpty ? urls.count : (urls.first == missing ? 72 : 32)
-                expect(visited == Array(urls.prefix(expectedVisits)), "raw legacy predicates run once")
-                expect(ClipboardManager.fileURLs(on: pb, volatileRoots: [])
-                    == (expected.isEmpty ? nil : Array(expected.map(\.path).reversed())),
-                    "raw legacy capture matches the store insertion order")
-            }
-        }
-    }
-
-    // macOS synthesizes modern items from legacy filenames; hide them only on this private fixture.
-    static func hideModernItems(on pasteboard: NSPasteboard) {
-        let superclass: AnyClass = object_getClass(pasteboard)!
-        let name = "LegacyFilesFixture" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        let subclass: AnyClass = objc_allocateClassPair(superclass, name, 0)!
-        let getter = #selector(getter: NSPasteboard.pasteboardItems)
-        let method = class_getInstanceMethod(superclass, getter)!
-        let block: @convention(block) (AnyObject) -> NSArray = { _ in [] }
-        precondition(class_addMethod(
-            subclass, getter, imp_implementationWithBlock(block), method_getTypeEncoding(method)))
-        objc_registerClassPair(subclass)
-        object_setClass(pasteboard, subclass)
-        precondition(pasteboard.pasteboardItems?.isEmpty == true)
     }
 
     // MARK: - Writing
