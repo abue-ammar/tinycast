@@ -364,6 +364,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - With Calendar **off**: no launcher entries, no card, no permission prompt at launch
 - Enabling shows the consent dialog **before** the macOS prompt; declining prompts for nothing
+- After Calendar permission is reset, Settings ▸ Calendar offers `Allow Calendar Access…` and asks
+  again; after denial it offers System Settings instead
 - With a meeting four minutes out, an empty palette shows the card on top, provider glyph and all
 - The countdown steps on the minute boundary rather than on a keystroke
 - ↵ joins: a Zoom link opens the Zoom app, and the browser where no app claims the scheme

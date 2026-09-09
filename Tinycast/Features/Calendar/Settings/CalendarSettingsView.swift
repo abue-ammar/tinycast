@@ -30,7 +30,18 @@ struct CalendarSettingsView: View {
             }
             .settingsEnabled(settings.calendarEnabled && settings.calendarShowInLauncher)
 
-            if store.access == .denied {
+            if store.access == .notDetermined {
+                Section {
+                    SettingsRow(
+                        title: "Calendar access is needed",
+                        subtitle: "Allow Tinycast to read events and find meeting links."
+                    ) {
+                        Button("Allow Calendar Access…") {
+                            core.calendarCoordinator.setCalendarEnabled(true)
+                        }
+                    }
+                }
+            } else if store.access == .denied {
                 Section {
                     SettingsRow(
                         title: "Calendar access is off",

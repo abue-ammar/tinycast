@@ -40,7 +40,8 @@ events as searchable launcher entries.
   mode read `No upcoming events`.
 - **`calendarEnabled` doubles as consent**, so it is in `SettingsBackupCoverage.deliberatelyExcluded`
   and only `CalendarCoordinator.setCalendarEnabled` may write it. Tinycast's own dialog comes first,
-  the macOS prompt second, and only from the gesture that asked.
+  the macOS prompt second, and only from the gesture that asked. If TCC is reset while the setting is
+  still on, the Calendar pane offers that same path again rather than stranding the feature.
 - **Per-calendar toggles live on `CalendarStore`, not `AppSettings`.** Calendar identifiers are
   machine-specific, so they are deliberately outside the backup mirror — the same reasoning as
   `palettePosition`.

@@ -76,12 +76,14 @@ final class CalendarCoordinator {
 
     /// The switch funnels here so enabling, which is also consent, confirms first.
     func setCalendarEnabled(_ enabled: Bool) {
-        guard enabled != settings.calendarEnabled else { return }
         if !enabled {
+            guard settings.calendarEnabled else { return }
             settings.calendarEnabled = false
             return
         }
 
+        // TCC can be reset while the feature remains enabled; that state needs the same consent path.
+        guard !settings.calendarEnabled || store.access == .notDetermined else { return }
         NSApp.activate(ignoringOtherApps: true)
         Task {
             guard
