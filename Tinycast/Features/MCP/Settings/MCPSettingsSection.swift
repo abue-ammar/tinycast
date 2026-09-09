@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Settings → AI's MCP half: the switch, the servers, and what each one is doing right now.
 struct MCPSettingsSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var appSettings
     @Environment(MCPSettingsStore.self) private var store
@@ -41,9 +42,11 @@ struct MCPSettingsSection: View {
             SettingsSectionHeader(.aiMCPServers)
         } footer: {
             Text(
-                "Tools from every enabled server are offered to the model; type @slug to address "
-                    + "one directly. The first call of a chat asks before it runs. Credentials "
-                    + "stay in your login Keychain."
+                String(localized: """
+                    Tools from every enabled server are offered to the model; type @slug to \
+                    address one directly. The first call of a chat asks before it runs. Credentials \
+                    stay in your login Keychain.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -52,7 +55,9 @@ struct MCPSettingsSection: View {
             MCPServerEditor(target: target, onSave: save, onCancel: { editor = nil })
         }
         .confirmationDialog(
-            "Remove \(pendingRemoval?.title ?? "this server")?", isPresented: removalBinding,
+            String(
+                localized: "Remove \(pendingRemoval?.title ?? "this server")?",
+                bundle: .appLanguage), isPresented: removalBinding,
             presenting: pendingRemoval
         ) { server in
             Button("Remove", role: .destructive) { remove(server) }
@@ -70,7 +75,7 @@ struct MCPSettingsSection: View {
         do {
             try MCPSecretStore().save(secrets, for: server.id)
         } catch {
-            return "The credentials could not be saved to your login Keychain."
+            return String(localized: "The credentials could not be saved to your login Keychain.", bundle: .appLanguage)
         }
         store.save(server)
         editor = nil
@@ -87,6 +92,7 @@ struct MCPSettingsSection: View {
 }
 
 private struct MCPServerRow: View {
+    @Environment(\.locale) private var localizationLocale
     let server: MCPServer
     let status: MCPServerStatus
     let onEdit: () -> Void
@@ -112,7 +118,7 @@ private struct MCPServerRow: View {
 
     /// The slug leads, because it is the half a reader has to type into the composer.
     private var subtitle: String {
-        let state = server.isEnabled ? status.label : "Disabled"
+        let state = server.isEnabled ? status.label : String(localized: "Disabled", bundle: .appLanguage)
         return "@\(server.slug) · \(state) · \(server.transport.summary)"
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Searchable list of installed apps, drawn from the launcher's own index.
 struct AppPickerPopover: View {
+    @Environment(\.locale) private var localizationLocale
     /// Bundle IDs to leave out — the ones already chosen.
     var excluded: Set<String> = []
     /// Shown above the list when the caller can also clear its choice.

@@ -28,8 +28,9 @@ final class SystemActionCoordinator {
         case .required(let title, let message):
             guard
                 await core.confirm(
-                    title: title, message: message, symbol: action.sfSymbol,
-                    confirmTitle: action.name)
+                    title: String(localized: String.LocalizationValue(title), bundle: .appLanguage),
+                    message: String(localized: String.LocalizationValue(message), bundle: .appLanguage), symbol: action.sfSymbol,
+                    confirmTitle: String(localized: String.LocalizationValue(action.name), bundle: .appLanguage))
             else { return }
         case .none:
             break
@@ -71,9 +72,9 @@ final class SystemActionCoordinator {
     private func presentFailure(action: SystemAction, failure: SystemActionFailure) async {
         guard
             await core.reportFailure(
-                title: "“\(action.name)” Failed", message: failure.message,
+                title: String(localized: "“\(action.name)” Failed", bundle: .appLanguage), message: failure.message,
                 symbol: action.sfSymbol,
-                recovery: failure.settings == nil ? nil : "Open System Settings…"),
+                recovery: failure.settings == nil ? nil : String(localized: "Open System Settings…", bundle: .appLanguage)),
             let settings = failure.settings
         else { return }
         let pane: String
@@ -93,10 +94,10 @@ final class SystemActionCoordinator {
         guard !targets.isEmpty,
             await core.confirm(
                 title: targets.count == 1
-                    ? "Quit 1 application?" : "Quit \(targets.count) applications?",
-                message: "Applications with unsaved changes will ask you to save.",
+                    ? "Quit 1 application?" : String(localized: "Quit \(targets.count) applications?", bundle: .appLanguage),
+                message: String(localized: "Applications with unsaved changes will ask you to save.", bundle: .appLanguage),
                 symbol: SystemActionCatalog.action(id: .quitAllApps).sfSymbol,
-                confirmTitle: "Quit All")
+                confirmTitle: String(localized: "Quit All", bundle: .appLanguage))
         else { return }
         for app in targets { app.terminate() }
     }

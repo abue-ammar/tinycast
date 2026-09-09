@@ -2,12 +2,13 @@ import AppKit
 import SwiftUI
 
 struct AboutView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
 
     private static var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
-        return "Version \(short) (\(build))"
+        return String(localized: "Version \(short) (\(build))", bundle: .appLanguage)
     }
 
     // Cached, and read from the bundle: the app icon is generic until LaunchServices registers.
@@ -142,30 +143,35 @@ private struct AboutLink: Identifiable {
     let detail: String
     let url: URL
 
-    static let all: [AboutLink] = [
-        AboutLink(
-            id: "website", glyph: .symbol("globe"), title: "Website",
-            detail: "abue-ammar.github.io/tinycast",
-            url: URL(string: "https://abue-ammar.github.io/tinycast/")!),
-        AboutLink(
-            id: "github", glyph: .brand("BrandGitHub"), title: "GitHub",
-            detail: "github.com/abue-ammar/tinycast",
-            url: URL(string: "https://github.com/abue-ammar/tinycast")!),
-        AboutLink(
-            id: "discord", glyph: .brand("BrandDiscord"), title: "Discord",
-            detail: "Join the Tinycast community",
-            url: URL(string: "https://discord.gg/v2Eeb4QQy3")!),
-        AboutLink(
-            id: "x", glyph: .brand("BrandX"), title: "X", detail: "@abue_ammar",
-            url: URL(string: "https://x.com/abue_ammar")!),
-        AboutLink(
-            id: "email", glyph: .symbol("envelope"), title: "Email",
-            detail: "iabueammar@gmail.com", url: URL(string: "mailto:iabueammar@gmail.com")!)
-    ]
+    static var all: [AboutLink] {
+        [
+            AboutLink(
+                id: "website", glyph: .symbol("globe"),
+                title: String(localized: "Website", bundle: .appLanguage),
+                detail: "abue-ammar.github.io/tinycast",
+                url: URL(string: "https://abue-ammar.github.io/tinycast/")!),
+            AboutLink(
+                id: "github", glyph: .brand("BrandGitHub"), title: "GitHub",
+                detail: "github.com/abue-ammar/tinycast",
+                url: URL(string: "https://github.com/abue-ammar/tinycast")!),
+            AboutLink(
+                id: "discord", glyph: .brand("BrandDiscord"), title: "Discord",
+                detail: String(localized: "Join the Tinycast community", bundle: .appLanguage),
+                url: URL(string: "https://discord.gg/v2Eeb4QQy3")!),
+            AboutLink(
+                id: "x", glyph: .brand("BrandX"), title: "X", detail: "@abue_ammar",
+                url: URL(string: "https://x.com/abue_ammar")!),
+            AboutLink(
+                id: "email", glyph: .symbol("envelope"),
+                title: String(localized: "Email", bundle: .appLanguage),
+                detail: "iabueammar@gmail.com", url: URL(string: "mailto:iabueammar@gmail.com")!)
+        ]
+    }
 }
 
 /// A row in the About "Links" card: glyph, title, destination and the arrow.
 private struct AboutLinkRow: View {
+    @Environment(\.locale) private var localizationLocale
     let link: AboutLink
 
     @State private var hovered = false

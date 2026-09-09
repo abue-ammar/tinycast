@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The Layout row: an add button beside the dropdown naming the entry every field below edits.
 struct WindowLayoutEntryPicker: View {
+    @Environment(\.locale) private var localizationLocale
     let draft: WindowLayoutDraft
     let displays: [WindowLayoutDisplay]
 

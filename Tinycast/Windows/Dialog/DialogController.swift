@@ -12,7 +12,7 @@ final class DialogController: NSObject, NSWindowDelegate {
 
     func confirm(
         title: String, message: String?, symbol: String?, tone: DialogTone, confirmTitle: String,
-        confirmRole: DialogAction.Role, dismissTitle: String = "Cancel"
+        confirmRole: DialogAction.Role, dismissTitle: String = String(localized: "Cancel", bundle: .appLanguage)
     ) async -> Bool {
         let request = DialogRequest(
             title: title, message: message, symbol: symbol, tone: tone,
@@ -38,7 +38,9 @@ final class DialogController: NSObject, NSWindowDelegate {
     func notice(title: String, message: String, symbol: String, tone: DialogTone) async {
         let request = DialogRequest(
             title: title, message: message, symbol: symbol, tone: tone,
-            actions: [DialogAction(title: "OK", role: .cancel)], defaultIndex: 0, cancelIndex: 0)
+            actions: [DialogAction(title: String(
+                localized: "OK",
+                bundle: .appLanguage), role: .cancel)], defaultIndex: 0, cancelIndex: 0)
         _ = await present(request)
     }
 
@@ -48,7 +50,7 @@ final class DialogController: NSObject, NSWindowDelegate {
     ) async
         -> Bool
     {
-        var actions = [DialogAction(title: "OK", role: .cancel)]
+        var actions = [DialogAction(title: String(localized: "OK", bundle: .appLanguage), role: .cancel)]
         if let recovery { actions.append(DialogAction(title: recovery)) }
         // ↵ lands on the recovery action when there is one to take, not on the OK dismissal.
         let recoveryIndex = recovery == nil ? nil : actions.count - 1
@@ -61,11 +63,16 @@ final class DialogController: NSObject, NSWindowDelegate {
     func pickVolume(current: Float32) async -> Float32? {
         let volume = VolumeState(level: Double(current))
         let request = DialogRequest(
-            title: "Set Volume", message: "Choose the output volume.", symbol: "speaker.wave.2",
+            title: String(
+                localized: "Set Volume",
+                bundle: .appLanguage), message: String(
+                localized: "Choose the output volume.",
+                bundle: .appLanguage),
+            symbol: "speaker.wave.2",
             tone: .neutral,
             actions: [
-                DialogAction(title: "Set Volume"),
-                DialogAction(title: "Cancel", role: .cancel)
+                DialogAction(title: String(localized: "Set Volume", bundle: .appLanguage)),
+                DialogAction(title: String(localized: "Cancel", bundle: .appLanguage), role: .cancel)
             ],
             defaultIndex: 0, cancelIndex: 1, accessory: .volume(volume))
         guard await present(request) == 0 else { return nil }
@@ -75,11 +82,15 @@ final class DialogController: NSObject, NSWindowDelegate {
     func createEvent() async -> EventDraft? {
         let state = EventDraftState()
         let request = DialogRequest(
-            title: "New Event", message: "It goes on the calendar new events go to.",
+            title: String(
+                localized: "New Event",
+                bundle: .appLanguage), message: String(
+                localized: "It goes on the calendar new events go to.",
+                bundle: .appLanguage),
             symbol: "calendar.badge.plus", tone: .neutral,
             actions: [
-                DialogAction(title: "Create"),
-                DialogAction(title: "Cancel", role: .cancel)
+                DialogAction(title: String(localized: "Create", bundle: .appLanguage)),
+                DialogAction(title: String(localized: "Cancel", bundle: .appLanguage), role: .cancel)
             ],
             defaultIndex: 0, cancelIndex: 1, accessory: .eventDraft(state))
         guard await present(request) == 0, state.draft.isValid else { return nil }
@@ -147,7 +158,7 @@ final class DialogController: NSObject, NSWindowDelegate {
     }
 
     private func hostingView(_ view: some View, width: CGFloat, minHeight: CGFloat) -> NSView {
-        let hosting = NSHostingView(rootView: AnyView(view))
+        let hosting = NSHostingView(rootView: AnyView(view.localizationEnvironment()))
         // Measure at the fixed width first: the message wraps, so height follows width.
         hosting.setFrameSize(NSSize(width: width, height: minHeight))
         let fitted = hosting.fittingSize

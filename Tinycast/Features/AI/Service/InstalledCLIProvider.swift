@@ -80,7 +80,9 @@ private final class InstalledCLITurnRunner {
         }
         guard let prompt = prompt(for: request) else {
             continuation.finish(
-                throwing: AIProviderError.unavailable("There is no user message to send."))
+                throwing: AIProviderError.unavailable(String(
+                    localized: "There is no user message to send.",
+                    bundle: .appLanguage)))
             return
         }
         let resolvedExecutable: URL?
@@ -104,7 +106,7 @@ private final class InstalledCLITurnRunner {
         } catch {
             continuation.finish(
                 throwing: AIProviderError.unavailable(
-                    "Tinycast could not prepare its private AI workspace."))
+                    String(localized: "Tinycast could not prepare its private AI workspace.", bundle: .appLanguage)))
             return
         }
 

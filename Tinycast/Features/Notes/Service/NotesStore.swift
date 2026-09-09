@@ -20,7 +20,7 @@ final class NotesStore {
     private(set) var isSearching = false
     /// Derived from the live draft, not the last listing, so an unnamed note titles itself as typed.
     var activeTitle: String {
-        guard let activeID else { return "Notes" }
+        guard let activeID else { return String(localized: "Notes", bundle: .appLanguage) }
         let title =
             summaries.first(where: { $0.id == activeID })?.title
             ?? URL(fileURLWithPath: activeID.rawValue).deletingPathExtension().lastPathComponent

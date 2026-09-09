@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct BackupSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     private var runningApps: RunningAppsMonitor { core.runningApps }
     @State private var raycastFile: URL?
@@ -31,7 +32,7 @@ struct BackupSettingsView: View {
 
     private var raycastFileSubtitle: String {
         guard let name = raycastFile?.lastPathComponent else {
-            return "Choose a .rayconfig file exported from Raycast."
+            return String(localized: "Choose a .rayconfig file exported from Raycast.", bundle: .appLanguage)
         }
         return "\(name) — \(isRaycastExport ? "Raycast export" : "not a Raycast export")"
     }
@@ -160,9 +161,9 @@ struct BackupSettingsView: View {
 
     private var backupFileSubtitle: String {
         guard let name = backupFile?.lastPathComponent else {
-            return "Choose a .tinycast file exported from Tinycast."
+            return String(localized: "Choose a .tinycast file exported from Tinycast.", bundle: .appLanguage)
         }
-        return openedManifest == nil ? "\(name) — couldn't be read" : name
+        return openedManifest == nil ? String(localized: "\(name) — couldn't be read", bundle: .appLanguage) : name
     }
 
     private func available(in manifest: BackupManifest) -> [BackupCategory: Int] {

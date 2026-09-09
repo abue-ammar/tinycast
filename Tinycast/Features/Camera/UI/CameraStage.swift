@@ -3,6 +3,7 @@ import SwiftUI
 
 /// What every camera surface puts above its footer: live video, or why there is none.
 struct CameraStage: View {
+    @Environment(\.locale) private var localizationLocale
     let feed: CameraSession.Feed
     var mirrored = true
 
@@ -11,9 +12,9 @@ struct CameraStage: View {
         case .live(let capture):
             CameraFeed(session: capture, mirrored: mirrored)
         case .denied:
-            unavailable("Tinycast has no access to the camera.")
+            unavailable(String(localized: "Tinycast has no access to the camera.", bundle: .appLanguage))
         case .noCamera:
-            unavailable("No camera on this Mac.")
+            unavailable(String(localized: "No camera on this Mac.", bundle: .appLanguage))
         }
     }
 

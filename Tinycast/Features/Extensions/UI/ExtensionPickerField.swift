@@ -2,6 +2,7 @@ import SwiftUI
 
 /// `Form.Dropdown` and `Form.TagPicker`: one control, typing and caret in the field itself.
 struct ExtensionPickerField: View {
+    @Environment(\.locale) private var localizationLocale
     let items: [ExtensionPickerItem]
     /// Every value currently held; a dropdown has one, a tag picker any number.
     let chosen: [String]
@@ -37,12 +38,16 @@ struct ExtensionPickerField: View {
     /// What a screen reader hears: the query while searching, else the value held.
     private var announcedValue: String {
         guard open, !query.isEmpty else { return chosen.isEmpty ? placeholder : label }
-        return chosen.isEmpty ? query : "\(label), searching \(query)"
+        return chosen.isEmpty ? query : String(localized: "\(label), searching \(query)", bundle: .appLanguage)
     }
 
     /// What the control does, then whatever the extension explains about the field.
     private var hint: String {
-        let state = open ? "Showing choices" : "Opens a list of choices"
+        let state = open ? String(
+            localized: "Showing choices",
+            bundle: .appLanguage) : String(
+            localized: "Opens a list of choices",
+            bundle: .appLanguage)
         let parts = [error, info].compactMap { $0 }.filter { !$0.isEmpty }
         return ([state] + parts).joined(separator: ". ")
     }
@@ -154,7 +159,7 @@ struct ExtensionPickerField: View {
                         .font(Theme.Typography.rowTitle)
                         .foregroundStyle(Theme.Colors.textTertiary)
                 }
-                ExtensionQueryText(query: query, prompt: "Search…", phase: typedAt)
+                ExtensionQueryText(query: query, prompt: String(localized: "Search…", bundle: .appLanguage), phase: typedAt)
             } else {
                 Text(label)
                     .font(Theme.Typography.rowTitle)

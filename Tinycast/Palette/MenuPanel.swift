@@ -55,9 +55,9 @@ final class MenuPanelController {
         let root = AnyView(content.paletteEnvironment(core))
         let panel = ensurePanel(state: core.palette)
         if let hosting {
-            hosting.rootView = root
+            hosting.rootView = AnyView(root.localizationEnvironment())
         } else {
-            let view = NSHostingView(rootView: root)
+            let view = NSHostingView(rootView: AnyView(root.localizationEnvironment()))
             view.sizingOptions = [.intrinsicContentSize]
             panel.contentView = view
             hosting = view
@@ -73,7 +73,7 @@ final class MenuPanelController {
     /// Rebuilds the hosted tree in place: the panel keeps its window, so nothing flickers.
     func update(_ content: AnyView, corner: Corner, core: AppCore) {
         guard let hosting, let parent else { return }
-        hosting.rootView = AnyView(content.paletteEnvironment(core))
+        hosting.rootView = AnyView(content.paletteEnvironment(core).localizationEnvironment())
         layout(corner: corner, parent: parent)
     }
 

@@ -57,12 +57,15 @@ final class QuickActionCoordinator {
         Task {
             guard
                 await core.confirm(
-                    title: "Enable Quick Actions?",
+                    title: String(localized: "Enable Quick Actions?", bundle: .appLanguage),
                     message:
-                        "Tinycast needs the Accessibility permission to read the text you have "
-                        + "selected in other apps and replace it. Nothing is read until you press "
-                        + "a shortcut.",
-                    symbol: "wand.and.sparkles", confirmTitle: "Continue", tone: .neutral,
+                        String(localized: """
+                            Tinycast needs the Accessibility permission to read the text you have selected \
+                            in other apps and replace it. Nothing is read until you press a shortcut.
+                            """, bundle: .appLanguage),
+                    symbol: "wand.and.sparkles", confirmTitle: String(
+                        localized: "Continue",
+                        bundle: .appLanguage), tone: .neutral,
                     confirmRole: .standard)
             else { return }
             settings.quickActionsEnabled = true
@@ -125,12 +128,14 @@ final class QuickActionCoordinator {
         Task {
             guard
                 await core.reportFailure(
-                    title: "Quick Actions can't read your selection",
+                    title: String(localized: "Quick Actions can't read your selection", bundle: .appLanguage),
                     message:
-                        "Tinycast needs the Accessibility permission to read the text you have "
-                        + "selected and replace it. If Tinycast is already listed, switch it off "
-                        + "and on again — a rebuilt app keeps a stale entry.",
-                    symbol: "wand.and.sparkles", recovery: "Open System Settings")
+                        String(localized: """
+                            Tinycast needs the Accessibility permission to read the text you have selected \
+                            and replace it. If Tinycast is already listed, switch it off and on again \
+                            — a rebuilt app keeps a stale entry.
+                            """, bundle: .appLanguage),
+                    symbol: "wand.and.sparkles", recovery: String(localized: "Open System Settings", bundle: .appLanguage))
             else { return }
             Permissions.openAccessibilitySettings()
         }
@@ -161,7 +166,7 @@ final class QuickActionCoordinator {
         _ state: QuickActionPanelState, previewing: Bool
     ) async throws -> String {
         guard !previewing else { return try await generate(state, streaming: true) }
-        core.showProgress(state.action.progressTitle)
+        core.showProgress(String(localized: String.LocalizationValue(state.action.progressTitle), bundle: .appLanguage))
         defer { core.hideProgress() }
         return try await generate(state, streaming: false)
     }
@@ -186,11 +191,13 @@ final class QuickActionCoordinator {
     private func deliver(_ text: String, to target: NSRunningApplication?, action: QuickAction) {
         injector.replaceSelection(
             with: text, in: target,
-            onDelivered: { [weak self] in self?.core.showMessage("\(action.title) applied") },
+            onDelivered: { [weak self] in self?.core.showMessage(String(
+                localized: "\(action.title) applied",
+                bundle: .appLanguage)) },
             onFailed: { [weak self] in
                 Paster.copyPlainText(text)
                 self?.core.showMessage(
-                    "\(action.title) couldn't replace the selection — copied instead",
+                    String(localized: "\(action.title) couldn't replace the selection — copied instead", bundle: .appLanguage),
                     tone: .danger)
             })
     }

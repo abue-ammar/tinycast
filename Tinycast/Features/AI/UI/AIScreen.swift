@@ -14,40 +14,44 @@ struct AIScreen: PaletteScreen {
     let rows = [Row()]
 
     /// One footer pill for Return's two jobs: Send, or Stop while a response streams.
-    var primaryActionTitle: String { chat.isStreaming ? "Stop" : "Send" }
+    var primaryActionTitle: String { chat.isStreaming ? String(
+        localized: "Stop",
+        bundle: .appLanguage) : String(
+        localized: "Send",
+        bundle: .appLanguage) }
 
     func actions(at selection: Int) -> PopoverMenuContent? {
         var items: [PopoverMenuItem] = []
         if chat.isStreaming {
             items.append(
-                PopoverMenuItem(title: "Stop Response", systemImage: "stop.fill") {
+                PopoverMenuItem(title: String(localized: "Stop Response", bundle: .appLanguage), systemImage: "stop.fill") {
                     coordinator.stopResponse()
                 })
         }
         items.append(
-            PopoverMenuItem(title: "New Chat", systemImage: "plus.bubble") {
+            PopoverMenuItem(title: String(localized: "New Chat", bundle: .appLanguage), systemImage: "plus.bubble") {
                 coordinator.startNewChat()
             })
         if chat.lastAssistantText != nil {
             items.append(
-                PopoverMenuItem(title: "Copy Last Response", systemImage: "doc.on.doc") {
+                PopoverMenuItem(title: String(localized: "Copy Last Response", bundle: .appLanguage), systemImage: "doc.on.doc") {
                     coordinator.copyLastResponse()
                 })
         }
         if !chat.pendingAttachments.isEmpty {
             items.append(
-                PopoverMenuItem(title: "Remove Attachments", systemImage: "paperclip") {
+                PopoverMenuItem(title: String(localized: "Remove Attachments", bundle: .appLanguage), systemImage: "paperclip") {
                     coordinator.clearAttachments()
                 })
         }
         items.append(
             PopoverMenuItem(
-                title: "Chat History", systemImage: "clock.arrow.circlepath"
+                title: String(localized: "Chat History", bundle: .appLanguage), systemImage: "clock.arrow.circlepath"
             ) {
                 coordinator.showHistory()
             })
         items.append(
-            PopoverMenuItem(title: "AI Settings", systemImage: "slider.horizontal.3") {
+            PopoverMenuItem(title: String(localized: "AI Settings", bundle: .appLanguage), systemImage: "slider.horizontal.3") {
                 coordinator.showSettings()
             })
         return PopoverMenuContent(header: chat.session.title, items: items)
@@ -126,6 +130,7 @@ private struct AIChatView: View {
 }
 
 private struct AIEmptyState: View {
+    @Environment(\.locale) private var localizationLocale
     let message: String?
     let canConfigure: Bool
     let onConfigure: () -> Void
@@ -160,6 +165,7 @@ private struct AIEmptyState: View {
 
 /// The MCP `@server` pill: a glyph and a word, unchanged by what attachments do.
 private struct ComposerChip: View {
+    @Environment(\.locale) private var localizationLocale
     let symbol: String
     let label: String
 
@@ -189,6 +195,7 @@ private struct ComposerChip: View {
 
 /// A staged file: an image states itself, a document names itself, and either can be taken back.
 private struct AttachmentChip: View {
+    @Environment(\.locale) private var localizationLocale
     let attachment: ChatAttachment
     let onRemove: () -> Void
 
@@ -286,6 +293,7 @@ private struct ComposerThumbnail: View {
 
 /// Staged files follow the typed text; past two they become a count, the width being the field's.
 private struct PendingAttachmentsChips: View {
+    @Environment(\.locale) private var localizationLocale
     let attachments: [ChatAttachment]
     let onRemove: (UUID) -> Void
 
@@ -338,6 +346,7 @@ private struct PendingAttachmentsChips: View {
 
 /// The chat header's model control, sharing the clipboard filter's menu-button chrome.
 struct AIModelButton: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     let icon: PopoverMenuIcon
     let isOpen: Bool
@@ -348,7 +357,7 @@ struct AIModelButton: View {
             title: title,
             icon: icon,
             isOpen: isOpen,
-            help: "Switch AI model",
+            help: String(localized: "Switch AI model", bundle: .appLanguage),
             action: action
         )
         .fixedSize(horizontal: true, vertical: false)
@@ -356,6 +365,7 @@ struct AIModelButton: View {
 }
 
 struct AIReasoningButton: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     let isOpen: Bool
     let action: () -> Void
@@ -365,7 +375,7 @@ struct AIReasoningButton: View {
             title: title,
             systemImage: "brain",
             isOpen: isOpen,
-            help: "Change reasoning effort",
+            help: String(localized: "Change reasoning effort", bundle: .appLanguage),
             action: action
         )
         .fixedSize(horizontal: true, vertical: false)

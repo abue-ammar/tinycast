@@ -52,6 +52,7 @@ struct CommandArgumentsRow: View {
 }
 
 private struct ArgumentField: View {
+    @Environment(\.locale) private var localizationLocale
     let argument: ExtensionCommandArgument
     @Binding var text: String
     let isFocused: Bool
@@ -80,7 +81,9 @@ private struct ArgumentField: View {
                 .strokeBorder(stroke, lineWidth: 1)
         )
         .onHover { hovered = $0 }
-        .help(argument.required ? "\(argument.placeholder) — required" : argument.placeholder)
+        .help(argument.required ? String(
+            localized: "\(argument.placeholder) — required",
+            bundle: .appLanguage) : argument.placeholder)
     }
 
     private var fill: Color {

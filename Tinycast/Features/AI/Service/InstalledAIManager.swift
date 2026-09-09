@@ -115,7 +115,7 @@ final class InstalledAIManager {
             return (
                 kind,
                 InstalledAIStatus(
-                    phase: .failed("The installed command could not run."),
+                    phase: .failed(String(localized: "The installed command could not run.", bundle: .appLanguage)),
                     executable: executable)
             )
         }

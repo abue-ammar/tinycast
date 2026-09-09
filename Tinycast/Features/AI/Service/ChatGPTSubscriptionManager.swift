@@ -22,7 +22,7 @@ final class ChatGPTSubscriptionManager {
     init(supportDirectory: URL = AppPaths.applicationSupport()) {
         let root = supportDirectory.appending(path: "InstalledAI/Codex", directoryHint: .isDirectory)
         client = CodexAppServerClient(
-            workspace: root.appending(path: "Workspace", directoryHint: .isDirectory))
+            workspace: root.appending(path: String(localized: "Workspace", bundle: .appLanguage), directoryHint: .isDirectory))
         turns = CodexTurnRunner(client: client)
         turns.connect = { [weak self] in
             guard let self else { throw CancellationError() }
@@ -69,7 +69,9 @@ final class ChatGPTSubscriptionManager {
             await loadModelsAndLimits()
         }
         guard account != nil else {
-            throw AIProviderError.unavailable("Sign in with `codex login`, then check Codex again.")
+            throw AIProviderError.unavailable(String(
+                localized: "Sign in with `codex login`, then check Codex again.",
+                bundle: .appLanguage))
         }
     }
 
@@ -222,7 +224,7 @@ final class ChatGPTSubscriptionManager {
         if error is AIProviderError { return error }
         let message =
             (error as? LocalizedError)?.errorDescription
-            ?? "The Codex connection failed."
+            ?? String(localized: "The Codex connection failed.", bundle: .appLanguage)
         return AIProviderError.responseFailed(message)
     }
 }

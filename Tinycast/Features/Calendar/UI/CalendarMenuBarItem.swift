@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Reading the coordinator here scopes Observation to the calendar label rather than either scene.
 struct CalendarMenuBarLabel: View {
+    @Environment(\.locale) private var localizationLocale
     let appName: String
 
     private var display: CalendarMenuBarDisplay { AppCore.shared.settings.calendarMenuBarDisplay }
@@ -17,9 +18,9 @@ struct CalendarMenuBarLabel: View {
             title(summary(for: meeting))
         case (.meetingTitle, nil)
         where !AppCore.shared.calendarCoordinator.hasUpcomingMenuBarEvent:
-            title("No upcoming events")
+            title(String(localized: "No upcoming events", bundle: .appLanguage))
         case (_, nil):
-            icon("calendar", describing: "no current meeting")
+            icon("calendar", describing: String(localized: "no current meeting", bundle: .appLanguage))
         }
     }
 
@@ -40,6 +41,7 @@ struct CalendarMenuBarLabel: View {
 
 /// Calendar actions only: the launcher item carries the app's menu, and neither repeats the other.
 struct CalendarMenuBarMenu: View {
+    @Environment(\.locale) private var localizationLocale
     var body: some View {
         if let meeting = AppCore.shared.calendarCoordinator.menuBarEvent {
             if meeting.link != nil {

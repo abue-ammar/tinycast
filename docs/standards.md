@@ -210,6 +210,42 @@ Minimal code, not annotated prose.
 None of this is linted, by choice. A rule that fires after the
 comment is written buys a second edit; these are cheap to get right on the first pass instead.
 
+## Localization
+
+Native interface copy lives in `Resources/Localizable.xcstrings`, with English as the development
+language and `zh-Hans` for Simplified Chinese. `InfoPlist.xcstrings` holds permission explanations.
+General Settings places Language directly below Theme in Appearance, offering System, English
+and 简体中文. `AppLanguage` writes the native `AppleLanguages` override in the app's defaults domain; System removes it. Read the explicit
+domain when displaying the selection so inherited system languages do not look like an override.
+Language changes apply immediately and are excluded from settings backups. `AppLocalization` resolves
+the current preference without a second store, and `Bundle.appLanguage` selects its explicit `.lproj`
+bundle. Native strings use `String(localized:…, bundle: .appLanguage)`; a locale alone does not make
+Foundation switch an already-loaded bundle's language.
+
+Every hosting root installs `.localizationEnvironment()`. It republishes the selected locale when
+preferences change, without replacing view identities. Views that render pretranslated strings
+subscribe with `@Environment(\.locale)` even when they do not otherwise read the value: SwiftUI must
+reevaluate their bodies as well as its own localized `Text`. Never use `.id(language)` to refresh a
+whole tree: that would discard drafts and local control state. Native `Picker` controls alone are
+keyed by their own stable name plus locale to refresh cached selection labels; sibling controls must
+never share an ID. Their bindings and surrounding state stay intact. AppKit window titles retain their
+localization expressions, and Settings refreshes its toolbar labels when the preference changes.
+Cached display catalogs keep source keys; translate on presentation, never in identities or hashes.
+
+SwiftUI literals use their localized overloads. A literal passed through a plain `String` parameter
+uses `String(localized:…, bundle: .appLanguage)`, with whole sentences and interpolations rather than
+translated fragments.
+Keep format argument types and positions intact in both translations.
+
+Pure models retain their language-independent data and English display keys. Resolve those keys at
+the presentation boundary using `LocalizedStringKey` or `String.LocalizationValue`. Never look up a
+translation for user-authored names, file contents, or text supplied by an extension. `AppEntry` uses
+its kind to localize built-in command names and retains the English name as a search alias.
+
+Settings search IDs, anchors and row targets keep their source titles. Translate the visible label
+only; matching considers both languages. A translated target would silently break scrolling and the
+highlight even though the label itself looks correct.
+
 ## Accessibility
 
 Every custom control carries a label and the traits that describe it. The palette is an entirely custom

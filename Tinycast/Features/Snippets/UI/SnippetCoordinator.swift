@@ -61,10 +61,14 @@ final class SnippetCoordinator {
         Task {
             guard
                 await core.confirm(
-                    title: "Enable snippets?",
+                    title: String(localized: "Enable snippets?", bundle: .appLanguage),
                     message:
-                        "Keyword expansion requires the Accessibility permission. Keystrokes stay on this Mac.",
-                    symbol: "curlybraces", confirmTitle: "Continue", tone: .neutral,
+                        String(
+                            localized:
+                                "Keyword expansion requires the Accessibility permission. Keystrokes stay on this Mac.",
+                            bundle: .appLanguage
+                        ),
+                    symbol: "curlybraces", confirmTitle: String(localized: "Continue", bundle: .appLanguage), tone: .neutral,
                     confirmRole: .standard)
             else { return }
 
@@ -178,7 +182,9 @@ final class SnippetCoordinator {
         if automaticGeneration == nil {
             guard injector.prepareInteractiveExpansion(targetApp: targetApp) else { return }
         }
-        let confirmation = record.snippet.showsConfirmation ? "Inserted \(record.snippet.name)" : nil
+        let confirmation = record.snippet.showsConfirmation ? String(
+            localized: "Inserted \(record.snippet.name)",
+            bundle: .appLanguage) : nil
         let context = injector.captureExpansionContext(
             targetApp: targetApp,
             clipboardHistory: clipboardHistoryForExpansion())

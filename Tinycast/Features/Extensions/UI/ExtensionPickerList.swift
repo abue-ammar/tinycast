@@ -14,6 +14,7 @@ struct ExtensionPickerItem: Identifiable, Equatable {
 
 /// The results a picker drops, styled as the ⌘K panel; the control above owns the query.
 struct ExtensionPickerList: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let items: [ExtensionPickerItem]
     let selection: Int

@@ -8,12 +8,15 @@ enum FallbackActionsMenu {
         fallback: Fallback, entry: AppEntry, query: String, core: AppCore
     ) -> PopoverMenuContent {
         PopoverMenuContent(
-            header: entry.name,
+            header: entry.localizedName,
             items: [
                 PopoverMenuItem(
-                    title: fallback.openVerb, systemImage: "list.bullet.rectangle", shortcut: "↵"
+                    title: String(localized: String.LocalizationValue(fallback.openVerb), bundle: .appLanguage),
+                    systemImage: "list.bullet.rectangle", shortcut: "↵"
                 ) { core.fallbackCoordinator.run(fallback, query: query) },
-                PopoverMenuItem(title: "Configure Fallbacks…", systemImage: "slider.horizontal.3") {
+                PopoverMenuItem(title: String(
+                    localized: "Configure Fallbacks…",
+                    bundle: .appLanguage), systemImage: "slider.horizontal.3") {
                     core.fallbackCoordinator.showSettings()
                 }
             ])

@@ -8,13 +8,13 @@ final class SettingsSplitViewController: NSSplitViewController {
         super.init(nibName: nil, bundle: nil)
 
         let sidebarItem = NSSplitViewItem(
-            sidebarWithViewController: NSHostingController(rootView: sidebar))
+            sidebarWithViewController: NSHostingController(rootView: AnyView(sidebar.localizationEnvironment())))
         // Fixed, as the column was before: nothing here reflows with width.
         sidebarItem.minimumThickness = Theme.Size.settingsSidebar
         sidebarItem.maximumThickness = Theme.Size.settingsSidebar
         sidebarItem.canCollapse = false
 
-        let detailItem = NSSplitViewItem(viewController: NSHostingController(rootView: detail))
+        let detailItem = NSSplitViewItem(viewController: NSHostingController(rootView: AnyView(detail.localizationEnvironment())))
         detailItem.minimumThickness = Theme.Size.settingsDetailMinimum
 
         addSplitViewItem(sidebarItem)

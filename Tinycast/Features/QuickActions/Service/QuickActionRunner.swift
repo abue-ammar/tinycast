@@ -24,7 +24,7 @@ final class QuickActionRunner {
         // Only when Accessibility saw a text element is "nothing is selected" the honest answer.
         throw reported == .empty
             ? QuickActionFailure.noSelection
-            : .unreadableApp(targetApp.localizedName ?? "That app")
+            : .unreadableApp(targetApp.localizedName ?? String(localized: "That app", bundle: .appLanguage))
     }
 
     private static func accepted(_ text: String) throws -> String {
@@ -58,7 +58,7 @@ final class QuickActionRunner {
         }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            throw AIProviderError.responseFailed("The model returned nothing.")
+            throw AIProviderError.responseFailed(String(localized: "The model returned nothing.", bundle: .appLanguage))
         }
         return trimmed
     }

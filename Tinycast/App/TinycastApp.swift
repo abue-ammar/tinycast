@@ -13,8 +13,10 @@ struct TinycastApp: App {
 
     /// Two independent items: one preference each, no state either can read off the other.
     var body: some Scene {
+        let _ = AppCore.shared.settings.language
         MenuBarExtra(isInserted: $showInMenuBar) {
             MenuBarMenu(appName: appName)
+                .localizationEnvironment()
         } label: {
             MenuBarLabel(appName: appName)
         }
@@ -22,8 +24,10 @@ struct TinycastApp: App {
 
         MenuBarExtra(isInserted: calendarMenuBarInsertion) {
             CalendarMenuBarMenu()
+                .localizationEnvironment()
         } label: {
             CalendarMenuBarLabel(appName: appName)
+                .localizationEnvironment()
         }
     }
 
@@ -46,15 +50,23 @@ struct TinycastApp: App {
     @CommandsBuilder
     private var menuBarCommands: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("About \(appName)") { AppCore.shared.settingsCoordinator.showAbout() }
-            Button("Check for Updates…") { AppCore.shared.updateCoordinator.checkForUpdates() }
+            Button(String(localized: "About \(appName)", bundle: .appLanguage)) {
+                AppCore.shared.settingsCoordinator.showAbout()
+            }
+            Button(String(localized: "Check for Updates…", bundle: .appLanguage)) {
+                AppCore.shared.updateCoordinator.checkForUpdates()
+            }
         }
         CommandGroup(replacing: .appSettings) {
-            Button("Settings…") { AppCore.shared.settingsCoordinator.showSettings() }
+            Button(String(localized: "Settings…", bundle: .appLanguage)) {
+                AppCore.shared.settingsCoordinator.showSettings()
+            }
                 .keyboardShortcut(",")
         }
         CommandGroup(replacing: .appTermination) {
-            Button("Close Settings") { AppCore.shared.settingsCoordinator.closeSettings() }
+            Button(String(localized: "Close Settings", bundle: .appLanguage)) {
+                AppCore.shared.settingsCoordinator.closeSettings()
+            }
                 .keyboardShortcut("q")
         }
     }

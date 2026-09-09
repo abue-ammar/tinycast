@@ -96,11 +96,13 @@ struct ExtensionAlert: Sendable {
     var isDestructive: Bool
 
     init(payload: [String: RenderValue]) {
-        title = payload["title"]?.stringValue ?? "Are you sure?"
+        title = payload["title"]?.stringValue ?? String(localized: "Are you sure?", bundle: .appLanguage)
         message = payload["message"]?.stringValue
         let primary = payload["primaryAction"]?.objectValue
-        primaryTitle = primary?["title"]?.stringValue ?? "Confirm"
-        dismissTitle = payload["dismissAction"]?.objectValue?["title"]?.stringValue ?? "Cancel"
+        primaryTitle = primary?["title"]?.stringValue ?? String(localized: "Confirm", bundle: .appLanguage)
+        dismissTitle = payload["dismissAction"]?.objectValue?["title"]?.stringValue ?? String(
+            localized: "Cancel",
+            bundle: .appLanguage)
         isDestructive = primary?["style"]?.stringValue == "destructive"
     }
 }

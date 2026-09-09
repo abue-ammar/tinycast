@@ -2,16 +2,17 @@ import SwiftUI
 
 /// Section label above a group of rows, shared by every palette list.
 struct SectionHeader: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     /// The first header hugs the top; later ones get spacing above, reading as below.
     var isFirst = false
     /// A gear beside the label, for a section whose membership the reader chooses.
     var configure: (() -> Void)?
-    var configureHelp = "Configure…"
+    var configureHelp = String(localized: "Configure…", bundle: .appLanguage)
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .lineLimit(1)
             if let configure {
                 Button(action: configure) {

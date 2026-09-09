@@ -16,7 +16,7 @@ struct EmojiScreen: PaletteScreen {
     /// Flat grid order across sections — what the selection indexes.
     var rows: [EmojiEntry] { sections.flatMap(\.entries) }
 
-    var primaryActionTitle: String { vm.pasteTarget?.pasteTitle ?? "Paste" }
+    var primaryActionTitle: String { vm.pasteTarget?.pasteTitle ?? String(localized: "Paste", bundle: .appLanguage) }
 
     private func entry(at selection: Int) -> EmojiEntry? {
         let rows = rows
@@ -69,9 +69,9 @@ struct EmojiScreen: PaletteScreen {
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         let sections = sections
         if !index.isLoaded {
-            EmptyResults(text: "Loading emoji…")
+            EmptyResults(text: String(localized: "Loading emoji…", bundle: .appLanguage))
         } else if sections.isEmpty {
-            EmptyResults(text: "No emoji found")
+            EmptyResults(text: String(localized: "No emoji found", bundle: .appLanguage))
         } else {
             EmojiGridView(
                 sections: sections,
@@ -101,18 +101,18 @@ enum EmojiActionsMenu {
             header: entry.displayName,
             items: [
                 PopoverMenuItem(
-                    title: target?.pasteTitle ?? "Paste",
+                    title: target?.pasteTitle ?? String(localized: "Paste", bundle: .appLanguage),
                     icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: "↵"
                 ) {
                     core.emojiCoordinator.pasteEmoji(entry)
                 },
                 PopoverMenuItem(
-                    title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵"
+                    title: String(localized: "Copy to Clipboard", bundle: .appLanguage), systemImage: "doc.on.doc", shortcut: "⌘↵"
                 ) {
                     core.emojiCoordinator.copyEmoji(entry)
                 },
                 PopoverMenuItem(
-                    title: "Paste and Keep Window Open",
+                    title: String(localized: "Paste and Keep Window Open", bundle: .appLanguage),
                     icon: .paste(target, fallback: "macwindow"), shortcut: "⌥↵"
                 ) {
                     core.emojiCoordinator.pasteEmojiKeepingWindowOpen(entry)

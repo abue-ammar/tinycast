@@ -381,6 +381,7 @@ extension ExtensionImage {
 
 /// A resolved icon at row size; an unresolvable one draws the faint tile, so rows never jump.
 struct ExtensionIconView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let resolved: ExtensionImage.Resolved?
     var size: CGFloat = Theme.Size.rowIcon

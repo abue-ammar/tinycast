@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Not `LabeledContent`: its selectable text field eats the taps a `ShortcutRecorder` needs.
 struct SettingsRow<Icon: View, Trailing: View>: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     var subtitle: String?
     /// Set when a search result points at this row, so its title can carry the pulse.
@@ -58,6 +59,7 @@ extension View {
 
 /// A feature pane's opening section: the master switch, then its launcher-visibility companion.
 struct FeatureSwitchSection: View {
+    @Environment(\.locale) private var localizationLocale
     let anchor: SettingsAnchor
     let enableTitle: String
     let enableSubtitle: String
@@ -85,6 +87,7 @@ struct FeatureSwitchSection: View {
 
 /// The filter row above a long list, shaped like a search field rather than a form text field.
 struct SettingsFilterField: View {
+    @Environment(\.locale) private var localizationLocale
     let prompt: String
     @Binding var query: String
     /// The plain field has no bezel: without this only the glyphs are a target.
@@ -118,6 +121,7 @@ struct SettingsFilterField: View {
 
 /// Dressed like `ShortcutRecorder`; a persistent `TextField` — swapping views broke repeat focus.
 struct AliasField: View {
+    @Environment(\.locale) private var localizationLocale
     /// The owner's `preferenceKey`, taken raw so a row without an `AppEntry` can carry one too.
     let key: String
     let name: String
@@ -187,6 +191,6 @@ struct AliasField: View {
 
 extension AliasField {
     init(entry: AppEntry) {
-        self.init(key: entry.preferenceKey, name: entry.name)
+        self.init(key: entry.preferenceKey, name: entry.localizedName)
     }
 }

@@ -165,7 +165,7 @@ final class QuicklinkCoordinator {
         let symbol = quicklink.iconSymbol ?? Quicklink.sfSymbol
         guard let bundleID = failure.missingApplicationBundleID else {
             await core.showNotice(
-                title: "Couldn’t Open \(quicklink.name)",
+                title: String(localized: "Couldn’t Open \(quicklink.name)", bundle: .appLanguage),
                 message: failure.localizedDescription, symbol: symbol, tone: .danger)
             return
         }
@@ -173,9 +173,9 @@ final class QuicklinkCoordinator {
         let name = applicationName(forBundleID: bundleID) ?? bundleID
         guard
             await core.reportFailure(
-                title: "Couldn’t Open \(quicklink.name)",
-                message: "\(name) isn’t installed any more.", symbol: symbol,
-                recovery: "Open with Default")
+                title: String(localized: "Couldn’t Open \(quicklink.name)", bundle: .appLanguage),
+                message: String(localized: "\(name) isn’t installed any more.", bundle: .appLanguage), symbol: symbol,
+                recovery: String(localized: "Open with Default", bundle: .appLanguage))
         else { return }
         performQuicklinkOpen(quicklink, link: link, forcingDefaultApp: true)
     }
@@ -202,9 +202,13 @@ final class QuicklinkCoordinator {
         if confirming, settings.quicklinkConfirmsBeforeDelete {
             guard
                 await core.confirm(
-                    title: "Delete “\(quicklink.name)”?",
-                    message: "Its shortcut, favorite slot and learned ranking go with it.",
-                    symbol: quicklink.iconSymbol ?? Quicklink.sfSymbol, confirmTitle: "Delete")
+                    title: String(localized: "Delete “\(quicklink.name)”?", bundle: .appLanguage),
+                    message: String(
+                        localized: "Its shortcut, favorite slot and learned ranking go with it.",
+                        bundle: .appLanguage),
+                    symbol: quicklink.iconSymbol ?? Quicklink.sfSymbol, confirmTitle: String(
+                        localized: "Delete",
+                        bundle: .appLanguage))
             else { return }
         }
         // Unwound only once the row is gone: a failed delete must not strand its references.
@@ -212,7 +216,9 @@ final class QuicklinkCoordinator {
             try store.remove(id: id)
         } catch {
             await core.showNotice(
-                title: "Couldn’t Delete “\(quicklink.name)”", message: error.localizedDescription,
+                title: String(
+                    localized: "Couldn’t Delete “\(quicklink.name)”",
+                    bundle: .appLanguage), message: error.localizedDescription,
                 symbol: quicklink.iconSymbol ?? Quicklink.sfSymbol, tone: .danger)
             return
         }
@@ -240,7 +246,7 @@ final class QuicklinkCoordinator {
     private func report(_ error: QuicklinkError) {
         Task {
             await core.showNotice(
-                title: "Couldn’t Save the Change", message: error.localizedDescription,
+                title: String(localized: "Couldn’t Save the Change", bundle: .appLanguage), message: error.localizedDescription,
                 symbol: Quicklink.sfSymbol, tone: .danger)
         }
     }
@@ -281,7 +287,8 @@ final class QuicklinkCoordinator {
     func exportQuicklinks() async {
         guard !store.quicklinks.isEmpty else {
             await core.showNotice(
-                title: "Nothing to Export", message: "You haven’t created any quicklinks yet.",
+                title: String(localized: "Nothing to Export", bundle: .appLanguage),
+                message: String(localized: "You haven’t created any quicklinks yet.", bundle: .appLanguage),
                 symbol: Quicklink.sfSymbol, tone: .neutral)
             return
         }
@@ -290,10 +297,10 @@ final class QuicklinkCoordinator {
         }
         do {
             try QuicklinkArchive.encode(store.quicklinks).write(to: url, options: .atomic)
-            core.showMessage("Exported \(store.quicklinks.count) Quicklinks")
+            core.showMessage(String(localized: "Exported \(store.quicklinks.count) Quicklinks", bundle: .appLanguage))
         } catch {
             await core.showNotice(
-                title: "Export Failed", message: error.localizedDescription,
+                title: String(localized: "Export Failed", bundle: .appLanguage), message: error.localizedDescription,
                 symbol: Quicklink.sfSymbol, tone: .danger)
         }
     }
@@ -313,22 +320,26 @@ final class QuicklinkCoordinator {
             // Everything offered was already here, so say so rather than "0 imported".
             guard !added.isEmpty else {
                 await core.showNotice(
-                    title: "Nothing to Import",
-                    message: "Every quicklink in this file is already in your library.",
+                    title: String(localized: "Nothing to Import", bundle: .appLanguage),
+                    message: String(localized: "Every quicklink in this file is already in your library.", bundle: .appLanguage),
                     symbol: Quicklink.sfSymbol, tone: .neutral)
                 return
             }
             let skipped = incoming.count - added.count
             let summary =
                 skipped == 0
-                ? "Imported \(added.count) quicklinks."
-                : "Imported \(added.count) quicklinks. Skipped \(skipped) already in your library."
+                ? String(localized: "Imported \(added.count) quicklinks.", bundle: .appLanguage)
+                : String(
+                    localized: "Imported \(added.count) quicklinks. Skipped \(skipped) already in your library.",
+                    bundle: .appLanguage)
             await core.showNotice(
-                title: "Quicklinks Imported", message: summary, symbol: Quicklink.sfSymbol,
+                title: String(
+                    localized: "Quicklinks Imported",
+                    bundle: .appLanguage), message: summary, symbol: Quicklink.sfSymbol,
                 tone: .success)
         } catch {
             await core.showNotice(
-                title: "Import Failed", message: error.localizedDescription,
+                title: String(localized: "Import Failed", bundle: .appLanguage), message: error.localizedDescription,
                 symbol: Quicklink.sfSymbol, tone: .danger)
         }
     }

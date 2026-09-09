@@ -2,6 +2,7 @@ import SwiftUI
 
 /// `Form.DatePicker`: presets plus an expression, typed into the control itself.
 struct ExtensionDateField: View {
+    @Environment(\.locale) private var localizationLocale
     let node: RenderNode
     let index: Int?
     @FocusState.Binding var focus: Int?
@@ -25,7 +26,7 @@ struct ExtensionDateField: View {
     private var isFocused: Bool { focus == index }
 
     private var label: String {
-        guard let value else { return "No Date" }
+        guard let value else { return String(localized: "No Date", bundle: .appLanguage) }
         return ExtensionDateExpression.detail(
             for: value, calendar: .current, includesTime: includesTime)
     }
@@ -37,7 +38,11 @@ struct ExtensionDateField: View {
 
     /// What the control does, then whatever the extension explains about the field.
     private var hint: String {
-        let state = open ? "Showing dates" : "Opens a list of dates"
+        let state = open ? String(
+            localized: "Showing dates",
+            bundle: .appLanguage) : String(
+            localized: "Opens a list of dates",
+            bundle: .appLanguage)
         let parts = [node.string("error"), node.string("info")]
             .compactMap { $0 }.filter { !$0.isEmpty }
         return ([state] + parts).joined(separator: ". ")

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LauncherList: View {
+    @Environment(\.locale) private var localizationLocale
     let results: [AppEntry]
     /// The flat row id the screen has selected, not an entry id: a fallback can repeat a result.
     let selectedRowID: String?
@@ -36,9 +37,9 @@ struct LauncherList: View {
 
         var sectionTitle: String {
             switch self {
-            case .calc: return "Calculator"
-            case .meeting: return "Meeting"
-            case .color: return "Color"
+            case .calc: return String(localized: "Calculator", bundle: .appLanguage)
+            case .meeting: return String(localized: "Meeting", bundle: .appLanguage)
+            case .color: return String(localized: "Color", bundle: .appLanguage)
             }
         }
 
@@ -87,7 +88,7 @@ struct LauncherList: View {
         if let card { cardRows = [.header(card.sectionTitle), .card(card)] }
         guard showSections else {
             guard !results.isEmpty else { return cardRows + fallbackRows }
-            return cardRows + [.header("Results")] + results.map { .app($0, slot: nil) }
+            return cardRows + [.header(String(localized: "Results", bundle: .appLanguage))] + results.map { .app($0, slot: nil) }
                 + fallbackRows
         }
         var rows: [Row] = cardRows
@@ -96,7 +97,7 @@ struct LauncherList: View {
         var grouped: [AppEntry.Kind: [AppEntry]] = [:]
         for app in rest { grouped[app.kind, default: []].append(app) }
         if !favorites.isEmpty {
-            rows.append(.header("Favorites"))
+            rows.append(.header(String(localized: "Favorites", bundle: .appLanguage)))
             rows.append(
                 contentsOf: favorites.enumerated().map {
                     .app($1, slot: FavoriteSlots.digit(at: $0))
@@ -124,7 +125,7 @@ struct LauncherList: View {
         let rows = rows
         return Group {
             if results.isEmpty && card == nil && fallbacks == nil {
-                EmptyResults(text: "No apps found")
+                EmptyResults(text: String(localized: "No apps found", bundle: .appLanguage))
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -137,7 +138,7 @@ struct LauncherList: View {
                                     SectionHeader(
                                         title: title, isFirst: row.id == rows.first?.id,
                                         configure: fallbacks?.onConfigure,
-                                        configureHelp: "Configure Fallbacks…")
+                                        configureHelp: String(localized: "Configure Fallbacks…", bundle: .appLanguage))
                                 case .card(let card):
                                     LeadCardView(card: card, selected: cardSelected)
                                         .contentShape(Rectangle())
@@ -203,6 +204,7 @@ private struct LeadCardView: View {
 }
 
 private struct AppRow: View {
+    @Environment(\.locale) private var localizationLocale
     let app: AppEntry
     let selected: Bool
     let running: Bool
@@ -241,7 +243,7 @@ private struct AppRow: View {
                             .offset(y: 3)
                     }
                 }
-            Text(app.name)
+            Text(app.localizedName)
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
             if let subtitle = app.subtitle {

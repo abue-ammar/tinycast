@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct EmojiSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppSettings.self) private var settings
 
     var body: some View {

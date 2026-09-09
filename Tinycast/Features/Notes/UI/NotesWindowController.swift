@@ -82,7 +82,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     private func ensurePanel() -> NotesPanel {
         if let panel { return panel }
         let root = NotesView().environment(coordinator)
-        let hosting = NSHostingView(rootView: root)
+        let hosting = NSHostingView(rootView: AnyView(root.localizationEnvironment()))
         hosting.sizingOptions = []
         let panel = NotesPanel(
             content: hosting,

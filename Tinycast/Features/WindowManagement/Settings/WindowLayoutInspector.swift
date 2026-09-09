@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The editor's right column. Stacks the field groups; holds no geometry of its own.
 struct WindowLayoutInspector: View {
+    @Environment(\.locale) private var localizationLocale
     let draft: WindowLayoutDraft
     let displays: [WindowLayoutDisplay]
 
@@ -108,12 +109,12 @@ struct WindowLayoutInspector: View {
             sectionLabel("Size")
             HStack(spacing: Theme.Spacing.md) {
                 WindowLayoutNumberField(
-                    label: "W", name: "Width", suffix: "%",
+                    label: "W", name: String(localized: "Width", bundle: .appLanguage), suffix: "%",
                     range: WindowLayoutDraft.percentRange,
                     value: WindowLayoutDraft.percent(entry.widthFraction),
                     onCommit: draft.setWidthPercent)
                 WindowLayoutNumberField(
-                    label: "H", name: "Height", suffix: "%",
+                    label: "H", name: String(localized: "Height", bundle: .appLanguage), suffix: "%",
                     range: WindowLayoutDraft.percentRange,
                     value: WindowLayoutDraft.percent(entry.heightFraction),
                     onCommit: draft.setHeightPercent)
@@ -126,11 +127,11 @@ struct WindowLayoutInspector: View {
             sectionLabel("Offset")
             HStack(spacing: Theme.Spacing.md) {
                 WindowLayoutNumberField(
-                    label: "X", name: "Horizontal offset", suffix: "pt",
+                    label: "X", name: String(localized: "Horizontal offset", bundle: .appLanguage), suffix: "pt",
                     range: WindowLayoutDraft.offsetRange, value: Int(entry.offset.x.rounded()),
                     onCommit: draft.setOffsetX)
                 WindowLayoutNumberField(
-                    label: "Y", name: "Vertical offset", suffix: "pt",
+                    label: "Y", name: String(localized: "Vertical offset", bundle: .appLanguage), suffix: "pt",
                     range: WindowLayoutDraft.offsetRange, value: Int(entry.offset.y.rounded()),
                     onCommit: draft.setOffsetY)
             }

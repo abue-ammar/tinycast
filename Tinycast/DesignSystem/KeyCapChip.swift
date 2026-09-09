@@ -2,6 +2,7 @@ import SwiftUI
 
 /// A single keycap chip: `.outline` for hotkey hints on rows, `.filled` for footer shortcuts.
 struct KeyCapChip: View {
+    @Environment(\.locale) private var localizationLocale
     enum Style {
         case outline
         case filled

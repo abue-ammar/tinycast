@@ -67,6 +67,7 @@ struct QuicklinkArgumentsRow: View {
 
 /// Shared chrome, so a typed field and a chosen one read as the same control.
 private struct ArgumentFieldChrome: ViewModifier {
+    @Environment(\.locale) private var localizationLocale
     let argument: SnippetTemplateEngine.MissingArgument
     let isFocused: Bool
     /// Visited, left, and still empty — the only state that earns a warning edge.
@@ -86,7 +87,7 @@ private struct ArgumentFieldChrome: ViewModifier {
                     .strokeBorder(stroke, lineWidth: 1)
             )
             .onHover { hovered = $0 }
-            .help(isOwed ? "\(argument.name) — required" : argument.name)
+            .help(isOwed ? String(localized: "\(argument.name) — required", bundle: .appLanguage) : argument.name)
     }
 
     private var fill: Color {
@@ -105,6 +106,7 @@ private struct ArgumentFieldChrome: ViewModifier {
 }
 
 private struct ArgumentField: View {
+    @Environment(\.locale) private var localizationLocale
     let argument: SnippetTemplateEngine.MissingArgument
     @Binding var text: String
     let isFocused: Bool
@@ -131,6 +133,7 @@ private struct ArgumentField: View {
 
 /// An `options=` argument: the value is picked from the palette's own menu, never typed.
 private struct ArgumentChoiceField: View {
+    @Environment(\.locale) private var localizationLocale
     let argument: SnippetTemplateEngine.MissingArgument
     @Binding var text: String
     let isFocused: Bool
@@ -167,7 +170,7 @@ private struct ArgumentChoiceField: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(argument.name))
-        .accessibilityValue(Text(text.isEmpty ? "No value" : text))
+        .accessibilityValue(Text(text.isEmpty ? String(localized: "No value", bundle: .appLanguage) : text))
         .accessibilityHint(Text("Opens a list of choices"))
         .accessibilityAddTraits(.isButton)
     }

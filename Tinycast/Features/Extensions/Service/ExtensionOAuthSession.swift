@@ -33,9 +33,11 @@ final class ExtensionOAuthSession {
 
         var errorDescription: String? {
             switch self {
-            case .canceled: return "Authentication was canceled."
+            case .canceled: return String(localized: "Authentication was canceled.", bundle: .appLanguage)
             case .failed(let message): return message
-            case .stateMismatch: return "OAuth state mismatch. Please try authenticating again."
+            case .stateMismatch: return String(
+                localized: "OAuth state mismatch. Please try authenticating again.",
+                bundle: .appLanguage)
             }
         }
     }
@@ -94,13 +96,15 @@ final class ExtensionOAuthSession {
             self.timeoutTimer?.invalidate()
             self.timeoutTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: false) { [weak self] _ in
                 Task { @MainActor [weak self] in
-                    self?.finish(error: OAuthError.failed("Authentication timed out."))
+                    self?.finish(error: OAuthError.failed(String(localized: "Authentication timed out.", bundle: .appLanguage)))
                 }
             }
 
             let opened = NSWorkspace.shared.open(url)
             if !opened {
-                self.finish(error: OAuthError.failed("Failed to open authorization URL in default browser."))
+                self.finish(error: OAuthError.failed(String(
+                    localized: "Failed to open authorization URL in default browser.",
+                    bundle: .appLanguage)))
             }
         }
     }

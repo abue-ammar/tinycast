@@ -49,13 +49,14 @@ struct SettingsSectionHeader<Label: View>: View {
 extension SettingsSectionHeader where Label == Text {
     /// The title comes from the anchor, so a section's name and its search breadcrumb are one string.
     init(_ anchor: SettingsAnchor) {
-        self.init(anchor: anchor) { Text(anchor.title) }
+        self.init(anchor: anchor) { Text(LocalizedStringKey(anchor.title)) }
     }
 }
 
 /// One setting's own name, in place of the `Text` a row's label would otherwise hold. This is what
 /// a row-level search result scrolls to and lights up.
 struct SettingsRowTitle: View {
+    @Environment(\.locale) private var localizationLocale
     let anchor: SettingsAnchor
     let title: String
 
@@ -65,7 +66,7 @@ struct SettingsRowTitle: View {
     }
 
     var body: some View {
-        Text(title).modifier(SearchPill(target: .row(anchor, title)))
+        Text(LocalizedStringKey(title)).modifier(SearchPill(target: .row(anchor, title)))
     }
 }
 

@@ -25,12 +25,12 @@ enum EmojiGrid {
             start += entries.count
         }
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
-            append("Frequently Used", frequent.top().compactMap(index.entry(for:)))
+            append(String(localized: "Frequently Used", bundle: .appLanguage), frequent.top().compactMap(index.entry(for:)))
             for section in index.categorySections {
                 append(section.category.title, section.entries)
             }
         } else {
-            append("Results", index.search(query))
+            append(String(localized: "Results", bundle: .appLanguage), index.search(query))
         }
         return sections
     }
@@ -57,6 +57,7 @@ private enum EmojiGridItem: Identifiable {
 }
 
 struct EmojiGridView: View {
+    @Environment(\.locale) private var localizationLocale
     let sections: [EmojiGridSection]
     /// Flat selection index across all sections, as in the list modes.
     let selection: Int
@@ -71,7 +72,9 @@ struct EmojiGridView: View {
     private var items: [EmojiGridItem] {
         var items: [EmojiGridItem] = []
         for section in sections {
-            items.append(.header(id: section.id + "-header", title: section.title))
+            items.append(.header(id: section.id + "-header", title: String(
+                localized: String.LocalizationValue(section.title),
+                bundle: .appLanguage)))
             var offset = 0
             var row = 0
             while offset < section.entries.count {
@@ -206,6 +209,7 @@ private struct EmojiGridRowView: View {
 
 /// Pure content: no gestures, overlays or hover tracking. See docs/features/emoji.md#rendering.
 private struct EmojiCell: View {
+    @Environment(\.locale) private var localizationLocale
     let glyph: String
     let selected: Bool
     let hovered: Bool

@@ -55,7 +55,7 @@ struct ExtensionCommandScreen: PaletteScreen {
     }
 
     var primaryActionTitle: String {
-        primaryAction(at: vm.selection)?.title ?? "Run"
+        primaryAction(at: vm.selection)?.title ?? String(localized: "Run", bundle: .appLanguage)
     }
 
     func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }

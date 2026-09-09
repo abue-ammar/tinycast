@@ -30,7 +30,9 @@ enum BackupApplier {
             do {
                 summary.snippets = try await applySnippets(bundle, to: core)
             } catch {
-                summary.problems.append("Couldn't import snippets: \(error.localizedDescription)")
+                summary.problems.append(String(
+                    localized: "Couldn't import snippets: \(error.localizedDescription)",
+                    bundle: .appLanguage))
             }
         }
         if categories.contains(.notes) {

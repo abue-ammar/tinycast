@@ -9,8 +9,8 @@ enum EscapeKeyBehavior: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .navigateBackOrClose: return "Navigate back or close window"
-        case .closeAndPopToRoot: return "Close window and pop to root"
+        case .navigateBackOrClose: return String(localized: "Navigate back or close window", bundle: .appLanguage)
+        case .closeAndPopToRoot: return String(localized: "Close window and pop to root", bundle: .appLanguage)
         }
     }
 }

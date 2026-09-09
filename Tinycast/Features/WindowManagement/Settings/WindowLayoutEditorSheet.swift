@@ -11,6 +11,7 @@ struct WindowLayoutEditRequest: Identifiable {
 
 /// Add / edit sheet for one layout, presented from the Window Management pane.
 struct WindowLayoutEditorSheet: View {
+    @Environment(\.locale) private var localizationLocale
     let request: WindowLayoutEditRequest
 
     @Environment(\.dismiss) private var dismiss
@@ -69,8 +70,12 @@ struct WindowLayoutEditorSheet: View {
     }
 
     private var title: String {
-        if request.isCapture { return "Capture Window Layout" }
-        return request.layout == nil ? "New Window Layout" : "Edit Window Layout"
+        if request.isCapture { return String(localized: "Capture Window Layout", bundle: .appLanguage) }
+        return request.layout == nil ? String(
+            localized: "New Window Layout",
+            bundle: .appLanguage) : String(
+            localized: "Edit Window Layout",
+            bundle: .appLanguage)
     }
 
     private var previewGap: CGFloat {

@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ChatTranscriptView: View {
+    @Environment(\.locale) private var localizationLocale
     let messages: [ChatMessage]
     let status: String?
     let usage: AIUsage?
@@ -87,6 +88,7 @@ struct ChatTranscriptView: View {
 
 /// A fast reply outruns a reader scrolling toward it, so this asks for the tail, not chases it.
 private struct ResumeFollowingButton: View {
+    @Environment(\.locale) private var localizationLocale
     let action: () -> Void
 
     var body: some View {
@@ -104,6 +106,7 @@ private struct ResumeFollowingButton: View {
 }
 
 private struct ChatMessageView: View {
+    @Environment(\.locale) private var localizationLocale
     let message: ChatMessage
     let status: String?
 
@@ -218,6 +221,7 @@ private struct ChatMessageView: View {
 
 /// A sent document names itself: its bytes went to the model, not into the transcript's prose.
 private struct ChatDocumentChip: View {
+    @Environment(\.locale) private var localizationLocale
     let document: AIDocument
 
     private var isPDF: Bool { document.mimeType == AIAttachmentPolicy.pdfMIMEType }
@@ -263,6 +267,7 @@ struct ChatImageThumbnail: View {
 
 /// A tool call inside a reply; the same row grammar the search one uses, with its own glyph.
 private struct ChatToolRow: View {
+    @Environment(\.locale) private var localizationLocale
     let use: ChatToolUse
 
     var body: some View {
@@ -294,6 +299,7 @@ private struct ChatToolRow: View {
 
 /// A web search inside a reply: live while it runs, a record of what it looked up once done.
 private struct ChatSearchRow: View {
+    @Environment(\.locale) private var localizationLocale
     let search: ChatSearch
 
     var body: some View {
@@ -305,7 +311,11 @@ private struct ChatSearchRow: View {
             } else {
                 ProgressView().controlSize(.small)
             }
-            Text(search.isComplete ? "Searched web" : "Searching web")
+            Text(search.isComplete ? String(
+                localized: "Searched web",
+                bundle: .appLanguage) : String(
+                localized: "Searching web",
+                bundle: .appLanguage))
                 .font(Theme.Typography.rowTrailing)
             if let query = search.query, !query.isEmpty {
                 Text("· \(query)")

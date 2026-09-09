@@ -1,6 +1,8 @@
 name: Tinycast
 options:
   bundleIdPrefix: com.tinycast
+  developmentLanguage: en
+  knownRegions: [en, zh-Hans]
   deploymentTarget:
     macOS: "26.0"
   createIntermediateGroups: true
@@ -11,6 +13,7 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "6.0"
+    SWIFT_EMIT_LOC_STRINGS: YES
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Manual
     # Stable self-signed identity so macOS keeps the Accessibility grant across rebuilds.

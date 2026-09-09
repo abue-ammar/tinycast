@@ -69,6 +69,10 @@ run() {
     if [ -n "$only" ] && [ "$name" != "$only" ]; then return 0; fi
     if [ "$index_only" -eq 1 ] && [ "$emit_db" -eq 0 ]; then return 0; fi
     ran=$((ran + 1))
+    set -- "$@" Tinycast/Platform/AppLocalization.swift
+    if grep -q 'localizationEnvironment(' "$@" "Tests/$name.swift"; then
+        set -- "$@" Tinycast/DesignSystem/LocalizationEnvironment.swift
+    fi
 
     # Absolute paths throughout: sourcekit-lsp resolves the command itself and does not apply
     # `directory` to relative arguments, so a relative path there silently yields no index.
@@ -350,6 +354,18 @@ run settings-history-test  Tinycast/Features/Settings/SettingsTab.swift \
                            Tinycast/Features/Settings/SettingsSearchCatalog.swift \
                            $L/SearchRelevance.swift
 run updates-test           Tinycast/Features/Updates/Model/*.swift
+run localization-test      Tinycast/Features/Settings/SettingsTab.swift \
+                           Tinycast/Features/Settings/AppAppearance.swift \
+                           Tinycast/Features/Settings/SettingsToolbarController.swift \
+                           Tinycast/Features/Settings/SettingsNavigationState.swift \
+                           Tinycast/Features/Settings/SettingsHistory.swift \
+                           Tinycast/Windows/WindowChrome.swift \
+                           Tinycast/Platform/NotificationToken.swift \
+                           Tinycast/Features/Settings/AppLanguage.swift \
+                           Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Features/Settings/SettingsAnchor.swift \
+                           Tinycast/Features/Settings/SettingsSearchCatalog.swift \
+                           $L/SearchRelevance.swift
 run support-test           Tinycast/Features/Support/Model/*.swift
 run ai-provider-test       Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \

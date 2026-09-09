@@ -28,7 +28,7 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
         self.onDownloaded = onDownloaded
 
         let hosting = NSHostingView(
-            rootView: QuickActionResultView(
+            rootView: AnyView(QuickActionResultView(
                 state: state,
                 languages: languages,
                 onReplace: { [weak self] in self?.replace(state.output) },
@@ -36,7 +36,7 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
                 onCancel: { [weak self] in self?.dismiss() },
                 onRetranslate: { [weak self] in self?.onRetranslate?($0) },
                 onDownloaded: { [weak self] in self?.onDownloaded?() },
-                onHeight: { [weak self] in self?.resize(toHeight: $0) }))
+                onHeight: { [weak self] in self?.resize(toHeight: $0) }).localizationEnvironment()))
         // The controller owns the frame; without this the top edge drifts as the reply grows.
         hosting.sizingOptions = []
         // Its tallest, so the first frame is never short; the view reports the real height at once.

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The layout library, inside the Window Management pane: layouts belong to window management.
 struct WindowLayoutsSection: View {
+    @Environment(\.locale) private var localizationLocale
     let onDelete: (WindowLayout) -> Void
 
     @Environment(WindowLayoutStore.self) private var store
@@ -21,7 +22,7 @@ struct WindowLayoutsSection: View {
             }
 
             if store.layouts.count > Self.filterThreshold {
-                SettingsFilterField(prompt: "Search layouts…", query: $query)
+                SettingsFilterField(prompt: String(localized: "Search layouts…", bundle: .appLanguage), query: $query)
             }
 
             if results.isEmpty {
@@ -57,13 +58,14 @@ struct WindowLayoutsSection: View {
 
     private var emptyMessage: String {
         store.layouts.isEmpty
-            ? "Save an arrangement once, then put every window back with one shortcut."
-            : "No layout matches “\(query)”."
+            ? String(localized: "Save an arrangement once, then put every window back with one shortcut.", bundle: .appLanguage)
+            : String(localized: "No layout matches “\(query)”.", bundle: .appLanguage)
     }
 }
 
 /// One layout's shortcut, launcher checkbox and actions, shaped like the window-command row.
 private struct WindowLayoutSettingsRow: View {
+    @Environment(\.locale) private var localizationLocale
     let layout: WindowLayout
     let onDelete: () -> Void
 

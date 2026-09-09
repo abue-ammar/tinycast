@@ -151,7 +151,7 @@ enum ShellCommandRunner {
         guard let terminal else {
             let reason =
                 directory == nil
-                ? missingDirectory(workingDirectory) : "The shell could not be started."
+                ? missingDirectory(workingDirectory) : String(localized: "The shell could not be started.", bundle: .appLanguage)
             return ShellCommandSession(
                 events: AsyncStream { continuation in
                     continuation.yield(
@@ -281,7 +281,7 @@ enum ShellCommandRunner {
     }
 
     nonisolated private static func missingDirectory(_ path: String?) -> String {
-        "The folder “\(path ?? "")” no longer exists."
+        String(localized: "The folder “\(path ?? "")” no longer exists.", bundle: .appLanguage)
     }
 
     /// Values follow as `$1`, `$2`, never spliced where zsh would re-parse them as syntax.

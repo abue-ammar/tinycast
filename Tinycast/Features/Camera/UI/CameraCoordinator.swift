@@ -55,17 +55,17 @@ final class CameraCoordinator: NSObject, NSWindowDelegate {
             let png = await session.capturePhoto(mirrored: mirrored)
             close()
             guard let png else {
-                core.showMessage("Couldn't take the photo", tone: .danger)
+                core.showMessage(String(localized: "Couldn't take the photo", bundle: .appLanguage), tone: .danger)
                 return
             }
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setData(png, forType: .png)
-            core.showMessage("Photo copied")
+            core.showMessage(String(localized: "Photo copied", bundle: .appLanguage))
         }
     }
 
     private func present() {
-        let hosting = NSHostingView(rootView: CameraView(coordinator: self))
+        let hosting = NSHostingView(rootView: AnyView(CameraView(coordinator: self).localizationEnvironment()))
         hosting.setFrameSize(hosting.fittingSize)
         let panel = CameraPanel(content: hosting)
         panel.delegate = self

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Tinycast's own menu-bar item. It carries no feature state, so no feature can hide or reshape it.
 struct MenuBarLabel: View {
+    @Environment(\.locale) private var localizationLocale
     let appName: String
 
     var body: some View {
@@ -11,6 +12,7 @@ struct MenuBarLabel: View {
 }
 
 struct MenuBarMenu: View {
+    @Environment(\.locale) private var localizationLocale
     let appName: String
 
     var body: some View {

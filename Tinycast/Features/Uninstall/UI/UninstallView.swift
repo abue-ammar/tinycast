@@ -59,6 +59,7 @@ struct UninstallList: View {
 }
 
 private struct UninstallRow: View {
+    @Environment(\.locale) private var localizationLocale
     let candidate: UninstallCandidate
     let selected: Bool
     let checked: Bool

@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct ChatCopyButton: View {
+    @Environment(\.locale) private var localizationLocale
     let text: String
-    var subject = "Message"
+    var subject = String(localized: "Message", bundle: .appLanguage)
 
     /// The stamp is the copy event: a fresh one re-arms the reset, so a second tap holds the check.
     @State private var copiedAt: Date?
@@ -21,7 +22,11 @@ struct ChatCopyButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(copied ? "Copied" : "Copy \(subject)")
+        .accessibilityLabel(copied ? String(
+            localized: "Copied",
+            bundle: .appLanguage) : String(
+            localized: "Copy \(subject)",
+            bundle: .appLanguage))
         .task(id: copiedAt) {
             guard copied else { return }
             try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))

@@ -5,6 +5,10 @@ struct SymbolCategory: Identifiable, Hashable, Sendable {
     let id: String
     let title: String
 
+    var localizedTitle: String {
+        String(localized: String.LocalizationValue(title), bundle: .appLanguage)
+    }
+
     static let suggested = SymbolCategory(id: "tinycast.suggested", title: "Suggested")
     static let all = SymbolCategory(id: "tinycast.all", title: "All Symbols")
     static let bundled = SymbolCategory(id: "tinycast.bundled", title: "Tinycast")
@@ -156,15 +160,19 @@ struct SymbolCatalog: Sendable {
 
     /// Anything absent is a rendering-mode bucket, not a browsable subject.
     private nonisolated static let categoryTitles: [String: String] = [
-        "communication": "Communication", "weather": "Weather", "maps": "Maps",
+        "communication": "Communication", "weather": "Weather",
+        "maps": "Maps",
         "objectsandtools": "Objects & Tools", "devices": "Devices",
         "cameraandphotos": "Camera & Photos", "gaming": "Gaming",
         "connectivity": "Connectivity", "transportation": "Transportation",
         "automotive": "Automotive", "accessibility": "Accessibility",
-        "privacyandsecurity": "Privacy & Security", "human": "People", "home": "Home",
+        "privacyandsecurity": "Privacy & Security", "human": "People",
+        "home": "Home",
         "fitness": "Fitness", "nature": "Nature", "editing": "Editing",
-        "textformatting": "Text Formatting", "media": "Media", "keyboard": "Keyboard",
-        "commerce": "Commerce", "time": "Time", "health": "Health", "shapes": "Shapes",
+        "textformatting": "Text Formatting", "media": "Media",
+        "keyboard": "Keyboard",
+        "commerce": "Commerce", "time": "Time",
+        "health": "Health", "shapes": "Shapes",
         "arrows": "Arrows", "indices": "Indices", "math": "Math"
     ]
 }

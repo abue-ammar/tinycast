@@ -13,6 +13,7 @@ extension DialogTone {
 
 /// A dialog: the palette's surface recipe at dialog size, glass only on the buttons.
 struct DialogView: View {
+    @Environment(\.locale) private var localizationLocale
     let request: DialogRequest
     let onChoose: (Int) -> Void
 
@@ -80,6 +81,7 @@ struct DialogView: View {
 }
 
 private struct DialogButton: View {
+    @Environment(\.locale) private var localizationLocale
     let action: DialogAction
     let keyCap: String?
     let onActivate: () -> Void

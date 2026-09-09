@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Settings › Extensions: the master switch, then a row per extension that expands in place.
 struct ExtensionsSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @State private var expanded: String?
     @State private var filter = ""
@@ -24,9 +25,12 @@ struct ExtensionsSettingsView: View {
                 anchor: .extensionsExtensions,
                 enableTitle: "Enable extensions",
                 enableSubtitle:
-                    "Run Raycast extensions natively. A running command holds a JavaScript engine "
-                    + "in memory until you leave it.",
-                launcherSubtitle: "List every extension's commands in launcher search.",
+                    String(
+                        localized:
+                            "Run Raycast extensions natively. A running command holds a JavaScript engine in memory until you leave it.",
+                        bundle: .appLanguage
+                    ),
+                launcherSubtitle: String(localized: "List every extension's commands in launcher search.", bundle: .appLanguage),
                 // Enabling is consent to run third-party code, so the setter confirms.
                 isEnabled: Binding(
                     get: { settings.extensionsEnabled },
@@ -88,17 +92,21 @@ struct ExtensionsSettingsView: View {
             } label: {
                 Label("What works", systemImage: "checkmark.circle")
                 Text(
-                    "List, detail, form and grid commands, and ones that just run. Preferences, "
-                        + "arguments, storage, the clipboard, toasts, HUDs and OAuth sign-in. "
-                        + "No-view commands refresh their subtitle on their manifest interval.")
+                    String(localized: """
+                        List, detail, form and grid commands, and ones that just run. Preferences, \
+                        arguments, storage, the clipboard, toasts, HUDs and OAuth sign-in. No-view \
+                        commands refresh their subtitle on their manifest interval.
+                        """, bundle: .appLanguage))
             }
             LabeledContent {
                 EmptyView()
             } label: {
                 Label("What doesn't, yet", systemImage: "xmark.circle")
                 Text(
-                    "Menu-bar commands, sign-ins routed through Raycast's own OAuth proxy, and "
-                        + "Raycast's AI, browser and window-management services.")
+                    String(localized: """
+                        Menu-bar commands, sign-ins routed through Raycast's own OAuth proxy, and \
+                        Raycast's AI, browser and window-management services.
+                        """, bundle: .appLanguage))
             }
         } header: {
             SettingsSectionHeader(.extensionsCompatibility)
@@ -119,7 +127,7 @@ struct ExtensionsSettingsView: View {
                     .foregroundStyle(.secondary)
             } else {
                 if core.extensions.installed.count > 3 {
-                    SettingsFilterField(prompt: "Filter extensions…", query: $filter)
+                    SettingsFilterField(prompt: String(localized: "Filter extensions…", bundle: .appLanguage), query: $filter)
                 }
                 if matching.isEmpty {
                     Text("No extension matches \u{201C}\(filter)\u{201D}.")
@@ -150,7 +158,11 @@ struct ExtensionsSettingsView: View {
             SettingsSectionHeader(anchor: .extensionsInstalled) {
                 Text(
                     core.extensions.installed.isEmpty
-                        ? "Installed" : "Installed (\(core.extensions.installed.count))")
+                        ? String(
+                            localized: "Installed",
+                            bundle: .appLanguage) : String(
+                            localized: "Installed (\(core.extensions.installed.count))",
+                            bundle: .appLanguage))
             }
         } footer: {
             if let error {
@@ -205,7 +217,7 @@ struct ExtensionsSettingsView: View {
             }
             SettingsRow(
                 title: "Add from folder",
-                subtitle: "A folder holding package.json and the built command files.",
+                subtitle: String(localized: "A folder holding package.json and the built command files.", bundle: .appLanguage),
                 anchor: .extensionsInstall
             ) {
                 Image(systemName: "folder")
@@ -249,9 +261,11 @@ struct ExtensionsSettingsView: View {
     }
 
     private var reclaimableSubtitle: String {
-        guard !reclaimable.isEmpty else { return "Nothing to clean up." }
-        let items = reclaimable.items == 1 ? "1 item" : "\(reclaimable.items) items"
-        return "Reclaims \(ExtensionCleanup.formatted(bytes: reclaimable.bytes)) from \(items)."
+        guard !reclaimable.isEmpty else { return String(localized: "Nothing to clean up.", bundle: .appLanguage) }
+        let items = reclaimable.items == 1 ? "1 item" : String(localized: "\(reclaimable.items) items", bundle: .appLanguage)
+        return String(
+            localized: "Reclaims \(ExtensionCleanup.formatted(bytes: reclaimable.bytes)) from \(items).",
+            bundle: .appLanguage)
     }
 
     /// Off-main: measuring walks a `node_modules`, which is tens of thousands of files.
@@ -266,27 +280,33 @@ struct ExtensionsSettingsView: View {
     /// Names what searching will cover, so the row says what the Registries button is for.
     private var searchSubtitle: String {
         let on = core.settings.extensionRegistries.filter(\.isEnabled)
-        guard !on.isEmpty else { return "No registries enabled — searching would find nothing." }
-        return "Searching \(on.map(\.name).joined(separator: ", "))."
+        guard !on.isEmpty else { return String(
+            localized: "No registries enabled — searching would find nothing.",
+            bundle: .appLanguage) }
+        return String(localized: "Searching \(on.map(\.name).joined(separator: ", ")).", bundle: .appLanguage)
     }
 
     private var importSubtitle: String {
         if let importProgress {
-            return "Importing \(importProgress.done) of \(importProgress.total)…"
+            return String(localized: "Importing \(importProgress.done) of \(importProgress.total)…", bundle: .appLanguage)
         }
         if let importSummary { return importSummary }
         guard raycastAvailable else {
-            return "No Raycast install found in ~/.config — checked raycast and raycast-x."
+            return String(
+                localized: "No Raycast install found in ~/.config — checked raycast and raycast-x.",
+                bundle: .appLanguage)
         }
         guard !pending.isEmpty else {
-            return "Copy what Raycast has already built. No Node or package manager needed."
+            return String(
+                localized: "Copy what Raycast has already built. No Node or package manager needed.",
+                bundle: .appLanguage)
         }
         let names = pending.map(\.installed.title)
             .sorted { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
             .prefix(3)
             .joined(separator: ", ")
-        let more = pending.count > 3 ? " and \(pending.count - 3) more" : ""
-        return "\(pending.count) not here yet — \(names)\(more)."
+        let more = pending.count > 3 ? String(localized: " and \(pending.count - 3) more", bundle: .appLanguage) : ""
+        return String(localized: "\(pending.count) not here yet — \(names)\(more).", bundle: .appLanguage)
     }
 
     private var raycastAvailable: Bool {
@@ -307,7 +327,7 @@ struct ExtensionsSettingsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        panel.prompt = "Add"
+        panel.prompt = String(localized: "Add", bundle: .appLanguage)
         guard panel.runModal() == .OK else { return }
         Task {
             error = nil
@@ -332,10 +352,13 @@ struct ExtensionsSettingsView: View {
         await findPending()
         let imported = chosen.count - failed.count
         if failed.isEmpty {
-            importSummary = "Imported \(imported) extension\(imported == 1 ? "" : "s")."
+            importSummary =
+                imported == 1
+                ? String(localized: "Imported 1 extension.", bundle: .appLanguage)
+                : String(localized: "Imported \(imported) extensions.", bundle: .appLanguage)
         } else {
-            importSummary = "Imported \(imported); \(failed.count) failed."
-            error = "Couldn't import \(failed.joined(separator: ", "))."
+            importSummary = String(localized: "Imported \(imported); \(failed.count) failed.", bundle: .appLanguage)
+            error = String(localized: "Couldn't import \(failed.joined(separator: ", ")).", bundle: .appLanguage)
         }
     }
 
@@ -350,6 +373,7 @@ struct ExtensionsSettingsView: View {
 
 /// A summary row, and while open its settings on an inset card — separators and fill, never glass.
 private struct ExtensionDisclosure: View {
+    @Environment(\.locale) private var localizationLocale
     let installed: InstalledExtension
     let isExpanded: Bool
     let onToggle: () -> Void
@@ -385,7 +409,9 @@ private struct ExtensionDisclosure: View {
         .onTapGesture(perform: onToggle)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(
-            isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
+            isExpanded
+                ? String(localized: "Hide \(installed.title) settings", bundle: .appLanguage)
+                : String(localized: "Configure \(installed.title)", bundle: .appLanguage))
     }
 
     /// One `Grid` for every run: separate grids size columns apart, stranding controls.
@@ -401,7 +427,7 @@ private struct ExtensionDisclosure: View {
 
                 if !installed.manifest.preferences.isEmpty {
                     rule
-                    heading("Preferences")
+                    heading(String(localized: "Preferences", bundle: .appLanguage))
                     ForEach(
                         Array(installed.manifest.preferences.enumerated()), id: \.element.name
                     ) { index, schema in
@@ -412,7 +438,11 @@ private struct ExtensionDisclosure: View {
                 }
 
                 rule
-                heading(installed.manifest.commands.count == 1 ? "Command" : "Commands")
+                heading(installed.manifest.commands.count == 1 ? String(
+                    localized: "Command",
+                    bundle: .appLanguage) : String(
+                    localized: "Commands",
+                    bundle: .appLanguage))
                 ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
                     index, command in
                     if index > 0 { rule }
@@ -452,7 +482,11 @@ private struct ExtensionDisclosure: View {
 
     private var subtitle: String {
         let count = installed.manifest.commands.count
-        let commands = "\(count) command\(count == 1 ? "" : "s")"
+        let commands = count == 1 ? String(
+            localized: "1 command",
+            bundle: .appLanguage) : String(
+            localized: "\(count) commands",
+            bundle: .appLanguage)
         let author = installed.manifest.author
         return author.isEmpty ? commands : "\(commands) · \(author)"
     }
@@ -460,6 +494,7 @@ private struct ExtensionDisclosure: View {
 
 /// One card row: the label left, the control right, columns aligned by the enclosing `Grid`.
 private struct SettingsCardRow<Control: View>: View {
+    @Environment(\.locale) private var localizationLocale
     /// Wide enough for a path field, and the trailing edge every control in the column shares.
     static var controlWidth: CGFloat { 200 }
 
@@ -505,11 +540,12 @@ private struct SettingsCardRow<Control: View>: View {
 
 /// One command: its shortcut, then any preferences it declares of its own.
 private struct CommandRows: View {
+    @Environment(\.locale) private var localizationLocale
     let installed: InstalledExtension
     let command: ExtensionCommand
 
     /// A fact about the command, so it sits by the name as a badge rather than a warning colour.
-    private var badge: String? { command.mode.isSupported ? nil : "Menu Bar" }
+    private var badge: String? { command.mode.isSupported ? nil : String(localized: "Menu Bar", bundle: .appLanguage) }
 
     var body: some View {
         SettingsCardRow(title: command.title, detail: command.description, badge: badge) {
@@ -541,6 +577,7 @@ private struct CommandRows: View {
 
 /// One `no-view` command's background refresh: Raycast's interval preference, stored locally.
 private struct ExtensionRefreshRow: View {
+    @Environment(\.locale) private var localizationLocale
     let extensionName: String
     let command: ExtensionCommand
     let schedule: String
@@ -555,7 +592,9 @@ private struct ExtensionRefreshRow: View {
 
     var body: some View {
         let info = core.extensions.backgroundInfo(extension: extensionName, command: command.name)
-        SettingsCardRow(title: "Background refresh", detail: detail(for: info), indent: indent) {
+        SettingsCardRow(title: String(
+            localized: "Background refresh",
+            bundle: .appLanguage), detail: detail(for: info), indent: indent) {
             Toggle(
                 "",
                 isOn: Binding(
@@ -566,14 +605,16 @@ private struct ExtensionRefreshRow: View {
     }
 
     private func detail(for info: ExtensionCommandMetadata) -> String {
-        var detail = "Runs every \(schedule) in the background."
+        var detail = String(localized: "Runs every \(schedule) in the background.", bundle: .appLanguage)
         if let lastRun = info.lastRun {
-            detail += " Last refresh \(Self.relative.localizedString(for: lastRun, relativeTo: Date()))."
+            detail += String(
+                localized: " Last refresh \(Self.relative.localizedString(for: lastRun, relativeTo: Date())).",
+                bundle: .appLanguage)
         } else {
-            detail += " Hasn't refreshed yet."
+            detail += String(localized: " Hasn't refreshed yet.", bundle: .appLanguage)
         }
         if let error = info.lastError {
-            detail += " Last error: \(ExtensionRefreshPolicy.headline(error))."
+            detail += String(localized: " Last error: \(ExtensionRefreshPolicy.headline(error)).", bundle: .appLanguage)
         }
         return detail
     }
@@ -585,6 +626,7 @@ private struct ExtensionRefreshRow: View {
 
 /// Hides one extension's commands: an import can add hundreds, and the global switch is too blunt.
 private struct ExtensionLauncherRow: View {
+    @Environment(\.locale) private var localizationLocale
     let installed: InstalledExtension
     @Environment(AppCore.self) private var core
 
@@ -601,10 +643,10 @@ private struct ExtensionLauncherRow: View {
 
     var body: some View {
         SettingsCardRow(
-            title: "Show in launcher",
+            title: String(localized: "Show in launcher", bundle: .appLanguage),
             detail: isVisible
-                ? "Its commands appear in launcher search."
-                : "Hidden from launcher search; shortcuts still work."
+                ? String(localized: "Its commands appear in launcher search.", bundle: .appLanguage)
+                : String(localized: "Hidden from launcher search; shortcuts still work.", bundle: .appLanguage)
         ) {
             // A closure, not `set: setVisible`: an actor-isolated method as a setter crashes IRGen.
             Toggle("", isOn: Binding(get: { isVisible }, set: { setVisible($0) }))
@@ -625,6 +667,7 @@ private struct ExtensionLauncherRow: View {
 
 /// The launcher icon, and the picker that replaces it.
 private struct ExtensionIconRow: View {
+    @Environment(\.locale) private var localizationLocale
     let installed: InstalledExtension
     @Environment(AppCore.self) private var core
     @State private var picking = false
@@ -636,9 +679,13 @@ private struct ExtensionIconRow: View {
 
     var body: some View {
         SettingsCardRow(
-            title: "Launcher icon",
+            title: String(localized: "Launcher icon", bundle: .appLanguage),
             detail: appearance == nil
-                ? "The icon this extension ships." : "Replaced with a Tinycast icon."
+                ? String(
+                    localized: "The icon this extension ships.",
+                    bundle: .appLanguage) : String(
+                    localized: "Replaced with a Tinycast icon.",
+                    bundle: .appLanguage)
         ) {
             HStack(spacing: Theme.Spacing.md) {
                 preview
@@ -671,6 +718,7 @@ private struct ExtensionIconRow: View {
 
 /// One preference control, stored so a command reads it through `getPreferenceValues()`.
 private struct ExtensionPreferenceRow: View {
+    @Environment(\.locale) private var localizationLocale
     let extensionName: String
     let schema: ExtensionPreferenceSchema
     var indent: CGFloat = 0
@@ -690,7 +738,7 @@ private struct ExtensionPreferenceRow: View {
     private var detail: String? {
         let description = schema.description ?? ""
         guard schema.required else { return description }
-        return description.isEmpty ? "Required." : description + " Required."
+        return description.isEmpty ? String(localized: "Required.", bundle: .appLanguage) : description + " Required."
     }
 
     @ViewBuilder
@@ -719,7 +767,7 @@ private struct ExtensionPreferenceRow: View {
                 .onChange(of: text) { _, value in save(value) }
         case .file, .directory, .appPicker:
             HStack(spacing: Theme.Spacing.sm) {
-                Text(text.isEmpty ? "Not set" : (text as NSString).lastPathComponent)
+                Text(text.isEmpty ? String(localized: "Not set", bundle: .appLanguage) : (text as NSString).lastPathComponent)
                     .foregroundStyle(text.isEmpty ? .secondary : .primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -776,6 +824,7 @@ private struct ImportCandidates: Identifiable {
 
 /// Anything not already built starts selected, so the common case is one press.
 private struct ExtensionImportSheet: View {
+    @Environment(\.locale) private var localizationLocale
     let candidates: [RaycastImportCandidate]
     let onImport: ([InstalledExtension]) -> Void
     let onCancel: () -> Void
@@ -803,7 +852,7 @@ private struct ExtensionImportSheet: View {
             }
 
             if candidates.count > 6 {
-                SettingsFilterField(prompt: "Filter…", query: $filter)
+                SettingsFilterField(prompt: String(localized: "Filter…", bundle: .appLanguage), query: $filter)
             }
 
             ScrollView {
@@ -838,7 +887,11 @@ private struct ExtensionImportSheet: View {
 
             HStack {
                 // Reads against what is selected, so it is never a button that does nothing.
-                Button(allChosen ? "Deselect All" : "Select All") {
+                Button(allChosen ? String(
+                    localized: "Deselect All",
+                    bundle: .appLanguage) : String(
+                    localized: "Select All",
+                    bundle: .appLanguage)) {
                     chosen = allChosen ? [] : Set(candidates.map(\.installed.manifest.name))
                 }
                 .disabled(candidates.isEmpty)
@@ -867,20 +920,28 @@ private struct ExtensionImportSheet: View {
 
     private var subtitle: String {
         guard !candidates.isEmpty else {
-            return "No built extensions found in ~/.config/raycast/extensions."
+            return String(localized: "No built extensions found in ~/.config/raycast/extensions.", bundle: .appLanguage)
         }
         guard !fresh.isEmpty else {
-            return "Everything Raycast has built is already here. Import one again to update it."
+            return String(
+                localized: "Everything Raycast has built is already here. Import one again to update it.",
+                bundle: .appLanguage)
         }
-        let count = fresh.count == 1 ? "one" : "\(fresh.count)"
-        return "The \(count) you don't have yet \(fresh.count == 1 ? "is" : "are") already ticked. "
-            + "Ticking one you have updates it."
+        let count = fresh.count
+        return String(localized: "Selected new extensions: \(count). ", bundle: .appLanguage)
+            + String(localized: "Ticking one you have updates it.", bundle: .appLanguage)
     }
 
     private func detail(for candidate: RaycastImportCandidate) -> String {
         let count = candidate.installed.manifest.commands.count
-        let commands = "\(count) command\(count == 1 ? "" : "s")"
-        return candidate.isInstalled ? "\(commands) · installed — tick to update" : commands
+        let commands = count == 1 ? String(
+            localized: "1 command",
+            bundle: .appLanguage) : String(
+            localized: "\(count) commands",
+            bundle: .appLanguage)
+        return candidate.isInstalled ? String(
+            localized: "\(commands) · installed — tick to update",
+            bundle: .appLanguage) : commands
     }
 
     private func binding(for candidate: RaycastImportCandidate) -> Binding<Bool> {

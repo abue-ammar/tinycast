@@ -2,9 +2,10 @@ import SwiftUI
 
 /// Shown only on request: a Settings pane gets screenshotted, and this is what names a person.
 struct RedactedText: View {
+    @Environment(\.locale) private var localizationLocale
     let value: String
-    var revealHelp = "Click to reveal"
-    var hideHelp = "Click to hide"
+    var revealHelp = String(localized: "Click to reveal", bundle: .appLanguage)
+    var hideHelp = String(localized: "Click to hide", bundle: .appLanguage)
 
     @State private var isRevealed = false
 
@@ -22,7 +23,7 @@ struct RedactedText: View {
         .buttonStyle(.plain)
         .help(isRevealed ? hideHelp : revealHelp)
         // Reading a disguise aloud is worse than useless to someone who cannot see the blur.
-        .accessibilityLabel(isRevealed ? value : "Hidden: \(revealHelp.lowercased())")
+        .accessibilityLabel(isRevealed ? value : String(localized: "Hidden: \(revealHelp.lowercased())", bundle: .appLanguage))
         .accessibilityAddTraits(.isButton)
     }
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The My Schedule list, bucketed into Today and Tomorrow.
 struct ScheduleList: View {
+    @Environment(\.locale) private var localizationLocale
     let results: [MeetingEvent]
     let selectedID: MeetingEvent.ID?
     let now: Date
@@ -26,7 +27,9 @@ struct ScheduleList: View {
         var current: String?
         for meeting in results {
             let title =
-                MeetingDay(for: meeting.start, now: now, calendar: .current)?.title ?? "Later"
+                MeetingDay(for: meeting.start, now: now, calendar: .current)?.title ?? String(
+                    localized: "Later",
+                    bundle: .appLanguage)
             if title != current {
                 rows.append(.header(title))
                 current = title
@@ -74,6 +77,7 @@ struct ScheduleList: View {
 }
 
 private struct MeetingRow: View {
+    @Environment(\.locale) private var localizationLocale
     let meeting: MeetingEvent
     let now: Date
     let selected: Bool
@@ -115,6 +119,6 @@ private struct MeetingRow: View {
 
     /// A meeting under way says so; everything else reads as the clock time it starts.
     private var trailing: String {
-        meeting.isInProgress(now: now) ? "Now" : MeetingTimeFormat.clock(meeting.start)
+        meeting.isInProgress(now: now) ? String(localized: "Now", bundle: .appLanguage) : MeetingTimeFormat.clock(meeting.start)
     }
 }

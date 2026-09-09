@@ -4,6 +4,7 @@ import SwiftUI
 
 /// The first-launch wizard, built from the app's own controls; re-runnable from Settings.
 struct OnboardingView: View {
+    @Environment(\.locale) private var localizationLocale
     @State private var step = 0
     @State private var model = OnboardingModel()
     @Environment(AppCore.self) private var core
@@ -78,18 +79,18 @@ struct OnboardingView: View {
 
     private var title: String {
         switch step {
-        case 0: "Welcome to Tinycast"
-        case 1: "Enable Pasting"
-        case 2: "Import from Raycast"
-        default: "You're all set"
+        case 0: String(localized: "Welcome to Tinycast", bundle: .appLanguage)
+        case 1: String(localized: "Enable Pasting", bundle: .appLanguage)
+        case 2: String(localized: "Import from Raycast", bundle: .appLanguage)
+        default: String(localized: "You're all set", bundle: .appLanguage)
         }
     }
 
     private var subtitle: String {
         switch step {
-        case 0: "Set a shortcut to summon the launcher from anywhere."
-        case 1: "Let Tinycast paste items back into the app you were using."
-        case 2: "Bring your shortcuts, favorites, and clipboard history along."
+        case 0: String(localized: "Set a shortcut to summon the launcher from anywhere.", bundle: .appLanguage)
+        case 1: String(localized: "Let Tinycast paste items back into the app you were using.", bundle: .appLanguage)
+        case 2: String(localized: "Bring your shortcuts, favorites, and clipboard history along.", bundle: .appLanguage)
         default: readyMessage
         }
     }
@@ -112,9 +113,9 @@ struct OnboardingView: View {
 
     private var readyMessage: String {
         if let caps = hotKeys.binding(for: .togglePalette)?.keycaps {
-            return "Press \(caps.joined()) anytime to start using Tinycast."
+            return String(localized: "Press \(caps.joined()) anytime to start using Tinycast.", bundle: .appLanguage)
         }
-        return "Tinycast is ready. Set a shortcut in Settings to summon it."
+        return String(localized: "Tinycast is ready. Set a shortcut in Settings to summon it.", bundle: .appLanguage)
     }
 
     // MARK: - Step content
@@ -134,23 +135,23 @@ struct OnboardingView: View {
         return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             OnboardingCard {
                 OnboardingRow(
-                    title: "App Launcher",
-                    subtitle: "Press this shortcut to open Tinycast.",
+                    title: String(localized: "App Launcher", bundle: .appLanguage),
+                    subtitle: String(localized: "Press this shortcut to open Tinycast.", bundle: .appLanguage),
                     systemImage: "magnifyingglass", tint: .blue
                 ) {
                     ShortcutRecorder(action: .togglePalette)
                 }
                 OnboardingDivider()
                 OnboardingRow(
-                    title: "Launch at login",
-                    subtitle: "Start Tinycast automatically when you log in.",
+                    title: String(localized: "Launch at login", bundle: .appLanguage),
+                    subtitle: String(localized: "Start Tinycast automatically when you log in.", bundle: .appLanguage),
                     systemImage: "power", tint: .green
                 ) {
                     Toggle("", isOn: $settings.launchAtLogin)
                         .labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }
             }
-            caption("You can change these anytime in Settings.")
+            caption(String(localized: "You can change these anytime in Settings.", bundle: .appLanguage))
         }
     }
 
@@ -158,15 +159,17 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             OnboardingCard {
                 OnboardingRow(
-                    title: "Accessibility",
+                    title: String(localized: "Accessibility", bundle: .appLanguage),
                     subtitle:
-                        "Allows pasting clipboard items and expanded snippets into active apps.",
+                        String(
+                            localized: "Allows pasting clipboard items and expanded snippets into active apps.",
+                            bundle: .appLanguage),
                     systemImage: "accessibility", tint: .blue
                 ) {
                     statusBadge
                 }
             }
-            caption("Optional — you can enable this later in Settings › Permissions.")
+            caption(String(localized: "Optional — you can enable this later in Settings › Permissions.", bundle: .appLanguage))
         }
     }
 
@@ -174,7 +177,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             OnboardingCard {
                 OnboardingRow(
-                    title: "Raycast Export",
+                    title: String(localized: "Raycast Export", bundle: .appLanguage),
                     subtitle: model.fileSubtitle,
                     systemImage: "doc.badge.gearshape", tint: .orange
                 ) {
@@ -182,8 +185,8 @@ struct OnboardingView: View {
                 }
                 OnboardingDivider()
                 OnboardingRow(
-                    title: "Passphrase",
-                    subtitle: "The password you set when exporting from Raycast.",
+                    title: String(localized: "Passphrase", bundle: .appLanguage),
+                    subtitle: String(localized: "The password you set when exporting from Raycast.", bundle: .appLanguage),
                     systemImage: "key", tint: .gray
                 ) {
                     SecureField("Passphrase", text: $model.passphrase)
@@ -197,13 +200,13 @@ struct OnboardingView: View {
             if let status = model.status {
                 importStatus(status)
             } else {
-                caption("Optional — you can import later in Settings › Backup.")
+                caption(String(localized: "Optional — you can import later in Settings › Backup.", bundle: .appLanguage))
             }
         }
     }
 
     private var doneStep: some View {
-        caption("Everything's ready. Hit Get Started to open the launcher.")
+        caption(String(localized: "Everything's ready. Hit Get Started to open the launcher.", bundle: .appLanguage))
             .frame(maxWidth: .infinity, alignment: .center)
     }
 
@@ -262,17 +265,21 @@ struct OnboardingView: View {
 
     private var primaryTitle: String {
         switch step {
-        case 0: "Continue"
-        case 1: accessibilityTrusted ? "Continue" : "Grant Access"
+        case 0: String(localized: "Continue", bundle: .appLanguage)
+        case 1: accessibilityTrusted ? String(
+            localized: "Continue",
+            bundle: .appLanguage) : String(
+            localized: "Grant Access",
+            bundle: .appLanguage)
         case 2:
             if model.didImport {
-                "Continue"
+                String(localized: "Continue", bundle: .appLanguage)
             } else if model.importing {
-                "Importing…"
+                String(localized: "Importing…", bundle: .appLanguage)
             } else {
-                "Import"
+                String(localized: "Import", bundle: .appLanguage)
             }
-        default: "Get Started"
+        default: String(localized: "Get Started", bundle: .appLanguage)
         }
     }
 
@@ -330,7 +337,11 @@ struct OnboardingView: View {
             Image(
                 systemName: accessibilityTrusted
                     ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-            Text(accessibilityTrusted ? "Granted" : "Not granted")
+            Text(accessibilityTrusted ? String(
+                localized: "Granted",
+                bundle: .appLanguage) : String(
+                localized: "Not granted",
+                bundle: .appLanguage))
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
@@ -378,7 +389,7 @@ final class OnboardingModel {
 
     var fileSubtitle: String {
         guard let name = file?.lastPathComponent else {
-            return "Choose a .rayconfig file exported from Raycast."
+            return String(localized: "Choose a .rayconfig file exported from Raycast.", bundle: .appLanguage)
         }
         return "\(name) — \(isRaycastExport ? "Raycast export" : "not a Raycast export")"
     }

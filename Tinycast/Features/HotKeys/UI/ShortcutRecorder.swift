@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Deliberately not a focusable control. See docs/features/hotkeys.md#recorder.
 struct ShortcutRecorder: View {
+    @Environment(\.locale) private var localizationLocale
     let action: HotKeyAction
     /// Drops the empty well's fill: a column of identical pills reads louder than its rows.
     var isQuiet = false
@@ -50,7 +51,11 @@ struct ShortcutRecorder: View {
         if let binding = hotKeys.binding(for: action) {
             boundLabel(binding)
         } else {
-            Text(isRecording ? "Listening…" : "Record")
+            Text(isRecording ? String(
+                localized: "Listening…",
+                bundle: .appLanguage) : String(
+                localized: "Record",
+                bundle: .appLanguage))
                 .font(Theme.Typography.keyCap)
                 .foregroundStyle(unsetInk)
         }

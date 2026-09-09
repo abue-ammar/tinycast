@@ -32,6 +32,7 @@ extension View {
 
 /// One side of a two-column lead card: a value line with an optional word-name badge beneath.
 struct LeadCardColumn: View {
+    @Environment(\.locale) private var localizationLocale
     let text: AttributedString
     let badge: String?
     var weight: Font.Weight = .medium
@@ -51,6 +52,7 @@ struct LeadCardColumn: View {
 
 /// The pill a lead card states its kind in — the calculator's unit, a colour's notation.
 private struct LeadCardBadge: View {
+    @Environment(\.locale) private var localizationLocale
     let text: String
 
     var body: some View {

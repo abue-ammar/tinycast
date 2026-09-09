@@ -2,6 +2,7 @@ import SwiftUI
 
 /// React owns the values; every edit dispatches back and the re-render draws it.
 struct ExtensionFormView: View {
+    @Environment(\.locale) private var localizationLocale
     let screen: ExtensionScreen
     let assetsPath: String?
     /// The focused field, as the flat index the palette navigates with.
@@ -119,8 +120,8 @@ struct ExtensionFormView: View {
                 ExtensionPickerField(
                     items: ExtensionFormView.items(in: field),
                     chosen: [field.string("value") ?? ""].filter { !$0.isEmpty },
-                    placeholder: field.string("placeholder") ?? "Select…",
-                    title: field.string("title") ?? "Dropdown",
+                    placeholder: field.string("placeholder") ?? String(localized: "Select…", bundle: .appLanguage),
+                    title: field.string("title") ?? String(localized: "Dropdown", bundle: .appLanguage),
                     info: field.string("info"),
                     error: field.string("error"),
                     assetsPath: assetsPath,
@@ -134,8 +135,8 @@ struct ExtensionFormView: View {
                 ExtensionPickerField(
                     items: ExtensionFormView.items(in: field),
                     chosen: field.array("value").compactMap(\.stringValue),
-                    placeholder: field.string("placeholder") ?? "Select…",
-                    title: field.string("title") ?? "Tags",
+                    placeholder: field.string("placeholder") ?? String(localized: "Select…", bundle: .appLanguage),
+                    title: field.string("title") ?? String(localized: "Tags", bundle: .appLanguage),
                     info: field.string("info"),
                     error: field.string("error"),
                     assetsPath: assetsPath,
@@ -238,6 +239,7 @@ struct ExtensionFormView: View {
 
 /// Local state absorbs typing so the caret never jumps; a programmatic reset wins.
 private struct ExtensionTextField: View {
+    @Environment(\.locale) private var localizationLocale
     let node: RenderNode
     let secure: Bool
     let index: Int?
@@ -264,7 +266,9 @@ private struct ExtensionTextField: View {
         .onHover { hovered = $0 }
         .modifier(ExtensionFormKeys(field: .text, onActivate: {}, onSubmit: onSubmit))
         // The visible label is a Text in the row beside it, which the field cannot claim itself.
-        .accessibilityLabel(Text(node.string("title") ?? node.string("placeholder") ?? "Text"))
+        .accessibilityLabel(Text(node.string("title") ?? node.string("placeholder") ?? String(
+            localized: "Text",
+            bundle: .appLanguage)))
         .extensionFieldHint(node.string("info"), error: node.string("error"))
         .onAppear { text = node.string("value") ?? "" }
         .onChange(of: node.string("value") ?? "") { _, incoming in
@@ -293,6 +297,7 @@ private struct ExtensionTextField: View {
 }
 
 private struct ExtensionTextArea: View {
+    @Environment(\.locale) private var localizationLocale
     let node: RenderNode
     let index: Int?
     @FocusState.Binding var focus: Int?
@@ -313,7 +318,7 @@ private struct ExtensionTextArea: View {
             .extensionFieldChrome(focused: focus == index, hovered: hovered, multiline: true)
             .onHover { hovered = $0 }
             .modifier(ExtensionFormKeys(field: .textArea, onActivate: {}, onSubmit: onSubmit))
-            .accessibilityLabel(Text(node.string("title") ?? "Text area"))
+            .accessibilityLabel(Text(node.string("title") ?? String(localized: "Text area", bundle: .appLanguage)))
             .extensionFieldHint(node.string("info"), error: node.string("error"))
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
@@ -344,6 +349,7 @@ private struct ExtensionTextArea: View {
 
 /// Its own control, not `Toggle`: a `Toggle` takes focus only under Full Keyboard Access.
 private struct ExtensionCheckbox: View {
+    @Environment(\.locale) private var localizationLocale
     let node: RenderNode
     let index: Int?
     @FocusState.Binding var focus: Int?
@@ -371,10 +377,16 @@ private struct ExtensionCheckbox: View {
         .onHover { hovered = $0 }
         .onTapGesture { toggle() }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(node.string("label") ?? node.string("title") ?? "Checkbox"))
+        .accessibilityLabel(Text(node.string("label") ?? node.string("title") ?? String(
+            localized: "Checkbox",
+            bundle: .appLanguage)))
         // A toggle announces what it is and what it holds, not just that it can be pressed.
         .accessibilityAddTraits(isOn ? [.isToggle, .isSelected] : .isToggle)
-        .accessibilityValue(Text(isOn ? "On" : "Off"))
+        .accessibilityValue(Text(isOn ? String(
+            localized: "On",
+            bundle: .appLanguage) : String(
+            localized: "Off",
+            bundle: .appLanguage)))
         .extensionFieldHint(node.string("info"), error: node.string("error"))
         .accessibilityAction { toggle() }
         .modifier(ExtensionFormKeys(field: .checkbox, onActivate: toggle, onSubmit: onSubmit))
@@ -414,6 +426,7 @@ private struct ExtensionCheckbox: View {
 }
 
 private struct ExtensionFilePicker: View {
+    @Environment(\.locale) private var localizationLocale
     let node: RenderNode
     let index: Int?
     @FocusState.Binding var focus: Int?
@@ -424,7 +437,7 @@ private struct ExtensionFilePicker: View {
     @State private var hovered = false
 
     private var label: String {
-        guard !paths.isEmpty else { return "Choose…" }
+        guard !paths.isEmpty else { return String(localized: "Choose…", bundle: .appLanguage) }
         return paths.map { ($0 as NSString).lastPathComponent }.joined(separator: ", ")
     }
 
@@ -447,7 +460,7 @@ private struct ExtensionFilePicker: View {
         .onHover { hovered = $0 }
         .onTapGesture { choose() }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(node.string("title") ?? "File"))
+        .accessibilityLabel(Text(node.string("title") ?? String(localized: "File", bundle: .appLanguage)))
         .accessibilityValue(Text(label))
         .accessibilityAddTraits(.isButton)
         .extensionFieldHint(node.string("info"), error: node.string("error"))

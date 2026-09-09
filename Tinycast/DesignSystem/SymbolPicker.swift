@@ -2,6 +2,7 @@ import SwiftUI
 
 /// A grid of SF Symbols with an Automatic escape hatch; the symbols are the caller's.
 struct SymbolPicker: View {
+    @Environment(\.locale) private var localizationLocale
     @Binding var selection: String?
     /// Drawn on the Automatic row, and what the row falls back to when nothing is picked.
     let fallback: String

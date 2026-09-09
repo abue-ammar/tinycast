@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Past calculations, shaped like `ClipboardList`; both sides per row, so no preview pane.
 struct CalculatorHistoryList: View {
+    @Environment(\.locale) private var localizationLocale
     let results: [CalcHistoryEntry]
     let selectedID: CalcHistoryEntry.ID?
     /// Changes only when the list should scroll, so mouse selection never yanks the position.
@@ -43,7 +44,7 @@ struct CalculatorHistoryList: View {
     /// Newest-first, so a date header is emitted whenever the bucket changes.
     private var rows: [Row] {
         var rows: [Row] = []
-        if let calc { rows = [.header("Calculator"), .calc(calc)] }
+        if let calc { rows = [.header(String(localized: "Calculator", bundle: .appLanguage)), .calc(calc)] }
         var currentBucket: DateBucket?
         for entry in results {
             let bucket = DateBucket(for: entry.createdAt)
@@ -103,6 +104,7 @@ struct CalculatorHistoryList: View {
 }
 
 private struct CalcHistoryRow: View {
+    @Environment(\.locale) private var localizationLocale
     let entry: CalcHistoryEntry
     let selected: Bool
     @State private var hovered = false

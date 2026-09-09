@@ -2,6 +2,7 @@ import SwiftUI
 
 /// AI Chat's own row: a shortcut of its own, and a checkbox for its place in launcher search.
 struct AICommandSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(VisibilityStore.self) private var visibility
 
     private let entry = CommandCatalog.entry(for: .aiChat)
@@ -9,7 +10,7 @@ struct AICommandSection: View {
     var body: some View {
         Section {
             if let entry {
-                SettingsRow(title: entry.name) {
+                SettingsRow(title: entry.localizedName) {
                     Image(systemName: CommandID.aiChat.sfSymbol)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
@@ -17,7 +18,7 @@ struct AICommandSection: View {
                     Toggle("", isOn: visibilityBinding(entry))
                         .labelsHidden()
                         .toggleStyle(.checkbox)
-                        .accessibilityLabel("Show \(entry.name) in launcher")
+                        .accessibilityLabel("Show \(entry.localizedName) in launcher")
                 }
             }
         } header: {

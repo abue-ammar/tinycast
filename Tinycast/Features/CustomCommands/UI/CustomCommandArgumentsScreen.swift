@@ -10,7 +10,11 @@ struct CustomCommandArgumentsScreen: PaletteScreen {
 
     var rows: [Row] { [] }
 
-    var primaryActionTitle: String { session.isLastArgument ? "Run Command" : "Next" }
+    var primaryActionTitle: String { session.isLastArgument ? String(
+        localized: "Run Command",
+        bundle: .appLanguage) : String(
+        localized: "Next",
+        bundle: .appLanguage) }
 
     /// A required argument holds ↵ until it has a value, which also hides the footer pill.
     func hasPrimaryAction(at selection: Int) -> Bool {

@@ -28,6 +28,12 @@ RAM.**
 SwiftUI and AppKit, **zero third-party dependencies**, no Electron and no telemetry. It also **runs
 real Raycast extensions**, rendered as native SwiftUI. Free, open source, and staying that way.
 
+The native interface supports **English and Simplified Chinese**. Choose System, English or
+简体中文 in Tinycast Settings → General → Appearance → Language (below Theme). The interface
+updates immediately, without restarting or clearing your open views.
+Built-in commands remain searchable by their English names. Extension-authored content
+keeps the language supplied by the extension.
+
 For anything private, email [iabueammar@gmail.com](mailto:iabueammar@gmail.com).
 
 <p align="center">

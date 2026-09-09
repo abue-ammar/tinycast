@@ -84,11 +84,14 @@ final class CalendarCoordinator {
         Task {
             guard
                 await core.confirm(
-                    title: "Enable calendar?",
+                    title: String(localized: "Enable calendar?", bundle: .appLanguage),
                     message:
-                        "Tinycast reads \(span.possessivePhrase) events to find join links. "
-                        + "Nothing leaves this Mac.",
-                    symbol: "calendar", confirmTitle: "Continue", tone: .neutral,
+                        String(
+                            localized:
+                                "Tinycast reads \(String(localized: String.LocalizationValue(span.possessivePhrase), bundle: .appLanguage)) events to find join links. Nothing leaves this Mac.",
+                            bundle: .appLanguage
+                        ),
+                    symbol: "calendar", confirmTitle: String(localized: "Continue", bundle: .appLanguage), tone: .neutral,
                     confirmRole: .standard)
             else { return }
 
@@ -211,7 +214,7 @@ final class CalendarCoordinator {
 
     func joinNextMeeting() {
         guard let meeting = nextJoinable() else {
-            report("Nothing to join right now")
+            report(String(localized: "Nothing to join right now", bundle: .appLanguage))
             return
         }
         join(meeting)
@@ -219,7 +222,7 @@ final class CalendarCoordinator {
 
     func copyNextMeetingLink() {
         guard let meeting = nextJoinable() else {
-            report("Nothing to join right now")
+            report(String(localized: "Nothing to join right now", bundle: .appLanguage))
             return
         }
         copyLink(meeting)
@@ -228,7 +231,7 @@ final class CalendarCoordinator {
     func createEvent() {
         paletteCoordinator.hidePalette(restoreFocus: false)
         guard settings.calendarEnabled, store.access == .granted else {
-            report("Turn Calendar on in Settings first")
+            report(String(localized: "Turn Calendar on in Settings first", bundle: .appLanguage))
             return
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -236,18 +239,20 @@ final class CalendarCoordinator {
             guard let draft = await core.createEvent() else { return }
             guard store.createEvent(draft, now: Date()) else {
                 _ = await core.reportFailure(
-                    title: "Couldn't create the event",
-                    message: "No calendar on this Mac accepts new events.",
+                    title: String(localized: "Couldn't create the event", bundle: .appLanguage),
+                    message: String(localized: "No calendar on this Mac accepts new events.", bundle: .appLanguage),
                     symbol: "calendar.badge.exclamationmark", recovery: nil)
                 return
             }
-            core.showMessage("Event created")
+            core.showMessage(String(localized: "Event created", bundle: .appLanguage))
         }
     }
 
     func openNextMeetingInCalendar() {
         guard let meeting = window.joinable(from: store.events, now: Date()) ?? agenda.first else {
-            report("Nothing scheduled \(span.orPhrase)")
+            report(String(
+                localized: "Nothing scheduled \(String(localized: String.LocalizationValue(span.orPhrase), bundle: .appLanguage))",
+                bundle: .appLanguage))
             return
         }
         openInCalendar(meeting)
@@ -288,27 +293,27 @@ final class CalendarCoordinator {
             NSApp.activate(ignoringOtherApps: true)
             guard
                 await core.confirm(
-                    title: "Join \(meeting.title)?",
+                    title: String(localized: "Join \(meeting.title)?", bundle: .appLanguage),
                     message: UpcomingWindow.countdown(to: meeting.start, now: Date()),
-                    symbol: link.provider.sfSymbol, confirmTitle: "Join", tone: .neutral,
-                    confirmRole: .standard, dismissTitle: "Not Now")
+                    symbol: link.provider.sfSymbol, confirmTitle: String(localized: "Join", bundle: .appLanguage), tone: .neutral,
+                    confirmRole: .standard, dismissTitle: String(localized: "Not Now", bundle: .appLanguage))
             else { return }
         }
         if MeetingLauncher.join(link) { return }
         _ = await core.reportFailure(
-            title: "Couldn't open the meeting link",
-            message: "Nothing on this Mac would open \(link.url.absoluteString).",
+            title: String(localized: "Couldn't open the meeting link", bundle: .appLanguage),
+            message: String(localized: "Nothing on this Mac would open \(link.url.absoluteString).", bundle: .appLanguage),
             symbol: "video.slash", recovery: nil)
     }
 
     func copyLink(_ meeting: MeetingEvent) {
         guard let link = meeting.link else {
-            report("This meeting has no link")
+            report(String(localized: "This meeting has no link", bundle: .appLanguage))
             return
         }
         paletteCoordinator.hidePalette(restoreFocus: false)
         Paster.copyPlainText(link.url.absoluteString)
-        core.showMessage("Meeting link copied")
+        core.showMessage(String(localized: "Meeting link copied", bundle: .appLanguage))
     }
 
     func openInCalendar(_ meeting: MeetingEvent) {

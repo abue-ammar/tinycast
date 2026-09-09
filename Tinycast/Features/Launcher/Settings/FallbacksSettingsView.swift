@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Settings ▸ Fallbacks: which commands a typed query is offered to, and in what order.
 struct FallbacksSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     /// Observed so a reorder or a checkbox redraws the list under the button that moved it.
     @Environment(FallbackStore.self) private var store
@@ -12,8 +13,10 @@ struct FallbacksSettingsView: View {
         Form {
             Section {
                 Text(
-                    "Every search offers these below its results, under “Use … with”. "
-                        + "Each one takes what you typed as its input."
+                    String(localized: """
+                        Every search offers these below its results, under “Use … with”. Each one \
+                        takes what you typed as its input.
+                        """, bundle: .appLanguage)
                 )
                 .foregroundStyle(.secondary)
             } header: {
@@ -39,8 +42,9 @@ struct FallbacksSettingsView: View {
                 }
             } footer: {
                 Text(
-                    "A quicklink appears here once its link contains an {argument}, "
-                        + "which the query fills in."
+                    String(
+                        localized: "A quicklink appears here once its link contains an {argument}, which the query fills in.",
+                        bundle: .appLanguage)
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -56,6 +60,7 @@ struct FallbacksSettingsView: View {
 }
 
 private struct FallbackRow: View {
+    @Environment(\.locale) private var localizationLocale
     let fallback: Fallback
     /// The visible order, so a move stores every id rather than only the two that swapped.
     let order: [Fallback]
@@ -66,7 +71,7 @@ private struct FallbackRow: View {
 
     var body: some View {
         if let entry = core.fallbackCoordinator.entry(for: fallback) {
-            SettingsRow(title: entry.name, subtitle: entry.kindLabel) {
+            SettingsRow(title: entry.localizedName, subtitle: entry.kindLabel) {
                 AppIconView(app: entry)
                     .frame(width: Theme.Size.settingsRowIcon, height: Theme.Size.settingsRowIcon)
             } trailing: {
@@ -76,18 +81,18 @@ private struct FallbackRow: View {
                     Image(systemName: "chevron.up")
                 }
                 .disabled(index == 0)
-                .accessibilityLabel("Move \(entry.name) up")
+                .accessibilityLabel("Move \(entry.localizedName) up")
                 Button {
                     move(by: 1)
                 } label: {
                     Image(systemName: "chevron.down")
                 }
                 .disabled(index == order.count - 1)
-                .accessibilityLabel("Move \(entry.name) down")
+                .accessibilityLabel("Move \(entry.localizedName) down")
                 Toggle("", isOn: enabledBinding)
                     .labelsHidden()
                     .toggleStyle(.checkbox)
-                    .accessibilityLabel("Offer \(entry.name) as a fallback")
+                    .accessibilityLabel("Offer \(entry.localizedName) as a fallback")
             }
         }
     }

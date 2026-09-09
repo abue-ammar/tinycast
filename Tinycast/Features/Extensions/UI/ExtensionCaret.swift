@@ -27,6 +27,7 @@ struct ExtensionCaret: View {
 
 /// The text a control-with-list is searched by; the caret overlays the insertion point.
 struct ExtensionQueryText: View {
+    @Environment(\.locale) private var localizationLocale
     let query: String
     let prompt: String
     /// Bumped by the control whenever the query changes, which relights the caret.

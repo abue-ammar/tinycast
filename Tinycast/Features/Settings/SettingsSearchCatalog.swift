@@ -34,6 +34,15 @@ struct SettingsSearchEntry: Identifiable, Hashable, Sendable {
         self.keywords = keywords
     }
 
+    var localizedTitle: String { String(localized: String.LocalizationValue(title), bundle: .appLanguage) }
+
+    var localizedBreadcrumb: String {
+        let pane = String(localized: String.LocalizationValue(tab.title), bundle: .appLanguage)
+        guard let anchor, anchor.title != tab.title else { return pane }
+        let section = String(localized: String.LocalizationValue(anchor.title), bundle: .appLanguage)
+        return "\(pane) › \(section)"
+    }
+
     var anchor: SettingsAnchor? { target?.anchor }
 
     var id: String { "\(tab.title)/\(anchor?.title ?? "")/\(title)" }
@@ -81,7 +90,8 @@ enum SettingsSearchCatalog {
         var titleScore = 0
         var titleMatches = 0
         for term in query.terms {
-            if let match = FuzzyMatch.match(term, candidate: entry.title) {
+            if let match = FuzzyMatch.match(term, candidate: entry.localizedTitle)
+                ?? FuzzyMatch.match(term, candidate: entry.title) {
                 titleMatches += 1
                 titleScore += match.score
                 continue
@@ -89,6 +99,7 @@ enum SettingsSearchCatalog {
             guard
                 entry.keywords.contains(where: { FuzzyMatch.match(term, candidate: $0) != nil })
                     || FuzzyMatch.match(term, candidate: entry.breadcrumb) != nil
+                    || FuzzyMatch.match(term, candidate: entry.localizedBreadcrumb) != nil
             else { return nil }
         }
 
@@ -133,6 +144,9 @@ enum SettingsSearchCatalog {
         .init(
             .generalAppearance, "Theme",
             keywords: ["dark", "light", "mode", "appearance"]),
+        .init(
+            .generalAppearance, "Language",
+            keywords: ["language", "locale", "English", "中文", "简体中文", "语言", "system"]),
         .init(
             .generalAppearance, "Compact mode",
             keywords: ["slim", "search bar", "small"]),

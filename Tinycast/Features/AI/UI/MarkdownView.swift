@@ -25,6 +25,7 @@ extension MarkdownBlock {
 }
 
 private struct MarkdownBlockView: View {
+    @Environment(\.locale) private var localizationLocale
     let block: MarkdownBlock
 
     var body: some View {
@@ -55,6 +56,7 @@ private struct MarkdownBlockView: View {
 }
 
 private struct MarkdownListView: View {
+    @Environment(\.locale) private var localizationLocale
     let items: [MarkdownBlock.Item]
     /// Nil for a bulleted list; otherwise the number the first item counts from.
     let start: Int?

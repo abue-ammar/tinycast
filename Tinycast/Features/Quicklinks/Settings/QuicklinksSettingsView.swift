@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The quicklink library plus the behaviour that applies to all of them.
 struct QuicklinksSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(QuicklinkStore.self) private var store
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
@@ -16,8 +17,10 @@ struct QuicklinksSettingsView: View {
                 anchor: .quicklinksQuicklinks,
                 enableTitle: "Enable quicklinks",
                 enableSubtitle:
-                    "Open saved destinations from the launcher, a shortcut, or Search Quicklinks.",
-                launcherSubtitle: "Find your quicklinks in launcher search.",
+                    String(
+                        localized: "Open saved destinations from the launcher, a shortcut, or Search Quicklinks.",
+                        bundle: .appLanguage),
+                launcherSubtitle: String(localized: "Find your quicklinks in launcher search.", bundle: .appLanguage),
                 isEnabled: $settings.quicklinksEnabled,
                 showsInLauncher: $settings.quicklinksShowInLauncher)
 
@@ -53,8 +56,10 @@ struct QuicklinksSettingsView: View {
     private var storageNotice: some View {
         Section {
             Label(
-                "Quicklinks can't be saved: the database couldn't be opened, so nothing you change"
-                    + " here will stick. The existing file was left untouched.",
+                String(localized: """
+                    Quicklinks can't be saved: the database couldn't be opened, so nothing you \
+                    change here will stick. The existing file was left untouched.
+                    """, bundle: .appLanguage),
                 systemImage: "exclamationmark.triangle.fill"
             )
             .foregroundStyle(.orange)
@@ -65,13 +70,13 @@ struct QuicklinksSettingsView: View {
     private var library: some View {
         Section {
             if !store.quicklinks.isEmpty {
-                SettingsFilterField(prompt: "Search quicklinks…", query: $query)
+                SettingsFilterField(prompt: String(localized: "Search quicklinks…", bundle: .appLanguage), query: $query)
             }
             if results.isEmpty {
                 Text(
                     store.quicklinks.isEmpty
-                        ? "Add one to make it searchable from the launcher."
-                        : "No quicklink matches “\(query)”."
+                        ? String(localized: "Add one to make it searchable from the launcher.", bundle: .appLanguage)
+                        : String(localized: "No quicklink matches “\(query)”.", bundle: .appLanguage)
                 )
                 .foregroundStyle(.secondary)
             } else {
@@ -105,12 +110,14 @@ struct QuicklinksSettingsView: View {
             Toggle(isOn: $settings.quicklinkOpensNewWindow) {
                 SettingsRowTitle(.quicklinksBehaviour, "Open in a new window")
                 Text(
-                    "Ask the handler for a new window instead of reusing its frontmost tab. "
-                        + "Only apps that accept a new-window argument can honour this.")
+                    String(localized: """
+                        Ask the handler for a new window instead of reusing its frontmost tab. Only \
+                        apps that accept a new-window argument can honour this.
+                        """, bundle: .appLanguage))
             }
             Picker(selection: $settings.quicklinkSelectionFallback) {
                 ForEach(QuicklinkSelectionFallback.allCases) { option in
-                    Text(option.title).tag(option)
+                    Text(LocalizedStringKey(option.title)).tag(option)
                 }
             } label: {
                 SettingsRowTitle(.quicklinksBehaviour, "When there's no selected text")
@@ -157,6 +164,7 @@ struct QuicklinksSettingsView: View {
 }
 
 private struct QuicklinkSettingsRow: View {
+    @Environment(\.locale) private var localizationLocale
     let quicklink: Quicklink
     @Binding var isEnabled: Bool
     let onEdit: () -> Void

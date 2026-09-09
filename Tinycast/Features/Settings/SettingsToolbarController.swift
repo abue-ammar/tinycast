@@ -10,17 +10,24 @@ final class SettingsToolbarController: NSObject, WindowChrome, NSToolbarDelegate
     private weak var window: NSWindow?
     private let backButton: NSButton
     private let forwardButton: NSButton
+    private var languageObservation: NotificationToken?
 
     init(navigation: SettingsNavigationState) {
         self.navigation = navigation
         // Two buttons, not a segmented control: that would draw a divider down the middle.
-        backButton = Self.makeButton("chevron.backward", "Back")
-        forwardButton = Self.makeButton("chevron.forward", "Forward")
+        backButton = Self.makeButton("chevron.backward", String(localized: "Back", bundle: .appLanguage))
+        forwardButton = Self.makeButton("chevron.forward", String(localized: "Forward", bundle: .appLanguage))
         super.init()
         backButton.target = self
         backButton.action = #selector(goBack)
         forwardButton.target = self
         forwardButton.action = #selector(goForward)
+        let center = NotificationCenter.default
+        languageObservation = NotificationToken(
+            center.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) {
+                [weak self] _ in
+                Task { @MainActor [weak self] in self?.sync() }
+            }, center: center)
     }
 
     // MARK: - WindowChrome
@@ -68,10 +75,10 @@ final class SettingsToolbarController: NSObject, WindowChrome, NSToolbarDelegate
         switch identifier {
         case Self.back:
             item.view = backButton
-            item.label = "Back"
+            item.label = String(localized: "Back", bundle: .appLanguage)
         case Self.forward:
             item.view = forwardButton
-            item.label = "Forward"
+            item.label = String(localized: "Forward", bundle: .appLanguage)
         default:
             return nil
         }
@@ -98,7 +105,18 @@ final class SettingsToolbarController: NSObject, WindowChrome, NSToolbarDelegate
     }
 
     private func sync() {
-        window?.title = navigation.tab.title
+        window?.title = String(
+            localized: String.LocalizationValue(navigation.tab.title), bundle: .appLanguage)
+        let back = String(localized: "Back", bundle: .appLanguage)
+        let forward = String(localized: "Forward", bundle: .appLanguage)
+        backButton.setAccessibilityLabel(back)
+        backButton.toolTip = back
+        forwardButton.setAccessibilityLabel(forward)
+        forwardButton.toolTip = forward
+        for item in window?.toolbar?.items ?? [] {
+            if item.itemIdentifier == Self.back { item.label = back }
+            if item.itemIdentifier == Self.forward { item.label = forward }
+        }
         backButton.isEnabled = navigation.canGoBack
         forwardButton.isEnabled = navigation.canGoForward
     }

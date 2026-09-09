@@ -31,6 +31,7 @@ struct OnboardingDivider: View {
 
 /// One onboarding line; a fixed rhythm keeps every card aligned whatever the control.
 struct OnboardingRow<Trailing: View>: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     var subtitle: String?
     var systemImage: String?

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FileSearchList: View {
+    @Environment(\.locale) private var localizationLocale
     let results: [FileSearchResult]
     let selectedID: FileSearchResult.ID?
     let scroll: ScrollIntent
@@ -15,7 +16,7 @@ struct FileSearchList: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    SectionHeader(title: "Results", isFirst: true)
+                    SectionHeader(title: String(localized: "Results", bundle: .appLanguage), isFirst: true)
                     ForEach(results) { result in
                         FileSearchRow(result: result, selected: result.id == selectedID)
                             .selectionFrame(result.id == selectedID)
@@ -40,6 +41,7 @@ struct FileSearchList: View {
 }
 
 private struct FileSearchRow: View {
+    @Environment(\.locale) private var localizationLocale
     let result: FileSearchResult
     let selected: Bool
     @State private var image: NSImage?

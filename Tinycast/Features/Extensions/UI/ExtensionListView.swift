@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Row order comes from `ExtensionScreen`, so the palette's flat index matches the draw.
 struct ExtensionListView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let screen: ExtensionScreen
     let selection: Int
@@ -34,14 +35,14 @@ struct ExtensionListView: View {
     @ViewBuilder
     private var emptyState: some View {
         if screen.isLoading {
-            EmptyResults(text: "Loading…")
+            EmptyResults(text: String(localized: "Loading…", bundle: .appLanguage))
         } else if let empty = screen.emptyView {
             VStack(spacing: Theme.Spacing.md) {
                 ExtensionIconView(
                     resolved: ExtensionImage.resolve(
                         empty.props["icon"], assetsPath: assetsPath, isDark: isDark),
                     size: 42)
-                Text(empty.string("title") ?? "Nothing here")
+                Text(empty.string("title") ?? String(localized: "Nothing here", bundle: .appLanguage))
                     .font(Theme.Typography.rowTitle)
                 if let description = empty.string("description") {
                     Text(description)
@@ -53,7 +54,7 @@ struct ExtensionListView: View {
             .padding(.horizontal, Theme.Spacing.xl)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            EmptyResults(text: "No results")
+            EmptyResults(text: String(localized: "No results", bundle: .appLanguage))
         }
     }
 
@@ -164,6 +165,7 @@ struct ExtensionListView: View {
 
 /// One `List.Item`: icon, title, subtitle, then its accessories right-aligned.
 private struct ExtensionItemRow: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let node: RenderNode
     let selected: Bool
@@ -208,6 +210,7 @@ private struct ExtensionItemRow: View {
 
 /// `List.Item.Accessory` values: text, a tag, a date, an icon, or a combination.
 struct ExtensionAccessoriesView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let accessories: [RenderValue]
     let assetsPath: String?
@@ -291,6 +294,7 @@ struct ExtensionAccessoriesView: View {
 
 /// One `Grid.Item`: content sized to the tile the `Grid`'s props ask for, title underneath.
 private struct ExtensionGridCell: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let node: RenderNode
     let selected: Bool
@@ -374,6 +378,7 @@ private struct ExtensionGridCell: View {
 
 /// A tile's image, scaled to the tile it is given — unlike `ExtensionIconView`'s fixed icon box.
 private struct ExtensionGridContentView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let resolved: ExtensionImage.Resolved?
     let fills: Bool

@@ -166,9 +166,11 @@ final class AIChatCoordinator {
     func deleteAllChats() async {
         guard
             await core.confirm(
-                title: "Delete all chats?",
-                message: "Every saved conversation will be removed. This can't be undone.",
-                symbol: PaletteMode.aiHistory.systemImage, confirmTitle: "Delete All")
+                title: String(localized: "Delete all chats?", bundle: .appLanguage),
+                message: String(
+                    localized: "Every saved conversation will be removed. This can't be undone.",
+                    bundle: .appLanguage),
+                symbol: PaletteMode.aiHistory.systemImage, confirmTitle: String(localized: "Delete All", bundle: .appLanguage))
         else { return }
         chat.deleteAll()
     }
@@ -251,13 +253,13 @@ final class AIChatCoordinator {
                     .staged(
                         Staged(
                             payload: .image(AIImage(data: png, mimeType: "image/png")),
-                            name: "Image", preview: Self.preview(png)))
+                            name: String(localized: "Image", bundle: .appLanguage), preview: Self.preview(png)))
                 ]
             }.value
             guard let self else { return }
             guard generation == self.chat.stagingGeneration else {
                 core.showMessage(
-                    "That file was still loading and did not make it into the chat.",
+                    String(localized: "That file was still loading and did not make it into the chat.", bundle: .appLanguage),
                     tone: .neutral)
                 return
             }
@@ -412,7 +414,7 @@ final class AIChatCoordinator {
 
     /// Shortened here, not by layout: a flexible label would take the row from the search field.
     var selectedModelTitle: String {
-        guard let selected = core.aiSettings.defaultModel else { return "Choose Model" }
+        guard let selected = core.aiSettings.defaultModel else { return String(localized: "Choose Model", bundle: .appLanguage) }
         let title = selectedModelOption?.title ?? selected.model
         guard title.count > Self.maxModelTitleLength else { return title }
         let keep = Self.maxModelTitleLength / 2
@@ -475,7 +477,7 @@ final class AIChatCoordinator {
     var selectedReasoningTitle: String {
         guard let selected = core.aiSettings.defaultModel?.effort,
             let effort = reasoningEfforts.first(where: { $0.id == selected })
-        else { return "Reasoning" }
+        else { return String(localized: "Reasoning", bundle: .appLanguage) }
         return effort.title
     }
 
@@ -547,7 +549,7 @@ struct AIModelOption: Identifiable {
             ? [
                 AIModelOption(
                     selection: .appleIntelligence, title: AppleIntelligence.title,
-                    sourceTitle: "On device", menuIcon: appleIntelligenceIcon)
+                    sourceTitle: String(localized: "On device", bundle: .appLanguage), menuIcon: appleIntelligenceIcon)
             ] : []
         let codex = codex.map { model in
             AIModelOption(

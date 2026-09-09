@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The support surface: the ask, the one button, and the reminder switch.
 struct SupportWindowView: View {
+    @Environment(\.locale) private var localizationLocale
     /// Held directly, not injected: it publishes nothing, so `@Observable` would buy nothing.
     let support: SupportCoordinator
 
@@ -51,7 +52,7 @@ struct SupportWindowView: View {
                 .frame(width: Self.iconSize, height: Self.iconSize)
                 .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
             VStack(spacing: Theme.Spacing.sm) {
-                Text("Support \(Bundle.main.appDisplayName)")
+                Text(String(localized: "Support \(Bundle.main.appDisplayName)", bundle: .appLanguage))
                     .font(.title2.weight(.semibold))
                 Text("Built with love.")
                     .font(.callout)
@@ -65,7 +66,9 @@ struct SupportWindowView: View {
 
     private var action: some View {
         VStack(spacing: Theme.Spacing.lg) {
-            SupportActionButton(title: "Support \(Bundle.main.appDisplayName)", icon: "heart") {
+            SupportActionButton(title: String(
+                localized: "Support \(Bundle.main.appDisplayName)",
+                bundle: .appLanguage), icon: "heart") {
                 support.openCheckout()
             }
             Text("Secure checkout on Polar.")
@@ -83,13 +86,15 @@ struct SupportWindowView: View {
             .foregroundStyle(Theme.Colors.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .help(
-                "About once a month. Turn this off and"
-                    + " \(Bundle.main.appDisplayName) won't ask again.")
+                String(
+                    localized: "About once a month. Turn this off and \(Bundle.main.appDisplayName) won't ask again.",
+                    bundle: .appLanguage))
     }
 }
 
 /// The window's one call to action. Local to Support, like every other view this feature owns.
 private struct SupportActionButton: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     let icon: String
     let action: () -> Void

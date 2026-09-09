@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ChatHistoryList: View {
+    @Environment(\.locale) private var localizationLocale
     let results: [ChatConversation]
     let selectedID: ChatConversation.ID?
     let scroll: ScrollIntent
@@ -81,6 +82,7 @@ struct ChatHistoryList: View {
 }
 
 private struct ChatHistoryRow: View {
+    @Environment(\.locale) private var localizationLocale
     let conversation: ChatConversation
     let selected: Bool
     @State private var hovered = false

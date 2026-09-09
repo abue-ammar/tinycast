@@ -2,6 +2,7 @@ import SwiftUI
 
 /// `DialogButton`'s twin, duplicated so the camera's controls need not move with a dialog's.
 struct CameraButton: View {
+    @Environment(\.locale) private var localizationLocale
     /// Secondary also reads as "off": the mirror toggle dims rather than growing a second style.
     enum Emphasis {
         case primary

@@ -3,6 +3,7 @@ import SwiftUI
 /// The sidebar's search field. Not `SettingsFilterField`: that one is borderless because it sits
 /// inside a `Form` row, where a bezel would read as a control the section owns.
 struct SettingsSearchField: View {
+    @Environment(\.locale) private var localizationLocale
     @Binding var query: String
     @FocusState.Binding var focused: Bool
 

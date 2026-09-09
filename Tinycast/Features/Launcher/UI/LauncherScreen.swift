@@ -113,13 +113,20 @@ struct LauncherScreen: PaletteScreen {
 
     var primaryActionTitle: String {
         switch row(at: clampedSelection) {
-        case .calc: return "Copy Answer"
-        case .color: return "Copy Color"
+        case .calc: return String(localized: "Copy Answer", bundle: .appLanguage)
+        case .color: return String(localized: "Copy Color", bundle: .appLanguage)
         case .meeting(let meeting):
-            return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
-        case .entry(let app): return app.kind.descriptor.openVerb
-        case .fallback(let fallback, _): return fallback.openVerb
-        case nil: return "Open Application"
+            return meeting.link == nil ? String(
+                localized: "Open in Calendar",
+                bundle: .appLanguage) : String(
+                localized: "Join Meeting",
+                bundle: .appLanguage)
+        case .entry(let app): return String(
+            localized: String.LocalizationValue(app.kind.descriptor.openVerb),
+            bundle: .appLanguage)
+        case .fallback(let fallback, _):
+            return String(localized: String.LocalizationValue(fallback.openVerb), bundle: .appLanguage)
+        case nil: return String(localized: "Open Application", bundle: .appLanguage)
         }
     }
 
@@ -387,7 +394,7 @@ struct LauncherScreen: PaletteScreen {
     private var fallbackSection: LauncherList.FallbackSection? {
         guard !fallbacks.isEmpty else { return nil }
         return LauncherList.FallbackSection(
-            title: Fallback.sectionTitle(query: vm.query),
+            title: Fallback.sectionTitle(query: vm.query) { String(localized: "Use “\($0)” with…", bundle: .appLanguage) },
             entries: fallbacks.map(\.entry),
             onActivate: { activate(at: fallbackRow(at: $0)) },
             onActions: {

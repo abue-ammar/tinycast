@@ -2,6 +2,7 @@ import SwiftUI
 
 /// `AttributedString` only does inline styling, so headings and bullets are placed here.
 struct ReleaseNotesView: View {
+    @Environment(\.locale) private var localizationLocale
     let text: String
 
     private var blocks: [ReleaseNotes.Block] { ReleaseNotes.blocks(from: text) }

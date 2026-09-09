@@ -108,8 +108,8 @@ final class CustomCommandCoordinator {
         }.value
         guard !drafts.isEmpty else {
             await core.showNotice(
-                title: "Nothing to Import",
-                message: "No Raycast script commands were found in this folder.",
+                title: String(localized: "Nothing to Import", bundle: .appLanguage),
+                message: String(localized: "No Raycast script commands were found in this folder.", bundle: .appLanguage),
                 symbol: CustomCommand.sfSymbol, tone: .neutral)
             return
         }
@@ -118,13 +118,13 @@ final class CustomCommandCoordinator {
         // Everything offered was already here, so say so rather than "0 imported".
         guard added > 0 else {
             await core.showNotice(
-                title: "Nothing to Import",
-                message: "Every script in this folder is already in your library.",
+                title: String(localized: "Nothing to Import", bundle: .appLanguage),
+                message: String(localized: "Every script in this folder is already in your library.", bundle: .appLanguage),
                 symbol: CustomCommand.sfSymbol, tone: .neutral)
             return
         }
         await core.showNotice(
-            title: "Scripts Imported",
+            title: String(localized: "Scripts Imported", bundle: .appLanguage),
             message: importSummary(added: added, offered: drafts.count),
             symbol: CustomCommand.sfSymbol, tone: .success)
     }
@@ -135,8 +135,8 @@ final class CustomCommandCoordinator {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Import"
-        panel.message = "Choose a folder of Raycast script commands."
+        panel.prompt = String(localized: "Import", bundle: .appLanguage)
+        panel.message = String(localized: "Choose a folder of Raycast script commands.", bundle: .appLanguage)
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK else { return nil }
         return panel.url
@@ -145,17 +145,20 @@ final class CustomCommandCoordinator {
     /// Scripts run arbitrary code, so this warns the way a backup of custom commands does.
     private func confirmScriptImport(count: Int) async -> Bool {
         await core.confirm(
-            title: count == 1 ? "Import 1 script?" : "Import \(count) scripts?",
+            title: count == 1 ? "Import 1 script?" : String(localized: "Import \(count) scripts?", bundle: .appLanguage),
             message:
-                "Imported commands run these files with your user account. Only import scripts you "
-                + "trust.",
-            symbol: CustomCommand.sfSymbol, confirmTitle: "Import", confirmRole: .standard)
+                String(
+                    localized: "Imported commands run these files with your user account. Only import scripts you trust.",
+                    bundle: .appLanguage),
+            symbol: CustomCommand.sfSymbol, confirmTitle: String(
+                localized: "Import",
+                bundle: .appLanguage), confirmRole: .standard)
     }
 
     private func importSummary(added: Int, offered: Int) -> String {
-        let imported = added == 1 ? "Imported 1 command." : "Imported \(added) commands."
+        let imported = added == 1 ? "Imported 1 command." : String(localized: "Imported \(added) commands.", bundle: .appLanguage)
         guard offered > added else { return imported }
-        return imported + " Skipped \(offered - added) already in your library."
+        return imported + String(localized: " Skipped \(offered - added) already in your library.", bundle: .appLanguage)
     }
 
     // MARK: - Running
@@ -221,8 +224,10 @@ final class CustomCommandCoordinator {
                     // Neutral, not destructive: their own command just wants a second tap.
                     await core.confirm(
                         title: command.name,
-                        message: "Are you sure you want to run this command?\n\n\(command.command)",
-                        symbol: command.symbol, confirmTitle: "Run",
+                        message: String(
+                            localized: "Are you sure you want to run this command?\n\n\(command.command)",
+                            bundle: .appLanguage),
+                        symbol: command.symbol, confirmTitle: String(localized: "Run", bundle: .appLanguage),
                         tone: .neutral, confirmRole: .standard)
                 else { return }
             }
@@ -291,26 +296,28 @@ final class CustomCommandCoordinator {
         guard !result.succeeded else {
             // What the command said beats a bare "it ran"; on finish, so a slow one reports late.
             if command.showsConfirmation {
-                core.showMessage(result.lastOutputLine ?? "Ran \(command.name)")
+                core.showMessage(result.lastOutputLine ?? String(localized: "Ran \(command.name)", bundle: .appLanguage))
             }
             return
         }
         let hint = shellEnvironmentHint(command: command, result: result)
         guard
             await core.reportFailure(
-                title: "“\(command.name)” Failed",
+                title: String(localized: "“\(command.name)” Failed", bundle: .appLanguage),
                 message: failureMessage(command: command, result: result),
-                symbol: command.symbol, recovery: hint == nil ? nil : "Open Settings…")
+                symbol: command.symbol, recovery: hint == nil ? nil : String(localized: "Open Settings…", bundle: .appLanguage))
         else { return }
         settingsCoordinator.showSettings(tab: .commands)
     }
 
     private func summary(of result: ShellCommandResult) -> String {
         switch result.termination {
-        case .launchFailed: return "The shell could not be started."
-        case .stopped: return "Stopped"
+        case .launchFailed: return String(localized: "The shell could not be started.", bundle: .appLanguage)
+        case .stopped: return String(localized: "Stopped", bundle: .appLanguage)
         case .exited(let status):
-            return status == 0 ? "Finished successfully." : "The command exited with status \(status)."
+            return status == 0
+                ? String(localized: "Finished successfully.", bundle: .appLanguage)
+                : String(localized: "The command exited with status \(status).", bundle: .appLanguage)
         }
     }
 
@@ -329,6 +336,8 @@ final class CustomCommandCoordinator {
         guard case .exited(status: 127) = result.termination, !command.loadsShellEnvironment else {
             return nil
         }
-        return "If this is a shell alias or function, turn on Load Shell Environment for this command."
+        return String(
+            localized: "If this is a shell alias or function, turn on Load Shell Environment for this command.",
+            bundle: .appLanguage)
     }
 }

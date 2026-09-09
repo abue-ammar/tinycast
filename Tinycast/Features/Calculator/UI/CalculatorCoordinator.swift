@@ -20,9 +20,11 @@ final class CalculatorCoordinator {
     func deleteAllHistory() async {
         guard
             await core.confirm(
-                title: "Clear calculation history?",
-                message: "Every past calculation goes. This can't be undone.",
-                symbol: PaletteMode.calculatorHistory.systemImage, confirmTitle: "Clear History")
+                title: String(localized: "Clear calculation history?", bundle: .appLanguage),
+                message: String(localized: "Every past calculation goes. This can't be undone.", bundle: .appLanguage),
+                symbol: PaletteMode.calculatorHistory.systemImage, confirmTitle: String(
+                    localized: "Clear History",
+                    bundle: .appLanguage))
         else { return }
         calcHistory.clearAll()
     }

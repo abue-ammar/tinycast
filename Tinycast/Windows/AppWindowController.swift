@@ -4,7 +4,7 @@ import SwiftUI
 /// Built on first show, torn down on close so its SwiftUI tree deallocates. Never quits the app.
 @MainActor
 final class AppWindowController: NSObject, NSWindowDelegate {
-    private let title: String
+    private let title: () -> String
     private let contentSize: CGSize
     private let isResizable: Bool
     private let autosaveName: String?
@@ -12,9 +12,11 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     /// Rebuilt with the window, so a chrome's state never outlives the window it decorated.
     private var chrome: WindowChrome?
+    private var languageObservation: NotificationToken?
 
     init(
-        title: String, contentSize: CGSize, resizable: Bool = false, autosaveName: String? = nil,
+        title: @autoclosure @escaping () -> String,
+        contentSize: CGSize, resizable: Bool = false, autosaveName: String? = nil,
         activation: ActivationPolicy
     ) {
         self.title = title
@@ -22,6 +24,16 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         self.isResizable = resizable
         self.autosaveName = autosaveName
         self.activation = activation
+        super.init()
+        let center = NotificationCenter.default
+        languageObservation = NotificationToken(
+            center.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) {
+                [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, self.chrome == nil else { return }
+                    self.window?.title = self.title()
+                }
+            }, center: center)
     }
 
     /// Returns `true` when a window was built, `false` when an already-open one was re-raised.
@@ -31,7 +43,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     ) -> Bool {
         let root = content()
         return show(chrome: chrome) {
-            let hosting = NSHostingController(rootView: root)
+            let hosting = NSHostingController(rootView: AnyView(root.localizationEnvironment()))
             // Keep the window's size authoritative: an unconstrained fill would drive the frame.
             hosting.sizingOptions = []
             return hosting
@@ -101,7 +113,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = title
+        window.title = title()
         // Edge-to-edge under a transparent titlebar, so it reads as one surface.
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden

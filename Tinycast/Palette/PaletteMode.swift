@@ -40,21 +40,23 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     }
     var placeholder: String {
         switch self {
-        case .launcher: return "Search for apps and commands…"
-        case .clipboard: return "Type to filter entries…"
-        case .ai: return "Ask anything…"
-        case .aiHistory: return "Search chats…"
-        case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
-        case .emoji: return "Search emoji and symbols…"
-        case .fileSearch: return "Search files and folders…"
-        case .schedule: return "Search your schedule…"
-        case .uninstall: return "Filter files and folders by name…"
-        case .quicklinks: return "Search quicklinks…"
-        case .snippets: return "Search snippets…"
+        case .launcher: return String(localized: "Search for apps and commands…", bundle: .appLanguage)
+        case .clipboard: return String(localized: "Type to filter entries…", bundle: .appLanguage)
+        case .ai: return String(localized: "Ask anything…", bundle: .appLanguage)
+        case .aiHistory: return String(localized: "Search chats…", bundle: .appLanguage)
+        case .calculatorHistory: return String(
+            localized: "Do math, convert units, or search your past calculations…",
+            bundle: .appLanguage)
+        case .emoji: return String(localized: "Search emoji and symbols…", bundle: .appLanguage)
+        case .fileSearch: return String(localized: "Search files and folders…", bundle: .appLanguage)
+        case .schedule: return String(localized: "Search your schedule…", bundle: .appLanguage)
+        case .uninstall: return String(localized: "Filter files and folders by name…", bundle: .appLanguage)
+        case .quicklinks: return String(localized: "Search quicklinks…", bundle: .appLanguage)
+        case .snippets: return String(localized: "Search snippets…", bundle: .appLanguage)
         // Replaced by the pending argument's name; only reached if the session vanished mid-render.
-        case .customCommandArguments: return "Enter a value…"
+        case .customCommandArguments: return String(localized: "Enter a value…", bundle: .appLanguage)
         // Replaced by the command's own `searchBarPlaceholder` whenever it declares one.
-        case .extensionCommand: return "Search…"
+        case .extensionCommand: return String(localized: "Search…", bundle: .appLanguage)
         }
     }
 }
@@ -71,5 +73,5 @@ struct PasteTarget: Equatable {
         iconPath = app.bundleURL?.path
     }
 
-    var pasteTitle: String { "Paste to \(name)" }
+    var pasteTitle: String { String(localized: "Paste to \(name)", bundle: .appLanguage) }
 }

@@ -69,6 +69,15 @@ format scalars first, since app metadata can contain bidi/zero-width markers bef
 
 ## Searchable aliases
 
+Built-in command, system-action and window-command names follow the app language through
+`AppEntry.localizedName`. Changing the app language republishes the built-in aliases and invalidates
+ranked results without rescanning applications. Category names index both supported languages.
+The original English name remains a translation alias, so either spelling
+finds the same command and keeps the same favorites, shortcuts and learned ranking. Category queries
+accept both English and localized labels. Application names, custom commands, quicklinks, snippets,
+layouts and extension-authored names keep their supplied spelling. The fallback header receives its
+localized formatter from the UI; its pure model still owns query elision.
+
 Every naming criterion an entry carries lowers to one flat list of `SearchAlias` — a string plus a
 `Role` (how far it is trusted) and a `Looseness` (the weakest match it will accept).
 `SearchRelevance.quality` matches each, keeps the strongest, and that becomes the entry's base

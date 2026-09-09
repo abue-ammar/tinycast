@@ -19,7 +19,11 @@ enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
     var id: Int { rawValue }
 
     var title: String {
-        self == .immediately ? "Immediately" : "After \(rawValue) seconds"
+        self == .immediately ? String(
+            localized: "Immediately",
+            bundle: .appLanguage) : String(
+            localized: "After \(rawValue) seconds",
+            bundle: .appLanguage)
     }
 
     var interval: TimeInterval { TimeInterval(rawValue) }
@@ -35,7 +39,11 @@ enum JoinWindow: Int, CaseIterable, Identifiable, Sendable {
 
     var id: Int { rawValue }
 
-    var title: String { rawValue == 1 ? "1 minute" : "\(rawValue) minutes" }
+    var title: String { rawValue == 1 ? String(
+        localized: "1 minute",
+        bundle: .appLanguage) : String(
+        localized: "\(rawValue) minutes",
+        bundle: .appLanguage) }
 }
 
 /// How early the calendar item picks the next event up. Zero, which `integer(forKey:)` also
@@ -49,7 +57,11 @@ enum MenuBarEvents: Int, CaseIterable, Identifiable, Sendable {
 
     var id: Int { rawValue }
 
-    var title: String { self == .today ? "Today" : "\(rawValue) minutes before" }
+    var title: String { self == .today ? String(
+        localized: "Today",
+        bundle: .appLanguage) : String(
+        localized: "\(rawValue) minutes before",
+        bundle: .appLanguage) }
 }
 
 /// The calendar's independent menu-bar presence. Zero matches an unset preference.
@@ -62,9 +74,9 @@ enum CalendarMenuBarDisplay: Int, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .disabled: "Disabled"
-        case .meetingIcon: "Meeting Icon"
-        case .meetingTitle: "Meeting Title"
+        case .disabled: String(localized: "Disabled", bundle: .appLanguage)
+        case .meetingIcon: String(localized: "Meeting Icon", bundle: .appLanguage)
+        case .meetingTitle: String(localized: "Meeting Title", bundle: .appLanguage)
         }
     }
 }
@@ -80,10 +92,10 @@ enum CalendarLauncherLimit: Int, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .one: "1 next"
-        case .three: "3 next"
-        case .five: "5 next"
-        case .all: "All"
+        case .one: String(localized: "1 next", bundle: .appLanguage)
+        case .three: String(localized: "3 next", bundle: .appLanguage)
+        case .five: String(localized: "5 next", bundle: .appLanguage)
+        case .all: String(localized: "All", bundle: .appLanguage)
         }
     }
 
@@ -102,9 +114,9 @@ enum HideCurrentEvent: Int, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .dontHide: "Keep visible — show time left"
-        case .automatically: "Automatically"
-        default: "After \(rawValue) minutes"
+        case .dontHide: String(localized: "Keep visible — show time left", bundle: .appLanguage)
+        case .automatically: String(localized: "Automatically", bundle: .appLanguage)
+        default: String(localized: "After \(rawValue) minutes", bundle: .appLanguage)
         }
     }
 
@@ -185,6 +197,10 @@ final class AppSettings {
     /// Follow macOS, or pin Tinycast to one appearance. Applied by `AppCore.applyAppearance()`.
     var appearance: AppAppearance {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance.rawValue) }
+    }
+
+    var language: AppLanguage {
+        didSet { language.save(to: defaults) }
     }
 
     /// Summon the launcher as a slim search bar that expands into the full list on typing.
@@ -496,6 +512,7 @@ final class AppSettings {
             ?? .navigateBackOrClose
         appearance =
             defaults.string(forKey: Key.appearance.rawValue).flatMap(AppAppearance.init) ?? .system
+        language = AppLanguage.selection(in: defaults, domain: Bundle.main.bundleIdentifier!)
         compactMode = defaults.bool(forKey: Key.compactMode.rawValue)
         // Defaults to true, so absence must be distinguished from a stored `false`.
         showFavoritesInCompactMode =

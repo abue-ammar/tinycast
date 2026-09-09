@@ -27,6 +27,7 @@ struct ExtensionActionItem {
 
 /// The ⌘K panel of a running command; not `PopoverMenu`, because it scrolls.
 struct ExtensionActionsPanel: View {
+    @Environment(\.locale) private var localizationLocale
     var header: String?
     let items: [ExtensionActionItem]
     @Binding var selection: Int
@@ -97,6 +98,7 @@ struct ExtensionActionsPanel: View {
 
 /// Its own row, not the palette's: that one is file-private.
 private struct ExtensionActionRow: View {
+    @Environment(\.locale) private var localizationLocale
     let item: ExtensionActionItem
     let selected: Bool
     let onActivate: () -> Void

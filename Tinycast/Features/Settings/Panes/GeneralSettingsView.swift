@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct GeneralSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
     private var hyperTap: HyperKeyTap { core.hyperKeyTap }
@@ -17,11 +18,15 @@ struct GeneralSettingsView: View {
     private var hyperSubtitle: String {
         guard settings.hyperKey != .none else {
             return
-                "Select a physical key to remap to the \(hyperGlyphs) modifier keys simultaneously."
+                String(
+                    localized: "Select a physical key to remap to the \(hyperGlyphs) modifier keys simultaneously.",
+                    bundle: .appLanguage)
         }
         return
-            "Pressing \(settings.hyperKey.title) will trigger the left \(hyperGlyphs) modifier keys."
-            + " Hyper Key shortcuts are shown in Tinycast with ✦."
+            String(localized: """
+                Pressing \(settings.hyperKey.title) will trigger the left \(hyperGlyphs) \
+                modifier keys. Hyper Key shortcuts are shown in Tinycast with ✦.
+                """, bundle: .appLanguage)
     }
 
     var body: some View {
@@ -61,7 +66,7 @@ struct GeneralSettingsView: View {
             Section {
                 Picker(selection: $settings.hyperKey) {
                     ForEach(HyperKeyPhysicalKey.allCases) { key in
-                        Text(key.title).tag(key)
+                        Text(LocalizedStringKey(key.title)).tag(key)
                     }
                 } label: {
                     SettingsRowTitle(.generalHyperKey, "Hyper Key")
@@ -119,6 +124,16 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalAppearance, "Theme")
                     Text("Match macOS, or pin Tinycast to Light or Dark.")
                 }
+                .id("Theme-\(localizationLocale.identifier)")
+                Picker(selection: $settings.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.title).tag(language)
+                    }
+                } label: {
+                    SettingsRowTitle(.generalAppearance, "Language")
+                    Text("Change the interface language immediately.")
+                }
+                .id("Language-\(localizationLocale.identifier)")
                 Toggle(isOn: $settings.compactMode) {
                     SettingsRowTitle(.generalAppearance, "Compact mode")
                     Text(
@@ -163,6 +178,7 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalGeneral, "Pop to Root Search")
                     Text("Reset to the launcher this long after the window closes.")
                 }
+                .id("Pop to Root Search-\(localizationLocale.identifier)")
                 Picker(selection: $settings.escapeKeyBehavior) {
                     ForEach(EscapeKeyBehavior.allCases) { behavior in
                         Text(behavior.title).tag(behavior)
@@ -171,6 +187,7 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalGeneral, "Escape Key Behavior")
                     Text("What Escape does once the search field is already empty.")
                 }
+                .id("Escape Key Behavior-\(localizationLocale.identifier)")
                 // Empty only when TIS fails; one layout still lists, so the row stays put.
                 if !inputSources.isEmpty {
                     Picker(selection: $settings.autoSwitchInputSourceID) {
@@ -190,7 +207,7 @@ struct GeneralSettingsView: View {
         .formStyle(.grouped)
         .settingsScrollTarget(.general)
         .confirmationDialog(
-            "Reset learned launcher ranking?",
+            String(localized: "Reset learned launcher ranking?", bundle: .appLanguage),
             isPresented: $confirmingRankingReset,
             titleVisibility: .visible
         ) {

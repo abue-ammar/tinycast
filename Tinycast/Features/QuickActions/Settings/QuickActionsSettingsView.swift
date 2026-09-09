@@ -3,6 +3,7 @@ import SwiftUI
 
 /// A peer of the AI pane, not a section in it: it only borrows the provider layer.
 struct QuickActionsSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var appSettings
     @Environment(QuickActionSettingsStore.self) private var store
@@ -20,14 +21,19 @@ struct QuickActionsSettingsView: View {
                 Toggle(isOn: enabledBinding) {
                     SettingsRowTitle(.quickActionsQuickActions, "Enable Quick Actions")
                     Text(
-                        "Act on the text you have selected in any app. Nothing is read until you "
-                            + "press a shortcut.")
+                        String(
+                            localized:
+                                "Act on the text you have selected in any app. Nothing is read until you press a shortcut.",
+                            bundle: .appLanguage
+                        ))
                 }
                 if appSettings.quickActionsEnabled, !isTrusted {
                     // Every shortcut fails without it; better said here than found one press later.
                     SettingsRow(
-                        title: "Accessibility permission required",
-                        subtitle: "Tinycast can't read your selection until it is granted."
+                        title: String(localized: "Accessibility permission required", bundle: .appLanguage),
+                        subtitle: String(
+                            localized: "Tinycast can't read your selection until it is granted.",
+                            bundle: .appLanguage)
                     ) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(Theme.Colors.destructive)
@@ -78,7 +84,9 @@ struct QuickActionsSettingsView: View {
     private var actionsSection: some View {
         Section {
             ForEach(QuickAction.allCases) { action in
-                SettingsRow(title: action.title, subtitle: subtitle(for: action)) {
+                SettingsRow(title: String(
+                    localized: String.LocalizationValue(action.title),
+                    bundle: .appLanguage), subtitle: subtitle(for: action)) {
                     Image(systemName: action.symbol)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
@@ -90,8 +98,8 @@ struct QuickActionsSettingsView: View {
                                 name: "pencil", size: Theme.Size.quickActionHeaderIcon)
                         }
                         .buttonStyle(.plain)
-                        .help("Edit \(action.title) instructions")
-                        .accessibilityLabel("Edit \(action.title) instructions")
+                        .help("Edit \(String(localized: String.LocalizationValue(action.title), bundle: .appLanguage)) instructions")
+                        .accessibilityLabel("Edit \(String(localized: String.LocalizationValue(action.title), bundle: .appLanguage)) instructions")
                     }
                     ShortcutRecorder(action: .command(CommandID(action)), isQuiet: true)
                     Picker("", selection: previewBinding(action)) {
@@ -101,12 +109,12 @@ struct QuickActionsSettingsView: View {
                     .labelsHidden()
                     .fixedSize()
                     .disabled(action.alwaysPreviews)
-                    .accessibilityLabel("What \(action.title) does with its result")
+                    .accessibilityLabel("What \(String(localized: String.LocalizationValue(action.title), bundle: .appLanguage)) does with its result")
                     if let entry = CommandCatalog.entry(for: CommandID(action)) {
                         Toggle("", isOn: launcherBinding(entry))
                             .labelsHidden()
                             .toggleStyle(.checkbox)
-                            .accessibilityLabel("Show \(action.title) in launcher")
+                            .accessibilityLabel("Show \(String(localized: String.LocalizationValue(action.title), bundle: .appLanguage)) in launcher")
                     }
                 }
             }
@@ -114,9 +122,11 @@ struct QuickActionsSettingsView: View {
             SettingsSectionHeader(.quickActionsActions)
         } footer: {
             Text(
-                "Replace puts the result straight into your document — undo in the app you were in "
-                    + "brings it back. Preview shows it in a panel first. The checkbox lists the "
-                    + "action in the launcher; its shortcut works either way."
+                String(localized: """
+                    Replace puts the result straight into your document — undo in the app you \
+                    were in brings it back. Preview shows it in a panel first. The checkbox \
+                    lists the action in the launcher; its shortcut works either way.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -141,8 +151,10 @@ struct QuickActionsSettingsView: View {
             SettingsSectionHeader(.quickActionsModel)
         } footer: {
             Text(
-                "Separate from chat's model on purpose: a shortcut you press all day should not "
-                    + "bill an API every time. Apple Intelligence runs on this Mac for nothing."
+                String(localized: """
+                    Separate from chat's model on purpose: a shortcut you press all day should \
+                    not bill an API every time. Apple Intelligence runs on this Mac for nothing.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -164,8 +176,10 @@ struct QuickActionsSettingsView: View {
             SettingsSectionHeader(.quickActionsTranslate)
         } footer: {
             Text(
-                "Translation uses Apple's own translator on this Mac, so it costs nothing and "
-                    + "reaches no provider. A language downloads the first time you use it."
+                String(localized: """
+                    Translation uses Apple's own translator on this Mac, so it costs nothing \
+                    and reaches no provider. A language downloads the first time you use it.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -173,7 +187,7 @@ struct QuickActionsSettingsView: View {
     }
 
     private func subtitle(for action: QuickAction) -> String? {
-        action.alwaysPreviews ? "Always shown in a panel" : nil
+        action.alwaysPreviews ? String(localized: "Always shown in a panel", bundle: .appLanguage) : nil
     }
 
     private var enabledBinding: Binding<Bool> {
@@ -236,6 +250,7 @@ struct QuickActionsSettingsView: View {
     }
 
     private struct InstructionsEditorSheet: View {
+        @Environment(\.locale) private var localizationLocale
         @Environment(\.dismiss) private var dismiss
         @State private var instructions: String
 
@@ -256,11 +271,13 @@ struct QuickActionsSettingsView: View {
 
         var body: some View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                Text("Customize \(action.title)")
+                Text("Customize \(String(localized: String.LocalizationValue(action.title), bundle: .appLanguage))")
                     .font(.title2.weight(.bold))
 
-                Text("Tell Tinycast how you want \(action.title) to handle your selected text.")
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Tell Tinycast how you want \(String(localized: String.LocalizationValue(action.title), bundle: .appLanguage)) to handle your selected text."
+                )
+                .foregroundStyle(.secondary)
 
                 TextEditor(text: $instructions)
                     .font(.body)

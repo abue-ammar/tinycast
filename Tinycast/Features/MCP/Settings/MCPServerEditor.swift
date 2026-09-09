@@ -8,6 +8,7 @@ struct MCPServerEditorTarget: Identifiable {
 
 /// Adds or edits one server, and can prove it connects before the sheet is dismissed.
 struct MCPServerEditor: View {
+    @Environment(\.locale) private var localizationLocale
     let target: MCPServerEditorTarget
     let onSave: (MCPServer, MCPSecretStore.Secrets) -> String?
     let onCancel: () -> Void
@@ -17,7 +18,7 @@ struct MCPServerEditor: View {
         case stdio
 
         var id: String { rawValue }
-        var title: String { self == .http ? "HTTP" : "Command" }
+        var title: String { self == .http ? "HTTP" : String(localized: "Command", bundle: .appLanguage) }
     }
 
     private enum Probe: Equatable {
@@ -77,17 +78,18 @@ struct MCPServerEditor: View {
         VStack(spacing: 0) {
             Form {
                 Section {
-                    field("Name") {
+                    field(String(localized: "Name", bundle: .appLanguage)) {
                         TextField("Name", text: $name, prompt: Text("GitHub"))
                     }
-                    field("Handle") {
+                    field(String(localized: "Handle", bundle: .appLanguage)) {
                         Text("@\(MCPSlug.normalize(name.isEmpty ? target.server.slug : name))")
                             .foregroundStyle(.secondary)
                     }
-                    field("Connection") {
+                    field(String(localized: "Connection", bundle: .appLanguage)) {
                         Picker("Connection", selection: $kind) {
-                            ForEach(Kind.allCases) { Text($0.title).tag($0) }
+                            ForEach(Kind.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
                         }
+                        .id("Connection Kind-\(localizationLocale.identifier)")
                         .labelsHidden()
                         .pickerStyle(.segmented)
                     }
@@ -95,22 +97,22 @@ struct MCPServerEditor: View {
                         field("URL") {
                             TextField("URL", text: $url, prompt: Text("https://example.com/mcp"))
                         }
-                        field("Header") {
+                        field(String(localized: "Header", bundle: .appLanguage)) {
                             TextField("Header", text: $headerName, prompt: Text("Authorization"))
                         }
-                        field("Value") {
+                        field(String(localized: "Value", bundle: .appLanguage)) {
                             SecureField("Value", text: $headerValue, prompt: Text("Bearer …"))
                         }
                     } else {
-                        field("Command") {
+                        field(String(localized: "Command", bundle: .appLanguage)) {
                             TextField("Command", text: $command, prompt: Text("npx"))
                         }
-                        field("Arguments") {
+                        field(String(localized: "Arguments", bundle: .appLanguage)) {
                             TextField(
                                 "Arguments", text: $argumentText,
                                 prompt: Text("-y @modelcontextprotocol/server-filesystem ~/Desktop"))
                         }
-                        field("Environment") {
+                        field(String(localized: "Environment", bundle: .appLanguage)) {
                             TextField(
                                 "Environment", text: $environmentText,
                                 prompt: Text("GITHUB_TOKEN=…"), axis: .vertical
@@ -119,14 +121,22 @@ struct MCPServerEditor: View {
                         }
                     }
                 } header: {
-                    Text(target.isNew ? "Add MCP Server" : "Edit MCP Server")
+                    Text(target.isNew ? String(
+                        localized: "Add MCP Server",
+                        bundle: .appLanguage) : String(
+                        localized: "Edit MCP Server",
+                        bundle: .appLanguage))
                 } footer: {
                     Text(
                         kind == .http
-                            ? "Remote endpoints must use HTTPS. The header value is stored in your "
+                            ? String(
+                                localized: "Remote endpoints must use HTTPS. The header value is stored in your ",
+                                bundle: .appLanguage)
                                 + "login Keychain, never in preferences."
-                            : "The command runs on this Mac with your own account. One "
-                                + "NAME=value per line; values are stored in your login Keychain."
+                            : String(localized: """
+                                The command runs on this Mac with your own account. One NAME=value per line; \
+                                values are stored in your login Keychain.
+                                """, bundle: .appLanguage)
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -134,9 +144,9 @@ struct MCPServerEditor: View {
 
                 Section {
                     Toggle("Offer this server's tools", isOn: $isEnabled)
-                    field("Trust") {
+                    field(String(localized: "Trust", bundle: .appLanguage)) {
                         Picker("Trust", selection: $trust) {
-                            ForEach(MCPTrust.allCases) { Text($0.title).tag($0) }
+                            ForEach(MCPTrust.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
                         }
                         .labelsHidden()
                     }
@@ -150,8 +160,10 @@ struct MCPServerEditor: View {
                     }
                 } footer: {
                     Text(
-                        "Ask Each Chat puts the first tool call of every conversation through a "
-                            + "confirmation. Never Allow withholds the server without removing it."
+                        String(localized: """
+                            Ask Each Chat puts the first tool call of every conversation through a confirmation. \
+                            Never Allow withholds the server without removing it.
+                            """, bundle: .appLanguage)
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -177,7 +189,9 @@ struct MCPServerEditor: View {
         case .running:
             ProgressView().controlSize(.small)
         case .found(let count):
-            Label(count == 1 ? "1 tool" : "\(count) tools", systemImage: "checkmark.circle")
+            Label(count == 1 ? "1 tool" : String(
+                localized: "\(count) tools",
+                bundle: .appLanguage), systemImage: "checkmark.circle")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .failed(let message):
@@ -227,7 +241,7 @@ struct MCPServerEditor: View {
             switch connection.status {
             case .ready(let tools): probe = .found(tools)
             case .failed(let message): probe = .failed(message)
-            default: probe = .failed("The server did not answer.")
+            default: probe = .failed(String(localized: "The server did not answer.", bundle: .appLanguage))
             }
             connection.stop()
         }
@@ -251,7 +265,7 @@ struct MCPServerEditor: View {
                 return error.localizedDescription
             }
         case .stdio where command.trimmingCharacters(in: .whitespaces).isEmpty:
-            return "Enter the command that starts this server."
+            return String(localized: "Enter the command that starts this server.", bundle: .appLanguage)
         case .stdio:
             break
         }

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The `Detail` screen, and the pane a `List` shows when `isShowingDetail` is on.
 struct ExtensionDetailBody: View {
+    @Environment(\.locale) private var localizationLocale
     let markdown: String?
     let metadata: RenderNode?
     let isLoading: Bool
@@ -35,6 +36,7 @@ struct ExtensionDetailBody: View {
 
 /// `Detail.Metadata` — label / link / tag-list / separator rows.
 struct ExtensionMetadataView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let metadata: RenderNode
     let assetsPath: String?
@@ -100,6 +102,7 @@ struct ExtensionMetadataView: View {
 }
 
 private struct ExtensionTagListView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(\.isDarkAppearance) private var isDark
     let tags: [RenderNode]
     let assetsPath: String?
@@ -178,6 +181,7 @@ struct FlowLayout: Layout {
 
 /// Inline styling comes from `AttributedString`; block structure is laid out here.
 struct ExtensionMarkdownView: View {
+    @Environment(\.locale) private var localizationLocale
     let markdown: String
 
     private enum Block: Identifiable {

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// One list over every registry; where a result comes from changes only its badge.
 struct ExtensionStoreSheet: View {
+    @Environment(\.locale) private var localizationLocale
     let onClose: () -> Void
     @Environment(AppCore.self) private var core
 
@@ -22,17 +23,21 @@ struct ExtensionStoreSheet: View {
     private var searchingSummary: String {
         let on = registries.filter(\.isEnabled)
         guard !on.isEmpty else {
-            return "No registries are enabled. Turn one on under Install → Where to search."
+            return String(
+                localized: "No registries are enabled. Turn one on under Install → Where to search.",
+                bundle: .appLanguage)
         }
         let names = on.map(\.name).joined(separator: ", ")
-        return "Searching \(names). Store extensions install as they are; a repository is built first."
+        return String(
+            localized: "Searching \(names). Store extensions install as they are; a repository is built first.",
+            bundle: .appLanguage)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             header
             // The same borderless field the panes use, rather than a bordered capsule of its own.
-            SettingsFilterField(prompt: "Search extensions…", query: $query)
+            SettingsFilterField(prompt: String(localized: "Search extensions…", bundle: .appLanguage), query: $query)
             content
             // The list scrolls right up to the footer without it, cutting the last row.
             Divider()
@@ -78,7 +83,7 @@ struct ExtensionStoreSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if results.isEmpty && searched {
-            placeholder("Nothing matches “\(query)”.")
+            placeholder(String(localized: "Nothing matches “\(query)”.", bundle: .appLanguage))
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -233,6 +238,7 @@ struct ExtensionStoreSheet: View {
 
 /// One search result: what it is, where it came from, and the button that installs it.
 private struct StoreRow: View {
+    @Environment(\.locale) private var localizationLocale
     enum State: Equatable {
         case idle
         case installing(String)
@@ -264,8 +270,11 @@ private struct StoreRow: View {
                             .background(Theme.Colors.controlSurface, in: .capsule)
                             .foregroundStyle(.secondary)
                             .help(
-                                "This registry serves source. Installing runs your package manager "
-                                    + "and the extension's build script.")
+                                String(
+                                    localized:
+                                        "This registry serves source. Installing runs your package manager and the extension's build script.",
+                                    bundle: .appLanguage
+                                ))
                     }
                 }
                 if !listing.summary.isEmpty {

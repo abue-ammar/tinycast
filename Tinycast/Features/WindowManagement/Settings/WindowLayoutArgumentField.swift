@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The Argument row: none, a file, a folder, a URL, or one of the user's quicklinks.
 struct WindowLayoutArgumentField: View {
+    @Environment(\.locale) private var localizationLocale
     let draft: WindowLayoutDraft
 
     @Environment(QuicklinkStore.self) private var quicklinks

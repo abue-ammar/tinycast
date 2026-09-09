@@ -9,7 +9,7 @@ struct ChatHistoryScreen: PaletteScreen {
     let openActions: () -> Void
 
     var rows: [ChatConversation] { history.search(vm.query) }
-    let primaryActionTitle = "Open Chat"
+    let primaryActionTitle = String(localized: "Open Chat", bundle: .appLanguage)
 
     private func conversation(at selection: Int) -> ChatConversation? {
         let rows = rows
@@ -48,8 +48,10 @@ struct ChatHistoryScreen: PaletteScreen {
         if rows.isEmpty {
             EmptyResults(
                 text: history.isAvailable
-                    ? history.conversations.isEmpty ? "No chats yet" : "No matching chats"
-                    : "Chat history is unavailable")
+                    ? history.conversations.isEmpty ? String(
+                        localized: "No chats yet",
+                        bundle: .appLanguage) : "No matching chats"
+                    : String(localized: "Chat history is unavailable", bundle: .appLanguage))
         } else {
             let selected = conversation(at: selection)
             HStack(spacing: 0) {
@@ -81,18 +83,20 @@ enum ChatHistoryActionsMenu {
             header: conversation.title,
             items: [
                 PopoverMenuItem(
-                    title: "Open Chat", systemImage: "bubble.left.and.bubble.right", shortcut: "↵"
+                    title: String(
+                        localized: "Open Chat",
+                        bundle: .appLanguage), systemImage: "bubble.left.and.bubble.right", shortcut: "↵"
                 ) {
                     coordinator.openChat(id: conversation.id)
                 },
                 PopoverMenuItem(
-                    title: "Delete Chat", systemImage: "trash", shortcut: "⌃X",
+                    title: String(localized: "Delete Chat", bundle: .appLanguage), systemImage: "trash", shortcut: "⌃X",
                     isDestructive: true
                 ) {
                     coordinator.deleteChat(id: conversation.id)
                 },
                 PopoverMenuItem(
-                    title: "Delete All Chats", systemImage: "trash", shortcut: "⌃⇧X",
+                    title: String(localized: "Delete All Chats", bundle: .appLanguage), systemImage: "trash", shortcut: "⌃⇧X",
                     isDestructive: true
                 ) {
                     Task { await coordinator.deleteAllChats() }

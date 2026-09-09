@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The join card above the launcher results; selectable like a row, Enter joins.
 struct MeetingCard: View {
+    @Environment(\.locale) private var localizationLocale
     let meeting: MeetingEvent
     let now: Date
     let selected: Bool
@@ -66,17 +67,21 @@ enum MeetingActionsMenu {
         var items: [PopoverMenuItem] = []
         if meeting.link != nil {
             items.append(
-                PopoverMenuItem(title: "Join Meeting", systemImage: "video.fill", shortcut: "↵") {
+                PopoverMenuItem(title: String(
+                    localized: "Join Meeting",
+                    bundle: .appLanguage), systemImage: "video.fill", shortcut: "↵") {
                     core.calendarCoordinator.join(meeting)
                 })
             items.append(
-                PopoverMenuItem(title: "Copy Meeting Link", systemImage: "link", shortcut: "⌘↵") {
+                PopoverMenuItem(title: String(
+                    localized: "Copy Meeting Link",
+                    bundle: .appLanguage), systemImage: "link", shortcut: "⌘↵") {
                     core.calendarCoordinator.copyLink(meeting)
                 })
         }
         items.append(
             PopoverMenuItem(
-                title: "Open in Calendar", systemImage: "calendar",
+                title: String(localized: "Open in Calendar", bundle: .appLanguage), systemImage: "calendar",
                 shortcut: meeting.link == nil ? "↵" : nil
             ) {
                 core.calendarCoordinator.openInCalendar(meeting)

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The message pill, whose trailing mark is its tone or a spinner. See docs/ui.md#dialogs--hud.
 struct MessageHUDView: View {
+    @Environment(\.locale) private var localizationLocale
     /// A report ends with its tone's glyph; something still running ends with a spinner instead.
     enum Accessory {
         case tone(DialogTone)

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The launcher's colour card, built from the calculator card's parts so it reads as one answer.
 struct ColorCard: View {
+    @Environment(\.locale) private var localizationLocale
     let color: ColorValue
     let selected: Bool
 
@@ -37,10 +38,10 @@ enum ColorActionsMenu {
     static func content(color: ColorValue, core: AppCore) -> PopoverMenuContent {
         let primary = ColorFormat.primary(for: color)
         return PopoverMenuContent(
-            header: "Copy Color as…",
+            header: String(localized: "Copy Color as…", bundle: .appLanguage),
             items: ColorFormat.offered(for: color).map { format in
                 PopoverMenuItem(
-                    title: format.title, icon: .blank,
+                    title: String(localized: String.LocalizationValue(format.title), bundle: .appLanguage), icon: .blank,
                     shortcut: format == primary ? "↵" : nil, detail: format.string(for: color)
                 ) {
                     core.clipboardCoordinator.copyColor(color, as: format)

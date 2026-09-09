@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The editor's left column: one display drawn to scale, its entries over it, and the tabs.
 struct WindowLayoutPreview: View {
+    @Environment(\.locale) private var localizationLocale
     let draft: WindowLayoutDraft
     /// Resolved once by the sheet: an AX read per render would cost a round trip per keystroke.
     let screens: [WindowLayoutScreen]
@@ -40,8 +41,10 @@ struct WindowLayoutPreview: View {
     private var caption: String {
         guard let uuid = draft.selectedDisplayUUID,
             let display = tabs.first(where: { $0.uuid == uuid })
-        else { return "No display selected" }
-        guard let screen = selectedScreen else { return "\(display.name) · not connected" }
+        else { return String(localized: "No display selected", bundle: .appLanguage) }
+        guard let screen = selectedScreen else { return String(
+            localized: "\(display.name) · not connected",
+            bundle: .appLanguage) }
         // Points, not pixels: nothing in this feature touches `backingScaleFactor`.
         let size = screen.screen.frame.size
         return "\(display.name) · \(Int(size.width)) × \(Int(size.height))"
@@ -50,6 +53,7 @@ struct WindowLayoutPreview: View {
 
 /// One display to scale with a rounded rect per entry on it. Draws; decides nothing.
 struct WindowLayoutPreviewCanvas: View {
+    @Environment(\.locale) private var localizationLocale
     let draft: WindowLayoutDraft
     let screen: WindowLayoutScreen?
     let gap: CGFloat
@@ -139,9 +143,9 @@ struct WindowLayoutPreviewCanvas: View {
     }
 
     private var accessibilityDescription: String {
-        guard let screen else { return "Preview, display not connected" }
+        guard let screen else { return String(localized: "Preview, display not connected", bundle: .appLanguage) }
         let count = draft.entries(onDisplay: screen.display.uuid).count
-        let windows = count == 1 ? "1 window" : "\(count) windows"
-        return "Preview of \(screen.display.name), \(windows)"
+        let windows = count == 1 ? "1 window" : String(localized: "\(count) windows", bundle: .appLanguage)
+        return String(localized: "Preview of \(screen.display.name), \(windows)", bundle: .appLanguage)
     }
 }

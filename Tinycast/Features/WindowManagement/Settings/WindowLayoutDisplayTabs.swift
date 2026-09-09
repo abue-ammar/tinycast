@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The numbered display tabs: they scope the canvas and target a newly added entry.
 struct WindowLayoutDisplayTabs: View {
+    @Environment(\.locale) private var localizationLocale
     let draft: WindowLayoutDraft
     let displays: [WindowLayoutDisplay]
 
@@ -38,6 +39,7 @@ struct WindowLayoutDisplayTabs: View {
 
 /// The 3×3 anchor control: nine cells, each drawing the corner of a screen its window would take.
 struct WindowLayoutPositionGrid: View {
+    @Environment(\.locale) private var localizationLocale
     let selection: WindowLayoutAnchor
     let onSelect: (WindowLayoutAnchor) -> Void
 

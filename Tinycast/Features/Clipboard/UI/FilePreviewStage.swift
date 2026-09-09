@@ -43,6 +43,7 @@ struct FilePreviewStage: View {
 
 /// The recorded path is still the answer to "where was it?", so the row keeps it and says this.
 private struct MissingFileStage: View {
+    @Environment(\.locale) private var localizationLocale
     var body: some View {
         VStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "doc.badge.exclamationmark")

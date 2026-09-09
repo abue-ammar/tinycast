@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The standalone camera: a live stage, a mirror switch, and a photo straight to the clipboard.
 struct CameraView: View {
+    @Environment(\.locale) private var localizationLocale
     let coordinator: CameraCoordinator
 
     var body: some View {
@@ -28,22 +29,26 @@ struct CameraView: View {
         HStack(spacing: Theme.Spacing.md) {
             if isLive {
                 CameraButton(
-                    title: "Mirror", emphasis: coordinator.mirrored ? .primary : .secondary
+                    title: String(
+                        localized: "Mirror",
+                        bundle: .appLanguage), emphasis: coordinator.mirrored ? .primary : .secondary
                 ) {
                     coordinator.mirrored.toggle()
                 }
                 if coordinator.canSwitchCamera {
-                    CameraButton(title: "Switch Camera", emphasis: .secondary) {
+                    CameraButton(title: String(localized: "Switch Camera", bundle: .appLanguage), emphasis: .secondary) {
                         coordinator.switchCamera()
                     }
                 }
             }
             Spacer(minLength: Theme.Spacing.md)
-            CameraButton(title: "Close", keyCap: "esc", emphasis: .secondary) {
+            CameraButton(title: String(localized: "Close", bundle: .appLanguage), keyCap: "esc", emphasis: .secondary) {
                 coordinator.close()
             }
             if isLive {
-                CameraButton(title: "Take Photo", keyCap: "↵") { coordinator.takePhoto() }
+                CameraButton(title: String(
+                    localized: "Take Photo",
+                    bundle: .appLanguage), keyCap: "↵") { coordinator.takePhoto() }
             }
         }
         .padding(Theme.Spacing.xl)

@@ -20,7 +20,11 @@ struct ScheduleScreen: PaletteScreen {
 
     /// A meeting with no link has nowhere to join, so the pill offers what it can instead.
     var primaryActionTitle: String {
-        meeting(at: vm.selection)?.link == nil ? "Open in Calendar" : "Join Meeting"
+        meeting(at: vm.selection)?.link == nil ? String(
+            localized: "Open in Calendar",
+            bundle: .appLanguage) : String(
+            localized: "Join Meeting",
+            bundle: .appLanguage)
     }
 
     private func meeting(at selection: Int) -> MeetingEvent? {
@@ -71,8 +75,12 @@ struct ScheduleScreen: PaletteScreen {
 
     /// Names why the list is empty: no access reads very differently from a free afternoon.
     private var emptyMessage: String {
-        if store.access != .granted { return "Tinycast has no access to your calendar" }
-        if !vm.query.trimmingCharacters(in: .whitespaces).isEmpty { return "No matching meetings" }
-        return "Nothing scheduled \(store.span.orPhrase)"
+        if store.access != .granted { return String(localized: "Tinycast has no access to your calendar", bundle: .appLanguage) }
+        if !vm.query.trimmingCharacters(in: .whitespaces).isEmpty { return String(
+            localized: "No matching meetings",
+            bundle: .appLanguage) }
+        return String(
+            localized: "Nothing scheduled \(String(localized: String.LocalizationValue(store.span.orPhrase), bundle: .appLanguage))",
+            bundle: .appLanguage)
     }
 }

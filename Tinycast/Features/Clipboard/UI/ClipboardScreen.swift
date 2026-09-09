@@ -12,8 +12,10 @@ struct ClipboardScreen: PaletteScreen {
 
     var primaryActionTitle: String {
         core.settings.clipboardDefaultAction == .copy
-            ? ClipboardDefaultAction.copy.title
-            : vm.pasteTarget?.pasteTitle ?? ClipboardDefaultAction.paste.title
+            ? String(localized: String.LocalizationValue(ClipboardDefaultAction.copy.title), bundle: .appLanguage)
+            : vm.pasteTarget?.pasteTitle ?? String(
+                localized: String.LocalizationValue(ClipboardDefaultAction.paste.title),
+                bundle: .appLanguage)
     }
 
     private func item(at selection: Int) -> ClipboardItem? {
@@ -102,7 +104,7 @@ struct ClipboardScreen: PaletteScreen {
         // Empty history: centre one message across the panel, not in the list column.
         if rows.isEmpty {
             // Names the filter, so one hiding every entry doesn't read as an empty history.
-            EmptyResults(text: vm.clipboardFilter.emptyMessage)
+            EmptyResults(text: String(localized: String.LocalizationValue(vm.clipboardFilter.emptyMessage), bundle: .appLanguage))
         } else {
             let selected = item(at: selection)
             HStack(spacing: 0) {
@@ -141,13 +143,17 @@ enum ClipboardActionsMenu {
     ) -> PopoverMenuContent {
         let copyFirst = core.settings.clipboardDefaultAction == .copy
         let pasteItem = PopoverMenuItem(
-            title: target?.pasteTitle ?? ClipboardDefaultAction.paste.title,
+            title: target?.pasteTitle ?? String(
+                localized: String.LocalizationValue(ClipboardDefaultAction.paste.title),
+                bundle: .appLanguage),
             icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: copyFirst ? "⌘↵" : "↵"
         ) {
             core.clipboardCoordinator.paste(item)
         }
         let copyItem = PopoverMenuItem(
-            title: ClipboardDefaultAction.copy.title, systemImage: "doc.on.doc",
+            title: String(
+                localized: String.LocalizationValue(ClipboardDefaultAction.copy.title),
+                bundle: .appLanguage), systemImage: "doc.on.doc",
             shortcut: copyFirst ? "↵" : "⌘↵"
         ) {
             core.clipboardCoordinator.copyToClipboard(item)
@@ -155,7 +161,9 @@ enum ClipboardActionsMenu {
         var items: [PopoverMenuItem] =
             (copyFirst ? [copyItem, pasteItem] : [pasteItem, copyItem]) + [
                 PopoverMenuItem(
-                    title: "Paste and Keep Window Open", icon: .paste(target, fallback: "macwindow"),
+                    title: String(
+                        localized: "Paste and Keep Window Open",
+                        bundle: .appLanguage), icon: .paste(target, fallback: "macwindow"),
                     shortcut: "⌥↵"
                 ) {
                     core.clipboardCoordinator.pasteKeepingWindowOpen(item)
@@ -163,40 +171,44 @@ enum ClipboardActionsMenu {
             ]
         if item.isPinned {
             items.append(
-                PopoverMenuItem(title: "Unpin Entry", systemImage: "pin.slash", shortcut: "⌘.") {
+                PopoverMenuItem(title: String(
+                    localized: "Unpin Entry",
+                    bundle: .appLanguage), systemImage: "pin.slash", shortcut: "⌘.") {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         } else {
             items.append(
-                PopoverMenuItem(title: "Pin Entry", systemImage: "pin", shortcut: "⌘.") {
+                PopoverMenuItem(title: String(localized: "Pin Entry", bundle: .appLanguage), systemImage: "pin", shortcut: "⌘.") {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         }
         if item.kind == .image || item.kind == .file {
             items.append(
-                PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
+                PopoverMenuItem(title: String(localized: "Show in Finder", bundle: .appLanguage), systemImage: "folder") {
                     core.clipboardCoordinator.revealClip(item)
                 })
         }
         if item.kind == .file {
             items.append(
-                PopoverMenuItem(title: "Open", systemImage: "arrow.up.forward.app") {
+                PopoverMenuItem(title: String(localized: "Open", bundle: .appLanguage), systemImage: "arrow.up.forward.app") {
                     core.clipboardCoordinator.openClip(item)
                 })
             items.append(
-                PopoverMenuItem(title: "Copy Path", systemImage: "doc.on.clipboard") {
+                PopoverMenuItem(title: String(localized: "Copy Path", bundle: .appLanguage), systemImage: "doc.on.clipboard") {
                     core.clipboardCoordinator.copyClipPath(item)
                 })
         }
         items.append(
             PopoverMenuItem(
-                title: "Delete Entry", systemImage: "trash", shortcut: "⌃X", isDestructive: true
+                title: String(
+                    localized: "Delete Entry",
+                    bundle: .appLanguage), systemImage: "trash", shortcut: "⌃X", isDestructive: true
             ) {
                 store.remove(item)
             })
         items.append(
             PopoverMenuItem(
-                title: "Delete All Entries", systemImage: "trash", shortcut: "⌃⇧X",
+                title: String(localized: "Delete All Entries", bundle: .appLanguage), systemImage: "trash", shortcut: "⌃⇧X",
                 isDestructive: true
             ) {
                 Task { await core.clipboardCoordinator.deleteAllClips() }
@@ -211,8 +223,8 @@ enum ClipboardActionsMenu {
             let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(
                 separator: " ")
             return String(oneLine.prefix(40))
-        case .image: return "Image"
-        case .file: return (item.filePath as NSString?)?.lastPathComponent ?? "File"
+        case .image: return String(localized: "Image", bundle: .appLanguage)
+        case .file: return (item.filePath as NSString?)?.lastPathComponent ?? String(localized: "File", bundle: .appLanguage)
         }
     }
 }

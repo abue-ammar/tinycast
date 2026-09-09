@@ -48,12 +48,16 @@ final class ExtensionCoordinator {
         Task {
             guard
                 await core.confirm(
-                    title: "Enable extensions?",
+                    title: String(localized: "Enable extensions?", bundle: .appLanguage),
                     message:
-                        "Extensions are third-party JavaScript, run on this Mac. A running command "
-                        + "holds a JavaScript engine in memory until you leave it — expect Tinycast "
-                        + "to use noticeably more RAM while one is open.",
-                    symbol: "puzzlepiece.extension", confirmTitle: "Enable", tone: .neutral,
+                        String(localized: """
+                            Extensions are third-party JavaScript, run on this Mac. A running command \
+                            holds a JavaScript engine in memory until you leave it — expect Tinycast \
+                            to use noticeably more RAM while one is open.
+                            """, bundle: .appLanguage),
+                    symbol: "puzzlepiece.extension", confirmTitle: String(
+                        localized: "Enable",
+                        bundle: .appLanguage), tone: .neutral,
                     confirmRole: .standard)
             else { return }
 
@@ -94,11 +98,13 @@ final class ExtensionCoordinator {
         Task {
             guard
                 await core.confirm(
-                    title: "Uninstall \(owner.title)?",
+                    title: String(localized: "Uninstall \(owner.title)?", bundle: .appLanguage),
                     message:
-                        "Removes the extension and everything it stored — its preferences, its cache "
-                        + "and its own files. Its commands leave the launcher.",
-                    symbol: "trash", confirmTitle: "Uninstall")
+                        String(localized: """
+                            Removes the extension and everything it stored — its preferences, its cache \
+                            and its own files. Its commands leave the launcher.
+                            """, bundle: .appLanguage),
+                    symbol: "trash", confirmTitle: String(localized: "Uninstall", bundle: .appLanguage))
             else { return }
             await extensions.uninstall(owner)
         }
@@ -110,11 +116,13 @@ final class ExtensionCoordinator {
         let size = ExtensionCleanup.formatted(bytes: report.bytes)
         guard
             await core.confirm(
-                title: "Clean up \(size)?",
+                title: String(localized: "Clean up \(size)?", bundle: .appLanguage),
                 message:
-                    "Removes build files left by an interrupted install, and the storage of "
-                    + "extensions that are no longer installed. Installed extensions are untouched.",
-                symbol: "trash", confirmTitle: "Clean Up")
+                    String(localized: """
+                        Removes build files left by an interrupted install, and the storage of extensions \
+                        that are no longer installed. Installed extensions are untouched.
+                        """, bundle: .appLanguage),
+                symbol: "trash", confirmTitle: String(localized: "Clean Up", bundle: .appLanguage))
         else { return }
 
         let installed = Set(extensions.installed.map(\.manifest.name))
@@ -124,7 +132,8 @@ final class ExtensionCoordinator {
         }.value
         core.showMessage(
             freed.isEmpty
-                ? "Nothing to clean up" : "Reclaimed \(ExtensionCleanup.formatted(bytes: freed.bytes))")
+                ? String(localized: "Nothing to clean up", bundle: .appLanguage)
+                : String(localized: "Reclaimed \(ExtensionCleanup.formatted(bytes: freed.bytes))", bundle: .appLanguage))
     }
 
     /// What no index prunes: left behind, these key a shortcut or a rank to a vanished command.

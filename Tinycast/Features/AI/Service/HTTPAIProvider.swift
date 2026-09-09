@@ -20,7 +20,7 @@ struct HTTPAIProvider: AIProvider {
                     let (bytes, response) = try await session.bytes(for: urlRequest)
                     guard let response = response as? HTTPURLResponse else {
                         throw AIProviderError.responseFailed(
-                            "The provider returned an invalid HTTP response.")
+                            String(localized: "The provider returned an invalid HTTP response.", bundle: .appLanguage))
                     }
                     guard response.statusCode == 200 else {
                         throw AIProviderError.responseFailed(Self.statusMessage(response))
@@ -46,7 +46,7 @@ struct HTTPAIProvider: AIProvider {
                     }
                     guard decoder.isTerminal else {
                         throw AIProviderError.responseFailed(
-                            "The connection closed before the response completed.")
+                            String(localized: "The connection closed before the response completed.", bundle: .appLanguage))
                     }
                     continuation.finish()
                 } catch is CancellationError {
@@ -105,27 +105,31 @@ struct HTTPAIProvider: AIProvider {
     private static func statusMessage(_ response: HTTPURLResponse) -> String {
         switch response.statusCode {
         case 401, 403:
-            return "API key rejected — check it in Settings."
+            return String(localized: "API key rejected — check it in Settings.", bundle: .appLanguage)
         case 429:
             guard let retryAfter = response.value(forHTTPHeaderField: "Retry-After"),
                 let seconds = Int(retryAfter), seconds >= 0
-            else { return "Rate limit reached — try again later." }
-            return "Rate limit reached — retry after \(seconds) seconds."
+            else { return String(localized: "Rate limit reached — try again later.", bundle: .appLanguage) }
+            return String(localized: "Rate limit reached — retry after \(seconds) seconds.", bundle: .appLanguage)
         case 500...599:
-            return "The provider is temporarily unavailable (HTTP \(response.statusCode))."
+            return String(
+                localized: "The provider is temporarily unavailable (HTTP \(response.statusCode)).",
+                bundle: .appLanguage)
         default:
-            return "The provider rejected the model or request (HTTP \(response.statusCode))."
+            return String(
+                localized: "The provider rejected the model or request (HTTP \(response.statusCode)).",
+                bundle: .appLanguage)
         }
     }
 
     private static func networkMessage(_ code: URLError.Code) -> String {
         switch code {
-        case .networkConnectionLost: return "The network connection was lost."
-        case .notConnectedToInternet: return "No internet connection."
-        case .timedOut: return "The provider took too long to respond."
+        case .networkConnectionLost: return String(localized: "The network connection was lost.", bundle: .appLanguage)
+        case .notConnectedToInternet: return String(localized: "No internet connection.", bundle: .appLanguage)
+        case .timedOut: return String(localized: "The provider took too long to respond.", bundle: .appLanguage)
         case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-            return "The provider could not be reached."
-        default: return "The network request failed."
+            return String(localized: "The provider could not be reached.", bundle: .appLanguage)
+        default: return String(localized: "The network request failed.", bundle: .appLanguage)
         }
     }
 }

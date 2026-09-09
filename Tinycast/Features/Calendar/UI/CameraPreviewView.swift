@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The join preview: your camera over the meeting it is about to open.
 struct CameraPreviewView: View {
+    @Environment(\.locale) private var localizationLocale
     let meeting: MeetingEvent
     let now: Date
     let feed: CameraSession.Feed
@@ -34,8 +35,10 @@ struct CameraPreviewView: View {
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
             Spacer(minLength: Theme.Spacing.md)
-            CameraButton(title: "Cancel", keyCap: "esc", emphasis: .secondary, onActivate: onCancel)
-            CameraButton(title: "Join", keyCap: "↵", onActivate: onJoin)
+            CameraButton(title: String(
+                localized: "Cancel",
+                bundle: .appLanguage), keyCap: "esc", emphasis: .secondary, onActivate: onCancel)
+            CameraButton(title: String(localized: "Join", bundle: .appLanguage), keyCap: "↵", onActivate: onJoin)
         }
         .padding(Theme.Spacing.xl)
     }

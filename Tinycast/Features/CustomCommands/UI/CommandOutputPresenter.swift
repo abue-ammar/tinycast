@@ -46,7 +46,9 @@ final class CommandOutputPresenter {
     @ObservationIgnored private let stop: (UUID) -> Void
     @ObservationIgnored private let openSettings: () -> Void
     @ObservationIgnored private lazy var window = AppWindowController(
-        title: "Command Output", contentSize: CommandOutputView.initialSize, resizable: true,
+        title: String(
+            localized: "Command Output",
+            bundle: .appLanguage), contentSize: CommandOutputView.initialSize, resizable: true,
         autosaveName: "CommandOutputWindow", activation: activation)
 
     init(

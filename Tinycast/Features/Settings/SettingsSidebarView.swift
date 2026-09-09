@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Stock `.sidebar` styling throughout: headers, capsule and tint are all system-supplied.
 struct SettingsSidebarView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(SettingsNavigationState.self) private var navigation
     @State private var query = ""
     @State private var highlighted: SettingsSearchEntry.ID?
@@ -29,9 +30,9 @@ struct SettingsSidebarView: View {
     private var browse: some View {
         List(selection: selection) {
             ForEach(SettingsSection.allCases) { section in
-                Section(section.title) {
+                Section(LocalizedStringKey(section.title)) {
                     ForEach(section.tabs) { tab in
-                        Label(tab.title, systemImage: tab.systemImage).tag(tab)
+                        Label(LocalizedStringKey(tab.title), systemImage: tab.systemImage).tag(tab)
                     }
                 }
             }
@@ -82,13 +83,14 @@ struct SettingsSidebarView: View {
 }
 
 private struct SettingsSearchResultRow: View {
+    @Environment(\.locale) private var localizationLocale
     let entry: SettingsSearchEntry
 
     var body: some View {
         Label {
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(entry.title).lineLimit(1)
-                Text(entry.breadcrumb)
+                Text(entry.localizedTitle).lineLimit(1)
+                Text(entry.localizedBreadcrumb)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

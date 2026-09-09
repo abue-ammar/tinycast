@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NoteSwitcherView: View {
+    @Environment(\.locale) private var localizationLocale
     let onContentHeight: (CGFloat) -> Void
     @Environment(NotesCoordinator.self) private var notes
     @FocusState private var searchFocused: Bool
@@ -72,7 +73,11 @@ struct NoteSwitcherView: View {
                     size: Theme.Size.noteGlyph
                 )
                 .foregroundStyle(Theme.Colors.textSecondary)
-                Text(notes.isSearching ? "Searching notes…" : "No notes found")
+                Text(notes.isSearching ? String(
+                    localized: "Searching notes…",
+                    bundle: .appLanguage) : String(
+                    localized: "No notes found",
+                    bundle: .appLanguage))
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
             .frame(maxWidth: .infinity)
@@ -131,6 +136,7 @@ extension View {
 }
 
 private struct NoteSwitcherRow: View {
+    @Environment(\.locale) private var localizationLocale
     let summary: NoteSummary
     let selected: Bool
     let editing: Bool
@@ -167,8 +173,12 @@ private struct NoteSwitcherRow: View {
             }
             Spacer(minLength: Theme.Spacing.md)
             if !editing, selected || hovered {
-                rowButton(title: "Rename \(summary.displayTitle)", symbol: "pencil", action: onBeginRename)
-                rowButton(title: "Move \(summary.displayTitle) to Trash", symbol: "trash", action: onTrash)
+                rowButton(title: String(
+                    localized: "Rename \(summary.displayTitle)",
+                    bundle: .appLanguage), symbol: "pencil", action: onBeginRename)
+                rowButton(title: String(
+                    localized: "Move \(summary.displayTitle) to Trash",
+                    bundle: .appLanguage), symbol: "trash", action: onTrash)
                     .foregroundStyle(Theme.Colors.destructive)
             }
         }
@@ -191,11 +201,11 @@ private struct NoteSwitcherRow: View {
             guard !editing else { return }
             onActivate()
         }
-        .accessibilityAction(named: "Rename \(summary.displayTitle)") {
+        .accessibilityAction(named: String(localized: "Rename \(summary.displayTitle)", bundle: .appLanguage)) {
             guard !editing else { return }
             onBeginRename()
         }
-        .accessibilityAction(named: "Move \(summary.displayTitle) to Trash") {
+        .accessibilityAction(named: String(localized: "Move \(summary.displayTitle) to Trash", bundle: .appLanguage)) {
             guard !editing else { return }
             onTrash()
         }

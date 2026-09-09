@@ -210,7 +210,7 @@ final class PalettePanel: NSPanel {
         animationBehavior = .none
         isReleasedWhenClosed = false
 
-        let hosting = NSHostingView(rootView: rootView)
+        let hosting = NSHostingView(rootView: AnyView(rootView.localizationEnvironment()))
         hosting.wantsLayer = true
         // The controller owns the frame; without this the top edge drifts on the swap.
         hosting.sizingOptions = []

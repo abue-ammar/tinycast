@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Blurred once it has content, so opening Settings on a stream cannot spill it; empty opens plain.
 struct SystemPromptEditor: View {
+    @Environment(\.locale) private var localizationLocale
     @Binding var text: String
 
     @Environment(\.isEnabled) private var isEnabled
@@ -18,7 +19,11 @@ struct SystemPromptEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             HStack(spacing: Theme.Spacing.sm) {
-                Text(text.isBlank ? "Nothing added" : "Added to every message")
+                Text(text.isBlank ? String(
+                    localized: "Nothing added",
+                    bundle: .appLanguage) : String(
+                    localized: "Added to every message",
+                    bundle: .appLanguage))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: Theme.Spacing.lg)
@@ -28,9 +33,16 @@ struct SystemPromptEditor: View {
                     Image(systemName: isRevealed ? "eye.slash" : "eye")
                 }
                 .buttonStyle(.plain)
-                .help(isRevealed ? "Hide the prompt" : "Show the prompt")
+                .help(isRevealed ? String(
+                    localized: "Hide the prompt",
+                    bundle: .appLanguage) : String(
+                    localized: "Show the prompt",
+                    bundle: .appLanguage))
                 .disabled(text.isBlank)
-                .accessibilityLabel(isRevealed ? "Hide the system prompt" : "Show the system prompt")
+                .accessibilityLabel(
+                    isRevealed
+                        ? String(localized: "Hide the system prompt", bundle: .appLanguage)
+                        : String(localized: "Show the system prompt", bundle: .appLanguage))
             }
             prompt
                 .padding(Theme.Spacing.sm)

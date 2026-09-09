@@ -41,9 +41,9 @@ final class ExtensionListPanelController {
     func present(_ content: AnyView, frame: NSRect, parent: NSWindow, palette: PaletteState) {
         let panel = ensurePanel(state: palette)
         if let hosting {
-            hosting.rootView = content
+            hosting.rootView = AnyView(content.localizationEnvironment())
         } else {
-            let view = NSHostingView(rootView: content)
+            let view = NSHostingView(rootView: AnyView(content.localizationEnvironment()))
             // The frame is stated from the control's place, so the host may never size the window.
             view.sizingOptions = []
             panel.contentView = view

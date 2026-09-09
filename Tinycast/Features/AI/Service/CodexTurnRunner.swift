@@ -92,10 +92,12 @@ final class CodexTurnRunner {
                 activeContinuation?.finish(
                     throwing: AIProviderError.responseFailed(
                         turn["error"]?.objectValue?["message"]?.stringValue
-                            ?? "Codex could not finish the response."))
+                            ?? String(localized: "Codex could not finish the response.", bundle: .appLanguage)))
             default:
                 activeContinuation?.finish(
-                    throwing: AIProviderError.responseFailed("The response was interrupted."))
+                    throwing: AIProviderError.responseFailed(String(
+                        localized: "The response was interrupted.",
+                        bundle: .appLanguage)))
             }
             clearActiveTurn()
         case "error":
@@ -103,7 +105,7 @@ final class CodexTurnRunner {
             activeContinuation?.finish(
                 throwing: AIProviderError.responseFailed(
                     params["error"]?.objectValue?["message"]?.stringValue
-                        ?? "Codex returned an error."))
+                        ?? String(localized: "Codex returned an error.", bundle: .appLanguage)))
             clearActiveTurn()
         default:
             break
@@ -140,7 +142,9 @@ final class CodexTurnRunner {
             })
         else {
             continuation.finish(
-                throwing: AIProviderError.unavailable("There is no user message to send."))
+                throwing: AIProviderError.unavailable(String(
+                    localized: "There is no user message to send.",
+                    bundle: .appLanguage)))
             return
         }
         var tookOwnership = false
@@ -150,18 +154,18 @@ final class CodexTurnRunner {
             try Task.checkCancellation()
             guard !model.isEmpty else {
                 throw AIProviderError.unavailable(
-                    "No Codex model is available for this account.")
+                    String(localized: "No Codex model is available for this account.", bundle: .appLanguage))
             }
             activeContinuation?.finish(
                 throwing: AIProviderError.responseFailed(
-                    "A newer request replaced this response."))
+                    String(localized: "A newer request replaced this response.", bundle: .appLanguage)))
             activeContinuation = continuation
             activeToken = token
             tookOwnership = true
 
             guard models.isEmpty || models.contains(where: { $0.id == model }) else {
                 throw AIProviderError.unavailable(
-                    "\(model) is no longer available. Choose another model in Settings.")
+                    String(localized: "\(model) is no longer available. Choose another model in Settings.", bundle: .appLanguage))
             }
 
             let threadResponse = try await client.request(
@@ -180,7 +184,7 @@ final class CodexTurnRunner {
                 let threadID = thread["id"]?.stringValue
             else {
                 throw CodexAppServerClient.ClientError.requestFailed(
-                    "Codex returned no generation thread.")
+                    String(localized: "Codex returned no generation thread.", bundle: .appLanguage))
             }
             // Claiming the thread after losing the turn aims `isActive` at a stream nobody reads.
             guard activeToken === token, !Task.isCancelled else { return }
@@ -296,7 +300,9 @@ final class CodexTurnRunner {
     private func clearActiveTurn() {
         let wasLive = activeContinuation != nil
         activeContinuation?.finish(
-            throwing: AIProviderError.responseFailed("The Codex connection was interrupted."))
+            throwing: AIProviderError.responseFailed(String(
+                localized: "The Codex connection was interrupted.",
+                bundle: .appLanguage)))
         activeContinuation = nil
         activeToken = nil
         activeThreadID = nil

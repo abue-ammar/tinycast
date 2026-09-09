@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CalendarSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
     @Environment(CalendarStore.self) private var store
@@ -12,9 +13,14 @@ struct CalendarSettingsView: View {
                 anchor: .calendarCalendar,
                 enableTitle: "Join meetings from Tinycast",
                 enableSubtitle:
-                    "Reads \(core.calendarCoordinator.span.possessivePhrase) events to find join "
-                    + "links. Nothing leaves this Mac.",
-                launcherSubtitle: "List individual meetings alongside apps and commands.",
+                    String(
+                        localized:
+                            "Reads \(String(localized: String.LocalizationValue(core.calendarCoordinator.span.possessivePhrase), bundle: .appLanguage)) events to find join links. Nothing leaves this Mac.",
+                        bundle: .appLanguage
+                    ),
+                launcherSubtitle: String(
+                    localized: "List individual meetings alongside apps and commands.",
+                    bundle: .appLanguage),
                 isEnabled: enabledBinding,
                 showsInLauncher: $settings.calendarShowInLauncher)
 
@@ -27,14 +33,17 @@ struct CalendarSettingsView: View {
                     SettingsRowTitle(.calendarSchedule, "Upcoming meetings in launcher")
                     Text("Choose how many upcoming meetings appear alongside apps and commands.")
                 }
+                .id("Upcoming meetings in launcher-\(localizationLocale.identifier)")
             }
             .settingsEnabled(settings.calendarEnabled && settings.calendarShowInLauncher)
 
             if store.access == .denied {
                 Section {
                     SettingsRow(
-                        title: "Calendar access is off",
-                        subtitle: "Turn Tinycast on under Privacy & Security ▸ Calendars."
+                        title: String(localized: "Calendar access is off", bundle: .appLanguage),
+                        subtitle: String(
+                            localized: "Turn Tinycast on under Privacy & Security ▸ Calendars.",
+                            bundle: .appLanguage)
                     ) {
                         Button("Open System Settings…") { Permissions.openCalendarSettings() }
                     }
@@ -60,6 +69,7 @@ struct CalendarSettingsView: View {
                     SettingsRowTitle(.calendarJoining, "Show the join card")
                     Text("How early the card appears, and how long past the start it stays.")
                 }
+                .id("Show the join card-\(localizationLocale.identifier)")
                 Toggle(isOn: $settings.autoJoinMeetings) {
                     SettingsRowTitle(.calendarJoining, "Auto Join Meetings")
                     Text("Automatically join meetings as they start.")
@@ -89,6 +99,7 @@ struct CalendarSettingsView: View {
                         "Its own menu bar item, showing a meeting icon or its title and countdown."
                     )
                 }
+                .id("Calendar in Menu Bar-\(localizationLocale.identifier)")
                 Picker(selection: $settings.menuBarEvents) {
                     ForEach(MenuBarEvents.allCases) { lead in
                         Text(lead.title).tag(lead)
@@ -96,10 +107,14 @@ struct CalendarSettingsView: View {
                 } label: {
                     SettingsRowTitle(.calendarMenuBar, "Show Upcoming Events")
                     Text(
-                        "When the next event reaches the menu bar. Today includes the next 30 "
-                            + "minutes after midnight."
+                        String(
+                            localized:
+                                "When the next event reaches the menu bar. Today includes the next 30 minutes after midnight.",
+                            bundle: .appLanguage
+                        )
                     )
                 }
+                .id("Show Upcoming Events-\(localizationLocale.identifier)")
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
                 Toggle(isOn: $settings.menuBarLinkedEventsOnly) {
                     SettingsRowTitle(.calendarMenuBar, "Only show events with meetings")
@@ -114,6 +129,7 @@ struct CalendarSettingsView: View {
                     SettingsRowTitle(.calendarMenuBar, "Hide Current Event")
                     Text("Choose whether to hide a started event or show its time left.")
                 }
+                .id("Hide Current Event-\(localizationLocale.identifier)")
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
             } header: {
                 SettingsSectionHeader(.calendarMenuBar)
@@ -142,6 +158,7 @@ struct CalendarSettingsView: View {
 
 /// The feature's own commands, so a shortcut or an alias is set beside what it acts on.
 private struct CalendarCommandsSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(VisibilityStore.self) private var visibility
 
     private let entries = [
@@ -152,7 +169,7 @@ private struct CalendarCommandsSection: View {
     var body: some View {
         Section {
             ForEach(entries) { entry in
-                SettingsRow(title: entry.name) {
+                SettingsRow(title: entry.localizedName) {
                     AppIconView(app: entry)
                         .frame(width: Theme.Size.settingsRowIcon, height: Theme.Size.settingsRowIcon)
                 } trailing: {
@@ -163,7 +180,7 @@ private struct CalendarCommandsSection: View {
                     Toggle("", isOn: visibilityBinding(entry))
                         .labelsHidden()
                         .toggleStyle(.checkbox)
-                        .accessibilityLabel("Show \(entry.name) in launcher")
+                        .accessibilityLabel("Show \(entry.localizedName) in launcher")
                 }
             }
         } header: {
@@ -185,6 +202,7 @@ private struct CalendarCommandsSection: View {
 
 /// Machine-local by nature, so these live on the store and never travel in a backup.
 private struct CalendarPickerSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(CalendarStore.self) private var store
     @State private var query = ""
 
@@ -198,7 +216,7 @@ private struct CalendarPickerSection: View {
 
     var body: some View {
         Section {
-            SettingsFilterField(prompt: "Search calendars…", query: $query)
+            SettingsFilterField(prompt: String(localized: "Search calendars…", bundle: .appLanguage), query: $query)
 
             if calendars.isEmpty {
                 Text(emptyMessage)
@@ -224,12 +242,18 @@ private struct CalendarPickerSection: View {
     private static let rowPadding: CGFloat = 15
 
     private var emptyMessage: String {
-        if !query.isEmpty { return "No matches for “\(query)”." }
-        return store.access == .granted ? "No calendars on this Mac." : "Nothing to show yet."
+        if !query.isEmpty { return String(localized: "No matches for “\(query)”.", bundle: .appLanguage) }
+        return store.access == .granted
+            ? String(
+                localized: "No calendars on this Mac.",
+                bundle: .appLanguage) : String(
+                localized: "Nothing to show yet.",
+                bundle: .appLanguage)
     }
 }
 
 private struct CalendarRow: View {
+    @Environment(\.locale) private var localizationLocale
     let calendar: MeetingCalendar
     @Environment(CalendarStore.self) private var store
 

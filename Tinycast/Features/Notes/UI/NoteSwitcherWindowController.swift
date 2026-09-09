@@ -43,7 +43,7 @@ final class NoteSwitcherWindowController: NSObject, NSWindowDelegate {
         if let panel { return panel }
         let root = NoteSwitcherView { [weak self] in self?.resize(toContentHeight: $0) }
             .environment(coordinator)
-        let hosting = NSHostingView(rootView: root)
+        let hosting = NSHostingView(rootView: AnyView(root.localizationEnvironment()))
         hosting.sizingOptions = []
         let panel = NotesPanel(
             content: hosting,

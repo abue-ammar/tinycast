@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct AISettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(AISettingsStore.self) private var settings
     @Environment(AppSettings.self) private var appSettings
@@ -95,11 +96,13 @@ struct AISettingsView: View {
 
     private var defaultModelFooter: String {
         if settings.defaultModel?.isOnDevice == true {
-            return "Apple Intelligence runs on this Mac. No key, no account, and nothing leaves it."
+            return String(
+                localized: "Apple Intelligence runs on this Mac. No key, no account, and nothing leaves it.",
+                bundle: .appLanguage)
         }
         return settings.defaultModel == nil
-            ? "Turn on Apple Intelligence, or add a provider above."
-            : "Tinycast contacts only the selected provider when an AI feature runs."
+            ? String(localized: "Turn on Apple Intelligence, or add a provider above.", bundle: .appLanguage)
+            : String(localized: "Tinycast contacts only the selected provider when an AI feature runs.", bundle: .appLanguage)
     }
 
     /// Why the on-device route is missing from the picker, or `nil` when it is there.
@@ -116,9 +119,15 @@ struct AISettingsView: View {
         }
         if !settings.connections.isEmpty {
             let count = settings.connections.count
-            providers.append(count == 1 ? "1 API connection" : "\(count) API connections")
+            providers.append(count == 1 ? String(
+                localized: "1 API connection",
+                bundle: .appLanguage) : String(
+                localized: "\(count) API connections",
+                bundle: .appLanguage))
         }
-        return providers.isEmpty ? "No external providers ready" : providers.joined(separator: ", ")
+        return providers.isEmpty ? String(
+            localized: "No external providers ready",
+            bundle: .appLanguage) : providers.joined(separator: ", ")
     }
 
     private var chatSection: some View {
@@ -142,21 +151,21 @@ struct AISettingsView: View {
         @Bindable var settings = settings
         return Section {
             Picker(selection: $settings.opensTo) {
-                ForEach(AIOpensTo.allCases) { Text($0.title).tag($0) }
+                ForEach(AIOpensTo.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
             } label: {
                 SettingsRowTitle(.aiConversations, "Opens to")
                 Text("What summoning AI Chat lands on.")
             }
             if settings.opensTo == .recent {
                 Picker(selection: $settings.newChatAfter) {
-                    ForEach(AINewChatAfter.allCases) { Text($0.title).tag($0) }
+                    ForEach(AINewChatAfter.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
                 } label: {
                     SettingsRowTitle(.aiConversations, "Start a new conversation after")
                     Text("Idle this long and the next summon starts fresh instead.")
                 }
             }
             Picker(selection: $settings.retention) {
-                ForEach(AIRetention.allCases) { Text($0.title).tag($0) }
+                ForEach(AIRetention.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
             } label: {
                 SettingsRowTitle(.aiConversations, "Keep conversations")
                 Text("Older conversations are deleted permanently.")
@@ -166,8 +175,10 @@ struct AISettingsView: View {
             SettingsSectionHeader(.aiConversations)
         } footer: {
             Text(
-                "Conversations stay on this Mac. Nothing here is carried in a settings backup — which "
-                    + "chats a Mac keeps is that Mac's business."
+                String(localized: """
+                    Conversations stay on this Mac. Nothing here is carried in a settings backup \
+                    — which chats a Mac keeps is that Mac's business.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -187,8 +198,10 @@ struct AISettingsView: View {
             SettingsSectionHeader(.aiSystemPrompt)
         } footer: {
             Text(
-                "Your text is sent ahead of every message in every chat, after what Tinycast "
-                    + "already tells the model about itself. Both are billed again on each turn."
+                String(localized: """
+                    Your text is sent ahead of every message in every chat, after what Tinycast \
+                    already tells the model about itself. Both are billed again on each turn.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -228,7 +241,11 @@ struct AISettingsView: View {
                 onCancel: { editor = nil })
         }
         .confirmationDialog(
-            pendingRemoval.map { "Remove “\($0.title)”?" } ?? "Remove connection?",
+            pendingRemoval.map { String(
+                localized: "Remove “\($0.title)”?",
+                bundle: .appLanguage) } ?? String(
+                localized: "Remove connection?",
+                bundle: .appLanguage),
             isPresented: removalPresented,
             titleVisibility: .visible
         ) {
@@ -250,10 +267,10 @@ struct AISettingsView: View {
             codexConnection
             if let limits = subscription.rateLimits, subscription.isConnected {
                 if let primary = limits.primary {
-                    quotaRow(primary, fallbackTitle: "Primary window")
+                    quotaRow(primary, fallbackTitle: String(localized: "Primary window", bundle: .appLanguage))
                 }
                 if let secondary = limits.secondary {
-                    quotaRow(secondary, fallbackTitle: "Secondary window")
+                    quotaRow(secondary, fallbackTitle: String(localized: "Secondary window", bundle: .appLanguage))
                 }
             }
             installedConnection(.claude)
@@ -262,8 +279,10 @@ struct AISettingsView: View {
             SettingsSectionHeader(.aiInstalledAI)
         } footer: {
             Text(
-                "Tinycast uses the Codex, Claude and OpenCode commands already installed and signed "
-                    + "in on this Mac. Tinycast never stores or asks for their API keys."
+                String(localized: """
+                    Tinycast uses the Codex, Claude and OpenCode commands already installed \
+                    and signed in on this Mac. Tinycast never stores or asks for their API keys.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -305,13 +324,15 @@ struct AISettingsView: View {
                         if let email = account.email {
                             RedactedText(
                                 value: email,
-                                revealHelp: "Click to reveal the signed-in account",
-                                hideHelp: "Click to hide the signed-in account")
+                                revealHelp: String(localized: "Click to reveal the signed-in account", bundle: .appLanguage),
+                                hideHelp: String(localized: "Click to hide the signed-in account", bundle: .appLanguage))
                         } else {
                             Text("Codex · Ready")
                         }
                         Text(
-                            account.planTitle == "API key" ? "Codex API key" : "ChatGPT \(account.planTitle)")
+                            account.planTitle == "API key" ? String(
+                                localized: "Codex API key",
+                                bundle: .appLanguage) : "ChatGPT \(account.planTitle)")
                     }
                 }
             case .unavailable(let message):
@@ -371,7 +392,9 @@ struct AISettingsView: View {
                 } label: {
                     Text("\(kind.title) · Ready")
                     Text(
-                        status.version.map { "Version \($0) · \(modelCount(status.models))" }
+                        status.version.map { String(
+                            localized: "Version \($0) · \(modelCount(status.models))",
+                            bundle: .appLanguage) }
                             ?? modelCount(status.models))
                 }
             case .signInRequired:
@@ -439,7 +462,7 @@ struct AISettingsView: View {
 
     private func providerToggle(_ kind: InstalledAIKind) -> some View {
         Toggle(
-            "Enable \(kind.title)",
+            String(localized: "Enable \(kind.title)", bundle: .appLanguage),
             isOn: Binding(
                 get: { settings.enabledInstalledProviders.contains(kind) },
                 set: { settings.setInstalledProviderEnabled($0, for: kind) })
@@ -480,8 +503,10 @@ struct AISettingsView: View {
             SettingsSectionHeader(.aiAPIConnections)
         } footer: {
             Text(
-                "OpenAI, Claude, Gemini and OpenRouter are presets. Custom OpenAI-compatible "
-                    + "endpoints are supported too. API keys stay in your login Keychain."
+                String(localized: """
+                    OpenAI, Claude, Gemini and OpenRouter are presets. Custom OpenAI-compatible \
+                    endpoints are supported too. API keys stay in your login Keychain.
+                    """, bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -529,9 +554,9 @@ struct AISettingsView: View {
         _ window: ChatGPTSubscription.UsageWindow, fallback: String
     ) -> String {
         guard let minutes = window.durationMinutes else { return fallback }
-        if minutes >= 1_440 { return "\(minutes / 1_440)-day window" }
-        if minutes >= 60 { return "\(minutes / 60)-hour window" }
-        return "\(minutes)-minute window"
+        if minutes >= 1_440 { return String(localized: "\(minutes / 1_440)-day window", bundle: .appLanguage) }
+        if minutes >= 60 { return String(localized: "\(minutes / 60)-hour window", bundle: .appLanguage) }
+        return String(localized: "\(minutes)-minute window", bundle: .appLanguage)
     }
 
     private func edit(_ connection: AIConnection) {
@@ -552,11 +577,13 @@ struct AISettingsView: View {
             } else if retargeted, AIEndpointPolicy.isLoopback(connection.baseURL) {
                 try keyStore.removeSecret(for: connection.id)
             } else if retargeted {
-                return "Enter an API key for this endpoint — the saved key stays with the old one."
+                return String(
+                    localized: "Enter an API key for this endpoint — the saved key stays with the old one.",
+                    bundle: .appLanguage)
             } else if !AIEndpointPolicy.isLoopback(connection.baseURL)
                 && keyStatuses[connection.id] != true
             {
-                return "Enter an API key for this remote provider."
+                return String(localized: "Enter an API key for this remote provider.", bundle: .appLanguage)
             }
             settings.save(connection)
             editor = nil
@@ -566,8 +593,8 @@ struct AISettingsView: View {
         } catch {
             keyError = true
             return isNew
-                ? "The key could not be saved to Keychain."
-                : "The saved key could not be updated in Keychain."
+                ? String(localized: "The key could not be saved to Keychain.", bundle: .appLanguage)
+                : String(localized: "The saved key could not be updated in Keychain.", bundle: .appLanguage)
         }
     }
 
@@ -590,11 +617,11 @@ struct AISettingsView: View {
 
     private func copySignInCommand(_ kind: InstalledAIKind) {
         Paster.copyPlainText(kind.signInCommand)
-        core.showMessage("Copied \(kind.signInCommand)")
+        core.showMessage(String(localized: "Copied \(kind.signInCommand)", bundle: .appLanguage))
     }
 
     private func modelCount(_ models: [InstalledAIModel]) -> String {
-        models.count == 1 ? "1 model" : "\(models.count) models"
+        models.count == 1 ? "1 model" : String(localized: "\(models.count) models", bundle: .appLanguage)
     }
 
     private func loadKeyStatuses() {
@@ -620,6 +647,7 @@ private struct AIConnectionEditorTarget: Identifiable {
 }
 
 private struct AIConnectionRow: View {
+    @Environment(\.locale) private var localizationLocale
     let connection: AIConnection
     let hasStoredKey: Bool
     let onEdit: () -> Void
@@ -647,16 +675,23 @@ private struct AIConnectionRow: View {
     }
 
     private var keyStatus: String {
-        if AIEndpointPolicy.isLoopback(connection.baseURL), !hasStoredKey { return "No key" }
-        return hasStoredKey ? "Keychain" : "Key missing"
+        if AIEndpointPolicy.isLoopback(connection.baseURL), !hasStoredKey { return String(
+            localized: "No key",
+            bundle: .appLanguage) }
+        return hasStoredKey ? String(
+            localized: "Keychain",
+            bundle: .appLanguage) : String(
+            localized: "Key missing",
+            bundle: .appLanguage)
     }
 
     private var modelCount: String {
-        connection.models.count == 1 ? "1 model" : "\(connection.models.count) models"
+        connection.models.count == 1 ? "1 model" : String(localized: "\(connection.models.count) models", bundle: .appLanguage)
     }
 }
 
 private struct AIConnectionEditorSheet: View {
+    @Environment(\.locale) private var localizationLocale
     let target: AIConnectionEditorTarget
     let onSave: (AIConnection, String, Bool) -> String?
     let onCancel: () -> Void
@@ -685,24 +720,24 @@ private struct AIConnectionEditorSheet: View {
         VStack(spacing: 0) {
             Form {
                 Section {
-                    editorField("Name") {
+                    editorField(String(localized: "Name", bundle: .appLanguage)) {
                         TextField(
                             "Name", text: $connection.name, prompt: Text("Optional label"))
                     }
-                    editorField("Provider") {
+                    editorField(String(localized: "Provider", bundle: .appLanguage)) {
                         Picker("Provider", selection: $connection.provider) {
                             ForEach(AIProviderKind.allCases) { provider in
-                                Text(provider.title).tag(provider)
+                                Text(LocalizedStringKey(provider.title)).tag(provider)
                             }
                         }
                         .labelsHidden()
                     }
-                    editorField("Base URL") {
+                    editorField(String(localized: "Base URL", bundle: .appLanguage)) {
                         TextField(
                             "Base URL", text: $connection.baseURL,
                             prompt: Text(connection.provider.defaultBaseURL))
                     }
-                    editorField("API Key") {
+                    editorField(String(localized: "API Key", bundle: .appLanguage)) {
                         SecureField(
                             "API Key", text: $key, prompt: Text(apiKeyPlaceholder))
                     }
@@ -712,8 +747,11 @@ private struct AIConnectionEditorSheet: View {
                             .foregroundStyle(.secondary)
                     } else if target.hasStoredKey {
                         Label(
-                            "The saved key stays with the endpoint it was saved for. "
-                                + "Enter a key for this one.",
+                            String(
+                                localized:
+                                    "The saved key stays with the endpoint it was saved for. Enter a key for this one.",
+                                bundle: .appLanguage
+                            ),
                             systemImage: "exclamationmark.triangle"
                         )
                         .font(.caption)
@@ -723,7 +761,11 @@ private struct AIConnectionEditorSheet: View {
                         Text(error).foregroundStyle(.orange)
                     }
                 } header: {
-                    Text(target.isNew ? "Add API Connection" : "Edit API Connection")
+                    Text(target.isNew ? String(
+                        localized: "Add API Connection",
+                        bundle: .appLanguage) : String(
+                        localized: "Edit API Connection",
+                        bundle: .appLanguage))
                 }
 
                 Section {
@@ -741,8 +783,10 @@ private struct AIConnectionEditorSheet: View {
                     }
                 } footer: {
                     Text(
-                        "Search the models available to this key and add one or more. Exact model "
-                            + "IDs remain available when discovery is unsupported."
+                        String(localized: """
+                            Search the models available to this key and add one or more. Exact model \
+                            IDs remain available when discovery is unsupported.
+                            """, bundle: .appLanguage)
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -800,7 +844,7 @@ private struct AIConnectionEditorSheet: View {
                     .foregroundStyle(.secondary)
                 manualModelField
             } else {
-                editorField("Find a model") {
+                editorField(String(localized: "Find a model", bundle: .appLanguage)) {
                     TextField(
                         "Find a model", text: $modelQuery,
                         prompt: Text(modelSearchPlaceholder)
@@ -869,7 +913,7 @@ private struct AIConnectionEditorSheet: View {
     }
 
     private var manualModelField: some View {
-        editorField("Model ID") {
+        editorField(String(localized: "Model ID", bundle: .appLanguage)) {
             TextField("Model ID", text: $modelQuery, prompt: Text(modelPlaceholder))
                 .onSubmit(addManualModel)
         }
@@ -904,10 +948,10 @@ private struct AIConnectionEditorSheet: View {
 
     private var modelPlaceholder: String {
         switch connection.provider {
-        case .openAI, .openAICompatible: return "Model ID (e.g. gpt-5.4-mini)"
-        case .anthropic: return "Model ID (e.g. claude-sonnet-4-6)"
-        case .gemini: return "Model ID (e.g. gemini-3.7-flash)"
-        case .openRouter: return "Model ID (e.g. openai/gpt-5.4-mini)"
+        case .openAI, .openAICompatible: return String(localized: "Model ID (e.g. gpt-5.4-mini)", bundle: .appLanguage)
+        case .anthropic: return String(localized: "Model ID (e.g. claude-sonnet-4-6)", bundle: .appLanguage)
+        case .gemini: return String(localized: "Model ID (e.g. gemini-3.7-flash)", bundle: .appLanguage)
+        case .openRouter: return String(localized: "Model ID (e.g. openai/gpt-5.4-mini)", bundle: .appLanguage)
         }
     }
 
@@ -917,14 +961,20 @@ private struct AIConnectionEditorSheet: View {
     }
 
     private var apiKeyPlaceholder: String {
-        if storedKeyMatchesTarget { return "Leave blank to keep saved key" }
-        if AIEndpointPolicy.isLoopback(connection.baseURL) { return "Optional for local endpoint" }
-        return "Paste API key"
+        if storedKeyMatchesTarget { return String(localized: "Leave blank to keep saved key", bundle: .appLanguage) }
+        if AIEndpointPolicy.isLoopback(connection.baseURL) { return String(
+            localized: "Optional for local endpoint",
+            bundle: .appLanguage) }
+        return String(localized: "Paste API key", bundle: .appLanguage)
     }
 
     private var modelSearchPlaceholder: String {
         connection.provider == .openRouter
-            ? "Search by model or company" : "Search available models"
+            ? String(
+                localized: "Search by model or company",
+                bundle: .appLanguage) : String(
+                localized: "Search available models",
+                bundle: .appLanguage)
     }
 
     private func matchingModels(
@@ -961,7 +1011,9 @@ private struct AIConnectionEditorSheet: View {
                 apiKey = try KeychainSecretStore.aiAPIKeys.secret(for: connection.id) ?? ""
             } catch {
                 discovery = .failed(
-                    "The saved key could not be read from Keychain.", allowsManualEntry: false)
+                    String(
+                        localized: "The saved key could not be read from Keychain.",
+                        bundle: .appLanguage), allowsManualEntry: false)
                 return
             }
         } else if AIEndpointPolicy.isLoopback(connection.baseURL) {
@@ -977,7 +1029,7 @@ private struct AIConnectionEditorSheet: View {
         } catch {
             discovery = .failed(
                 (error as? LocalizedError)?.errorDescription
-                    ?? "Enter a valid provider base URL.",
+                    ?? String(localized: "Enter a valid provider base URL.", bundle: .appLanguage),
                 allowsManualEntry: false)
             return
         }
@@ -994,7 +1046,7 @@ private struct AIConnectionEditorSheet: View {
             let catalogError = error as? AIModelDiscovery.DiscoveryError
             discovery = .failed(
                 catalogError?.errorDescription
-                    ?? "The provider could not load models. Enter one manually.",
+                    ?? String(localized: "The provider could not load models. Enter one manually.", bundle: .appLanguage),
                 allowsManualEntry: catalogError != .rejectedKey)
         }
     }
@@ -1030,11 +1082,11 @@ private struct AIConnectionEditorSheet: View {
 
     private func save() {
         if case .failed(_, let allowsManualEntry) = discovery, !allowsManualEntry {
-            error = "Resolve the API key or endpoint error before saving."
+            error = String(localized: "Resolve the API key or endpoint error before saving.", bundle: .appLanguage)
             return
         }
         guard !connection.models.isEmpty else {
-            error = "Select or add at least one model."
+            error = String(localized: "Select or add at least one model.", bundle: .appLanguage)
             return
         }
         do {
@@ -1042,7 +1094,7 @@ private struct AIConnectionEditorSheet: View {
         } catch {
             self.error =
                 (error as? LocalizedError)?.errorDescription
-                ?? "Enter a valid provider base URL."
+                ?? String(localized: "Enter a valid provider base URL.", bundle: .appLanguage)
             return
         }
         error = onSave(connection, key, target.isNew)

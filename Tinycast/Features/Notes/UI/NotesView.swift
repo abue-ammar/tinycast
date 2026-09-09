@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NotesView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(NotesCoordinator.self) private var notes
 
     var body: some View {
@@ -102,13 +103,28 @@ struct NotesView: View {
 
 /// The title bar's trailing controls: the launcher's footer capsule, with glyphs instead of pills.
 private struct NoteTitlebarActions: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(NotesCoordinator.self) private var notes
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xxs) {
-            action("plus", "Create Note", "Create Note  ⌘N", notes.createNote)
-            action("rectangle.stack", "Browse Notes", "Browse Notes  ⌘P", notes.searchNotes)
-            action("folder", "Open Notes Folder", "Open Notes Folder  ⌘O", notes.openNotesFolder)
+            action("plus", String(
+                localized: "Create Note",
+                bundle: .appLanguage), String(
+                localized: "Create Note  ⌘N",
+                bundle: .appLanguage), notes.createNote)
+            action("rectangle.stack", String(
+                localized: "Browse Notes",
+                bundle: .appLanguage), String(
+                localized: "Browse Notes  ⌘P",
+                bundle: .appLanguage), notes.searchNotes)
+            action(
+                "folder", String(
+                    localized: "Open Notes Folder",
+                    bundle: .appLanguage), String(
+                    localized: "Open Notes Folder  ⌘O",
+                    bundle: .appLanguage),
+                notes.openNotesFolder)
         }
         .padding(Theme.Spacing.xs)
         .frosted(in: Capsule())

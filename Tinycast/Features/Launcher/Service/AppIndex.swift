@@ -103,11 +103,21 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
 
+    /// Only built-in names belong to Tinycast's translation catalog.
+    var localizedName: String {
+        switch kind {
+        case .command, .systemAction, .windowCommand:
+            return String(localized: String.LocalizationValue(name), bundle: .appLanguage)
+        default:
+            return name
+        }
+    }
+
     /// What this entry is called, in the shape `EntryNaming` reads.
     var naming: EntryNaming.Sources {
-        var sources = EntryNaming.Sources(name: name)
+        var sources = EntryNaming.Sources(name: localizedName)
         sources.strongNames = matchAliases
-        sources.translations = alternateNames
+        sources.translations = alternateNames + (localizedName == name ? [] : [name])
         sources.ownerName = ownerName
         sources.bundleID = bundleID
         sources.executableName = executableName
@@ -128,7 +138,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         matchAliases.append(candidate)
     }
 
-    var kindLabel: String { ownerName ?? kind.descriptor.label }
+    var kindLabel: String {
+        ownerName ?? String(localized: String.LocalizationValue(kind.descriptor.label), bundle: .appLanguage)
+    }
 
     /// The hotkey action for this entry, or nil when the entry has no addressable action.
     var hotKeyAction: HotKeyAction? {
@@ -216,6 +228,13 @@ extension AppEntry.Kind {
     private static let byCategoryName: [String: AppEntry.Kind] = allCases.reduce(into: [:]) {
         $0[$1.descriptor.sectionTitle.lowercased()] = $1
         $0[$1.descriptor.label.lowercased()] = $1
+        for language in ["en", "zh-Hans"] {
+            let bundle = AppLocalization.bundle(for: Locale(identifier: language))
+            let section = String(localized: String.LocalizationValue($1.descriptor.sectionTitle), bundle: bundle)
+            let label = String(localized: String.LocalizationValue($1.descriptor.label), bundle: bundle)
+            $0[section.lowercased()] = $1
+            $0[label.lowercased()] = $1
+        }
     }
 
     /// The category a query names outright. Exact only — a prefix would take a word from an entry.
@@ -485,6 +504,10 @@ final class AppIndex {
             entry.buildAliases()
             return entry
         }
+    }
+
+    func refreshLanguage() {
+        publishEntries()
     }
 
     private func publishEntries() {

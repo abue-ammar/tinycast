@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The palette's extension screen: whichever root component the running command rendered.
 struct ExtensionCommandView: View {
+    @Environment(\.locale) private var localizationLocale
     let screen: ExtensionScreen
     let state: ExtensionSessionState
     let selection: Int
@@ -21,11 +22,11 @@ struct ExtensionCommandView: View {
     private var content: some View {
         switch state {
         case .launching where screen.root == nil:
-            EmptyResults(text: "Starting…")
+            EmptyResults(text: String(localized: "Starting…", bundle: .appLanguage))
         case .failed(let message):
             ExtensionFailureView(message: message)
         case .finished:
-            EmptyResults(text: "Done")
+            EmptyResults(text: String(localized: "Done", bundle: .appLanguage))
         default:
             switch screen.kind {
             case .list, .grid:
@@ -46,11 +47,15 @@ struct ExtensionCommandView: View {
             case .unsupported(let type):
                 if type.isEmpty {
                     // A commit rendered null; "Starting…" here would look like a hang.
-                    EmptyResults(text: "Nothing to show")
+                    EmptyResults(text: String(localized: "Nothing to show", bundle: .appLanguage))
                 } else {
                     ExtensionFailureView(
                         message:
-                            "This command renders \(type), which Tinycast doesn't support yet. See docs/extensions.md."
+                            String(
+                                localized:
+                                    "This command renders \(type), which Tinycast doesn't support yet. See docs/extensions.md.",
+                                bundle: .appLanguage
+                            )
                     )
                 }
             }
@@ -60,6 +65,7 @@ struct ExtensionCommandView: View {
 
 /// The stack trace is kept: it is the only debugging signal an author gets.
 struct ExtensionFailureView: View {
+    @Environment(\.locale) private var localizationLocale
     let message: String
 
     private var headline: String {
@@ -97,6 +103,7 @@ struct ExtensionFailureView: View {
 
 /// `showHUD` is a separate window: a no-view command closes the palette first.
 struct ExtensionFeedbackOverlay: View {
+    @Environment(\.locale) private var localizationLocale
     let toasts: [ExtensionToast]
     let onToastAction: (String) -> Void
 
@@ -113,6 +120,7 @@ struct ExtensionFeedbackOverlay: View {
     }
 
     private struct ToastRow: View {
+        @Environment(\.locale) private var localizationLocale
         let toast: ExtensionToast
         let onAction: (String) -> Void
 

@@ -63,6 +63,7 @@ struct PopoverMenuContent {
 
 /// The palette's own menu, hosted by `MenuPanelController` in a window of its own.
 struct PopoverMenu: View {
+    @Environment(\.locale) private var localizationLocale
     var header: String?
     let items: [PopoverMenuItem]
     @Binding var selection: Int
@@ -171,6 +172,7 @@ struct PopoverMenu: View {
 
 /// One menu row; highlight is selection-driven, so only one row is ever active.
 private struct PopoverMenuRow: View {
+    @Environment(\.locale) private var localizationLocale
     let item: PopoverMenuItem
     let selected: Bool
     let onActivate: () -> Void

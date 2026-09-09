@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Swatches and a searchable symbol grid. Changes apply at once: the launcher is the real preview.
 struct ExtensionAppearancePicker: View {
+    @Environment(\.locale) private var localizationLocale
     let current: ExtensionAppearance
     /// Whether it is re-skinned, the only time resetting means anything.
     let isCustom: Bool
@@ -71,9 +72,10 @@ struct ExtensionAppearancePicker: View {
                     .pointerStyle(.horizontalText)
                 Picker("", selection: $category) {
                     ForEach(catalog.categories) { item in
-                        Text(item.title).tag(item)
+                        Text(item.localizedTitle).tag(item)
                     }
                 }
+                .id("Symbol Category-\(localizationLocale.identifier)")
                 .labelsHidden()
                 .fixedSize()
             }
@@ -135,8 +137,10 @@ struct ExtensionAppearancePicker: View {
     }
 
     private func footnote(_ count: Int) -> String {
-        let noun = count == 1 ? "symbol" : "symbols"
-        return query.isEmpty ? "\(count) \(noun) in \(category.title)" : "\(count) \(noun) matching"
+        if query.isEmpty {
+            return String(localized: "Symbols in \(category.localizedTitle): \(count)", bundle: .appLanguage)
+        }
+        return String(localized: "Matching symbols: \(count)", bundle: .appLanguage)
     }
 }
 

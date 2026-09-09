@@ -2,6 +2,7 @@ import SwiftUI
 
 /// A colour entry's preview: the colour and the copied text, the notations being ⌘K's business.
 struct ColorPreview: View {
+    @Environment(\.locale) private var localizationLocale
     let color: ColorValue
     let text: String
 

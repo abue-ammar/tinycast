@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 struct PermissionsSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
     @State private var calendarAccess = Permissions.calendarAccess()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -11,7 +12,11 @@ struct PermissionsSettingsView: View {
             Section {
                 LabeledContent {
                     Label(
-                        accessibilityTrusted ? "Granted" : "Not granted",
+                        accessibilityTrusted ? String(
+                            localized: "Granted",
+                            bundle: .appLanguage) : String(
+                            localized: "Not granted",
+                            bundle: .appLanguage),
                         systemImage: accessibilityTrusted
                             ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
                     )
@@ -22,11 +27,18 @@ struct PermissionsSettingsView: View {
                 }
 
                 LabeledContent {
-                    Button(accessibilityTrusted ? "Open…" : "Grant Access…") {
+                    Button(accessibilityTrusted ? String(
+                        localized: "Open…",
+                        bundle: .appLanguage) : String(
+                        localized: "Grant Access…",
+                        bundle: .appLanguage)) {
                         Permissions.openAccessibilitySettings()
                     }
                 } label: {
-                    Text(accessibilityTrusted ? "Manage in System Settings" : "Grant access")
+                    Text(
+                        accessibilityTrusted
+                            ? String(localized: "Manage in System Settings", bundle: .appLanguage)
+                            : String(localized: "Grant access", bundle: .appLanguage))
                     Text("Opens Privacy & Security › Accessibility.")
                 }
             } header: {
@@ -65,9 +77,11 @@ struct PermissionsSettingsView: View {
 
     private var calendarStatus: (title: String, symbol: String, tint: Color) {
         switch calendarAccess {
-        case .granted: return ("Granted", "checkmark.circle.fill", .green)
-        case .notDetermined: return ("Not asked yet", "questionmark.circle.fill", .secondary)
-        case .denied: return ("Not granted", "exclamationmark.triangle.fill", .orange)
+        case .granted: return (String(localized: "Granted", bundle: .appLanguage), "checkmark.circle.fill", .green)
+        case .notDetermined: return (String(
+            localized: "Not asked yet",
+            bundle: .appLanguage), "questionmark.circle.fill", .secondary)
+        case .denied: return (String(localized: "Not granted", bundle: .appLanguage), "exclamationmark.triangle.fill", .orange)
         }
     }
 

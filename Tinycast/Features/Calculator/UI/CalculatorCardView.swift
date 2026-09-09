@@ -25,6 +25,7 @@ enum CalcMemo {
 
 /// The inline answer card above the app results; selectable like a row, Enter copies.
 struct CalculatorCard: View {
+    @Environment(\.locale) private var localizationLocale
     let result: CalcResult
     let selected: Bool
 
@@ -104,11 +105,15 @@ enum CalcActionsMenu {
         PopoverMenuContent(
             header: result.expression,
             items: [
-                PopoverMenuItem(title: "Copy Answer", systemImage: "doc.on.doc", shortcut: "↵") {
+                PopoverMenuItem(title: String(
+                    localized: "Copy Answer",
+                    bundle: .appLanguage), systemImage: "doc.on.doc", shortcut: "↵") {
                     core.calculatorCoordinator.copyCalculatorResult(result)
                 },
                 PopoverMenuItem(
-                    title: "Copy Calculation", systemImage: "doc.on.doc.fill", shortcut: "⇧⌘↵"
+                    title: String(
+                        localized: "Copy Calculation",
+                        bundle: .appLanguage), systemImage: "doc.on.doc.fill", shortcut: "⇧⌘↵"
                 ) {
                     core.calculatorCoordinator.copyCalculationWithExpression(result)
                 }

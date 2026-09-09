@@ -45,6 +45,7 @@ struct SnippetsList: View {
 }
 
 private struct SnippetRow: View {
+    @Environment(\.locale) private var localizationLocale
     let record: StoredSnippet
     let selected: Bool
     @State private var hovered = false
@@ -86,6 +87,7 @@ private struct SnippetRow: View {
 }
 
 struct SnippetPreview: View {
+    @Environment(\.locale) private var localizationLocale
     let record: StoredSnippet?
 
     var body: some View {
@@ -110,6 +112,7 @@ struct SnippetPreview: View {
 
 /// The "Information" block; everything in it is already in memory, so nothing is gathered off-main.
 private struct SnippetInfoSection: View {
+    @Environment(\.locale) private var localizationLocale
     let record: StoredSnippet
 
     private struct InfoRow: Identifiable {
@@ -119,13 +122,13 @@ private struct SnippetInfoSection: View {
     }
 
     private var rows: [InfoRow] {
-        var rows = [InfoRow(label: "Name", value: record.snippet.name)]
+        var rows = [InfoRow(label: String(localized: "Name", bundle: .appLanguage), value: record.snippet.name)]
         if let keyword = record.snippet.keyword, !keyword.isEmpty {
-            rows.append(InfoRow(label: "Keyword", value: keyword))
+            rows.append(InfoRow(label: String(localized: "Keyword", bundle: .appLanguage), value: keyword))
         }
-        rows.append(InfoRow(label: "File", value: record.fileURL.lastPathComponent))
+        rows.append(InfoRow(label: String(localized: "File", bundle: .appLanguage), value: record.fileURL.lastPathComponent))
         rows.append(
-            InfoRow(label: "Characters", value: record.snippet.text.count.formatted()))
+            InfoRow(label: String(localized: "Characters", bundle: .appLanguage), value: record.snippet.text.count.formatted()))
         return rows
     }
 

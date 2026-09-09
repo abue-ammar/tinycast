@@ -8,8 +8,8 @@ enum SettingsPaneScanner {
 
     /// Panes whose bundle carries a junk or missing display name; keyed by CFBundleIdentifier.
     private static let nameOverrides: [String: String] = [
-        "com.apple.Battery-Settings.extension": "Battery",
-        "com.apple.HeadphoneSettings": "Headphones"
+        "com.apple.Battery-Settings.extension": String(localized: "Battery", bundle: .appLanguage),
+        "com.apple.HeadphoneSettings": String(localized: "Headphones", bundle: .appLanguage)
     ]
 
     /// Panes that shouldn't appear in the launcher at all (contextual/one-shot panes).

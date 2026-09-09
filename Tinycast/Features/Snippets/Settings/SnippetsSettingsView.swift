@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SnippetsSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(SnippetsStore.self) private var snippetsStore
     @Environment(AppSettings.self) private var settings
@@ -15,8 +16,10 @@ struct SnippetsSettingsView: View {
                 anchor: .snippetsSnippets,
                 enableTitle: "Enable snippets",
                 enableSubtitle:
-                    "Reusable Markdown templates, expanded from the launcher or a typed keyword.",
-                launcherSubtitle: "Find your snippets in launcher search.",
+                    String(
+                        localized: "Reusable Markdown templates, expanded from the launcher or a typed keyword.",
+                        bundle: .appLanguage),
+                launcherSubtitle: String(localized: "Find your snippets in launcher search.", bundle: .appLanguage),
                 // Enabling is also keyword-expansion consent, so it uses the confirming setter.
                 isEnabled: Binding(
                     get: { settings.snippetsEnabled },
@@ -79,8 +82,15 @@ struct SnippetsSettingsView: View {
     private var library: some View {
         Section {
             if sortedSnippets.isEmpty {
-                Text(snippetsStore.state == .loading ? "Loading snippets…" : "No snippets yet.")
-                    .foregroundStyle(.secondary)
+                Text(
+                    snippetsStore.state == .loading
+                        ? String(
+                            localized: "Loading snippets…",
+                            bundle: .appLanguage) : String(
+                            localized: "No snippets yet.",
+                            bundle: .appLanguage)
+                )
+                .foregroundStyle(.secondary)
             } else {
                 ForEach(sortedSnippets) { record in
                     SnippetSettingsRow(
@@ -114,13 +124,13 @@ struct SnippetsSettingsView: View {
         if case .failed(let message) = snippetsStore.state {
             noticeSection(
                 "Couldn’t load the snippet library", message, tint: .orange,
-                retryHint: "Tries to load the snippet library again.")
+                retryHint: String(localized: "Tries to load the snippet library again.", bundle: .appLanguage))
         }
 
         if !snippetsStore.issues.isEmpty {
             noticeSection(
                 snippetIssueTitle, snippetIssueMessage, tint: .orange,
-                retryHint: "Reloads snippet files after you fix them on disk.")
+                retryHint: String(localized: "Reloads snippet files after you fix them on disk.", bundle: .appLanguage))
         }
 
         // The editor reports its own failures, so this covers the ones with no sheet behind.
@@ -157,7 +167,8 @@ struct SnippetsSettingsView: View {
     private var snippetIssueTitle: String {
         let count = snippetsStore.issues.count
         return count == 1
-            ? "1 snippet file couldn’t be loaded" : "\(count) snippet files couldn’t be loaded"
+            ? String(localized: "1 snippet file couldn’t be loaded", bundle: .appLanguage)
+            : String(localized: "\(count) snippet files couldn’t be loaded", bundle: .appLanguage)
     }
 
     private var snippetIssueMessage: String {
@@ -166,7 +177,9 @@ struct SnippetsSettingsView: View {
             return "\(first.fileURL.lastPathComponent): \(first.message)"
         }
         return
-            "\(first.fileURL.lastPathComponent): \(first.message) Plus \(snippetsStore.issues.count - 1) more."
+            String(
+                localized: "\(first.fileURL.lastPathComponent): \(first.message) Plus \(snippetsStore.issues.count - 1) more.",
+                bundle: .appLanguage)
     }
 
     private func delete(_ record: StoredSnippet) {
@@ -181,6 +194,7 @@ struct SnippetEditRequest: Identifiable {
 }
 
 private struct SnippetSettingsRow: View {
+    @Environment(\.locale) private var localizationLocale
     let record: StoredSnippet
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -216,6 +230,7 @@ private struct SnippetSettingsRow: View {
 }
 
 private struct SnippetEditorSheet: View {
+    @Environment(\.locale) private var localizationLocale
     /// nil while adding; otherwise the record whose file (and revision) the save targets.
     let record: StoredSnippet?
 
@@ -243,25 +258,34 @@ private struct SnippetEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(record == nil ? "Add Snippet" : "Edit Snippet")
+            Text(record == nil ? String(
+                localized: "Add Snippet",
+                bundle: .appLanguage) : String(
+                localized: "Edit Snippet",
+                bundle: .appLanguage))
                 .font(.title2.weight(.bold))
 
             field(
-                title: "Name", placeholder: "Email Sign-off", text: $name,
-                hint: "Required. Shown in the library and launcher.")
+                title: String(
+                    localized: "Name",
+                    bundle: .appLanguage), placeholder: String(
+                    localized: "Email Sign-off",
+                    bundle: .appLanguage), text: $name,
+                hint: String(localized: "Required. Shown in the library and launcher.", bundle: .appLanguage))
             field(
-                title: "Keyword", placeholder: "Optional, for example !notes", text: $keyword,
-                hint: "Optional. Type this to expand the snippet.")
+                title: String(localized: "Keyword", bundle: .appLanguage),
+                placeholder: String(localized: "Optional, for example !notes", bundle: .appLanguage), text: $keyword,
+                hint: String(localized: "Optional. Type this to expand the snippet.", bundle: .appLanguage))
 
             templateEditor
 
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 optionToggle(
                     "Enabled", isOn: $isEnabled,
-                    detail: "Disabled snippets cannot be expanded.")
+                    detail: String(localized: "Disabled snippets cannot be expanded.", bundle: .appLanguage))
                 optionToggle(
                     "Show confirmation", isOn: $showsConfirmation,
-                    detail: "Confirm on screen after this snippet is inserted.")
+                    detail: String(localized: "Confirm on screen after this snippet is inserted.", bundle: .appLanguage))
             }
 
             if let errorMessage {

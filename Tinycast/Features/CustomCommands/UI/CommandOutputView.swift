@@ -3,6 +3,7 @@ import SwiftUI
 
 /// One flat surface: the log is the page, separated by space and weight, not by rules.
 struct CommandOutputView: View {
+    @Environment(\.locale) private var localizationLocale
     let presenter: CommandOutputPresenter
 
     static let initialSize = CGSize(width: 720, height: 460)
@@ -50,9 +51,9 @@ struct CommandOutputView: View {
         HStack(spacing: Theme.Spacing.xs) {
             CopyLogButton(log: run.log)
             if run.isRunning {
-                iconButton("stop.fill", help: "Stop") { presenter.stopRunning() }
+                iconButton("stop.fill", help: String(localized: "Stop", bundle: .appLanguage)) { presenter.stopRunning() }
             } else {
-                iconButton("arrow.clockwise", help: "Run Again") { presenter.runAgain() }
+                iconButton("arrow.clockwise", help: String(localized: "Run Again", bundle: .appLanguage)) { presenter.runAgain() }
             }
         }
     }
@@ -135,6 +136,7 @@ struct CommandOutputView: View {
 
 /// Copies the whole log, then shows a checkmark long enough to be believed.
 private struct CopyLogButton: View {
+    @Environment(\.locale) private var localizationLocale
     let log: String
     @State private var copiedAt: Date?
 
@@ -147,7 +149,7 @@ private struct CopyLogButton: View {
                 .font(Theme.Typography.bar)
                 .foregroundStyle(copiedAt == nil ? Theme.Colors.textSecondary : Theme.Colors.success)
         }
-        .tooltip("Copy Output")
+        .tooltip(String(localized: "Copy Output", bundle: .appLanguage))
         .task(id: copiedAt) {
             guard copiedAt != nil else { return }
             try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))

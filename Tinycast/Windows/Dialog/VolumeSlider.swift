@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Our own slider: `NSSlider` would drop an Aqua control onto a vibrancy surface.
 struct VolumeSlider: View {
+    @Environment(\.locale) private var localizationLocale
     let state: VolumeState
 
     var body: some View {

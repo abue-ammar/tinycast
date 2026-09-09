@@ -2,6 +2,7 @@ import SwiftUI
 
 /// A sibling of `RaycastImportSelection`, not a generalisation: only this greys absent rows.
 struct BackupCategorySelection: View {
+    @Environment(\.locale) private var localizationLocale
     @Binding var selection: Set<BackupCategory>
     /// Categories the file actually holds, with how much. nil means everything is offered.
     var available: [BackupCategory: Int]?
@@ -38,7 +39,7 @@ struct BackupCategorySelection: View {
                             Image(systemName: category.descriptor.symbol)
                                 .foregroundStyle(.secondary)
                                 .frame(width: 16)
-                            Text(category.descriptor.label).lineLimit(1)
+                            Text(LocalizedStringKey(category.descriptor.label)).lineLimit(1)
                             if let subtitle = subtitle(category) {
                                 Text(subtitle)
                                     .foregroundStyle(.secondary)
@@ -49,7 +50,11 @@ struct BackupCategorySelection: View {
                     .toggleStyle(.checkbox)
                 }
             }
-            Button(selection.isEmpty ? "Select All" : "Deselect All") {
+            Button(selection.isEmpty ? String(
+                localized: "Select All",
+                bundle: .appLanguage) : String(
+                localized: "Deselect All",
+                bundle: .appLanguage)) {
                 selection = selection.isEmpty ? Set(offered) : []
             }
             .buttonStyle(.link)

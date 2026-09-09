@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The whole update surface: prompt, release notes, progress and report, in one window.
 struct UpdateWindowView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(UpdateCoordinator.self) private var updates
 
     static let width: CGFloat = 460
@@ -67,26 +68,28 @@ struct UpdateWindowView: View {
 
     private var title: String {
         switch updates.stage {
-        case .checking: return "Checking for updates…"
-        case .upToDate: return "\(Bundle.main.appDisplayName) is up to date"
-        case .localBuild: return "\(Bundle.main.appDisplayName) doesn't update itself"
+        case .checking: return String(localized: "Checking for updates…", bundle: .appLanguage)
+        case .upToDate: return String(localized: "\(Bundle.main.appDisplayName) is up to date", bundle: .appLanguage)
+        case .localBuild: return String(localized: "\(Bundle.main.appDisplayName) doesn't update itself", bundle: .appLanguage)
         case .available(let release), .blocked(_, let release), .installing(let release, _):
-            return "\(Bundle.main.appDisplayName) \(release.version) is available"
-        case .readyToRelaunch: return "Update installed"
-        case .failed: return "Update failed"
+            return String(
+                localized: "\(Bundle.main.appDisplayName) \(release.version.description) is available",
+                bundle: .appLanguage)
+        case .readyToRelaunch: return String(localized: "Update installed", bundle: .appLanguage)
+        case .failed: return String(localized: "Update failed", bundle: .appLanguage)
         }
     }
 
     private var subtitle: String {
         switch updates.stage {
         case .checking, .upToDate, .failed:
-            return "Version \(updates.runningVersion)"
+            return String(localized: "Version \(updates.runningVersion)", bundle: .appLanguage)
         case .localBuild:
-            return "This is a local build — rebuild it to move it forward."
+            return String(localized: "This is a local build — rebuild it to move it forward.", bundle: .appLanguage)
         case .available, .blocked, .installing:
-            return "You have \(updates.runningVersion)."
+            return String(localized: "You have \(updates.runningVersion).", bundle: .appLanguage)
         case .readyToRelaunch:
-            return "Relaunch to start using it."
+            return String(localized: "Relaunch to start using it.", bundle: .appLanguage)
         }
     }
 
@@ -116,7 +119,7 @@ struct UpdateWindowView: View {
 
     private func report(_ failure: UpdateFailure) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            Text(failure.errorDescription ?? "Something went wrong.")
+            Text(failure.errorDescription ?? String(localized: "Something went wrong.", bundle: .appLanguage))
                 .font(.callout)
             if let recovery = failure.recoverySuggestion {
                 Text(recovery)

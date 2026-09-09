@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Both flavours in one pane: the built-ins, then the user's own shell commands.
 struct CommandsSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(CustomCommandStore.self) private var store
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
@@ -14,14 +15,16 @@ struct CommandsSettingsView: View {
             LauncherItemsSection(
                 kind: .command,
                 anchor: .commandsCommands,
-                searchPrompt: "Search commands…")
+                searchPrompt: String(localized: "Search commands…", bundle: .appLanguage))
 
             FeatureSwitchSection(
                 anchor: .commandsCustomCommands,
                 enableTitle: "Enable custom commands",
                 enableSubtitle:
-                    "Commands run with your user account in /bin/zsh, so use full executable paths.",
-                launcherSubtitle: "Find your commands in launcher search.",
+                    String(
+                        localized: "Commands run with your user account in /bin/zsh, so use full executable paths.",
+                        bundle: .appLanguage),
+                launcherSubtitle: String(localized: "Find your commands in launcher search.", bundle: .appLanguage),
                 isEnabled: $settings.customCommandsEnabled,
                 showsInLauncher: $settings.customCommandsShowInLauncher)
 
@@ -55,8 +58,10 @@ struct CommandsSettingsView: View {
                 }
             } footer: {
                 Text(
-                    "Name it, then give it a shortcut if you want one. Importing reads a folder of "
-                        + "Raycast script commands, one command per script."
+                    String(localized: """
+                        Name it, then give it a shortcut if you want one. Importing reads a folder \
+                        of Raycast script commands, one command per script.
+                        """, bundle: .appLanguage)
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -93,6 +98,7 @@ private struct EditorTarget: Identifiable {
 }
 
 private struct CustomCommandSettingsRow: View {
+    @Environment(\.locale) private var localizationLocale
     let command: CustomCommand
     @Binding var isEnabled: Bool
     let onEdit: () -> Void

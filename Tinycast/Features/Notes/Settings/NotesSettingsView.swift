@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NotesSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
@@ -24,6 +25,7 @@ struct NotesSettingsView: View {
 }
 
 private struct NotesCommandsSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(VisibilityStore.self) private var visibility
 
     private let entries = [CommandID.showNotes, .createNote, .searchNotes]
@@ -32,7 +34,7 @@ private struct NotesCommandsSection: View {
     var body: some View {
         Section {
             ForEach(entries) { entry in
-                SettingsRow(title: entry.name) {
+                SettingsRow(title: entry.localizedName) {
                     AppIconView(app: entry)
                         .frame(width: Theme.Size.settingsRowIcon, height: Theme.Size.settingsRowIcon)
                 } trailing: {
@@ -42,7 +44,7 @@ private struct NotesCommandsSection: View {
                     Toggle("", isOn: visibilityBinding(entry))
                         .labelsHidden()
                         .toggleStyle(.checkbox)
-                        .accessibilityLabel("Show \(entry.name) in launcher")
+                        .accessibilityLabel("Show \(entry.localizedName) in launcher")
                 }
             }
         } header: {

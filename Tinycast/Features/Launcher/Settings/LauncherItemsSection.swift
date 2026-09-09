@@ -2,6 +2,7 @@ import SwiftUI
 
 /// One category's Settings sections; never filters by visibility, so hidden rows stay listed.
 struct LauncherItemsSection: View {
+    @Environment(\.locale) private var localizationLocale
     let kind: AppEntry.Kind
     let anchor: SettingsAnchor
     let searchPrompt: String
@@ -32,7 +33,11 @@ struct LauncherItemsSection: View {
             SettingsFilterField(prompt: searchPrompt, query: $query)
 
             if entries.isEmpty {
-                Text(query.isEmpty ? "Nothing here yet." : "No matches for “\(query)”.")
+                Text(query.isEmpty ? String(
+                    localized: "Nothing here yet.",
+                    bundle: .appLanguage) : String(
+                    localized: "No matches for “\(query)”.",
+                    bundle: .appLanguage))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
             } else {
@@ -62,11 +67,12 @@ struct LauncherItemsSection: View {
 }
 
 private struct LauncherItemRow: View {
+    @Environment(\.locale) private var localizationLocale
     let entry: AppEntry
     @Environment(VisibilityStore.self) private var visibility
 
     var body: some View {
-        SettingsRow(title: entry.name) {
+        SettingsRow(title: entry.localizedName) {
             AppIconView(app: entry).frame(width: 18, height: 18)
         } trailing: {
             AliasField(entry: entry)
@@ -76,7 +82,7 @@ private struct LauncherItemRow: View {
             Toggle("", isOn: itemBinding)
                 .labelsHidden()
                 .toggleStyle(.checkbox)
-                .accessibilityLabel("Show \(entry.name) in launcher")
+                .accessibilityLabel("Show \(entry.localizedName) in launcher")
         }
     }
 

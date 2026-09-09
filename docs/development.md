@@ -41,6 +41,27 @@ Xcode, prefix with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (t
 project settings in `project.yml`, run `xcodegen generate` and commit the result. There is no
 `Package.swift`, and `Bundle.module` must never be used.
 
+### Localizing the interface
+
+Edit `Tinycast/Resources/Localizable.xcstrings` and `InfoPlist.xcstrings` in Xcode. The build emits
+localizable strings for literal call sites; display keys supplied by pure models are maintained
+explicitly in the catalog. Keep English and Simplified Chinese translations complete when adding copy.
+
+To inspect a Debug build in Chinese without changing system preferences:
+
+```sh
+open -n "path/to/Tinycast Dev.app" --args -AppleLanguages '(zh-Hans)'
+```
+
+Use `(en)` for English. These launch arguments apply to this process only. `localization-test` compiles
+the real catalogs into a temporary app bundle and checks both languages, English fallback, formatted
+arguments and settings search navigation. It also saves language selections in an isolated test
+bundle's defaults domain and checks subsequent launches and switching within one process. The live
+check mounts SwiftUI content and Settings' AppKit toolbar, verifies updates without losing view state,
+and removes the test domain afterward. Existing app
+preferences are untouched. To test the Settings picker manually, launch without `-AppleLanguages`:
+launch arguments take precedence over saved preferences.
+
 ### The dev channel
 
 Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Every

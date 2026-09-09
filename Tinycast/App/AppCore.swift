@@ -323,7 +323,7 @@ final class AppCore {
         case .delivered:
             paletteCoordinator.showPalette(mode: .extensionCommand, restoreAnyMode: true)
         case .expired:
-            showMessage("Sign-in expired — run the command again", tone: .danger)
+            showMessage(String(localized: "Sign-in expired — run the command again", bundle: .appLanguage), tone: .danger)
         case .ignored:
             break
         }
@@ -396,7 +396,9 @@ final class AppCore {
         quickActionSettings.repairModel(
             against: aiSettings.connections, fallback: aiSettings.defaultModel)
         guard let selection = quickActionSettings.model ?? aiSettings.defaultModel else {
-            throw AIProviderError.unavailable("Choose a model in Settings \u{2192} Quick Actions.")
+            throw AIProviderError.unavailable(String(
+                localized: "Choose a model in Settings \u{2192} Quick Actions.",
+                bundle: .appLanguage))
         }
         return try AIProviderFactory.make(
             selection: selection, settings: aiSettings, subscription: chatGPTSubscription,
@@ -467,6 +469,7 @@ final class AppCore {
             { _ = $0.snippetsShowInLauncher },
             reproject: { $0.snippetCoordinator.applySnippetsLauncherPresence() })
         track({ _ = $0.appearance }, reproject: { $0.applyAppearance() })
+        track({ _ = $0.language }, reproject: { $0.appIndex.refreshLanguage() })
     }
 
     /// `.system` resolves to `nil`, so AppKit follows macOS with nothing polling.
@@ -539,7 +542,7 @@ final class AppCore {
     func confirm(
         title: String, message: String?, symbol: String?, confirmTitle: String,
         tone: DialogTone = .danger, confirmRole: DialogAction.Role = .destructive,
-        dismissTitle: String = "Cancel"
+        dismissTitle: String = String(localized: "Cancel", bundle: .appLanguage)
     ) async -> Bool {
         await dialogs.confirm(
             title: title, message: message, symbol: symbol, tone: tone, confirmTitle: confirmTitle,

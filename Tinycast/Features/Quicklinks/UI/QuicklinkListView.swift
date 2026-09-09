@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The Search Quicklinks screen: the whole library, pinned entries first.
 struct QuicklinkList: View {
+    @Environment(\.locale) private var localizationLocale
     let results: [Quicklink]
     let selectedID: Quicklink.ID?
     /// Changes only when the list should scroll, so mouse selection never yanks the position.
@@ -32,7 +33,11 @@ struct QuicklinkList: View {
         var rows: [Row] = []
         var currentTitle: String?
         for quicklink in results {
-            let title = quicklink.isPinned ? "Pinned" : "Quicklinks"
+            let title = quicklink.isPinned ? String(
+                localized: "Pinned",
+                bundle: .appLanguage) : String(
+                localized: "Quicklinks",
+                bundle: .appLanguage)
             if title != currentTitle {
                 rows.append(.header(title))
                 currentTitle = title
@@ -83,6 +88,7 @@ struct QuicklinkList: View {
 }
 
 private struct QuicklinkRow: View {
+    @Environment(\.locale) private var localizationLocale
     let quicklink: Quicklink
     let selected: Bool
     @Environment(HotKeyManager.self) private var hotKeys
@@ -161,6 +167,7 @@ struct QuicklinkPreview: View {
 
 /// The "Information" block; everything in it is already in memory, so nothing is gathered off-main.
 private struct QuicklinkInfoSection: View {
+    @Environment(\.locale) private var localizationLocale
     let quicklink: Quicklink
     @Environment(HotKeyManager.self) private var hotKeys
     @Environment(AppIndex.self) private var appIndex
@@ -182,20 +189,22 @@ private struct QuicklinkInfoSection: View {
 
     private var rows: [InfoRow] {
         var rows = [
-            InfoRow(label: "Name", value: quicklink.name),
-            InfoRow(label: "Link", value: quicklink.link)
+            InfoRow(label: String(localized: "Name", bundle: .appLanguage), value: quicklink.name),
+            InfoRow(label: String(localized: "Link", bundle: .appLanguage), value: quicklink.link)
         ]
         if let bundleID = quicklink.openWithBundleID {
             rows.append(
                 InfoRow(
-                    label: "Open With",
+                    label: String(localized: "Open With", bundle: .appLanguage),
                     value: AppPresentation.resolve(bundleID: bundleID, in: appIndex).name))
         }
         if let keycaps = hotKeys.binding(for: .quicklink(id: quicklink.id))?.keycaps {
-            rows.append(InfoRow(label: "Shortcut", value: keycaps.joined()))
+            rows.append(InfoRow(label: String(localized: "Shortcut", bundle: .appLanguage), value: keycaps.joined()))
         }
         rows.append(
-            InfoRow(label: "Created", value: Self.createdFormatter.string(from: quicklink.createdAt)))
+            InfoRow(label: String(
+                localized: "Created",
+                bundle: .appLanguage), value: Self.createdFormatter.string(from: quicklink.createdAt)))
         return rows
     }
 

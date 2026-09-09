@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MarkdownTableView: View {
+    @Environment(\.locale) private var localizationLocale
     let table: MarkdownBlock.Table
 
     var body: some View {

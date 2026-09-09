@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RootPaletteView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(PaletteState.self) private var vm
     @Environment(AppIndex.self) private var appIndex
@@ -136,7 +137,10 @@ struct RootPaletteView: View {
     private var clipboardFilterContent: PopoverMenuContent {
         PopoverMenuContent(
             items: ClipboardFilter.allCases.map { filter in
-                PopoverMenuItem(title: filter.title, systemImage: filter.systemImage) {
+                PopoverMenuItem(
+                    title: String(localized: String.LocalizationValue(filter.title), bundle: .appLanguage),
+                    systemImage: filter.systemImage
+                ) {
                     vm.clipboardFilter = filter
                 }
             })
@@ -158,11 +162,15 @@ struct RootPaletteView: View {
         }
         if loading {
             items.insert(
-                PopoverMenuItem(title: "Loading models…", icon: .blank, isLoading: true) {}, at: 0)
+                PopoverMenuItem(title: String(
+                    localized: "Loading models…",
+                    bundle: .appLanguage), icon: .blank, isLoading: true) {}, at: 0)
         }
         guard !items.isEmpty else {
             return PopoverMenuContent(items: [
-                PopoverMenuItem(title: "Configure AI", systemImage: "slider.horizontal.3") {
+                PopoverMenuItem(title: String(
+                    localized: "Configure AI",
+                    bundle: .appLanguage), systemImage: "slider.horizontal.3") {
                     core.aiChatCoordinator.showSettings()
                 }
             ])
@@ -175,7 +183,7 @@ struct RootPaletteView: View {
         return PopoverMenuContent(
             items: core.aiChatCoordinator.reasoningEfforts.map { effort in
                 PopoverMenuItem(
-                    title: effort.title, icon: .blank,
+                    title: String(localized: String.LocalizationValue(effort.title), bundle: .appLanguage), icon: .blank,
                     detail: effort.id == selected ? "✓" : nil
                 ) {
                     core.aiChatCoordinator.selectReasoningEffort(effort)
@@ -186,13 +194,15 @@ struct RootPaletteView: View {
     /// The bottom-left app menu content (About / Support / Settings).
     private var appMenuContent: PopoverMenuContent {
         PopoverMenuContent(items: [
-            PopoverMenuItem(title: "About Tinycast", systemImage: "info.circle") {
+            PopoverMenuItem(title: String(localized: "About Tinycast", bundle: .appLanguage), systemImage: "info.circle") {
                 core.settingsCoordinator.showAbout()
             },
-            PopoverMenuItem(title: "Support Tinycast", systemImage: "heart") {
+            PopoverMenuItem(title: String(localized: "Support Tinycast", bundle: .appLanguage), systemImage: "heart") {
                 core.supportCoordinator.showSupport()
             },
-            PopoverMenuItem(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
+            PopoverMenuItem(title: String(
+                localized: "Settings",
+                bundle: .appLanguage), systemImage: "gearshape", shortcut: "⌘,") {
                 core.settingsCoordinator.showSettings()
             }
         ])
@@ -1116,8 +1126,12 @@ struct RootPaletteView: View {
 
     /// Never promises a step the click does not take: a root screen closes rather than backs.
     private var backHelp: String {
-        let escape = hasBackStep ? "Esc to go back" : "Esc to close"
-        return "\(escape) or ⌘ Esc to go to root search"
+        let escape = hasBackStep ? String(
+            localized: "Esc to go back",
+            bundle: .appLanguage) : String(
+            localized: "Esc to close",
+            bundle: .appLanguage)
+        return String(localized: "\(escape) or ⌘ Esc to go to root search", bundle: .appLanguage)
     }
 
     private func goBack() {
@@ -1166,6 +1180,7 @@ private struct SearchFieldHiding: ViewModifier {
 
 /// The footer's menu circle; hover lives here, so a sweep never re-renders the body.
 private struct MenuCircleButton: View {
+    @Environment(\.locale) private var localizationLocale
     let action: () -> Void
     @State private var hovered = false
 
@@ -1188,6 +1203,7 @@ private struct MenuCircleButton: View {
 
 /// Hover state lives here, so lighting the chevron never re-renders the header around it.
 private struct HeaderBackButton: View {
+    @Environment(\.locale) private var localizationLocale
     let help: String
     let action: () -> Void
     @State private var hovered = false
@@ -1233,6 +1249,7 @@ extension View {
 }
 
 struct EmptyResults: View {
+    @Environment(\.locale) private var localizationLocale
     let text: String
     var body: some View {
         VStack(spacing: 8) {
@@ -1246,6 +1263,7 @@ struct EmptyResults: View {
 
 /// Overflow is a button rather than a slot, so no favorite loses its digit to it.
 private struct CompactFavoritesRow: View {
+    @Environment(\.locale) private var localizationLocale
     let favorites: [AppEntry]
     let showsOverflow: Bool
     let onLaunch: (AppEntry) -> Void
@@ -1263,7 +1281,7 @@ private struct CompactFavoritesRow: View {
                 }
             }
             if showsOverflow {
-                CompactFavoriteButton(help: "Show all  ↓", action: onOverflow) {
+                CompactFavoriteButton(help: String(localized: "Show all  ↓", bundle: .appLanguage), action: onOverflow) {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 10))
                         .foregroundStyle(Theme.Colors.textSecondary)
@@ -1286,6 +1304,7 @@ private struct CompactFavoritesRow: View {
 
 /// One compact favorite: bare icon, tooltip, action; no hover chrome, so it reads tight.
 private struct CompactFavoriteButton<Content: View>: View {
+    @Environment(\.locale) private var localizationLocale
     let help: String
     let action: () -> Void
     @ViewBuilder let content: Content

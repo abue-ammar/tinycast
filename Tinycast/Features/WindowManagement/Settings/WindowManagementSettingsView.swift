@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WindowManagementSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppSettings.self) private var settings
     @Environment(AppCore.self) private var core
     @State private var pendingDeletion: WindowLayout?
@@ -13,8 +14,12 @@ struct WindowManagementSettingsView: View {
                 anchor: .windowManagementWindowManagement,
                 enableTitle: "Enable window management",
                 enableSubtitle:
-                    "Moves the window you were last in, using the Accessibility permission Tinycast already uses to paste.",
-                launcherSubtitle: "Find the window commands in launcher search.",
+                    String(
+                        localized:
+                            "Moves the window you were last in, using the Accessibility permission Tinycast already uses to paste.",
+                        bundle: .appLanguage
+                    ),
+                launcherSubtitle: String(localized: "Find the window commands in launcher search.", bundle: .appLanguage),
                 isEnabled: $settings.windowManagementEnabled,
                 showsInLauncher: $settings.windowManagementShowInLauncher)
 
@@ -57,7 +62,9 @@ struct WindowManagementSettingsView: View {
                     Text("\(settings.windowGap) pt")
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
-                    Stepper("Gap between windows", value: $settings.windowGap, in: 0...64, step: 2)
+                    Stepper(String(
+                        localized: "Gap between windows",
+                        bundle: .appLanguage), value: $settings.windowGap, in: 0...64, step: 2)
                         .labelsHidden()
                 }
             } label: {
@@ -77,7 +84,7 @@ struct WindowManagementSettingsView: View {
                     WindowCommandSettingsRow(command: command)
                 }
             } header: {
-                Text(section.group.title)
+                Text(LocalizedStringKey(section.group.title))
             }
         }
     }
@@ -85,11 +92,12 @@ struct WindowManagementSettingsView: View {
 
 /// One command's shortcut recorder and visibility checkbox, shaped like the shortcuts row.
 private struct WindowCommandSettingsRow: View {
+    @Environment(\.locale) private var localizationLocale
     let command: WindowCommand
     @Environment(VisibilityStore.self) private var visibility
 
     var body: some View {
-        SettingsRow(title: command.name) {
+        SettingsRow(title: String(localized: String.LocalizationValue(command.name), bundle: .appLanguage)) {
             Image(systemName: command.sfSymbol)
         } trailing: {
             ShortcutRecorder(action: .windowCommand(id: command.id))
@@ -98,7 +106,7 @@ private struct WindowCommandSettingsRow: View {
                 .labelsHidden()
                 .toggleStyle(.checkbox)
                 .help("Show in launcher")
-                .accessibilityLabel("Show \(command.name) in launcher")
+                .accessibilityLabel("Show \(String(localized: String.LocalizationValue(command.name), bundle: .appLanguage)) in launcher")
         }
     }
 

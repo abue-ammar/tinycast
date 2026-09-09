@@ -15,14 +15,14 @@ enum SnippetArgumentsPrompt {
         NSApp.activate(ignoringOtherApps: true)
 
         let alert = NSAlert()
-        alert.messageText = "Snippet: \(snippetName)"
-        alert.informativeText = "Fill in the template fields:"
+        alert.messageText = String(localized: "Snippet: \(snippetName)", bundle: .appLanguage)
+        alert.informativeText = String(localized: "Fill in the template fields:", bundle: .appLanguage)
         alert.alertStyle = .informational
         // AppKit gives ↵ to the first button and Esc to the one titled "Cancel".
-        alert.addButton(withTitle: "Expand")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Expand", bundle: .appLanguage))
+        alert.addButton(withTitle: String(localized: "Cancel", bundle: .appLanguage))
 
-        let form = NSHostingView(rootView: SnippetArgumentsForm(values: values))
+        let form = NSHostingView(rootView: AnyView(SnippetArgumentsForm(values: values).localizationEnvironment()))
         form.frame = NSRect(
             x: 0, y: 0,
             width: Theme.Size.argumentPromptWidth,
@@ -59,6 +59,7 @@ private final class ArgumentValues {
 }
 
 private struct SnippetArgumentsForm: View {
+    @Environment(\.locale) private var localizationLocale
     let values: ArgumentValues
     @FocusState private var focusedArgument: String?
 

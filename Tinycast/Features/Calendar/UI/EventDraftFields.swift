@@ -9,6 +9,7 @@ final class EventDraftState {
 
 /// The New Event dialog's controls: a title, then when and how long, as chips.
 struct EventDraftFields: View {
+    @Environment(\.locale) private var localizationLocale
     @Bindable var state: EventDraftState
     @FocusState private var focused: Bool
 
@@ -25,10 +26,12 @@ struct EventDraftFields: View {
                     RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
                         .fill(Theme.Colors.controlSurface))
             ChipRow(
-                label: "Starts", values: EventDraft.startOffsets,
+                label: String(localized: "Starts", bundle: .appLanguage), values: EventDraft.startOffsets,
                 title: EventDraft.label(startOffset:), selection: $state.draft.startOffsetMinutes)
             ChipRow(
-                label: "For", values: EventDraft.durations, title: EventDraft.label(duration:),
+                label: String(
+                    localized: "For",
+                    bundle: .appLanguage), values: EventDraft.durations, title: EventDraft.label(duration:),
                 selection: $state.draft.durationMinutes)
         }
         .onAppear { focused = true }
@@ -37,6 +40,7 @@ struct EventDraftFields: View {
 
 /// Our own chips: a menu-style `Picker` drops an AppKit popover onto a vibrancy surface.
 private struct ChipRow: View {
+    @Environment(\.locale) private var localizationLocale
     let label: String
     let values: [Int]
     let title: (Int) -> String
@@ -49,7 +53,10 @@ private struct ChipRow: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(width: Theme.Size.dialogIcon, alignment: .leading)
             ForEach(values, id: \.self) { value in
-                Chip(title: title(value), selected: value == selection) { selection = value }
+                Chip(
+                    title: String(localized: String.LocalizationValue(title(value)), bundle: .appLanguage),
+                    selected: value == selection
+                ) { selection = value }
             }
             Spacer(minLength: 0)
         }
@@ -57,6 +64,7 @@ private struct ChipRow: View {
 }
 
 private struct Chip: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     let selected: Bool
     let onTap: () -> Void

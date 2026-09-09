@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FileSearchSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
@@ -29,6 +30,7 @@ struct FileSearchSettingsView: View {
 
 /// Search Files has a binding of its own, so it carries a recorder as well as a checkbox.
 private struct SearchFilesCommandSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(VisibilityStore.self) private var visibility
 
     private let entry = CommandCatalog.entry(for: .searchFiles)
@@ -36,7 +38,7 @@ private struct SearchFilesCommandSection: View {
     var body: some View {
         Section {
             if let entry {
-                SettingsRow(title: entry.name) {
+                SettingsRow(title: entry.localizedName) {
                     Image(systemName: CommandID.searchFiles.sfSymbol)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
@@ -44,7 +46,7 @@ private struct SearchFilesCommandSection: View {
                     Toggle("", isOn: visibilityBinding(entry))
                         .labelsHidden()
                         .toggleStyle(.checkbox)
-                        .accessibilityLabel("Show \(entry.name) in launcher")
+                        .accessibilityLabel("Show \(entry.localizedName) in launcher")
                 }
             }
         } header: {
@@ -64,6 +66,7 @@ private struct SearchFilesCommandSection: View {
 }
 
 private struct FileSearchScopesSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppSettings.self) private var settings
     /// Recomputed only on change: a `fileExists` per row is too much per body render.
     @State private var missing: Set<String> = []
@@ -118,8 +121,8 @@ private struct FileSearchScopesSection: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        panel.prompt = "Add"
-        panel.message = "Choose folders to include when searching for files."
+        panel.prompt = String(localized: "Add", bundle: .appLanguage)
+        panel.message = String(localized: "Choose folders to include when searching for files.", bundle: .appLanguage)
         // Tinycast is an accessory app, so the panel opens behind the frontmost app without this.
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK else { return }
@@ -129,6 +132,7 @@ private struct FileSearchScopesSection: View {
 }
 
 private struct ScopeRow: View {
+    @Environment(\.locale) private var localizationLocale
     let scope: String
     let isMissing: Bool
     let onRemove: () -> Void
@@ -162,6 +166,7 @@ private struct ScopeRow: View {
 }
 
 private struct FileSearchIgnoreSection: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppSettings.self) private var settings
     @State private var draft = ""
 
@@ -205,6 +210,7 @@ private struct FileSearchIgnoreSection: View {
 }
 
 private struct PatternRow: View {
+    @Environment(\.locale) private var localizationLocale
     let pattern: String
     /// Nil for a built-in rule, which has no remove affordance because it cannot be turned off.
     let onRemove: (() -> Void)?

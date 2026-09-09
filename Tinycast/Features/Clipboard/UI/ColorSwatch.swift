@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The one place a colour is drawn, over the checkerboard that makes its alpha visible.
 struct ColorSwatch: View {
+    @Environment(\.locale) private var localizationLocale
     let color: ColorValue
     var cornerRadius: CGFloat = Theme.Radius.thumbnail
 

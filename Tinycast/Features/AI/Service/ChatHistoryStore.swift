@@ -150,7 +150,7 @@ final class ChatHistoryStore {
             let state: ChatMessage.State
             if storedState == .streaming {
                 state = .failed
-                if body.isEmpty { body = "Response interrupted." }
+                if body.isEmpty { body = String(localized: "Response interrupted.", bundle: .appLanguage) }
             } else {
                 state = storedState
             }

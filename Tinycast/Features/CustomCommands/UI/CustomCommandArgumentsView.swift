@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The command it will run, and one row per value it still wants.
 struct CustomCommandArgumentsView: View {
+    @Environment(\.locale) private var localizationLocale
     let session: CustomCommandArgumentSession
 
     private static let markSize: CGFloat = 11

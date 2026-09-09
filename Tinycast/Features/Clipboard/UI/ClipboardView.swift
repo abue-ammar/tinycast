@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ClipboardList: View {
+    @Environment(\.locale) private var localizationLocale
     let results: [ClipboardItem]
     let selectedID: ClipboardItem.ID?
     /// Changes only when the list should scroll, so mouse selection never yanks it.
@@ -33,7 +34,7 @@ struct ClipboardList: View {
         var currentTitle: String?
         var pinnedSlot = 0
         for item in results {
-            let title = item.isPinned ? "Pinned" : DateBucket(for: item.createdAt).title
+            let title = item.isPinned ? String(localized: "Pinned", bundle: .appLanguage) : DateBucket(for: item.createdAt).title
             if title != currentTitle {
                 rows.append(.header(title))
                 currentTitle = title
@@ -94,11 +95,11 @@ enum DateBucket: Int {
 
     var title: String {
         switch self {
-        case .today: return "Today"
-        case .yesterday: return "Yesterday"
-        case .thisWeek: return "This Week"
-        case .thisMonth: return "This Month"
-        case .earlier: return "Earlier"
+        case .today: return String(localized: "Today", bundle: .appLanguage)
+        case .yesterday: return String(localized: "Yesterday", bundle: .appLanguage)
+        case .thisWeek: return String(localized: "This Week", bundle: .appLanguage)
+        case .thisMonth: return String(localized: "This Month", bundle: .appLanguage)
+        case .earlier: return String(localized: "Earlier", bundle: .appLanguage)
         }
     }
 
@@ -118,6 +119,7 @@ enum DateBucket: Int {
 }
 
 private struct ClipboardRow: View {
+    @Environment(\.locale) private var localizationLocale
     let item: ClipboardItem
     let selected: Bool
     let imageURL: URL?
@@ -163,8 +165,10 @@ private struct ClipboardRow: View {
         case .text:
             return String((item.text ?? "").prefix(200)).trimmingCharacters(
                 in: .whitespacesAndNewlines)
-        case .image: return "Image"
-        case .file: return item.filePath.map { URL(fileURLWithPath: $0).lastPathComponent } ?? "File"
+        case .image: return String(localized: "Image", bundle: .appLanguage)
+        case .file: return item.filePath.map { URL(fileURLWithPath: $0).lastPathComponent } ?? String(
+            localized: "File",
+            bundle: .appLanguage)
         }
     }
 
@@ -278,6 +282,7 @@ private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
 }
 
 struct ClipboardPreview: View {
+    @Environment(\.locale) private var localizationLocale
     let item: ClipboardItem?
     @Environment(ClipboardStore.self) private var store
 
@@ -333,6 +338,7 @@ struct ClipboardPreview: View {
 
 /// The "Information" block; disk-touching details are gathered off the main actor.
 private struct ClipboardInfoSection: View {
+    @Environment(\.locale) private var localizationLocale
     let item: ClipboardItem
     let imageURL: URL?
 
@@ -393,48 +399,71 @@ private struct ClipboardInfoSection: View {
     private var rows: [InfoRow] {
         var rows: [InfoRow] = []
         if let source {
-            rows.append(InfoRow(label: "Source", value: source.name, icon: source.icon))
+            rows.append(InfoRow(label: String(localized: "Source", bundle: .appLanguage), value: source.name, icon: source.icon))
         }
         switch item.kind {
         case .text:
             // What the entry *is*, which is what the type filter files it under.
             let isColor = item.colorValue != nil
-            rows.append(InfoRow(label: "Type", value: isColor ? "Color" : "Text"))
+            rows.append(
+                InfoRow(
+                    label: String(localized: "Type", bundle: .appLanguage),
+                    value: isColor ? String(
+                        localized: "Color",
+                        bundle: .appLanguage) : String(
+                        localized: "Text",
+                        bundle: .appLanguage)))
             // A colour's own notations are the pane above; its length is not what you came for.
             if !isColor {
                 if let characters = details.characters {
-                    rows.append(InfoRow(label: "Characters", value: characters.formatted()))
+                    rows.append(InfoRow(label: String(
+                        localized: "Characters",
+                        bundle: .appLanguage), value: characters.formatted()))
                 }
                 if let words = details.words {
-                    rows.append(InfoRow(label: "Words", value: words.formatted()))
+                    rows.append(InfoRow(label: String(localized: "Words", bundle: .appLanguage), value: words.formatted()))
                 }
             }
         case .image:
-            rows.append(InfoRow(label: "Type", value: "Image"))
+            rows.append(InfoRow(label: String(
+                localized: "Type",
+                bundle: .appLanguage), value: String(
+                localized: "Image",
+                bundle: .appLanguage)))
             if let size = details.pixelSize {
                 rows.append(
-                    InfoRow(label: "Dimensions", value: "\(Int(size.width))×\(Int(size.height))"))
+                    InfoRow(label: String(
+                        localized: "Dimensions",
+                        bundle: .appLanguage), value: "\(Int(size.width))×\(Int(size.height))"))
             }
             if let bytes = details.fileBytes {
                 rows.append(
                     InfoRow(
-                        label: "Size", value: Int64(bytes).formatted(.byteCount(style: .file))))
+                        label: String(
+                            localized: "Size",
+                            bundle: .appLanguage), value: Int64(bytes).formatted(.byteCount(style: .file))))
             }
         case .file:
             let path = item.filePath ?? ""
             rows.append(
                 InfoRow(
-                    label: "Type",
+                    label: String(localized: "Type", bundle: .appLanguage),
                     value: details.typeName ?? ClipboardFileKind.of(path: path).title))
-            rows.append(InfoRow(label: "Path", value: (path as NSString).abbreviatingWithTildeInPath))
+            rows.append(InfoRow(label: String(
+                localized: "Path",
+                bundle: .appLanguage), value: (path as NSString).abbreviatingWithTildeInPath))
             if let bytes = details.fileBytes {
                 rows.append(
                     InfoRow(
-                        label: "Size", value: Int64(bytes).formatted(.byteCount(style: .file))))
+                        label: String(
+                            localized: "Size",
+                            bundle: .appLanguage), value: Int64(bytes).formatted(.byteCount(style: .file))))
             }
         }
         rows.append(
-            InfoRow(label: "Copied", value: Self.copiedFormatter.string(from: item.createdAt)))
+            InfoRow(label: String(
+                localized: "Copied",
+                bundle: .appLanguage), value: Self.copiedFormatter.string(from: item.createdAt)))
         return rows
     }
 

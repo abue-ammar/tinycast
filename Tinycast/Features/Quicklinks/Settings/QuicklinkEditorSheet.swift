@@ -9,6 +9,7 @@ struct QuicklinkEditRequest: Identifiable {
 
 /// Add / edit sheet for a single quicklink, presented from the Quicklinks pane.
 struct QuicklinkEditorSheet: View {
+    @Environment(\.locale) private var localizationLocale
     let quicklink: Quicklink?
 
     @Environment(\.dismiss) private var dismiss
@@ -36,7 +37,11 @@ struct QuicklinkEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(quicklink == nil ? "Add Quicklink" : "Edit Quicklink")
+            Text(quicklink == nil ? String(
+                localized: "Add Quicklink",
+                bundle: .appLanguage) : String(
+                localized: "Edit Quicklink",
+                bundle: .appLanguage))
                 .font(.title2.weight(.bold))
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -67,10 +72,10 @@ struct QuicklinkEditorSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 optionToggle(
                     "Show in root search", isOn: $showsInRootSearch,
-                    detail: "List this quicklink alongside apps and commands.")
+                    detail: String(localized: "List this quicklink alongside apps and commands.", bundle: .appLanguage))
                 optionToggle(
                     "Pin to top", isOn: $isPinned,
-                    detail: "Keep it above the other quicklinks.")
+                    detail: String(localized: "Keep it above the other quicklinks.", bundle: .appLanguage))
             }
 
             if let errorMessage {
@@ -154,7 +159,11 @@ struct QuicklinkEditorSheet: View {
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
                     SymbolImage(name: resolvedSymbol, size: 14)
-                    Text(iconSymbol == nil ? "Automatic" : "Custom")
+                    Text(iconSymbol == nil ? String(
+                        localized: "Automatic",
+                        bundle: .appLanguage) : String(
+                        localized: "Custom",
+                        bundle: .appLanguage))
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
@@ -190,7 +199,7 @@ struct QuicklinkEditorSheet: View {
                 .frame(width: 180)
             }
             .popover(isPresented: $showingAppPicker, arrowEdge: .bottom) {
-                AppPickerPopover(clearTitle: "Default app") { bundleID in
+                AppPickerPopover(clearTitle: String(localized: "Default app", bundle: .appLanguage)) { bundleID in
                     openWithBundleID = bundleID
                     showingAppPicker = false
                 }

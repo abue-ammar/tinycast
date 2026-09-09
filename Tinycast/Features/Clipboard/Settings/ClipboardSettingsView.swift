@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ClipboardSettingsView: View {
+    @Environment(\.locale) private var localizationLocale
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
     @State private var confirmingClear = false
@@ -35,7 +36,7 @@ struct ClipboardSettingsView: View {
             Section {
                 Picker(selection: $settings.clipboardRetention) {
                     ForEach(ClipboardRetention.allCases) { retention in
-                        Text(retention.title).tag(retention)
+                        Text(LocalizedStringKey(retention.title)).tag(retention)
                     }
                 } label: {
                     SettingsRowTitle(.clipboardHistory, "Keep history for")
@@ -46,7 +47,7 @@ struct ClipboardSettingsView: View {
                 }
                 Picker(selection: $settings.clipboardDefaultAction) {
                     ForEach(ClipboardDefaultAction.allCases) { action in
-                        Text(action.title).tag(action)
+                        Text(LocalizedStringKey(action.title)).tag(action)
                     }
                 } label: {
                     SettingsRowTitle(.clipboardHistory, "Default action")
@@ -92,7 +93,7 @@ struct ClipboardSettingsView: View {
         .formStyle(.grouped)
         .settingsScrollTarget(.clipboard)
         .confirmationDialog(
-            "Clear clipboard history?",
+            String(localized: "Clear clipboard history?", bundle: .appLanguage),
             isPresented: $confirmingClear,
             titleVisibility: .visible
         ) {
@@ -108,6 +109,7 @@ struct ClipboardSettingsView: View {
 
 /// One excluded app; only the bundle ID is stored, so name and icon resolve on the fly.
 private struct DisabledAppRow: View {
+    @Environment(\.locale) private var localizationLocale
     let bundleID: String
     let onRemove: () -> Void
 

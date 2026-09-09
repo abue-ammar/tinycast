@@ -77,6 +77,7 @@ struct ExtensionDisclosureChevron: View {
 
 /// One row of a picker popover: an optional icon, a title, and a trailing detail.
 struct ExtensionPickerRow: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     var detail: String?
     var icon: ExtensionImage.Resolved?

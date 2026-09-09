@@ -18,6 +18,7 @@ enum BarButtonChrome {
 
 /// A palette bar control, bare until hover; hover lives here so its owner never re-renders.
 struct BarButton<Label: View>: View {
+    @Environment(\.locale) private var localizationLocale
     var chrome: BarButtonChrome = .capsule
     let action: () -> Void
     @ViewBuilder let label: Label
@@ -39,6 +40,7 @@ struct BarButton<Label: View>: View {
 
 /// A header control that states the active choice and opens an in-window menu.
 struct HeaderMenuButton: View {
+    @Environment(\.locale) private var localizationLocale
     let title: String
     let icon: PopoverMenuIcon
     let isOpen: Bool

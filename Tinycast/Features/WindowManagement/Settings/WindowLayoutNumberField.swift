@@ -3,6 +3,7 @@ import SwiftUI
 
 /// A suffixed numeric field. Commits every valid keystroke, clamps on ↵ or focus loss.
 struct WindowLayoutNumberField: View {
+    @Environment(\.locale) private var localizationLocale
     let label: String
     /// The accessibility label's subject, since "W" reads as a letter.
     let name: String

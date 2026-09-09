@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Lines soft-wrap: a second scroll view would fight the transcript's own dissolve.
 struct MarkdownCodeView: View {
+    @Environment(\.locale) private var localizationLocale
     let language: String?
     let text: String
 
@@ -14,7 +15,7 @@ struct MarkdownCodeView: View {
                         .foregroundStyle(Theme.Colors.textTertiary)
                 }
                 Spacer(minLength: 0)
-                ChatCopyButton(text: text, subject: "Code")
+                ChatCopyButton(text: text, subject: String(localized: "Code", bundle: .appLanguage))
             }
             Text(text)
                 .font(Theme.Typography.code)

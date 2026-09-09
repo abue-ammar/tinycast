@@ -2,6 +2,7 @@ import SwiftUI
 @preconcurrency import Translation
 
 struct QuickActionResultView: View {
+    @Environment(\.locale) private var localizationLocale
     let state: QuickActionPanelState
     let languages: [Locale.Language]
     let onReplace: () -> Void
@@ -100,7 +101,7 @@ struct QuickActionResultView: View {
             HStack(spacing: Theme.Spacing.sm) {
                 SymbolImage(name: state.action.symbol, size: Theme.Size.quickActionHeaderIcon)
                     .foregroundStyle(Theme.Colors.textSecondary)
-                Text(state.action.title)
+                Text(LocalizedStringKey(state.action.title))
                     .font(Theme.Typography.panelTitle)
                 Spacer(minLength: Theme.Spacing.md)
             }

@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Add / edit sheet for a single custom command, presented from the Commands pane.
 struct CustomCommandEditorSheet: View {
+    @Environment(\.locale) private var localizationLocale
     let command: CustomCommand?
 
     @Environment(\.dismiss) private var dismiss
@@ -44,7 +45,11 @@ struct CustomCommandEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(command == nil ? "Add Custom Command" : "Edit Custom Command")
+            Text(command == nil ? String(
+                localized: "Add Custom Command",
+                bundle: .appLanguage) : String(
+                localized: "Edit Custom Command",
+                bundle: .appLanguage))
                 .font(.title2.weight(.bold))
 
             HStack(alignment: .bottom, spacing: Theme.Spacing.lg) {
@@ -86,16 +91,18 @@ struct CustomCommandEditorSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 optionToggle(
                     "Load shell environment", isOn: $loadsShellEnvironment,
-                    detail: "Resolves aliases, functions and PATH. Slower to start.")
+                    detail: String(localized: "Resolves aliases, functions and PATH. Slower to start.", bundle: .appLanguage))
                 optionToggle(
                     "Needs confirmation", isOn: $requiresConfirmation,
-                    detail: "Ask before running this command.")
+                    detail: String(localized: "Ask before running this command.", bundle: .appLanguage))
                 optionToggle(
                     "Show confirmation", isOn: $showsConfirmation,
-                    detail: "Confirm on screen after the command succeeds.")
+                    detail: String(localized: "Confirm on screen after the command succeeds.", bundle: .appLanguage))
                 optionToggle(
                     "Show output", isOn: $showsOutput,
-                    detail: "Open a window with everything the command printed when it finishes.")
+                    detail: String(
+                        localized: "Open a window with everything the command printed when it finishes.",
+                        bundle: .appLanguage))
             }
 
             if let errorMessage {
@@ -137,7 +144,11 @@ struct CustomCommandEditorSheet: View {
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
                     SymbolImage(name: iconSymbol ?? CustomCommand.sfSymbol, size: 14)
-                    Text(iconSymbol == nil ? "Automatic" : "Custom")
+                    Text(iconSymbol == nil ? String(
+                        localized: "Automatic",
+                        bundle: .appLanguage) : String(
+                        localized: "Custom",
+                        bundle: .appLanguage))
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
@@ -176,8 +187,8 @@ struct CustomCommandEditorSheet: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Choose"
-        panel.message = "Choose the folder this command runs in."
+        panel.prompt = String(localized: "Choose", bundle: .appLanguage)
+        panel.message = String(localized: "Choose the folder this command runs in.", bundle: .appLanguage)
         if !workingDirectory.isEmpty {
             panel.directoryURL = URL(
                 fileURLWithPath: (workingDirectory as NSString).expandingTildeInPath)
@@ -218,8 +229,8 @@ struct CustomCommandEditorSheet: View {
             }
             Text(
                 arguments.isEmpty
-                    ? "Add one to be asked for a value before the command runs."
-                    : "Asked for in order, then passed to the command as $1, $2 …"
+                    ? String(localized: "Add one to be asked for a value before the command runs.", bundle: .appLanguage)
+                    : String(localized: "Asked for in order, then passed to the command as $1, $2 …", bundle: .appLanguage)
             )
             .font(.caption)
             .foregroundStyle(.secondary)

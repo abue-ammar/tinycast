@@ -11,7 +11,7 @@ enum AIProviderFactory {
         keyStore: KeychainSecretStore = .aiAPIKeys
     ) throws -> any AIProvider {
         guard let selection = settings.defaultModel else {
-            throw AIProviderError.unavailable("Choose a default AI model in Settings.")
+            throw AIProviderError.unavailable(String(localized: "Choose a default AI model in Settings.", bundle: .appLanguage))
         }
         return try make(
             selection: selection, settings: settings, subscription: subscription,
@@ -35,23 +35,25 @@ enum AIProviderFactory {
             return AppleIntelligenceProvider(guardrails: guardrails)
         case .codex(let model, let effort):
             guard settings.enabledInstalledProviders.contains(.codex) else {
-                throw AIProviderError.unavailable("Codex is disabled in AI Settings.")
+                throw AIProviderError.unavailable(String(localized: "Codex is disabled in AI Settings.", bundle: .appLanguage))
             }
             return CodexInstalledProvider(
                 turns: subscription.turns, model: model, effort: effort)
         case .claude(let model, let effort):
             guard settings.enabledInstalledProviders.contains(.claude) else {
-                throw AIProviderError.unavailable("Claude is disabled in AI Settings.")
+                throw AIProviderError.unavailable(String(localized: "Claude is disabled in AI Settings.", bundle: .appLanguage))
             }
             return try installedAI.provider(kind: .claude, model: model, effort: effort)
         case .openCode(let model, let effort):
             guard settings.enabledInstalledProviders.contains(.openCode) else {
-                throw AIProviderError.unavailable("OpenCode is disabled in AI Settings.")
+                throw AIProviderError.unavailable(String(localized: "OpenCode is disabled in AI Settings.", bundle: .appLanguage))
             }
             return try installedAI.provider(kind: .openCode, model: model, effort: effort)
         case .api(let connectionID, let model, let effort):
             guard let connection = settings.connection(id: connectionID) else {
-                throw AIProviderError.unavailable("Choose an API connection in Settings.")
+                throw AIProviderError.unavailable(String(
+                    localized: "Choose an API connection in Settings.",
+                    bundle: .appLanguage))
             }
             let baseURL: URL
             do {
@@ -63,10 +65,12 @@ enum AIProviderFactory {
             do {
                 key = try keyStore.secret(for: connection.id) ?? ""
             } catch {
-                throw AIProviderError.unavailable("The API key could not be read from Keychain.")
+                throw AIProviderError.unavailable(String(
+                    localized: "The API key could not be read from Keychain.",
+                    bundle: .appLanguage))
             }
             guard AIEndpointPolicy.isLoopback(connection.baseURL) || !key.isEmpty else {
-                throw AIProviderError.unavailable("Add an API key in Settings.")
+                throw AIProviderError.unavailable(String(localized: "Add an API key in Settings.", bundle: .appLanguage))
             }
             return HTTPAIProvider(
                 configuration: AIHTTPConfiguration(
