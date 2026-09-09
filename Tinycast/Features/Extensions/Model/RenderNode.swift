@@ -1,7 +1,7 @@
 import Foundation
 
 /// A prop value from the runtime; `node` is an element-valued prop hoisted out of a `__slot`.
-enum RenderValue: Sendable, Equatable {
+enum RenderValue: Sendable, Hashable {
     case string(String)
     case number(Double)
     case bool(Bool)
@@ -133,7 +133,7 @@ enum RenderValue: Sendable, Equatable {
 }
 
 /// One node of the tree an extension's React render produced.
-struct RenderNode: Sendable, Equatable, Identifiable {
+struct RenderNode: Sendable, Hashable, Identifiable {
     let id: Int
     let type: String
     let props: [String: RenderValue]

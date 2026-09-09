@@ -17,9 +17,10 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     private var menuImageTask: Task<Void, Never>?
     private var deferredSnapshot: ExtensionMenuBarSnapshot?
     private var hasPreparedContent = false
-    private var images: [(value: RenderValue, image: NSImage)] = []
+    /// Keyed by icon rather than searched: a menu redraws its rows on every React commit.
+    private var images: [RenderValue: NSImage] = [:]
     private var imageBindings: [(item: NSMenuItem, value: RenderValue)] = []
-    private var failedIcons: [RenderValue] = []
+    private var failedIcons: Set<RenderValue> = []
     private let placeholder = NSImage(size: NSSize(width: 14, height: 14))
     private var iconFailed = false
     private var menuSession: String?
@@ -58,6 +59,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         menu.autoenablesItems = false
         menu.delegate = self
         // AppKit owns tracking, which is what hands a click on another status item over to it.
+        // Attached before the first snapshot, so the click that starts a command still opens a menu.
         status.menu = menu
     }
 
@@ -69,6 +71,8 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         if previous?.title != snapshot.title { status.button?.title = snapshot.title ?? "" }
         if previous?.tooltip != snapshot.tooltip { status.button?.toolTip = snapshot.tooltip }
         status.button?.setAccessibilityLabel(snapshot.tooltip ?? snapshot.title ?? "Extension menu")
+        // A menu-bar extra with no rows has nothing to open, so it detaches rather than show one.
+        if previous?.hasMenu != snapshot.hasMenu { status.menu = snapshot.hasMenu ? menu : nil }
         let iconChanged = previous?.iconJSON != snapshot.iconJSON || previous == nil
         if iconChanged { loadIcon() }
     }
@@ -104,9 +108,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
     }
 
     private var nextIcon: RenderValue? {
-        imageBindings.first { binding in
-            !failedIcons.contains(binding.value) && !images.contains { $0.value == binding.value }
-        }?.value
+        imageBindings.first { !failedIcons.contains($0.value) && images[$0.value] == nil }?.value
     }
 
     private func loadMenuImages() {
@@ -117,9 +119,9 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             while let value = self?.nextIcon {
                 let image = await loadImage(value, assetsPath, 14)
                 guard !Task.isCancelled, let self else { return }
-                guard let image else { self.failedIcons.append(value); continue }
+                guard let image else { self.failedIcons.insert(value); continue }
                 guard self.imageBindings.contains(where: { $0.value == value }) else { continue }
-                self.images.append((value, image))
+                self.images[value] = image
                 for binding in self.imageBindings where binding.value == value {
                     if binding.item.image !== image { binding.item.image = image }
                 }
@@ -133,7 +135,8 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         imageBindings.removeAll(keepingCapacity: true)
         identities.removeAll(keepingCapacity: true)
         reconcile(nodes, in: menu, session: session, path: [])
-        images.removeAll { cached in !imageBindings.contains { $0.value == cached.value } }
+        let live = Set(imageBindings.map(\.value))
+        images = images.filter { live.contains($0.key) }
         hasPreparedContent = !nodes.isEmpty
     }
 
@@ -213,7 +216,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         if item.representedObject as? Action != action { item.representedObject = action }
         let image = node.props["icon"].map { icon in
             imageBindings.append((item, icon))
-            return images.first { $0.value == icon }?.image ?? placeholder
+            return images[icon] ?? placeholder
         }
         if item.image !== image { item.image = image }
         var enabled = handler != nil
