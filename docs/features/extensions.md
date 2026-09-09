@@ -12,8 +12,8 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 
 ## Invariants
 
-- **One foreground command and one transient menu-bar command can run concurrently.** Each owns its
-  own `JSContext`. Foreground launches stop only the previous foreground command; menu refreshes are
+- **At most two commands run concurrently.** The palette and scheduled `no-view` refreshes share one
+  runtime; a foreground launch preempts its background refresh. Menu commands use a separate runtime,
   serialized by `ExtensionMenuBarManager`. Every menu session has its own bridge and an immutable
   extension namespace, so storage, preferences, OAuth and command launches cannot target the palette's
   extension. Shutdown cancels pending host tasks; a generation check rejects replies from old contexts.
@@ -130,7 +130,7 @@ Two host-call flavours:
 | `Service/ExtensionCommandMetadataStore.swift` | every command's subtitle override and refresh bookkeeping, in one small file |
 | `Service/ExtensionCatalog.swift` | discovery on disk, install, uninstall, import-from-Raycast |
 | `Service/ExtensionCleanup.swift` | the build workspace's name, the launch sweep, and reclaiming orphans |
-| `Service/ExtensionManager.swift` | the single owner: installed set, foreground session, menu-bar manager, launcher entries |
+| `Service/ExtensionManager.swift` | the single owner: installed set, foreground session, no-view refreshes, menu-bar manager, launcher entries |
 | `Service/ExtensionMenuBarManager.swift` | serialized refreshes, short-lived menu sessions and their deadlines |
 | `Service/ExtensionMenuBarHost.swift` | immutable per-session namespace and menu-specific host behavior |
 | `Service/ExtensionMenuBarStore.swift` | active commands, button snapshots and next refresh dates |
@@ -154,7 +154,8 @@ evaluation and the blocking shims off the main actor.
 
 **One foreground command at a time, one context per command.** Starting a foreground command stops
 its predecessor and throws the whole `JSContext` away; the next launch boots a fresh one (~7 ms warm,
-measured). Menu commands use a separate transient lane owned by the extension feature.
+measured). Scheduled `no-view` refreshes borrow this runtime while the palette is idle and yield to a
+foreground launch. Menu commands use a separate transient lane owned by the extension feature.
 
 Reusing a context was subtly broken. Timers are global and React's scheduler drives every commit
 through `setTimeout`, so cancelling an extension's leftover timers on teardown also cancelled the
@@ -213,10 +214,11 @@ settings backups. The command's **Show in menu bar** toggle, uninstall, and disa
 all tear down the corresponding native items and work. Removing a menu item leaves the extension's
 other commands installed. Only explicitly activated commands have saved records.
 
-`launchCommand` preserves `type`, arguments and JSON context. Background menu refreshes and explicit background `no-view` launches use the transient lane at utility
-priority and leave the palette alone; a user-initiated view launch from a menu opens the palette. Menu toasts are suppressed;
-errors are exposed through the menu and user-initiated failures also use the HUD. `updateCommandMetadata`
-and scheduled `no-view` refreshes remain unsupported.
+`launchCommand` preserves `type`, arguments and JSON context. Background menu refreshes and explicit
+background `no-view` launches use the transient lane at utility priority and leave the palette alone;
+a user-initiated view launch from a menu opens the palette. Menu toasts are suppressed; errors appear
+in the menu and user-initiated failures also use the HUD. `updateCommandMetadata` publishes subtitles
+for the executing command, including menu commands, without changing another runtime's command.
 
 Menu-bar icons retain successful small raster variants and let AppKit choose the drawing appearance.
 Failed loads retry on the next session, never on each React render. Native rows retain no render tree. Do not
@@ -600,8 +602,8 @@ with nothing due costs a comparison. Three guards keep it cheap:
   window call, since those would fire on a timer.
 
 `ExtensionRefreshPolicy` is where the parsing, due dates and backoff live, driven by
-`Tests/ext-refresh-test.swift`; `Tests/ext-metadata-test.swift` covers the store behind it. A `menu-bar` interval parses but never schedules, since menu-bar
-commands don't run at all.
+`Tests/ext-refresh-test.swift`; `Tests/ext-metadata-test.swift` covers the store behind it. Menu-bar
+commands schedule separately through `ExtensionMenuBarManager`, with a ten-second interval floor.
 
 ## What's supported
 
@@ -721,7 +723,7 @@ both generated wrappers and extensions that call a helper directly with `execFil
 
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`. A `no-view` command declaring `interval`
-(`"1m"`, `"12h"`, `"1d"`) also refreshes in the background — see below.
+(`"1m"`, `"12h"`, `"1d"`) also refreshes in the background — see [Background refresh](#background-refresh).
 `menu-bar` commands render native menu extras with the lifecycle described above.
 Launch contexts also carry JSON `props.launchContext`.
 
@@ -734,7 +736,6 @@ OAuth extensions it excluded are not counted yet — re-measure before quoting t
 
 | Gap | Why |
 | --- | --- |
-| **Scheduled `no-view` refresh and `updateCommandMetadata`** | Only menu-bar commands have background scheduling. Subtitle metadata updates are not published to launcher entries. |
 | **Raycast's PKCE proxy (`oauth.raycast.com`)** | Extensions whose provider has no PKCE support exchange tokens through Raycast's proxy. `OAuth.PKCEClient` works; a provider that needs that proxy still fails. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **A WebSocket to a host with a certificate macOS distrusts** | `ws`'s `rejectUnauthorized: false` is ignored — URLSession validates the chain either way. |

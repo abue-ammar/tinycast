@@ -57,6 +57,12 @@ struct ExtensionRefreshTests {
         expect(
             command(json: baseJSON(interval: "weekly"))?.interval == nil,
             "garbage means no schedule, not a crash")
+        let frequent = baseJSON(interval: "10s")
+        expect(command(json: frequent)?.interval == 60, "no-view manifests keep the minute floor")
+        var menu = frequent
+        menu["mode"] = "menu-bar"
+        expect(command(json: menu)?.interval == 10, "menu-bar manifests keep the ten-second floor")
+        expect(command(json: menu)?.intervalRaw == "10s", "menu-bar Settings retain the requested interval")
     }
 
     // MARK: - Schedulability
@@ -73,7 +79,7 @@ struct ExtensionRefreshTests {
             "a view interval never schedules")
         expect(
             !ExtensionRefreshPolicy.isSchedulable(mode: .menuBar, interval: 60),
-            "a menu-bar interval parses but never schedules")
+            "the no-view scheduler excludes menu-bar commands")
     }
 
     // MARK: - Due dates and backoff

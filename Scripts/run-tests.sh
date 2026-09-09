@@ -460,6 +460,7 @@ run slow ext-test          -parse-as-library \
                            $E/Service/ExtensionStorage.swift \
                            $E/Service/ExtensionMenuBarStore.swift \
                            $E/Service/ExtensionMenuBarManager.swift \
+                           $E/Service/ExtensionBackgroundSession.swift \
                            $E/UI/ExtensionMenuBarController.swift \
                            $E/UI/ExtensionMenuBarImage.swift \
                            Tinycast/Platform/Appearance.swift \

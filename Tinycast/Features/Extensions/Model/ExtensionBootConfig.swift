@@ -111,8 +111,3 @@ enum ExtensionRuntimeVersion {
     /// The @raycast/api version the bundled shim tracks. Surfaced as `environment.raycastVersion`.
     static let raycastAPI = "2.0.3"
 }
-
-enum ExtensionLaunchType: String, Sendable {
-    case userInitiated
-    case background
-}

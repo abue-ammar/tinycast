@@ -4,14 +4,16 @@ import AppKit
 final class ExtensionMenuBarHost: ExtensionHostContext {
     let owner: InstalledExtension
     let storage: ExtensionStorage
+    private let reference: ExtensionCommandRef
     private var isInteractive: Bool
     private weak var manager: ExtensionManager?
     private weak var coordinator: ExtensionCoordinator?
     private let oauth = ExtensionOAuthSession()
 
-    init(owner: InstalledExtension, launchType: ExtensionLaunchType, storage: ExtensionStorage,
+    init(owner: InstalledExtension, command: ExtensionCommand, launchType: ExtensionLaunchType, storage: ExtensionStorage,
          manager: ExtensionManager, coordinator: ExtensionCoordinator) {
         self.owner = owner
+        reference = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
         isInteractive = launchType == .userInitiated
         self.storage = storage
         self.manager = manager
@@ -19,6 +21,7 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     }
 
     var activeExtensionName: String? { owner.manifest.name }
+    var activeLaunchType: ExtensionLaunchType { isInteractive ? .userInitiated : .background }
     var pasteTarget: NSRunningApplication? { NSWorkspace.shared.frontmostApplication }
     var applicationURLs: [URL] { coordinator?.applicationURLs ?? [] }
 
@@ -29,6 +32,9 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     func popToRoot() {}
     func clearSearchBar() {}
     func openPreferences(scope: String) { coordinator?.showExtensionSettings(for: owner) }
+    func updateCommandMetadata(subtitle: String?) {
+        manager?.updateCommandMetadata(subtitle: subtitle, for: reference)
+    }
     func present(toast: ExtensionToast) -> Int { 0 }
     func update(toast id: Int, with toast: ExtensionToast) {}
     func hide(toast id: Int) {}

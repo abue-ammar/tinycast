@@ -18,7 +18,7 @@ extension ExtensionTests {
         let manager = ExtensionMenuBarManager(
             storage: storage, file: directory.appendingPathComponent("bars.json"),
             supportDirectory: directory.appendingPathComponent("support"), showsStatusItems: false,
-            makeExecution: { _, _ in
+            makeExecution: { _, _, _ in
                 boots += 1
                 let host = StubHost()
                 hosts.append(host)
@@ -449,7 +449,7 @@ extension ExtensionTests {
             storage: storage, file: directory.appendingPathComponent("bars.json"),
             supportDirectory: directory.appendingPathComponent("support"), executionTimeout: .seconds(1),
             showsStatusItems: false,
-            makeExecution: { owner, type in
+            makeExecution: { owner, _, type in
                 boots.append((owner.manifest.name, type))
                 let host = MenuHost(name: owner.manifest.name, storage: storage)
                 host.isInteractive = type == .userInitiated
@@ -627,4 +627,107 @@ extension ExtensionTests {
         manager.synchronize([])
         check("uninstall prunes every menu and schedule", manager.store.records.isEmpty && !manager.isRunning)
     }
+}
+
+/// The headless refresh lane: what one run reports, and what a preempted one must not.
+@MainActor
+enum ExtensionBackgroundSessionTests {
+    static func runChecks(_ check: (String, Bool, String) -> Void) async {
+        let reference = ExtensionCommandRef(extensionName: "coffee", commandName: "status")
+
+        // A fast command used to finish before anyone waited, and then record a timeout instead.
+        let early = ExtensionBackgroundSession(reference: reference)
+        early.complete(.success)
+        var outcome = await early.wait(timeout: 0.05)
+        check("a run that finished before the wait still reports success", outcome == .success, "")
+
+        let failed = ExtensionBackgroundSession(reference: reference)
+        failed.complete(.failure("TypeError: x"))
+        outcome = await failed.wait(timeout: 0.05)
+        check("a synchronous failure keeps its own message", outcome.error == "TypeError: x", "")
+
+        let hung = ExtensionBackgroundSession(reference: reference)
+        outcome = await hung.wait(timeout: 0.05)
+        check("a run that never settles times out", outcome == .failure("Timed out."), "")
+        hung.complete(.success)
+        check("a late success cannot rewrite the timeout", hung.outcome == .failure("Timed out."), "")
+
+        let aborted = ExtensionBackgroundSession(reference: reference)
+        aborted.complete(.cancelled)
+        outcome = await aborted.wait(timeout: 0.05)
+        check("a preempted run records neither success nor failure",
+              outcome == .cancelled && outcome.error == nil, "")
+
+        await realCommandChecks(check)
+    }
+
+    /// End to end through JavaScriptCore, wired the way `runInBackground` wires it: a real no-view
+    /// command, the shipped delegate callbacks, and the outcome a schedule is recorded from.
+    static func realCommandChecks(_ check: (String, Bool, String) -> Void) async {
+        let reference = ExtensionCommandRef(extensionName: "fixture", commandName: "status")
+        let cases: [(String, String, ExtensionBackgroundSession.Outcome)] = [
+            ("a command that returns settles as a success",
+             "module.exports.default = async function() { return; };", .success),
+            ("a command that throws settles as its own failure",
+             "module.exports.default = async function() { throw new Error('boom'); };",
+             .failure("boom"))
+        ]
+        for (label, body, expected) in cases {
+            let session = ExtensionBackgroundSession(reference: reference)
+            let relay = BackgroundRelay(session: session)
+            let runtime = ExtensionRuntime(
+                hostAPI: StubBackgroundHost(), runtimeURL: ExtensionTests.runtimeURL())
+            defer { runtime.shutdown() }
+            runtime.setDelegate(relay)
+            try? await runtime.boot(config: ExtensionBootConfig.current(
+                supportDirectory: FileManager.default.temporaryDirectory))
+            var context = ExtensionLaunchContext(
+                extensionName: reference.extensionName, extensionTitle: reference.extensionName,
+                commandName: reference.commandName, commandMode: ExtensionCommandMode.noView,
+                assetsPath: "/tmp",
+                supportPath: "/tmp", preferences: [:], caches: [:], arguments: [:],
+                fallbackText: nil, isDarkAppearance: true)
+            context.launchType = .background
+            await runtime.start(
+                session: session.id, code: body, file: URL(fileURLWithPath: "/tmp/status.js"),
+                mode: ExtensionCommandMode.noView, context: context)
+            // The whole point: a fast command settles before anyone waits, and must still report.
+            let outcome = await session.wait(timeout: 5)
+            let matched: Bool
+            switch (outcome, expected) {
+            case (.success, .success): matched = true
+            case (.failure(let actual), .failure(let wanted)): matched = actual.contains(wanted)
+            default: matched = false
+            }
+            check(label, matched, "got \(outcome)")
+        }
+    }
+}
+
+/// Routes the runtime callbacks into one background session, exactly as `ExtensionManager` does.
+@MainActor
+private final class BackgroundRelay: ExtensionRuntimeDelegate {
+    private let session: ExtensionBackgroundSession
+
+    init(session: ExtensionBackgroundSession) { self.session = session }
+
+    func runtime(_ runtime: ExtensionRuntime, session id: String, didRender tree: RenderTree) {}
+    func runtime(_ runtime: ExtensionRuntime, session id: String, navigationDepth: Int) {}
+    func runtime(_ runtime: ExtensionRuntime, log level: String, message: String) {}
+
+    func runtime(_ runtime: ExtensionRuntime, session id: String, didFail message: String) {
+        guard id == session.id else { return }
+        session.complete(.failure(message))
+    }
+
+    func runtime(_ runtime: ExtensionRuntime, session id: String, didFinish: Void) {
+        guard id == session.id else { return }
+        session.complete(.success)
+    }
+}
+
+@MainActor
+private final class StubBackgroundHost: ExtensionHostAPI {
+    func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String { "" }
+    func sessionEnded() {}
 }

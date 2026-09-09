@@ -30,7 +30,7 @@ enum ExtensionRefreshPolicy {
         return max(amount * multiplier, minimumInterval)
     }
 
-    /// Only `no-view` refreshes; a `menu-bar` interval parses but never schedules.
+    /// Menu-bar refreshes belong to their own scheduler.
     static func isSchedulable(mode: ExtensionCommandMode, interval: TimeInterval?) -> Bool {
         mode == .noView && interval != nil
     }

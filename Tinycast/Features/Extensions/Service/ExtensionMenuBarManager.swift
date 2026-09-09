@@ -8,7 +8,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     private let supportDirectory: URL
     private let executionTimeout: Duration
     private let showsStatusItems: Bool
-    private let makeExecution: (InstalledExtension, ExtensionLaunchType) -> Execution?
+    private let makeExecution: (InstalledExtension, ExtensionCommand, ExtensionLaunchType) -> Execution?
     private let onError: (String, InstalledExtension, Bool) -> Void
     private var installed: [InstalledExtension] = []
     private var controllers: [String: ExtensionMenuBarController] = [:]
@@ -62,7 +62,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
 
     init(storage: ExtensionStorage, file: URL, supportDirectory: URL, executionTimeout: Duration = .seconds(60),
          showsStatusItems: Bool = true,
-         makeExecution: @escaping (InstalledExtension, ExtensionLaunchType) -> Execution?,
+         makeExecution: @escaping (InstalledExtension, ExtensionCommand, ExtensionLaunchType) -> Execution?,
          onError: @escaping (String, InstalledExtension, Bool) -> Void) {
         self.storage = storage
         self.supportDirectory = supportDirectory
@@ -164,7 +164,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             runNext()
             return
         }
-        guard let execution = makeExecution(owner, request.type) else { runNext(); return }
+        guard let execution = makeExecution(owner, command, request.type) else { runNext(); return }
         let runtime = execution.runtime
         runtime.setDelegate(self)
         let session = Session(request: request, owner: owner, mode: command.mode, execution: execution)

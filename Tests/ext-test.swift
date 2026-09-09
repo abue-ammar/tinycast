@@ -199,6 +199,7 @@ struct ExtensionTests {
         await asyncComponentChecks()
         await menuBarRuntimeChecks()
         await menuBarHostChecks()
+        await ExtensionBackgroundSessionTests.runChecks(check)
         await ExtensionFetchTests.runChecks()
 
         print("\n\(passes) passed, \(failures) failed")
