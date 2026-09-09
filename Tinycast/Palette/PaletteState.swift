@@ -85,6 +85,11 @@ final class PaletteState {
 
     /// Open `mode` over the current screen, which a back step returns to.
     func push(mode: PaletteMode) {
+        // The launcher never draws a back step, so it cannot sit on top of another screen.
+        if mode == .launcher {
+            prepare(mode: .launcher)
+            return
+        }
         backStack.append(PaletteFrame(mode: self.mode, query: query, selection: selection))
         replace(mode: mode)
     }

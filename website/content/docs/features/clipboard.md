@@ -6,7 +6,7 @@ description: Text and images, searchable, filtered by type, pasted back where yo
 Tinycast keeps what you copy and lets you paste any of it back into the app you were using.
 
 Reach it with <kbd>⇥</kbd> from the launcher, the **Clipboard History** command, or its own global
-shortcut recorded in **Settings → Clipboard**.
+shortcut recorded in **Settings → Clipboard**. <kbd>⎋</kbd> returns to the launcher from all three.
 
 The footer names where a paste will land — "Paste to Notes" — so you always know the target.
 

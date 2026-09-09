@@ -298,7 +298,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
                 return true
             }
-            return core.palette.pop()
+            if core.palette.pop() { return true }
+            if core.palette.mode == .clipboard {
+                core.palette.prepare(mode: .launcher)
+                return true
+            }
+            return false
         }
         installPasteMonitor()
         // Handled at the panel: the field editor or a missing main menu eats these first.

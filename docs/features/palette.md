@@ -98,9 +98,11 @@ Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is s
 **The summon decides where a screen sits, not the mode.** `PaletteCoordinator.navigate(to:)` is the
 one rule: a palette already on screen is being *navigated*, so the current screen is pushed and
 becomes the step back; a hidden one is being *summoned*, so the new screen is a root with nothing
-behind it. Every mode command and every global hotkey funnels through `showPalette`, which calls it —
-so typing "Clipboard History" at the root and pressing ↵ leaves a step back to the search that found
-it, while the Clipboard History hotkey does not. Nothing per-feature encodes this.
+behind it. The launcher is the exception — it never draws a back chevron, so `push(.launcher)`
+`prepare`s instead of stacking, and an empty-field Escape on it always hides. Every mode command and
+every global hotkey funnels through `showPalette`, which calls `navigate` — so typing "Clipboard
+History" at the root and pressing ↵ leaves a step back to the search that found it, while the
+Clipboard History hotkey does not. Nothing per-feature encodes this.
 
 `PaletteState` holds the screens below `mode` as `[PaletteFrame]` — mode, query and selection, enough
 that returning looks like never having left — and offers four motions over it:
@@ -117,10 +119,11 @@ top, which would throw away the very selection being restored.
 
 **Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
 leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
-pushed screen pops, and a root hides the palette. A focused inline argument field is a rung above the
-query, so Escape hands focus back to the search field first — the query that found the command is
-still there to be cleared by the next press. A bare backspace in an empty field takes the same step,
-and ⌘⎋ skips the whole stack for a fresh root search without closing the window.
+pushed screen pops. A clipboard root — Tab or its own hotkey — still walks back to the launcher,
+like Raycast. Every other root hides the palette. A focused inline argument field is a rung above
+the query, so Escape hands focus back to the search field first — the query that found the command
+is still there to be cleared by the next press. A bare backspace in an empty field takes the same
+step, and ⌘⎋ skips the whole stack for a fresh root search without closing the window.
 
 `EscapeKeyBehavior` (General settings) can trade the walk back for the old behavior: under
 `closeAndPopToRoot` an empty field closes the window and resets it immediately, whatever Pop to Root
@@ -129,8 +132,8 @@ Search says. Clearing the query is still the first press either way.
 The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
 slot means once you are off the root, and a slot that changed shape with provenance would read
 as two different controls. Where the click lands still depends on the stack — a pushed screen
-pops, a root one closes — so `backHelp` says which, rather than promising a step that is really
-a close. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
+pops, a clipboard root returns to the launcher, and any other root closes — so `backHelp` says
+which, rather than promising a step that is really a close. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
 `HeaderBackButton` keeps that hover state to itself so the header around it never re-renders.
 
 The launcher advertises the first hop in the header — `AI Chat` beside a `⇥` cap, the footer's own
@@ -407,6 +410,10 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Several kinds do not. All
 handled in `PalettePanel.sendEvent` before `super` hands the event to the responder chain:
 
 - **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
+- **A bare Escape** — AppKit binds it to `cancelOperation:` on the field editor, the same
+  selector as ⌘. When the query is empty there is nothing to cancel, so the key dies unless
+  `sendEvent` claims it (`onBareEscape`). An IME composition, an open control list, and an
+  extension form field keep the key, because each of those has its own cancel.
 - **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
 - **The physical number-row slots.** `FavoriteSlots` matches ⌘1…⌘0 by key code before fixed command
   chords, then publishes the resolved position to the active screen. Only the launcher and clipboard

@@ -15,7 +15,7 @@ screen or a screen you reach from it, and <kbd>⎋</kbd> walks back the way you 
 | <kbd>⌘</kbd><kbd>K</kbd>  | Open the Actions menu for the selection               |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Move the selection                                    |
 | <kbd>⇥</kbd>              | Cycle between the launcher and clipboard              |
-| <kbd>⎋</kbd>              | Clear the search, go back a screen, then close        |
+| <kbd>⎋</kbd>              | Clear the search, go back a screen (clipboard included), then close |
 | <kbd>⌘</kbd><kbd>⎋</kbd>  | Back to the root search from any depth                |
 | <kbd>⌫</kbd>              | On an empty field, step back one screen               |
 | <kbd>⌘</kbd><kbd>,</kbd>  | Open Settings                                         |

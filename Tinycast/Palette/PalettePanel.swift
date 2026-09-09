@@ -11,6 +11,8 @@ final class PalettePanel: NSPanel {
 
     /// Bare backspace, which the field editor swallows before `onKeyPress` could see it.
     var onBareBackspace: (() -> Bool)?
+    /// Bare Escape, which the field editor turns into `cancelOperation:` before `onKeyPress`.
+    var onBareEscape: (() -> Bool)?
     /// Command chords the field editor swallows, plus the ones no main menu handles.
     var onCommandShortcut: ((NSEvent) -> Bool)?
     /// The palette's typing context, handed over each time a field takes focus.
@@ -172,6 +174,18 @@ final class PalettePanel: NSPanel {
             Int(event.keyCode) == kVK_Delete,
             event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
             onBareBackspace?() == true
+        {
+            return
+        }
+        if event.type == .keyDown,
+            Int(event.keyCode) == kVK_Escape,
+            !event.isARepeat,
+            event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
+            PaletteEscapeAction.shouldClaimFromSendEvent(
+                isComposing: paletteState?.isComposing == true,
+                isControlListOpen: paletteState?.isControlListOpen == true,
+                isEditingField: paletteState?.isEditingField == true),
+            onBareEscape?() == true
         {
             return
         }

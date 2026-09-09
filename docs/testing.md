@@ -89,6 +89,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` |
+| `palette-escape-test` | `PaletteEscapeAction` — the walk-back table, the ⌘⎋ chord, and which empty-field Escape `sendEvent` must claim |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
@@ -277,8 +278,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   then hides on a second press; clicking away closes it
 - Search a mode command (Clipboard History, Search Emoji, Search Quicklinks, Search Files, AI Chat)
   and run it: Escape returns to the launcher **with the query still typed and the row still
-  selected**, and the next press clears it. The same screen from its own global hotkey hides the
-  palette instead, and shows its own header icon rather than a back chevron
+  selected**, and the next press clears it. Clipboard History opened by Tab or its own hotkey
+  also returns to the launcher. Every other screen from its own global hotkey hides the palette
+  instead, and shows its own header icon rather than a back chevron
 - ⌘⎋ from any depth lands on an empty root search with the window still open — **must be checked on
   a real keyboard**: macOS claims the chord, so `CommandEscapeTap` is the only thing that delivers it
   and it needs Accessibility granted to the running build. With the palette closed, ⌘⎋ still does

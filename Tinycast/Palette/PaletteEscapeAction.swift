@@ -7,6 +7,8 @@ enum PaletteEscapeAction: Equatable {
     case clearQuery
     case exitExtensionScreen
     case goBack
+    /// Clipboard on the Tab ring has no stack, but it still walks back to the launcher.
+    case goToLauncher
     case hidePalette
 
     static func resolve(
@@ -20,6 +22,17 @@ enum PaletteEscapeAction: Equatable {
         guard behavior == .navigateBackOrClose else { return .hidePalette }
         // An extension pops its own navigation stack before the command is left.
         if mode == .extensionCommand { return .exitExtensionScreen }
+        // The header has no back chevron here, so a leftover stack must not walk back.
+        if mode == .launcher { return .hidePalette }
+        // Tab / hotkey clipboard is a root, but Raycast still lands on the launcher.
+        if mode == .clipboard { return canGoBack ? .goBack : .goToLauncher }
         return canGoBack ? .goBack : .hidePalette
+    }
+
+    /// The field editor binds Escape to `cancelOperation:` and drops an empty-field press.
+    static func shouldClaimFromSendEvent(
+        isComposing: Bool, isControlListOpen: Bool, isEditingField: Bool
+    ) -> Bool {
+        !isComposing && !isControlListOpen && !isEditingField
     }
 }

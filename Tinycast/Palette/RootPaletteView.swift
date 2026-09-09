@@ -279,6 +279,7 @@ struct RootPaletteView: View {
                     WindowReader {
                         hostWindow = $0
                         installHeaderArrowHandler(in: $0)
+                        installBareEscapeHandler(in: $0)
                     }
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
@@ -347,7 +348,10 @@ struct RootPaletteView: View {
             .onChange(of: menuSelection) { syncMenuPanel(presenting: false) }
             .onDisappear {
                 menuPanel.hide()
-                (hostWindow as? PalettePanel)?.onHeaderFieldBoundaryArrow = nil
+                if let panel = hostWindow as? PalettePanel {
+                    panel.onHeaderFieldBoundaryArrow = nil
+                    panel.onBareEscape = nil
+                }
             }
             .onAppear { searchFocused = !screen.hidesSearchField }
             .modifier(SearchFieldHiding(hidden: hidesSearchField, apply: applySearchFieldHiding))
@@ -422,31 +426,7 @@ struct RootPaletteView: View {
                 return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
             }
             .onKeyPress(.escape) {
-                // An open list closes itself first, exactly as the ⌘K menu does.
-                if vm.isControlListOpen { return .ignored }
-                switch PaletteEscapeAction.resolve(
-                    menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
-                    mode: vm.mode, canGoBack: vm.canGoBack,
-                    behavior: settings.escapeKeyBehavior)
-                {
-                case .closeMenu:
-                    closeMenus()
-                case .leaveArgumentField:
-                    returnFocusToSearchField()
-                case .clearQuery:
-                    vm.query = ""
-                case .exitExtensionScreen:
-                    core.extensionCoordinator.exitExtensionScreen()
-                case .goBack:
-                    goBack()
-                case .hidePalette:
-                    core.paletteCoordinator.hidePalette()
-                    // This behavior promises a root search on reopen, whatever the delay says.
-                    if settings.escapeKeyBehavior == .closeAndPopToRoot {
-                        core.paletteCoordinator.popToRootNow()
-                    }
-                }
-                return .handled
+                handleEscapeKey() ? .handled : .ignored
             }
             .onKeyPress(keys: [.tab], phases: .down) { press in
                 // ⇥ inside an open list belongs to the list, not to the form's field order.
@@ -1065,6 +1045,42 @@ struct RootPaletteView: View {
         searchFocused = next == nil
     }
 
+    /// Field editor binds Escape to cancelOperation, so sendEvent must run this first.
+    private func handleEscapeKey() -> Bool {
+        if vm.isComposing || vm.isControlListOpen { return false }
+        switch PaletteEscapeAction.resolve(
+            menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
+            mode: vm.mode, canGoBack: vm.canGoBack,
+            behavior: settings.escapeKeyBehavior)
+        {
+        case .closeMenu:
+            closeMenus()
+        case .leaveArgumentField:
+            returnFocusToSearchField()
+        case .clearQuery:
+            vm.query = ""
+        case .exitExtensionScreen:
+            core.extensionCoordinator.exitExtensionScreen()
+        case .goBack:
+            goBack()
+        case .goToLauncher:
+            vm.prepare(mode: .launcher)
+        case .hidePalette:
+            core.paletteCoordinator.hidePalette()
+            // This behavior promises a root search on reopen, whatever the delay says.
+            if settings.escapeKeyBehavior == .closeAndPopToRoot {
+                core.paletteCoordinator.popToRootNow()
+            }
+        }
+        return true
+    }
+
+    /// Claims empty-field Escape in sendEvent; onKeyPress never sees that press.
+    private func installBareEscapeHandler(in window: NSWindow?) {
+        guard let panel = window as? PalettePanel else { return }
+        panel.onBareEscape = { handleEscapeKey() }
+    }
+
     /// Right at an inline field's end and Left at its start continue the same ring as Tab.
     private func installHeaderArrowHandler(in window: NSWindow?) {
         guard let panel = window as? PalettePanel else { return }
@@ -1111,7 +1127,9 @@ struct RootPaletteView: View {
 
     /// An extension keeps its own stack, so it can have a step back the palette cannot see.
     private var hasBackStep: Bool {
-        vm.canGoBack || (vm.mode == .extensionCommand && extensions.navigationDepth > 1)
+        vm.canGoBack
+            || vm.mode == .clipboard
+            || (vm.mode == .extensionCommand && extensions.navigationDepth > 1)
     }
 
     /// Never promises a step the click does not take: a root screen closes rather than backs.
@@ -1125,7 +1143,12 @@ struct RootPaletteView: View {
             core.extensionCoordinator.exitExtensionScreen()
             return
         }
-        if !vm.pop() { core.paletteCoordinator.hidePalette() }
+        if vm.pop() { return }
+        if vm.mode == .clipboard {
+            vm.prepare(mode: .launcher)
+            return
+        }
+        core.paletteCoordinator.hidePalette()
     }
 
     private func activateSelection() {

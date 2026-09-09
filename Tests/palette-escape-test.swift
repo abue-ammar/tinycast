@@ -58,6 +58,10 @@ struct PaletteEscapeTests {
             resolve(),
             .hidePalette,
             "an empty launcher query hides the palette")
+        expect(
+            resolve(canGoBack: true),
+            .hidePalette,
+            "the launcher never walks back: a leftover stack still hides, it does not pop")
         // The two surfaces where the field is not a search field: an argument answer, a chat draft.
         expect(
             resolve(query: "blue", mode: .customCommandArguments),
@@ -79,8 +83,8 @@ struct PaletteEscapeTests {
             "a clipboard screen opened from the root search returns to it")
         expect(
             resolve(mode: .clipboard),
-            .hidePalette,
-            "the same screen summoned by its own hotkey is a root, so it hides")
+            .goToLauncher,
+            "a clipboard root opened by Tab or its hotkey walks back to the launcher")
         expect(
             resolve(mode: .ai, canGoBack: true),
             .goBack,
@@ -99,6 +103,10 @@ struct PaletteEscapeTests {
             resolve(mode: .clipboard, canGoBack: true, behavior: .closeAndPopToRoot),
             .hidePalette,
             "close-and-pop-to-root hides even where a back step exists")
+        expect(
+            resolve(mode: .clipboard, behavior: .closeAndPopToRoot),
+            .hidePalette,
+            "close-and-pop-to-root also hides a clipboard root, instead of walking to the launcher")
         expect(
             resolve(mode: .extensionCommand, canGoBack: true, behavior: .closeAndPopToRoot),
             .hidePalette,
@@ -157,6 +165,23 @@ struct PaletteEscapeTests {
             CommandEscapeTap.isChord(
                 keyCode: Int64(kVK_Escape), flags: [.maskCommand, .maskAlphaShift, .maskSecondaryFn]),
             true, "the flags a real keyboard adds do not disqualify the chord")
+
+        expectChord(
+            PaletteEscapeAction.shouldClaimFromSendEvent(
+                isComposing: false, isControlListOpen: false, isEditingField: false),
+            true, "an empty-field Escape must be claimed before the field editor drops it")
+        expectChord(
+            PaletteEscapeAction.shouldClaimFromSendEvent(
+                isComposing: true, isControlListOpen: false, isEditingField: false),
+            false, "an IME composition keeps Escape so it can cancel marked text")
+        expectChord(
+            PaletteEscapeAction.shouldClaimFromSendEvent(
+                isComposing: false, isControlListOpen: true, isEditingField: false),
+            false, "an open control list closes itself, so sendEvent must not steal the key")
+        expectChord(
+            PaletteEscapeAction.shouldClaimFromSendEvent(
+                isComposing: false, isControlListOpen: false, isEditingField: true),
+            false, "an extension form field owns Escape while it is editing")
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }

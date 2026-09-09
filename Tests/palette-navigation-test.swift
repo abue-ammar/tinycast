@@ -86,6 +86,13 @@ struct PaletteNavigationTests {
             !ringed.canGoBack && ringed.mode == .clipboard,
             "crossing the Tab ring drops the stack without disturbing the screen")
 
+        let stacked = PaletteState()
+        stacked.prepare(mode: .clipboard)
+        stacked.push(mode: .launcher)
+        expect(
+            stacked.mode == .launcher && !stacked.canGoBack,
+            "the launcher is the root, so opening it drops whatever was underneath")
+
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
