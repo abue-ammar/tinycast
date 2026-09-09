@@ -187,9 +187,10 @@ its refresh schedule.
 Opening during a background refresh reuses that session and enables interactive confirmations, HUDs
 and OAuth for its actions. Its original JavaScript launch type still describes how the session started.
 
-The status button opens a native popup tracking session anchored below its full menu-bar window in
-screen coordinates, allowing for the menu's top inset and native gap. Escape, an outside click, or
-clicking the button again dismisses it. Native rows and small icons stay prepared between runs;
+The menu is attached to the status item, so AppKit owns tracking: it positions and dismisses the menu,
+and a click on any other status item hands off to that item the way two native menus do. Attaching it
+once at init rather than per snapshot keeps the first click working before any render arrives.
+Native rows and small icons stay prepared between runs;
 teardown clears handler IDs while preserving action appearance. A click before the new runtime is
 ready waits for a fresh callback with the same section/submenu path, label and shortcut, including an alternate's primary
 item. Changed or ambiguous items ask the user to reopen the menu instead of dispatching an old handler.

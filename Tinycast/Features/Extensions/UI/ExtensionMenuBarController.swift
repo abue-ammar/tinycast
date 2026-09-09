@@ -2,8 +2,6 @@ import AppKit
 
 @MainActor
 final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
-    private static let menuTopInset: CGFloat = 5
-    private static let menuBarGap: CGFloat = 3
     let entryID: String
     private(set) var isOpen = false
     var onOpen: (() -> Void)?
@@ -56,12 +54,11 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         super.init()
         status.autosaveName = entryID
         status.isVisible = isVisible
-        status.button?.target = self
-        status.button?.action = #selector(toggleMenu)
-        status.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
         status.button?.imagePosition = .imageLeading
         menu.autoenablesItems = false
         menu.delegate = self
+        // AppKit owns tracking, which is what hands a click on another status item over to it.
+        status.menu = menu
     }
 
     func update(_ snapshot: ExtensionMenuBarSnapshot) {
@@ -308,16 +305,6 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             } else { unavailable = true }
         }
         if unavailable { onActionUnavailable?() }
-    }
-
-    @objc private func toggleMenu() {
-        if isOpen { menu.cancelTracking(); return }
-        guard snapshot?.hasMenu == true, let button = status.button, let window = button.window else { return }
-        button.highlight(true)
-        defer { button.highlight(false) }
-        let anchor = NSPoint(x: window.frame.minX,
-                             y: window.frame.minY - Self.menuTopInset - Self.menuBarGap)
-        menu.popUp(positioning: nil, at: anchor, in: nil)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
