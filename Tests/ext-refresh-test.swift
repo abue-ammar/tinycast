@@ -20,7 +20,7 @@ struct ExtensionRefreshTests {
 
     static func baseJSON(interval: Any?) -> [String: Any] {
         var json: [String: Any] = [
-            "name": "status", "title": "Status", "mode": "no-view",
+            "name": "status", "title": "Status", "mode": "no-view"
         ]
         if let interval { json["interval"] = interval }
         return json

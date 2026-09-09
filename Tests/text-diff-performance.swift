@@ -33,8 +33,9 @@ enum TextDiffPerformance {
             checksum += chunks.count
         }
         let duration = start.duration(to: .now).components
-        let milliseconds = (Double(duration.seconds) * 1_000
-            + Double(duration.attoseconds) / 1e15) / Double(iterations)
+        let milliseconds =
+            (Double(duration.seconds) * 1_000
+                + Double(duration.attoseconds) / 1e15) / Double(iterations)
 
         let expected: [TextDiffEngine.Chunk]
         if workload == "equal" {
@@ -45,7 +46,8 @@ enum TextDiffPerformance {
             expected = [.deleted(original), .inserted(modified)]
         } else if workload == "sparse" {
             let suffix = String(original.dropFirst(3))
-            expected = [.deleted("old"), .inserted("new")]
+            expected =
+                [.deleted("old"), .inserted("new")]
                 + (suffix.isEmpty ? [] : [.equal(suffix)])
         } else {
             expected = (0..<count).flatMap { index in
@@ -78,8 +80,10 @@ enum TextDiffPerformance {
             ("a b", "b a"), ("one one two", "one two one"),
             ("café", "cafe\u{301}"), (" 👩🏽‍💻\n中文", "\t中文 👩🏽‍💻")
         ]
-        let fragments = ["", "a", "b", "a", " ", "  ", "\n", "\t", ".!?", "—",
-                         "café", "e\u{301}", "👩🏽‍💻", "中文", "مرحبا", "123"]
+        let fragments = [
+            "", "a", "b", "a", " ", "  ", "\n", "\t", ".!?", "—",
+            "café", "e\u{301}", "👩🏽‍💻", "中文", "مرحبا", "123"
+        ]
         var seed: UInt64 = 0x54494E5943415354
         func next(_ limit: Int) -> Int {
             seed = seed &* 6_364_136_223_846_793_005 &+ 1

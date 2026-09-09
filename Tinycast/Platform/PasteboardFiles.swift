@@ -7,12 +7,34 @@ enum PasteboardFiles {
 
     /// Empty when the board names no file, so a caller falls through to text or bytes.
     static func urls(on pasteboard: NSPasteboard) -> [URL] {
-        let items = (pasteboard.pasteboardItems ?? []).compactMap(url(from:))
-        if !items.isEmpty { return items }
-        guard let paths = pasteboard.propertyList(forType: legacyFilenames) as? [String] else {
-            return []
+        urls(on: pasteboard, limit: .max) { _ in true }
+    }
+
+    /// Filters while decoding, so a ten-thousand-file select-all stops decoding at the limit.
+    static func urls(
+        on pasteboard: NSPasteboard, limit: Int, matching predicate: (URL) -> Bool
+    ) -> [URL] {
+        guard limit > 0 else { return [] }
+        var matches: [URL] = []
+        var hasFileURL = false
+        for item in pasteboard.pasteboardItems ?? [] {
+            guard let url = url(from: item) else { continue }
+            hasFileURL = true
+            guard predicate(url) else { continue }
+            matches.append(url)
+            if matches.count == limit { return matches }
         }
-        return paths.map { URL(fileURLWithPath: $0) }
+        // A modern flavour suppresses the fallback even when every URL was rejected.
+        guard !hasFileURL,
+            let paths = pasteboard.propertyList(forType: legacyFilenames) as? [String]
+        else { return matches }
+        for path in paths {
+            let url = URL(fileURLWithPath: path)
+            guard predicate(url) else { continue }
+            matches.append(url)
+            if matches.count == limit { return matches }
+        }
+        return matches
     }
 
     /// `public.file-url` arrives as UTF-8 data on most boards and as a string on some.

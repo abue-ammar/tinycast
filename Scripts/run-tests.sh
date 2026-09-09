@@ -52,19 +52,22 @@ if [ "$only" = "--index" ]; then
     printf '[' > "$DB"
 fi
 
-# run [slow] [-O] <name> <source...> — queue the harness. `slow` dispatches it in the first wave.
+# run [slow] [-O] [index] <name> <source...> — queue the harness. `slow` dispatches it in the first
+# wave; `index` claims editor flags for a harness that is compiled by hand rather than by the suite.
 run() {
-    local opt=-Onone pri=1
+    local opt=-Onone pri=1 index_only=0
     while :; do
         case "$1" in
-            slow) pri=0; shift;;
-            -O)   opt=-O; shift;;
-            *)    break;;
+            slow)  pri=0; shift;;
+            -O)    opt=-O; shift;;
+            index) index_only=1; shift;;
+            *)     break;;
         esac
     done
     local name=$1
     shift
     if [ -n "$only" ] && [ "$name" != "$only" ]; then return 0; fi
+    if [ "$index_only" -eq 1 ] && [ "$emit_db" -eq 0 ]; then return 0; fi
     ran=$((ran + 1))
 
     # Absolute paths throughout: sourcekit-lsp resolves the command itself and does not apply
@@ -76,10 +79,14 @@ run() {
         printf '{"directory":"%s","command":"swiftc -swift-version 6 -sdk %s' \
             "$PWD" "$(xcrun --show-sdk-path --sdk macosx)" >> "$DB"
         printf ' %s' "${sources[@]}" >> "$DB"
-        # Claim only the harness itself. The command still lists every shipped source it compiles, so
-        # symbols resolve inside the harness — but claiming those sources here would hand them this
-        # 3-file command instead of the app's, and `.compile` is last-wins.
-        printf '","files":["%s/Tests/%s.swift"]}' "$PWD" "$name" >> "$DB"
+        # Claim every file under `Tests/`: the harness and any helper compiled beside it. A shipped
+        # source stays unclaimed, because it would get this short command instead of the app's full
+        # one and `.compile` is last-wins — but the app never compiles anything in `Tests/`.
+        local claimed=""
+        for source in "${sources[@]}"; do
+            case "$source" in *"/Tests/"*) claimed="$claimed${claimed:+,}\"$source\"";; esac
+        done
+        printf '","files":[%s]}' "$claimed" >> "$DB"
         return 0
     fi
 
@@ -99,6 +106,10 @@ run file-search-session-test Tinycast/Platform/Signposts.swift \
                              $L/SearchRelevance.swift \
                              Tinycast/Features/FileSearch/Model/*.swift \
                              Tinycast/Features/FileSearch/Service/*.swift
+run index file-search-performance Tinycast/Platform/Signposts.swift \
+                           $L/SearchRelevance.swift \
+                           Tinycast/Features/FileSearch/Model/*.swift \
+                           Tinycast/Features/FileSearch/Service/FileSearchService.swift
 run ranking-test           $L/SearchRelevance.swift $L/LauncherRankingStore.swift
 run scopes-test            $L/SearchScopes.swift
 run app-name-test          Tinycast/Platform/AppDisplayName.swift \
@@ -106,6 +117,7 @@ run app-name-test          Tinycast/Platform/AppDisplayName.swift \
                            $L/SearchRelevance.swift
 run favorites-test         $L/FavoriteSlots.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift
+run index calc-performance Tinycast/Features/Calculator/Model/*.swift
 run calendar-test          Tinycast/Features/Calendar/Model/*.swift
 run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
@@ -121,6 +133,14 @@ run pasteboard-test        Tinycast/Platform/PasteboardFiles.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
                            Tinycast/Features/Clipboard/Service/Paster.swift
+run index clipboard-file-performance \
+                           Tinycast/Platform/PasteboardFiles.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorFormat.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardManager.swift
 run emoji-test             Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
                            Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift \
                            Tinycast/Features/Emoji/Model/EmojiData.generated.swift
@@ -354,6 +374,7 @@ run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/MCP/Model/*.swift \
                            Tinycast/Features/MCP/Settings/MCPSettingsStore.swift
 run -O text-diff-test      Tinycast/Features/QuickActions/Model/TextDiffEngine.swift
+run index text-diff-performance Tinycast/Features/QuickActions/Model/TextDiffEngine.swift
 run quick-action-test      Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \

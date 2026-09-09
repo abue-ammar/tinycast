@@ -128,6 +128,28 @@ enum ClipboardSelectionBenchmark {
                 ])
             }
         }
+        for legacy in [false, true] {
+            for count in [cap, 10_000] {
+                let urls = Array(durable.prefix(count))
+                let pasteboard = board(urls, legacy: legacy)
+                precondition(PasteboardFiles.urls(on: pasteboard) == urls)
+                let iterations = 5
+                let startCPU = cpu()
+                let start = ContinuousClock.now
+                for _ in 0..<iterations {
+                    autoreleasepool { precondition(PasteboardFiles.urls(on: pasteboard) == urls) }
+                }
+                let wall = milliseconds(start) / Double(iterations)
+                let cpuTime = (cpu() - startCPU) / Double(iterations)
+                pasteboard.releaseGlobally()
+                results.append([
+                    "workload": "uncapped-reader", "files": count,
+                    "format": legacy ? "legacy" : "file-url", "iterations": iterations,
+                    "wall_ms_per_call": wall, "cpu_ms_per_call": cpuTime,
+                    "exact_output_passed": true
+                ])
+            }
+        }
         let data = try JSONSerialization.data(withJSONObject: results, options: [.sortedKeys])
         FileHandle.standardOutput.write(data + Data([10]))
     }
