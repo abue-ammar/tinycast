@@ -100,7 +100,13 @@ final class PaletteState {
         return true
     }
 
-    /// Tab rings the root surfaces, so crossing to one leaves nothing behind it.
+    /// Tab's step deeper into the ring: the screen crossed from is the step back, query and all.
+    func pushCarryingQuery(mode: PaletteMode) {
+        backStack.append(PaletteFrame(mode: self.mode, query: query, selection: selection))
+        self.mode = mode
+    }
+
+    /// Tab closing the ring on the launcher, which is its root: nothing is left behind it.
     func resetNavigation() {
         backStack.removeAll()
     }

@@ -110,6 +110,7 @@ that returning looks like never having left — and offers four motions over it:
 | `prepare(mode:)` | become the root: open fresh, drop the stack |
 | `replace(mode:)` | swap the screen, keep what it was opened over (a new chat, not a new root) |
 | `push(mode:)` | open over the current screen, which a back step returns to |
+| `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring |
 | `pop()` | restore the screen underneath; `false` when this one is the root |
 
 `pop()` bumps `followToken` rather than `resetToken`: the reset token exists to snap a list to the
@@ -145,6 +146,11 @@ still a `.freshScreen`: that field holds a half-written message rather than a qu
 dropped into a filter matches nothing. `.ask` is its own case rather than a `carryQuery(.ai)` because
 the text is submitted, not seeded, and the hint reads the case back out (`== .ask`) instead of
 restating the rule.
+
+**A ring hop is a step, so Escape walks back out the way Tab came in** — launcher → chat → clipboard
+takes two presses to unwind, and the back chevron's tooltip stops promising a step it cannot take.
+The launcher is the ring's root, so the hop that closes the ring resets the stack instead of stacking
+a third screen; ringing round forever therefore never grows the stack past two.
 
 `.customCommandArguments` — `PaletteMode.isArgumentForm` — is the one mode where the search field is
 not a search field: it _is_ the current argument's input, so its placeholder names that argument and ↵
