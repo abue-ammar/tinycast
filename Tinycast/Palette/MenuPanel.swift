@@ -69,7 +69,8 @@ final class MenuPanelController {
     /// Rebuilds the hosted tree in place: the panel keeps its window, so nothing flickers.
     func update(_ content: AnyView, corner: Corner, core: AppCore, clipsToMenuCorners: Bool) {
         guard let panel, let parent else { return }
-        setContent(AnyView(content.paletteEnvironment(core)), clipsToMenuCorners: clipsToMenuCorners, in: panel)
+        setContent(
+            AnyView(content.paletteEnvironment(core)), clipsToMenuCorners: clipsToMenuCorners, in: panel)
         layout(corner: corner, parent: parent)
     }
 

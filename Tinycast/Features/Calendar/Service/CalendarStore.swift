@@ -39,10 +39,15 @@ final class CalendarStore {
         hiddenCalendarIDs = Set(defaults.stringArray(forKey: hiddenKey) ?? [])
     }
 
+    /// TCC sends nothing when a grant changes in Settings, so anything acting on `access` re-reads.
+    func refreshAccess() {
+        access = Permissions.calendarAccess()
+    }
+
     // MARK: - Lifecycle
 
     func start() {
-        access = Permissions.calendarAccess()
+        refreshAccess()
         guard access == .granted else { return }
         observeWake()
         // Deferred: the first EventKit query pays for its XPC warm-up, and launch protects itself.
@@ -61,7 +66,7 @@ final class CalendarStore {
     /// Tinycast's own consent dialog has already been accepted by the time this runs.
     func requestAccess() async -> Bool {
         let granted = await Permissions.requestCalendarAccess()
-        access = Permissions.calendarAccess()
+        refreshAccess()
         guard granted else { return false }
         // A store built before the grant never sees the new calendars; drop it and rebuild.
         changeObserver = nil
@@ -111,7 +116,7 @@ final class CalendarStore {
 
     /// `EKEventStore` is not `Sendable`, so this stays on main; only pure values leave.
     func reload() {
-        access = Permissions.calendarAccess()
+        refreshAccess()
         guard access == .granted else {
             publish([])
             return
