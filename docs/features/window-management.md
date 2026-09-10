@@ -136,7 +136,8 @@ Two details carry their weight:
 Rule 1 also delivers the "works for windows Tinycast never moved" requirement: the capture happens in
 `WindowMover.perform` before a single write.
 
-**Cycling covers the four halves only**, and `WindowCycle` picks one of three modes, `.sizes` by default:
+**Cycling covers the four halves only**, and `WindowCycle` picks one of three modes, `.off` by default
+so a repeat press stays idempotent unless asked otherwise:
 
 - **`.sizes`** — ½ → ⅓ → ⅔ in place. Top and Bottom Half cycle through _vertical_ thirds, which have no
   commands of their own (the Thirds group is horizontal), so they are expressed as fractions rather
@@ -264,7 +265,7 @@ quantize to zero and the gesture would do nothing.
   app, and activating an app that lives on another Space pulls that Space forward — a race against the
   gesture that can land on the opposite Space from the one asked for.
 - **Settings** — `windowManagementEnabled` (off), `windowManagementShowInLauncher` (on), `windowGap`
-  (0) and `windowCycle` (`.sizes`). All four ride in settings backups: unlike `snippetsEnabled` they
+  (0) and `windowCycle` (`.off`). All four ride in settings backups: unlike `snippetsEnabled` they
   grant no permission class of their own.
 - **Per-command visibility** reuses `VisibilityStore` as-is; clearing a recorded shortcut is how a
   hotkey is disabled, so there is no separate per-command enabled flag. Window commands deliberately
