@@ -51,6 +51,7 @@ final class SettingsCoordinator {
             .environment(core.aiSettings)
             .environment(core.mcpSettings)
             .environment(core.quickActionSettings)
+            .environment(core.customQuickActions)
             .environment(core.chatGPTSubscription)
             .environment(core.installedAI)
             // Propagates down so the window's materials show through, not each list's backing.

@@ -52,6 +52,7 @@ final class AppCore {
     let mcpSettings = MCPSettingsStore()
     let mcp = MCPServerManager()
     let quickActionSettings = QuickActionSettingsStore()
+    let customQuickActions = CustomQuickActionStore()
     let chatGPTSubscription = ChatGPTSubscriptionManager()
     let installedAI = InstalledAIManager()
 
@@ -150,8 +151,10 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var supportCoordinator = SupportCoordinator(
         store: supportReminders, core: self)
     @ObservationIgnored private(set) lazy var quickActionCoordinator = QuickActionCoordinator(
-        settings: settings, store: quickActionSettings, injector: textInjector,
-        appIndex: appIndex, paletteCoordinator: paletteCoordinator, core: self)
+        settings: settings, store: quickActionSettings, customActions: customQuickActions,
+        injector: textInjector, appIndex: appIndex, hotKeys: hotKeys, favorites: favorites,
+        visibility: visibility, ranking: launcherRanking, aliases: aliases,
+        paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var mcpCoordinator = MCPCoordinator(
         settings: settings, store: mcpSettings, manager: mcp, core: self)
     @ObservationIgnored private(set) lazy var aiChatCoordinator = AIChatCoordinator(
@@ -209,6 +212,11 @@ final class AppCore {
             notesCoordinator.applyEnabled()
             aiChatCoordinator.applyEnabled()
             mcpCoordinator.applyEnabled()
+            customQuickActions.onChange = { [weak self] _ in
+                self?.quickActionCoordinator.applyCustomQuickActionsPresence()
+            }
+            // Before `hotKeys.start` even when off: the prune reads it.
+            customQuickActions.load()
             quickActionCoordinator.applyEnabled()
             customCommands.onChange = { [weak self] _ in
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
@@ -258,6 +266,9 @@ final class AppCore {
             hotKeys.onOpenQuicklink = { [weak self] id in
                 self?.quicklinkCoordinator.openQuicklink(id: id)
             }
+            hotKeys.onRunQuickAction = { [weak self] id in
+                self?.quickActionCoordinator.run(id: id)
+            }
             hotKeys.onRunExtensionCommand = { [weak self] entryID in
                 self?.extensionCoordinator.runExtensionCommand(entryID: entryID)
             }
@@ -281,7 +292,8 @@ final class AppCore {
             hotKeys.start(
                 customCommandIDs: Set(customCommands.commands.map(\.id)),
                 quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)),
-                windowLayoutIDs: Set(windowLayouts.layouts.map(\.id)))
+                windowLayoutIDs: Set(windowLayouts.layouts.map(\.id)),
+                quickActionIDs: Set(customQuickActions.actions.map(\.id)))
             // Keeps running while Carbon pauses: the recorder needs its rewritten flags.
             hyperKeyTap.start(settings: settings)
 
@@ -341,6 +353,8 @@ final class AppCore {
             return customCommands.command(id: id)?.name
         case .quicklink(let id):
             return quicklinks.quicklink(id: id)?.name
+        case .quickAction(let id):
+            return customQuickActions.action(id: id)?.name
         case .windowLayout(let id):
             return windowLayouts.layout(id: id)?.name
         case .extensionCommand(let entryID):

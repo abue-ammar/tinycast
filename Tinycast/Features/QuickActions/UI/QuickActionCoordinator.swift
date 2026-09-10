@@ -7,26 +7,41 @@ import Observation
 final class QuickActionCoordinator {
     private let settings: AppSettings
     private let store: QuickActionSettingsStore
+    private let customActions: CustomQuickActionStore
     private let injector: TextInjector
     private let appIndex: AppIndex
+    private let hotKeys: HotKeyManager
+    private let favorites: FavoritesStore
+    private let visibility: VisibilityStore
+    private let ranking: LauncherRankingStore
+    private let aliases: AliasStore
     private let paletteCoordinator: PaletteCoordinator
     private let panels = QuickActionPanelController()
     private unowned let core: AppCore
 
-    private static let launcherCommands = Set(QuickAction.allCases.map(CommandID.init))
+    private static let launcherCommands = Set(BuiltInQuickAction.allCases.map(CommandID.init))
 
     /// One at a time: two runs race for one selection, and the second overwrites the first's work.
     @ObservationIgnored private var running: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
 
     init(
-        settings: AppSettings, store: QuickActionSettingsStore, injector: TextInjector,
-        appIndex: AppIndex, paletteCoordinator: PaletteCoordinator, core: AppCore
+        settings: AppSettings, store: QuickActionSettingsStore,
+        customActions: CustomQuickActionStore, injector: TextInjector,
+        appIndex: AppIndex, hotKeys: HotKeyManager, favorites: FavoritesStore,
+        visibility: VisibilityStore, ranking: LauncherRankingStore, aliases: AliasStore,
+        paletteCoordinator: PaletteCoordinator, core: AppCore
     ) {
         self.settings = settings
         self.store = store
+        self.customActions = customActions
         self.injector = injector
         self.appIndex = appIndex
+        self.hotKeys = hotKeys
+        self.favorites = favorites
+        self.visibility = visibility
+        self.ranking = ranking
+        self.aliases = aliases
         self.paletteCoordinator = paletteCoordinator
         self.core = core
     }
@@ -34,6 +49,7 @@ final class QuickActionCoordinator {
     /// Launcher rows come and go with the switch; the Carbon bindings stay registered.
     func applyEnabled() {
         appIndex.setCommandsVisible(Self.launcherCommands, settings.quickActionsEnabled)
+        applyCustomQuickActionsPresence()
         guard settings.quickActionsEnabled else {
             cancel()
             core.applyInstalledAILifecycle()
@@ -69,6 +85,72 @@ final class QuickActionCoordinator {
             // The one prompt for this feature, raised from the gesture that asked for it.
             Permissions.ensureAccessibility()
         }
+    }
+
+    func applyCustomQuickActionsPresence() {
+        appIndex.setCustomQuickActions(
+            settings.quickActionsEnabled ? customActions.actions : [])
+    }
+
+    // MARK: - The reader's own actions
+
+    @discardableResult
+    func addCustomQuickAction(
+        _ draft: CustomQuickAction
+    ) throws(CustomQuickActionError) -> CustomQuickAction {
+        try customActions.add(draft)
+    }
+
+    func updateCustomQuickAction(_ draft: CustomQuickAction) throws(CustomQuickActionError) {
+        try customActions.update(draft)
+    }
+
+    func setPreviewsResult(_ previews: Bool, id: UUID) {
+        do {
+            try customActions.setPreviewsResult(previews, id: id)
+        } catch {
+            report(error)
+        }
+    }
+
+    func deleteCustomQuickAction(id: UUID) async {
+        guard let action = customActions.action(id: id) else { return }
+        guard
+            await core.confirm(
+                title: "Delete “\(action.name)”?",
+                message: "Its instructions, shortcut and learned ranking go with it.",
+                symbol: action.symbol, confirmTitle: "Delete")
+        else { return }
+        // Unwound only once the row is gone, so a kept record never loses its shortcut.
+        do {
+            guard let removed = try customActions.remove(id: id) else { return }
+            removeCustomQuickActionReferences(removed)
+        } catch {
+            report(error)
+        }
+    }
+
+    private func report(_ error: CustomQuickActionError) {
+        Task {
+            await core.showNotice(
+                title: "Couldn’t Save the Change", message: error.localizedDescription,
+                symbol: CustomQuickAction.sfSymbol, tone: .danger)
+        }
+    }
+
+    private func removeCustomQuickActionReferences(_ action: CustomQuickAction) {
+        let hotKeyAction = HotKeyAction.quickAction(id: action.id)
+        if hotKeys.recordingAction == hotKeyAction { hotKeys.recordingAction = nil }
+        hotKeys.setBinding(nil, for: hotKeyAction)
+        favorites.remove(keys: [action.entryID])
+        visibility.removeItemKeys([action.entryID])
+        aliases.removeKeys([action.entryID])
+        ranking.reset(itemKey: action.entryID)
+    }
+
+    func run(id: UUID) {
+        guard let action = customActions.action(id: id) else { return }
+        run(.custom(action))
     }
 
     func run(_ action: QuickAction) {
