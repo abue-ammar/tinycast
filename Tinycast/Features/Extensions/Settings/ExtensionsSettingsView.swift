@@ -469,6 +469,8 @@ private struct SettingsCardRow<Control: View>: View {
     var indent: CGFloat = 0
     /// A short fact about the row, beside its name rather than in the control column.
     var badge: String?
+    /// `nil` lets a pair of 120pt fields size themselves; other rows keep the shared 200pt slot.
+    var controlWidth: CGFloat? = Self.controlWidth
     @ViewBuilder var control: Control
 
     var body: some View {
@@ -497,30 +499,45 @@ private struct SettingsCardRow<Control: View>: View {
             .gridColumnAlignment(.leading)
             // One width for every control: else a toggle, a pop-up and a field end apart.
             control
-                .frame(width: SettingsCardRow.controlWidth, alignment: .trailing)
+                .frame(width: controlWidth, alignment: .trailing)
                 .gridColumnAlignment(.trailing)
         }
     }
 }
 
-/// One command: its shortcut, then any preferences it declares of its own.
+/// One command: alias and shortcut on the title row, then any preferences it declares of its own.
 private struct CommandRows: View {
     let installed: InstalledExtension
     let command: ExtensionCommand
+    @Environment(AppSettings.self) private var settings
+    @Environment(VisibilityStore.self) private var visibility
 
     /// A fact about the command, so it sits by the name as a badge rather than a warning colour.
     private var badge: String? { command.mode.isSupported ? nil : "Menu Bar" }
 
+    // Same key `AppIndex` already folds into `.userAlias`.
+    private var entryID: String {
+        ExtensionCommandRef(
+            extensionName: installed.manifest.name, commandName: command.name
+        ).entryID
+    }
+
+    // Hidden or unpublished commands never reach rank, so typing here would match nothing.
+    private var aliasReachesRanker: Bool {
+        settings.extensionsShowInLauncher && !visibility.hiddenItemKeys.contains(entryID)
+    }
+
     var body: some View {
-        SettingsCardRow(title: command.title, detail: command.description, badge: badge) {
-            if command.mode.isSupported {
-                // Per command, not per extension: a shortcut has to land on one thing to run.
-                ShortcutRecorder(
-                    action: .extensionCommand(
-                        entryID: ExtensionCommandRef(
-                            extensionName: installed.manifest.name, commandName: command.name
-                        ).entryID),
-                    isQuiet: true)
+        SettingsCardRow(
+            title: command.title, detail: command.description, badge: badge, controlWidth: nil
+        ) {
+            HStack(spacing: Theme.Spacing.lg) {
+                AliasField(key: entryID, name: command.title)
+                    .settingsEnabled(aliasReachesRanker)
+                if command.mode.isSupported {
+                    // Per command, not per extension: a shortcut has to land on one thing to run.
+                    ShortcutRecorder(action: .extensionCommand(entryID: entryID))
+                }
             }
         }
         // Indented under its command: at the same inset the association is reading order.

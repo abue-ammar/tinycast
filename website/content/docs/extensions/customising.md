@@ -28,6 +28,13 @@ using them outside Apple's own context is not permitted.
 
 Icon choices **do** ride along in [settings backups](/docs/reference/backup).
 
+## Command alias
+
+Each command has an **Add Alias** field beside its shortcut recorder. Type `si` and that command
+ranks first when you search `si`, the same way an [application alias](/docs/launcher/aliases) works.
+
+The field dims when the command is hidden from launcher search.
+
 ## Uninstalling
 
 Removes the extension and everything attached to it: local storage, cache, preferences, its support

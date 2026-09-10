@@ -6,7 +6,7 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 - [How it works](#how-it-works) · [The JS runtime](#the-js-runtime) ·
   [The Swift host](#the-swift-host) · [Rendering](#rendering)
 - [Turning it on](#turning-it-on) · [Installing extensions](#installing-extensions) ·
-  [Registries](#registries) · [Shortcuts](#shortcuts) · [What's supported](#whats-supported) ·
+  [Registries](#registries) · [Shortcuts](#shortcuts) · [Aliases](#aliases) · [What's supported](#whats-supported) ·
   [What isn't](#what-isnt-supported-yet) · [Working on the runtime](#working-on-the-runtime)
 
 ## Invariants
@@ -443,6 +443,15 @@ Its index is not pruned at launch the way the UUID-keyed ones are: the installed
 asynchronously and only while extensions are on, so at launch "not installed yet" and "gone" look
 identical, and pruning there would quietly drop a working binding. Uninstalling clears its own instead,
 along with the extension's stored preferences and its chosen icon.
+
+## Aliases
+
+A user alias binds to a **command**, keyed by the launcher entry id
+(`extension:<extension>/<command>`) — the same key the shortcut, favorite and ranking stores use.
+Settings › Extensions › the command › Alias is the writer; `AppIndex` already ranks it as
+`.userAlias`. The field sits beside the shortcut recorder on the command's title row, the same
+pairing Settings ▸ Commands uses. It dims when the command is hidden from launcher search — the
+global Show in launcher switch, or this extension's — because the ranker never sees the entry then.
 
 ## Background refresh
 

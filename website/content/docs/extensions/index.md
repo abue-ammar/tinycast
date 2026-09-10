@@ -35,7 +35,7 @@ runs. A fresh boot takes about 7 ms once warm.
 - [Installing extensions](/docs/extensions/installing) — the three routes, registries and package
   managers
 - [What works](/docs/extensions/compatibility) — the supported API surface and the known gaps
-- [Configuring one](/docs/extensions/customising) — preferences, icons and storage
+- [Configuring one](/docs/extensions/customising) — preferences, icons, aliases and storage
 
 ## Shortcuts and arguments
 
