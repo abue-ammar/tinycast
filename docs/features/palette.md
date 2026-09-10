@@ -53,6 +53,21 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
 Everything resolved "once per summon" is resolved there deliberately, not per render. `AppCore` holds
 only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 
+## Background transparency
+
+General settings' **Background transparency** slider adjusts the palette's existing tint over the
+system blur, with five detents at -100, -50, 0, 50, and 100. Its center and Reset both use
+`paletteTransparency = 0`, which returns the original
+`panelScrim` token unchanged in Light and Dark. Negative values make the tint more opaque; positive
+values make it more transparent. The setting is saved when a drag ends and on keyboard adjustments.
+`PaletteBackground` observes it separately from the result list, and keeps the existing blur view.
+Custom detents add a faint white border, one physical pixel wide. The two more transparent Dark
+detents use a one-point white gradient border, brightest at the top with softer sides and a faint
+lower reflection. They disable the system window shadow, which also draws a black outline outside
+the content.
+The existing window reader supplies the panel to `PaletteBackground`; appearance and transparency
+changes update its shadow. The center keeps the original shadow and adds no border.
+
 ## Screens
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.

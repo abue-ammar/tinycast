@@ -84,6 +84,44 @@ struct AppearanceTests {
         print("# the scrim inverts rather than ramping: it lightens the light surface")
         check("light scrim is white", components(c.panelScrim, .aqua)[0] == 255)
         check("dark scrim is black", components(c.panelScrim, .darkAqua)[0] == 0)
+
+        print("# palette transparency keeps the default in each appearance")
+        for appearance: NSAppearance.Name in [.darkAqua, .aqua] {
+            let baseline = components(c.panelScrim, appearance)
+            check(
+                "zero transparency adjustment matches the original \(appearance.rawValue)",
+                components(c.panelScrim(transparency: 0), appearance) == baseline)
+            check(
+                "more transparent keeps the tint color \(appearance.rawValue)",
+                components(c.panelScrim(transparency: 50), appearance).prefix(3) == baseline.prefix(3))
+            check(
+                "more transparent lowers tint opacity \(appearance.rawValue)",
+                components(c.panelScrim(transparency: 50), appearance)[3] < baseline[3])
+            check(
+                "less transparent raises tint opacity \(appearance.rawValue)",
+                components(c.panelScrim(transparency: -50), appearance)[3] > baseline[3])
+            check(
+                "least transparent is opaque \(appearance.rawValue)",
+                components(c.panelScrim(transparency: -100), appearance)[3] == 255)
+            check(
+                "most transparent clears the tint \(appearance.rawValue)",
+                components(c.panelScrim(transparency: 100), appearance)[3] == 0)
+            check(
+                "transparency stays bounded \(appearance.rawValue)",
+                components(c.panelScrim(transparency: Int.max), appearance)[3] == 0
+                    && components(c.panelScrim(transparency: Int.min), appearance)[3] == 255)
+            let highlights = [-100, -50, 0, 50, 100].map {
+                components(c.panelEdgeHighlight(transparency: $0), appearance)
+            }
+            check("default adds no edge highlight \(appearance.rawValue)", highlights[2][3] == 0)
+            check(
+                "custom detents keep a visible edge \(appearance.rawValue)",
+                [0, 1, 3, 4].allSatisfy { highlights[$0][3] > 0 })
+            check(
+                "edge highlights stay neutral and translucent \(appearance.rawValue)",
+                highlights.allSatisfy { $0.prefix(3) == [255, 255, 255] && $0[3] < 128 })
+        }
+
         // Frost brightens glass in both, so it is the one token that stays white either side.
         check("frost stays white", components(c.glassFrost, .aqua)[0] == 255)
 

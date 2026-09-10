@@ -15,6 +15,7 @@ enum SettingsBackupCoverage {
         "popToRootSeconds": .popToRootTimeout,
         "escapeKeyBehavior": .escapeKeyBehavior,
         "appearance": .appearance,
+        "paletteTransparency": .paletteTransparency,
         "compactMode": .compactMode,
         "showFavoritesInCompactMode": .showFavoritesInCompactMode,
         "searchScopes": .searchScopes,

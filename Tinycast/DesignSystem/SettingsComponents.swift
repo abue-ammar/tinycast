@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsRow<Icon: View, Trailing: View>: View {
     let title: String
     var subtitle: String?
+    var subtitleLineLimit = 1
     /// Set when a search result points at this row, so its title can carry the pulse.
     var anchor: SettingsAnchor?
     @ViewBuilder var icon: Icon
@@ -27,7 +28,8 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(subtitleLineLimit)
+                        .fixedSize(horizontal: false, vertical: true)
                         .truncationMode(.middle)
                         .help(subtitle)
                 }
@@ -40,11 +42,13 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
 
 extension SettingsRow where Icon == EmptyView {
     init(
-        title: String, subtitle: String? = nil, anchor: SettingsAnchor? = nil,
+        title: String, subtitle: String? = nil, subtitleLineLimit: Int = 1,
+        anchor: SettingsAnchor? = nil,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.init(
-            title: title, subtitle: subtitle, anchor: anchor, icon: { EmptyView() },
+            title: title, subtitle: subtitle, subtitleLineLimit: subtitleLineLimit,
+            anchor: anchor, icon: { EmptyView() },
             trailing: trailing)
     }
 }
