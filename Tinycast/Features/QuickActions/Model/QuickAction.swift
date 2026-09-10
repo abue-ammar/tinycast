@@ -1,49 +1,57 @@
 import Foundation
 
-/// What a Quick Action does to the selected text; a fifth is one case here plus its prompt.
-enum QuickAction: String, CaseIterable, Codable, Identifiable, Sendable {
-    case fixGrammar
-    case rewrite
-    case translate
-    case summarize
+enum QuickAction: Hashable, Identifiable, Sendable {
+    case builtIn(BuiltInQuickAction)
+    case custom(CustomQuickAction)
 
-    var id: String { rawValue }
+    static let fixGrammar = QuickAction.builtIn(.fixGrammar)
+    static let rewrite = QuickAction.builtIn(.rewrite)
+    static let translate = QuickAction.builtIn(.translate)
+    static let summarize = QuickAction.builtIn(.summarize)
+
+    static let allBuiltIn: [QuickAction] = BuiltInQuickAction.allCases.map(QuickAction.builtIn)
+
+    var id: String {
+        switch self {
+        case .builtIn(let action): return action.rawValue
+        case .custom(let action): return action.entryID
+        }
+    }
+
+    var builtInAction: BuiltInQuickAction? {
+        guard case .builtIn(let action) = self else { return nil }
+        return action
+    }
+
+    var customAction: CustomQuickAction? {
+        guard case .custom(let action) = self else { return nil }
+        return action
+    }
 
     var title: String {
         switch self {
-        case .fixGrammar: return "Fix Grammar"
-        case .rewrite: return "Rewrite"
-        case .translate: return "Translate"
-        case .summarize: return "Summarize"
+        case .builtIn(let action): return action.title
+        case .custom(let action): return action.name
         }
     }
 
     var symbol: String {
         switch self {
-        case .fixGrammar: return "textformat"
-        case .rewrite: return "wand.and.sparkles"
-        case .translate: return "translate"
-        case .summarize: return "text.line.3.summary"
+        case .builtIn(let action): return action.symbol
+        case .custom(let action): return action.symbol
         }
     }
 
-    /// Shown in the progress pill, where there is no panel to watch the answer arrive in.
     var progressTitle: String {
         switch self {
-        case .fixGrammar: return "Fixing Grammar…"
-        case .rewrite: return "Rewriting…"
-        case .translate: return "Translating…"
-        case .summarize: return "Summarizing…"
+        case .builtIn(let action): return action.progressTitle
+        case .custom(let action): return action.name + "…"
         }
     }
 
-    /// Summarize answers a question about the text, so replacing it unasked would destroy it.
-    var alwaysPreviews: Bool { self == .summarize }
+    var alwaysPreviews: Bool { builtInAction?.alwaysPreviews ?? false }
 
-    /// Only grammar is safe unseen: it fixes what was wrong, where a rewrite changes the voice.
-    var replacesDirectlyByDefault: Bool { self == .fixGrammar }
+    var showsDiff: Bool { builtInAction?.showsDiff ?? false }
 
-    var showsDiff: Bool { self == .fixGrammar || self == .rewrite }
-
-    var usesTranslationFramework: Bool { self == .translate }
+    var usesTranslationFramework: Bool { builtInAction?.usesTranslationFramework ?? false }
 }

@@ -42,10 +42,10 @@ enum CommandID: String, CaseIterable, Sendable {
     var name: String {
         switch self {
         case .aiChat: return "AI Chat"
-        case .fixGrammar: return QuickAction.fixGrammar.title
-        case .rewrite: return QuickAction.rewrite.title
-        case .translate: return QuickAction.translate.title
-        case .summarize: return QuickAction.summarize.title
+        case .fixGrammar: return BuiltInQuickAction.fixGrammar.title
+        case .rewrite: return BuiltInQuickAction.rewrite.title
+        case .translate: return BuiltInQuickAction.translate.title
+        case .summarize: return BuiltInQuickAction.summarize.title
         case .calculatorHistory: return "Calculator History"
         case .clipboardHistory: return "Clipboard History"
         case .searchEmoji: return "Search Emoji & Symbols"
@@ -83,10 +83,10 @@ enum CommandID: String, CaseIterable, Sendable {
     var sfSymbol: String {
         switch self {
         case .aiChat: return "sparkles"
-        case .fixGrammar: return QuickAction.fixGrammar.symbol
-        case .rewrite: return QuickAction.rewrite.symbol
-        case .translate: return QuickAction.translate.symbol
-        case .summarize: return QuickAction.summarize.symbol
+        case .fixGrammar: return BuiltInQuickAction.fixGrammar.symbol
+        case .rewrite: return BuiltInQuickAction.rewrite.symbol
+        case .translate: return BuiltInQuickAction.translate.symbol
+        case .summarize: return BuiltInQuickAction.summarize.symbol
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .clipboardHistory: return "doc.on.clipboard"
         case .searchEmoji: return "face.smiling"
@@ -121,13 +121,23 @@ enum CommandID: String, CaseIterable, Sendable {
         }
     }
 
-    /// Exhaustive over `QuickAction`, so a fifth cannot reach the launcher without a row here.
-    init(_ action: QuickAction) {
+    /// Exhaustive, so a fifth shipped action cannot reach the launcher without a row here.
+    init(_ action: BuiltInQuickAction) {
         switch action {
         case .fixGrammar: self = .fixGrammar
         case .rewrite: self = .rewrite
         case .translate: self = .translate
         case .summarize: self = .summarize
+        }
+    }
+
+    var builtInQuickAction: BuiltInQuickAction? {
+        switch self {
+        case .fixGrammar: return .fixGrammar
+        case .rewrite: return .rewrite
+        case .translate: return .translate
+        case .summarize: return .summarize
+        default: return nil
         }
     }
 

@@ -3,6 +3,13 @@ import Foundation
 /// Chat's `AIPreamble` is not sent here: it describes a launcher nobody is asking the model about.
 enum QuickActionPrompt {
     static func instructions(for action: QuickAction, override: String? = nil) -> String {
+        switch action {
+        case .builtIn(let builtIn): return instructions(for: builtIn, override: override)
+        case .custom(let custom): return boundary + "\n\n" + custom.instructions
+        }
+    }
+
+    static func instructions(for action: BuiltInQuickAction, override: String? = nil) -> String {
         if !action.usesTranslationFramework, let override { return override }
         return switch action {
         case .fixGrammar:
@@ -38,7 +45,7 @@ enum QuickActionPrompt {
     }
 
     /// The output lands in somebody's document, and the selection is material, never a request.
-    private static let boundary = """
+    static let boundary = """
         You transform text. Return only the transformed text — no preamble, no explanation, no \
         commentary, and no quotation marks or code fences around it.
 
@@ -49,7 +56,9 @@ enum QuickActionPrompt {
     /// Without the `Text:` delimiter a short selection reads as part of the instruction above it.
     static func message(for action: QuickAction, selection: String) -> String {
         var lines = ["Text:", selection]
-        if action == .summarize { lines.insert("Summarize the text below.", at: 0) }
+        if action.builtInAction == .summarize {
+            lines.insert("Summarize the text below.", at: 0)
+        }
         return lines.joined(separator: "\n")
     }
 }
