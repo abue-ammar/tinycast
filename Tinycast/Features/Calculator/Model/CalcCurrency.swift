@@ -118,6 +118,11 @@ enum CalcCurrency {
         "CNY": ["rmb", "renminbi"]  // ISO 4217 names CNY "Yuan Renminbi"; CLDR says "Chinese Yuan"
     ]
 
+    /// Codes daily use spells from CLDR's sign, not ISO 4217. docs/features/calculator.md
+    private static let signCodes: [String: [String]] = [
+        "TWD": ["ntd"]  // CLDR writes TWD "NT$", so Taiwan types the sign's code, not TWD
+    ]
+
     /// Hand-written because no standards body names a coin. docs/features/calculator.md
     static let crypto: [(code: String, name: String, aliases: [String])] = [
         ("ADA", "Cardano", ["cardano"]),
@@ -172,6 +177,10 @@ enum CalcCurrency {
             for word in words { table[word] = def }
         }
         for (code, words) in isoNames {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
+        }
+        for (code, words) in signCodes {
             guard let def = defs[code] else { continue }
             for word in words { table[word] = def }
         }

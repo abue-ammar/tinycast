@@ -726,6 +726,9 @@ struct CalcTests {
         // ISO 4217's own name for CNY is "Yuan Renminbi"; CLDR carries only "Chinese Yuan"
         expectError("1 rmb to usd", "No exchange rate for CNY.")
         expectError("1 renminbi to usd", "No exchange rate for CNY.")
+        // CLDR signs TWD "NT$", so `ntd` is what Taiwan types; `twd` keeps working
+        expectError("1 ntd to usd", "No exchange rate for TWD.")
+        expectError("1299 usd to ntd", "No exchange rate for TWD.")
         // Slang is no longer carried: CLDR has no "quid", and we don't hand-maintain synonyms
         expectNil("50 quid to usd")
         expectNil("100 bucks to eur")
