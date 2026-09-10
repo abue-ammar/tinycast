@@ -10,6 +10,7 @@ enum PaletteAxis {
 @MainActor struct PaletteMenuContent {
     let rowCount: Int
     let isLoading: (Int) -> Bool
+    let clipsToMenuCorners: Bool
     /// Built on demand: `moveMenu` resolves the open menu on every arrow key.
     let view: () -> AnyView
     /// Bounds-checked by the caller against `rowCount`, so a row index is always one this menu has.
@@ -17,12 +18,13 @@ enum PaletteAxis {
 
     init(
         rowCount: Int, view: @escaping () -> AnyView, activate: @escaping (Int) -> Void,
-        isLoading: @escaping (Int) -> Bool = { _ in false }
+        isLoading: @escaping (Int) -> Bool = { _ in false }, clipsToMenuCorners: Bool = false
     ) {
         self.rowCount = rowCount
         self.view = view
         self.activate = activate
         self.isLoading = isLoading
+        self.clipsToMenuCorners = clipsToMenuCorners
     }
 
     init(
@@ -38,7 +40,7 @@ enum PaletteAxis {
                         width: width, onActivate: onActivate))
             },
             activate: { popover.items[$0].action() },
-            isLoading: { popover.items[$0].isLoading })
+            isLoading: { popover.items[$0].isLoading }, clipsToMenuCorners: true)
     }
 }
 

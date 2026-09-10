@@ -86,7 +86,7 @@ enum ChatHistoryActionsMenu {
                     coordinator.openChat(id: conversation.id)
                 },
                 PopoverMenuItem(
-                    title: "Delete Chat", systemImage: "trash", shortcut: "⌃X",
+                    title: "Delete Chat", systemImage: "trash", startsSection: true, shortcut: "⌃X",
                     isDestructive: true
                 ) {
                     coordinator.deleteChat(id: conversation.id)

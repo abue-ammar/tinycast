@@ -76,7 +76,7 @@ enum MeetingActionsMenu {
         }
         items.append(
             PopoverMenuItem(
-                title: "Open in Calendar", systemImage: "calendar",
+                title: "Open in Calendar", systemImage: "calendar", startsSection: true,
                 shortcut: meeting.link == nil ? "↵" : nil
             ) {
                 core.calendarCoordinator.openInCalendar(meeting)

@@ -30,19 +30,22 @@ struct AIScreen: PaletteScreen {
             })
         if chat.lastAssistantText != nil {
             items.append(
-                PopoverMenuItem(title: "Copy Last Response", systemImage: "doc.on.doc") {
+                PopoverMenuItem(title: "Copy Last Response", systemImage: "doc.on.doc", startsSection: true) {
                     coordinator.copyLastResponse()
                 })
         }
         if !chat.pendingAttachments.isEmpty {
             items.append(
-                PopoverMenuItem(title: "Remove Attachments", systemImage: "paperclip") {
+                PopoverMenuItem(
+                    title: "Remove Attachments", systemImage: "paperclip",
+                    startsSection: chat.lastAssistantText == nil
+                ) {
                     coordinator.clearAttachments()
                 })
         }
         items.append(
             PopoverMenuItem(
-                title: "Chat History", systemImage: "clock.arrow.circlepath"
+                title: "Chat History", systemImage: "clock.arrow.circlepath", startsSection: true
             ) {
                 coordinator.showHistory()
             })
