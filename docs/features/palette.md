@@ -115,7 +115,9 @@ one rule: a palette already on screen is being *navigated*, so the current scree
 becomes the step back; a hidden one is being *summoned*, so the new screen is a root with nothing
 behind it. Every mode command and every global hotkey funnels through `showPalette`, which calls it —
 so typing "Clipboard History" at the root and pressing ↵ leaves a step back to the search that found
-it, while the Clipboard History hotkey does not. Nothing per-feature encodes this.
+it, while the Clipboard History hotkey does not. **The launcher is the exception, because it is the
+root** — ⌘Space over an open clipboard opens the root search with nothing behind it, rather than
+stacking the launcher over the screen it replaced. Nothing per-feature encodes this.
 
 `PaletteState` holds the screens below `mode` as `[PaletteFrame]` — mode, query and selection, enough
 that returning looks like never having left — and offers four motions over it:
