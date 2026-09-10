@@ -644,6 +644,7 @@ struct ExtensionTests {
             const path = require("node:path");
             const crypto = require("node:crypto");
             const { fileURLToPath, pathToFileURL } = require("node:url");
+            const util = require("node:util");
             const h = React.createElement;
             module.exports.default = function Command() {
               const [count, setCount] = React.useState(0);
@@ -669,12 +670,24 @@ struct ExtensionTests {
                 errorCode(() => fileURLToPath("file://example.com/tmp/a")),
                 errorCode(() => fileURLToPath("https://example.com/a")),
               ].join("\\n");
+              // execa and undici read all of these at module scope; each was once a TypeError.
+              const debug = util.debuglog("execa");
+              const utilShim = [
+                typeof debug, String(debug.enabled), String(debug("ignored")),
+                util.stripVTControlCharacters("\\u001B[31mred\\u001B[39m"),
+                util.formatWithOptions({ colors: true }, "%s=%d", "n", 2),
+                String(util.inspect.custom === Symbol.for("nodejs.util.inspect.custom")),
+                typeof util.aborted(AbortSignal.abort()).then,
+              ].join(",");
               return h(List, { navigationTitle: "Synthetic", isLoading: false },
                 h(List.Item, {
                   title: "count=" + count,
                   subtitle: path.join("/a/b", "../c"),
                   icon: Icon.Circle,
-                  accessories: [{ text: digest }, { text: abortable }, { text: filePaths }],
+                  accessories: [
+                    { text: digest }, { text: abortable }, { text: filePaths },
+                    { text: utilShim },
+                  ],
                   actions: h(ActionPanel, null,
                     h(Action, { title: "Bump", onAction: () => setCount((v) => v + 10) }))
                 }));
@@ -715,11 +728,17 @@ struct ExtensionTests {
             String(describing: screen.items.first?.node.array("accessories").dropFirst().first))
         check(
             "fileURLToPath decodes a path and rejects an unusable URL",
-            ExtensionAccessoriesView_labelForTest(screen.items.first?.node.array("accessories").last)
+            ExtensionAccessoriesView_labelForTest(
+                screen.items.first?.node.array("accessories").dropFirst(2).first)
                 == "/Applications/Tinycast Beta.app\n/tmp/a#b.png\n"
                 + "file:///tmp/My%20Image.png\n"
                 + "ERR_INVALID_FILE_URL_PATH\nERR_INVALID_FILE_URL_HOST\n"
                 + "ERR_INVALID_URL_SCHEME",
+            String(describing: screen.items.first?.node.array("accessories").dropFirst(2).first))
+        check(
+            "util shim answers debuglog, stripVTControlCharacters, aborted and inspect.custom",
+            ExtensionAccessoriesView_labelForTest(screen.items.first?.node.array("accessories").last)
+                == "function,false,undefined,red,n=2,true,function",
             String(describing: screen.items.first?.node.array("accessories").last))
 
         // Dispatch the row's action and confirm the re-render.

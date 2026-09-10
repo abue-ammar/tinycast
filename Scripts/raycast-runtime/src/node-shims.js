@@ -1151,6 +1151,29 @@ const types = {
   ...Object.fromEntries(BOXED_TAGS.map((tag) => [`is${tag}Object`, (value) => isBoxed(value) && tagOf(value) === tag])),
 };
 
+/// Node's own ANSI matcher, verbatim: a looser regex eats printable text out of an execa message.
+const VT_CONTROL = /[\u001B\u009B][[\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d\/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g;
+
+const sectionEnabled = (section) =>
+  String(process.env.NODE_DEBUG || "")
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .some((token) =>
+      new RegExp(`^${token.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`, "i").test(section),
+    );
+
+/// execa and undici both call this at module scope, so an absent `debuglog` takes the bundle down
+/// before its command ever runs.
+function debuglog(section, onLogger) {
+  const enabled = sectionEnabled(section);
+  const logger = enabled
+    ? (...args) => process.stderr.write(`${String(section).toUpperCase()} ${process.pid}: ${format(...args)}\n`)
+    : () => {};
+  logger.enabled = enabled;
+  onLogger?.(logger);
+  return logger;
+}
+
 const promisifyCustom = Symbol.for("nodejs.util.promisify.custom");
 
 const util = {
@@ -1169,6 +1192,15 @@ const util = {
   },
   inspect,
   format,
+  formatWithOptions: (_options, ...args) => format(...args),
+  debuglog,
+  debug: debuglog,
+  stripVTControlCharacters: (text) => String(text).replace(VT_CONTROL, ""),
+  aborted: (signal) =>
+    new Promise((resolve) => {
+      if (signal.aborted) resolve();
+      else signal.addEventListener("abort", () => resolve(), { once: true });
+    }),
   /// Deliberately more forgiving than Node's: bundles call this at load time against classes from
   /// modules Tinycast only stubs, and a throw there would take down an extension that never reaches
   /// the code path.
@@ -1184,6 +1216,7 @@ const util = {
   types,
 };
 util.promisify.custom = promisifyCustom;
+util.inspect.custom = Symbol.for("nodejs.util.inspect.custom");
 
 // ─── querystring / assert / string_decoder ──────────────────────────
 
