@@ -130,10 +130,10 @@ struct DoubleTapDetectorTests {
 
         // Every action reaches the launcher as well as a shortcut; `CommandID.init` is exhaustive.
         expect(
-            QuickAction.allCases.allSatisfy { CommandID($0).name == $0.title },
+            BuiltInQuickAction.allCases.allSatisfy { CommandID($0).name == $0.title },
             "each Quick Action's command carries the action's own title")
         expect(
-            Set(QuickAction.allCases.map(CommandID.init)).count == QuickAction.allCases.count,
+            Set(BuiltInQuickAction.allCases.map(CommandID.init)).count == BuiltInQuickAction.allCases.count,
             "no two Quick Actions share a launcher command")
         expect(
             Set(HotKeyAction.builtInActions.map(\.defaultsKey)).count

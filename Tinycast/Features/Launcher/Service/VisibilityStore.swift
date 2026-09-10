@@ -70,9 +70,10 @@ final class VisibilityStore {
         case .app: isKindEnabled(.application)
         case .settingsPane: isKindEnabled(.systemSettings)
         case .systemAction: isKindEnabled(.systemAction)
-        case .command: isKindEnabled(.command)
-        case .togglePalette, .customCommand, .windowCommand, .windowLayout, .quicklink,
-            .extensionCommand:
+        // A Quick Action command answers to `quickActionsEnabled`, not to the Commands category.
+        case .command(let id): id.entryKind == .command ? isKindEnabled(.command) : true
+        case .togglePalette, .quickAction, .customCommand, .windowCommand, .windowLayout,
+            .quicklink, .extensionCommand:
             true
         }
     }

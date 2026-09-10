@@ -6,12 +6,14 @@ struct QuickActionsSettingsView: View {
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var appSettings
     @Environment(QuickActionSettingsStore.self) private var store
+    @Environment(CustomQuickActionStore.self) private var customActions
     @Environment(AISettingsStore.self) private var aiSettings
     @Environment(VisibilityStore.self) private var visibility
 
     /// Polled like the Permissions pane: the grant lands in System Settings, which sends nothing.
     @State private var isTrusted = Permissions.isAccessibilityTrusted()
-    @State private var editingAction: QuickAction?
+    @State private var editingAction: BuiltInQuickAction?
+    @State private var customEditing: CustomQuickActionEditRequest?
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -58,6 +60,9 @@ struct QuickActionsSettingsView: View {
                 store.settings.setInstructionOverride(instructionOverride, for: action)
             }
         }
+        .sheet(item: $customEditing) { request in
+            CustomQuickActionEditorSheet(request: request)
+        }
         .onAppear {
             core.quickActionCoordinator.loadLanguages()
             store.resolveModel(
@@ -77,38 +82,25 @@ struct QuickActionsSettingsView: View {
 
     private var actionsSection: some View {
         Section {
-            ForEach(QuickAction.allCases) { action in
-                SettingsRow(title: action.title, subtitle: subtitle(for: action)) {
-                    Image(systemName: action.symbol)
+            ForEach(BuiltInQuickAction.allCases, content: builtInRow)
+            ForEach(customActions.actions) { action in
+                SettingsRow(title: action.name, subtitle: nil) {
+                    SymbolImage(name: action.symbol, size: Theme.Size.quickActionHeaderIcon)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
-                    if !action.usesTranslationFramework {
-                        Button {
-                            editingAction = action
-                        } label: {
-                            SymbolImage(
-                                name: "pencil", size: Theme.Size.quickActionHeaderIcon)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Edit \(action.title) instructions")
-                        .accessibilityLabel("Edit \(action.title) instructions")
+                    editButton(title: action.name) {
+                        customEditing = CustomQuickActionEditRequest(action: action)
                     }
-                    ShortcutRecorder(action: .command(CommandID(action)), isQuiet: true)
-                    Picker("", selection: previewBinding(action)) {
-                        Text("Replace").tag(false)
-                        Text("Preview").tag(true)
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                    .disabled(action.alwaysPreviews)
-                    .accessibilityLabel("What \(action.title) does with its result")
-                    if let entry = CommandCatalog.entry(for: CommandID(action)) {
-                        Toggle("", isOn: launcherBinding(entry))
-                            .labelsHidden()
-                            .toggleStyle(.checkbox)
-                            .accessibilityLabel("Show \(action.title) in launcher")
-                    }
+                    AliasField(key: action.entryID, name: action.name)
+                    ShortcutRecorder(action: .quickAction(id: action.id), isQuiet: true)
+                    resultPicker(title: action.name, selection: previewBinding(action))
+                    launcherToggle(title: action.name, entry: AppEntry(action))
                 }
+            }
+            Button {
+                customEditing = CustomQuickActionEditRequest(action: nil)
+            } label: {
+                SettingsRowTitle(.quickActionsActions, "Add Quick Action")
             }
         } header: {
             SettingsSectionHeader(.quickActionsActions)
@@ -121,6 +113,50 @@ struct QuickActionsSettingsView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
+    }
+
+    private func builtInRow(_ action: BuiltInQuickAction) -> some View {
+        let entry = CommandCatalog.entry(for: CommandID(action))
+        return SettingsRow(title: action.title, subtitle: subtitle(for: action)) {
+            Image(systemName: action.symbol)
+                .frame(width: Theme.Size.settingsRowIcon)
+        } trailing: {
+            if !action.usesTranslationFramework {
+                editButton(title: action.title) { editingAction = action }
+            }
+            // The four left the Commands pane with their kind, and its alias field with it.
+            if let entry { AliasField(entry: entry) }
+            ShortcutRecorder(action: .command(CommandID(action)), isQuiet: true)
+            resultPicker(title: action.title, selection: previewBinding(action))
+                .disabled(action.alwaysPreviews)
+            if let entry { launcherToggle(title: action.title, entry: entry) }
+        }
+    }
+
+    private func editButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            SymbolImage(name: "pencil", size: Theme.Size.quickActionHeaderIcon)
+        }
+        .buttonStyle(.plain)
+        .help("Edit \(title)")
+        .accessibilityLabel("Edit \(title)")
+    }
+
+    private func resultPicker(title: String, selection: Binding<Bool>) -> some View {
+        Picker("", selection: selection) {
+            Text("Replace").tag(false)
+            Text("Preview").tag(true)
+        }
+        .labelsHidden()
+        .fixedSize()
+        .accessibilityLabel("What \(title) does with its result")
+    }
+
+    private func launcherToggle(title: String, entry: AppEntry) -> some View {
+        Toggle("", isOn: launcherBinding(entry))
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .accessibilityLabel("Show \(title) in launcher")
     }
 
     private var modelSection: some View {
@@ -172,7 +208,7 @@ struct QuickActionsSettingsView: View {
         }
     }
 
-    private func subtitle(for action: QuickAction) -> String? {
+    private func subtitle(for action: BuiltInQuickAction) -> String? {
         action.alwaysPreviews ? "Always shown in a panel" : nil
     }
 
@@ -182,10 +218,16 @@ struct QuickActionsSettingsView: View {
             set: { core.quickActionCoordinator.setEnabled($0) })
     }
 
-    private func previewBinding(_ action: QuickAction) -> Binding<Bool> {
+    private func previewBinding(_ action: BuiltInQuickAction) -> Binding<Bool> {
         Binding(
             get: { store.settings.previewsResult(action) },
             set: { store.settings.setPreviewsResult($0, for: action) })
+    }
+
+    private func previewBinding(_ action: CustomQuickAction) -> Binding<Bool> {
+        Binding(
+            get: { action.previewsResult },
+            set: { core.quickActionCoordinator.setPreviewsResult($0, id: action.id) })
     }
 
     private func launcherBinding(_ entry: AppEntry) -> Binding<Bool> {
@@ -239,12 +281,12 @@ struct QuickActionsSettingsView: View {
         @Environment(\.dismiss) private var dismiss
         @State private var instructions: String
 
-        let action: QuickAction
+        let action: BuiltInQuickAction
         let builtIn: String
         let onSave: (String?) -> Void
 
         init(
-            action: QuickAction, instructionOverride: String?,
+            action: BuiltInQuickAction, instructionOverride: String?,
             onSave: @escaping (String?) -> Void
         ) {
             self.action = action

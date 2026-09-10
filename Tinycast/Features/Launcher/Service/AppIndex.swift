@@ -5,6 +5,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case application
         case systemSettings
         case command
+        case quickAction
         case customCommand
         case snippet
         case systemAction
@@ -28,6 +29,10 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Command", sectionTitle: "Commands",
                     openVerb: "Run Command", canRevealInFinder: false, isSymbolIcon: true)
+            case .quickAction:
+                return KindDescriptor(
+                    label: "Quick Action", sectionTitle: "Quick Actions",
+                    openVerb: "Run Quick Action", canRevealInFinder: false, isSymbolIcon: true)
             case .customCommand:
                 return KindDescriptor(
                     label: "Custom Command", sectionTitle: "Custom Commands",
@@ -135,6 +140,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         switch kind {
         case .command:
             return CommandCatalog.command(for: self)?.hotKeyAction
+        case .quickAction:
+            if let command = CommandCatalog.command(for: self) { return command.hotKeyAction }
+            return CustomQuickAction.id(fromEntryID: id).map { .quickAction(id: $0) }
         case .application:
             return bundleID.map { .app(bundleID: $0) }
         case .systemSettings:
@@ -172,6 +180,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .snippet: return "text.quote"
         case .customCommand: return CustomCommand.sfSymbol
         case .command: return CommandCatalog.command(for: self)?.sfSymbol ?? "questionmark"
+        case .quickAction:
+            return CommandCatalog.command(for: self)?.sfSymbol ?? CustomQuickAction.sfSymbol
         case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol ?? "questionmark"
@@ -198,6 +208,14 @@ extension AppEntry {
             id: layout.entryID, name: layout.name,
             url: URL(string: "tinycast://window-layout/" + layout.id.uuidString)!,
             bundleID: nil, kind: .windowLayout, symbolName: layout.iconSymbol)
+    }
+
+    /// The one row a custom Quick Action draws, wherever it is offered from.
+    init(_ action: CustomQuickAction) {
+        self.init(
+            id: action.entryID, name: action.name,
+            url: URL(string: "tinycast://quick-action/" + action.id.uuidString)!,
+            bundleID: nil, kind: .quickAction, symbolName: action.iconSymbol)
     }
 
     /// The one row a quicklink draws, wherever it is offered from.
@@ -276,6 +294,7 @@ final class AppIndex {
     private var windowCommandEntries: [AppEntry] = []
     private var windowLayoutEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
+    private var customQuickActionEntries: [AppEntry] = []
     private var extensionEntries: [AppEntry] = []
     private var meetingEntries: [AppEntry] = []
     /// The catalog's commands a disabled feature hides; the Commands slice is recomputed from it.
@@ -296,6 +315,14 @@ final class AppIndex {
 
     /// The always-relevant built-ins, plus whatever a disabled feature has not hidden.
     private var commandEntries: [AppEntry] {
+        visibleCatalogEntries.filter { $0.kind == .command }
+    }
+
+    private var quickActionEntries: [AppEntry] {
+        visibleCatalogEntries.filter { $0.kind == .quickAction } + customQuickActionEntries
+    }
+
+    private var visibleCatalogEntries: [AppEntry] {
         CommandCatalog.all.filter {
             guard let command = CommandCatalog.command(for: $0) else { return true }
             return !hiddenCommands.contains(command)
@@ -326,6 +353,14 @@ final class AppIndex {
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
         customCommandEntries = entries
+        publishEntries()
+    }
+
+    /// Replaces the custom Quick Action slice, which shares its section with the shipped four.
+    func setCustomQuickActions(_ actions: [CustomQuickAction]) {
+        let entries = actions.sorted(by: CustomQuickAction.precedes).map(AppEntry.init)
+        guard entries != customQuickActionEntries else { return }
+        customQuickActionEntries = entries
         publishEntries()
     }
 
@@ -494,7 +529,7 @@ final class AppIndex {
             + Self.named(
                 extensionEntries + quicklinkEntries + snippetEntries + Self.systemActionEntries
                     + windowLayoutEntries + windowCommandEntries + customCommandEntries
-                    + commandEntries)
+                    + quickActionEntries + commandEntries)
         guard updated != apps else { return }
         apps = updated
         entriesRevision &+= 1

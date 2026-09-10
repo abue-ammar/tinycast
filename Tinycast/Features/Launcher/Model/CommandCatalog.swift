@@ -34,10 +34,16 @@ enum CommandCatalog {
     ) -> AppEntry {
         AppEntry(
             id: id.rawValue, name: id.name, url: url ?? placeholderURL(id), bundleID: nil,
-            kind: .command, subtitle: subtitle)
+            kind: id.entryKind, subtitle: subtitle)
     }
 
     nonisolated private static func placeholderURL(_ id: CommandID) -> URL {
         URL(string: "tinycast://" + id.rawValue.replacingOccurrences(of: ":", with: "/"))!
+    }
+}
+
+extension CommandID {
+    var entryKind: AppEntry.Kind {
+        builtInQuickAction == nil ? .command : .quickAction
     }
 }
