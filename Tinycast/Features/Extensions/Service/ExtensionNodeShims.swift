@@ -1,9 +1,21 @@
 import CryptoKit
+import Darwin
 import Foundation
 
 /// Answered inline on the JS queue, so a blocking answer can never deadlock the UI.
 final class ExtensionNodeShims: @unchecked Sendable {
     private let fileManager = FileManager.default
+    private var fileHandles: [Int32: FileHandle] = [:]
+
+    /// A lock flag like `O_EXLOCK` would block the JS queue with no way back.
+    private static let openableFlags =
+        O_RDONLY | O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_TRUNC | O_EXCL | O_NOFOLLOW
+    private static let openFileLimit = 256
+
+    func closeFiles() {
+        for handle in fileHandles.values { try? handle.close() }
+        fileHandles.removeAll()
+    }
 
     /// Returns the JSON envelope `{ok, value}` / `{ok:false, error, code}` the JS side unwraps.
     func perform(api: String, method: String, argsJSON: String) -> String {
@@ -57,6 +69,22 @@ final class ExtensionNodeShims: @unchecked Sendable {
         }
 
         switch method {
+        case "open":
+            let target = try path(0)
+            guard fileHandles.count < Self.openFileLimit else {
+                throw ShimError.failed("EMFILE: too many open files, open '\(target)'", "EMFILE")
+            }
+            let flags = (arguments[safe: 1] as? NSNumber)?.int32Value ?? O_RDONLY
+            let mode = (arguments[safe: 2] as? NSNumber)?.uint16Value ?? 0o666
+            let descriptor = Darwin.open(
+                target, (flags & Self.openableFlags) | O_CLOEXEC, mode_t(mode))
+            guard descriptor >= 0 else { throw fileError("open", target) }
+            fileHandles[descriptor] = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+            return descriptor
+
+        case "close", "read", "write":
+            return try fileOperation(method: method, arguments: arguments)
+
         case "readFile":
             let target = try path(0)
             guard let data = fileManager.contents(atPath: target) else {
@@ -178,6 +206,73 @@ final class ExtensionNodeShims: @unchecked Sendable {
             throw ShimError.failed("fs.\(method) is not supported.", "ENOSYS")
         }
     }
+
+    private func fileOperation(method: String, arguments: [Any]) throws -> Any? {
+        guard let descriptor = (arguments.first as? NSNumber)?.int32Value,
+            let handle = fileHandles[descriptor]
+        else { throw ShimError.failed("EBADF: bad file descriptor, \(method)", "EBADF") }
+        switch method {
+        case "close":
+            fileHandles[descriptor] = nil
+            do { try handle.close() } catch { throw fileError("close") }
+            return nil
+        case "read":
+            let count = max(0, (arguments[safe: 1] as? NSNumber)?.intValue ?? 0)
+            let position = (arguments[safe: 2] as? NSNumber)?.int64Value
+            var data = Data(count: count)
+            let read = data.withUnsafeMutableBytes { bytes in
+                uninterrupted {
+                    if let position {
+                        return Darwin.pread(descriptor, bytes.baseAddress, count, off_t(position))
+                    }
+                    return Darwin.read(descriptor, bytes.baseAddress, count)
+                }
+            }
+            guard read >= 0 else { throw fileError("read") }
+            return data.prefix(read).base64EncodedString()
+        default:
+            let data = Data(base64Encoded: arguments[safe: 1] as? String ?? "") ?? Data()
+            let position = (arguments[safe: 2] as? NSNumber)?.int64Value
+            var written = 0
+            // fs-minipass drops the remainder it is handed, so a short write truncates in silence.
+            try data.withUnsafeBytes { bytes in
+                while written < data.count {
+                    let start = bytes.baseAddress!.advanced(by: written)
+                    let remaining = data.count - written
+                    let step = uninterrupted {
+                        if let position {
+                            return Darwin.pwrite(
+                                descriptor, start, remaining, off_t(position) + off_t(written))
+                        }
+                        return Darwin.write(descriptor, start, remaining)
+                    }
+                    guard step > 0 else { throw fileError("write") }
+                    written += step
+                }
+            }
+            return written
+        }
+    }
+
+    private func uninterrupted(_ body: () -> Int) -> Int {
+        while true {
+            let result = body()
+            if result >= 0 || errno != EINTR { return result }
+        }
+    }
+
+    private func fileError(_ syscall: String, _ path: String? = nil) -> ShimError {
+        let code = errno
+        let name = Self.errorNames[code] ?? "EIO"
+        let target = path.map { " '\($0)'" } ?? ""
+        return ShimError.failed(
+            "\(name): \(String(cString: strerror(code))), \(syscall)\(target)", name)
+    }
+
+    private static let errorNames: [Int32: String] = [
+        EACCES: "EACCES", EBADF: "EBADF", EEXIST: "EEXIST", EISDIR: "EISDIR", EMFILE: "EMFILE",
+        ENOENT: "ENOENT", ENOSPC: "ENOSPC", ENOTDIR: "ENOTDIR", EPERM: "EPERM"
+    ]
 
     private func stat(path: String, followLinks: Bool) throws -> [String: Any] {
         let attributes =
