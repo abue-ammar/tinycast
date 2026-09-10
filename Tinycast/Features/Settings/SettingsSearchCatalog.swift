@@ -464,7 +464,7 @@ enum SettingsSearchCatalog {
             keywords: ["supported", "unsupported", "raycast api"]),
         .init(
             group: .extensionsInstalled, "Installed extensions",
-            keywords: ["library", "uninstall", "preferences", "appearance"]),
+            keywords: ["library", "uninstall", "preferences", "appearance", "alias", "shortcut"]),
         .init(
             .extensionsInstall, "Search extensions",
             keywords: ["store", "browse", "install", "registry"]),

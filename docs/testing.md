@@ -490,6 +490,12 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Window commands move the window you were last in; cycle-on-repeat steps ½ → ⅓ → ⅔
 - "Top Half" lands flush with the top of the visible frame, on a secondary display too
 
+### Extensions
+
+- Every command under Settings ▸ Extensions has Add Alias, and Record Hotkey when the mode is
+  supported; an alias set there finds the command from its start and shows the chip
+- Hiding the extension from the launcher, or turning off Show in launcher, dims its alias fields
+
 ### Settings and backup
 
 - Every pane renders and the sidebar switches without flicker
