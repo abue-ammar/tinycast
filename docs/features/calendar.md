@@ -40,8 +40,10 @@ events as searchable launcher entries.
   mode read `No upcoming events`.
 - **`calendarEnabled` doubles as consent**, so it is in `SettingsBackupCoverage.deliberatelyExcluded`
   and only `CalendarCoordinator.setCalendarEnabled` may write it. Tinycast's own dialog comes first,
-  the macOS prompt second, and only from the gesture that asked. If TCC is reset while the setting is
-  still on, the Calendar pane offers that same path again rather than stranding the feature.
+  the macOS prompt second, and only from the gesture that asked. **It is written only after macOS
+  grants**, so a prompt that fails or is dismissed can never leave the feature reading as on with no
+  access. Enabling is re-offered whenever access is anything but granted — by the Calendar pane and by
+  the Permissions pane — so a TCC record lost after the setting was already on never strands it.
 - **Per-calendar toggles live on `CalendarStore`, not `AppSettings`.** Calendar identifiers are
   machine-specific, so they are deliberately outside the backup mirror — the same reasoning as
   `palettePosition`.
@@ -248,5 +250,9 @@ preference lands on `.disabled` and `.today` rather than fighting them. `MenuBar
 `.disabled` is the one switch that takes the item out of the menu bar, and a second one would only
 disagree with it.
 
-The Permissions pane shows calendar access alongside Accessibility, but only ever opens System
-Settings: the Calendar pane's own switch is the one place that may prompt.
+The Permissions pane shows calendar access alongside Accessibility, and when TCC has no record it
+offers the same consent path rather than only opening System Settings — the Calendars pane there
+lists no app that has never asked, so a `notDetermined` state that could only be sent to Settings was
+a dead end. Both entry points funnel through `CalendarCoordinator.setCalendarEnabled`, so Tinycast's
+dialog still comes first. A denial is the one state that Settings alone can undo, and both panes send
+it there.
