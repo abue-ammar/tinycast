@@ -140,6 +140,8 @@ struct CalendarSettingsView: View {
         .formStyle(.grouped)
         .settingsScrollTarget(.calendar)
         .releasesFocusOnOutsideClick()
+        // The snapshot is only reloaded while the feature runs, so a grant made in Settings lands here.
+        .onAppear { store.refreshAccess() }
     }
 
     /// Routed through the coordinator so enabling, which is also consent, confirms first.
