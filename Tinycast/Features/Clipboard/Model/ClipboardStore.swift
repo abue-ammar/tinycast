@@ -405,21 +405,25 @@ final class ClipboardStore {
     }
 
     var nextExtractionRetry: Date? {
-        guard textSearchEnabled, let stmt = prepare(
-            "SELECT MIN(retry_at) FROM item_text_failures WHERE attempts < 3")
+        guard textSearchEnabled,
+            let stmt = prepare(
+                "SELECT MIN(retry_at) FROM item_text_failures WHERE attempts < 3")
         else { return nil }
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_step(stmt) == SQLITE_ROW, sqlite3_column_type(stmt, 0) != SQLITE_NULL else { return nil }
+        guard sqlite3_step(stmt) == SQLITE_ROW, sqlite3_column_type(stmt, 0) != SQLITE_NULL else {
+            return nil
+        }
         return Date(timeIntervalSince1970: sqlite3_column_double(stmt, 0))
     }
 
     func recordExtractionFailure(for item: ClipboardItem, generation: UUID, retryAt: Date) {
-        guard textSearchEnabled, generation == extractionGeneration, let stmt = prepare(
-            """
-            INSERT INTO item_text_failures(item_id, attempts, retry_at)
-            SELECT id, 1, ?2 FROM items WHERE id = ?1
-            ON CONFLICT(item_id) DO UPDATE SET attempts = attempts + 1, retry_at = excluded.retry_at
-            """)
+        guard textSearchEnabled, generation == extractionGeneration,
+            let stmt = prepare(
+                """
+                INSERT INTO item_text_failures(item_id, attempts, retry_at)
+                SELECT id, 1, ?2 FROM items WHERE id = ?1
+                ON CONFLICT(item_id) DO UPDATE SET attempts = attempts + 1, retry_at = excluded.retry_at
+                """)
         else { return }
         defer { sqlite3_finalize(stmt) }
         sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)

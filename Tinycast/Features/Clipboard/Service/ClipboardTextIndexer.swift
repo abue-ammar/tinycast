@@ -67,7 +67,9 @@ final class ClipboardTextIndexer {
                 guard let item = self.store.nextExtractionItem() else {
                     guard let retry = self.store.nextExtractionRetry else { return }
                     self.waitingForRetry = true
-                    do { try await Task.sleep(for: .seconds(max(0, retry.timeIntervalSinceNow))) } catch { return }
+                    do { try await Task.sleep(for: .seconds(max(0, retry.timeIntervalSinceNow))) } catch {
+                        return
+                    }
                     self.waitingForRetry = false
                     continue
                 }
