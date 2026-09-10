@@ -119,6 +119,7 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalAppearance, "Theme")
                     Text("Match macOS, or pin Tinycast to Light or Dark.")
                 }
+                PaletteTransparencyRow()
                 Toggle(isOn: $settings.compactMode) {
                     SettingsRowTitle(.generalAppearance, "Compact mode")
                     Text(
@@ -212,5 +213,55 @@ struct GeneralSettingsView: View {
 
     private func refreshInputSources() {
         inputSources = core.inputSourceSwitcher.options(selecting: settings.autoSwitchInputSourceID)
+    }
+}
+
+private struct PaletteTransparencyRow: View {
+    @Environment(AppSettings.self) private var settings
+    @State private var draft: Double?
+    @State private var isEditing = false
+
+    private var value: Binding<Double> {
+        Binding(
+            get: { draft ?? Double(settings.paletteTransparency) },
+            set: { value in
+                if isEditing {
+                    draft = value
+                } else {
+                    settings.paletteTransparency = Int(value)
+                }
+            })
+    }
+
+    var body: some View {
+        SettingsRow(
+            title: "Background transparency",
+            subtitle: "The level of transparency of the glass background.",
+            subtitleLineLimit: 2,
+            anchor: .generalAppearance
+        ) {
+            Slider(
+                value: value, in: -100...100, step: 50, neutralValue: 0,
+                label: { EmptyView() },
+                minimumValueLabel: { Text("Less") },
+                maximumValueLabel: { Text("More") },
+                tick: { SliderTick($0) },
+                onEditingChanged: { editing in
+                    isEditing = editing
+                    if !editing, let draft {
+                        settings.paletteTransparency = Int(draft)
+                        self.draft = nil
+                    }
+                }
+            )
+            .labelsHidden()
+            .accessibilityLabel("Background transparency")
+            .frame(width: Theme.Size.paletteTransparencySlider)
+            Button("Reset") {
+                draft = nil
+                settings.paletteTransparency = 0
+            }
+            .help("Restore the default background in Light and Dark.")
+        }
     }
 }
