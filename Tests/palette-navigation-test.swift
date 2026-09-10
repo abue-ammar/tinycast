@@ -45,6 +45,13 @@ struct PaletteNavigationTests {
             vm.mode == .launcher && vm.query == "clipboard",
             "a refused back step leaves the screen untouched")
 
+        // An empty stack is not the same as nothing behind it: only the root search is that.
+        let summonedScreen = PaletteState()
+        summonedScreen.prepare(mode: .clipboard)
+        expect(
+            summonedScreen.pop() && summonedScreen.mode == .launcher,
+            "a screen summoned by its own hotkey still leaves to the root search")
+
         // A list snapped to the top would throw away the very selection being restored.
         let tokens = searchingLauncher()
         tokens.push(mode: .emoji)
@@ -77,14 +84,17 @@ struct PaletteNavigationTests {
         let summoned = searchingLauncher()
         summoned.push(mode: .clipboard)
         summoned.prepare(mode: .emoji)
-        expect(!summoned.canGoBack, "a summon is a new root, not a step onto the old stack")
+        expect(
+            summoned.pop() && summoned.mode == .launcher,
+            "a summon drops the stack, so one step back is the root search, not what was on it")
 
         let ringed = searchingLauncher()
         ringed.push(mode: .clipboard)
         ringed.resetNavigation()
+        expect(ringed.mode == .clipboard, "crossing the Tab ring leaves the screen undisturbed")
         expect(
-            !ringed.canGoBack && ringed.mode == .clipboard,
-            "crossing the Tab ring drops the stack without disturbing the screen")
+            ringed.pop() && ringed.mode == .launcher,
+            "and the root search is still below it, so Escape never closes the window")
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }

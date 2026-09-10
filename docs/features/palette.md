@@ -110,17 +110,23 @@ that returning looks like never having left — and offers four motions over it:
 | `prepare(mode:)` | become the root: open fresh, drop the stack |
 | `replace(mode:)` | swap the screen, keep what it was opened over (a new chat, not a new root) |
 | `push(mode:)` | open over the current screen, which a back step returns to |
-| `pop()` | restore the screen underneath; `false` when this one is the root |
+| `pop()` | restore the screen underneath, else the root search; `false` only on the root search |
 
 `pop()` bumps `followToken` rather than `resetToken`: the reset token exists to snap a list to the
 top, which would throw away the very selection being restored.
 
+**An empty stack is not the same as nothing behind it.** The root search is below every other
+screen — a hotkey summon, a Tab across the ring and any `prepare` all stack nothing — so `pop()`
+falls back to it, `canGoBack` is `mode != .launcher`, and `navigate(to:)` resets rather than pushes
+onto the launcher ([#529](https://github.com/abue-ammar/tinycast/issues/529)).
+
 **Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
 leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
-pushed screen pops, and a root hides the palette. A focused inline argument field is a rung above the
-query, so Escape hands focus back to the search field first — the query that found the command is
-still there to be cleared by the next press. A bare backspace in an empty field takes the same step,
-and ⌘⎋ skips the whole stack for a fresh root search without closing the window.
+screen steps back — to what it was pushed over, or to the root search — and the root search hides
+the palette. A focused inline argument field is a rung above the query, so Escape hands focus back
+to the search field first — the query that found the command is still there to be cleared by the
+next press. A bare backspace in an empty field takes the same step, and ⌘⎋ skips the whole stack
+for a fresh root search without closing the window.
 
 `EscapeKeyBehavior` (General settings) can trade the walk back for the old behavior: under
 `closeAndPopToRoot` an empty field closes the window and resets it immediately, whatever Pop to Root
@@ -128,9 +134,9 @@ Search says. Clearing the query is still the first press either way.
 
 The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
 slot means once you are off the root, and a slot that changed shape with provenance would read
-as two different controls. Where the click lands still depends on the stack — a pushed screen
-pops, a root one closes — so `backHelp` says which, rather than promising a step that is really
-a close. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
+as two different controls. The click always steps back; Escape only agrees under
+`navigateBackOrClose`, so `backHelp` reads the behavior rather than promising a key that would
+close instead. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
 `HeaderBackButton` keeps that hover state to itself so the header around it never re-renders.
 
 The launcher advertises the first hop in the header — `AI Chat` beside a `⇥` cap, the footer's own

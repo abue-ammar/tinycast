@@ -69,7 +69,8 @@ final class PaletteState {
         isVisible = visible
     }
 
-    var canGoBack: Bool { !backStack.isEmpty }
+    /// The root search is below every other screen, whether or not one was pushed onto it.
+    var canGoBack: Bool { mode != .launcher }
 
     /// Open `mode` as the root: a fresh screen with nothing behind it to go back to.
     func prepare(mode: PaletteMode) {
@@ -89,9 +90,14 @@ final class PaletteState {
         replace(mode: mode)
     }
 
-    /// Restore the screen underneath, false when this one is the root.
+    /// Restore the screen underneath, false only on the root search, which has nothing below it.
     func pop() -> Bool {
-        guard let frame = backStack.popLast() else { return false }
+        guard let frame = backStack.popLast() else {
+            // A screen summoned by its own hotkey stacked nothing, and still leaves to the root.
+            guard mode != .launcher else { return false }
+            prepare(mode: .launcher)
+            return true
+        }
         openScreen(frame.mode)
         query = frame.query
         selection = frame.selection
@@ -100,7 +106,7 @@ final class PaletteState {
         return true
     }
 
-    /// Tab rings the root surfaces, so crossing to one leaves nothing behind it.
+    /// Tab rings the root surfaces, so crossing to one drops what the last was opened over.
     func resetNavigation() {
         backStack.removeAll()
     }

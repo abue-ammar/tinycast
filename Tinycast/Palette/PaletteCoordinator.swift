@@ -57,7 +57,8 @@ final class PaletteCoordinator {
 
     /// A palette already up is being navigated, not summoned: the screen under it is the back step.
     func navigate(to mode: PaletteMode) {
-        if windowController.isVisible, palette.mode != mode {
+        // Never the launcher: it is what every stack stands on, so reaching it is not a step onto one.
+        if windowController.isVisible, palette.mode != mode, mode != .launcher {
             palette.push(mode: mode)
         } else {
             palette.prepare(mode: mode)

@@ -111,6 +111,11 @@ struct PaletteEscapeTests {
             resolve(menuOpen: true, canGoBack: true, behavior: .closeAndPopToRoot),
             .closeMenu,
             "a menu outranks the behavior setting beneath it")
+        // The setting is read before the stack is, so the fallback below it never reaches this.
+        expect(
+            resolve(mode: .clipboard, behavior: .closeAndPopToRoot),
+            .hidePalette,
+            "a screen summoned by its own hotkey closes under close-and-pop-to-root")
 
         expect(
             resolve(menuOpen: true, mode: .ai),

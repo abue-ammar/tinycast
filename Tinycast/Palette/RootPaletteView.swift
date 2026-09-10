@@ -1145,14 +1145,10 @@ struct RootPaletteView: View {
         open(.argumentOptions, highlighting: 0)
     }
 
-    /// An extension keeps its own stack, so it can have a step back the palette cannot see.
-    private var hasBackStep: Bool {
-        vm.canGoBack || (vm.mode == .extensionCommand && extensions.navigationDepth > 1)
-    }
-
-    /// Never promises a step the click does not take: a root screen closes rather than backs.
+    /// The chevron always steps back; Escape only agrees under the behavior that walks back.
     private var backHelp: String {
-        let escape = hasBackStep ? "Esc to go back" : "Esc to close"
+        let walksBack = settings.escapeKeyBehavior == .navigateBackOrClose
+        let escape = walksBack ? "Esc to go back" : "Esc to close"
         return "\(escape) or ⌘ Esc to go to root search"
     }
 
