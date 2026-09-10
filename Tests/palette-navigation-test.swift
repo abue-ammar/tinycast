@@ -84,7 +84,27 @@ struct PaletteNavigationTests {
         ringed.resetNavigation()
         expect(
             !ringed.canGoBack && ringed.mode == .clipboard,
-            "crossing the Tab ring drops the stack without disturbing the screen")
+            "closing the Tab ring drops the stack without disturbing the screen")
+
+        let hopped = searchingLauncher()
+        hopped.pushCarryingQuery(mode: .clipboard)
+        expect(
+            hopped.mode == .clipboard && hopped.query == "clipboard" && hopped.selection == 3,
+            "a ring hop carries the query and the row it was on")
+        expect(
+            hopped.pop() && hopped.mode == .launcher && hopped.query == "clipboard",
+            "and the screen it crossed from is the step back")
+
+        let chatted = searchingLauncher()
+        chatted.push(mode: .ai)
+        chatted.query = "why is the sky blue"
+        chatted.push(mode: .clipboard)
+        expect(
+            chatted.pop() && chatted.mode == .ai && chatted.query == "why is the sky blue",
+            "Tab out of chat leaves the draft to come back to")
+        expect(
+            chatted.pop() && chatted.mode == .launcher,
+            "and a second step back reaches the launcher the ring started on")
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
