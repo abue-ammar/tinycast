@@ -110,6 +110,7 @@ that returning looks like never having left — and offers four motions over it:
 | `prepare(mode:)` | become the root: open fresh, drop the stack |
 | `replace(mode:)` | swap the screen, keep what it was opened over (a new chat, not a new root) |
 | `push(mode:)` | open over the current screen, which a back step returns to |
+| `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring |
 | `pop()` | restore the screen underneath; `false` when this one is the root |
 
 `pop()` bumps `followToken` rather than `resetToken`: the reset token exists to snap a list to the
@@ -145,6 +146,11 @@ still a `.freshScreen`: that field holds a half-written message rather than a qu
 dropped into a filter matches nothing. `.ask` is its own case rather than a `carryQuery(.ai)` because
 the text is submitted, not seeded, and the hint reads the case back out (`== .ask`) instead of
 restating the rule.
+
+**A ring hop is a step, so Escape walks back out the way Tab came in** — launcher → chat → clipboard
+takes two presses to unwind, and the back chevron's tooltip stops promising a step it cannot take.
+The launcher is the ring's root, so the hop that closes the ring resets the stack instead of stacking
+a third screen; ringing round forever therefore never grows the stack past two.
 
 `.customCommandArguments` — `PaletteMode.isArgumentForm` — is the one mode where the search field is
 not a search field: it _is_ the current argument's input, so its placeholder names that argument and ↵
@@ -365,6 +371,12 @@ they already hold.
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
 
+`PopoverMenuItem.startsSection` draws a separator in the existing gap above a row. It takes no
+layout space or selection index, so the menu keeps its row positions, dimensions, and navigation.
+Built-in action menus mark boundaries between opening or copying, managing the item, settings, and
+deletion. Menus offering one kind of action, such as calculator copies, color formats, or emoji
+transfers, keep their rows in one group.
+
 ### The menu's own window
 
 A menu is **not** an overlay inside the palette: `MenuPanelController` hosts it in a `MenuPanel`, a
@@ -379,6 +391,12 @@ The panel is a second SwiftUI hierarchy, so it observes nothing of `RootPaletteV
 `syncMenuPanel` pushes a rebuilt tree on every `openMenu` or `menuSelection` change, and
 `paletteEnvironment` injects the same stores into both hierarchies so they cannot drift.
 `WindowReader` reports the palette's `NSWindow`, which the menu's frame is placed against.
+
+`PaletteMenuContent` opts into `clipsToMenuCorners` when wrapping a native `PopoverMenu`. Its hosting
+view's backing layer uses the continuous `menuPanel` corner with edge antialiasing. AppKit draws the
+window shadow from that outline, refreshed after layout and display on show and resize. Custom
+extension panels keep their original hosting setup. Switching between native and custom content
+replaces the hosting view so layer styling stays with the menu that requested it.
 
 ## Menu-open input freeze
 

@@ -391,6 +391,9 @@ enum SettingsSearchCatalog {
             .clipboardHistory, "Keep history for",
             keywords: ["retention", "delete", "privacy", "expire"]),
         .init(
+            .clipboardHistory, "Search text in images and PDFs",
+            keywords: ["OCR", "recognize", "scan", "screenshot", "background", "idle"]),
+        .init(
             .clipboardHistory, "Default action",
             keywords: ["enter", "return", "paste", "copy", "primary"]),
         .init(

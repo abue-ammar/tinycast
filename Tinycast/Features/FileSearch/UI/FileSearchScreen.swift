@@ -74,7 +74,7 @@ enum FileSearchActionsMenu {
                     title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"
                 ) { core.fileSearchCoordinator.showInFinder(result) },
                 PopoverMenuItem(
-                    title: "Copy Path", systemImage: "doc.on.clipboard"
+                    title: "Copy Path", systemImage: "doc.on.clipboard", startsSection: true
                 ) { core.fileSearchCoordinator.copyPath(result) }
             ])
     }

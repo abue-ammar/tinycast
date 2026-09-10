@@ -163,18 +163,22 @@ enum ClipboardActionsMenu {
             ]
         if item.isPinned {
             items.append(
-                PopoverMenuItem(title: "Unpin Entry", systemImage: "pin.slash", shortcut: "⌘.") {
+                PopoverMenuItem(
+                    title: "Unpin Entry", systemImage: "pin.slash", startsSection: true, shortcut: "⌘."
+                ) {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         } else {
             items.append(
-                PopoverMenuItem(title: "Pin Entry", systemImage: "pin", shortcut: "⌘.") {
+                PopoverMenuItem(
+                    title: "Pin Entry", systemImage: "pin", startsSection: true, shortcut: "⌘."
+                ) {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         }
         if item.kind == .image || item.kind == .file {
             items.append(
-                PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
+                PopoverMenuItem(title: "Show in Finder", systemImage: "folder", startsSection: true) {
                     core.clipboardCoordinator.revealClip(item)
                 })
         }
@@ -190,7 +194,8 @@ enum ClipboardActionsMenu {
         }
         items.append(
             PopoverMenuItem(
-                title: "Delete Entry", systemImage: "trash", shortcut: "⌃X", isDestructive: true
+                title: "Delete Entry", systemImage: "trash", startsSection: true, shortcut: "⌃X",
+                isDestructive: true
             ) {
                 store.remove(item)
             })

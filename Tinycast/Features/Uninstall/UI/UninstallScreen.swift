@@ -104,11 +104,14 @@ enum UninstallActionsMenu {
             items.append(
                 PopoverMenuItem(
                     title: checked ? "Unselect File" : "Select File",
-                    systemImage: checked ? "circle" : "checkmark.circle", shortcut: "⌘↵"
+                    systemImage: checked ? "circle" : "checkmark.circle", startsSection: true,
+                    shortcut: "⌘↵"
                 ) { session.toggle(candidate.id) })
         }
         items.append(
-            PopoverMenuItem(title: "Copy Path", systemImage: "doc.on.clipboard", shortcut: "⌥⌘C") {
+            PopoverMenuItem(
+                title: "Copy Path", systemImage: "doc.on.clipboard", startsSection: true, shortcut: "⌥⌘C"
+            ) {
                 core.uninstallCoordinator.copyUninstallPath(candidate)
             })
         items.append(

@@ -45,36 +45,59 @@ final class MenuPanelController {
     private var panel: MenuPanel?
     private var hosting: NSHostingView<AnyView>?
     private weak var parent: NSWindow?
+    private var clipsToMenuCorners = false
 
     /// `bottomBar`'s own padding: a menu's edge must line up with the button it hangs off.
     private static let inset: CGFloat = Theme.Spacing.md
 
     var isOpen: Bool { panel?.isVisible ?? false }
 
-    func show(_ content: AnyView, corner: Corner, parent: NSWindow, core: AppCore) {
+    func show(
+        _ content: AnyView, corner: Corner, parent: NSWindow, core: AppCore, clipsToMenuCorners: Bool
+    ) {
         let root = AnyView(content.paletteEnvironment(core))
         let panel = ensurePanel(state: core.palette)
-        if let hosting {
-            hosting.rootView = root
-        } else {
-            let view = NSHostingView(rootView: root)
-            view.sizingOptions = [.intrinsicContentSize]
-            panel.contentView = view
-            hosting = view
-        }
+        setContent(root, clipsToMenuCorners: clipsToMenuCorners, in: panel)
         self.parent = parent
         // Open disarmed: a menu opened by click lands under the pointer, which chose no row of it.
         core.palette.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
         layout(corner: corner, parent: parent)
-        guard panel.parent == nil else { return }
-        parent.addChildWindow(panel, ordered: .above)
+        if panel.parent == nil { parent.addChildWindow(panel, ordered: .above) }
+        refreshShadow(panel)
     }
 
     /// Rebuilds the hosted tree in place: the panel keeps its window, so nothing flickers.
-    func update(_ content: AnyView, corner: Corner, core: AppCore) {
-        guard let hosting, let parent else { return }
-        hosting.rootView = AnyView(content.paletteEnvironment(core))
+    func update(_ content: AnyView, corner: Corner, core: AppCore, clipsToMenuCorners: Bool) {
+        guard let panel, let parent else { return }
+        setContent(
+            AnyView(content.paletteEnvironment(core)), clipsToMenuCorners: clipsToMenuCorners, in: panel)
         layout(corner: corner, parent: parent)
+    }
+
+    private func setContent(_ root: AnyView, clipsToMenuCorners: Bool, in panel: MenuPanel) {
+        if let hosting, self.clipsToMenuCorners == clipsToMenuCorners {
+            hosting.rootView = root
+            return
+        }
+        let view = NSHostingView(rootView: root)
+        if clipsToMenuCorners {
+            view.wantsLayer = true
+            view.layer?.cornerRadius = Theme.Radius.menuPanel
+            view.layer?.cornerCurve = .continuous
+            view.layer?.masksToBounds = true
+            view.layer?.allowsEdgeAntialiasing = true
+        }
+        view.sizingOptions = [.intrinsicContentSize]
+        panel.contentView = view
+        hosting = view
+        self.clipsToMenuCorners = clipsToMenuCorners
+    }
+
+    private func refreshShadow(_ panel: MenuPanel) {
+        guard clipsToMenuCorners else { return }
+        hosting?.layoutSubtreeIfNeeded()
+        panel.displayIfNeeded()
+        panel.invalidateShadow()
     }
 
     func hide() {
@@ -115,5 +138,6 @@ final class MenuPanelController {
         // Every arrow key re-pushes the tree, and only the highlight moved.
         guard panel.frame != frame else { return }
         panel.setFrame(frame, display: true)
+        refreshShadow(panel)
     }
 }

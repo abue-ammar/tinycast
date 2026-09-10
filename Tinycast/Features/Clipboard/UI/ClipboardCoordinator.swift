@@ -37,6 +37,7 @@ final class ClipboardCoordinator {
     func applyEnabled() {
         appIndex.setCommandsVisible([.clipboardHistory], settings.clipboardEnabled)
         guard settings.clipboardEnabled else {
+            core.applyClipboardTextSearch()
             clipboardManager.stop()
             if palette.mode == .clipboard { palette.prepare(mode: .launcher) }
             clipboardStore.close()
@@ -45,8 +46,20 @@ final class ClipboardCoordinator {
         clipboardStore.open()
         clipboardStore.maxAge = settings.clipboardRetention.maxAge
         clipboardManager.start()
+        core.applyClipboardTextSearch()
         // Deferred off the launch path: the palette fills in behind the SQLite read and prune.
         Task { clipboardStore.load() }
+    }
+
+    func followSearchResults(query: String, previous: [ClipboardItem], current: [ClipboardItem]) {
+        guard palette.isVisible, palette.mode == .clipboard,
+            palette.query.trimmingCharacters(in: .whitespaces) == query,
+            previous.indices.contains(palette.selection)
+        else { return }
+        let selectedID = previous[palette.selection].id
+        if let index = current.firstIndex(where: { $0.id == selectedID }) {
+            palette.selection = index
+        }
     }
 
     /// The setting names an age, the store enforces it; a shortened window culls straight away.

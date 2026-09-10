@@ -967,9 +967,12 @@ struct RootPaletteView: View {
         }
         let view = AnyView(content.view())
         if presenting, let hostWindow {
-            menuPanel.show(view, corner: corner, parent: hostWindow, core: core)
+            menuPanel.show(
+                view, corner: corner, parent: hostWindow, core: core,
+                clipsToMenuCorners: content.clipsToMenuCorners)
         } else {
-            menuPanel.update(view, corner: corner, core: core)
+            menuPanel.update(
+                view, corner: corner, core: core, clipsToMenuCorners: content.clipsToMenuCorners)
         }
     }
 
@@ -1067,16 +1070,17 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Crossing chat's edge opens a fresh screen, so a draft never lands in a list.
+    /// A ring hop leaves a step back — except the hop closing the ring on the launcher, its root.
     private func cycleMode() {
         switch PaletteTabAction.resolve(
             mode: vm.mode, aiEnabled: settings.aiEnabled,
             clipboardEnabled: settings.clipboardEnabled)
         {
-        case .carryQuery(let mode):
-            vm.mode = mode
+        case .carryQuery(.launcher):
+            vm.mode = .launcher
             vm.resetNavigation()
-        case .freshScreen(let mode): vm.prepare(mode: mode)
+        case .carryQuery(let mode): vm.pushCarryingQuery(mode: mode)
+        case .freshScreen(let mode): vm.push(mode: mode)
         case .ask: core.aiChatCoordinator.ask(vm.query)
         }
     }
