@@ -55,9 +55,9 @@ final class PaletteCoordinator {
         }
     }
 
-    /// A palette already up is being navigated, not summoned: the screen under it is the back step.
+    /// Navigating keeps the screen under as the back step; the launcher is the root and never has one.
     func navigate(to mode: PaletteMode) {
-        if windowController.isVisible, palette.mode != mode {
+        if windowController.isVisible, palette.mode != mode, mode != .launcher {
             palette.push(mode: mode)
         } else {
             palette.prepare(mode: mode)
