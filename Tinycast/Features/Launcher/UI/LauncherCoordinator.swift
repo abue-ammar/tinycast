@@ -77,6 +77,15 @@ final class LauncherCoordinator {
             runCommand(id)
             return
         }
+        if app.kind == .quickAction {
+            if let command = CommandCatalog.command(for: app) {
+                runCommand(command)
+                return
+            }
+            guard let id = CustomQuickAction.id(fromEntryID: app.id) else { return }
+            core.quickActionCoordinator.run(id: id)
+            return
+        }
         if app.kind == .customCommand {
             guard let id = CustomCommand.id(fromEntryID: app.id) else { return }
             customCommandCoordinator.runCustomCommand(id: id)
@@ -125,8 +134,8 @@ final class LauncherCoordinator {
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
             snippetCoordinator.expandSnippet(id: snippetID, targetApp: previous)
-        case .command, .customCommand, .systemAction, .windowCommand, .windowLayout, .quicklink,
-            .extensionCommand, .meeting:
+        case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
+            .quicklink, .extensionCommand, .meeting:
             break  // handled above
         }
     }
