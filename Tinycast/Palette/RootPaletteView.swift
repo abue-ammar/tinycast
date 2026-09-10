@@ -286,8 +286,7 @@ struct RootPaletteView: View {
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Theme.Colors.panelScrim)
-                .background(VisualEffectView())
+                .background(PaletteBackground(window: hostWindow))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))),
             selection: sel)
     }
@@ -1335,5 +1334,47 @@ private struct CompactFavoriteButton<Content: View>: View {
         }
         .buttonStyle(.plain)
         .help(help)
+    }
+}
+
+private struct PaletteBackground: View {
+    @Environment(AppSettings.self) private var settings
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.displayScale) private var displayScale
+    let window: NSWindow?
+
+    private var usesSystemShadow: Bool {
+        colorScheme != .dark || settings.paletteTransparency <= 0
+    }
+
+    var body: some View {
+        Theme.Colors.panelScrim(transparency: settings.paletteTransparency)
+            .background(VisualEffectView())
+            .overlay {
+                if settings.paletteTransparency != 0 {
+                    let edge = RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous)
+                    if usesSystemShadow {
+                        edge.strokeBorder(
+                            Theme.Colors.panelEdgeHighlight(transparency: settings.paletteTransparency),
+                            lineWidth: Theme.Size.hairline / displayScale
+                        )
+                        .allowsHitTesting(false)
+                    } else {
+                        edge.strokeBorder(
+                            Theme.Colors.panelEdgeGradient(transparency: settings.paletteTransparency),
+                            lineWidth: Theme.Size.hairline
+                        )
+                        .allowsHitTesting(false)
+                    }
+                }
+            }
+            .onChange(of: window, initial: true) { applyShadow() }
+            .onChange(of: usesSystemShadow) { applyShadow() }
+    }
+
+    private func applyShadow() {
+        guard let window, window.hasShadow != usesSystemShadow else { return }
+        window.hasShadow = usesSystemShadow
+        window.invalidateShadow()
     }
 }

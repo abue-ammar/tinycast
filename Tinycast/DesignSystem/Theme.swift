@@ -161,6 +161,7 @@ enum Theme {
         /// The narrowest the pane column may get before a grouped row's control starts colliding.
         static let settingsDetailMinimum: CGFloat = 420
         static let settingsRowIcon: CGFloat = 20
+        static let paletteTransparencySlider: CGFloat = 190
         /// The sidebar's search field; matches a grouped `Form` row's control height.
         static let settingsSearchField: CGFloat = 28
         /// The layout editor. Height is stated so selecting an entry cannot resize the sheet.
@@ -289,6 +290,31 @@ enum Theme {
 
         /// The ramp's inverse: the scrim darkens the dark surface and lightens the light one.
         static let panelScrim = adaptive(dark: .srgbInk(0, alpha: 0.40), light: .srgbInk(1, alpha: 0.55))
+
+        static func panelScrim(transparency: Int) -> Color {
+            guard transparency != 0 else { return panelScrim }
+            let amount = Double(max(-100, min(100, transparency))) / 100
+            func alpha(_ baseline: Double) -> Double {
+                amount > 0 ? baseline * (1 - amount) : baseline - (1 - baseline) * amount
+            }
+            return adaptive(
+                dark: .srgbInk(0, alpha: alpha(0.40)), light: .srgbInk(1, alpha: alpha(0.55)))
+        }
+
+        static func panelEdgeHighlight(transparency: Int) -> Color {
+            let amount = Double(max(-100, min(100, transparency))) / 100
+            let dark = amount > 0 ? 0.58 - amount * 0.20 : -amount * 0.04
+            let light = amount > 0 ? amount * 0.10 : -amount * 0.02
+            return adaptive(dark: .srgbInk(1, alpha: dark), light: .srgbInk(1, alpha: light))
+        }
+
+        static func panelEdgeGradient(transparency: Int) -> LinearGradient {
+            let highlight = panelEdgeHighlight(transparency: transparency)
+            return LinearGradient(
+                colors: [highlight, highlight.opacity(0.35), highlight.opacity(0.65)],
+                startPoint: .top, endPoint: .bottom)
+        }
+
         /// Selection fill, shared by every list so they look identical.
         static let selection = ramp(dark: 0.10, light: 0.09)
         /// Mouse hover: a fainter layer, visually distinct from selection.
