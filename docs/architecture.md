@@ -101,6 +101,11 @@ fine too; deciding something with one is what the rule forbids. `showNotice`, `c
 
 New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a competing singleton: this is a singleton, not a container.
 
+Clipboard text recognition uses a short-lived `ClipboardTextHelper` executable bundled under
+`Contents/Helpers`. `AppCore` owns the optional indexer; the stateless `ClipboardTextWorker` invokes
+one helper per item and reaps it before returning. The helper owns Vision/PDF extraction allocations
+and writes only bounded recognized text to its pipe. It does not initialize the application runtime.
+
 ## Entry points and windows
 
 `TinycastApp` (`@main`) declares only two `MenuBarExtra` scenes — Tinycast's own item and the

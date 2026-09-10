@@ -14,18 +14,14 @@ nonisolated enum ClipboardTextExtractor {
 
     enum Failure: Error { case unreadable }
 
-    static func extract(_ item: ClipboardItem) async throws -> String {
+    static func extract(at url: URL, isPDF: Bool) async throws -> String {
         try Task.checkCancellation()
-        guard let path = item.imagePath ?? item.filePath else { return "" }
-        let kind = item.kind == .image ? ClipboardFileKind.image : ClipboardFileKind.of(path: path)
-        guard kind == .image || kind == .pdf else { return "" }
-        let url = URL(fileURLWithPath: path)
         let values = try url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
         guard values.isRegularFile == true, let size = values.fileSize,
             size <= maximumFileBytes
         else { return "" }
-        if kind == .pdf { return try await extractPDF(url) }
-        guard let image = image(at: url) else { throw Failure.unreadable }
+        if isPDF { return try await extractPDF(url) }
+        guard let image = autoreleasepool(invoking: { image(at: url) }) else { throw Failure.unreadable }
         return bounded(try await recognize(image))
     }
 

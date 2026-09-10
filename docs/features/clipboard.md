@@ -129,10 +129,20 @@ reenabling; deletion and retention still remove it with its original item.
 
 When both clipboard history and text search are enabled, `AppCore` creates its optional
 `ClipboardTextIndexer`. It extracts locally with Apple's Vision `RecognizeTextRequest`, starting one
-background-priority job after two seconds without input while the palette is hidden, then waiting
-again between items. Existing and imported history is backfilled, including rows beyond the resident
-window. Turning either switch off cancels the worker; reenabling waits for its cancellation to finish
-before starting another. No OCR recognition runs on the capture or search path.
+background-priority job after two seconds without input, even while the palette is open. A 250 ms
+pause separates items; continued typing or mouse movement defers the next job. Existing and imported
+history is backfilled, including rows beyond the resident window. Turning either switch off cancels the worker; reenabling waits for its cancellation to finish
+before starting another. No OCR recognition runs on the capture or search path. The worker sleeps
+until a retry is due when only failed work remains; new captures wake that wait, and an empty queue
+exits without idle polling.
+
+Recognition runs in a bundled `ClipboardTextHelper` process, one item at a time. Vision and PDFKit
+extraction state belong to that process and are reclaimed when it exits. The parent accepts at most
+32 KB from its output pipe, propagates cancellation, and terminates/reaps a helper that exceeds
+60 seconds. The helper has no database, clipboard or settings access in its code; it receives only
+the current input path and returns text. It is absent while OCR is disabled or the queue is empty.
+This releases recognition-process memory after work, but does not cap combined transient memory
+or reclaim unrelated palette and system-framework caches in the parent.
 
 Images include owned clipboard PNGs and referenced image files. Referenced PDFs use PDFKit's embedded
 text page by page, with Vision OCR for pages without text. Mixed text-and-scan documents therefore
@@ -154,11 +164,17 @@ identity prevents late publication. Publication follows the selected item by UUI
 promotion keep known matches visible while refreshing. Clearing or reloading rotates the extraction
 generation, and a guarded insert cannot recreate a deleted entry. Backups stream original fields
 without loading OCR metadata. See the [opt-in measurements](../performance/results/clipboard-ocr-opt-in.md)
-for search latency, CPU and memory evidence and remaining validation.
+for original search measurements and the [reliability follow-up](../performance/results/clipboard-ocr-reliability.md)
+for the open-palette, retry and process-memory changes.
 
 Work is bounded: files up to 32 MB, the first 64 PDF pages, a 4,194,304-pixel bitmap budget with a 4096-pixel maximum edge, and
-32 KB of extracted UTF-8 text per item. Empty, unsupported, oversized, locked or unreadable inputs are
-recorded as completed attempts so they cannot spin in the idle queue. Long bitmaps are recognized
+32 KB of extracted UTF-8 text per item. Successful empty, unsupported and oversized inputs are
+recorded as completed attempts. Failed recognition, locked/unreadable inputs and helper failures
+use a separate `item_text_failures` table: up to three attempts, separated by 30 seconds, without
+blocking other items. Success and item deletion remove retry state. Enabling text search resets
+failures and earlier empty attempts, including those written by the initial draft, so they can be
+tried again. Nonempty recognized text is retained. This also means empty inputs may be reprocessed
+on a later enabled launch; there is no indefinite retry loop within a session. Long bitmaps are recognized
 in overlapping 2048-pixel tiles; Vision's relative minimum text-height cutoff is disabled so it
 cannot discard small text on a tall screenshot or page. Referenced files are read once
 when indexed; later file edits do not refresh this historical search text. Backups carry the original

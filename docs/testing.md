@@ -25,7 +25,9 @@ what you touched.
 separate ordering oracle across all type filters, old pins, short queries, promotion, deletion, late
 extraction, default-off/reopen/reenable behavior and cancelled queries. `clipboard-text-test` exercises
 real Apple Vision, embedded/scanned PDFs, lazy schema creation, persisted metadata, idle scheduling,
-worker cancellation and synchronous match preservation while pinning.
+worker cancellation, bounded retries and synchronous match preservation while pinning.
+`clipboard-worker-test` compiles the shipped helper and checks real recognition, error propagation,
+output bounds, cancellation and deadline termination, including that children are reaped.
 
 ```sh
 ./Scripts/run-tests.sh              # all of them
@@ -95,7 +97,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `calc-test` | all of `Calculator/Model/` |
 | `calendar-test` | all of `Calendar/Model/` — link detection, the join window, the day buckets |
 | `clipboard-search-test` | Ordinary and OCR result ordering, opt-in lifecycle, cancellation, pins and type filters |
-| `clipboard-text-test` | Apple Vision image OCR, embedded/scanned PDF extraction, idle scheduling and cancellation |
+| `clipboard-text-test` | Apple Vision/PDF extraction, scheduling, retry backoff and recovery |
+| `clipboard-worker-test` | Bundled OCR helper protocol, cancellation, deadline and output bounds |
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |

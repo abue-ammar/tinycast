@@ -1,4 +1,7 @@
-# Clipboard OCR opt-in — maintainer feedback and measurements
+# Clipboard OCR opt-in — initial draft measurements
+
+These measurements describe the initial PR (`e0e64a3`). See the
+[reliability follow-up](clipboard-ocr-reliability.md) for subsequent fixes and matched measurements.
 
 Implements the behavior requested in [issue #518](https://github.com/abue-ammar/tinycast/issues/518#issuecomment-5600402867):
 local recognition is off by default, ordinary text/path results return immediately, recognized text

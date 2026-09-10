@@ -32,9 +32,20 @@ targets:
     platform: macOS
     sources:
       - path: Tinycast
+        excludes:
+          - Features/Clipboard/Service/ClipboardTextExtractor.swift
+          - Features/Clipboard/Service/ClipboardTextHelper.swift
       # The MIT mark's licence asks the notice to travel with the binary, not just the repo.
       - path: NOTICE.md
         buildPhase: resources
+    dependencies:
+      - target: ClipboardTextHelper
+        link: false
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app
@@ -52,3 +63,16 @@ targets:
         Debug:
           PRODUCT_NAME: Tinycast Dev
           PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+
+  ClipboardTextHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift
+      - Tinycast/Features/Clipboard/Service/ClipboardTextHelper.swift
+    settings:
+      base:
+        PRODUCT_NAME: ClipboardTextHelper
+        EXECUTABLE_NAME: ClipboardTextHelper
+        PRODUCT_MODULE_NAME: ClipboardTextHelper
+        SKIP_INSTALL: YES

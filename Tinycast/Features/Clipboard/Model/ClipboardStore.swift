@@ -201,6 +201,12 @@ final class ClipboardStore {
         CREATE TRIGGER IF NOT EXISTS items_extract_ad AFTER DELETE ON items BEGIN
           DELETE FROM item_text WHERE item_id = old.id;
         END;
+        CREATE TABLE IF NOT EXISTS item_text_failures(
+          item_id TEXT NOT NULL UNIQUE, attempts INTEGER NOT NULL, retry_at REAL NOT NULL
+        );
+        CREATE TRIGGER IF NOT EXISTS items_extract_failure_ad AFTER DELETE ON items BEGIN
+          DELETE FROM item_text_failures WHERE item_id = old.id;
+        END;
         CREATE INDEX IF NOT EXISTS items_extract_candidates ON items(kind)
           WHERE kind IN ('image', 'file');
         """
@@ -370,6 +376,8 @@ final class ClipboardStore {
             guard let db, sqlite3_exec(db, Self.extractionSchema, nil, nil, nil) == SQLITE_OK else {
                 return false
             }
+            sqlite3_exec(db, "DELETE FROM item_text_failures", nil, nil, nil)
+            sqlite3_exec(db, "DELETE FROM item_text WHERE text = ''", nil, nil, nil)
         }
         textSearchEnabled = enabled
         extractionGeneration = UUID()
@@ -378,7 +386,7 @@ final class ClipboardStore {
         return true
     }
 
-    func nextExtractionItem() -> ClipboardItem? {
+    func nextExtractionItem(now: Date = Date()) -> ClipboardItem? {
         guard textSearchEnabled else { return nil }
         guard
             let stmt = prepare(
@@ -386,11 +394,37 @@ final class ClipboardStore {
                 SELECT id, kind, text, image_path, created_at, source_app, pinned_at
                 FROM items WHERE kind IN ('image', 'file')
                   AND id NOT IN (SELECT item_id FROM item_text)
+                  AND id NOT IN (SELECT item_id FROM item_text_failures
+                    WHERE attempts >= 3 OR retry_at > ?1)
                 ORDER BY rowid DESC LIMIT 1
                 """)
         else { return nil }
         defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, now.timeIntervalSince1970)
         return sqlite3_step(stmt) == SQLITE_ROW ? Self.row(stmt) : nil
+    }
+
+    var nextExtractionRetry: Date? {
+        guard textSearchEnabled, let stmt = prepare(
+            "SELECT MIN(retry_at) FROM item_text_failures WHERE attempts < 3")
+        else { return nil }
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_step(stmt) == SQLITE_ROW, sqlite3_column_type(stmt, 0) != SQLITE_NULL else { return nil }
+        return Date(timeIntervalSince1970: sqlite3_column_double(stmt, 0))
+    }
+
+    func recordExtractionFailure(for item: ClipboardItem, generation: UUID, retryAt: Date) {
+        guard textSearchEnabled, generation == extractionGeneration, let stmt = prepare(
+            """
+            INSERT INTO item_text_failures(item_id, attempts, retry_at)
+            SELECT id, 1, ?2 FROM items WHERE id = ?1
+            ON CONFLICT(item_id) DO UPDATE SET attempts = attempts + 1, retry_at = excluded.retry_at
+            """)
+        else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
+        sqlite3_bind_double(stmt, 2, retryAt.timeIntervalSince1970)
+        sqlite3_step(stmt)
     }
 
     @discardableResult
@@ -398,6 +432,11 @@ final class ClipboardStore {
         guard textSearchEnabled, generation == extractionGeneration, let db,
             Self.insertExtractedText(text, for: item.id, in: db)
         else { return false }
+        if let stmt = prepare("DELETE FROM item_text_failures WHERE item_id = ?1") {
+            sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
+            sqlite3_step(stmt)
+            sqlite3_finalize(stmt)
+        }
         invalidateSearch(preservingMatches: true)
         searchRevision += 1
         return true

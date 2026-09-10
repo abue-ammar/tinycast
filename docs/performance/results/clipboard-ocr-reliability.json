@@ -1,0 +1,243 @@
+{
+  "date": "2026-09-10",
+  "baseline_commit": "e0e64a37d835128a2ced74c5c30021b806aff1e6",
+  "method": "Three fresh verified-sandbox Debug app-module fixtures per variant in alternating order; one 1000x300 PNG and one scanned PDF page; actual AppCore/indexer/palette/coordinator; AppCore.start/global services not started. Timing sample is process CPU including reaped children, not system/GPU cost. Phase memory snapshots are not peaks.",
+  "runs": {
+    "baseline": [
+      {
+        "identity": {"app": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/pr-diagnosis/Preview baseline memory 2 36bfab40.app", "bundle_id": "com.tinycast.previewfixture.36bfab408a0a4361a2d24053c8335c91", "library": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/ocr-fixes-baseline/Tinycast Dev.app/Contents/MacOS/Tinycast Dev.debug.dylib", "library_sha256": "21521148008819da0b6a580eeb37ae9688f67e1f30d0ecace9bb5bf586f0e0d4", "host_source_sha256": "0e947d6cd92feca5b404a446b39a3984376d8a1fb03bc6d917caf16dfc0ec0cf"},
+        "phases": {
+          "isolation": {"bundle_id": "com.tinycast.previewfixture.36bfab408a0a4361a2d24053c8335c91", "fresh_profile": true, "phase": "isolation", "private_general_verified": true, "sandbox_read_denied": true, "sandbox_write_denied": true},
+          "ready": {"appcore_start_called": false, "phase": "ready", "poller_started": false},
+          "disabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.125982, "footprint_bytes": 15287016, "phase": "disabled", "rss_bytes": 69664768},
+          "disabled_after_3s": {"child_cpu_seconds": 0, "cpu_seconds": 0.126373, "footprint_bytes": 13501160, "phase": "disabled_after_3s", "rss_bytes": 69681152},
+          "enabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.127349, "footprint_bytes": 13468392, "phase": "enabled", "rss_bytes": 69844992},
+          "extracted": {"child_cpu_seconds": 0, "cpu_seconds": 0.827666, "footprint_bytes": 109560672, "phase": "extracted", "rss_bytes": 99319808},
+          "enabled_settled_5s": {"child_cpu_seconds": 0, "cpu_seconds": 0.828688, "footprint_bytes": 37946208, "phase": "enabled_settled_5s", "rss_bytes": 99221504},
+          "enabled_settled_8s": {"child_cpu_seconds": 0, "cpu_seconds": 0.829953, "footprint_bytes": 37897056, "phase": "enabled_settled_8s", "rss_bytes": 98975744},
+          "disabled_after_work_5s": {"child_cpu_seconds": 0, "cpu_seconds": 0.831263, "footprint_bytes": 36569952, "phase": "disabled_after_work_5s", "rss_bytes": 98926592},
+          "palette_open": {"child_cpu_seconds": 0, "cpu_seconds": 1.042345, "footprint_bytes": 44762048, "phase": "palette_open", "rss_bytes": 137920512},
+          "pin_state": {
+            "ids": ["2FAF2161-347A-4D4C-B73C-67A308F16E90", "1B346610-8A43-4663-80CF-E3B13098C456", "B756E9B2-12D1-4C18-98F4-9F65DD280629"],
+            "image_id": "1B346610-8A43-4663-80CF-E3B13098C456",
+            "phase": "pin_state",
+            "selection": 1,
+            "visible": true
+          },
+          "ui_pass": {"copy_private": true, "phase": "ui_pass", "pin_followed": true, "rapid_toggle_recovered": true, "selection_followed": true, "type_filter_unchanged": true},
+          "palette_closed_settled": {"child_cpu_seconds": 0, "cpu_seconds": 1.178482, "footprint_bytes": 38224832, "phase": "palette_closed_settled", "rss_bytes": 141885440},
+          "complete": {"phase": "complete"}
+        }
+      },
+      {
+        "identity": {"app": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/pr-diagnosis/Preview baseline memory 3 a7e65b1b.app", "bundle_id": "com.tinycast.previewfixture.a7e65b1bf8b04c9591fed6b194e50404", "library": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/ocr-fixes-baseline/Tinycast Dev.app/Contents/MacOS/Tinycast Dev.debug.dylib", "library_sha256": "21521148008819da0b6a580eeb37ae9688f67e1f30d0ecace9bb5bf586f0e0d4", "host_source_sha256": "0e947d6cd92feca5b404a446b39a3984376d8a1fb03bc6d917caf16dfc0ec0cf"},
+        "phases": {
+          "isolation": {"bundle_id": "com.tinycast.previewfixture.a7e65b1bf8b04c9591fed6b194e50404", "fresh_profile": true, "phase": "isolation", "private_general_verified": true, "sandbox_read_denied": true, "sandbox_write_denied": true},
+          "ready": {"appcore_start_called": false, "phase": "ready", "poller_started": false},
+          "disabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.125995, "footprint_bytes": 15434496, "phase": "disabled", "rss_bytes": 69713920},
+          "disabled_after_3s": {"child_cpu_seconds": 0, "cpu_seconds": 0.126323, "footprint_bytes": 13812480, "phase": "disabled_after_3s", "rss_bytes": 69664768},
+          "enabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.127108, "footprint_bytes": 13845248, "phase": "enabled", "rss_bytes": 69894144},
+          "extracted": {"child_cpu_seconds": 0, "cpu_seconds": 0.815493, "footprint_bytes": 109642592, "phase": "extracted", "rss_bytes": 94896128},
+          "enabled_settled_5s": {"child_cpu_seconds": 0, "cpu_seconds": 0.816292, "footprint_bytes": 37864288, "phase": "enabled_settled_5s", "rss_bytes": 94650368},
+          "enabled_settled_8s": {"child_cpu_seconds": 0, "cpu_seconds": 0.81678, "footprint_bytes": 37864288, "phase": "enabled_settled_8s", "rss_bytes": 94470144},
+          "disabled_after_work_5s": {"child_cpu_seconds": 0, "cpu_seconds": 0.817139, "footprint_bytes": 21955424, "phase": "disabled_after_work_5s", "rss_bytes": 94470144},
+          "palette_open": {"child_cpu_seconds": 0, "cpu_seconds": 0.985946, "footprint_bytes": 38519768, "phase": "palette_open", "rss_bytes": 136069120},
+          "pin_state": {
+            "ids": ["8985CDDE-1DDA-4244-9BFC-64A6AF45941E", "C5B52612-4BB5-4F0C-80D6-A49E5EC1C13B", "CC52F983-9045-4633-92B2-C47B6DA0915F"],
+            "image_id": "C5B52612-4BB5-4F0C-80D6-A49E5EC1C13B",
+            "phase": "pin_state",
+            "selection": 1,
+            "visible": true
+          },
+          "ui_pass": {"copy_private": true, "phase": "ui_pass", "pin_followed": true, "rapid_toggle_recovered": true, "selection_followed": true, "type_filter_unchanged": true},
+          "palette_closed_settled": {"child_cpu_seconds": 0, "cpu_seconds": 1.052811, "footprint_bytes": 37389272, "phase": "palette_closed_settled", "rss_bytes": 124993536},
+          "complete": {"phase": "complete"}
+        }
+      },
+      {
+        "identity": {"app": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/pr-diagnosis/Preview baseline memory 4 69be5828.app", "bundle_id": "com.tinycast.previewfixture.69be5828601a49959a7648994274f7e4", "library": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/ocr-fixes-baseline/Tinycast Dev.app/Contents/MacOS/Tinycast Dev.debug.dylib", "library_sha256": "21521148008819da0b6a580eeb37ae9688f67e1f30d0ecace9bb5bf586f0e0d4", "host_source_sha256": "0e947d6cd92feca5b404a446b39a3984376d8a1fb03bc6d917caf16dfc0ec0cf"},
+        "phases": {
+          "isolation": {"bundle_id": "com.tinycast.previewfixture.69be5828601a49959a7648994274f7e4", "fresh_profile": true, "phase": "isolation", "private_general_verified": true, "sandbox_read_denied": true, "sandbox_write_denied": true},
+          "ready": {"appcore_start_called": false, "phase": "ready", "poller_started": false},
+          "disabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.15478, "footprint_bytes": 15221576, "phase": "disabled", "rss_bytes": 66142208},
+          "disabled_after_3s": {"child_cpu_seconds": 0, "cpu_seconds": 0.155276, "footprint_bytes": 13910856, "phase": "disabled_after_3s", "rss_bytes": 62881792},
+          "enabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.156461, "footprint_bytes": 13910856, "phase": "enabled", "rss_bytes": 63520768},
+          "extracted": {"child_cpu_seconds": 0, "cpu_seconds": 1.201006, "footprint_bytes": 110003064, "phase": "extracted", "rss_bytes": 88588288},
+          "enabled_settled_5s": {"child_cpu_seconds": 0, "cpu_seconds": 1.202456, "footprint_bytes": 24003448, "phase": "enabled_settled_5s", "rss_bytes": 65847296},
+          "enabled_settled_8s": {"child_cpu_seconds": 0, "cpu_seconds": 1.203523, "footprint_bytes": 23937912, "phase": "enabled_settled_8s", "rss_bytes": 65093632},
+          "disabled_after_work_5s": {"child_cpu_seconds": 0, "cpu_seconds": 1.204175, "footprint_bytes": 23872376, "phase": "disabled_after_work_5s", "rss_bytes": 65683456},
+          "palette_open": {"child_cpu_seconds": 0, "cpu_seconds": 1.391738, "footprint_bytes": 40403928, "phase": "palette_open", "rss_bytes": 116473856},
+          "pin_state": {
+            "ids": ["2699F5EB-2A42-41DF-904E-940D0CFC0476", "D9BB7B9C-3165-4F52-85CB-C9819CA278E4", "7028B8CF-6FA0-4AEA-8D89-49D00D725D0A"],
+            "image_id": "D9BB7B9C-3165-4F52-85CB-C9819CA278E4",
+            "phase": "pin_state",
+            "selection": 1,
+            "visible": true
+          },
+          "ui_pass": {"copy_private": true, "phase": "ui_pass", "pin_followed": true, "rapid_toggle_recovered": true, "selection_followed": true, "type_filter_unchanged": true},
+          "palette_closed_settled": {"child_cpu_seconds": 0, "cpu_seconds": 1.459281, "footprint_bytes": 39371736, "phase": "palette_closed_settled", "rss_bytes": 119390208},
+          "complete": {"phase": "complete"}
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "identity": {"app": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/pr-diagnosis/Preview candidate memory 2 c156338a.app", "bundle_id": "com.tinycast.previewfixture.c156338a96c2443faf263c7785cc511b", "library": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/DerivedData/Build/Products/Debug/Tinycast Dev.app/Contents/MacOS/Tinycast Dev.debug.dylib", "library_sha256": "85a9348cc8f19500920bae625fc3092d34f5e8ec7d1644ea592130c33becd9bf", "host_source_sha256": "0e947d6cd92feca5b404a446b39a3984376d8a1fb03bc6d917caf16dfc0ec0cf"},
+        "phases": {
+          "isolation": {"bundle_id": "com.tinycast.previewfixture.c156338a96c2443faf263c7785cc511b", "fresh_profile": true, "phase": "isolation", "private_general_verified": true, "sandbox_read_denied": true, "sandbox_write_denied": true},
+          "ready": {"appcore_start_called": false, "phase": "ready", "poller_started": false},
+          "disabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.128498, "footprint_bytes": 14762776, "phase": "disabled", "rss_bytes": 69025792},
+          "disabled_after_3s": {"child_cpu_seconds": 0, "cpu_seconds": 0.129364, "footprint_bytes": 14795544, "phase": "disabled_after_3s", "rss_bytes": 69058560},
+          "enabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.131543, "footprint_bytes": 13599536, "phase": "enabled", "rss_bytes": 69337088},
+          "extracted": {"child_cpu_seconds": 0.992798, "cpu_seconds": 0.152708, "footprint_bytes": 13796144, "phase": "extracted", "rss_bytes": 70205440},
+          "enabled_settled_5s": {"child_cpu_seconds": 0.992798, "cpu_seconds": 0.154445, "footprint_bytes": 13386544, "phase": "enabled_settled_5s", "rss_bytes": 66781184},
+          "enabled_settled_8s": {"child_cpu_seconds": 0.992798, "cpu_seconds": 0.154834, "footprint_bytes": 13386544, "phase": "enabled_settled_8s", "rss_bytes": 66650112},
+          "disabled_after_work_5s": {"child_cpu_seconds": 0.992798, "cpu_seconds": 0.155629, "footprint_bytes": 13353776, "phase": "disabled_after_work_5s", "rss_bytes": 66600960},
+          "palette_open": {"child_cpu_seconds": 0.992798, "cpu_seconds": 0.386048, "footprint_bytes": 32244696, "phase": "palette_open", "rss_bytes": 110395392},
+          "pin_state": {
+            "ids": ["7C3F63D7-55A3-4400-A34A-67857E330C21", "98099FE6-541E-4148-B35A-EB627D2AA274", "F57447EE-9F35-4CDB-9C64-8005D5202E19"],
+            "image_id": "98099FE6-541E-4148-B35A-EB627D2AA274",
+            "phase": "pin_state",
+            "selection": 1,
+            "visible": true
+          },
+          "ui_pass": {"copy_private": true, "phase": "ui_pass", "pin_followed": true, "rapid_toggle_recovered": true, "selection_followed": true, "type_filter_unchanged": true},
+          "palette_closed_settled": {"child_cpu_seconds": 0.992798, "cpu_seconds": 0.484923, "footprint_bytes": 30016472, "phase": "palette_closed_settled", "rss_bytes": 113197056},
+          "complete": {"phase": "complete"}
+        }
+      },
+      {
+        "identity": {"app": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/pr-diagnosis/Preview candidate memory 3 fc962890.app", "bundle_id": "com.tinycast.previewfixture.fc9628903aac4e479b012c2773a61e8c", "library": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/DerivedData/Build/Products/Debug/Tinycast Dev.app/Contents/MacOS/Tinycast Dev.debug.dylib", "library_sha256": "85a9348cc8f19500920bae625fc3092d34f5e8ec7d1644ea592130c33becd9bf", "host_source_sha256": "0e947d6cd92feca5b404a446b39a3984376d8a1fb03bc6d917caf16dfc0ec0cf"},
+        "phases": {
+          "isolation": {"bundle_id": "com.tinycast.previewfixture.fc9628903aac4e479b012c2773a61e8c", "fresh_profile": true, "phase": "isolation", "private_general_verified": true, "sandbox_read_denied": true, "sandbox_write_denied": true},
+          "ready": {"appcore_start_called": false, "phase": "ready", "poller_started": false},
+          "disabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.124026, "footprint_bytes": 15139608, "phase": "disabled", "rss_bytes": 69550080},
+          "disabled_after_3s": {"child_cpu_seconds": 0, "cpu_seconds": 0.124324, "footprint_bytes": 15155992, "phase": "disabled_after_3s", "rss_bytes": 69566464},
+          "enabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.125669, "footprint_bytes": 13927192, "phase": "enabled", "rss_bytes": 69713920},
+          "extracted": {"child_cpu_seconds": 0.768257, "cpu_seconds": 0.139414, "footprint_bytes": 14172976, "phase": "extracted", "rss_bytes": 70615040},
+          "enabled_settled_5s": {"child_cpu_seconds": 0.768257, "cpu_seconds": 0.140999, "footprint_bytes": 13681456, "phase": "enabled_settled_5s", "rss_bytes": 60522496},
+          "enabled_settled_8s": {"child_cpu_seconds": 0.768257, "cpu_seconds": 0.141564, "footprint_bytes": 13681456, "phase": "enabled_settled_8s", "rss_bytes": 53592064},
+          "disabled_after_work_5s": {"child_cpu_seconds": 0.768257, "cpu_seconds": 0.143037, "footprint_bytes": 13697840, "phase": "disabled_after_work_5s", "rss_bytes": 55951360},
+          "palette_open": {"child_cpu_seconds": 0.768257, "cpu_seconds": 0.365221, "footprint_bytes": 33391552, "phase": "palette_open", "rss_bytes": 103514112},
+          "pin_state": {
+            "ids": ["0FEE3635-ECE9-4E93-B2AB-B16C9C5CBC23", "DE9685A4-97D5-4C39-998A-7085F517CB68", "34836F9D-A01D-4623-A406-01753C87D1E7"],
+            "image_id": "DE9685A4-97D5-4C39-998A-7085F517CB68",
+            "phase": "pin_state",
+            "selection": 1,
+            "visible": true
+          },
+          "ui_pass": {"copy_private": true, "phase": "ui_pass", "pin_followed": true, "rapid_toggle_recovered": true, "selection_followed": true, "type_filter_unchanged": true},
+          "palette_closed_settled": {"child_cpu_seconds": 0.768257, "cpu_seconds": 0.434961, "footprint_bytes": 31196096, "phase": "palette_closed_settled", "rss_bytes": 104562688},
+          "complete": {"phase": "complete"}
+        }
+      },
+      {
+        "identity": {"app": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/pr-diagnosis/Preview candidate memory 4 d45bc469.app", "bundle_id": "com.tinycast.previewfixture.d45bc46940a543679d7bad52d7989405", "library": "/Users/jankampling/Repositories/tinycast/build/ocr-pr/build/DerivedData/Build/Products/Debug/Tinycast Dev.app/Contents/MacOS/Tinycast Dev.debug.dylib", "library_sha256": "85a9348cc8f19500920bae625fc3092d34f5e8ec7d1644ea592130c33becd9bf", "host_source_sha256": "0e947d6cd92feca5b404a446b39a3984376d8a1fb03bc6d917caf16dfc0ec0cf"},
+        "phases": {
+          "isolation": {"bundle_id": "com.tinycast.previewfixture.d45bc46940a543679d7bad52d7989405", "fresh_profile": true, "phase": "isolation", "private_general_verified": true, "sandbox_read_denied": true, "sandbox_write_denied": true},
+          "ready": {"appcore_start_called": false, "phase": "ready", "poller_started": false},
+          "disabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.121484, "footprint_bytes": 15155968, "phase": "disabled", "rss_bytes": 69402624},
+          "disabled_after_3s": {"child_cpu_seconds": 0, "cpu_seconds": 0.121874, "footprint_bytes": 15172352, "phase": "disabled_after_3s", "rss_bytes": 69419008},
+          "enabled": {"child_cpu_seconds": 0, "cpu_seconds": 0.122797, "footprint_bytes": 15221504, "phase": "enabled", "rss_bytes": 69566464},
+          "extracted": {"child_cpu_seconds": 0.766598, "cpu_seconds": 0.135385, "footprint_bytes": 15434520, "phase": "extracted", "rss_bytes": 70369280},
+          "enabled_settled_5s": {"child_cpu_seconds": 0.766598, "cpu_seconds": 0.136318, "footprint_bytes": 15057688, "phase": "enabled_settled_5s", "rss_bytes": 67010560},
+          "enabled_settled_8s": {"child_cpu_seconds": 0.766598, "cpu_seconds": 0.136616, "footprint_bytes": 14992152, "phase": "enabled_settled_8s", "rss_bytes": 66945024},
+          "disabled_after_work_5s": {"child_cpu_seconds": 0.766598, "cpu_seconds": 0.136986, "footprint_bytes": 13550360, "phase": "disabled_after_work_5s", "rss_bytes": 66797568},
+          "palette_open": {"child_cpu_seconds": 0.766598, "cpu_seconds": 0.316794, "footprint_bytes": 32752576, "phase": "palette_open", "rss_bytes": 110903296},
+          "pin_state": {
+            "ids": ["956C1144-02B4-40F4-A63E-611DF85F1A4F", "3F3173EA-BB65-472D-B5B7-C1E37F723D1F", "196095E1-BF70-427C-A4D9-EDF863D75F5D"],
+            "image_id": "3F3173EA-BB65-472D-B5B7-C1E37F723D1F",
+            "phase": "pin_state",
+            "selection": 1,
+            "visible": true
+          },
+          "ui_pass": {"copy_private": true, "phase": "ui_pass", "pin_followed": true, "rapid_toggle_recovered": true, "selection_followed": true, "type_filter_unchanged": true},
+          "palette_closed_settled": {"child_cpu_seconds": 0.766598, "cpu_seconds": 0.385305, "footprint_bytes": 29443008, "phase": "palette_closed_settled", "rss_bytes": 112984064},
+          "complete": {"phase": "complete"}
+        }
+      }
+    ]
+  },
+  "summary": {
+    "baseline": {
+      "disabled_after_3s": {
+        "rss_mib": {"median": 66.4375, "min": 59.96875, "max": 66.453125},
+        "footprint_mib": {"median": 13.172607421875, "min": 12.875709533691406, "max": 13.266426086425781}
+      },
+      "extracted": {
+        "rss_mib": {"median": 90.5, "min": 84.484375, "max": 94.71875},
+        "footprint_mib": {"median": 104.56332397460938, "min": 104.48519897460938, "max": 104.90709686279297}
+      },
+      "enabled_settled_8s": {
+        "rss_mib": {"median": 90.09375, "min": 62.078125, "max": 94.390625},
+        "footprint_mib": {"median": 36.110198974609375, "min": 22.82897186279297, "max": 36.141448974609375}
+      },
+      "disabled_after_work_5s": {
+        "rss_mib": {"median": 90.09375, "min": 62.640625, "max": 94.34375},
+        "footprint_mib": {"median": 22.76647186279297, "min": 20.938323974609375, "max": 34.875823974609375}
+      },
+      "palette_open": {
+        "rss_mib": {"median": 129.765625, "min": 111.078125, "max": 131.53125},
+        "footprint_mib": {"median": 38.532188415527344, "min": 36.735313415527344, "max": 42.68841552734375}
+      },
+      "palette_closed_settled": {
+        "rss_mib": {"median": 119.203125, "min": 113.859375, "max": 135.3125},
+        "footprint_mib": {"median": 36.45404052734375, "min": 35.657188415527344, "max": 37.547813415527344}
+      },
+      "recognition_cpu_seconds": {"median": 0.7003170000000001, "min": 0.688385, "max": 1.044545, "includes_reaped_children": true}
+    },
+    "candidate": {
+      "disabled_after_3s": {
+        "rss_mib": {"median": 66.203125, "min": 65.859375, "max": 66.34375},
+        "footprint_mib": {"median": 14.453880310058594, "min": 14.110130310058594, "max": 14.469482421875}
+      },
+      "extracted": {
+        "rss_mib": {"median": 67.109375, "min": 66.953125, "max": 67.34375},
+        "footprint_mib": {"median": 13.516403198242188, "min": 13.157028198242188, "max": 14.719505310058594}
+      },
+      "enabled_settled_8s": {
+        "rss_mib": {"median": 63.5625, "min": 51.109375, "max": 63.84375},
+        "footprint_mib": {"median": 13.047653198242188, "min": 12.766403198242188, "max": 14.297630310058594}
+      },
+      "disabled_after_work_5s": {
+        "rss_mib": {"median": 63.515625, "min": 53.359375, "max": 63.703125},
+        "footprint_mib": {"median": 12.922630310058594, "min": 12.735153198242188, "max": 13.063278198242188}
+      },
+      "palette_open": {
+        "rss_mib": {"median": 105.28125, "min": 98.71875, "max": 105.765625},
+        "footprint_mib": {"median": 31.23529052734375, "min": 30.750938415527344, "max": 31.84466552734375}
+      },
+      "palette_closed_settled": {
+        "rss_mib": {"median": 107.75, "min": 99.71875, "max": 107.953125},
+        "footprint_mib": {"median": 28.625938415527344, "min": 28.07904052734375, "max": 29.75091552734375}
+      },
+      "recognition_cpu_seconds": {"median": 0.782002, "min": 0.779186, "max": 1.013963, "includes_reaped_children": true}
+    }
+  },
+  "sources": {"Tinycast/App/AppCore.swift": "47d5ceee00e2d8ffc10595c01e17218e04b41e7af65038856fb4bf9e86963ae2", "Tinycast/Features/Clipboard/Model/ClipboardStore.swift": "0a39e99ba180323fe113ea2c89e132733d68d978a411b8f63ae28548052186db", "Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift": "f1cd45892a0c162875ccfe53541d123998c10a2b3fc49787a40f4b67e617906b", "Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift": "58e3d0a8663515897d99a1313f2488d9858caf1e345d6c317b67171f3189442d", "Tinycast/Features/Clipboard/Service/ClipboardTextHelper.swift": "72d06f1d96bf60c6027b1166d61d11cde866f802c68e687bb1489cacc4657478", "Tinycast/Features/Clipboard/Service/ClipboardTextWorker.swift": "9f99c855a9c8e19980a9839be314b7f194b83f423d7e64e62a1df3872607eb49", "build/pr-diagnosis/PreviewUIFixture.swift": "0e947d6cd92feca5b404a446b39a3984376d8a1fb03bc6d917caf16dfc0ec0cf", "build/pr-diagnosis/run-host.py": "ede4a543ca764851c15cd3454761d3a50bbb861a08400935fc0c562e8fef8543"},
+  "combined_peak_diagnostic": {
+    "sample_interval_seconds": 0.05,
+    "scope": "External ps sampling; diagnostic only, excluded from matched CPU/memory medians. Apple system service memory not counted.",
+    "maximum_sample": {"combined_rss_bytes": 132186112, "parent_rss_bytes": 64602112, "children_rss_bytes": 67584000},
+    "observed_child_count": 2,
+    "children_remaining": [],
+    "fixture_exit": 0
+  },
+  "leaks": {
+    "baseline": {
+      "allocations": 342,
+      "bytes": 21312,
+      "root_families": ["AppIntents/LinkServices XPC", "HIToolbox keyboard-layout XML strings"],
+      "log_sha256": "912c0c7e477d87e735d824f5bff8be2bb633cd535cea273b19fccd627dcc562a",
+      "zero_leaks": false
+    },
+    "candidate": {
+      "allocations": 265,
+      "bytes": 16976,
+      "root_families": ["AppIntents/LinkServices XPC", "HIToolbox keyboard-layout XML strings"],
+      "log_sha256": "09d4fba62d19cd407876b4a8d0482cb2af23a496c2f11bb66d45046adcc9b3cc",
+      "zero_leaks": false
+    }
+  },
+  "validation": {"harnesses": 65, "release_channel_override_build": "passed, ad-hoc signed Tinycast Beta.app containing fixed-name helper", "open_palette_baseline": "recognition blocked throughout 10-second window", "open_palette_candidate": "two inputs recognized; selection/filter/copy passed", "after_measurement_changes": "Indexer whitespace-only lint fix and explicit helper executable/module names for release channel overrides."}
+}

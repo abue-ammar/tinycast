@@ -380,9 +380,7 @@ final class AppCore {
         clipboardStore.setTextSearchActive(palette.isVisible)
         let indexer = ClipboardTextIndexer(
             store: clipboardStore,
-            canRun: { [weak self] in
-                self?.palette.isVisible == false && ClipboardTextIndexer.isSystemIdle
-            })
+            canRun: { ClipboardTextIndexer.isSystemIdle })
         clipboardTextIndexer = indexer
         clipboardStore.onItemsChanged = { [weak indexer] in indexer?.schedule() }
         clipboardStore.onSearchResultsChanged = { [weak self] query, previous, current in

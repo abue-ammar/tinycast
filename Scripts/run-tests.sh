@@ -128,7 +128,10 @@ run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swif
 run clipboard-search-test  Tinycast/Features/Clipboard/Model/*.swift
 run clipboard-text-test    Tinycast/Features/Clipboard/Model/*.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift \
-                           Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift
+                           Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardTextWorker.swift
+run clipboard-worker-test  Tinycast/Features/Clipboard/Model/*.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardTextWorker.swift
 run pasteboard-test        Tinycast/Platform/PasteboardFiles.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \

@@ -22,17 +22,14 @@ struct ClipboardTextTests {
         CGImageDestinationAddImage(destination, image, nil)
         expect(CGImageDestinationFinalize(destination), "write image fixture")
 
-        let imageItem = ClipboardItem(imagePath: imageURL.path, sourceBundleID: nil)
-        let imageText = try await Task.detached { try await ClipboardTextExtractor.extract(imageItem) }.value
+        let imageText = try await Task.detached { try await ClipboardTextExtractor.extract(at: imageURL, isPDF: false) }.value
         expect(imageText.localizedCaseInsensitiveContains("ALPINE RECEIPT 7391"), "Vision recognizes image")
-        let fileItem = ClipboardItem(filePath: imageURL.path, sourceBundleID: nil)
-        let fileText = try await Task.detached { try await ClipboardTextExtractor.extract(fileItem) }.value
+        let fileText = try await Task.detached { try await ClipboardTextExtractor.extract(at: imageURL, isPDF: false) }.value
         expect(fileText.contains("7391"), "referenced image is recognized")
 
         let pdfURL = directory.appendingPathComponent("mixed.pdf")
         makePDF(at: pdfURL, scan: image)
-        let pdfItem = ClipboardItem(filePath: pdfURL.path, sourceBundleID: nil)
-        let pdfText = try await Task.detached { try await ClipboardTextExtractor.extract(pdfItem) }.value
+        let pdfText = try await Task.detached { try await ClipboardTextExtractor.extract(at: pdfURL, isPDF: true) }.value
         expect(pdfText.contains("EMBEDDED INVOICE 4826"), "PDF embedded text is extracted")
         expect(pdfText.contains("7391"), "PDF scanned page is recognized")
         expect(pdfText.utf8.count <= ClipboardTextExtractor.maximumTextBytes, "text is bounded")
@@ -49,21 +46,20 @@ struct ClipboardTextTests {
             tallURL as CFURL, "public.png" as CFString, 1, nil)!
         CGImageDestinationAddImage(tallDestination, tall.makeImage()!, nil)
         expect(CGImageDestinationFinalize(tallDestination), "write tall screenshot fixture")
-        let tallItem = ClipboardItem(imagePath: tallURL.path, sourceBundleID: nil)
-        let tallText = try await Task.detached { try await ClipboardTextExtractor.extract(tallItem) }.value
+        let tallText = try await Task.detached { try await ClipboardTextExtractor.extract(at: tallURL, isPDF: false) }.value
         expect(tallText.contains("7391"), "small relative text survives tall screenshot downsampling")
 
         let missing = ClipboardItem(
             filePath: directory.appendingPathComponent("missing.pdf").path,
             sourceBundleID: nil)
         do {
-            _ = try await ClipboardTextExtractor.extract(missing)
+            _ = try await ClipboardTextExtractor.extract(at: URL(fileURLWithPath: missing.filePath!), isPDF: true)
             expect(false, "missing file throws")
         } catch { expect(true, "missing file throws") }
         let cancelled = Task.detached {
             try Task.checkCancellation()
             try await Task.sleep(for: .seconds(1))
-            return try await ClipboardTextExtractor.extract(imageItem)
+            return try await ClipboardTextExtractor.extract(at: imageURL, isPDF: false)
         }
         cancelled.cancel()
         do {
@@ -73,6 +69,7 @@ struct ClipboardTextTests {
 
         try await searchAndLifetime(in: directory)
         try await scheduling(in: directory)
+        try await retryFailures(in: directory)
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
     }
@@ -195,6 +192,70 @@ struct ClipboardTextTests {
         try await Task.sleep(for: .milliseconds(120))
         expect(store.search("scheduled", filter: .all).isEmpty, "clear discards in-flight result")
         indexer.stop()
+    }
+
+    static func retryFailures(in directory: URL) async throws {
+        enum Failure: Error { case temporary }
+        let store = ClipboardStore(directory: directory.appendingPathComponent("failures"))
+        store.setTextSearchEnabled(true)
+        store.addFiles(["/tmp/failure.pdf"], sourceBundleID: nil)
+        let failed = store.items[0]
+        var calls = 0
+        var failing = true
+        let indexer = ClipboardTextIndexer(
+            store: store, delay: .milliseconds(10), retryDelay: 0.05, canRun: { true },
+            extract: { _ in
+                let shouldFail = await MainActor.run { calls += 1; return failing }
+                if shouldFail { throw Failure.temporary }
+                return "RECOVERED 4826"
+            })
+        store.onItemsChanged = { [weak indexer] in indexer?.schedule() }
+        indexer.start()
+        try await waitUntil { calls == 3 && store.nextExtractionRetry == nil }
+        try await Task.sleep(for: .milliseconds(100))
+        expect(calls == 3, "persistent failures stop after three attempts")
+        expect(store.nextExtractionItem() == nil, "exhausted failure does not spin in queue")
+        indexer.stop()
+        await indexer.waitUntilStopped()
+        store.setTextSearchEnabled(false)
+        store.setTextSearchEnabled(true)
+        expect(store.nextExtractionItem()?.id == failed.id, "reenabling offers failed item again")
+        failing = false
+        indexer.start()
+        try await waitUntil { calls == 4 && store.nextExtractionItem() == nil }
+        try await waitUntil { store.search("RECOVERED", filter: .file).count == 1 }
+        expect(store.nextExtractionRetry == nil, "success removes retry state")
+        indexer.stop()
+        await indexer.waitUntilStopped()
+
+        store.clearAll()
+        store.addFiles(["/tmp/later.pdf"], sourceBundleID: nil)
+        let item = store.items[0]
+        let generation = store.extractionGeneration
+        let now = Date()
+        store.recordExtractionFailure(for: item, generation: generation, retryAt: now.addingTimeInterval(30))
+        expect(store.nextExtractionItem(now: now) == nil, "backoff delays retries")
+        expect(store.nextExtractionItem(now: now.addingTimeInterval(31))?.id == item.id, "retry becomes eligible")
+        indexer.start()
+        try await Task.sleep(for: .milliseconds(30))
+        store.addFiles(["/tmp/fresh.pdf"], sourceBundleID: nil)
+        try await waitUntil { calls == 5 }
+        expect(calls == 5, "fresh capture wakes retry sleep without waiting thirty seconds")
+        indexer.stop()
+        await indexer.waitUntilStopped()
+        store.remove(item)
+        expect(store.nextExtractionRetry == nil, "deletion removes retry state")
+        store.recordExtractionFailure(for: item, generation: generation, retryAt: now)
+        expect(store.nextExtractionRetry == nil, "late failure cannot recreate deleted row")
+        store.clearAll()
+        store.addFiles(["/tmp/empty.pdf"], sourceBundleID: nil)
+        let empty = store.items[0]
+        store.setExtractedText("", for: empty, generation: store.extractionGeneration)
+        expect(store.nextExtractionItem() == nil, "empty successful recognition does not loop")
+        store.setTextSearchEnabled(false)
+        store.setTextSearchEnabled(true)
+        expect(store.nextExtractionItem()?.id == empty.id, "reenabling retries earlier empty attempts")
+        store.close()
     }
 
     static func waitUntil(_ condition: () -> Bool) async throws {
