@@ -31,6 +31,6 @@ final class WindowCommandCoordinator {
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: true) }
         windowMover.perform(
             id, target: target, gap: CGFloat(settings.windowGap),
-            cycleOnRepeat: settings.windowCycleOnRepeat)
+            cycle: settings.windowCycle)
     }
 }

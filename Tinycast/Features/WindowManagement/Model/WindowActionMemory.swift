@@ -49,7 +49,7 @@ struct WindowActionMemory<Key: Hashable> {
     /// Resolves the cycle step and restore point; `commit` writes once the mover knows what landed.
     func decide(
         key: Key, command: WindowCommand.ID, currentFrame: CGRect, currentScreenID: Int,
-        cycleEnabled: Bool, now: Date
+        cycleLength: Int, now: Date
     ) -> Decision {
         // First sight: capture where it was, so Restore works for a never-moved window.
         guard let record = records[key] else {
@@ -65,14 +65,14 @@ struct WindowActionMemory<Key: Hashable> {
 
         let lastTileCommand =
             WindowPlacementEngine.isTileCommand(record.command) ? record.command : nil
-        let cycles = WindowCommandCatalog.command(id: command)?.cyclesOnRepeat ?? false
         let expired = cycleTimeout.map { now.timeIntervalSince(record.at) > $0 } ?? false
+        // A length of 1 covers both a non-cycling command and cycling switched off entirely.
         let continues =
-            cycleEnabled && cycles && command == record.command
+            cycleLength > 1 && command == record.command
             && currentScreenID == record.screenID && !expired
         return Decision(
-            step: continues ? (record.step + 1) % 3 : 0, restoreFrame: record.restoreFrame,
-            canRestore: true, lastTileCommand: lastTileCommand)
+            step: continues ? (record.step + 1) % cycleLength : 0,
+            restoreFrame: record.restoreFrame, canRestore: true, lastTileCommand: lastTileCommand)
     }
 
     /// Records what actually landed. `appliedFrame` must be read back from the window, not assumed.

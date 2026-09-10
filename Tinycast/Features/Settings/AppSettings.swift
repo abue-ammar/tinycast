@@ -422,9 +422,9 @@ final class AppSettings {
         }
     }
 
-    /// Re-triggering a half steps it through ⅓ and ⅔ instead of re-applying the same frame.
-    var windowCycleOnRepeat: Bool {
-        didSet { defaults.set(windowCycleOnRepeat, forKey: Key.windowCycleOnRepeat.rawValue) }
+    /// What re-triggering a half does: nothing, step its size, or walk it across the displays.
+    var windowCycle: WindowCycle {
+        didSet { defaults.set(windowCycle.rawValue, forKey: Key.windowCycle.rawValue) }
     }
 
     /// Off means fully off, down to a still-registered shortcut opening nothing.
@@ -595,7 +595,8 @@ final class AppSettings {
             || defaults.bool(forKey: Key.windowManagementShowInLauncher.rawValue)
         // Unset reads as 0, which is the intended default anyway — no gap.
         windowGap = defaults.integer(forKey: Key.windowGap.rawValue)
-        windowCycleOnRepeat = defaults.bool(forKey: Key.windowCycleOnRepeat.rawValue)
+        windowCycle =
+            defaults.string(forKey: Key.windowCycle.rawValue).flatMap(WindowCycle.init) ?? .off
         windowLayoutsShowInLauncher =
             defaults.object(forKey: Key.windowLayoutsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.windowLayoutsShowInLauncher.rawValue)

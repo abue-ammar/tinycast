@@ -43,7 +43,7 @@ final class WindowMover {
     @discardableResult
     func perform(
         _ command: WindowCommand.ID, target: NSRunningApplication?, gap: CGFloat,
-        cycleOnRepeat: Bool
+        cycle: WindowCycle
     ) -> Bool {
         // Invoked from an explicit user gesture, so prompting for the grant is appropriate here.
         guard Permissions.ensureAccessibility() else { return false }
@@ -79,11 +79,13 @@ final class WindowMover {
         let now = Date()
         let decision = memory.decide(
             key: key, command: command, currentFrame: current, currentScreenID: host.id,
-            cycleEnabled: cycleOnRepeat, now: now)
+            cycleLength: WindowPlacementEngine.cycleLength(
+                for: command, screens: screens, cycle: cycle),
+            now: now)
 
         let input = WindowPlacementEngine.Input(
             command: command, windowFrame: current, screens: screens, gap: gap, step: decision.step,
-            restoreFrame: decision.canRestore ? decision.restoreFrame : nil,
+            cycle: cycle, restoreFrame: decision.canRestore ? decision.restoreFrame : nil,
             lastTileCommand: decision.lastTileCommand)
         guard let placement = WindowPlacementEngine.placement(for: input) else { return false }
 

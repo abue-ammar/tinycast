@@ -32,12 +32,12 @@ Center · Center Half · Make Larger · Make Smaller · Restore
 
 ## Settings
 
-| Setting                  | Range          | Default |
-| ------------------------ | -------------- | ------- |
-| Enable window management | —              | **Off** |
-| Show in launcher         | —              | On      |
-| Cycle sizes on repeat    | —              | **Off** |
-| Gap between windows      | 0–64 pt, in 2s | **0**   |
+| Setting                  | Range                                       | Default  |
+| ------------------------ | ------------------------------------------- | -------- |
+| Enable window management | —                                           | **Off**  |
+| Show in launcher         | —                                           | On       |
+| Cycling                  | None · Cycle ½, ⅓ and ⅔ · Cycle displays    | **None** |
+| Gap between windows      | 0–64 pt, in 2s                              | **0**    |
 
 Per-command shortcut and visibility live in this same pane — window commands deliberately get no
 launcher pane of their own.
@@ -64,11 +64,16 @@ The usable area already excludes the menu bar, the Dock and the notch.
 
 ## Cycling and Restore
 
-**Cycling** covers the four halves only, stepping ½ → ⅓ → ⅔, and is off by default. Top and Bottom
-Half cycle through vertical thirds.
+**Cycling** covers the four halves only, and is off by default — a repeat press re-applies the same
+frame. Two modes change that:
 
-It restarts at ½ when you move the window yourself (more than 2 pt), on a different command, on a
-different display, after a timeout, or when cycling is off.
+- **Cycle ½, ⅓ and ⅔** steps the half in place. Top and Bottom Half step through vertical thirds.
+- **Cycle displays** walks the half one slot along every half-slot your displays contribute, so one
+  shortcut sweeps the whole desktop. On two displays, Left Half gives Display 1 left → Display 2
+  right → Display 2 left → Display 1 right, then wraps. With a single display it does nothing.
+
+The chain restarts when you move the window yourself (more than 2 pt), on a different command, on a
+different display, or after a timeout.
 
 **Restore is single-level, not a stack.** Left Half → Maximize → Top Right → Restore lands on the
 **original** frame, not the previous one.
