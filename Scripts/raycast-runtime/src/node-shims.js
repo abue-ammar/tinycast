@@ -179,6 +179,9 @@ const process = {
   once(event, listener) {
     return process.on(event, listener);
   },
+  addListener(event, listener) {
+    return process.on(event, listener);
+  },
   off(event, listener) {
     processListeners.get(event)?.delete(listener);
     return process;
