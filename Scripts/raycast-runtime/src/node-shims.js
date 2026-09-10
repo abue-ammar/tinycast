@@ -128,6 +128,8 @@ export function configureNodeShims(info) {
 const processListeners = new Map();
 
 const process = {
+  // Axios gates its Node http adapter on this tag; untagged, axios takes the fetch path.
+  [Symbol.toStringTag]: "process",
   platform: "darwin",
   arch: "arm64",
   version: "v22.0.0",
@@ -320,10 +322,37 @@ function fsMode(mode) {
 }
 
 const FILE_STREAM_CHUNK = 64 * 1024;
+const FS_CONSTANTS = { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1, O_RDONLY: 0, O_WRONLY: 1, O_RDWR: 2, O_APPEND: 8, O_NOFOLLOW: 256, O_CREAT: 512, O_TRUNC: 1024, O_EXCL: 2048 };
+const { O_RDONLY, O_WRONLY, O_RDWR, O_APPEND, O_CREAT, O_TRUNC, O_EXCL } = FS_CONSTANTS;
+const OPEN_FLAGS = {
+  r: O_RDONLY, "r+": O_RDWR,
+  w: O_WRONLY | O_CREAT | O_TRUNC, "w+": O_RDWR | O_CREAT | O_TRUNC,
+  wx: O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, "wx+": O_RDWR | O_CREAT | O_TRUNC | O_EXCL,
+  a: O_WRONLY | O_CREAT | O_APPEND, "a+": O_RDWR | O_CREAT | O_APPEND,
+  ax: O_WRONLY | O_CREAT | O_APPEND | O_EXCL, "ax+": O_RDWR | O_CREAT | O_APPEND | O_EXCL,
+};
 
 const fs = {
-  constants: { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1 },
+  constants: FS_CONSTANTS,
 
+  openSync(file, flags = "r", mode = 0o666) {
+    const value = typeof flags === "number" ? flags : OPEN_FLAGS[flags];
+    if (value === undefined) throw new TypeError(`Invalid file flags: ${flags}`);
+    return hostCallSync("fs", "open", [fsPath(file), value, fsMode(mode)]);
+  },
+  closeSync(fd) {
+    hostCallSync("fs", "close", [fd]);
+  },
+  readSync(fd, buffer, offset = 0, length = buffer.length - offset, position = null) {
+    if (offset < 0 || length < 0 || offset + length > buffer.length) throw new RangeError("Read exceeds buffer bounds");
+    const bytes = base64ToBytes(hostCallSync("fs", "read", [fd, length, position]));
+    buffer.set(bytes, offset);
+    return bytes.length;
+  },
+  writeSync(fd, buffer, offset = 0, length = buffer.length - offset, position = null) {
+    if (offset < 0 || length < 0 || offset + length > buffer.length) throw new RangeError("Write exceeds buffer bounds");
+    return hostCallSync("fs", "write", [fd, bytesToBase64(buffer.subarray(offset, offset + length)), position]);
+  },
   readFileSync(file, options) {
     return decodeFileResult(hostCallSync("fs", "readFile", [fsPath(file)]), options);
   },
@@ -396,6 +425,7 @@ const fs = {
     hostCallSync("fs", "chmod", [fsPath(file), fsMode(mode)]);
   },
   utimesSync() {},
+  futimesSync() {},
   watch() {
     throw new Error("fs.watch is not supported in Tinycast extensions.");
   },
@@ -473,6 +503,9 @@ function callbackify(syncFn) {
 }
 
 for (const [name, sync] of [
+  ["open", fs.openSync],
+  ["close", fs.closeSync],
+  ["futimes", fs.futimesSync],
   ["readFile", fs.readFileSync],
   ["writeFile", fs.writeFileSync],
   ["appendFile", fs.appendFileSync],
@@ -491,6 +524,12 @@ for (const [name, sync] of [
   ["chmod", fs.chmodSync],
 ]) {
   fs[name] = callbackify(sync);
+}
+for (const name of ["read", "write"]) {
+  fs[name] = (fd, buffer, offset, length, position, callback) => {
+    callbackify(fs[`${name}Sync`])(fd, buffer, offset, length, position,
+      (error, count) => callback(error, count, buffer));
+  };
 }
 fs.exists = (file, callback) => queueMicrotask(() => callback(fs.existsSync(file)));
 
@@ -674,7 +713,31 @@ function zlibSync(method) {
   return (data) => Buffer.from(base64ToBytes(hostCallSync("zlib", method, [bytesToBase64(Buffer.from(data))])));
 }
 
+// minizlib swaps `Buffer.concat` for a no-op around `_processChunk`, so hold the real one.
+const concatBuffers = Buffer.concat;
+
+class Unzip extends EventEmitter {
+  constructor() {
+    super();
+    this._chunks = [];
+    this._handle = { close() {} };
+  }
+  _processChunk(chunk, flush) {
+    this._chunks.push(Buffer.from(chunk));
+    if (flush !== 4) return Buffer.alloc(0);
+    const input = concatBuffers(this._chunks);
+    this._chunks = [];
+    if (!input.length) return input;
+    return zlibSync(input[0] === 0x1f && input[1] === 0x8b ? "gunzip" : "inflate")(input);
+  }
+  close() {
+    this._chunks = [];
+    this._handle = null;
+  }
+}
+
 const zlibImpl = {
+  Unzip,
   gzipSync: zlibSync("gzip"),
   gunzipSync: zlibSync("gunzip"),
   deflateSync: zlibSync("deflate"),
@@ -692,8 +755,6 @@ const zlibImpl = {
 for (const name of ["gzip", "gunzip", "deflate", "inflate", "deflateRaw", "inflateRaw"]) {
   zlibImpl[name] = callbackify(zlibImpl[`${name}Sync`]);
 }
-// The one-shot functions above are real; the stream classes (`zlib.Inflate`, …) are not, and bundles
-// subclass them at load time — so unknown members fall through to a throwing constructor.
 const zlib = unsupportedModule("zlib", zlibImpl);
 
 // ─── events ─────────────────────────────────────────────────────────
@@ -950,11 +1011,15 @@ class ClientRequest extends EventEmitter {
 
   destroy(error) {
     this._destroyed = true;
+    clearTimeout(this._timer);
     if (error) this.emit("error", error);
     return this;
   }
 
-  setTimeout() {
+  setTimeout(ms, callback) {
+    if (callback) this.once("timeout", callback);
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.emit("timeout"), ms);
     return this;
   }
 
@@ -982,11 +1047,13 @@ class ClientRequest extends EventEmitter {
         },
       ]);
       if (this._destroyed) return;
+      clearTimeout(this._timer);
       const response = new IncomingMessage(raw);
       this.emit("response", response);
       response.end(Buffer.from(raw.bodyBase64 ?? "", "base64"));
       this.emit("close");
     } catch (error) {
+      clearTimeout(this._timer);
       if (!this._destroyed) this.emit("error", error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -1224,15 +1291,27 @@ const httpLike = (name) =>
     METHODS: [],
   });
 
+/// Node's streams are ES5 functions: follow-redirects, inside axios, calls `Writable` on its `this`.
+function es5Constructible(Class) {
+  return new Proxy(Class, {
+    apply: (target, self, args) =>
+      void Object.defineProperties(self, Object.getOwnPropertyDescriptors(new target(...args))),
+  });
+}
+
+const streamClasses = {
+  Stream: es5Constructible(Stream),
+  Readable: es5Constructible(Readable),
+  Writable: es5Constructible(Writable),
+  Duplex: es5Constructible(Duplex),
+  Transform: es5Constructible(Transform),
+  PassThrough: es5Constructible(PassThrough),
+};
+
 const streamModule = unsupportedModule(
   "stream",
-  Object.assign(Stream, {
-    Stream,
-    Readable,
-    Writable,
-    Duplex,
-    Transform,
-    PassThrough,
+  Object.assign(streamClasses.Stream, {
+    ...streamClasses,
     pipeline,
     finished,
     promises: { pipeline: (...stages) => pipelinePromise(stages), finished: finishedPromise },

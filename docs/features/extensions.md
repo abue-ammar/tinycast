@@ -527,7 +527,8 @@ this). `ExtensionHostBridge` keeps those inside Tinycast: `raycast://extensions/
 runs that command when it's installed, anything else reopens the palette. Handing them to the workspace
 would launch Raycast itself.
 
-**Node built-ins** — `path`, `fs` (+ `fs/promises`, and `createReadStream`/`createWriteStream`), `os`,
+**Node built-ins** — `path`, `fs` (+ `fs/promises`, `createReadStream`/`createWriteStream`, and the
+descriptor calls `tar` unpacks through), `os`,
 `child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`),
 `crypto` (hashes, HMAC, random, UUID), `zlib` (gzip/zlib/raw deflate, both directions), `http`/`https`
 (`request` and `get`, buffered over the same URLSession bridge as `fetch`), `stream` (`Readable`,
@@ -556,6 +557,10 @@ A bundle that ships its own HTTP client rather than calling `fetch` — node-fet
 shim answers it: one request when the body ends, one response chunk when the bridge replies. The
 transport decodes for us, so the response drops `content-encoding` and `content-length` rather than
 have the client gunzip plaintext.
+
+Two things decide whether it gets there. Axios enables that adapter only when
+`Object.prototype.toString.call(process)` reads `[object process]`, so `process` carries the tag; and
+follow-redirects inherits with `Writable.call(this)`, so `stream` hands out callable constructors.
 
 **Bundled Swift helpers** — an extension that imports `swift:../swift/<package>` ships the compiled
 Mach-O in `assets/`, and the wrapper Raycast generates chmods it to `755` before spawning it. Store

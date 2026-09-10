@@ -130,6 +130,22 @@ export function createHarness({ onRender, onFail, verbose = false, stubs = {} } 
 
 function syncHostCall(api, method, args) {
   switch (`${api}.${method}`) {
+    case "fs.open":
+      return fs.openSync(args[0], args[1], args[2]);
+    case "fs.close":
+      fs.closeSync(args[0]);
+      return null;
+    case "fs.read": {
+      const buffer = Buffer.alloc(args[1]);
+      return buffer.subarray(0, fs.readSync(args[0], buffer, 0, buffer.length, args[2])).toString("base64");
+    }
+    case "fs.write": {
+      const buffer = Buffer.from(args[1], "base64");
+      return fs.writeSync(args[0], buffer, 0, buffer.length, args[2]);
+    }
+    case "fs.chmod":
+      fs.chmodSync(args[0], args[1]);
+      return null;
     case "fs.readFile":
       return fs.readFileSync(args[0]).toString("base64");
     case "fs.writeFile":

@@ -189,6 +189,7 @@ struct ExtensionTests {
         oauthUnitChecks()
         await runtimeChecks()
         await searchAccessoryRuntimeChecks()
+        await nodeContractChecks()
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -979,6 +980,87 @@ struct ExtensionTests {
                 ExtensionSearchAccessory(node: $0.activeRoot?.node("searchBarAccessory"))?.nodeID
             } == accessory.nodeID)
         await runtime.stop(session: "sAccessory")
+    }
+
+    @MainActor
+    static func nodeContractChecks() async {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-archive-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (runtime, host, recorder) = makeRuntime()
+        try? await runtime.boot(config: .current(supportDirectory: directory))
+        let command = """
+            const fs = require("fs"), zlib = require("zlib"), assert = require("assert");
+            const call = (name, ...args) => new Promise((resolve, reject) =>
+              fs[name](...args, (error, ...values) => error ? reject(error) : resolve(values)));
+            module.exports.default = async () => {
+              const file = "\(directory.path)/output", moved = file + ".moved";
+              const gzip = Buffer.from("H4sIAAAAAAAC/ytJLGL4X5BYmZOfmAIANNN0xgwAAAA=", "base64");
+              const expected = Buffer.from("74617200ff7061796c6f6164", "hex");
+              const unzip = new zlib.Unzip();
+              const concat = Buffer.concat;
+              let decoded;
+              try {
+                Buffer.concat = (chunks) => chunks;
+                assert.equal(unzip._processChunk(gzip.subarray(0, 10), 0).length, 0);
+                decoded = unzip._processChunk(gzip.subarray(10), 4);
+              } finally { Buffer.concat = concat; unzip.close(); }
+              assert(decoded.equals(expected));
+              const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL;
+              const [fd] = await call("open", file, flags, 0o600);
+              const [written, same] = await call("write", fd, decoded, 0, decoded.length, null);
+              assert.equal(written, expected.length); assert(same === decoded);
+              await call("futimes", fd, new Date(1000000), new Date(2000000));
+              await call("close", fd);
+              const code = (fn) => { try { fn(); return "none"; } catch (error) { return error.code; } };
+              assert.equal(code(() => fs.openSync(file, "wx")), "EEXIST");
+              const [reader] = await call("open", file, "r");
+              fs.renameSync(file, moved);
+              const buffer = Buffer.alloc(expected.length + 2, 42);
+              const [count, sameBuffer] = await call("read", reader, buffer, 1, expected.length, 0);
+              assert.equal(count, expected.length); assert(sameBuffer === buffer);
+              assert(buffer.subarray(1, -1).equals(expected)); assert.equal(buffer[0], 42);
+              assert.equal(fs.readSync(reader, buffer, 0, 3, null), 3);
+              assert.equal(buffer.subarray(0, 3).toString(), "tar");
+              assert.equal(fs.readSync(reader, buffer, 0, expected.length, null), expected.length - 3);
+              assert.equal(fs.readSync(reader, buffer, 0, 1, null), 0);
+              fs.closeSync(reader);
+              assert.equal(code(() => fs.readSync(reader, buffer, 0, 1, null)), "EBADF");
+              assert.equal(code(() => fs.openSync(moved + "/nested", "w")), "ENOTDIR");
+              const writer = fs.openSync(moved, "r+");
+              fs.writeSync(writer, Buffer.from("X"), 0, 1, 2);
+              fs.writeSync(writer, Buffer.from("Y"), 0, 1, null);
+              fs.closeSync(writer);
+              assert.equal(fs.readFileSync(moved).subarray(0, 3).toString(), "YaX");
+              const zlibDecoded = new zlib.Unzip()._processChunk(
+                Buffer.from("eJwrSSxi+F+QWJmTn5gCACHpBTE=", "base64"), 4);
+              assert(zlibDecoded.equals(expected));
+              const invalid = new zlib.Unzip();
+              assert.throws(() => invalid._processChunk(Buffer.from("invalid"), 4));
+              invalid.close();
+              // axios picks its Node http adapter by this tag, and inherits from streams ES5-style.
+              assert.equal(Object.prototype.toString.call(process), "[object process]");
+              const { Writable } = require("stream");
+              function Legacy() { Writable.call(this, { highWaterMark: 7 }); }
+              Legacy.prototype = Object.create(Writable.prototype);
+              Legacy.prototype._write = function (chunk, encoding, callback) { this.seen = chunk; callback(); };
+              const legacy = new Legacy();
+              assert(legacy instanceof Writable);
+              assert.equal(legacy.writableLength, 0);
+              legacy.write(Buffer.from("hi"));
+              assert.equal(String(legacy.seen), "hi");
+              await require("@raycast/api").showHUD("archive IO passed");
+            };
+            """
+        await runtime.start(
+            session: "archive", code: command, file: directory.appendingPathComponent("test.js"),
+            mode: .noView, context: launchContext(mode: .noView))
+        await settle()
+        check("node file, zlib and stream contracts", host.huds == ["archive IO passed"],
+              recorder.failures.joined(separator: "|"))
+        await runtime.stop(session: "archive")
+        runtime.shutdown()
     }
 
     /// Raycast's `swift:` wrapper chmods its bundled helper before spawning it: store zips ship it 644.
