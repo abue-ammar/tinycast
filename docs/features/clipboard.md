@@ -32,6 +32,12 @@
 - **A colour is parsed from the text on demand, never stored.** `ColorValue` is the single parser
   behind the clipboard's swatches and the launcher's colour card, so the two can never disagree
   about what counts as a colour or what it converts to.
+- **Recognized text is search metadata and nothing else.** It lives in its own `item_text` table,
+  never on `ClipboardItem` and never in the resident window, so no surface can paste it, copy it,
+  or classify an entry by it. What an entry *is* still comes from the content that was captured.
+- **No recognition ever runs in the app process.** `ClipboardTextWorker` spawns one bundled
+  `ClipboardTextHelper` per item and reaps it, which is the whole reason Vision's and PDFKit's
+  allocations do not accumulate in Tinycast. The helper is handed a path and answers with text.
 
 ## Poll-based capture
 
@@ -109,11 +115,12 @@ load everything — while the history is shorter than the window.
 Searching is trigram FTS, which needs **at least three characters**; shorter queries, and the
 no-database fallback path, filter the in-memory window instead. Results are memoized one query deep,
 with a second memo for the empty query, and both are invalidated whenever `items` changes.
-The original-text FTS query supplies its newest 200 history row IDs before materializing rows,
-retaining PERF-013's bounded query. Pins remain matched separately in memory, and the type filter
-applies after the limit. `promote` updates the row's timestamp and rowid atomically; an update trigger
-moves its original-text FTS entry. Its UUID, image blob and derived text survive, including while text
-recognition is disabled.
+The FTS query picks its newest `searchLimit` row IDs before materializing rows, so a broad query
+never builds more items than it can show. Pins are still matched separately in memory, and the type
+filter applies after the limit. `promote` updates the row's timestamp and rowid in one statement
+rather than deleting and re-inserting it, because a delete would take the row's recognized text with
+it; an update trigger moves the original-text FTS entry to the new rowid. The UUID and the image blob
+are untouched.
 
 Files under the store's own `imagesDir` are **owned**: pruned and deleted with their row. External
 references — an image imported from another app's cache — are left on disk when the row goes. A
@@ -127,22 +134,22 @@ settings backups. A cold disabled launch creates no OCR schema, indexer, search 
 and loads no extracted strings. Existing derived data stays on disk when disabled and is reused on
 reenabling; deletion and retention still remove it with its original item.
 
-When both clipboard history and text search are enabled, `AppCore` creates its optional
-`ClipboardTextIndexer`. It extracts locally with Apple's Vision `RecognizeTextRequest`, starting one
+When both clipboard history and text search are enabled, `AppCore` creates its
+`ClipboardTextIndexer`. It recognizes locally with Vision's `RecognizeTextRequest`, starting one
 background-priority job after two seconds without input, even while the palette is open. A 250 ms
 pause separates items; continued typing or mouse movement defers the next job. Existing and imported
-history is backfilled, including rows beyond the resident window. Turning either switch off cancels the worker; reenabling waits for its cancellation to finish
-before starting another. No OCR recognition runs on the capture or search path. The worker sleeps
-until a retry is due when only failed work remains; new captures wake that wait, and an empty queue
-exits without idle polling.
+history is backfilled, including rows beyond the resident window. Nothing recognizes on the capture
+or search path. When only failed work is left the indexer sleeps until a retry is due — a new capture
+wakes that wait — and an empty queue exits rather than polling.
 
-Recognition runs in a bundled `ClipboardTextHelper` process, one item at a time. Vision and PDFKit
-extraction state belong to that process and are reclaimed when it exits. The parent accepts at most
-32 KB from its output pipe, propagates cancellation, and terminates/reaps a helper that exceeds
-60 seconds. The helper has no database, clipboard or settings access in its code; it receives only
-the current input path and returns text. It is absent while OCR is disabled or the queue is empty.
-This releases recognition-process memory after work, but does not cap combined transient memory
-or reclaim unrelated palette and system-framework caches in the parent.
+Turning either switch off cancels the run in flight; the indexer is kept and reschedules itself once
+that run winds down, which is why `applyClipboardTextSearch` can be called again at any time.
+
+Recognition runs in a bundled `ClipboardTextHelper`, one item at a time, and Vision's and PDFKit's
+state leaves with it. The parent accepts at most 32 KB from the helper's output pipe, propagates
+cancellation, and terminates and reaps a helper that runs past 60 seconds. `ClipboardTextWorker`
+does its blocking read and wait on its own `DispatchQueue`, never the cooperative pool. No helper
+exists while text search is off or the queue is empty.
 
 Images include owned clipboard PNGs and referenced image files. Referenced PDFs use PDFKit's embedded
 text page by page, with Vision OCR for pages without text. Mixed text-and-scan documents therefore
@@ -153,32 +160,30 @@ The derived `item_text` table and its trigram FTS index persist metadata without
 strings to `ClipboardItem` or loading them into the resident history. Original text/path search returns
 immediately. A cancellable off-main SQLite query adds OCR-only matches for All, Images and Files;
 Text, Links, Emails and Colors never consult OCR. Type classification always uses original content.
-There is no spinner or skeleton. Pins lead in pin order, ordinary unpinned matches retain their order,
-and OCR-only unpinned matches of the active type fill remaining slots up to 200. OCR matches use history recency, not
-extraction order. This deliberately prioritizes ordinary matches over the prototype's combined
-recency ordering. Queries under three characters consult only the resident window and pins.
+There is no spinner or skeleton. Pins lead in pin order, ordinary unpinned matches keep theirs, and
+OCR-only unpinned matches of the active type fill what is left of the same `searchLimit` budget, in
+history recency rather than extraction order — a deliberate choice to let an ordinary match answer
+first. Queries under three characters consult only the resident window and pins.
 
-Each query reader uses a 2 MiB SQLite cache budget and releases its connection after completion.
-Query/filter replacement, palette dismissal, disabling and history mutation cancel obsolete work; a request
-identity prevents late publication. Publication follows the selected item by UUID. Pinning and
-promotion keep known matches visible while refreshing. Clearing or reloading rotates the extraction
-generation, and a guarded insert cannot recreate a deleted entry. Backups stream original fields
-without loading OCR metadata. See the [opt-in measurements](../performance/results/clipboard-ocr-opt-in.md)
-for original search measurements and the [reliability follow-up](../performance/results/clipboard-ocr-reliability.md)
-for the open-palette, retry and process-memory changes.
+Each reader takes a 2 MiB SQLite cache budget and closes its connection when it finishes. A new
+query or filter, palette dismissal, disabling, and any history mutation cancel work that is now
+obsolete, and a request identity keeps a late answer from publishing. Publication follows the
+selected item by UUID; pinning and promoting keep the matches already on screen while it refreshes.
+Clearing or reloading rotates the extraction generation, and the insert selects its row rather than
+naming it, so it cannot recreate a deleted entry. Backups stream the original fields and never load
+OCR metadata.
 
-Work is bounded: files up to 32 MB, the first 64 PDF pages, a 4,194,304-pixel bitmap budget with a 4096-pixel maximum edge, and
-32 KB of extracted UTF-8 text per item. Successful empty, unsupported and oversized inputs are
-recorded as completed attempts. Failed recognition, locked/unreadable inputs and helper failures
-use a separate `item_text_failures` table: up to three attempts, separated by 30 seconds, without
-blocking other items. Success and item deletion remove retry state. Enabling text search resets
-failures and earlier empty attempts, including those written by the initial draft, so they can be
-tried again. Nonempty recognized text is retained. This also means empty inputs may be reprocessed
-on a later enabled launch; there is no indefinite retry loop within a session. Long bitmaps are recognized
-in overlapping 2048-pixel tiles; Vision's relative minimum text-height cutoff is disabled so it
-cannot discard small text on a tall screenshot or page. Referenced files are read once
-when indexed; later file edits do not refresh this historical search text. Backups carry the original
-content and references; restored entries derive their search text again.
+Work is bounded: files up to 32 MB, the first 64 PDF pages, a 4,194,304-pixel bitmap budget with a
+4096-pixel maximum edge, and 32 KB of UTF-8 text per item. An empty, unsupported or oversized input
+is a completed attempt. Failed recognition, a locked or unreadable input and a helper failure go to
+`item_text_failures` instead: up to three attempts 30 seconds apart, which never block another item.
+Success and deletion clear that state. Enabling text search resets failures and earlier empty
+attempts so they can be tried again, keeping recognized text that is not empty — so an empty input
+may be reprocessed on a later launch, but nothing retries forever inside one session. Long bitmaps
+are recognized in overlapping 2048-pixel tiles, with Vision's relative minimum text-height cutoff
+disabled so it cannot discard small text on a tall screenshot or page. A referenced file is read once
+when it is indexed; editing it later does not refresh the historical search text. Backups carry the
+original content and references, and a restored entry is recognized again.
 
 ## Type filter
 

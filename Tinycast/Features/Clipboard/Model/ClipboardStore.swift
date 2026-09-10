@@ -131,9 +131,11 @@ final class ClipboardStore {
     }
     @ObservationIgnored var onItemsChanged: (() -> Void)?
     @ObservationIgnored var onSearchResultsChanged: ((String, [ClipboardItem], [ClipboardItem]) -> Void)?
-    private(set) var extractionGeneration = UUID()
+    /// Rotated whenever the history is replaced, so a helper's late answer lands on nothing.
+    @ObservationIgnored private(set) var extractionGeneration = UUID()
+    /// The only thing a view observes for search freshness; `items` cannot speak for OCR.
     private var searchRevision = 0
-    private(set) var textSearchEnabled = false
+    @ObservationIgnored private(set) var textSearchEnabled = false
     @ObservationIgnored private var textSearchActive = true
     @ObservationIgnored private var textSearchTask: Task<Void, Never>?
     @ObservationIgnored private var textSearchNeedsRefresh = false
@@ -150,7 +152,9 @@ final class ClipboardStore {
     /// Same memo for the empty query, so the pinned split runs once per mutation.
     @ObservationIgnored private var orderedCache: [ClipboardItem]?
 
-    private static let memoryWindow = 1000
+    nonisolated private static let memoryWindow = 1000
+    /// The most unpinned rows any one query answers with, ordinary and OCR-only alike.
+    nonisolated private static let searchLimit = 200
 
     nonisolated private static let insertSQL = """
         INSERT INTO items(id, kind, text, image_path, created_at, source_app, pinned_at)
@@ -431,11 +435,21 @@ final class ClipboardStore {
         sqlite3_step(stmt)
     }
 
+    /// Selects the row rather than naming it, so an item deleted mid-recognition stays deleted.
     @discardableResult
     func setExtractedText(_ text: String, for item: ClipboardItem, generation: UUID) -> Bool {
-        guard textSearchEnabled, generation == extractionGeneration, let db,
-            Self.insertExtractedText(text, for: item.id, in: db)
+        guard textSearchEnabled, generation == extractionGeneration,
+            let stmt = prepare(
+                """
+                INSERT OR IGNORE INTO item_text(item_id, text)
+                SELECT id, ?2 FROM items WHERE id = ?1 AND kind IN ('image', 'file')
+                """)
         else { return false }
+        sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, text, -1, SQLITE_TRANSIENT)
+        let stored = sqlite3_step(stmt) == SQLITE_DONE && sqlite3_changes(db) > 0
+        sqlite3_finalize(stmt)
+        guard stored else { return false }
         if let stmt = prepare("DELETE FROM item_text_failures WHERE item_id = ?1") {
             sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
@@ -444,22 +458,6 @@ final class ClipboardStore {
         invalidateSearch(preservingMatches: true)
         searchRevision += 1
         return true
-    }
-
-    @discardableResult
-    nonisolated private static func insertExtractedText(
-        _ text: String, for id: UUID, in db: OpaquePointer?
-    ) -> Bool {
-        var stmt: OpaquePointer?
-        let sql = """
-            INSERT OR IGNORE INTO item_text(item_id, text)
-            SELECT id, ?2 FROM items WHERE id = ?1 AND kind IN ('image', 'file')
-            """
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
-        defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_text(stmt, 1, id.uuidString, -1, SQLITE_TRANSIENT)
-        sqlite3_bind_text(stmt, 2, text, -1, SQLITE_TRANSIENT)
-        return sqlite3_step(stmt) == SQLITE_DONE && sqlite3_changes(db) > 0
     }
 
     func imageURL(for item: ClipboardItem) -> URL? {
@@ -474,6 +472,7 @@ final class ClipboardStore {
 
     /// Display order for `query` under `filter`: pinned entries first, each block newest-first.
     func search(_ query: String, filter: ClipboardFilter) -> [ClipboardItem] {
+        // Load-bearing: a settled OCR query changes the answer without `items` changing.
         _ = searchRevision
         let q = query.trimmingCharacters(in: .whitespaces)
         updateTextSearch(q, filter: filter)
@@ -508,7 +507,8 @@ final class ClipboardStore {
         let pins = (ordinary + additional).filter(\.isPinned)
             .sorted { ($0.pinnedAt ?? .distantFuture) < ($1.pinnedAt ?? .distantFuture) }
         let unpinned = ordinary.filter { !$0.isPinned }
-        let remaining = max(0, 200 - filter.apply(to: unpinned).count)
+        // OCR-only rows fill what is left of the budget the FTS `LIMIT` gives ordinary ones.
+        let remaining = max(0, Self.searchLimit - filter.apply(to: unpinned).count)
         return pins + unpinned + filter.apply(to: additional.filter { !$0.isPinned }).prefix(remaining)
     }
 
@@ -607,7 +607,7 @@ final class ClipboardStore {
             ? """
             SELECT \(columns), t.text FROM item_text t JOIN items i ON i.id = t.item_id
             WHERE \(kind) AND (i.pinned_at IS NOT NULL OR i.rowid >= COALESCE(
-              (SELECT rowid FROM items WHERE pinned_at IS NULL ORDER BY rowid DESC LIMIT 1 OFFSET 999), 0))
+              (SELECT rowid FROM items WHERE pinned_at IS NULL ORDER BY rowid DESC LIMIT 1 OFFSET \(memoryWindow - 1)), 0))
             ORDER BY i.pinned_at IS NULL, i.pinned_at, i.rowid DESC
             """
             : """
@@ -618,7 +618,7 @@ final class ClipboardStore {
                   JOIN item_text t ON t.rowid = f.rowid JOIN items i ON i.id = t.item_id
                 WHERE item_text_fts MATCH ?1 AND \(kind)
                 ORDER BY i.rowid DESC
-                LIMIT 200 + (SELECT COUNT(*) FROM items WHERE pinned_at IS NOT NULL)
+                LIMIT \(searchLimit) + (SELECT COUNT(*) FROM items WHERE pinned_at IS NOT NULL)
               )
               UNION ALL
               SELECT \(columns), t.text AS recognized, i.rowid AS rid
@@ -645,7 +645,7 @@ final class ClipboardStore {
             }
             matches.append(item)
             if !item.isPinned { unpinned += 1 }
-            if unpinned == 200 { break }
+            if unpinned == searchLimit { break }
         }
         return Task.isCancelled ? [] : matches
     }
@@ -697,6 +697,7 @@ final class ClipboardStore {
         reinsert(item.with(createdAt: Date(), pinnedAt: nil))
     }
 
+    /// Rewrites the row under the same id so it leads; a delete would take its derived text too.
     private func reinsert(_ updated: ClipboardItem) {
         if let stmt = prepare(
             """
@@ -714,6 +715,7 @@ final class ClipboardStore {
             sqlite3_step(stmt)
             sqlite3_finalize(stmt)
         }
+        // Array ops also cover items surfaced by FTS from beyond the in-memory window.
         items.removeAll { $0.id == updated.id }
         items.insert(updated, at: 0)
         trimWindow()
@@ -834,7 +836,7 @@ final class ClipboardStore {
             SELECT i.id, i.kind, i.text, i.image_path, i.created_at, i.source_app, i.pinned_at
             FROM (
               SELECT rowid FROM items_fts WHERE items_fts MATCH ?
-              ORDER BY rowid DESC LIMIT 200
+              ORDER BY rowid DESC LIMIT \(Self.searchLimit)
             ) f JOIN items i ON i.rowid = f.rowid ORDER BY f.rowid DESC
             """)
         deleteByIDStmt = prepare("DELETE FROM items WHERE id = ?")

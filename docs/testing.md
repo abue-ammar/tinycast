@@ -21,14 +21,6 @@ what you touched.
 
 ## The harnesses
 
-`clipboard-search-test` compares immediate original-text results and settled OCR results with a
-separate ordering oracle across all type filters, old pins, short queries, promotion, deletion, late
-extraction, default-off/reopen/reenable behavior and cancelled queries. `clipboard-text-test` exercises
-real Apple Vision, embedded/scanned PDFs, lazy schema creation, persisted metadata, idle scheduling,
-worker cancellation, bounded retries and synchronous match preservation while pinning.
-`clipboard-worker-test` compiles the shipped helper and checks real recognition, error propagation,
-output bounds, cancellation and deadline termination, including that children are reaped.
-
 ```sh
 ./Scripts/run-tests.sh              # all of them
 ./Scripts/run-tests.sh calc-test    # just one, while iterating

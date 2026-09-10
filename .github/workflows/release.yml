@@ -106,17 +106,20 @@ jobs:
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
 
-      # Apple silicon users pay for no Intel slice: assert the download stays thin.
+      # Apple silicon users pay for no Intel slice: assert the download stays thin. Both binaries —
+      # a bundled helper is shipped code too, and nothing else would catch a stray slice in it.
       - name: Assert the build is arm64-only
         env:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
         run: |
-          BIN="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app/Contents/MacOS/${DISPLAY_NAME}"
-          SLICES="$(lipo -archs "$BIN")"
-          if [ "$SLICES" != "arm64" ]; then
-            echo "::error::expected arm64 alone, got '$SLICES'"
-            exit 1
-          fi
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
+          for BIN in "$APP/Contents/MacOS/${DISPLAY_NAME}" "$APP/Contents/Helpers/ClipboardTextHelper"; do
+            SLICES="$(lipo -archs "$BIN")"
+            if [ "$SLICES" != "arm64" ]; then
+              echo "::error::${BIN##*/}: expected arm64 alone, got '$SLICES'"
+              exit 1
+            fi
+          done
 
       # Two artifacts from one build: the DMG people download and the cask installs, and the zip
       # the in-app updater installs — it expands with `ditto` instead of mounting a volume.
@@ -318,28 +321,31 @@ jobs:
             build
 
       # A silently-dropped ARCHS override would publish a thin build under the universal name, which
-      # is the one mistake this whole channel exists to prevent.
-      - name: Assert both slices on the shipping binary
+      # is the one mistake this whole channel exists to prevent. A thin bundled helper is the quiet
+      # version of it: the app still boots on Intel and only its OCR stops working.
+      - name: Assert both slices on the shipping binaries
         run: |
           APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
-          BIN="$APP/Contents/MacOS/${DISPLAY_NAME}"
-          SLICES="$(lipo -archs "$BIN")"
           PLIST_MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
-          echo "arch=$SLICES LSMinimumSystemVersion=$PLIST_MIN"
+          echo "LSMinimumSystemVersion=$PLIST_MIN"
           if [ "$PLIST_MIN" != "26.0" ]; then
             echo "::error::expected LSMinimumSystemVersion 26.0, got $PLIST_MIN"
             exit 1
           fi
-          for A in arm64 x86_64; do
-            case " $SLICES " in
-              *" $A "*) ;;
-              *) echo "::error::no $A slice — this is not a universal build"; exit 1 ;;
-            esac
-            MINOS="$(xcrun vtool -arch "$A" -show-build-version "$BIN" | awk '/minos/{print $2}')"
-            if [ "$MINOS" != "26.0" ]; then
-              echo "::error::$A: expected a macOS 26.0 floor, got minos=$MINOS"
-              exit 1
-            fi
+          for BIN in "$APP/Contents/MacOS/${DISPLAY_NAME}" "$APP/Contents/Helpers/ClipboardTextHelper"; do
+            SLICES="$(lipo -archs "$BIN")"
+            echo "${BIN##*/}: arch=$SLICES"
+            for A in arm64 x86_64; do
+              case " $SLICES " in
+                *" $A "*) ;;
+                *) echo "::error::${BIN##*/}: no $A slice — this is not a universal build"; exit 1 ;;
+              esac
+              MINOS="$(xcrun vtool -arch "$A" -show-build-version "$BIN" | awk '/minos/{print $2}')"
+              if [ "$MINOS" != "26.0" ]; then
+                echo "::error::${BIN##*/} $A: expected a macOS 26.0 floor, got minos=$MINOS"
+                exit 1
+              fi
+            done
           done
 
       - name: Package DMG and ZIP

@@ -1,4 +1,4 @@
-import AppKit
+import CoreGraphics
 import OSLog
 
 @MainActor
@@ -11,6 +11,8 @@ final class ClipboardTextIndexer {
     private var task: Task<Void, Never>?
     private var isEnabled = false
     private var waitingForRetry = false
+    /// Recognition only starts in a lull, and a busy Mac is rechecked no sooner than the same lull.
+    private static let idleWindow: TimeInterval = 2
     private static let logger = Logger(subsystem: "com.tinycast", category: "ClipboardText")
 
     init(
@@ -30,7 +32,7 @@ final class ClipboardTextIndexer {
     }
 
     static var isSystemIdle: Bool {
-        CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null) >= 2
+        CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null) >= idleWindow
     }
 
     func start() {
@@ -74,7 +76,7 @@ final class ClipboardTextIndexer {
                     continue
                 }
                 guard self.canRun() else {
-                    do { try await Task.sleep(for: .seconds(2)) } catch { return }
+                    do { try await Task.sleep(for: .seconds(Self.idleWindow)) } catch { return }
                     continue
                 }
                 let generation = self.store.extractionGeneration

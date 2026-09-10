@@ -1,7 +1,15 @@
 import Foundation
 
+/// Runs one `ClipboardTextHelper` per item, so Vision's allocations leave with the child process.
 nonisolated enum ClipboardTextWorker {
     enum Failure: Error { case recognition, outputLimit }
+
+    /// Mirrors `ClipboardTextExtractor.maximumTextBytes`: the helper is not in the app's module.
+    private static let maximumOutputBytes = 32_000
+    private static let readSize = 4096
+    /// The read loop and `waitUntilExit` block, so they stay off the cooperative pool.
+    private static let queue = DispatchQueue(
+        label: "com.tinycast.clipboard-text", qos: .background, attributes: .concurrent)
 
     static func extract(_ item: ClipboardItem) async throws -> String {
         guard let path = item.imagePath ?? item.filePath else { return "" }
@@ -23,36 +31,51 @@ nonisolated enum ClipboardTextWorker {
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
         process.qualityOfService = .background
-        return try await withTaskCancellationHandler {
-            try process.run()
-            if Task.isCancelled { process.terminate() }
-            let deadline = Task.detached(priority: .background) {
-                do { try await Task.sleep(for: timeout) } catch { return }
-                if process.isRunning { process.terminate() }
-            }
-            defer {
-                deadline.cancel()
-                if process.isRunning { process.terminate() }
-                process.waitUntilExit()
-                try? output.fileHandleForReading.close()
-            }
-            var data = Data()
-            while let chunk = try output.fileHandleForReading.read(upToCount: 4096), !chunk.isEmpty {
-                data.append(chunk)
-                if data.count > 32_000 {
-                    if process.isRunning { process.terminate() }
-                    process.waitUntilExit()
-                    throw Failure.outputLimit
-                }
-            }
-            process.waitUntilExit()
-            try Task.checkCancellation()
-            guard process.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else {
-                throw Failure.recognition
-            }
-            return text
-        } onCancel: {
-            if process.isRunning { process.terminate() }
+        do { try process.run() } catch { throw Failure.recognition }
+        // Cancellation can land between the check above and the launch, which nothing else catches.
+        if Task.isCancelled { terminate(process) }
+        let deadline = Task.detached(priority: .background) {
+            do { try await Task.sleep(for: timeout) } catch { return }
+            terminate(process)
         }
+        let result = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                queue.async { continuation.resume(returning: collect(from: process, reading: output)) }
+            }
+        } onCancel: {
+            terminate(process)
+        }
+        deadline.cancel()
+        try Task.checkCancellation()
+        return try result.get()
+    }
+
+    /// Blocking throughout, and the only place a helper is reaped: every exit runs the `defer`.
+    private static func collect(from process: Process, reading output: Pipe) -> Result<String, Failure> {
+        let reader = output.fileHandleForReading
+        defer {
+            terminate(process)
+            process.waitUntilExit()
+            try? reader.close()
+        }
+        var data = Data()
+        do {
+            while let chunk = try reader.read(upToCount: readSize), !chunk.isEmpty {
+                data.append(chunk)
+                if data.count > maximumOutputBytes { return .failure(.outputLimit) }
+            }
+        } catch {
+            return .failure(.recognition)
+        }
+        process.waitUntilExit()
+        guard process.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else {
+            return .failure(.recognition)
+        }
+        return .success(text)
+    }
+
+    /// `terminate()` traps on a process that never launched, so the state has to be asked first.
+    private static func terminate(_ process: Process) {
+        if process.isRunning { process.terminate() }
     }
 }

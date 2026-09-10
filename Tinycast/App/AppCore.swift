@@ -13,7 +13,6 @@ final class AppCore {
     let windowLayouts = WindowLayoutStore()
     let clipboardStore = ClipboardStore()
     @ObservationIgnored private var clipboardTextIndexer: ClipboardTextIndexer?
-    @ObservationIgnored private var clipboardTextTransition: Task<Void, Never>?
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
     let snippetListener = SnippetKeywordListener(
@@ -356,31 +355,24 @@ final class AppCore {
         await notesCoordinator.prepareForTermination()
     }
 
+    /// Idempotent: both switches are tracked, and either one flipping re-runs the whole decision.
     func applyClipboardTextSearch() {
         guard settings.clipboardEnabled, settings.clipboardTextSearchEnabled else {
             clipboardStore.onItemsChanged = nil
             clipboardStore.onSearchResultsChanged = nil
             clipboardStore.setTextSearchEnabled(false)
-            guard let indexer = clipboardTextIndexer, clipboardTextTransition == nil else { return }
-            indexer.stop()
-            clipboardTextTransition = Task { [weak self] in
-                await indexer.waitUntilStopped()
-                guard let self else { return }
-                self.clipboardTextIndexer = nil
-                self.clipboardTextTransition = nil
-                if !Task.isCancelled { self.applyClipboardTextSearch() }
-            }
+            clipboardTextIndexer?.stop()
             return
         }
-        guard clipboardTextIndexer == nil, clipboardTextTransition == nil else { return }
         guard clipboardStore.setTextSearchEnabled(true) else {
             showMessage("Couldn't enable text recognition for clipboard history.", tone: .danger)
             return
         }
         clipboardStore.setTextSearchActive(palette.isVisible)
-        let indexer = ClipboardTextIndexer(
-            store: clipboardStore,
-            canRun: { ClipboardTextIndexer.isSystemIdle })
+        // Kept across a disable: the indexer reschedules itself once a cancelled run winds down.
+        let indexer =
+            clipboardTextIndexer
+            ?? ClipboardTextIndexer(store: clipboardStore, canRun: { ClipboardTextIndexer.isSystemIdle })
         clipboardTextIndexer = indexer
         clipboardStore.onItemsChanged = { [weak indexer] in indexer?.schedule() }
         clipboardStore.onSearchResultsChanged = { [weak self] query, previous, current in
@@ -390,7 +382,6 @@ final class AppCore {
     }
 
     func prepareForTermination() {
-        clipboardTextTransition?.cancel()
         clipboardTextIndexer?.stop()
         // Caps Lock first: its remap is the one teardown that outlives the process.
         hyperKeyTap.prepareForTermination()

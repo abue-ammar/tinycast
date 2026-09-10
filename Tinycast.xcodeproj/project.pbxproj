@@ -3437,7 +3437,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tinycast.ClipboardTextHelper;
 				PRODUCT_MODULE_NAME = ClipboardTextHelper;
-				PRODUCT_NAME = ClipboardTextHelper;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -3521,7 +3520,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tinycast.ClipboardTextHelper;
 				PRODUCT_MODULE_NAME = ClipboardTextHelper;
-				PRODUCT_NAME = ClipboardTextHelper;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};

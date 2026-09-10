@@ -32,6 +32,8 @@ targets:
     platform: macOS
     sources:
       - path: Tinycast
+        # The helper's own sources: compiling them in would link Vision and PDFKit into the app,
+        # which is the whole thing running recognition out of process avoids.
         excludes:
           - Features/Clipboard/Service/ClipboardTextExtractor.swift
           - Features/Clipboard/Service/ClipboardTextHelper.swift
@@ -72,7 +74,9 @@ targets:
       - Tinycast/Features/Clipboard/Service/ClipboardTextHelper.swift
     settings:
       base:
-        PRODUCT_NAME: ClipboardTextHelper
+        # release.yml passes PRODUCT_NAME on the xcodebuild line, which hits every target: without
+        # these two pinned, a channel build renames the executable `ClipboardTextWorker` looks for
+        # and gives the module a name with a space in it.
         EXECUTABLE_NAME: ClipboardTextHelper
         PRODUCT_MODULE_NAME: ClipboardTextHelper
         SKIP_INSTALL: YES

@@ -197,6 +197,13 @@ struct ClipboardTextTests {
         expect(calls == 2, "completed item is processed once")
         store.addFiles(["/tmp/second.pdf"], sourceBundleID: nil)
         try await waitUntil { calls == 3 }
+        // `applyClipboardTextSearch` never waits between the two, so a cancelled run must requeue.
+        store.addFiles(["/tmp/third.pdf"], sourceBundleID: nil)
+        let restarted = calls
+        indexer.stop()
+        indexer.start()
+        try await waitUntil { store.nextExtractionItem() == nil }
+        expect(calls > restarted, "stop immediately followed by start drains the queue")
         store.clearAll()
         try await Task.sleep(for: .milliseconds(120))
         expect(store.search("scheduled", filter: .all).isEmpty, "clear discards in-flight result")
