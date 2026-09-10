@@ -82,7 +82,7 @@ Seven features, all off by default.
 | [Window Management](/docs/features/window-management) | Enable window management | Show in launcher, Cycle sizes on repeat, Gap (0–64 pt, default 0)           |
 | [Clipboard](/docs/features/clipboard)                 | _(always on)_            | Keep history for (**3 Months**), Disabled Applications, Clear history       |
 | [Emoji & Symbols](/docs/features/emoji)               | _(always on)_            | Emoji Skin Tone (**Default**)                                               |
-| [Extensions](/docs/extensions)                        | Enable extensions        | Show in launcher, package manager, registries, custom search paths, Storage |
+| [Extensions](/docs/extensions)                        | Enable extensions        | Show in launcher, per-command alias and shortcut, package manager, registries, custom search paths, Storage |
 
 Clipboard and Emoji have no feature switch — they are part of the palette itself.
 
