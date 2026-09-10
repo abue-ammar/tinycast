@@ -288,6 +288,9 @@ enum SettingsSearchCatalog {
             group: .quickActionsActions, "Actions",
             keywords: ["shortcut", "replace", "preview", "customize"]),
         .init(
+            .quickActionsActions, "Add Quick Action",
+            keywords: ["new", "custom", "prompt", "instructions", "alias"]),
+        .init(
             .quickActionsModel, "Model",
             keywords: ["llm", "ai", "default"]),
         .init(
