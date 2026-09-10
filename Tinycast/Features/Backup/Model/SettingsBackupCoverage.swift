@@ -31,7 +31,7 @@ enum SettingsBackupCoverage {
         "windowManagementEnabled": .windowManagementEnabled,
         "windowManagementShowInLauncher": .windowManagementShowInLauncher,
         "windowGap": .windowGap,
-        "windowCycleOnRepeat": .windowCycleOnRepeat,
+        "windowCycle": .windowCycle,
         "windowLayoutsShowInLauncher": .windowLayoutsShowInLauncher,
         "quicklinksEnabled": .quicklinksEnabled,
         "quicklinksShowInLauncher": .quicklinksShowInLauncher,

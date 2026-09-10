@@ -355,8 +355,8 @@ enum SettingsSearchCatalog {
             .windowManagementWindowManagement, "Enable window management",
             keywords: ["tile", "accessibility"]),
         .init(
-            .windowManagementOptions, "Cycle sizes on repeat",
-            keywords: ["repeat", "thirds", "halves"]),
+            .windowManagementOptions, "Cycling",
+            keywords: ["repeat", "thirds", "halves", "displays", "monitor", "screens"]),
         .init(
             .windowManagementOptions, "Gap between windows",
             keywords: ["padding", "spacing", "margin", "points"]),

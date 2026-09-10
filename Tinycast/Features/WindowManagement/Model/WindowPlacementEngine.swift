@@ -50,6 +50,8 @@ enum WindowPlacementEngine {
         var gap: CGFloat
         /// Cycle position, supplied by `WindowActionMemory` so the geometry itself stays stateless.
         var step: Int
+        /// What the step means: the mode the user picked for a repeat press.
+        var cycle: WindowCycle
         /// Read only by `.restore`.
         var restoreFrame: CGRect?
         /// The tile that last placed this window, so a display move re-derives rather than scales.
@@ -57,13 +59,15 @@ enum WindowPlacementEngine {
 
         init(
             command: WindowCommand.ID, windowFrame: CGRect, screens: [Screen], gap: CGFloat = 0,
-            step: Int = 0, restoreFrame: CGRect? = nil, lastTileCommand: WindowCommand.ID? = nil
+            step: Int = 0, cycle: WindowCycle = .off, restoreFrame: CGRect? = nil,
+            lastTileCommand: WindowCommand.ID? = nil
         ) {
             self.command = command
             self.windowFrame = windowFrame
             self.screens = screens
             self.gap = gap
             self.step = step
+            self.cycle = cycle
             self.restoreFrame = restoreFrame
             self.lastTileCommand = lastTileCommand
         }
@@ -109,15 +113,16 @@ enum WindowPlacementEngine {
             break
         }
 
-        // Non-cycling commands ignore the step, so a stale cycle position can't leak in.
-        let step = command.cyclesOnRepeat ? normalizedStep(input.step) : 0
+        // `cycleLength` is 1 for a non-cycling command, so a stale step can never leak in.
+        let step = wrapped(
+            input.step,
+            into: cycleLength(for: input.command, screens: input.screens, cycle: input.cycle))
 
-        if let fractions = tileFractions(input.command, step: step) {
-            let frame = tile(
-                host.visibleFrame, x0: fractions.x0, x1: fractions.x1, y0: fractions.y0,
-                y1: fractions.y1, gap: gap)
-            return Placement(
-                frame: frame, screenID: host.id, anchor: fractions.anchor, resizes: true)
+        if let half = Half.of(input.command) {
+            return halfPlacement(input, half: half, host: host, step: step)
+        }
+        if let fractions = tileFractions(input.command) {
+            return tilePlacement(fractions, on: host, gap: gap)
         }
 
         let canvas = canvas(host.visibleFrame, gap: gap)
@@ -229,7 +234,7 @@ enum WindowPlacementEngine {
         _ frame: CGRect, from: Screen, to: Screen, gap: CGFloat, lastTile: WindowCommand.ID?
     ) -> CGRect {
         // Exactness beats proportion: an untouched tile re-derives instead of being scaled.
-        if let lastTile, let fractions = tileFractions(lastTile, step: 0) {
+        if let lastTile, let fractions = tileFractions(lastTile) {
             return tile(
                 to.visibleFrame, x0: fractions.x0, x1: fractions.x1, y0: fractions.y0,
                 y1: fractions.y1, gap: sanitizedGap(gap, in: to.visibleFrame))
@@ -280,24 +285,92 @@ enum WindowPlacementEngine {
     private static let oneThird: CGFloat = 1.0 / 3.0
     private static let twoThirds: CGFloat = 2.0 / 3.0
 
-    /// Fractional bounds of a tile command, or `nil`; `step` matters only for the four halves.
-    private static func tileFractions(_ command: WindowCommand.ID, step: Int) -> Fractions? {
-        let cycle: [CGFloat] = [0.5, oneThird, twoThirds]
-        let position = cycle[normalizedStep(step)]
-        switch command {
-        case .leftHalf:
-            return Fractions(x0: 0, x1: position, y0: 0, y1: 1, anchor: .topLeading)
-        case .rightHalf:
-            return Fractions(
-                x0: 1 - position, x1: 1, y0: 0, y1: 1,
-                anchor: Anchor(horizontal: .max, vertical: .min))
-        case .topHalf:
-            return Fractions(x0: 0, x1: 1, y0: 0, y1: position, anchor: .topLeading)
-        case .bottomHalf:
-            return Fractions(
-                x0: 0, x1: 1, y0: 1 - position, y1: 1,
-                anchor: Anchor(horizontal: .min, vertical: .max))
+    /// One of the four halves: the axis it splits, and the edge of that axis it hugs.
+    private struct Half {
+        enum Axis { case horizontal, vertical }
+        enum Edge { case leading, trailing }
 
+        var axis: Axis
+        var edge: Edge
+
+        static func of(_ command: WindowCommand.ID) -> Half? {
+            switch command {
+            case .leftHalf: Half(axis: .horizontal, edge: .leading)
+            case .rightHalf: Half(axis: .horizontal, edge: .trailing)
+            case .topHalf: Half(axis: .vertical, edge: .leading)
+            case .bottomHalf: Half(axis: .vertical, edge: .trailing)
+            default: nil
+            }
+        }
+
+        /// Bounds covering `fraction` of the screen along the axis, pinned to the edge.
+        func fractions(_ fraction: CGFloat) -> Fractions {
+            let leads = edge == .leading
+            let span: (CGFloat, CGFloat) = leads ? (0, fraction) : (1 - fraction, 1)
+            let along: Anchor.Axis = leads ? .min : .max
+            switch axis {
+            case .horizontal:
+                return Fractions(
+                    x0: span.0, x1: span.1, y0: 0, y1: 1,
+                    anchor: Anchor(horizontal: along, vertical: .min))
+            case .vertical:
+                return Fractions(
+                    x0: 0, x1: 1, y0: span.0, y1: span.1,
+                    anchor: Anchor(horizontal: .min, vertical: along))
+            }
+        }
+    }
+
+    /// The sizes a half steps through when size cycling is on.
+    private static let sizeCycle: [CGFloat] = [0.5, oneThird, twoThirds]
+
+    /// Presses before the chain wraps; 1 means this command doesn't cycle at all.
+    static func cycleLength(
+        for command: WindowCommand.ID, screens: [Screen], cycle: WindowCycle
+    ) -> Int {
+        guard WindowCommandCatalog.command(id: command)?.cyclesOnRepeat == true else { return 1 }
+        switch cycle {
+        case .off: return 1
+        case .sizes: return sizeCycle.count
+        // One display makes the display cycle a no-op rather than a left/right flip in place.
+        case .displays: return screens.count > 1 ? screens.count * 2 : 1
+        }
+    }
+
+    /// A half's slot this press: its own edge on the host, or one walked along the display strip.
+    private static func halfPlacement(
+        _ input: Input, half: Half, host: Screen, step: Int
+    ) -> Placement {
+        guard input.cycle == .displays else {
+            return tilePlacement(half.fractions(sizeCycle[step]), on: host, gap: input.gap)
+        }
+        let strip = ordered(input.screens)
+        guard strip.count > 1, let hostIndex = strip.firstIndex(where: { $0.id == host.id }) else {
+            return tilePlacement(half.fractions(0.5), on: host, gap: input.gap)
+        }
+        // Left and Top walk backwards, so one shortcut sweeps the whole desktop in one direction.
+        let leads = half.edge == .leading
+        let slot = wrapped(
+            hostIndex * 2 + (leads ? 0 : 1) + (leads ? -step : step), into: strip.count * 2)
+        let edge: Half.Edge = slot.isMultiple(of: 2) ? .leading : .trailing
+        return tilePlacement(
+            Half(axis: half.axis, edge: edge).fractions(0.5), on: strip[slot / 2], gap: input.gap)
+    }
+
+    private static func tilePlacement(
+        _ fractions: Fractions, on screen: Screen, gap: CGFloat
+    ) -> Placement {
+        let frame = tile(
+            screen.visibleFrame, x0: fractions.x0, x1: fractions.x1, y0: fractions.y0,
+            y1: fractions.y1, gap: sanitizedGap(gap, in: screen.visibleFrame))
+        return Placement(
+            frame: frame, screenID: screen.id, anchor: fractions.anchor, resizes: true)
+    }
+
+    /// Fractional bounds of a tile command at its base position, or `nil` if it isn't one.
+    private static func tileFractions(_ command: WindowCommand.ID) -> Fractions? {
+        if let half = Half.of(command) { return half.fractions(0.5) }
+        switch command {
         case .topLeftQuarter:
             return Fractions(x0: 0, x1: 0.5, y0: 0, y1: 0.5, anchor: .topLeading)
         case .topRightQuarter:
@@ -346,7 +419,7 @@ enum WindowPlacementEngine {
 
     /// Whether the command lands on the fractional grid, which a display move can re-derive.
     static func isTileCommand(_ command: WindowCommand.ID) -> Bool {
-        tileFractions(command, step: 0) != nil
+        tileFractions(command) != nil
     }
 
     /// A tile from fractional bounds of `visible`. See docs/features/window-management.md#geometry.
@@ -437,5 +510,8 @@ enum WindowPlacementEngine {
         return min(gap, min(visible.width, visible.height) / 10)
     }
 
-    private static func normalizedStep(_ step: Int) -> Int { ((step % 3) + 3) % 3 }
+    /// Wraps into `0..<length`, so neither a negative nor an overrun step escapes the cycle.
+    private static func wrapped(_ value: Int, into length: Int) -> Int {
+        ((value % length) + length) % length
+    }
 }

@@ -45,11 +45,13 @@ struct WindowManagementSettingsView: View {
     private var options: some View {
         @Bindable var settings = settings
         return Section {
-            Toggle(isOn: $settings.windowCycleOnRepeat) {
-                SettingsRowTitle(.windowManagementOptions, "Cycle sizes on repeat")
-                Text(
-                    "Triggering a half again steps it through a third and two thirds before returning."
-                )
+            Picker(selection: $settings.windowCycle) {
+                ForEach(WindowCycle.allCases) { cycle in
+                    Text(cycle.title).tag(cycle)
+                }
+            } label: {
+                SettingsRowTitle(.windowManagementOptions, "Cycling")
+                Text(settings.windowCycle.detail)
             }
 
             LabeledContent {
