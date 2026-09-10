@@ -81,7 +81,7 @@ the shared primitives and system shims every feature draws on. Neither may depen
 app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`, `CustomCommandStore`,
 `FavoritesStore`, `VisibilityStore`, `AliasStore`, `LauncherRankingStore`, `CalculatorHistoryStore`,
 `CurrencyRateStore`, `FrequentEmojiStore`, `CalendarStore`), the managers, monitors and clocks
-(`ClipboardManager`,
+(`ClipboardManager`, the opt-in `ClipboardTextIndexer`,
 `HotKeyManager`, `HyperKeyTap`, `RunningAppsMonitor`, `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `UninstallSession`,
 `CustomCommandArgumentSession`, `MeetingClock`), `NotesStore`, the twenty feature coordinators, and the
@@ -100,6 +100,12 @@ fine too; deciding something with one is what the rule forbids. `showNotice`, `c
 `DialogController` and `MessageHUDController` stay single-owned.
 
 New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a competing singleton: this is a singleton, not a container.
+
+Clipboard text recognition is the one feature that leaves the process. `AppCore` owns the indexer;
+the stateless `ClipboardTextWorker` runs one bundled `ClipboardTextHelper` per item, from
+`Contents/Helpers`, and reaps it before returning. Vision's and PDFKit's allocations therefore belong
+to a process that exits, and the helper — which has no database, clipboard or settings access — is
+handed an input path and answers with bounded text down a pipe.
 
 ## Entry points and windows
 

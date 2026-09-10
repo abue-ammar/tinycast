@@ -67,6 +67,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Events go stale while the palette is closed, and the countdown only ticks while up.
             core.calendarCoordinator.paletteDidShow()
             core.palette.noteVisible(true)
+            core.clipboardStore.setTextSearchActive(true)
             // Only while we are on screen: a system-wide tap has no business outliving the window.
             commandEscapeTap.enable()
             // Non-activating, so summoning never raises our own aux windows behind it.
@@ -121,6 +122,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
         core.palette.noteVisible(false)
+        core.clipboardStore.setTextSearchActive(false)
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
         anchor = nil
         // The guides must never outlive the panel they point at.

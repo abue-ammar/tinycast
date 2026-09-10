@@ -12,6 +12,7 @@ final class AppCore {
     let quicklinks = QuicklinkStore()
     let windowLayouts = WindowLayoutStore()
     let clipboardStore = ClipboardStore()
+    @ObservationIgnored private var clipboardTextIndexer: ClipboardTextIndexer?
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
     let snippetListener = SnippetKeywordListener(
@@ -354,7 +355,34 @@ final class AppCore {
         await notesCoordinator.prepareForTermination()
     }
 
+    /// Idempotent: both switches are tracked, and either one flipping re-runs the whole decision.
+    func applyClipboardTextSearch() {
+        guard settings.clipboardEnabled, settings.clipboardTextSearchEnabled else {
+            clipboardStore.onItemsChanged = nil
+            clipboardStore.onSearchResultsChanged = nil
+            clipboardStore.setTextSearchEnabled(false)
+            clipboardTextIndexer?.stop()
+            return
+        }
+        guard clipboardStore.setTextSearchEnabled(true) else {
+            showMessage("Couldn't enable text recognition for clipboard history.", tone: .danger)
+            return
+        }
+        clipboardStore.setTextSearchActive(palette.isVisible)
+        // Kept across a disable: the indexer reschedules itself once a cancelled run winds down.
+        let indexer =
+            clipboardTextIndexer
+            ?? ClipboardTextIndexer(store: clipboardStore, canRun: { ClipboardTextIndexer.isSystemIdle })
+        clipboardTextIndexer = indexer
+        clipboardStore.onItemsChanged = { [weak indexer] in indexer?.schedule() }
+        clipboardStore.onSearchResultsChanged = { [weak self] query, previous, current in
+            self?.clipboardCoordinator.followSearchResults(query: query, previous: previous, current: current)
+        }
+        indexer.start()
+    }
+
     func prepareForTermination() {
+        clipboardTextIndexer?.stop()
         // Caps Lock first: its remap is the one teardown that outlives the process.
         hyperKeyTap.prepareForTermination()
         windowLayoutCoordinator.prepareForTermination()
@@ -429,6 +457,8 @@ final class AppCore {
             }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
         track(
             { _ = $0.clipboardEnabled }, reproject: { $0.clipboardCoordinator.applyEnabled() })
+        track(
+            { _ = $0.clipboardTextSearchEnabled }, reproject: { $0.applyClipboardTextSearch() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })

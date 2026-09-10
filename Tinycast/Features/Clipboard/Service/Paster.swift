@@ -100,7 +100,9 @@ enum Paster {
             pb.declareTypes([.string, ClipboardManager.internalType], owner: nil)
             pb.setString(text, forType: .string)
         case .image:
-            guard let url = store.imageURL(for: item), let data = try? Data(contentsOf: url) else {
+            guard let url = store.imageURL(for: item),
+                let data = try? Data(contentsOf: url, options: .mappedIfSafe)
+            else {
                 return false
             }
             pb.clearContents()
