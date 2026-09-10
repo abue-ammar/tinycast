@@ -499,12 +499,23 @@ Only the display name is indexed. Activation resolves the stable UUID through th
 to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
 execution semantics.
 
-## Quick Action commands
+## Quick Actions
 
-`CommandID.fixGrammar`, `.rewrite`, `.translate` and `.summarize` publish the four Quick Actions
-while `quickActionsEnabled` is on, each carrying the action's own title and glyph so the launcher row
-and the settings row can never drift. `CommandID.init(_ action: QuickAction)` is exhaustive, so a
-fifth action cannot reach the launcher without one.
+`AppEntry.Kind.quickAction` is one section holding both halves. `CommandID.fixGrammar`, `.rewrite`,
+`.translate` and `.summarize` publish the shipped four while `quickActionsEnabled` is on, each
+carrying the action's own title and glyph so the launcher row and the settings row can never drift.
+`CommandID.init(_ action: BuiltInQuickAction)` is exhaustive, so a fifth cannot reach the launcher
+without one. They report `CommandID.entryKind`, the one place a catalog command claims a section other
+than Commands.
+
+Custom actions arrive through `AppIndex.setCustomQuickActions` as `quick-action:<uuid>` entries,
+sorted by when they were made, and bind `HotKeyAction.quickAction(id:)`.
+
+`VisibilityStore.allowsHotKey` reads `entryKind` to let a Quick Action command through ungated, like
+every other feature carrying its own switch. **There is deliberately no `Enable Quick Actions`
+category toggle**: a `LauncherItemsSection(kind: .quickAction)` would be a second switch over rows the
+pane already lists. This did move a gate, though. `Enable Commands` off used to stop the shipped four,
+and no longer does.
 
 Activation hands the action to `QuickActionCoordinator.run(_:)` **without** hiding the palette first:
 the coordinator reads the displaced app and then hides, because after the hide the frontmost app is

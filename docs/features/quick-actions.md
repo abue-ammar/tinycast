@@ -1,10 +1,13 @@
 # Quick Actions
 
-Act on whatever text is selected, in whatever app is frontmost. Four of them — Fix Grammar, Rewrite,
-Translate and Summarize — each with its own bindable shortcut **and its own launcher command**, both
-listed in **Settings → Quick Actions**. Three go through the AI provider layer; Translate goes to
+Act on whatever text is selected, in whatever app is frontmost. Four are shipped: Fix Grammar,
+Rewrite, Translate and Summarize, each with its own bindable shortcut **and its own launcher command**,
+both listed in **Settings → Quick Actions**. Three go through the AI provider layer; Translate goes to
 Apple's own translator. The result either replaces the selection or arrives in a floating panel, per
 action.
+
+A **custom Quick Action** is a name, a glyph and a prompt, run through the same provider. It takes a
+shortcut and a launcher row like any other.
 
 Quick Actions is the provider layer's second consumer. It shares nothing with AI Chat but the
 provider protocol and the connections behind it.
@@ -13,8 +16,9 @@ provider protocol and the connections behind it.
 
 - **Off out of the box, and off means the shortcuts do nothing.** `AppSettings.quickActionsEnabled`
   is the flag and `QuickActionCoordinator` is the only place that reads it: no selection is read, no
-  provider is built, no panel opens. The four commands leave the launcher's Commands slice through
-  `AppIndex.setCommandsVisible`, the way Notes and AI Chat drop theirs. Carbon bindings stay
+  provider is built, no panel opens. The four commands leave the launcher's Quick Actions slice
+  through `AppIndex.setCommandsVisible`, and the custom ones leave it through
+  `AppIndex.setCustomQuickActions`, the way Notes and AI Chat drop theirs. Carbon bindings stay
   registered, so re-enabling restores every shortcut without touching the hotkey layer. The flag
   grants keystroke delivery into other apps, so like `snippetsEnabled` it is excluded from settings
   backups — an import must never arm it.
@@ -53,17 +57,28 @@ provider protocol and the connections behind it.
   model that the text is material to work on and never instructions to follow, and that only the
   transformed text may come back — no preamble, no fences. Custom instructions replace these rules
   too. The output is pasted into somebody's document.
+- **A custom prompt cannot drop that boundary.** An override on a shipped action may replace
+  `boundary`, because the sheet shows the whole prompt. A custom action *is* the prompt, so `boundary`
+  is prepended and no control removes it.
 - **Each model action owns its instructions.** The pencil on Fix Grammar, Rewrite and Summarize opens
   a sheet prefilled with the exact built-in prompt. Saving replaces that prompt for only that action;
-  Use Default restores it. Translate has no editor because no model handles translation.
+  Use Default restores it. Translate has no editor because no model handles translation. The same
+  pencil on a custom action opens its editor, which owns the name and glyph too.
+- **A custom action never travels in a backup.** Neither the record nor its shortcut, for the reason
+  `quickActionInstructions` already doesn't: an import must never change what a shortcut does to
+  somebody's documents. Its JSON sits outside `UserDefaults`, so no settings key can sweep it up.
 
 ## The actions
 
-`QuickAction` is the extensibility story: a fifth action is one case there, its prompt in
-`QuickActionPrompt`, and one `CommandID` case for its launcher row. The shortcut, the settings row
-and the panel all read `allCases`, its shortcut is the `HotKeyAction.command(CommandID)` its launcher
-row already has, and `CommandID.init(_ action:)` is exhaustive over `QuickAction`, so
-a fifth cannot compile without a launcher command of its own.
+`QuickAction` is `.builtIn(BuiltInQuickAction)` or `.custom(CustomQuickAction)`. Coordinator, panel,
+runner and prompt all take that one type, and neither half has a code path of its own.
+
+A fifth *shipped* action is one `BuiltInQuickAction` case, its prompt in `QuickActionPrompt`, and one
+`CommandID` case for its launcher row. `CommandID.init(_ action:)` is exhaustive, so it cannot compile
+without one.
+
+The custom case carries the record rather than an id, so a run uses the prompt as it was when it
+started.
 
 | Action | Engine | Default result | Diff |
 | --- | --- | --- | --- |
@@ -71,9 +86,44 @@ a fifth cannot compile without a launcher command of its own.
 | Rewrite | provider | panel | yes |
 | Translate | Apple Translation | panel | no |
 | Summarize | provider | panel, always | no |
+| a custom action | provider | panel | no |
+
+A custom action previews by default, switchable to Replace per row: Tinycast cannot know whether an
+arbitrary prompt transforms the text or answers a question about it, and only the second destroys what
+it replaces. No diff, for the same reason.
 
 Custom instructions stay on this Mac and are excluded from settings backups, like chat's system
 prompt, because importing them would change results without the reader seeing them first.
+
+## Custom actions
+
+`CustomQuickAction` is `id`, `name`, `iconSymbol`, `instructions`, `previewsResult`, `createdAt`.
+`CustomQuickActionStore` keeps them as JSON in Application Support, ordered by `createdAt`, under an
+injected directory so the harness gets a throwaway one. Name and instructions must be non-empty;
+nothing else is rejected, including a name a shipped action already uses.
+
+**Replace / Preview rides the record.** `QuickActionSettings` keys on `BuiltInQuickAction`, which
+cannot hold a UUID, and a parallel dictionary would outlive what it described. On the record, a delete
+takes the choice with it.
+
+**`AppEntry.Kind.quickAction` is one section for both halves**, ungated in
+`VisibilityStore.allowsHotKey` because `quickActionsEnabled` is the master switch. The four keep their
+`CommandID`s, so no shortcut or preference key moved. A custom action binds
+`HotKeyAction.quickAction(id:)` under `hotkey.quickAction.<uuid>`, indexed in `boundQuickActionIDs` so
+`HotKeyManager.start` can prune a binding whose action was deleted while Tinycast was off.
+
+**The pane draws its own `AliasField`.** Leaving `.command` took the four out of
+`LauncherItemsSection(kind: .command)`, which is where Settings → Commands drew theirs. Without it,
+`deleteCustomQuickAction` would be clearing an alias no surface could set.
+
+**Nothing is saved until it is on disk.** `commit` persists before it moves `actions`, and a write
+that cannot land throws `.storageUnavailable` where the reader sees it. An absent file is a fresh
+install; one that exists but will not decode sets `isAvailable` false and makes every mutation refuse.
+`QuicklinkStore`'s rule: authored data is reported on, never written over.
+
+**Deleting unwinds only once the record is gone.** Confirm, remove, *then* drop the binding, the
+favorite, the alias, the visibility key and the ranking. `WindowLayoutCoordinator`'s order: a failed
+delete must never leave a kept record stripped of its shortcut.
 
 Only Fix Grammar applies unseen: it changes what was wrong, where a rewrite changes the voice.
 Summarize can never be told to replace text unseen — it answers a question *about* the text, so
@@ -199,6 +249,12 @@ failure handler, so automatic expansion stays silent as before.
 - Run one from the launcher (⌘Space → "Fix Grammar") with text selected behind it: the palette
   closes and the selection in the displaced app is what gets acted on, not Tinycast's own field.
 - Uncheck an action's launcher checkbox: the row leaves ⌘Space, and its shortcut still works.
+- Add a custom action, bind a shortcut, run it from the shortcut and from ⌘Space, then rename it and
+  confirm the shortcut, the Replace choice and the checkbox all survived.
+- Delete a custom action with a shortcut bound: the dialog asks first, the row leaves both Settings
+  and ⌘Space, and the chord is free for something else to take.
+- Type "quick actions" in ⌘Space: the section lists the shipped four beside the custom ones.
+- Give Fix Grammar and a custom action an alias in the pane, then type each alias in ⌘Space.
 - Press a shortcut with Tinycast's own Settings window frontmost: refused, with a HUD.
 - Press one in a password field: refused.
 - Summarize a long selection: the panel streams, grows without the title drifting, and scrolls past
