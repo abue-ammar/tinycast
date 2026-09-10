@@ -151,7 +151,8 @@ enum CalcHistoryActionsMenu {
                     core.calculatorCoordinator.copyHistoryExpression(entry)
                 },
                 PopoverMenuItem(
-                    title: "Delete Entry", systemImage: "trash", shortcut: "⌃X", isDestructive: true
+                    title: "Delete Entry", systemImage: "trash", startsSection: true, shortcut: "⌃X",
+                    isDestructive: true
                 ) {
                     calcHistory.remove(entry)
                 },

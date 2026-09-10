@@ -967,9 +967,12 @@ struct RootPaletteView: View {
         }
         let view = AnyView(content.view())
         if presenting, let hostWindow {
-            menuPanel.show(view, corner: corner, parent: hostWindow, core: core)
+            menuPanel.show(
+                view, corner: corner, parent: hostWindow, core: core,
+                clipsToMenuCorners: content.clipsToMenuCorners)
         } else {
-            menuPanel.update(view, corner: corner, core: core)
+            menuPanel.update(
+                view, corner: corner, core: core, clipsToMenuCorners: content.clipsToMenuCorners)
         }
     }
 

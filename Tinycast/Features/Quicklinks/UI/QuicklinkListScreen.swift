@@ -126,7 +126,7 @@ enum QuicklinkActionsMenu {
                 })
         }
         items.append(
-            PopoverMenuItem(title: "Edit Quicklink", systemImage: "pencil") {
+            PopoverMenuItem(title: "Edit Quicklink", systemImage: "pencil", startsSection: true) {
                 core.paletteCoordinator.hidePalette(restoreFocus: false)
                 core.quicklinkCoordinator.editQuicklink(quicklink)
             })
@@ -136,10 +136,15 @@ enum QuicklinkActionsMenu {
             })
         items.append(
             quicklink.isPinned
-                ? PopoverMenuItem(title: "Unpin Quicklink", systemImage: "pin.slash", shortcut: "⌘.") {
+                ? PopoverMenuItem(
+                    title: "Unpin Quicklink", systemImage: "pin.slash", startsSection: true,
+                    shortcut: "⌘."
+                ) {
                     core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
                 }
-                : PopoverMenuItem(title: "Pin Quicklink", systemImage: "pin", shortcut: "⌘.") {
+                : PopoverMenuItem(
+                    title: "Pin Quicklink", systemImage: "pin", startsSection: true, shortcut: "⌘."
+                ) {
                     core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
                 })
         items.append(
@@ -156,14 +161,16 @@ enum QuicklinkActionsMenu {
             !QuicklinkDestination.containsPlaceholder(quicklink.link)
         {
             items.append(
-                PopoverMenuItem(title: "Show in Finder", systemImage: "folder", shortcut: "⌘F") {
+                PopoverMenuItem(
+                    title: "Show in Finder", systemImage: "folder", startsSection: true, shortcut: "⌘F"
+                ) {
                     core.paletteCoordinator.hidePalette(restoreFocus: false)
                     AppLauncher.showInFinder(URL(fileURLWithPath: path))
                 })
         }
         items.append(
             PopoverMenuItem(
-                title: "Delete Quicklink", systemImage: "trash", shortcut: "⌘⌫",
+                title: "Delete Quicklink", systemImage: "trash", startsSection: true, shortcut: "⌘⌫",
                 isDestructive: true
             ) {
                 Task { await core.quicklinkCoordinator.deleteQuicklink(id: quicklink.id) }

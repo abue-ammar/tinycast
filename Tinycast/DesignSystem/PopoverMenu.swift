@@ -21,6 +21,7 @@ struct PopoverMenuItem {
     let icon: PopoverMenuIcon
     let isLoading: Bool
     var sectionTitle: String?
+    var startsSection: Bool
     var shortcut: String?
     /// A value the row states rather than a chord it runs — what a "Copy as" row copies.
     var detail: String?
@@ -30,13 +31,14 @@ struct PopoverMenuItem {
 
     init(
         title: String, icon: PopoverMenuIcon, isLoading: Bool = false, sectionTitle: String? = nil,
-        shortcut: String? = nil, detail: String? = nil,
+        startsSection: Bool = false, shortcut: String? = nil, detail: String? = nil,
         isDestructive: Bool = false, action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
         self.isLoading = isLoading
         self.sectionTitle = sectionTitle
+        self.startsSection = startsSection
         self.shortcut = shortcut
         self.detail = detail
         self.isDestructive = isDestructive
@@ -45,12 +47,12 @@ struct PopoverMenuItem {
 
     init(
         title: String, systemImage: String, isLoading: Bool = false, sectionTitle: String? = nil,
-        shortcut: String? = nil, isDestructive: Bool = false,
+        startsSection: Bool = false, shortcut: String? = nil, isDestructive: Bool = false,
         action: @escaping () -> Void
     ) {
         self.init(
             title: title, icon: .symbol(systemImage), isLoading: isLoading,
-            sectionTitle: sectionTitle, shortcut: shortcut,
+            sectionTitle: sectionTitle, startsSection: startsSection, shortcut: shortcut,
             isDestructive: isDestructive, action: action)
     }
 }
@@ -111,6 +113,17 @@ struct PopoverMenu: View {
                             }
                             PopoverMenuRow(item: items[index], selected: index == selection) {
                                 onActivate(index)
+                            }
+                        }
+                        .overlay(alignment: .top) {
+                            if index > 0, items[index].startsSection {
+                                Rectangle()
+                                    .fill(Theme.Colors.separator)
+                                    .frame(height: Theme.Size.hairline)
+                                    .padding(.horizontal, Theme.Spacing.md)
+                                    .offset(y: -Theme.Size.menuRowSpacing)
+                                    .allowsHitTesting(false)
+                                    .accessibilityHidden(true)
                             }
                         }
                         .id(index)

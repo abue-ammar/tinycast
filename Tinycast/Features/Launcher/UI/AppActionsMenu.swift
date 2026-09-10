@@ -56,7 +56,7 @@ enum AppActionsMenu {
         if app.canRevealInFinder {
             items.append(
                 PopoverMenuItem(
-                    title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"
+                    title: "Show in Finder", systemImage: "folder", startsSection: true, shortcut: "⌘↵"
                 ) {
                     core.launcherCoordinator.showInFinder(app)
                 })
@@ -79,7 +79,8 @@ enum AppActionsMenu {
         if app.kind == .application {
             items.append(
                 PopoverMenuItem(
-                    title: "Uninstall Application", systemImage: "trash", isDestructive: true
+                    title: "Uninstall Application", systemImage: "trash", startsSection: true,
+                    isDestructive: true
                 ) {
                     core.uninstallCoordinator.beginUninstall(app)
                 })
@@ -90,7 +91,7 @@ enum AppActionsMenu {
                 items.append(
                     PopoverMenuItem(
                         title: enabled ? "Disable Background Refresh" : "Enable Background Refresh",
-                        systemImage: enabled ? "pause.circle" : "play.circle"
+                        systemImage: enabled ? "pause.circle" : "play.circle", startsSection: true
                     ) {
                         core.extensions.toggleBackgroundRefresh(for: app)
                     })
@@ -102,12 +103,15 @@ enum AppActionsMenu {
                 }
             }
             items.append(
-                PopoverMenuItem(title: "Configure Extension", systemImage: "slider.horizontal.3") {
+                PopoverMenuItem(
+                    title: "Configure Extension", systemImage: "slider.horizontal.3", startsSection: true
+                ) {
                     core.extensionCoordinator.showExtensionSettings(for: app)
                 })
             items.append(
                 PopoverMenuItem(
-                    title: "Uninstall Extension", systemImage: "trash", isDestructive: true
+                    title: "Uninstall Extension", systemImage: "trash", startsSection: true,
+                    isDestructive: true
                 ) {
                     core.extensionCoordinator.confirmUninstall(app)
                 })
