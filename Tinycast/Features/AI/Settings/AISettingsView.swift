@@ -129,6 +129,12 @@ struct AISettingsView: View {
                 Text(
                     "Sends prompts on to a search engine when the route offers one — Codex and OpenRouter.")
             }
+            Toggle(isOn: $settings.thinkingEnabled) {
+                SettingsRowTitle(.aiChat, "Thinking")
+                Text(
+                    "Off asks for a direct answer, so a simple question comes back sooner. Reaches a "
+                        + "connection pointed at a custom endpoint, such as DeepSeek's.")
+            }
         } header: {
             SettingsSectionHeader(.aiChat)
         } footer: {
@@ -746,23 +752,6 @@ private struct AIConnectionEditorSheet: View {
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                }
-
-                if connection.provider == .openAICompatible {
-                    Section {
-                        Toggle(isOn: $connection.thinkingEnabled) {
-                            Text("Thinking")
-                            Text("Off asks for a direct answer, so a simple question comes back sooner.")
-                        }
-                    } footer: {
-                        Text(
-                            "Off sends a disabled-thinking field with each request. Endpoints whose "
-                                + "models think by default, such as DeepSeek, then answer directly; "
-                                + "one with no thinking mode may refuse it."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
                 }
             }
             .formStyle(.grouped)

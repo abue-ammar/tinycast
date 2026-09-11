@@ -99,7 +99,7 @@ struct AIProviderTests {
         toolCatalogsAndTurnsEncodePerProvider()
         toolArgumentsSurviveArrivingInFragments()
         toolCapabilitiesFollowTheRoute()
-        thinkingIsOnUntilAConnectionTurnsItOff()
+        thinkingIsOnUntilSettingsTurnItOff()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -267,44 +267,47 @@ struct AIProviderTests {
     }
 
     /// A body that named the default would 400 on every endpoint without a thinking mode.
-    static func thinkingIsOnUntilAConnectionTurnsItOff() {
-        let stored = """
-            {"id":"\(UUID().uuidString)","name":"","provider":"openAICompatible",
-            "baseURL":"https://api.deepseek.com","models":["m"],"visionModels":[]}
-            """
-        let saved = try? JSONDecoder().decode(AIConnection.self, from: Data(stored.utf8))
-        expect(saved?.thinkingEnabled == true, "a connection saved before the toggle reads as on")
+    static func thinkingIsOnUntilSettingsTurnItOff() {
+        let suite = "tinycast.thinking.\(UUID().uuidString)"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
 
-        var connection = AIConnection(provider: .openAICompatible, models: ["m"])
-        connection.thinkingEnabled = false
-        let reopened = (try? JSONEncoder().encode(connection)).flatMap {
-            try? JSONDecoder().decode(AIConnection.self, from: $0)
-        }
-        expect(reopened?.thinkingEnabled == false, "turning it off persists")
+        let fresh = AISettingsStore(defaults: defaults)
+        expect(fresh.thinkingEnabled, "thinking is on until the reader turns it off")
+        fresh.thinkingEnabled = false
+        expect(
+            AISettingsStore(defaults: defaults).thinkingEnabled == false,
+            "and the choice persists")
+
+        let gateway = AIConnection(
+            provider: .openAI, baseURL: "https://api.fusioncode.app/v1", models: ["m"])
+        expect(
+            gateway.takesThinkingField,
+            "a preset pointed away from its own API is a gateway, which may take the field")
+        expect(
+            !AIConnection(provider: .openAI, models: ["m"]).takesThinkingField,
+            "a preset on its own API never does, because a vendor rejects what it does not define")
+        expect(
+            !AIConnection(provider: .anthropic, baseURL: "https://gateway.example", models: ["m"])
+                .takesThinkingField,
+            "the Anthropic shape is out of scope whatever it points at")
 
         let turn = AIRequest(messages: [AIMessage(role: .user, text: "hi")])
         let on = AIRequestBody.make(
             turn,
             configuration: AIHTTPConfiguration(
-                provider: .openAICompatible, baseURL: URL(string: "https://api.deepseek.com")!,
+                provider: .openAI, baseURL: URL(string: "https://api.fusioncode.app/v1")!,
                 model: "m"))
         expect(on["thinking"] == nil, "thinking on sends no key at all")
 
         let off = AIRequestBody.make(
             turn,
             configuration: AIHTTPConfiguration(
-                provider: .openAICompatible, baseURL: URL(string: "https://api.deepseek.com")!,
-                model: "m", thinkingEnabled: false))
+                provider: .openAI, baseURL: URL(string: "https://api.fusioncode.app/v1")!,
+                model: "m", disablesThinking: true))
         expect(
             (off["thinking"] as? [String: String])?["type"] == "disabled",
             "thinking off asks the endpoint to answer directly")
-
-        let vendor = AIRequestBody.make(
-            turn,
-            configuration: AIHTTPConfiguration(
-                provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
-                model: "gpt-5", thinkingEnabled: false))
-        expect(vendor["thinking"] == nil, "a vendor API never receives a field it does not define")
     }
 
     static func providerPresetsResolveEndpoints() {

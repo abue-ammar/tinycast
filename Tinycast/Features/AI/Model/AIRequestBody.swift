@@ -30,8 +30,7 @@ enum AIRequestBody {
         if let effort = configuration.effort, configuration.provider == .openRouter {
             body["reasoning"] = ["effort": effort]
         }
-        // Only the off state is written: an endpoint with no thinking mode sees the body it always did.
-        if !configuration.thinkingEnabled, configuration.provider == .openAICompatible {
+        if configuration.disablesThinking {
             body["thinking"] = ["type": "disabled"]
         }
         if !input.tools.isEmpty {
