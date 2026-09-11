@@ -10,14 +10,27 @@ import { describeError, log, settle } from "./host.js";
 import { fireTimer, setUncaughtHandler } from "./polyfills.js";
 import { configureNodeShims } from "./node-shims.js";
 import { defineModule, evaluateCommonJS } from "./modules.js";
+import { resolveComponent } from "./async-component.js";
 import { NavigationRoot, setFieldCommandHandler } from "./api/components.js";
 import { Surface } from "./reconciler.js";
 import { raycastApi } from "./api/index.js";
 import { configureSystem, runToastAction } from "./api/system.js";
 
-defineModule("react", React);
-defineModule("react/jsx-runtime", JSXRuntime);
-defineModule("react/jsx-dev-runtime", JSXRuntime);
+const reactModule = {
+  ...React,
+  createElement: (type, ...rest) => createElement(resolveComponent(type), ...rest),
+};
+const jsxModule = {
+  ...JSXRuntime,
+  jsx: (type, props, key) => JSXRuntime.jsx(resolveComponent(type), props, key),
+  jsxs: (type, props, key) => JSXRuntime.jsxs(resolveComponent(type), props, key),
+};
+reactModule.default = reactModule;
+jsxModule.default = jsxModule;
+
+defineModule("react", reactModule);
+defineModule("react/jsx-runtime", jsxModule);
+defineModule("react/jsx-dev-runtime", jsxModule);
 defineModule("@raycast/api", raycastApi);
 // react-dom only appears in bundles defensively; make the import resolve and the calls explain.
 defineModule("react-dom", {
@@ -122,7 +135,7 @@ globalThis.__tinycast = {
         if (typeof entry !== "function") {
           throw new Error("A view command must default-export a React component.");
         }
-        session.mountView(createElement(entry, launchProps));
+        session.mountView(createElement(resolveComponent(entry), launchProps));
       } else {
         if (typeof entry !== "function") {
           throw new Error("A no-view command must default-export a function.");

@@ -190,6 +190,7 @@ struct ExtensionTests {
         await runtimeChecks()
         await searchAccessoryRuntimeChecks()
         await nodeContractChecks()
+        await asyncComponentChecks()
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -1060,7 +1061,10 @@ struct ExtensionTests {
               invalid.close();
               // axios picks its Node http adapter by this tag, and inherits from streams ES5-style.
               assert.equal(Object.prototype.toString.call(process), "[object process]");
-              const { Writable } = require("stream");
+              const { Readable, Writable } = require("stream");
+              // node-fetch sends a body through `Readable.from`, which never splits it into bytes.
+              const body = await Array.fromAsync(Readable.from("hello"));
+              assert.equal(body.length, 1); assert.equal(String(body[0]), "hello");
               function Legacy() { Writable.call(this, { highWaterMark: 7 }); }
               Legacy.prototype = Object.create(Writable.prototype);
               Legacy.prototype._write = function (chunk, encoding, callback) { this.seen = chunk; callback(); };
@@ -1080,6 +1084,71 @@ struct ExtensionTests {
               recorder.failures.joined(separator: "|"))
         await runtime.stop(session: "archive")
         runtime.shutdown()
+    }
+
+    /// `withAccessToken` hands React an async component, which only renders while the promise it
+    /// suspended on comes back rather than being remade every attempt (#519).
+    @MainActor
+    static func asyncComponentChecks() async {
+        let (runtime, _, recorder) = makeRuntime()
+        do {
+            try await runtime.boot(
+                config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        } catch {
+            check("async component runtime boots", false, error.localizedDescription)
+            return
+        }
+
+        let command = """
+            "use strict";
+            const { List, ActionPanel, Action } = require("@raycast/api");
+            const React = require("react");
+            const h = React.createElement;
+            function Inner() {
+              const [count, setCount] = React.useState(0);
+              return h(List, null, h(List.Item, {
+                title: "count=" + count,
+                actions: h(ActionPanel, null,
+                  h(Action, { title: "Bump", onAction: () => setCount((v) => v + 1) })),
+              }));
+            }
+            async function Wrapped(props) { return await Inner(props); }
+            module.exports.default = function Command(props) { return h(Wrapped, props); };
+            """
+        await runtime.start(
+            session: "sAsync", code: command, file: URL(fileURLWithPath: "/tmp/async.js"),
+            mode: .view, context: launchContext())
+        await settle()
+
+        check(
+            "an async command renders", recorder.failures.isEmpty,
+            recorder.failures.joined(separator: "\n"))
+        guard let tree = recorder.trees.last else {
+            check("an async command reaches the screen", false)
+            runtime.shutdown()
+            return
+        }
+        var screen = ExtensionScreen(tree: tree, query: "")
+        check(
+            "an async command reaches the screen",
+            screen.items.first?.node.string("title") == "count=0",
+            screen.items.first?.node.string("title") ?? "nil")
+
+        let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: 0))
+        if let handler = actions.first?.handler {
+            await runtime.dispatch(
+                session: "sAsync", handler: handler,
+                payload: ExtensionRuntime.jsonString(from: []))
+            await settle()
+            screen = ExtensionScreen(tree: recorder.trees.last!, query: "")
+            check(
+                "state inside an async command still updates",
+                screen.items.first?.node.string("title") == "count=1",
+                screen.items.first?.node.string("title") ?? "nil")
+        } else {
+            check("state inside an async command still updates", false, "no dispatchable action")
+        }
+        await runtime.stop(session: "sAsync")
     }
 
     /// Raycast's `swift:` wrapper chmods its bundled helper before spawning it: store zips ship it 644.
