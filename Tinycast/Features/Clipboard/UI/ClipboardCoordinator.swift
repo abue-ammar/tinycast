@@ -141,6 +141,18 @@ final class ClipboardCoordinator {
         AppLauncher.showInFinder(url)
     }
 
+    /// Nil only for a vanished file, which the HUD reports rather than hand over a dead path.
+    func dragPayload(for item: ClipboardItem) -> ClipDragPayload? {
+        let payload = item.dragPayload
+        guard case .file = payload else { return payload }
+        return clipURL(for: item).map(ClipDragPayload.file)
+    }
+
+    /// A landed drop is a finished errand, so the palette leaves as it does after a paste.
+    func clipDropped() {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+    }
+
     func openClip(_ item: ClipboardItem) {
         guard let url = clipURL(for: item) else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)

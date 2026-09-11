@@ -11,6 +11,9 @@ struct ClipboardList: View {
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
     let onActions: (ClipboardItem) -> Void
+    /// Nil when the entry has nothing left to hand over, which is reported rather than dragged.
+    let onDragPayload: (ClipboardItem) -> ClipDragPayload?
+    let onDropped: () -> Void
     @Environment(ClipboardStore.self) private var store
 
     private enum Row: Identifiable {
@@ -63,15 +66,17 @@ struct ClipboardList: View {
                             )
                             .selectionFrame(item.id == selectedID)
                             .contentShape(Rectangle())
-                            // Simultaneous gestures, and the light catcher: `.contextMenu` stalls.
-                            .onTapGesture { onSelect(item) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
+                            // The light catcher: `.contextMenu` stalls.
+                            .onRightClick { onActions(item) }
+                            .clipDraggable(
+                                payload: { onDragPayload(item) },
+                                onSelect: { onSelect(item) },
+                                onActivate: {
                                     onSelect(item)
                                     onActivate()
-                                }
+                                },
+                                onDropped: onDropped
                             )
-                            .onRightClick { onActions(item) }
                         }
                     }
                 }
