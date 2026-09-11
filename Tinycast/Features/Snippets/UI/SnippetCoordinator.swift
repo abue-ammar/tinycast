@@ -126,14 +126,13 @@ final class SnippetCoordinator {
         // `beginAutomaticExpansion` is the gate, so this callback doesn't re-check anything.
         listener.start(
             onUserActivity: { [weak self] in self?.injector.cancelAutomaticExpansion() },
-            onMatch: { [weak self] id, keyword, keywordLength, targetApp in
+            onMatch: { [weak self] id, keyword, keywordLength, target in
                 guard let self,
-                    let generation = self.injector.beginAutomaticExpansion(
-                        targetApp: targetApp)
+                    let generation = self.injector.beginAutomaticExpansion(target: target)
                 else { return }
                 self.expandSnippet(
                     id: id,
-                    targetApp: targetApp,
+                    target: target,
                     expectedKeyword: keyword,
                     keywordLength: keywordLength,
                     automaticGeneration: generation)
@@ -155,14 +154,15 @@ final class SnippetCoordinator {
 
     /// The browser's ↵. The target has to be read before the panel hides, as the launcher's does.
     func expandSnippetFromPalette(id: StoredSnippet.ID) {
-        let target = windowController.previousApp
-        paletteCoordinator.hidePalette(restoreFocus: false)
-        expandSnippet(id: id, targetApp: target)
+        let target = windowController.previousTarget
+        // One of our own editors is only reachable again once the palette hands key back to it.
+        paletteCoordinator.hidePalette(restoreFocus: target?.ownEditor != nil)
+        expandSnippet(id: id, target: target)
     }
 
     func expandSnippet(
         id: StoredSnippet.ID,
-        targetApp: NSRunningApplication?,
+        target: InjectionTarget?,
         expectedKeyword: String? = nil,
         keywordLength: Int = 0,
         automaticGeneration: UInt? = nil
@@ -171,16 +171,16 @@ final class SnippetCoordinator {
         guard let record = records.first(where: { $0.id == id }) else {
             injector.cancelArgumentPrompt(
                 automaticGeneration: automaticGeneration,
-                targetApp: targetApp)
+                target: target)
             return
         }
         // Only the interactive path needs this: it must fail before the prompt, not after.
         if automaticGeneration == nil {
-            guard injector.prepareInteractiveExpansion(targetApp: targetApp) else { return }
+            guard injector.prepareInteractiveExpansion(target: target) else { return }
         }
         let confirmation = record.snippet.showsConfirmation ? "Inserted \(record.snippet.name)" : nil
         let context = injector.captureExpansionContext(
-            targetApp: targetApp,
+            target: target,
             clipboardHistory: clipboardHistoryForExpansion())
         let result = SnippetTemplateEngine.expand(
             record,
@@ -192,7 +192,7 @@ final class SnippetCoordinator {
                 records: records,
                 context: context,
                 missingArgs: result.missingArguments,
-                targetApp: targetApp,
+                target: target,
                 expectedKeyword: expectedKeyword,
                 keywordLength: keywordLength,
                 automaticGeneration: automaticGeneration,
@@ -201,7 +201,7 @@ final class SnippetCoordinator {
         }
         completeSnippetExpansion(
             result,
-            targetApp: targetApp,
+            target: target,
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
@@ -213,7 +213,7 @@ final class SnippetCoordinator {
         records: [StoredSnippet],
         context: SnippetTemplateEngine.ExpansionContext,
         missingArgs: [SnippetTemplateEngine.MissingArgument],
-        targetApp: NSRunningApplication?,
+        target: InjectionTarget?,
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: UInt?,
@@ -226,7 +226,7 @@ final class SnippetCoordinator {
         else {
             injector.cancelArgumentPrompt(
                 automaticGeneration: automaticGeneration,
-                targetApp: targetApp)
+                target: target)
             return
         }
 
@@ -237,7 +237,7 @@ final class SnippetCoordinator {
             userArguments: arguments)
         completeSnippetExpansion(
             result,
-            targetApp: targetApp,
+            target: target,
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
@@ -246,7 +246,7 @@ final class SnippetCoordinator {
 
     private func completeSnippetExpansion(
         _ result: SnippetTemplateEngine.ExpansionResult,
-        targetApp: NSRunningApplication?,
+        target: InjectionTarget?,
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: UInt?,
@@ -254,7 +254,7 @@ final class SnippetCoordinator {
     ) {
         injector.deliver(
             InjectedText(result.text, cursorOffsetFromEnd: result.cursorOffsetFromEnd),
-            targetApp: targetApp,
+            target: target,
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,

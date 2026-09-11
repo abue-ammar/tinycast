@@ -75,14 +75,14 @@ final class QuicklinkCoordinator {
         guard settings.quicklinksEnabled, let quicklink = store.quicklink(id: id),
             quicklink.isEnabled
         else { return }
-        // With the palette closed a shortcut still reads the selection from the frontmost app.
+        // With the palette closed a shortcut still reads the selection from wherever the caret is.
         let target =
             windowController.isVisible
-            ? windowController.previousApp : NSWorkspace.shared.frontmostApplication
+            ? windowController.previousTarget : InjectionTarget.current()
         let encoding: SnippetTemplateEngine.ValueEncoding =
             QuicklinkDestination.usesURLEncoding(quicklink.link) ? .percentEncoding : .none
         var context = injector.captureExpansionContext(
-            targetApp: target, clipboardHistory: clipboardHistory())
+            target: target, clipboardHistory: clipboardHistory())
 
         // An unreadable selection is missing, not empty: substitute the clipboard, or take the field.
         if context.selection.isEmpty, SnippetTemplateEngine.usesSelection(quicklink.link) {

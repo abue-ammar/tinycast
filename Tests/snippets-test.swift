@@ -10,6 +10,8 @@ struct SnippetsTests {
     static var passes = 0
 
     static func main() async throws {
+        // The in-process delivery tier drives a real text view, which needs AppKit awake.
+        _ = NSApplication.shared
         testIdentityAndRevision()
         testRaycastImport()
         try testMarkdownCodec()
@@ -24,6 +26,7 @@ struct SnippetsTests {
         testKeywordPolicy()
         testKeywordLifecycle()
         testKeywordListenerLifecycle()
+        testOwnEditorInjection()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
@@ -594,6 +597,62 @@ struct SnippetsTests {
             backing.string(forType: .string) == "Original")
     }
 
+    /// Our panels never activate, so the frontmost app is not where the typist's caret is.
+    private static func testOwnEditorInjection() {
+        let editor = HarnessEditor(frame: NSRect(x: 0, y: 0, width: 320, height: 120))
+
+        // The tap sees the keystroke first, so the view is a character behind at match time.
+        editor.string = "!si"
+        editor.setSelectedRange(NSRange(location: 3, length: 0))
+        check(
+            "a document shorter than the keyword reads as pending, not absent",
+            editor.keywordReplacementState(expectedKeyword: "!sig", keywordLength: 4) == .pending)
+
+        editor.string = "Regards, !si"
+        editor.setSelectedRange(NSRange(location: 12, length: 0))
+        check(
+            "the same stale view behind existing text reads as a mismatch, not a lag",
+            editor.keywordReplacementState(expectedKeyword: "!sig", keywordLength: 4) == .rejected)
+
+        editor.string = "Regards, !sig"
+        editor.setSelectedRange(NSRange(location: 13, length: 0))
+        check(
+            "the keyword resolves once AppKit has delivered the keystroke",
+            editor.keywordReplacementState(expectedKeyword: "!sig", keywordLength: 4)
+                == .matched(NSRange(location: 9, length: 4)))
+
+        editor.inject(InjectedText("Ada Lovelace"), over: NSRange(location: 9, length: 4))
+        check(
+            "a converged keyword is replaced in place",
+            editor.string == "Regards, Ada Lovelace")
+        check(
+            "the caret lands after the text the snippet inserted",
+            editor.selectedRange() == NSRange(location: 21, length: 0))
+
+        editor.string = "Regards, !xyz"
+        editor.setSelectedRange(NSRange(location: 13, length: 0))
+        check(
+            "enough text that is not the keyword is a mismatch, never a wait",
+            editor.keywordReplacementState(expectedKeyword: "!sig", keywordLength: 4) == .rejected)
+
+        editor.string = "wrap me"
+        editor.setSelectedRange(NSRange(location: 0, length: 7))
+        check(
+            "a zero-length keyword takes the selection as its replacement range",
+            editor.keywordReplacementState(expectedKeyword: nil, keywordLength: 0)
+                == .matched(NSRange(location: 0, length: 7)))
+
+        editor.inject(
+            InjectedText("<b></b>", cursorOffsetFromEnd: 4), over: NSRange(location: 0, length: 7))
+        check(
+            "the selection is replaced and the caret honours the template's cursor offset",
+            editor.string == "<b></b>" && editor.selectedRange() == NSRange(location: 3, length: 0))
+
+        check(
+            "the caret offset counts UTF-16 units, not characters",
+            InjectedText("\u{1F1F3}\u{1F1F1} done", cursorOffsetFromEnd: 5).caretPrefixLength == 4)
+    }
+
     private static func testDeliveryQueueAndPasteboard() async throws {
         let queue = DeliveryQueue()
         var order: [String] = []
@@ -650,58 +709,58 @@ struct SnippetsTests {
 
         check(
             "an AX keyword one character behind the event stream remains pending",
-            AccessibilityReplacementPolicy.keywordState(
+            TextReplacementPolicy.keywordState(
                 value: "!tcaxprob",
                 selectedRange: NSRange(location: 9, length: 0),
                 keyword: "!tcaxprobe") == .pending)
         check(
             "a converged AX keyword resolves to its exact replacement range",
-            AccessibilityReplacementPolicy.keywordState(
+            TextReplacementPolicy.keywordState(
                 value: "prefix !tcaxprobe",
                 selectedRange: NSRange(location: 17, length: 0),
                 keyword: "!tcaxprobe") == .matched(NSRange(location: 7, length: 10)))
         check(
             "an AX state with enough text but the wrong suffix is a genuine rejection",
-            AccessibilityReplacementPolicy.keywordState(
+            TextReplacementPolicy.keywordState(
                 value: "prefix !tcaxwrong",
                 selectedRange: NSRange(location: 17, length: 0),
                 keyword: "!tcaxprobe") == .rejected)
         check(
             "an empty editor AX snapshot remains pending instead of becoming a false mismatch",
-            AccessibilityReplacementPolicy.keywordState(
+            TextReplacementPolicy.keywordState(
                 value: "",
                 selectedRange: NSRange(location: 0, length: 0),
                 keyword: "!tcaxprobe") == .pending)
         check(
             "a non-empty selection is a mismatch rather than a lagging caret",
-            AccessibilityReplacementPolicy.keywordState(
+            TextReplacementPolicy.keywordState(
                 value: "prefix !tcaxprobe",
                 selectedRange: NSRange(location: 7, length: 10),
                 keyword: "!tcaxprobe") == .rejected)
         check(
             "AX replacement confirmation requires the observable text to actually change",
-            AccessibilityReplacementPolicy.confirmsReplacement(
+            TextReplacementPolicy.confirmsReplacement(
                 originalValue: "!tcprobe",
                 replacementRange: NSRange(location: 0, length: 8),
                 insertedText: "PROBE_OK",
                 observedValue: "PROBE_OK"))
         check(
             "an AX setter success with unchanged text is not accepted as delivery",
-            !AccessibilityReplacementPolicy.confirmsReplacement(
+            !TextReplacementPolicy.confirmsReplacement(
                 originalValue: "!tcprobe",
                 replacementRange: NSRange(location: 0, length: 8),
                 insertedText: "PROBE_OK",
                 observedValue: "!tcprobe"))
         check(
             "an AX write that lands somewhere unexpected is not accepted as delivery",
-            !AccessibilityReplacementPolicy.confirmsReplacement(
+            !TextReplacementPolicy.confirmsReplacement(
                 originalValue: "keep !tcprobe",
                 replacementRange: NSRange(location: 5, length: 8),
                 insertedText: "PROBE_OK",
                 observedValue: "PROBE_OK !tcprobe"))
         check(
             "an unreadable value after the write is not accepted as delivery",
-            !AccessibilityReplacementPolicy.confirmsReplacement(
+            !TextReplacementPolicy.confirmsReplacement(
                 originalValue: "!tcprobe",
                 replacementRange: NSRange(location: 0, length: 8),
                 insertedText: "PROBE_OK",
@@ -1915,3 +1974,6 @@ private final class FakeSnippetKeywordTapController: SnippetKeywordTapControllin
         state = .absent
     }
 }
+
+/// Stands in for `NoteTextView`: the conformance is the whole opt-in.
+private final class HarnessEditor: NSTextView, InjectableTextView {}

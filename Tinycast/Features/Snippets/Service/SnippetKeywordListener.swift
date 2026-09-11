@@ -127,7 +127,7 @@ final class SnippetKeywordListener: HealthCheckable {
     @ObservationIgnored private var policy = SnippetKeywordPolicy()
     @ObservationIgnored private var onUserActivity: (() -> Void)?
     @ObservationIgnored
-    private var onMatch: ((StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void)?
+    private var onMatch: ((StoredSnippet.ID, String, Int, InjectionTarget?) -> Void)?
     private var sessionActive = true
     private var loggedTapFailure = false
 
@@ -164,7 +164,7 @@ final class SnippetKeywordListener: HealthCheckable {
 
     func start(
         onUserActivity: @escaping () -> Void,
-        onMatch: @escaping (StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void
+        onMatch: @escaping (StoredSnippet.ID, String, Int, InjectionTarget?) -> Void
     ) {
         self.onUserActivity = onUserActivity
         self.onMatch = onMatch
@@ -328,11 +328,8 @@ final class SnippetKeywordListener: HealthCheckable {
             isDeleteBackward: keyCode == kVK_Delete)
         if input != .ignored { onUserActivity?() }
         guard let match = policy.process(input, at: now()) else { return }
-        onMatch?(
-            match.snippetID,
-            match.keyword,
-            match.deletionCount,
-            NSWorkspace.shared.frontmostApplication)
+        // Sampled here, with the keystroke: by delivery the reader may have moved on.
+        onMatch?(match.snippetID, match.keyword, match.deletionCount, InjectionTarget.current())
     }
 
     private static let resetKeyCodes: Set<Int> = [

@@ -126,7 +126,7 @@ final class LauncherCoordinator {
             quicklinkCoordinator.openQuicklink(id: id, values: arguments)
             return
         }
-        let previous = windowController.previousApp
+        let previous = windowController.previousTarget
         paletteCoordinator.hidePalette(restoreFocus: false)
         switch app.kind {
         case .application:
@@ -136,7 +136,7 @@ final class LauncherCoordinator {
             AppLauncher.openSettingsPane(bundleID: bundleID)
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
-            snippetCoordinator.expandSnippet(id: snippetID, targetApp: previous)
+            snippetCoordinator.expandSnippet(id: snippetID, target: previous)
         case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
             .quicklink, .extensionCommand, .meeting:
             break  // handled above
