@@ -56,6 +56,8 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     var visionModels: [String]
     /// OpenRouter's per-model catalog metadata; absent for APIs that do not publish this contract.
     var reasoningOptions: [String: ReasoningOptions]?
+    /// Absent until thinking is turned off, so a connection saved before the toggle reads as on.
+    private var thinkingDisabled: Bool?
 
     init(
         id: UUID = UUID(), name: String = "", provider: AIProviderKind = .openAI,
@@ -69,6 +71,11 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         self.models = models
         self.visionModels = visionModels
         self.reasoningOptions = reasoningOptions
+    }
+
+    var thinkingEnabled: Bool {
+        get { thinkingDisabled != true }
+        set { thinkingDisabled = newValue ? nil : true }
     }
 
     var title: String {
@@ -248,12 +255,17 @@ struct AIHTTPConfiguration: Equatable, Sendable {
     let baseURL: URL
     let model: String
     let effort: String?
+    let thinkingEnabled: Bool
 
-    init(provider: AIProviderKind, baseURL: URL, model: String, effort: String? = nil) {
+    init(
+        provider: AIProviderKind, baseURL: URL, model: String, effort: String? = nil,
+        thinkingEnabled: Bool = true
+    ) {
         self.provider = provider
         self.baseURL = baseURL
         self.model = model
         self.effort = effort
+        self.thinkingEnabled = thinkingEnabled
     }
 
     var shape: APIShape { provider.apiShape }

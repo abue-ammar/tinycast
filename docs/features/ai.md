@@ -159,6 +159,12 @@ and reasoning efforts from `model/list`; OpenCode gets identifiers and model-spe
 `opencode models --pure --verbose`. Claude exposes the CLI's stable `sonnet`, `opus` and `haiku`
 aliases, with the CLI's effort levels on the supported Opus and Sonnet families.
 
+An OpenAI Compatible connection also carries a **Thinking** toggle, on by default. Turning it off sends
+`"thinking": {"type": "disabled"}` with every request on that connection, which is how DeepSeek and the
+endpoints that copied its contract answer without reasoning first. Only the off state is ever written,
+and only for that preset, so a body that named the default can never reach an endpoint with no thinking
+mode. The flag is absent from a connection saved before the toggle existed, which reads as on.
+
 ## Provider interface
 
 `AIProvider.stream(_:)` accepts provider-neutral messages, optional instructions, a maximum output
@@ -202,7 +208,7 @@ same in-window menu control as Clipboard's type filter and changes the chat rout
 message. For installed routes and OpenRouter models whose catalog reports the capability, it also
 shows the supported reasoning efforts and changes the chat effort for the next message.
 Other API routes keep their provider default because their model catalogs expose no portable effort
-contract. Neither change interrupts a response already streaming; stopping one is the pill's job,
+contract; an OpenAI Compatible connection settles that in Settings instead, with its Thinking toggle. Neither change interrupts a response already streaming; stopping one is the pill's job,
 so the header never has to fit a third control beside the switcher.
 
 The second footer control is the palette's normal Actions (`⌘K`) menu. It owns New Chat, Chat History
