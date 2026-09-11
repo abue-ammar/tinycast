@@ -280,7 +280,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onFieldEditorFocused = { [weak self] context in
             self?.core.inputSourceSwitcher.applySession(to: context)
         }
-        // Backspace in an empty search takes the same back step Escape does.
+        // Backspace takes Escape's back step but never closes: a root screen falls to the launcher.
         panel.onBareBackspace = { [weak self] in
             guard let core = self?.core, core.palette.query.isEmpty else { return false }
             // A form field owns the key: the text it deletes is the field's, not a query's.
@@ -300,7 +300,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
                 return true
             }
-            return core.palette.pop()
+            if core.palette.pop() { return true }
+            guard core.palette.mode != .launcher else { return false }
+            core.palette.prepare(mode: .launcher)
+            return true
         }
         installPasteMonitor()
         // Handled at the panel: the field editor or a missing main menu eats these first.

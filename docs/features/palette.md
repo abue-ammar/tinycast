@@ -137,8 +137,10 @@ top, which would throw away the very selection being restored.
 leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
 pushed screen pops, and a root hides the palette. A focused inline argument field is a rung above the
 query, so Escape hands focus back to the search field first — the query that found the command is
-still there to be cleared by the next press. A bare backspace in an empty field takes the same step,
-and ⌘⎋ skips the whole stack for a fresh root search without closing the window.
+still there to be cleared by the next press. A bare backspace in an empty field takes the same step
+**but never closes**: on a root screen summoned by its own hotkey it falls to the root search, which
+is the step Escape would have taken had that screen been reached by typing its name. ⌘⎋ skips the
+whole stack for that same root search from any depth.
 
 `EscapeKeyBehavior` (General settings) can trade the walk back for the old behavior: under
 `closeAndPopToRoot` an empty field closes the window and resets it immediately, whatever Pop to Root
