@@ -27,8 +27,9 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 
 ## Before submitting
 
-- **A linked issue that got a green light.** No agreed issue, no merge — unless a maintainer marks
-  the PR `typo` or `docs`.
+- **A linked issue marked `approved`.** Put `Closes #<number>` in the PR description. A PR that
+  doesn't close an `approved` issue is closed automatically the moment it opens — fix the link and
+  reopen it. Docs-only changes (`*.md`, `docs/`, `website/`) skip the check.
 - The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes — harnesses, lint,
   purity, a clean build. Engine changes come with new cases. CI runs the harnesses and lint — it
   annotates lint violations on your diff — but does **not** build the app, so **build locally**: a PR

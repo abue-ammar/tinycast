@@ -1,0 +1,123 @@
+name: Triage
+
+# First-touch on every issue and PR, plus the approved-issue gate on PRs.
+# pull_request_target (not pull_request) so forked PRs are gated too — no checkout and API calls
+# only, so there's no untrusted-code-execution risk from using the _target event.
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened, reopened, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on issue
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = [
+              "Thanks for opening this.",
+              "",
+              "A few things worth knowing up front:",
+              "",
+              "**Tinycast is not a Raycast clone.** It has already borrowed what it wanted from Raycast, and",
+              "the borrowing is done. Small conveniences are usually closed without much discussion.",
+              "Something genuinely necessary is still considered on its merits.",
+              "",
+              "**Code needs a green light first.** If you ticked \"I'm willing to implement this\", wait for the",
+              "`approved` label before you write anything. A pull request whose linked issue isn't approved is",
+              "closed automatically — docs-only changes are the exception.",
+              "",
+              "This is a solo project, so replies can take a while.",
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+      - name: Require an approved issue
+        id: gate
+        if: github.event_name == 'pull_request_target'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (["OWNER", "MEMBER", "COLLABORATOR"].includes(pr.author_association)) return;
+
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+            const isDocs = (f) => f.endsWith(".md") || f.startsWith("docs/") || f.startsWith("website/");
+            // A diff over one page is never docs-only in practice, so a truncated list can't pass.
+            if (files.length < 100 && files.every((f) => isDocs(f.filename))) return;
+
+            const { repository } = await github.graphql(`
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 10) {
+                      nodes { number labels(first: 50) { nodes { name } } }
+                    }
+                  }
+                }
+              }
+            `, { owner: context.repo.owner, repo: context.repo.repo, number: pr.number });
+
+            const linked = repository.pullRequest.closingIssuesReferences.nodes;
+            if (linked.some((i) => i.labels.nodes.some((l) => l.name === "approved"))) return;
+
+            const body = [
+              "Closing this automatically — it doesn't link an approved issue.",
+              "",
+              "Tinycast requires the bug or feature to be agreed before code is written, so effort isn't",
+              "wasted on something that won't be merged. See",
+              "[CONTRIBUTING.md](https://github.com/" + context.repo.owner + "/" + context.repo.repo +
+                "/blob/main/CONTRIBUTING.md).",
+              "",
+              "To get this merged:",
+              "",
+              "1. Open an issue (or find the existing one) describing the change.",
+              "2. Wait for it to be marked `approved`.",
+              "3. Put `Closes #<number>` in this PR's description and reopen it.",
+              "",
+              "Docs-only changes (`*.md`, `docs/`, `website/`) skip this check. Nothing personal — this is",
+              "automated.",
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              state: "closed",
+              state_reason: "not_planned"
+            });
+            core.setOutput("blocked", "true");
+
+      - name: Comment on pull request
+        if: github.event_name == 'pull_request_target' && github.event.action == 'opened' && steps.gate.outputs.blocked != 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "Thanks for the PR! This is a solo project, so review can take a while."
+            });
