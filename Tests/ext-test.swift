@@ -669,10 +669,13 @@ struct ExtensionTests {
                 return () => clearTimeout(timer);
               }, []);
               const digest = crypto.createHash("sha256").update("abc").digest("hex").slice(0, 8);
-              // AbortSignal's statics too: `AbortSignal.timeout` used to be "not a function".
+              // AbortSignal's statics, the brand node-fetch checks, and url.parse's legacy `path`.
               const abortable = [
                 typeof AbortSignal.timeout, typeof AbortSignal.abort, typeof AbortSignal.any,
                 String(AbortSignal.timeout(5e3).aborted), AbortSignal.abort().reason.name,
+                Object.getPrototypeOf(AbortSignal.abort()).constructor.name,
+                Object.prototype.toString.call(AbortSignal.abort()),
+                require("node:url").parse("https://a.test/ajax.php?f=list").path,
               ].join(",");
               const errorCode = (callback) => {
                 try { callback(); return "none"; } catch (error) { return error.code; }
@@ -736,10 +739,11 @@ struct ExtensionTests {
             String(describing: screen.items.first?.node.array("accessories").first))
         check("toast reached the host", host.toasts == ["hello"], host.toasts.joined(separator: ","))
         check(
-            "AbortSignal carries its statics",
+            "AbortSignal survives node-fetch's brand checks, and url.parse keeps its path",
             ExtensionAccessoriesView_labelForTest(
                 screen.items.first?.node.array("accessories").dropFirst().first)
-                == "function,function,function,false,AbortError",
+                == "function,function,function,false,AbortError,AbortSignal,"
+                + "[object AbortSignal],/ajax.php?f=list",
             String(describing: screen.items.first?.node.array("accessories").dropFirst().first))
         check(
             "fileURLToPath decodes a path and rejects an unusable URL",

@@ -276,12 +276,17 @@ if (!g.fetch) {
 // ─── AbortController ────────────────────────────────────────────────
 
 if (!g.AbortController) {
-  class AbortSignalShim {
+  // node-fetch brand-checks a signal by constructor name and by tag before it will send.
+  class AbortSignal {
+    static name = "AbortSignal";
     constructor() {
       this.aborted = false;
       this.reason = undefined;
       this._listeners = new Set();
       this.onabort = null;
+    }
+    get [Symbol.toStringTag]() {
+      return "AbortSignal";
     }
     addEventListener(type, listener) {
       if (type === "abort") this._listeners.add(listener);
@@ -295,17 +300,17 @@ if (!g.AbortController) {
     // The statics, not just the instance shape: a signal missing them still reads as supported at
     // the type level, so an extension calls `AbortSignal.timeout` and gets "is not a function".
     static abort(reason) {
-      const signal = new AbortSignalShim();
+      const signal = new AbortSignal();
       signal._fire(reason);
       return signal;
     }
     static timeout(ms) {
-      const signal = new AbortSignalShim();
+      const signal = new AbortSignal();
       setTimeout(() => signal._fire(timeoutError()), ms);
       return signal;
     }
     static any(signals) {
-      const merged = new AbortSignalShim();
+      const merged = new AbortSignal();
       for (const source of signals) {
         if (source?.aborted) {
           merged._fire(source.reason);
@@ -330,10 +335,10 @@ if (!g.AbortController) {
       }
     }
   }
-  g.AbortSignal = AbortSignalShim;
+  g.AbortSignal = AbortSignal;
   g.AbortController = class {
     constructor() {
-      this.signal = new AbortSignalShim();
+      this.signal = new AbortSignal();
     }
     abort(reason) {
       this.signal._fire(reason);
