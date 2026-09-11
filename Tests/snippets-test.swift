@@ -1196,6 +1196,21 @@ struct SnippetsTests {
         check(
             "format still applies with an offset",
             expand("{date offset=\"-1d\" format=\"yyyy-MM-dd\"}").text == "2026-07-23")
+        check(
+            "a bare format needs no quotes",
+            expand("{date format=yyyy-MM-dd}").text == "2026-07-24")
+        check(
+            "a bare format keeps its spaces",
+            expand("{date format=MMMM d, yyyy}").text == "July 24, 2026")
+        check(
+            "a bare value ends at the next parameter",
+            expand("{date format=MMM d offset=+1d}").text == "Jul 25")
+        check(
+            "a bare value trailing another parameter keeps its spaces",
+            expand("{date offset=+1d format=MMM d}").text == "Jul 25")
+        check(
+            "a bare format with no value leaves the token literal",
+            expand("{date format=}").text == "{date format=}")
 
         // UUID comes from the injected source, once per token.
         check("each uuid token draws a fresh value", expand("{uuid}|{uuid}").text == "uuid-1|uuid-2")

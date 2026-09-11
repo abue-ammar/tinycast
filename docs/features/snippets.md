@@ -51,7 +51,9 @@ the store and its watchers stop, and the launcher section disappears — while t
 states survive for re-enabling. "Show in launcher" takes the section and the two Snippet commands out
 of the launcher together; keyword expansion and the browser's shortcut keep working.
 `snippetsShowInLauncher` travels in settings backups; `snippetsEnabled` deliberately does not, so an
-import can never enable keystroke listening. `AppCore`'s settings sinks re-project on every change.
+import can never enable keystroke listening — which is why either importer's summary says the switch is
+still off when snippets land, so a dormant keyword doesn't read as a broken one. `AppCore`'s settings
+sinks re-project on every change.
 
 ## Importing from Raycast
 
@@ -124,7 +126,9 @@ so a migrated snippet keeps working.
 | `{snippet:Name}` · `{snippet name="Name"}` | Another snippet resolved by name, then keyword                                                                                                                                                                     |
 | `{cursor}`                                 | Final insertion point                                                                                                                                                                                              |
 
-The editor's **Insert…** menu lists every token above; parameters and modifiers are typed by hand.
+The editor's **Insert…** menu lists every token above; parameters and modifiers are typed by hand. A
+parameter value needs quotes only to carry a `|`: an unquoted one runs to the next `key=`, so
+`{date format=MMMM d, yyyy}` keeps its spaces the way Raycast writes it.
 
 Any value-producing token accepts a modifier pipeline, applied left to right:
 `{clipboard | trim | uppercase}`. The modifiers are `uppercase`, `lowercase`, `trim`,
