@@ -409,6 +409,20 @@ struct ExtensionTests {
         check("controlled rows survive a non-matching query", controlled.items.count == 1)
         check("search handler exposed", controlled.searchTextHandler == "2:onSearchTextChange")
 
+        let keepOrder = ExtensionScreen(
+            tree: tree(
+                """
+                {"id":2,"type":"List","props":{"filtering":{"keepSectionOrder":true},
+                  "onSearchTextChange":{"$fn":"2:onSearchTextChange"}},"children":[
+                  {"id":3,"type":"List.Item","props":{"title":"Apple"},"children":[]},
+                  {"id":4,"type":"List.Item","props":{"title":"Banana"},"children":[]}]}
+                """), query: "ban")
+        check("an object `filtering` still filters", keepOrder.filtersLocally)
+        check(
+            "and keeps only the match",
+            keepOrder.items.map { $0.node.string("title") } == ["Banana"],
+            keepOrder.items.map { $0.node.string("title") ?? "" }.joined(separator: ","))
+
         let grid = ExtensionScreen(
             tree: tree(
                 """
