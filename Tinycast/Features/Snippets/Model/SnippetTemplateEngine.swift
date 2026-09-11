@@ -604,14 +604,37 @@ enum SnippetTemplateEngine {
                 guard let decoded = decodeQuoted(&remainder) else { return nil }
                 value = decoded
             } else {
-                let bare = remainder.prefix { !$0.isWhitespace }
-                guard !bare.isEmpty else { return nil }
-                remainder = remainder.dropFirst(bare.count)
-                value = String(bare)
+                guard let bare = takeBareValue(&remainder) else { return nil }
+                value = bare
             }
             guard parameters.updateValue(value, forKey: String(key)) == nil else { return nil }
         }
         return ParsedToken(command: String(command).lowercased(), parameters: parameters)
+    }
+
+    /// Runs to the next `key=`, so an unquoted `format=MMM d, yyyy` keeps the spaces Raycast writes.
+    private static func takeBareValue(_ remainder: inout Substring) -> String? {
+        var index = remainder.startIndex
+        var end = remainder.startIndex
+        while index < remainder.endIndex {
+            if remainder[index].isWhitespace {
+                index = remainder[index...].drop(while: \Character.isWhitespace).startIndex
+                if startsParameter(remainder[index...]) { break }
+            } else {
+                index = remainder.index(after: index)
+                end = index
+            }
+        }
+        guard end > remainder.startIndex else { return nil }
+        let value = String(remainder[..<end])
+        remainder = remainder[end...]
+        return value
+    }
+
+    private static func startsParameter(_ text: Substring) -> Bool {
+        let key = text.prefix { !$0.isWhitespace && $0 != "=" }
+        guard !key.isEmpty else { return false }
+        return text.dropFirst(key.count).drop(while: \Character.isWhitespace).first == "="
     }
 
     /// Consumes a quoted value from `remainder`, leaving it positioned after the closing quote.
