@@ -211,6 +211,8 @@ function syncHostCall(api, method, args) {
         .digest("base64");
     case "proc.run": {
       const spec = args[0];
+      // Mirrors the Swift host: a detached child answers at launch, with no output.
+      if (spec.detached) return { stdout: "", stderr: "", status: 0 };
       try {
         const stdout = spec.shell
           ? execFileSync("/bin/sh", ["-c", spec.command], { cwd: spec.cwd })
