@@ -14,26 +14,35 @@ struct OnboardingView: View {
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private static let lastStep = 3
-    /// Fixed content size, so `NSHostingView` can't size the window to its ideal height.
-    static let windowSize = CGSize(width: 520, height: 400)
+    static let width: CGFloat = 520
+    /// Only until the first layout measures the real one, which is what the window then takes.
+    static let initialSize = CGSize(width: width, height: 352)
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
             hero
             stepContent
-                .frame(maxHeight: .infinity, alignment: .top)
             footer
         }
-        .padding(.top, Theme.Spacing.xxl)
+        // Less on top: the title bar adds 32pt, and the lights must be cleared.
+        .padding(.top, Theme.Spacing.xs)
         .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        // The ideal height, not the window's, so sizing to it converges instead of feeding back.
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            core.onboardingCoordinator.fit(height: $0)
+        }
+        // Only the gradient reaches under the titlebar; the content stays in the safe area.
         .background(
             LinearGradient(
                 colors: [Theme.Colors.sheen, Color.clear],
-                startPoint: .top, endPoint: .center)
+                startPoint: .top, endPoint: .center
+            )
+            .ignoresSafeArea()
         )
-        // Extend under the titlebar, so window height equals the fixed content height.
-        .ignoresSafeArea()
         // Onboarding's shortcut step has a recorder too, and it isn't inside a `SettingsPane`.
         .shortcutRecorderPopoverHost()
         .animation(.easeInOut(duration: 0.2), value: step)
