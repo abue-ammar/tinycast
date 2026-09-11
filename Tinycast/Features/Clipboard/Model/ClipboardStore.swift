@@ -470,10 +470,14 @@ final class ClipboardStore {
         return URL(fileURLWithPath: path)
     }
 
-    /// What a drag hands out: our stored blob for an image, the referenced file for a file entry.
-    /// Nil for text, which stays on the row's own gestures.
-    func dragURL(for item: ClipboardItem) -> URL? {
-        imageURL(for: item) ?? fileURL(for: item)
+    /// What a drag hands out, in the flavour the receiver expects. Never nil: every row drags.
+    func dragPayload(for item: ClipboardItem) -> ClipDragPayload {
+        if let url = imageURL(for: item) ?? fileURL(for: item) { return .file(url) }
+        let text = item.text ?? ""
+        guard item.textForm == .link, let url = ClipDragPayload.webURL(from: text) else {
+            return .text(text)
+        }
+        return .link(url, text)
     }
 
     /// Display order for `query` under `filter`: pinned entries first, each block newest-first.

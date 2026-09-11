@@ -77,7 +77,7 @@ struct ClipboardList: View {
                             // Last, so the drag overlay sits above the right-click catcher and
                             // claims the left button the gestures above no longer see.
                             .clipDraggable(
-                                store.dragURL(for: item),
+                                store.dragPayload(for: item),
                                 onSelect: { onSelect(item) },
                                 onActivate: {
                                     onSelect(item)

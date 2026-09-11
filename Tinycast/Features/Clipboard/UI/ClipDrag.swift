@@ -1,8 +1,27 @@
 import AppKit
 import SwiftUI
 
-/// Drags a clipboard entry out as the file it already is, so an image reaches another app in one
-/// gesture rather than through Reveal in Finder.
+/// What a row hands to the app it is dropped on. The flavours are what receivers actually read:
+/// a file URL for anything on disk, a URL *and* its text for a link, plain text for the rest.
+enum ClipDragPayload: Equatable, Sendable {
+    /// The stored blob for an image, the referenced file for a `.file` entry.
+    case file(URL)
+    /// A browser wants `public.url`, a text field wants the string. Writing both serves either.
+    case link(URL, String)
+    case text(String)
+
+    /// A bare domain is still a link, and a browser rejects one without a scheme, so it gets
+    /// `https://` — the same assumption the address bar makes.
+    static func webURL(from text: String) -> URL? {
+        let token = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { return nil }
+        if token.contains("://") { return URL(string: token) }
+        return URL(string: "https://" + token)
+    }
+}
+
+/// Drags a clipboard entry out to another app, so reaching one costs a gesture rather than Reveal
+/// in Finder or a paste into a scratch window.
 ///
 /// An overlay that tracks the gesture itself, like `WindowDragHandle`: the hosting view eats the
 /// click first, and SwiftUI's `onDrag` hands over an `NSItemProvider` with no say in the operation
@@ -10,34 +29,32 @@ import SwiftUI
 /// where a same-volume drop defaults to a **move** — which would carry the blob out of the history
 /// and strand its row. An `NSDraggingSource` answers `.copy` and the entry stays.
 struct ClipDragHandle: NSViewRepresentable {
-    let url: URL
+    let payload: ClipDragPayload
     var onSelect: () -> Void
     var onActivate: () -> Void
     var onDropped: () -> Void
 
-    func makeNSView(context: Context) -> NSView { ClipDragView(url: url) }
+    func makeNSView(context: Context) -> NSView { ClipDragView(payload: payload) }
 
     func updateNSView(_ nsView: NSView, context: Context) {
         guard let view = nsView as? ClipDragView else { return }
-        view.url = url
+        view.payload = payload
         view.bind(onSelect: onSelect, onActivate: onActivate, onDropped: onDropped)
     }
 }
 
 extension View {
-    /// Marks a row as a drag source for `url`. A row without one keeps its SwiftUI gestures, so a
-    /// text entry behaves exactly as before.
+    /// Marks a row as a drag source. The handle owns the press outright, so it takes the click and
+    /// the double click the row's own gestures used to answer.
     func clipDraggable(
-        _ url: URL?,
+        _ payload: ClipDragPayload,
         onSelect: @escaping () -> Void,
         onActivate: @escaping () -> Void,
         onDropped: @escaping () -> Void
     ) -> some View {
         overlay {
-            if let url {
-                ClipDragHandle(
-                    url: url, onSelect: onSelect, onActivate: onActivate, onDropped: onDropped)
-            }
+            ClipDragHandle(
+                payload: payload, onSelect: onSelect, onActivate: onActivate, onDropped: onDropped)
         }
     }
 }
@@ -46,16 +63,16 @@ extension View {
 private final class ClipDragView: NSView, NSDraggingSource {
     /// The slop AppKit itself allows before a press reads as a drag.
     private static let threshold: CGFloat = 4
-    /// The row thumbnail is already cached at this size, so the preview costs no decode.
+    /// The row thumbnail is already cached at this size, so the fallback costs no decode.
     private static let previewPixel: CGFloat = 64
 
-    var url: URL
+    var payload: ClipDragPayload
     private var onSelect: (() -> Void)?
     private var onActivate: (() -> Void)?
     private var onDropped: (() -> Void)?
 
-    init(url: URL) {
-        self.url = url
+    init(payload: ClipDragPayload) {
+        self.payload = payload
         super.init(frame: .zero)
     }
 
@@ -100,16 +117,46 @@ private final class ClipDragView: NSView, NSDraggingSource {
         beginDrag(with: event)
     }
 
-    /// `NSURL` writes the file URL every receiver understands, from Finder to a browser upload.
     private func beginDrag(with event: NSEvent) {
-        let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+        let item = NSDraggingItem(pasteboardWriter: pasteboardWriter())
         item.setDraggingFrame(bounds, contents: dragImage())
         beginDraggingSession(with: [item], event: event, source: self)
     }
 
+    /// `NSURL` writes the file URL every receiver understands, from Finder to a browser upload.
+    /// A link writes two types from one item, so the receiver takes whichever it reads.
+    private func pasteboardWriter() -> NSPasteboardWriting {
+        switch payload {
+        case .file(let url):
+            return url as NSURL
+        case .link(let url, let text):
+            let item = NSPasteboardItem()
+            item.setString(url.absoluteString, forType: .URL)
+            item.setString(text, forType: .string)
+            return item
+        case .text(let text):
+            return text as NSString
+        }
+    }
+
+    /// The row as drawn, which is what SwiftUI's own drag preview shows and the only preview a text
+    /// row can have. Converting into the superview keeps a container larger than the row honest.
+    private func dragImage() -> NSImage? {
+        guard let host = superview else { return fallbackImage() }
+        let rect = convert(bounds, to: host)
+        guard !rect.isEmpty, let rep = host.bitmapImageRepForCachingDisplay(in: rect) else {
+            return fallbackImage()
+        }
+        host.cacheDisplay(in: rect, to: rep)
+        let image = NSImage(size: rect.size)
+        image.addRepresentation(rep)
+        return image
+    }
+
     /// Cache-only lookups: a decode on mouse-down would stall the frame the drag begins on.
-    private func dragImage() -> NSImage {
-        ImageThumbnail.cached(url, maxPixel: Self.previewPixel)
+    private func fallbackImage() -> NSImage? {
+        guard case .file(let url) = payload else { return nil }
+        return ImageThumbnail.cached(url, maxPixel: Self.previewPixel)
             ?? FilePreviewThumbnail.cached(url, maxPixel: Self.previewPixel)
             ?? NSWorkspace.shared.icon(forFile: url.path)
     }
