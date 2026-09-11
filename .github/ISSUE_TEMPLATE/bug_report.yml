@@ -55,8 +55,10 @@ body:
     attributes:
       label: Contribution
       description: >
-        Optional. Don't start until the issue is marked `approved` — an unapproved PR is
-        closed automatically.
+        Read
+        [CONTRIBUTING.md](https://github.com/abue-ammar/tinycast/blob/main/CONTRIBUTING.md)
+        before you write a line — it is required reading, and it is what your PR is held to. Don't
+        start until the issue is marked `approved`; an unapproved PR is closed automatically.
       options:
         - label: I'm willing to implement this myself
           required: false
