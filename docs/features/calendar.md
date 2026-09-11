@@ -227,8 +227,8 @@ still lands on top of it. The session, the panel and the stage are the `Camera` 
 
 The Calendar pane carries the master switch (routed through the coordinator so the consent gate cannot
 be bypassed), the `Include Tomorrow's Events` switch, the `Join Next Meeting` recorder, the
-join-window picker, and the per-calendar checkbox list — `LauncherItemsSection`'s shape, including the one `Form` row holding a `LazyVStack`, because a
-`Form` realizes every row it is handed.
+join-window picker, and the per-calendar checkbox list — one `Form` row holding a `LazyVStack`,
+because a `Form` realizes every row it is handed; a few light rows don't need `LauncherItemsTable`.
 
 The hidden-calendar set stores **exclusions**, so a calendar added after the setting was written
 defaults to on. Holidays and Birthdays are what people switch off.

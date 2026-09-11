@@ -349,7 +349,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 ### Launcher and icons
 
 - Every installed app appears; Settings panes appear under System Settings; running apps show the dot
-- Icons render with no placeholder flash on reopen, and Settings ▸ Applications scrolls without hitching
+- Icons render with no placeholder flash on reopen, and Settings ▸ Applications scrolls without hitching,
+  even with the scrollbar thumb dragged from end to end in under a second
 - An app removed since the last open drops out after a reopen
 - Learned ranking still surfaces your habitual result for a short query
 

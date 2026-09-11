@@ -623,9 +623,18 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   `TextField` descendant would inherit as an invisible caret.
   `.searchable(placement: .sidebar)` renders nothing here — it needs a SwiftUI `NavigationSplitView`,
   and this sidebar is an `NSHostingController` in a real `NSSplitViewController`.
-- **A `Form` realizes every row it is handed.** `LauncherItemsSection` therefore holds its items in
-  a `LazyVStack` inside one Form row — 400 apps cost 55 ms and 69 views that way against 750 ms and
-  2040 eager. Any other unbounded list must do the same.
+- **A `Form` realizes every row it is handed, and a lazy stack rebuilds a row's AppKit controls.**
+  Handed 400 apps directly, a `Form` took 750 ms and 2040 views; a `LazyVStack` in one Form row
+  fixed that, but tears a row's `TextField` and checkbox — both `NSView`s — down when the row scrolls
+  off and builds them again when one scrolls on, about 7 ms and 4 ms on macOS 27. A fast scrollbar
+  drag replaces a screenful of rows per update, so the list froze for 100–400 ms at a time.
+  `LauncherItemsSection` therefore holds its items in `LauncherItemsTable`, an `NSTableView` filling
+  one Form row: it keeps a screenful of cells and hands each a new entry, and each cell hosts the
+  SwiftUI `LauncherItemRow`, so a reused row's controls update in place. A hosted row inherits nothing
+  from the pane, so the table injects the stores the row reads, and moves Tab on to the next row's
+  alias field itself; rows are a fixed 54 pt. A negative `.padding` doesn't move an AppKit view, so the
+  table hangs 15 pt past its own view into the Form row's padding, where the lazy stack's rows sat.
+  A long list whose rows hold no AppKit control can stay a `LazyVStack`.
 
 ### The window-layout editor
 
@@ -669,7 +678,9 @@ shortcut"), live held modifiers, and conflict (rejected caps + owner, orange).
 
 - **An ancestor draws it.** The open recorder publishes its bounds via `ShortcutRecorderAnchorKey`;
   `.shortcutRecorderPopoverHost()` sits on `SettingsDetailView` — one host above every pane's
-  `Form`, and on `OnboardingView`. An overlay on the row would be clipped by the scroll view.
+  `Form`, and on `OnboardingView`. An overlay on the row would be clipped by the scroll view. A
+  recorder in a `LauncherItemsTable` cell sits in its own hosting view, where the preference stops,
+  so the cell reports the recorder's frame and `LauncherItemsSection` republishes it as the anchor.
 - **`shortcutPopover.width` is load-bearing.** The callout centres on the recorder only while it
   fits either side of it; wider than that and the clamp kicks in and skews the caret.
   `Tests/callout-test.swift` pins this.
