@@ -4,8 +4,13 @@ import SwiftUI
 /// Tinycast's own dialogs; `NSAlert`'s nested run loop would let hotkeys stack them.
 @MainActor
 final class DialogController: NSObject, NSWindowDelegate {
+    private let settings: AppSettings
     private var panel: DialogPanel?
     private var continuation: CheckedContinuation<Int, Never>?
+
+    init(settings: AppSettings) {
+        self.settings = settings
+    }
 
     /// The palette reads this so its own dialog taking key isn't a click-away.
     var isPresenting: Bool { continuation != nil }
@@ -98,7 +103,7 @@ final class DialogController: NSObject, NSWindowDelegate {
                         guard Self.accepts(index, for: request) else { return }
                         self?.finish(index)
                     }),
-                width: Theme.Size.dialogWidth, minHeight: 0)
+                width: metrics.size.dialogWidth, minHeight: 0)
             let panel = DialogPanel(content: content)
             panel.handlesArrowKeys = request.accessory?.claimsArrowKeys ?? false
             panel.delegate = self
@@ -146,8 +151,10 @@ final class DialogController: NSObject, NSWindowDelegate {
         closing?.fadeOut(duration: Theme.Duration.exit)
     }
 
+    private var metrics: InterfaceMetrics { settings.interfaceSize.metrics }
+
     private func hostingView(_ view: some View, width: CGFloat, minHeight: CGFloat) -> NSView {
-        let hosting = NSHostingView(rootView: AnyView(view))
+        let hosting = NSHostingView(rootView: AnyView(view.environment(\.metrics, metrics)))
         // Measure at the fixed width first: the message wraps, so height follows width.
         hosting.setFrameSize(NSSize(width: width, height: minHeight))
         let fitted = hosting.fittingSize

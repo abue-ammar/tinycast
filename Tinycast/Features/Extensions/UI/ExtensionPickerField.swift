@@ -2,6 +2,8 @@ import SwiftUI
 
 /// `Form.Dropdown` and `Form.TagPicker`: one control, typing and caret in the field itself.
 struct ExtensionPickerField: View {
+    private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
+    @Environment(\.metrics) private var metrics
     let items: [ExtensionPickerItem]
     /// Every value currently held; a dropdown has one, a tag picker any number.
     let chosen: [String]
@@ -137,7 +139,7 @@ struct ExtensionPickerField: View {
     }
 
     private var control: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: metrics.spacing.sm) {
             if let leadingIcon, query.isEmpty {
                 ExtensionIconView(resolved: leadingIcon, size: 14)
             }
@@ -146,24 +148,24 @@ struct ExtensionPickerField: View {
                 // A multi-select keeps its chosen values in view while the query is typed.
                 if allowsMultipleSelection, !chosen.isEmpty {
                     Text(label)
-                        .font(Theme.Typography.rowTitle)
+                        .font(metrics.typography.rowTitle)
                         .foregroundStyle(Theme.Colors.textSecondary)
                         .lineLimit(1)
                         .layoutPriority(-1)
                     Text("·")
-                        .font(Theme.Typography.rowTitle)
+                        .font(metrics.typography.rowTitle)
                         .foregroundStyle(Theme.Colors.textTertiary)
                 }
                 ExtensionQueryText(query: query, prompt: "Search…", phase: typedAt)
             } else {
                 Text(label)
-                    .font(Theme.Typography.rowTitle)
+                    .font(metrics.typography.rowTitle)
                     .foregroundStyle(
                         chosen.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
                     )
                     .lineLimit(1)
             }
-            Spacer(minLength: Theme.Spacing.sm)
+            Spacer(minLength: metrics.spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: flipped)
         }
         .extensionFieldChrome(focused: isFocused, open: open, hovered: hovered)
@@ -184,7 +186,7 @@ struct ExtensionPickerField: View {
 
     /// The panel's own height, which the placement rule then seats above or below the control.
     private var listHeight: CGFloat {
-        ExtensionFormMetrics.popoverHeight(
+        form.popoverHeight(
             rows: matches.count, hasSearchField: false, headers: sectionCount)
     }
 

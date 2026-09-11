@@ -144,7 +144,8 @@ struct LauncherScreen: PaletteScreen {
         return ExtensionArgumentsAccessory.make(
             entry: entry, coordinator: core.extensionCoordinator,
             values: { name in headerFieldBinding(entry: entry, name: name) },
-            focus: focus, onSubmit: { activate(at: selection) })
+            focus: focus, metrics: core.settings.interfaceSize.metrics,
+            onSubmit: { activate(at: selection) })
     }
 
     private func headerFieldBinding(entry: AppEntry, name: String) -> Binding<String> {

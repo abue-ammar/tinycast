@@ -47,9 +47,6 @@ final class MenuPanelController {
     private weak var parent: NSWindow?
     private var clipsToMenuCorners = false
 
-    /// `bottomBar`'s own padding: a menu's edge must line up with the button it hangs off.
-    private static let inset: CGFloat = Theme.Spacing.md
-
     var isOpen: Bool { panel?.isVisible ?? false }
 
     func show(
@@ -61,7 +58,7 @@ final class MenuPanelController {
         self.parent = parent
         // Open disarmed: a menu opened by click lands under the pointer, which chose no row of it.
         core.palette.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
-        layout(corner: corner, parent: parent)
+        layout(corner: corner, parent: parent, metrics: core.settings.interfaceSize.metrics)
         if panel.parent == nil { parent.addChildWindow(panel, ordered: .above) }
         refreshShadow(panel)
     }
@@ -71,7 +68,7 @@ final class MenuPanelController {
         guard let panel, let parent else { return }
         setContent(
             AnyView(content.paletteEnvironment(core)), clipsToMenuCorners: clipsToMenuCorners, in: panel)
-        layout(corner: corner, parent: parent)
+        layout(corner: corner, parent: parent, metrics: core.settings.interfaceSize.metrics)
     }
 
     private func setContent(_ root: AnyView, clipsToMenuCorners: Bool, in panel: MenuPanel) {
@@ -82,7 +79,6 @@ final class MenuPanelController {
         let view = NSHostingView(rootView: root)
         if clipsToMenuCorners {
             view.wantsLayer = true
-            view.layer?.cornerRadius = Theme.Radius.menuPanel
             view.layer?.cornerCurve = .continuous
             view.layer?.masksToBounds = true
             view.layer?.allowsEdgeAntialiasing = true
@@ -118,21 +114,26 @@ final class MenuPanelController {
     }
 
     /// Sizes to the hosted menu, then seats it against the palette's frame in screen space.
-    private func layout(corner: Corner, parent: NSWindow) {
+    private func layout(corner: Corner, parent: NSWindow, metrics: InterfaceMetrics) {
         guard let panel, let hosting else { return }
+        // Set here, not once at build: the AppKit corner must track the SwiftUI clip's radius.
+        if clipsToMenuCorners { hosting.layer?.cornerRadius = metrics.radius.menuPanel }
         let size = hosting.intrinsicContentSize
         guard size.width > 0, size.height > 0 else { return }
         let host = parent.frame
+        // `bottomBar`'s own padding: a menu's edge must line up with the button it hangs off.
+        let inset = metrics.spacing.md
         let origin: NSPoint =
             switch corner {
             case .bottomLeading:
-                NSPoint(x: host.minX + Self.inset, y: host.minY + Self.inset)
+                NSPoint(x: host.minX + inset, y: host.minY + inset)
             case .bottomTrailing:
-                NSPoint(x: host.maxX - Self.inset - size.width, y: host.minY + Self.inset)
+                NSPoint(x: host.maxX - inset - size.width, y: host.minY + inset)
             case .belowHeaderTrailing:
                 NSPoint(
-                    x: host.maxX - Theme.Spacing.md * 2 - size.width,
-                    y: host.maxY - Theme.Size.headerPadding - Theme.Size.headerHeight - size.height)
+                    x: host.maxX - inset * 2 - size.width,
+                    y: host.maxY - metrics.size.headerPadding - metrics.size.headerHeight
+                        - size.height)
             }
         let frame = NSRect(origin: origin, size: size)
         // Every arrow key re-pushes the tree, and only the highlight moved.

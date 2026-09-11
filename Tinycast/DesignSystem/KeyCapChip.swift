@@ -13,19 +13,20 @@ struct KeyCapChip: View {
         case standard
         case hero
 
-        var side: CGFloat {
+        func side(_ metrics: InterfaceMetrics) -> CGFloat {
             switch self {
-            case .compact: Theme.Size.compactKeyCap
-            case .standard: Theme.Size.keyCap
-            case .hero: Theme.Size.heroKeyCap
+            case .compact: metrics.size.compactKeyCap
+            case .standard: metrics.size.keyCap
+            case .hero: metrics.size.heroKeyCap
             }
         }
 
-        var font: Font {
+        @MainActor
+        func font(_ metrics: InterfaceMetrics) -> Font {
             switch self {
-            case .compact: Theme.Typography.compactKeyCap
-            case .standard: Theme.Typography.keyCap
-            case .hero: Theme.Typography.heroKeyCap
+            case .compact: metrics.typography.compactKeyCap
+            case .standard: metrics.typography.keyCap
+            case .hero: metrics.typography.heroKeyCap
             }
         }
     }
@@ -33,18 +34,19 @@ struct KeyCapChip: View {
     let text: String
     var style: Style = .filled
     var scale: Scale = .standard
+    @Environment(\.metrics) private var metrics
 
     /// "↵" falls back to another face that seats high, so nudge it render-only.
     private static let returnGlyphDrop: CGFloat = 1.1
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.keyCap, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
         Text(text)
-            .font(scale.font)
+            .font(scale.font(metrics))
             .foregroundStyle(Theme.Colors.textSecondary)
             .offset(y: text == "↵" ? Self.returnGlyphDrop : 0)
-            .padding(.horizontal, Theme.Spacing.xs)
-            .frame(minWidth: scale.side, minHeight: scale.side)
+            .padding(.horizontal, metrics.spacing.xs)
+            .frame(minWidth: scale.side(metrics), minHeight: scale.side(metrics))
             .background {
                 switch style {
                 case .filled: shape.fill(Theme.Colors.controlSurface)

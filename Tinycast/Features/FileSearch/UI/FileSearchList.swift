@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct FileSearchList: View {
+
+    @Environment(\.metrics) private var metrics
     let results: [FileSearchResult]
     let selectedID: FileSearchResult.ID?
     let scroll: ScrollIntent
@@ -24,9 +26,9 @@ struct FileSearchList: View {
                             .onRightClick { onActions(result) }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -40,6 +42,8 @@ struct FileSearchList: View {
 }
 
 private struct FileSearchRow: View {
+
+    @Environment(\.metrics) private var metrics
     let result: FileSearchResult
     let selected: Bool
     @State private var image: NSImage?
@@ -58,30 +62,30 @@ private struct FileSearchRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: metrics.spacing.lg) {
             Group {
                 if let image {
                     Image(nsImage: image).resizable()
                 } else {
-                    RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
+                    RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous)
                         .fill(Theme.Colors.iconPlaceholder)
                 }
             }
-            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
             Text(result.name)
-                .font(Theme.Typography.rowTitle)
+                .font(metrics.typography.rowTitle)
                 .lineLimit(1)
-            Spacer(minLength: Theme.Spacing.md)
+            Spacer(minLength: metrics.spacing.md)
             Text(result.parentPath)
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.vertical, metrics.spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                 .fill(fill)
         )
         .armedHover($hovered)

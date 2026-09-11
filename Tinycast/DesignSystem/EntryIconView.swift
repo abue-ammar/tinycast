@@ -6,6 +6,7 @@ struct EntryIconView: View {
     /// Only `.file` needs it, and only the launcher has one to give.
     var fileURL: URL = URL(fileURLWithPath: "/")
     @State private var image: NSImage?
+    @Environment(\.metrics) private var metrics
 
     init(source: EntryIcon, fileURL: URL = URL(fileURLWithPath: "/")) {
         self.source = source
@@ -18,7 +19,7 @@ struct EntryIconView: View {
             if let image {
                 Image(nsImage: image).resizable()
             } else {
-                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                     .fill(Theme.Colors.iconPlaceholder)
             }
         }

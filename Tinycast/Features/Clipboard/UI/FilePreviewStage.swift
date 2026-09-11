@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The preview pane's stage for a referenced file: a poster frame, or a player for media.
 struct FilePreviewStage: View {
+    @Environment(\.metrics) private var metrics
     let path: String
 
     /// One stat, off the render path: `body` re-runs per keystroke and must not touch the disk.
@@ -26,7 +27,7 @@ struct FilePreviewStage: View {
         case .some where kind.isPlayable: MediaPreviewPlayer(url: url, isAudio: kind == .audio)
         default:
             FileThumbnailStage(
-                url: url, maxPixel: Theme.Size.clipboardPreviewPixel, glyph: kind.systemImage)
+                url: url, maxPixel: metrics.size.clipboardPreviewPixel, glyph: kind.systemImage)
         }
     }
 
@@ -43,13 +44,14 @@ struct FilePreviewStage: View {
 
 /// The recorded path is still the answer to "where was it?", so the row keeps it and says this.
 private struct MissingFileStage: View {
+    @Environment(\.metrics) private var metrics
     var body: some View {
-        VStack(spacing: Theme.Spacing.sm) {
+        VStack(spacing: metrics.spacing.sm) {
             Image(systemName: "doc.badge.exclamationmark")
                 .font(.system(.largeTitle))
                 .symbolRenderingMode(.hierarchical)
             Text("File is no longer available")
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
         }
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity)
@@ -58,6 +60,7 @@ private struct MissingFileStage: View {
 
 /// A still, framed exactly as the image preview is, so every preview kind is one shape.
 private struct FileThumbnailStage: View {
+    @Environment(\.metrics) private var metrics
     let url: URL
     let maxPixel: CGFloat
     let glyph: String
@@ -70,9 +73,9 @@ private struct FileThumbnailStage: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                        RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
                             .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
                     )
             } else {
@@ -95,6 +98,7 @@ private struct FileThumbnailStage: View {
 
 /// Owns the `AVPlayer`. Never autoplays: arrow-keying a list must not start twenty decodes.
 private struct MediaPreviewPlayer: View {
+    @Environment(\.metrics) private var metrics
     let url: URL
     let isAudio: Bool
 
@@ -110,8 +114,8 @@ private struct MediaPreviewPlayer: View {
     var body: some View {
         PlayerSurface(player: player)
             .background { if isAudio { AudioPoster(url: url) } }
-            .frame(height: Theme.Size.clipboardMediaHeight)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+            .frame(height: metrics.size.clipboardMediaHeight)
+            .clipShape(RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous))
             .task(id: PlaybackKey(url: url, isVisible: palette.isVisible)) {
                 stop()
                 guard palette.isVisible else { return }

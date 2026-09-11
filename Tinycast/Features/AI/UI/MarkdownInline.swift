@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Inline markdown for one block. `Text` renders emphasis on its own but not code or strikethrough.
 enum MarkdownInline {
-    static func attributed(_ source: String) -> AttributedString {
+    static func attributed(_ source: String, _ metrics: InterfaceMetrics) -> AttributedString {
         var options = AttributedString.MarkdownParsingOptions()
         options.interpretedSyntax = .inlineOnlyPreservingWhitespace
         options.failurePolicy = .returnPartiallyParsedIfPossible
@@ -12,7 +12,7 @@ enum MarkdownInline {
         let intents = text.runs.compactMap { run in run.inlinePresentationIntent.map { ($0, run.range) } }
         for (intent, range) in intents {
             if intent.contains(.code) {
-                text[range].font = Theme.Typography.inlineCode
+                text[range].font = metrics.typography.inlineCode
                 text[range].backgroundColor = Theme.Colors.controlSurface
             }
             if intent.contains(.strikethrough) { text[range].strikethroughStyle = .single }
@@ -20,11 +20,11 @@ enum MarkdownInline {
         return text
     }
 
-    static func headingFont(_ level: Int) -> Font {
+    static func headingFont(_ level: Int, _ metrics: InterfaceMetrics) -> Font {
         switch level {
-        case 1: Theme.Typography.markdownHeading1
-        case 2: Theme.Typography.markdownHeading2
-        default: Theme.Typography.markdownHeading3
+        case 1: metrics.typography.markdownHeading1
+        case 2: metrics.typography.markdownHeading2
+        default: metrics.typography.markdownHeading3
         }
     }
 }

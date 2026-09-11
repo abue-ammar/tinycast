@@ -5,13 +5,13 @@ enum BarButtonChrome {
     case capsule
     case rounded
 
-    var shape: AnyShape {
+    func shape(_ metrics: InterfaceMetrics) -> AnyShape {
         switch self {
         case .capsule:
             return AnyShape(Capsule())
         case .rounded:
             return AnyShape(
-                RoundedRectangle(cornerRadius: Theme.Radius.barControl, style: .continuous))
+                RoundedRectangle(cornerRadius: metrics.radius.barControl, style: .continuous))
         }
     }
 }
@@ -22,13 +22,14 @@ struct BarButton<Label: View>: View {
     let action: () -> Void
     @ViewBuilder let label: Label
     @State private var hovered = false
+    @Environment(\.metrics) private var metrics
 
     var body: some View {
-        let shape = chrome.shape
+        let shape = chrome.shape(metrics)
         return Button(action: action) {
             label
-                .padding(.horizontal, Theme.Spacing.md)
-                .frame(height: Theme.Size.barButtonHeight)
+                .padding(.horizontal, metrics.spacing.md)
+                .frame(height: metrics.size.barButtonHeight)
                 .contentShape(shape)
                 .background(shape.fill(hovered ? Theme.Colors.rowHover : Color.clear))
         }
@@ -44,6 +45,7 @@ struct HeaderMenuButton: View {
     let isOpen: Bool
     let help: String
     let action: () -> Void
+    @Environment(\.metrics) private var metrics
 
     init(
         title: String, icon: PopoverMenuIcon, isOpen: Bool, help: String,
@@ -65,29 +67,29 @@ struct HeaderMenuButton: View {
 
     var body: some View {
         BarButton(chrome: .rounded, action: action) {
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: metrics.spacing.sm) {
                 switch icon {
                 case .blank:
                     EmptyView()
                 case .symbol(let name):
                     Image(systemName: name)
-                        .font(Theme.Typography.bar)
+                        .font(metrics.typography.bar)
                         .symbolRenderingMode(.hierarchical)
                 case .asset(let name):
                     Image(name)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: Theme.Size.barBrandIcon, height: Theme.Size.barBrandIcon)
+                        .frame(width: metrics.size.barBrandIcon, height: metrics.size.barBrandIcon)
                 case .file(let path):
                     MenuFileIcon(path: path)
                 }
                 Text(title)
-                    .font(Theme.Typography.bar)
+                    .font(metrics.typography.bar)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 // Points at the menu it opens, the way a native pop-up's chevron does.
                 Image(systemName: isOpen ? "chevron.up" : "chevron.down")
-                    .font(Theme.Typography.disclosure)
+                    .font(metrics.typography.disclosure)
             }
             .foregroundStyle(Theme.Colors.textSecondary)
         }

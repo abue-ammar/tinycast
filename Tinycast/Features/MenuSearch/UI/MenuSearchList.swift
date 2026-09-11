@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MenuSearchList: View {
+
+    @Environment(\.metrics) private var metrics
     let items: [MenuSearchItem]
     let targetName: String
     let iconURL: URL?
@@ -30,9 +32,9 @@ struct MenuSearchList: View {
                             .onTapGesture { onActivate(item) }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -54,6 +56,8 @@ struct MenuSearchList: View {
 }
 
 private struct MenuSearchRow: View {
+
+    @Environment(\.metrics) private var metrics
     let item: MenuSearchItem
     let icon: NSImage?
     let selected: Bool
@@ -66,38 +70,38 @@ private struct MenuSearchRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: metrics.spacing.lg) {
             Group {
                 if let icon {
                     Image(nsImage: icon).resizable()
                 } else {
-                    RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
+                    RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous)
                         .fill(Theme.Colors.iconPlaceholder)
                 }
             }
-            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
             Text(item.title)
-                .font(Theme.Typography.rowTitle)
+                .font(metrics.typography.rowTitle)
                 .lineLimit(1)
-            Spacer(minLength: Theme.Spacing.md)
+            Spacer(minLength: metrics.spacing.md)
             Text(item.displayPath)
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             let caps = item.shortcut?.keycaps ?? []
             if !caps.isEmpty {
-                HStack(spacing: Theme.Spacing.xxs) {
+                HStack(spacing: metrics.spacing.xxs) {
                     ForEach(caps, id: \.self) { cap in
                         KeyCapChip(text: cap, style: .outline)
                     }
                 }
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.vertical, metrics.spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                 .fill(fill)
         )
         .armedHover($hovered)

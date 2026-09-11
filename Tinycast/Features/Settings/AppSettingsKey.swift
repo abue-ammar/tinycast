@@ -15,6 +15,7 @@ enum AppSettingsKey: String, CaseIterable {
     case popToRootTimeout = "popToRootTimeout"
     case escapeKeyBehavior = "escapeKeyBehavior"
     case appearance = "appearance"
+    case interfaceSize = "interfaceSize"
     case paletteTransparency = "paletteTransparency"
     case compactMode = "compactMode"
     case showFavoritesInCompactMode = "showFavoritesInCompactMode"

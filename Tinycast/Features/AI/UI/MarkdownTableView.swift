@@ -1,17 +1,19 @@
 import SwiftUI
 
 struct MarkdownTableView: View {
+
+    @Environment(\.metrics) private var metrics
     let table: MarkdownBlock.Table
 
     var body: some View {
         Grid(
-            alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.xl,
-            verticalSpacing: Theme.Spacing.sm
+            alignment: .leadingFirstTextBaseline, horizontalSpacing: metrics.spacing.xl,
+            verticalSpacing: metrics.spacing.sm
         ) {
             GridRow {
                 ForEach(Array(table.header.enumerated()), id: \.offset) { column, cell in
-                    Text(MarkdownInline.attributed(cell))
-                        .font(Theme.Typography.sectionHeader)
+                    Text(MarkdownInline.attributed(cell, metrics))
+                        .font(metrics.typography.sectionHeader)
                         .foregroundStyle(Theme.Colors.textSecondary)
                         .gridColumnAlignment(alignment(at: column))
                 }
@@ -26,7 +28,7 @@ struct MarkdownTableView: View {
             ForEach(Array(table.rows.enumerated()), id: \.offset) { _, row in
                 GridRow {
                     ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
-                        Text(MarkdownInline.attributed(cell))
+                        Text(MarkdownInline.attributed(cell, metrics))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -34,13 +36,13 @@ struct MarkdownTableView: View {
         }
         // Given only a width, Grid measures a wrapping row a line short of what it draws.
         .fixedSize(horizontal: false, vertical: true)
-        .padding(Theme.Spacing.xl)
+        .padding(metrics.spacing.xl)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
                 .fill(Theme.Colors.cardFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
                 .stroke(Theme.Colors.cardStroke))
     }
 

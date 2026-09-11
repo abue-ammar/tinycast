@@ -3,6 +3,7 @@ import SwiftUI
 /// The extension's search-bar dropdown, drawn as a header control. Not `HeaderMenuButton`: the
 /// choice it states carries an extension's own icon, which `PopoverMenuIcon` cannot name.
 struct ExtensionSearchAccessoryButton: View {
+    @Environment(\.metrics) private var metrics
     /// Room for a long choice beside its icon and tick, without a form field's 360pt sprawl.
     static let listWidth: CGFloat = 240
 
@@ -18,12 +19,12 @@ struct ExtensionSearchAccessoryButton: View {
 
     var body: some View {
         BarButton(chrome: .rounded, action: action) {
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: metrics.spacing.sm) {
                 if let icon {
-                    ExtensionIconView(resolved: icon, size: Theme.Size.menuIcon)
+                    ExtensionIconView(resolved: icon, size: metrics.size.menuIcon)
                 }
                 Text(accessory.title(for: value) ?? "")
-                    .font(Theme.Typography.bar)
+                    .font(metrics.typography.bar)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 // The panel always drops below the header, so it never points back up flipped.

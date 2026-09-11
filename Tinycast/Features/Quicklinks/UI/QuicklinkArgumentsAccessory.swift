@@ -14,6 +14,7 @@ enum QuicklinkArgumentsAccessory {
         onSubmit: @escaping () -> Void
     ) -> PaletteHeaderAccessory? {
         guard let quicklink else { return nil }
+        let metrics = core.settings.interfaceSize.metrics
         let arguments = core.quicklinkCoordinator.promptedArguments(for: quicklink)
         guard !arguments.isEmpty else { return nil }
 
@@ -21,7 +22,8 @@ enum QuicklinkArgumentsAccessory {
         let symbol = placement == .afterQuery ? quicklink.symbol : nil
         let value = { (name: String) in binding(quicklink: quicklink, name: name, vm: vm) }
         return PaletteHeaderAccessory(
-            width: QuicklinkArgumentsRow.totalWidth(for: arguments, hasIcon: symbol != nil),
+            width: QuicklinkArgumentsRow.totalWidth(
+                for: arguments, hasIcon: symbol != nil, metrics: metrics),
             fieldNames: arguments.map(\.name),
             firstIncompleteField: arguments.first { value($0.name).wrappedValue.isEmpty }?.name,
             optionsMenu: { name in

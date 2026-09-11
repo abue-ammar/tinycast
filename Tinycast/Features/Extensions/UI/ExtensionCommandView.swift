@@ -60,6 +60,7 @@ struct ExtensionCommandView: View {
 
 /// The stack trace is kept: it is the only debugging signal an author gets.
 struct ExtensionFailureView: View {
+    @Environment(\.metrics) private var metrics
     let message: String
 
     private var headline: String {
@@ -72,12 +73,12 @@ struct ExtensionFailureView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                HStack(spacing: Theme.Spacing.sm) {
+            VStack(alignment: .leading, spacing: metrics.spacing.md) {
+                HStack(spacing: metrics.spacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                     Text(headline)
-                        .font(Theme.Typography.rowTitle)
+                        .font(metrics.typography.rowTitle)
                         .textSelection(.enabled)
                 }
                 if let detail {
@@ -88,7 +89,7 @@ struct ExtensionFailureView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Theme.Spacing.lg)
+            .padding(metrics.spacing.lg)
             .hideNativeScrollers()
         }
         .thinScrollbar()
@@ -97,22 +98,25 @@ struct ExtensionFailureView: View {
 
 /// `showHUD` is a separate window: a no-view command closes the palette first.
 struct ExtensionFeedbackOverlay: View {
+    @Environment(\.metrics) private var metrics
     let toasts: [ExtensionToast]
     let onToastAction: (String) -> Void
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.xs) {
+        VStack(spacing: metrics.spacing.xs) {
             ForEach(toasts) { toast in
                 ToastRow(toast: toast, onAction: onToastAction)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .padding(.bottom, Theme.Size.bottomBarHeight)
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.bottom, metrics.size.bottomBarHeight)
+        .padding(.horizontal, metrics.spacing.md)
         .animation(.easeOut(duration: 0.16), value: toasts.map(\.id))
     }
 
     private struct ToastRow: View {
+
+        @Environment(\.metrics) private var metrics
         let toast: ExtensionToast
         let onAction: (String) -> Void
 
@@ -125,30 +129,30 @@ struct ExtensionFeedbackOverlay: View {
         }
 
         var body: some View {
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: metrics.spacing.sm) {
                 Image(systemName: icon.name)
                     .foregroundStyle(icon.tint)
                     .symbolEffect(.rotate, isActive: toast.style == .animated)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(toast.title).font(Theme.Typography.bar).lineLimit(1)
+                    Text(toast.title).font(metrics.typography.bar).lineLimit(1)
                     if let message = toast.message, !message.isEmpty {
                         Text(message)
-                            .font(Theme.Typography.rowTrailing)
+                            .font(metrics.typography.rowTrailing)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                     }
                 }
-                Spacer(minLength: Theme.Spacing.sm)
+                Spacer(minLength: metrics.spacing.sm)
                 if let action = toast.primaryAction {
                     Button(action.title) { onAction(action.token) }
                         .buttonStyle(.plain)
-                        .font(Theme.Typography.bar)
+                        .font(metrics.typography.bar)
                         .foregroundStyle(.tint)
                 }
             }
-            .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, Theme.Spacing.sm)
-            .frosted(in: RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous))
+            .padding(.horizontal, metrics.spacing.md)
+            .padding(.vertical, metrics.spacing.sm)
+            .frosted(in: RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous))
         }
     }
 }

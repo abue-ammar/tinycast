@@ -381,16 +381,20 @@ extension ExtensionImage {
 
 /// A resolved icon at row size; an unresolvable one draws the faint tile, so rows never jump.
 struct ExtensionIconView: View {
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let resolved: ExtensionImage.Resolved?
-    var size: CGFloat = Theme.Size.rowIcon
+    var size: CGFloat?
     /// Opt-in, and off for row icons: a playing GIF at 24pt is noise in a long list.
     var animates = false
     @State private var loaded: NSImage?
 
+    /// Row size unless a caller states one, which only the ⌘K panel's 20pt slot does.
+    private var side: CGFloat { size ?? metrics.size.rowIcon }
+
     var body: some View {
         content
-            .frame(width: size, height: size)
+            .frame(width: side, height: side)
             .clipShape(shape)
             // Keyed on appearance too: an inline SVG's palette resolves at decode.
             .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
@@ -403,14 +407,14 @@ struct ExtensionIconView: View {
         switch resolved?.source {
         case .symbol(let name):
             Image(systemName: name)
-                .font(.system(size: size * 0.62, weight: .regular))
+                .font(.system(size: side * 0.62, weight: .regular))
                 .symbolRenderingMode(resolved?.tint == nil ? .hierarchical : .monochrome)
                 .foregroundStyle(resolved?.tint ?? Theme.Colors.textSecondary)
-                .frame(width: size, height: size)
+                .frame(width: side, height: side)
         case .glyph(let text):
             Text(text)
-                .font(.system(size: size * 0.72))
-                .frame(width: size, height: size)
+                .font(.system(size: side * 0.72))
+                .frame(width: side, height: side)
         case .file, .fileIcon, .remote, .inline:
             if let loaded {
                 // Only a multi-frame image pays for `NSImageView`; a still stays on SwiftUI's path.
@@ -433,14 +437,14 @@ struct ExtensionIconView: View {
     }
 
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
             .fill(Theme.Colors.iconPlaceholder)
     }
 
     private var shape: AnyShape {
         resolved?.isCircular == true
             ? AnyShape(Circle())
-            : AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+            : AnyShape(RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous))
     }
 
 }

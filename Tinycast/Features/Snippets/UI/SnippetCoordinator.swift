@@ -222,7 +222,8 @@ final class SnippetCoordinator {
         guard
             let arguments = SnippetArgumentsPrompt.run(
                 snippetName: record.snippet.name,
-                arguments: missingArgs)
+                arguments: missingArgs,
+                metrics: settings.interfaceSize.metrics)
         else {
             injector.cancelArgumentPrompt(
                 automaticGeneration: automaticGeneration,

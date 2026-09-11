@@ -60,6 +60,27 @@ Source: `Tinycast/DesignSystem/Theme.swift`.
 `Theme` is the single source of truth. **Never hardcode a spacing/radius/size/color that has a token.**
 Add a token rather than a magic number when introducing a new value.
 
+### Interface Size (`InterfaceMetrics`)
+
+`AppSettings.interfaceSize` scales the palette and the surfaces that float with it — the ⌘K menu, the
+extension list panel, Quick Actions, the snippet prompt, dialogs and HUDs. Settings, Onboarding,
+Support, Update, About and Notes never scale.
+
+`DesignSystem/InterfaceMetrics.swift` stores **only a scale** and derives every value from the `Theme`
+literal, so `Theme` stays the one place a number is written down. **In any view a scaled surface can
+reach, read `@Environment(\.metrics)` rather than `Theme.Spacing/Radius/Size/Typography`** — the key
+defaults to `.standard`, so a shared `DesignSystem/` component renders unscaled in Settings without
+being forked. An AppKit site reads `settings.interfaceSize.metrics` where it computes its frame.
+
+A length measured against the **screen** does not scale; a length measured against **our own content**
+does. So `hairline`, `paletteTopMarginFraction`, `paletteSnapDistance`, `paletteMinimumVisible`, the
+drop-guide dashes, `hudEdgeOffset` and every row *count* stay on `Theme`, as does every chrome token.
+
+Scaling rounds to whole points, once, at the leaf accessor. A **derived** token composes already
+scaled parts (`compactHeight`, `menuRowHeight`) rather than scaling the derived result, so an AppKit
+frame can never disagree with the SwiftUI view inside it by a point. `interface-size-test` pins all of
+this, member by member, including that `.standard` is `Theme` verbatim.
+
 ### Spacing (`Theme.Spacing`)
 
 `xxs 2` · `xs 4` · `sm 6` · `md 8` · `lg 10` · `xl 12` · `xxl 20`
@@ -138,9 +159,14 @@ Notes adds `noteWindow 520×420` (opening size on a first run only), `noteWindow
 
 ### Typography (`Theme.Typography`)
 
-System fonts only — **no fixed point sizes in views** (honors Dynamic Type). `searchField` is the one
-explicit size (20pt regular). Use `rowTitle` (`.body`), `sectionHeader` (`.subheadline.medium`),
+System text styles only — **no fixed point sizes in views**. `searchField` is the one explicit size
+(20pt regular). Use `rowTitle` (`.body`), `sectionHeader` (`.subheadline.medium`),
 `rowTrailing`/`bar`/`menuRow`/`keyCap` etc. as named.
+
+`InterfaceMetrics.Typography` scales a style by rebuilding its `NSFont` **from that font's own
+descriptor** at the scaled point size. Never reconstruct one as `.system(size:weight:)` from a
+hand-written weight table: on macOS `.headline` is Bold and `.caption2` is Medium, so a table
+*lightens* them the moment the user leaves the default size.
 
 ### Colors (`Theme.Colors`) — the alpha ramp
 

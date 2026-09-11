@@ -134,6 +134,9 @@ enum SettingsSearchCatalog {
             .generalAppearance, "Theme",
             keywords: ["dark", "light", "mode", "appearance"]),
         .init(
+            .generalAppearance, "Interface size",
+            keywords: ["text size", "font size", "scale", "zoom", "bigger", "larger", "legible"]),
+        .init(
             .generalAppearance, "Background transparency",
             keywords: ["glass", "opacity", "blur", "translucency", "reset"]),
         .init(

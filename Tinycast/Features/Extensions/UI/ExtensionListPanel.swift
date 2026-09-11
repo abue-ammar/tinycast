@@ -85,7 +85,7 @@ struct ExtensionListPlacement: Equatable {
 
     /// The shipped rule in screen space; the palette's frame stays the room a list may fill.
     @MainActor
-    init?(anchor: CGRect, in window: NSWindow, height: CGFloat) {
+    init?(anchor: CGRect, in window: NSWindow, height: CGFloat, form: ExtensionFormMetrics) {
         guard let contentHeight = window.contentView?.bounds.height else { return nil }
         let host = window.frame
         // SwiftUI reports the control top-left down; AppKit reads the window bottom-left up.
@@ -93,14 +93,14 @@ struct ExtensionListPlacement: Equatable {
             NSRect(
                 x: anchor.minX, y: contentHeight - anchor.maxY, width: anchor.width,
                 height: anchor.height))
-        let placement = ExtensionFormMetrics.placement(
+        let placement = form.placement(
             anchor: CGRect(
                 x: control.minX, y: host.maxY - control.maxY, width: control.width,
                 height: control.height),
             popoverHeight: height, containerHeight: host.height)
         frame = NSRect(
             x: control.minX, y: host.maxY - placement.y - height,
-            width: ExtensionFormMetrics.controlWidth, height: height)
+            width: form.controlWidth, height: height)
         flipped = placement.flipped
     }
 }
@@ -142,6 +142,8 @@ private struct ExtensionListPanelModifier<List: View, Revision: Equatable>: View
     @State private var host: NSWindow?
     @State private var anchor: CGRect = .zero
     @Environment(PaletteState.self) private var palette
+    @Environment(\.metrics) private var metrics
+    private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
 
     private struct Key: Equatable {
         let open: Bool
@@ -168,13 +170,15 @@ private struct ExtensionListPanelModifier<List: View, Revision: Equatable>: View
 
     private func sync() {
         guard open, let host, anchor.width > 0,
-            let placement = ExtensionListPlacement(anchor: anchor, in: host, height: height)
+            let placement = ExtensionListPlacement(
+                anchor: anchor, in: host, height: height, form: form)
         else {
             controller.hide()
             return
         }
         if flipped != placement.flipped { flipped = placement.flipped }
-        let root = AnyView(list().environment(palette))
+        // Forwarded, not re-derived: a child window must never disagree with its parent.
+        let root = AnyView(list().environment(palette).environment(\.metrics, metrics))
         controller.present(root, frame: placement.frame, parent: host, palette: palette)
     }
 }

@@ -16,6 +16,7 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
 
     func present(
         _ state: QuickActionPanelState,
+        metrics: InterfaceMetrics,
         languages: [Locale.Language],
         onRetranslate: @escaping (Locale.Language) -> Void,
         onDownloaded: @escaping () -> Void,
@@ -36,12 +37,13 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
                 onCancel: { [weak self] in self?.dismiss() },
                 onRetranslate: { [weak self] in self?.onRetranslate?($0) },
                 onDownloaded: { [weak self] in self?.onDownloaded?() },
-                onHeight: { [weak self] in self?.resize(toHeight: $0) }))
+                onHeight: { [weak self] in self?.resize(toHeight: $0) }
+            ).environment(\.metrics, metrics))
         // The controller owns the frame; without this the top edge drifts as the reply grows.
         hosting.sizingOptions = []
         // Its tallest, so the first frame is never short; the view reports the real height at once.
         hosting.setFrameSize(
-            NSSize(width: Theme.Size.quickActionPanel, height: Theme.Size.quickActionPanelBody))
+            NSSize(width: metrics.size.quickActionPanel, height: metrics.size.quickActionPanelBody))
 
         let panel = QuickActionPanel(content: hosting)
         panel.delegate = self

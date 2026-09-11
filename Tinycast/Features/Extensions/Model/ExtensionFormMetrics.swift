@@ -1,53 +1,59 @@
 import Foundation
 
 /// The geometry every form control shares; pure, so a harness drives the placement rule.
-enum ExtensionFormMetrics {
+struct ExtensionFormMetrics {
+    /// `Theme` at the default Interface Size, for the pure placement rule and its harness.
+    static let base = ExtensionFormMetrics(scale: 1)
+
+    /// Owned here rather than in `DesignSystem`: an extension never moves a launcher surface.
+    let scale: CGFloat
+
     /// One control's width and height, in the proportions an extension's form is authored against.
-    static let controlWidth: CGFloat = 360
-    static let controlHeight: CGFloat = 32
+    var controlWidth: CGFloat { scaled(360) }
+    var controlHeight: CGFloat { scaled(32) }
     /// A text area is a control that grew: same width and chrome, several lines tall.
-    static let textAreaHeight: CGFloat = 78
+    var textAreaHeight: CGFloat { scaled(78) }
     /// Inset of a control's own text from its rounded edge.
-    static let textInset: CGFloat = 10
+    var textInset: CGFloat { scaled(10) }
     /// One top inset everywhere, so a field and a text area start their text on one line.
-    static let verticalInset: CGFloat = 7
+    var verticalInset: CGFloat { scaled(7) }
     /// `NSTextView`'s line-fragment padding, taken off so its text aligns with a field's.
-    static let textViewGutter: CGFloat = 5
+    var textViewGutter: CGFloat { scaled(5) }
     /// The box a checkbox draws, and the gap to the label beside it.
-    static let checkboxSize: CGFloat = 14
+    var checkboxSize: CGFloat { scaled(14) }
     /// The gap between one labelled row and the next, tuned by eye rather than derived.
-    static let rowSpacing: CGFloat = 18
+    var rowSpacing: CGFloat { scaled(18) }
     /// The gap a separator adds on each side, so a group reads apart from the one before it.
-    static let separatorSpacing: CGFloat = 4
+    var separatorSpacing: CGFloat { scaled(4) }
     /// Room above the first row and below the last, so neither touches the bars.
-    static let formVerticalPadding: CGFloat = 16
+    var formVerticalPadding: CGFloat { scaled(16) }
     /// The gap between a control and the popover it opens, on whichever side it opens.
-    static let popoverGap: CGFloat = 6
+    var popoverGap: CGFloat { scaled(6) }
     /// The ⌘K panel's pitch, restated: a launcher change must never move a form.
-    static let popoverRowHeight: CGFloat = 36
-    static let popoverRowSpacing: CGFloat = 1
+    var popoverRowHeight: CGFloat { scaled(36) }
+    var popoverRowSpacing: CGFloat { 1 }
     /// A section heading inside a picker's list; shorter than a row, since it is a label.
-    static let popoverSectionHeaderHeight: CGFloat = 24
+    var popoverSectionHeaderHeight: CGFloat { scaled(24) }
     /// Six rows and half of the seventh, so a long list reads as scrollable rather than clipped.
-    static let popoverVisibleRows: CGFloat = 6.5
+    var popoverVisibleRows: CGFloat { 6.5 }
     /// The search or expression row a popover opens with, where it has one.
-    static let popoverSearchHeight: CGFloat = 30
+    var popoverSearchHeight: CGFloat { scaled(30) }
     /// The drawn caret that stands in for a field editor the control never gets.
-    static let caretWidth: CGFloat = 1
-    static let caretHeight: CGFloat = 15
-    static let caretBlink: TimeInterval = 0.5
+    var caretWidth: CGFloat { 1 }
+    var caretHeight: CGFloat { scaled(15) }
+    var caretBlink: TimeInterval { 0.5 }
     /// How far left of an empty field's prompt its caret stands, as the field editor's does.
-    static let caretPromptGap: CGFloat = 2
+    var caretPromptGap: CGFloat { scaled(2) }
     /// `Theme.Spacing.sm` on every side, matching the ⌘K panel's own inset.
-    static let popoverPadding: CGFloat = 6
+    var popoverPadding: CGFloat { scaled(6) }
 
     /// Rounded: a half-row of an odd pitch lands the popover's edge on a half pixel.
-    static var popoverRowsMaxHeight: CGFloat {
+    var popoverRowsMaxHeight: CGFloat {
         (popoverVisibleRows * (popoverRowHeight + popoverRowSpacing)).rounded()
     }
 
     /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
-    static func popoverListHeight(rows: Int, headers: Int = 0) -> CGFloat {
+    func popoverListHeight(rows: Int, headers: Int = 0) -> CGFloat {
         guard rows > 0 else { return 0 }
         let pitch = popoverRowHeight + popoverRowSpacing
         let headings = CGFloat(headers) * (popoverSectionHeaderHeight + popoverRowSpacing)
@@ -56,7 +62,7 @@ enum ExtensionFormMetrics {
     }
 
     /// The whole popover, list plus whatever chrome sits above it.
-    static func popoverHeight(rows: Int, hasSearchField: Bool, headers: Int = 0) -> CGFloat {
+    func popoverHeight(rows: Int, hasSearchField: Bool, headers: Int = 0) -> CGFloat {
         // The panel is sized to this, so an empty list must still measure the row it draws.
         let list = rows > 0 ? popoverListHeight(rows: rows, headers: headers) : popoverRowHeight
         let search = hasSearchField ? popoverSearchHeight : 0
@@ -72,7 +78,7 @@ enum ExtensionFormMetrics {
     }
 
     /// Below the control when it fits, else above it; clamped so it can never leave the container.
-    static func placement(
+    func placement(
         anchor: CGRect, popoverHeight: CGFloat, containerHeight: CGFloat
     ) -> Placement {
         let below = anchor.maxY + popoverGap
@@ -86,5 +92,10 @@ enum ExtensionFormMetrics {
         }
         // Taller than the container either way: show its start, which is where the selection is.
         return Placement(y: max(0, min(below, containerHeight - popoverHeight)), flipped: false)
+    }
+
+    /// Whole points, matching `InterfaceMetrics`: a fractional pitch lands a row edge off-pixel.
+    private func scaled(_ value: CGFloat) -> CGFloat {
+        scale == 1 ? value : (value * scale).rounded()
     }
 }

@@ -236,6 +236,12 @@ anchor is dropped on hide, so the next summon re-resolves for wherever the user 
 All of the arithmetic lives in `PalettePlacement`, which is CoreGraphics-only and takes every screen
 fact as a parameter, so `palette-placement-test` drives the shipped rules rather than a copy of them.
 
+The panel's width and height are not constants: they come from `InterfaceMetrics`, so Interface Size
+changes them. A change re-enters through `AppCore.track` → `applyInterfaceSize()`, which **drops the
+cached anchor** and re-resolves it — one rule, the summon's. An untouched palette re-centres at the new
+width; a dragged one keeps its stored top-left unless the wider bar no longer leaves
+`paletteMinimumVisible` on any display, in which case it falls home.
+
 ### Drag to reposition
 
 **Drag to reposition** (`AppSettings.paletteDraggable`, off by default) is the only thing that moves a

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ChatHistoryList: View {
+
+    @Environment(\.metrics) private var metrics
     let results: [ChatConversation]
     let selectedID: ChatConversation.ID?
     let scroll: ScrollIntent
@@ -65,9 +67,9 @@ struct ChatHistoryList: View {
                         }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -81,6 +83,8 @@ struct ChatHistoryList: View {
 }
 
 private struct ChatHistoryRow: View {
+
+    @Environment(\.metrics) private var metrics
     let conversation: ChatConversation
     let selected: Bool
     @State private var hovered = false
@@ -92,35 +96,35 @@ private struct ChatHistoryRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
-            RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
+        HStack(spacing: metrics.spacing.lg) {
+            RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous)
                 .fill(Theme.Colors.controlSurface)
-                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
                 .overlay(
                     Image(systemName: "bubble.left")
                         .font(.system(size: 12))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.secondary))
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+            VStack(alignment: .leading, spacing: metrics.spacing.xxs) {
                 Text(conversation.title)
-                    .font(Theme.Typography.rowTitle)
+                    .font(metrics.typography.rowTitle)
                     .lineLimit(1)
                 if !conversation.preview.isEmpty {
                     Text(conversation.preview)
-                        .font(Theme.Typography.keyCap)
+                        .font(metrics.typography.keyCap)
                         .foregroundStyle(Theme.Colors.textTertiary)
                         .lineLimit(1)
                 }
             }
             Spacer(minLength: 0)
             Text(conversation.updatedAt.formatted(date: .omitted, time: .shortened))
-                .font(Theme.Typography.keyCap)
+                .font(metrics.typography.keyCap)
                 .foregroundStyle(Theme.Colors.textTertiary)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.vertical, metrics.spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous).fill(fill)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
         )
         .armedHover($hovered)
     }

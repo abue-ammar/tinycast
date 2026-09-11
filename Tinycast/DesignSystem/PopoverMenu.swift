@@ -69,42 +69,43 @@ struct PopoverMenu: View {
     let items: [PopoverMenuItem]
     @Binding var selection: Int
     /// Fixed, never intrinsic: a width tracking the longest row would jitter as rows change.
-    var width: CGFloat = Theme.Size.menuWidth
+    var width: CGFloat?
     let onActivate: (Int) -> Void
 
     /// The palette arms this only once the pointer has moved of its own accord.
     @Environment(PaletteState.self) private var palette
+    @Environment(\.metrics) private var metrics
     /// Set by the pointer so the reveal can tell its own move from a keyboard one.
     @State private var pointerSelection: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Size.menuRowSpacing) {
+        VStack(alignment: .leading, spacing: metrics.size.menuRowSpacing) {
             if let header { headerLabel(header) }
             rows
         }
-        .padding(Theme.Spacing.sm)
-        .frame(width: width)
+        .padding(metrics.spacing.sm)
+        .frame(width: width ?? metrics.size.menuWidth)
         .glassEffect(
-            .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
+            .regular, in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
         )
     }
 
     private func headerLabel(_ text: String) -> some View {
         Text(text)
-            .font(Theme.Typography.sectionHeader)
+            .font(metrics.typography.sectionHeader)
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .truncationMode(.tail)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.top, Theme.Spacing.xs)
-            .padding(.bottom, Theme.Spacing.xs / 2)
+            .padding(.horizontal, metrics.spacing.lg)
+            .padding(.top, metrics.spacing.xs)
+            .padding(.bottom, metrics.spacing.xs / 2)
     }
 
     /// Rows alone scroll, under a header that keeps naming what they act on.
     private var rows: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Size.menuRowSpacing) {
+                VStack(alignment: .leading, spacing: metrics.size.menuRowSpacing) {
                     // Index-as-id is stable: a menu's rows never reorder while it is open.
                     ForEach(items.indices, id: \.self) { index in
                         VStack(alignment: .leading, spacing: 0) {
@@ -120,8 +121,8 @@ struct PopoverMenu: View {
                                 Rectangle()
                                     .fill(Theme.Colors.separator)
                                     .frame(height: Theme.Size.hairline)
-                                    .padding(.horizontal, Theme.Spacing.md)
-                                    .offset(y: -Theme.Size.menuRowSpacing)
+                                    .padding(.horizontal, metrics.spacing.md)
+                                    .offset(y: -metrics.size.menuRowSpacing)
                                     .allowsHitTesting(false)
                                     .accessibilityHidden(true)
                             }
@@ -149,29 +150,29 @@ struct PopoverMenu: View {
     private var viewportHeight: CGFloat {
         let rows = CGFloat(items.count)
         var contentHeight =
-            rows * Theme.Size.menuRowHeight + max(rows - 1, 0) * Theme.Size.menuRowSpacing
+            rows * metrics.size.menuRowHeight + max(rows - 1, 0) * metrics.size.menuRowSpacing
         for (index, item) in items.enumerated() where item.sectionTitle != nil {
-            contentHeight += Theme.Size.menuSectionHeader + Theme.Spacing.xxs
-            if index > 0 { contentHeight += Theme.Spacing.md }
+            contentHeight += metrics.size.menuSectionHeader + metrics.spacing.xxs
+            if index > 0 { contentHeight += metrics.spacing.md }
         }
-        return min(contentHeight, Theme.Size.menuRowsMaxHeight)
+        return min(contentHeight, metrics.size.menuRowsMaxHeight)
     }
 
     /// Tighter below than above, so a header belongs to the rows under it, not between two groups.
     private func sectionLabel(_ title: String, isFirst: Bool) -> some View {
         Text(title)
-            .font(Theme.Typography.sectionHeader)
+            .font(metrics.typography.sectionHeader)
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .truncationMode(.tail)
             .frame(
-                maxWidth: .infinity, minHeight: Theme.Size.menuSectionHeader,
-                maxHeight: Theme.Size.menuSectionHeader, alignment: .leading
+                maxWidth: .infinity, minHeight: metrics.size.menuSectionHeader,
+                maxHeight: metrics.size.menuSectionHeader, alignment: .leading
             )
             // `md`, matching a row's own inset, so header and icon share one edge.
-            .padding(.horizontal, Theme.Spacing.md)
-            .padding(.top, isFirst ? 0 : Theme.Spacing.md)
-            .padding(.bottom, Theme.Spacing.xxs)
+            .padding(.horizontal, metrics.spacing.md)
+            .padding(.top, isFirst ? 0 : metrics.spacing.md)
+            .padding(.bottom, metrics.spacing.xxs)
     }
 
     /// Armed only once the pointer has moved of its own accord, so a scroll past it lights nothing.
@@ -187,67 +188,68 @@ private struct PopoverMenuRow: View {
     let item: PopoverMenuItem
     let selected: Bool
     let onActivate: () -> Void
+    @Environment(\.metrics) private var metrics
 
     var body: some View {
         Button(action: onActivate) {
             // `sm`, not `lg`: the icon slot carries its own slack, so the gap reads wider.
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: metrics.spacing.sm) {
                 if item.isLoading {
                     ProgressView()
                         .controlSize(.small)
-                        .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                        .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                 } else {
                     switch item.icon {
                     case .blank:
                         EmptyView()
                     case .symbol(let name):
                         Image(systemName: name)
-                            .font(Theme.Typography.menuIcon)
+                            .font(metrics.typography.menuIcon)
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
-                            .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                            .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     case .asset(let name):
                         Image(name)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
-                            .frame(width: Theme.Size.menuBrandIcon, height: Theme.Size.menuBrandIcon)
-                            .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                            .frame(width: metrics.size.menuBrandIcon, height: metrics.size.menuBrandIcon)
+                            .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     case .file(let path):
                         MenuFileIcon(path: path)
                     }
                 }
                 Text(item.title)
-                    .font(Theme.Typography.menuRow)
+                    .font(metrics.typography.menuRow)
                     .foregroundStyle(item.isDestructive ? Color.red : Color.primary)
                     .lineLimit(1)
-                Spacer(minLength: Theme.Spacing.sm)
+                Spacer(minLength: metrics.spacing.sm)
                 if let detail = item.detail {
                     Text(detail)
                         // Smaller than the title it trails: a stated value, not a second label.
-                        .font(Theme.Typography.keyCap)
+                        .font(metrics.typography.keyCap)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         // A notation opens with what identifies it, so the tail is what can go.
                         .truncationMode(.tail)
                 }
                 if let shortcut = item.shortcut {
-                    HStack(spacing: Theme.Spacing.xxs) {
+                    HStack(spacing: metrics.spacing.xxs) {
                         ForEach(Array(shortcut.enumerated()), id: \.offset) { _, glyph in
                             KeyCapChip(text: String(glyph), style: .outline)
                         }
                     }
                 }
             }
-            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.horizontal, metrics.spacing.md)
             // Stated, not padded: the height maths above counts rows, so a row is one exact height.
             .frame(
-                maxWidth: .infinity, minHeight: Theme.Size.menuRowHeight,
-                maxHeight: Theme.Size.menuRowHeight, alignment: .leading
+                maxWidth: .infinity, minHeight: metrics.size.menuRowHeight,
+                maxHeight: metrics.size.menuRowHeight, alignment: .leading
             )
             .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.menuRow, style: .continuous)
                     .fill(selected ? Theme.Colors.menuHover : Color.clear)
             )
         }
@@ -260,6 +262,7 @@ private struct PopoverMenuRow: View {
 struct MenuFileIcon: View {
     let path: String
     @State private var image: NSImage?
+    @Environment(\.metrics) private var metrics
 
     init(path: String) {
         self.path = path
@@ -274,7 +277,7 @@ struct MenuFileIcon: View {
                 Color.clear
             }
         }
-        .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+        .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
         .task(id: IconRequest(path)) {
             guard image == nil else { return }
             image = await IconCache.loadAsync(forFile: path)

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Row order comes from `ExtensionScreen`, so the palette's flat index matches the draw.
 struct ExtensionListView: View {
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let screen: ExtensionScreen
     let selection: Int
@@ -19,7 +20,7 @@ struct ExtensionListView: View {
             } else if screen.showsDetail {
                 HStack(spacing: 0) {
                     rowList
-                        .frame(width: Theme.Size.clipboardListWidth)
+                        .frame(width: metrics.size.clipboardListWidth)
                     Rectangle().fill(Theme.Colors.separator).frame(width: 1)
                     detailPane
                 }
@@ -36,21 +37,21 @@ struct ExtensionListView: View {
         if screen.isLoading {
             EmptyResults(text: "Loading…")
         } else if let empty = screen.emptyView {
-            VStack(spacing: Theme.Spacing.md) {
+            VStack(spacing: metrics.spacing.md) {
                 ExtensionIconView(
                     resolved: ExtensionImage.resolve(
                         empty.props["icon"], assetsPath: assetsPath, isDark: isDark),
                     size: 42)
                 Text(empty.string("title") ?? "Nothing here")
-                    .font(Theme.Typography.rowTitle)
+                    .font(metrics.typography.rowTitle)
                 if let description = empty.string("description") {
                     Text(description)
-                        .font(Theme.Typography.rowTrailing)
+                        .font(metrics.typography.rowTrailing)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
             }
-            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.horizontal, metrics.spacing.xl)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             EmptyResults(text: "No results")
@@ -83,9 +84,9 @@ struct ExtensionListView: View {
                         }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -107,8 +108,8 @@ struct ExtensionListView: View {
             grid(
                 layout: layout,
                 tileWidth: layout.tileWidth(
-                    inWidth: geometry.size.width - Theme.Spacing.md * 2,
-                    spacing: Theme.Spacing.sm))
+                    inWidth: geometry.size.width - metrics.spacing.md * 2,
+                    spacing: metrics.spacing.sm))
         }
     }
 
@@ -117,9 +118,9 @@ struct ExtensionListView: View {
             ScrollView {
                 LazyVGrid(
                     columns: Array(
-                        repeating: GridItem(.flexible(), spacing: Theme.Spacing.sm),
+                        repeating: GridItem(.flexible(), spacing: metrics.spacing.sm),
                         count: layout.columns),
-                    spacing: Theme.Spacing.sm
+                    spacing: metrics.spacing.sm
                 ) {
                     ForEach(screen.items) { item in
                         ExtensionGridCell(
@@ -135,9 +136,9 @@ struct ExtensionListView: View {
                         .selectionFrame(item.index == selection)
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -164,6 +165,7 @@ struct ExtensionListView: View {
 
 /// One `List.Item`: icon, title, subtitle, then its accessories right-aligned.
 private struct ExtensionItemRow: View {
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let node: RenderNode
     let selected: Bool
@@ -178,29 +180,29 @@ private struct ExtensionItemRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: metrics.spacing.lg) {
             ExtensionIconView(
                 resolved: ExtensionImage.resolve(node.props["icon"], assetsPath: assetsPath, isDark: isDark))
             Text(node.string("title") ?? "")
-                .font(Theme.Typography.rowTitle)
+                .font(metrics.typography.rowTitle)
                 .lineLimit(1)
                 // A detail list is 290pt wide, and an accessory would otherwise win the squeeze.
                 .layoutPriority(1)
             if !compact, let subtitle = node.string("subtitle"), !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: Theme.Spacing.sm)
+            Spacer(minLength: metrics.spacing.sm)
             // Raycast draws the accessories it is given, and a quota row's signal is all in them.
             ExtensionAccessoriesView(
                 accessories: node.array("accessories"), assetsPath: assetsPath)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.vertical, metrics.spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous).fill(fill)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
         )
         .armedHover($hovered)
     }
@@ -208,12 +210,13 @@ private struct ExtensionItemRow: View {
 
 /// `List.Item.Accessory` values: text, a tag, a date, an icon, or a combination.
 struct ExtensionAccessoriesView: View {
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let accessories: [RenderValue]
     let assetsPath: String?
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: metrics.spacing.sm) {
             ForEach(Array(accessories.enumerated()), id: \.offset) { _, accessory in
                 if let fields = accessory.objectValue {
                     accessoryView(fields)
@@ -224,7 +227,7 @@ struct ExtensionAccessoriesView: View {
 
     @ViewBuilder
     private func accessoryView(_ fields: [String: RenderValue]) -> some View {
-        HStack(spacing: Theme.Spacing.xs) {
+        HStack(spacing: metrics.spacing.xs) {
             if let icon = fields["icon"] {
                 ExtensionIconView(
                     resolved: ExtensionImage.resolve(icon, assetsPath: assetsPath, isDark: isDark), size: 13)
@@ -234,7 +237,7 @@ struct ExtensionAccessoriesView: View {
             }
             if let text = ExtensionAccessoriesView.label(fields["text"]) {
                 Text(text)
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .foregroundStyle(
                         ExtensionImage.color(fields["text"]?.objectValue?["color"], isDark: isDark)
                             ?? Theme.Colors.textSecondary
@@ -243,7 +246,7 @@ struct ExtensionAccessoriesView: View {
             }
             if let date = ExtensionAccessoriesView.date(fields["date"]) {
                 Text(date, format: .relative(presentation: .numeric))
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .lineLimit(1)
             }
@@ -263,9 +266,9 @@ struct ExtensionAccessoriesView: View {
         if let text {
             let color = ExtensionImage.color(fields?["color"], isDark: isDark) ?? Theme.Colors.textSecondary
             Text(text)
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(color)
-                .padding(.horizontal, Theme.Spacing.xs)
+                .padding(.horizontal, metrics.spacing.xs)
                 .padding(.vertical, 1)
                 .background(
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
@@ -291,6 +294,7 @@ struct ExtensionAccessoriesView: View {
 
 /// One `Grid.Item`: content sized to the tile the `Grid`'s props ask for, title underneath.
 private struct ExtensionGridCell: View {
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let node: RenderNode
     let selected: Bool
@@ -320,16 +324,16 @@ private struct ExtensionGridCell: View {
     }
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.xs) {
+        VStack(spacing: metrics.spacing.xs) {
             tile
             if let title = node.string("title") {
                 Text(title)
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .lineLimit(1)
             }
             if let subtitle = node.string("subtitle") {
                 Text(subtitle)
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -357,7 +361,7 @@ private struct ExtensionGridCell: View {
 
     /// Filling content shares the tile's corner; inset artwork is small enough to need a tighter one.
     private var contentRadius: Double {
-        layout.inset == .zero ? ExtensionGridLayout.tileRadius : Theme.Radius.thumbnail
+        layout.inset == .zero ? ExtensionGridLayout.tileRadius : metrics.radius.thumbnail
     }
 
     /// `content` is an `ImageLike` or `{value, tooltip}` wrapping one — both `resolve`'s job.
