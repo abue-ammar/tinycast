@@ -11,7 +11,8 @@ struct ClipboardList: View {
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
     let onActions: (ClipboardItem) -> Void
-    /// A dropped entry is a finished errand, so the palette leaves as it does after a paste.
+    /// Nil when the entry has nothing left to hand over, which is reported rather than dragged.
+    let onDragPayload: (ClipboardItem) -> ClipDragPayload?
     let onDropped: () -> Void
     @Environment(ClipboardStore.self) private var store
 
@@ -65,19 +66,13 @@ struct ClipboardList: View {
                             )
                             .selectionFrame(item.id == selectedID)
                             .contentShape(Rectangle())
-                            // Simultaneous gestures, and the light catcher: `.contextMenu` stalls.
-                            .onTapGesture { onSelect(item) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    onSelect(item)
-                                    onActivate()
-                                }
-                            )
+                            // The light catcher: `.contextMenu` stalls.
                             .onRightClick { onActions(item) }
-                            // Last, so the drag overlay sits above the right-click catcher and
-                            // claims the left button the gestures above no longer see.
+                            // Last, so it sits above the right-click catcher. It claims the left
+                            // button outright, which is why the click lives here and not in a tap
+                            // gesture underneath.
                             .clipDraggable(
-                                store.dragPayload(for: item),
+                                payload: { onDragPayload(item) },
                                 onSelect: { onSelect(item) },
                                 onActivate: {
                                     onSelect(item)

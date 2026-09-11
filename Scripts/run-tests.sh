@@ -128,12 +128,14 @@ run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swif
                            Tinycast/Features/Clipboard/Model/ColorValue.swift \
                            Tinycast/Features/Clipboard/Model/ColorFormat.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift
-run clipboard-search-test  Tinycast/Features/Clipboard/Model/*.swift
-run clipboard-text-test    Tinycast/Features/Clipboard/Model/*.swift \
+# `Q` is the URL detector a drag payload builds its link with, rather than a second one.
+Q=Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift
+run clipboard-search-test  Tinycast/Features/Clipboard/Model/*.swift $Q
+run clipboard-text-test    Tinycast/Features/Clipboard/Model/*.swift $Q \
                            Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardTextWorker.swift
-run clipboard-worker-test  Tinycast/Features/Clipboard/Model/*.swift \
+run clipboard-worker-test  Tinycast/Features/Clipboard/Model/*.swift $Q \
                            Tinycast/Features/Clipboard/Service/ClipboardTextWorker.swift
 run pasteboard-test        Tinycast/Platform/PasteboardFiles.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \

@@ -1,53 +1,32 @@
 import AppKit
 import SwiftUI
 
-/// What a row hands to the app it is dropped on. The flavours are what receivers actually read:
-/// a file URL for anything on disk, a URL *and* its text for a link, plain text for the rest.
-enum ClipDragPayload: Equatable, Sendable {
-    /// The stored blob for an image, the referenced file for a `.file` entry.
-    case file(URL)
-    /// A browser wants `public.url`, a text field wants the string. Writing both serves either.
-    case link(URL, String)
-    case text(String)
-
-    /// A bare domain is still a link, and a browser rejects one without a scheme, so it gets
-    /// `https://` — the same assumption the address bar makes.
-    static func webURL(from text: String) -> URL? {
-        let token = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty else { return nil }
-        if token.contains("://") { return URL(string: token) }
-        return URL(string: "https://" + token)
-    }
-}
-
-/// Drags a clipboard entry out to another app, so reaching one costs a gesture rather than Reveal
-/// in Finder or a paste into a scratch window.
+/// Drags a clipboard entry out to another app.
 ///
-/// An overlay that tracks the gesture itself, like `WindowDragHandle`: the hosting view eats the
-/// click first, and SwiftUI's `onDrag` hands over an `NSItemProvider` with no say in the operation
-/// mask. That say is the point. Images live under `ClipboardStore.imagesDir` on the boot volume,
-/// where a same-volume drop defaults to a **move** — which would carry the blob out of the history
-/// and strand its row. An `NSDraggingSource` answers `.copy` and the entry stays.
+/// AppKit rather than SwiftUI's `onDrag`, which takes an `NSItemProvider` and cannot declare the
+/// operation mask. Images live under `imagesDir` on the boot volume, where a same-volume drop
+/// defaults to a move and would carry the blob out of the history. Only `NSDraggingSource` can
+/// answer `.copy`.
 struct ClipDragHandle: NSViewRepresentable {
-    let payload: ClipDragPayload
+    /// Read when the drag starts, not when the row draws: resolving it stats the file.
+    var payload: () -> ClipDragPayload?
     var onSelect: () -> Void
     var onActivate: () -> Void
     var onDropped: () -> Void
 
-    func makeNSView(context: Context) -> NSView { ClipDragView(payload: payload) }
+    func makeNSView(context: Context) -> NSView { ClipDragView() }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        guard let view = nsView as? ClipDragView else { return }
-        view.payload = payload
-        view.bind(onSelect: onSelect, onActivate: onActivate, onDropped: onDropped)
+        (nsView as? ClipDragView)?
+            .bind(payload: payload, onSelect: onSelect, onActivate: onActivate, onDropped: onDropped)
     }
 }
 
 extension View {
-    /// Marks a row as a drag source. The handle owns the press outright, so it takes the click and
-    /// the double click the row's own gestures used to answer.
+    /// The handle owns the press, so it answers the click and the double click too — a SwiftUI tap
+    /// gesture underneath it never sees either.
     func clipDraggable(
-        _ payload: ClipDragPayload,
+        payload: @escaping () -> ClipDragPayload?,
         onSelect: @escaping () -> Void,
         onActivate: @escaping () -> Void,
         onDropped: @escaping () -> Void
@@ -59,45 +38,35 @@ extension View {
     }
 }
 
-/// Claims mouse-down, then decides: past the slop it is a drag, otherwise it was the row's click.
 private final class ClipDragView: NSView, NSDraggingSource {
-    /// The slop AppKit itself allows before a press reads as a drag.
     private static let threshold: CGFloat = 4
-    /// The row thumbnail is already cached at this size, so the fallback costs no decode.
+    /// The row tile is already cached at this size, so the preview costs no decode.
     private static let previewPixel: CGFloat = 64
 
-    var payload: ClipDragPayload
+    private var payload: (() -> ClipDragPayload?)?
     private var onSelect: (() -> Void)?
     private var onActivate: (() -> Void)?
     private var onDropped: (() -> Void)?
 
-    init(payload: ClipDragPayload) {
-        self.payload = payload
-        super.init(frame: .zero)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
     func bind(
-        onSelect: @escaping () -> Void, onActivate: @escaping () -> Void,
-        onDropped: @escaping () -> Void
+        payload: @escaping () -> ClipDragPayload?, onSelect: @escaping () -> Void,
+        onActivate: @escaping () -> Void, onDropped: @escaping () -> Void
     ) {
+        self.payload = payload
         self.onSelect = onSelect
         self.onActivate = onActivate
         self.onDropped = onDropped
     }
 
-    /// The row's own gestures never see this press, so the click they used to handle lands here.
+    /// Tracks the gesture itself, like `WindowDragHandle`: the hosting view eats the click first.
     override func mouseDown(with event: NSEvent) {
         guard let window else { return }
-        // On the press, not the release: a drag that starts must carry the row it started on.
         onSelect?()
         if event.clickCount == 2 {
             onActivate?()
             return
         }
-        // Deltas off `mouseLocation`, so no view or window coordinate conversion can drift.
+        // Deltas off `mouseLocation`, so no coordinate conversion can drift.
         let start = NSEvent.mouseLocation
         var passedThreshold = false
         window.trackEvents(
@@ -113,19 +82,27 @@ private final class ClipDragView: NSView, NSDraggingSource {
             passedThreshold = true
             stop.pointee = true
         }
-        guard passedThreshold else { return }
-        beginDrag(with: event)
+        guard passedThreshold, let payload = payload?() else { return }
+        beginDrag(payload, with: event)
     }
 
-    private func beginDrag(with event: NSEvent) {
-        let item = NSDraggingItem(pasteboardWriter: pasteboardWriter())
-        item.setDraggingFrame(bounds, contents: dragImage())
-        beginDraggingSession(with: [item], event: event, source: self)
+    private func beginDrag(_ payload: ClipDragPayload, with event: NSEvent) {
+        let image = dragImage(for: payload)
+        let item = NSDraggingItem(pasteboardWriter: pasteboardWriter(for: payload))
+        // Sized to the image and centred on the cursor; the row's shape would stretch a thumbnail.
+        let origin = convert(event.locationInWindow, from: nil)
+        item.setDraggingFrame(
+            NSRect(
+                x: origin.x - image.size.width / 2, y: origin.y - image.size.height / 2,
+                width: image.size.width, height: image.size.height),
+            contents: image)
+        let session = beginDraggingSession(with: [item], event: event, source: self)
+        // A refused drop flies back, so a drag that achieved nothing says so.
+        session.animatesToStartingPositionsOnCancelOrFail = true
     }
 
-    /// `NSURL` writes the file URL every receiver understands, from Finder to a browser upload.
     /// A link writes two types from one item, so the receiver takes whichever it reads.
-    private func pasteboardWriter() -> NSPasteboardWriting {
+    private func pasteboardWriter(for payload: ClipDragPayload) -> NSPasteboardWriting {
         switch payload {
         case .file(let url):
             return url as NSURL
@@ -139,38 +116,56 @@ private final class ClipDragView: NSView, NSDraggingSource {
         }
     }
 
-    /// The row as drawn, which is what SwiftUI's own drag preview shows and the only preview a text
-    /// row can have. Converting into the superview keeps a container larger than the row honest.
-    private func dragImage() -> NSImage? {
-        guard let host = superview else { return fallbackImage() }
-        let rect = convert(bounds, to: host)
-        guard !rect.isEmpty, let rep = host.bitmapImageRepForCachingDisplay(in: rect) else {
-            return fallbackImage()
+    /// Drawn, never snapshotted: SwiftUI renders into layers, so `cacheDisplay` on the row returns
+    /// a transparent bitmap and the drag carries nothing visible.
+    private func dragImage(for payload: ClipDragPayload) -> NSImage {
+        switch payload {
+        case .file(let url):
+            // Cache-only: a decode on mouse-down stalls the frame the drag begins on.
+            return ImageThumbnail.cached(url, maxPixel: Self.previewPixel)
+                ?? FilePreviewThumbnail.cached(url, maxPixel: Self.previewPixel)
+                ?? NSWorkspace.shared.icon(forFile: url.path)
+        case .link(_, let text), .text(let text):
+            return Self.textImage(text)
         }
-        host.cacheDisplay(in: rect, to: rep)
-        let image = NSImage(size: rect.size)
-        image.addRepresentation(rep)
-        return image
     }
 
-    /// Cache-only lookups: a decode on mouse-down would stall the frame the drag begins on.
-    private func fallbackImage() -> NSImage? {
-        guard case .file(let url) = payload else { return nil }
-        return ImageThumbnail.cached(url, maxPixel: Self.previewPixel)
-            ?? FilePreviewThumbnail.cached(url, maxPixel: Self.previewPixel)
-            ?? NSWorkspace.shared.icon(forFile: url.path)
+    private static func textImage(_ copy: String) -> NSImage {
+        let line = copy.replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespaces)
+        let string = NSAttributedString(
+            string: String(line.prefix(60)),
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.labelColor
+            ])
+        let inset = NSSize(width: 10, height: 6)
+        let text = string.size()
+        let size = NSSize(
+            width: min(text.width, 320) + inset.width * 2, height: text.height + inset.height * 2)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.controlBackgroundColor.withAlphaComponent(0.95).setFill()
+        NSBezierPath(
+            roundedRect: NSRect(origin: .zero, size: size),
+            xRadius: Theme.Radius.thumbnail, yRadius: Theme.Radius.thumbnail
+        ).fill()
+        string.draw(
+            in: NSRect(
+                x: inset.width, y: inset.height, width: size.width - inset.width * 2,
+                height: text.height))
+        image.unlockFocus()
+        return image
     }
 
     // MARK: - NSDraggingSource
 
-    /// Copy, always. The store owns the blob it hands out, and a move would delete it.
+    /// Copy, always: the store owns the blob it hands out, and a move would delete it.
     func draggingSession(
         _ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
         .copy
     }
 
-    /// A drop that landed is a finished errand, so the palette gets out of the way like a paste.
     func draggingSession(
         _ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation
     ) {

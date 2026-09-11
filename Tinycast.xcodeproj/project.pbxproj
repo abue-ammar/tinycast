@@ -125,6 +125,7 @@
 		36784C964DB27B94A62EEAA3 /* tinycast.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6621A88681E993D49EEF07A3 /* tinycast.icon */; };
 		36968DFA1E201E681F0BCD42 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1306524F57602D90FCF153C /* Theme.swift */; };
 		36A6FC9C41CDBD4ADA1F8E87 /* AIModelDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68649D40F987D1CD24D1112 /* AIModelDiscovery.swift */; };
+		383A577E1A70AF702C474B0F /* ClipDragPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6491D532351DEB940B4FBD1A /* ClipDragPayload.swift */; };
 		3891DA96CC148D13893F4494 /* ShortcutCaptureSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B235DFF451FF4D52A8E44D00 /* ShortcutCaptureSession.swift */; };
 		3917193B62450F226297B3F1 /* SelectionReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 648F0F43FEEE537F6451756B /* SelectionReveal.swift */; };
 		39F5A11DD9D7C31AC720D4C0 /* QuicklinksSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79BC68E042182F7068220BB3 /* QuicklinksSettingsView.swift */; };
@@ -820,6 +821,7 @@
 		63E3B7CDDB6A9D790548648B /* ReleaseArchitecture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseArchitecture.swift; sourceTree = "<group>"; };
 		6420FE45699DC3E53907CAE3 /* AIInstructions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIInstructions.swift; sourceTree = "<group>"; };
 		648F0F43FEEE537F6451756B /* SelectionReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionReveal.swift; sourceTree = "<group>"; };
+		6491D532351DEB940B4FBD1A /* ClipDragPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDragPayload.swift; sourceTree = "<group>"; };
 		64EC07E163CE4F3D11FE7225 /* SymbolImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolImage.swift; sourceTree = "<group>"; };
 		65F1010FAC9C0EC4DBDE58A8 /* AIRequestBody.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequestBody.swift; sourceTree = "<group>"; };
 		6621A88681E993D49EEF07A3 /* tinycast.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = tinycast.icon; sourceTree = "<group>"; };
@@ -2756,6 +2758,7 @@
 				D381DD8CB296A6D5CFF90111 /* ClipboardFileKind.swift */,
 				682E7F6534CB4014969D98E0 /* ClipboardFilter.swift */,
 				201FCD08ACA933378876385B /* ClipboardStore.swift */,
+				6491D532351DEB940B4FBD1A /* ClipDragPayload.swift */,
 				025D7D760DE2FD02C0D7D9D2 /* ColorFormat.swift */,
 				8756FBB625DFAE931D8D5D9D /* ColorSpaces.swift */,
 				CA9287418DC6C04437FB4BAF /* ColorValue.swift */,
@@ -2986,6 +2989,7 @@
 				52D95C1FF343FCD57D5425A0 /* ChatSession.swift in Sources */,
 				E77BF5D26A6D9E9FC7E82259 /* ChatTranscriptView.swift in Sources */,
 				4E1BFE20BD4308D1EF05A5F2 /* ClipDrag.swift in Sources */,
+				383A577E1A70AF702C474B0F /* ClipDragPayload.swift in Sources */,
 				A320745F576C5915217DF113 /* ClipboardCoordinator.swift in Sources */,
 				40E28FFBE1DDE737D43A7836 /* ClipboardFileKind.swift in Sources */,
 				AD9753D6EAF202B6E31510EB /* ClipboardFilter.swift in Sources */,
