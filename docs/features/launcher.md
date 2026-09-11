@@ -555,6 +555,13 @@ A pane's list is also its display order, so `CommandID`'s declaration order is g
 Nothing keys on that order — `CommandCatalog.all` sorts by name and every preference keys on the raw
 value — so a command may be moved between owners without migrating anything.
 
+## Search Menu Items
+
+`CommandID.searchMenuItems` opens the frontmost app's main menu bar as a palette screen. It is a
+plain command entry — no new `AppEntry.Kind`, no `VisibilityStore` category and no
+`SettingsTab.ownedCommands` claim, so Settings › Commands owns its switch. Its invariants and
+internals live in [menu-search.md](menu-search.md).
+
 > **Invariant:** `Tests/fuzz-test.swift` compiles the real `Tinycast/Features/Launcher/Model/SearchRelevance.swift`, so
 > that file must stay Foundation-only and pure. There is no copy of the scorer to keep in sync.
 

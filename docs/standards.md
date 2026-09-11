@@ -74,6 +74,7 @@ fit the table.
 | `Runner` | Performs one effectful operation on request |
 | `Launcher` | An `NSWorkspace.open` wrapper specifically |
 | `Center` | The Carbon registration layer specifically |
+| `Access` | One surface's raw platform reads, shared so its walkers cannot disagree |
 | `Session` | Transient state for one in-progress interaction |
 | `State` | Shared observable state that persists nothing itself |
 | `Catalog` | Pure static namespace over a built-in list |
