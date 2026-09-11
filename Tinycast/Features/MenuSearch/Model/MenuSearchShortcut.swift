@@ -17,6 +17,24 @@ struct MenuSearchShortcut: Hashable, Sendable {
             hasControl: modifiers & 0b100 != 0)
     }
 
+    // AX reports special keys as PUA scalars no text font renders; map them to visible glyphs.
+    var displayCharacter: String {
+        guard character.unicodeScalars.count == 1,
+            let scalar = character.unicodeScalars.first
+        else { return character }
+        switch scalar.value {
+        case 0xF700: return "↑"
+        case 0xF701: return "↓"
+        case 0xF702: return "←"
+        case 0xF703: return "→"
+        case 0xF729: return "↖"
+        case 0xF72B: return "↘"
+        case 0xF72C: return "⇞"
+        case 0xF72D: return "⇟"
+        default: return character
+        }
+    }
+
     // Glyphs in the order macOS menus use, so a row reads like the menu it came from.
     var displayString: String? {
         guard !character.isEmpty, hasCommand || hasShift || hasOption || hasControl else {
@@ -27,7 +45,7 @@ struct MenuSearchShortcut: Hashable, Sendable {
         if hasOption { glyphs += "⌥" }
         if hasShift { glyphs += "⇧" }
         if hasCommand { glyphs += "⌘" }
-        return glyphs + character.uppercased()
+        return glyphs + displayCharacter.uppercased()
     }
 
     // One chip per cap, so rows reuse the launcher's keycap grammar instead of a glyph string.
@@ -38,7 +56,7 @@ struct MenuSearchShortcut: Hashable, Sendable {
         if hasOption { caps.append("⌥") }
         if hasShift { caps.append("⇧") }
         if hasCommand { caps.append("⌘") }
-        caps.append(character.uppercased())
+        caps.append(displayCharacter.uppercased())
         return caps
     }
 }

@@ -365,6 +365,13 @@ struct MenuSearchTests {
                 hasControl: false
             ).keycaps.isEmpty,
             "a chord with no glyph carries no chips")
+        let upArrow = MenuSearchShortcut.commandEquivalent(character: "\u{F700}", modifiers: 0b100)
+        expect(
+            upArrow?.displayString == "⌃⌘↑",
+            "a PUA arrow scalar renders as a visible glyph, never tofu")
+        expect(
+            upArrow?.keycaps == ["⌃", "⌘", "↑"],
+            "the chips carry the same mapped glyph")
     }
 
     static func snapshotDuplicates() {
