@@ -71,7 +71,8 @@ enum AIProviderFactory {
             return HTTPAIProvider(
                 configuration: AIHTTPConfiguration(
                     provider: connection.provider, baseURL: baseURL, model: model, effort: effort,
-                    disablesThinking: !settings.thinkingEnabled && connection.takesThinkingField),
+                    disablesThinking: effort == AIConnection.ReasoningOptions.noEffort
+                        && connection.takesThinkingField),
                 apiKey: key)
         }
     }

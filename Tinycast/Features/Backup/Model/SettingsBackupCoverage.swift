@@ -94,8 +94,6 @@ enum SettingsBackupCoverage {
             "The default model names an external AI destination; importing must not choose one.",
         AppSettingsKey.aiWebSearch.rawValue:
             "Whether prompts may reach a search engine is a choice each Mac makes for itself.",
-        AppSettingsKey.aiThinking.rawValue:
-            "Names how the endpoints this Mac reaches should answer, and no other Mac shares them.",
         AppSettingsKey.aiSystemPrompt.rawValue:
             "Standing instructions to a model are the one AI setting that changes every answer; an "
             + "import must not carry them onto another Mac unseen.",

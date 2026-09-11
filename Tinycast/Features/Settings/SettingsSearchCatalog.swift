@@ -258,9 +258,8 @@ enum SettingsSearchCatalog {
                 "base url", "openai", "anthropic", "ollama"
             ]),
         .init(.aiDefault, "Default model", keywords: ["llm", "gpt", "claude"]),
-        .init(.aiDefault, "Reasoning effort", keywords: ["thinking", "effort"]),
+        .init(.aiDefault, "Reasoning effort", keywords: ["thinking", "effort", "deepseek"]),
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
-        .init(.aiChat, "Thinking", keywords: ["reasoning", "deepseek"]),
         .init(
             .aiConversations, "Opens to",
             keywords: ["new chat", "last", "summon"]),

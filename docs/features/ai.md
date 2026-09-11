@@ -159,6 +159,17 @@ and reasoning efforts from `model/list`; OpenCode gets identifiers and model-spe
 `opencode models --pure --verbose`. Claude exposes the CLI's stable `sonnet`, `opus` and `haiku`
 aliases, with the CLI's effort levels on the supported Opus and Sonnet families.
 
+Turning thinking off is a reasoning effort, not a second control: `reasoningOptions(for:)` answers with
+the connection's catalogued efforts, or — for a connection with no catalog to publish one — `Default`
+and `None`. `takesThinkingField` decides who gets that pair: an OpenAI-shaped preset whose base URL is
+not that preset's own, because a preset pointed away from its own API is a gateway, and a gateway is
+the only destination Tinycast can offer the switch to honestly. Picking `None` sends
+`"thinking": {"type": "disabled"}`, which is how DeepSeek and the endpoints that copied its contract
+answer without reasoning first. A vendor API is never offered the pair and so is never sent a field it
+does not define — which matters precisely because the preset alone says nothing about the destination
+when every base URL is editable. Only `None` is ever written, so every other body is the one it always
+was, and the choice rides in `AIModelSelection.effort` like every other route's.
+
 ## Provider interface
 
 `AIProvider.stream(_:)` accepts provider-neutral messages, optional instructions, a maximum output
@@ -202,23 +213,12 @@ same in-window menu control as Clipboard's type filter and changes the chat rout
 message. For installed routes and OpenRouter models whose catalog reports the capability, it also
 shows the supported reasoning efforts and changes the chat effort for the next message.
 Other API routes keep their provider default because their model catalogs expose no portable effort
-contract; Settings → AI settles that for them instead, with one **Thinking** toggle. Neither change interrupts a response already streaming; stopping one is the pill's job,
+contract. Neither change interrupts a response already streaming; stopping one is the pill's job,
 so the header never has to fit a third control beside the switcher.
 
 The second footer control is the palette's normal Actions (`⌘K`) menu. It owns New Chat, Chat History
 and AI Settings, plus Stop Response and Copy Last Response when those actions apply. Chat adds no
 separate footer design and no independent window.
-
-`Thinking` sits beside `Web search` in Settings → AI → Chat and is on by default, because an endpoint
-that reasons was chosen for that. Off sends `"thinking": {"type": "disabled"}` with each request, which
-is how DeepSeek and the endpoints that copied its contract answer without reasoning first. It is one
-setting rather than one per connection, for the reason Web search is: the reader is stating how they
-want answers, not configuring a destination. `AIConnection.takesThinkingField` decides who hears it —
-an OpenAI-shaped preset whose base URL is not that preset's own, because a preset pointed away from its
-own API is a gateway. A vendor API is therefore never sent a field it does not define, which matters
-precisely because the preset alone says nothing about the destination when every base URL is editable.
-Only the off state is ever written, so every other body is the one it always was. The key is excluded
-from settings backups with every other AI key.
 
 `AIChatState` turns provider-neutral stream events into one live assistant message. Thinking state is
 shown without entering the transcript, partial text is preserved on failure, cancellation invalidates

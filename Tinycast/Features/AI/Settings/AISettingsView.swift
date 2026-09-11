@@ -129,12 +129,6 @@ struct AISettingsView: View {
                 Text(
                     "Sends prompts on to a search engine when the route offers one — Codex and OpenRouter.")
             }
-            Toggle(isOn: $settings.thinkingEnabled) {
-                SettingsRowTitle(.aiChat, "Thinking")
-                Text(
-                    "Off asks for a direct answer, so a simple question comes back sooner. Reaches a "
-                        + "connection pointed at a custom endpoint, such as DeepSeek's.")
-            }
         } header: {
             SettingsSectionHeader(.aiChat)
         } footer: {

@@ -16,10 +16,6 @@ final class AISettingsStore {
     var webSearchEnabled: Bool {
         didSet { defaults.set(webSearchEnabled, forKey: AppSettingsKey.aiWebSearch.rawValue) }
     }
-    /// On by default: an endpoint that reasons was chosen for that, and off is the exception.
-    var thinkingEnabled: Bool {
-        didSet { defaults.set(thinkingEnabled, forKey: AppSettingsKey.aiThinking.rawValue) }
-    }
     /// Appended to `AIInstructions.preamble` on every turn, so it is billed on every turn.
     var systemPrompt: String {
         didSet { defaults.set(systemPrompt, forKey: AppSettingsKey.aiSystemPrompt.rawValue) }
@@ -69,8 +65,6 @@ final class AISettingsStore {
             defaults.data(forKey: AppSettingsKey.aiDefaultModel.rawValue))
         webSearchEnabled =
             defaults.object(forKey: AppSettingsKey.aiWebSearch.rawValue) as? Bool ?? false
-        thinkingEnabled =
-            defaults.object(forKey: AppSettingsKey.aiThinking.rawValue) as? Bool ?? true
         systemPrompt = defaults.string(forKey: AppSettingsKey.aiSystemPrompt.rawValue) ?? ""
         systemPromptEnabled =
             defaults.object(forKey: AppSettingsKey.aiSystemPromptEnabled.rawValue) as? Bool ?? true
@@ -119,19 +113,19 @@ final class AISettingsStore {
             if connection.models.contains(model) {
                 defaultModel = .api(
                     connection: connection.id, model: model,
-                    effort: connection.reasoningOptions?[model]?.resolvedEffort(effort))
+                    effort: connection.reasoningOptions(for: model)?.resolvedEffort(effort))
             } else {
                 defaultModel = connection.models.first.map {
                     .api(
                         connection: connection.id, model: $0,
-                        effort: connection.reasoningOptions?[$0]?.resolvedEffort(nil))
+                        effort: connection.reasoningOptions(for: $0)?.resolvedEffort(nil))
                 }
             }
         }
         if defaultModel == nil, let model = connection.models.first {
             defaultModel = .api(
                 connection: connection.id, model: model,
-                effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
+                effort: connection.reasoningOptions(for: model)?.resolvedEffort(nil))
         }
     }
 
@@ -224,7 +218,7 @@ final class AISettingsStore {
             if let model = connection.models.first {
                 return .api(
                     connection: connection.id, model: model,
-                    effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
+                    effort: connection.reasoningOptions(for: model)?.resolvedEffort(nil))
             }
         }
         return nil

@@ -99,7 +99,7 @@ struct AIProviderTests {
         toolCatalogsAndTurnsEncodePerProvider()
         toolArgumentsSurviveArrivingInFragments()
         toolCapabilitiesFollowTheRoute()
-        thinkingIsOnUntilSettingsTurnItOff()
+        aGatewayOffersNoneAsItsReasoningEffort()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -267,47 +267,45 @@ struct AIProviderTests {
     }
 
     /// A body that named the default would 400 on every endpoint without a thinking mode.
-    static func thinkingIsOnUntilSettingsTurnItOff() {
-        let suite = "tinycast.thinking.\(UUID().uuidString)"
-        let defaults = isolatedDefaults(suite)
-        defer { discardSuite(suite, defaults) }
-
-        let fresh = AISettingsStore(defaults: defaults)
-        expect(fresh.thinkingEnabled, "thinking is on until the reader turns it off")
-        fresh.thinkingEnabled = false
-        expect(
-            AISettingsStore(defaults: defaults).thinkingEnabled == false,
-            "and the choice persists")
-
+    static func aGatewayOffersNoneAsItsReasoningEffort() {
         let gateway = AIConnection(
             provider: .openAI, baseURL: "https://api.fusioncode.app/v1", models: ["m"])
         expect(
-            gateway.takesThinkingField,
-            "a preset pointed away from its own API is a gateway, which may take the field")
+            gateway.reasoningOptions(for: "m")?.efforts == ["default", "none"],
+            "a preset pointed away from its own API offers the one effort a gateway can honour")
         expect(
-            !AIConnection(provider: .openAI, models: ["m"]).takesThinkingField,
-            "a preset on its own API never does, because a vendor rejects what it does not define")
+            gateway.reasoningOptions(for: "m")?.resolvedEffort(nil) == "default",
+            "and reasoning stays on until the reader picks None")
         expect(
-            !AIConnection(provider: .anthropic, baseURL: "https://gateway.example", models: ["m"])
-                .takesThinkingField,
+            AIConnection(provider: .openAI, models: ["m"]).reasoningOptions(for: "m") == nil,
+            "a preset on its own API offers none, because a vendor rejects what it does not define")
+        expect(
+            AIConnection(provider: .anthropic, baseURL: "https://gateway.example", models: ["m"])
+                .reasoningOptions(for: "m") == nil,
             "the Anthropic shape is out of scope whatever it points at")
 
+        let catalogued = AIConnection(
+            id: UUID(), provider: .openRouter, baseURL: "https://gateway.example", models: ["m"],
+            reasoningOptions: ["m": .init(efforts: ["high", "low"], defaultEffort: "high")])
+        expect(
+            catalogued.reasoningOptions(for: "m")?.efforts == ["high", "low"],
+            "a published catalog always wins over the synthesized switch")
+
         let turn = AIRequest(messages: [AIMessage(role: .user, text: "hi")])
+        let url = URL(string: "https://api.fusioncode.app/v1")!
         let on = AIRequestBody.make(
             turn,
-            configuration: AIHTTPConfiguration(
-                provider: .openAI, baseURL: URL(string: "https://api.fusioncode.app/v1")!,
-                model: "m"))
-        expect(on["thinking"] == nil, "thinking on sends no key at all")
+            configuration: AIHTTPConfiguration(provider: .openAI, baseURL: url, model: "m"))
+        expect(on["thinking"] == nil, "reasoning left alone sends no key at all")
 
         let off = AIRequestBody.make(
             turn,
             configuration: AIHTTPConfiguration(
-                provider: .openAI, baseURL: URL(string: "https://api.fusioncode.app/v1")!,
-                model: "m", disablesThinking: true))
+                provider: .openAI, baseURL: url, model: "m", effort: "none",
+                disablesThinking: true))
         expect(
             (off["thinking"] as? [String: String])?["type"] == "disabled",
-            "thinking off asks the endpoint to answer directly")
+            "None asks the endpoint to answer directly")
     }
 
     static func providerPresetsResolveEndpoints() {
