@@ -39,6 +39,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     var isVisible: Bool { panel?.isVisible ?? false }
 
+    /// What the palette covered when it was summoned, for anything it expands into on dismissal.
+    var previousTarget: InjectionTarget? {
+        InjectionTarget.behindPalette(ownWindow: previousOwnWindow, app: previousApp)
+    }
+
     func show() {
         Signposts.interval("PaletteWindowController.show") {
             // Summoned over one of our own windows: there is no external paste or focus target.

@@ -30,8 +30,8 @@ provider protocol and the connections behind it.
   through `DialogController` first and then calls `Permissions.ensureAccessibility()`, the pattern
   `SnippetCoordinator.setSnippetsEnabled` established. Everything else — a shortcut press, a
   delivery — uses `isAccessibilityTrusted()` and degrades to a HUD.
-- **Tinycast is never the target.** `QuickActionRunner.selection(in:using:)` refuses our own bundle
-  identifier, and `TextInjector.targetAcceptsInjection` refuses it again before every event post,
+- **Tinycast is never an event target.** `QuickActionRunner.selection(in:using:)` refuses our own
+  bundle identifier, and `TextInjector.targetAcceptsInjection` refuses it again before every event post,
   along with anything raised while Secure Event Input is up. A shortcut pressed with Settings
   frontmost, or in a password field, does nothing and says so.
 - **One run at a time.** Two overlapping runs would race for one selection, and the second would

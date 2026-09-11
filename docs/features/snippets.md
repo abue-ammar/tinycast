@@ -16,6 +16,12 @@ another app.
 - **All of `Model/` and `Service/` compiles into `snippets-test`** (it globs both), so the model, Markdown
   serializer, template engine, repository and keyword policies stay Foundation-only, and the AppKit files
   there keep their dependencies to what the harness can stub.
+- **Expansion goes where the caret is, which is not the frontmost application.** Our panels are
+  non-activating, so a key window of ours receives the keystrokes while `frontmostApplication` still
+  names the app behind it. `InjectionTarget.current()` resolves the destination from
+  `NSApp.keyWindow` first, and only falls back to the frontmost app when no window of ours holds key.
+  A key window of ours that is *not* an `InjectableTextView` — the palette's own search field, a
+  Settings form — resolves to no target at all, so a keyword typed there expands nowhere.
 - The on-disk Markdown format is user-authored and user-editable — an interchange format, not an internal
   one.
 
@@ -192,8 +198,9 @@ inactivity. It is capped at 256 characters. Keywords are matched case-insensitiv
 duplicates resolve by file identity. Tinycast-tagged synthetic events are ignored.
 
 Immediately before deleting a matched keyword and before inserting its expansion, automatic delivery
-re-checks consent, both permissions, Secure Event Input, the captured target app, and cancellation
-generation. A failed gate leaves the typed keyword untouched.
+re-checks consent, both permissions, Secure Event Input, the captured target, and cancellation
+generation. A failed gate leaves the typed keyword untouched. Delivery into one of our own editors
+gates on consent and the generation alone: there is nothing to grant, activate or post.
 
 ## Search Snippets
 
@@ -242,7 +249,23 @@ not report completion and therefore cannot show it.
 
 ## Text delivery and pasteboard safety
 
-Delivery is one contract, in this order, and every clause below is a rule in it.
+There are two delivery tiers, and the target picks which one runs.
+
+`InjectionTarget.ownEditor` is one of our own views — today only `NoteTextView`, which opts in by
+adopting `InjectableTextView`. It is written in process with `insertText(_:replacementRange:)`:
+undoable in the editor's own `UndoManager`, and needing no Accessibility grant, no pasteboard lease,
+no app activation and no event posting. Rules 1, 3 and 4 below do not apply — our own storage is
+authoritative, so there is nothing to sniff for and nothing to read back.
+
+**Rule 2 applies to it more sharply than to any renderer.** The tap is `headInsertEventTap`, so it
+fires *before* AppKit delivers the keystroke to our own view: the first look is always one character
+stale. `.pending` only covers a document shorter than the keyword; with anything typed before it, the
+same staleness reads as `.rejected` and fails closed. So this tier **leads with the wait** — it sleeps
+one convergence interval before it inspects at all, then polls on the shared budget. In practice the
+keyword has landed after a single 5 ms pass.
+
+`InjectionTarget.external` is another application, and it takes the contract below, in this order,
+where every clause is a rule in it.
 
 1. The focused element exposes `AXSelectedTextMarkerRange` → a renderer surface. Skip Accessibility.
 2. The keyword is not at the caret yet → wait, up to 40 ms. Never arrives → events. Wrong → refuse.
@@ -258,7 +281,7 @@ marker range is the reliable tell, so those targets never take the Accessibility
 `accessibilityTextState` skips them for the same reason: a value that never moves cannot confirm a
 paste either.
 
-**Rule 2: too little text is not the same as the wrong text.** `AccessibilityReplacementPolicy`
+**Rule 2: too little text is not the same as the wrong text.** `TextReplacementPolicy`
 `.pending` means the value is shorter than the keyword — the renderer has not caught up — and is
 retried for up to eight 5 ms passes. `.rejected` means there was enough text and it was not the
 keyword, which is a genuine mismatch and stops delivery. Only an automatic expansion waits; an
