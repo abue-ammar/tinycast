@@ -558,6 +558,16 @@ struct RootPaletteView: View {
                 if menuOpen { closeMenus() }
                 return .handled
             }
+            // ⇧⌘H mirrors the Hide from Search row, on that row's own guard, and closes the menu.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.contains(.command), press.modifiers.contains(.shift),
+                    ASCIIKeyboardLayout.matches(press.key, character: "h"),
+                    !isCollapsed, let launcher = screen as? LauncherScreen
+                else { return .ignored }
+                guard launcher.hideFromSearch(at: selection(in: launcher)) else { return .ignored }
+                if menuOpen { closeMenus() }
+                return .handled
+            }
             // Both cases, Shift uppercasing the key; the compact bar shows no target.
             .onKeyPress(phases: .down) { press in
                 guard press.modifiers.contains(.control), press.modifiers.contains(.shift),

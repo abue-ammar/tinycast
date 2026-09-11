@@ -211,7 +211,8 @@ struct LauncherScreen: PaletteScreen {
                     core.launcherCoordinator.resetRanking(for: app)
                     // Reset can move the item; keep the highlight on the item whose action ran.
                     if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }
-                })
+                },
+                onHideFromSearch: { _ = hideFromSearch(at: selection) })
         case .fallback(let fallback, let app):
             return FallbackActionsMenu.content(
                 fallback: fallback, entry: app, query: vm.query, core: core)
@@ -315,6 +316,16 @@ struct LauncherScreen: PaletteScreen {
     private func favoriteIndex(of app: AppEntry) -> Int? {
         guard let index = results.firstIndex(of: app), index < favoriteCount else { return nil }
         return index
+    }
+
+    /// ⇧⌘H — the row leaves the list for good, so the highlight takes the place it vacated.
+    func hideFromSearch(at selection: Int) -> Bool {
+        guard let app = entry(at: selection), app.canHideFromSearch,
+            !CommandCatalog.isQueryDriven(app), let index = results.firstIndex(of: app)
+        else { return false }
+        visibility.setItemVisible(false, for: app)
+        select(row: min(index, max(reorderedResults().count - 1, 0)))
+        return true
     }
 
     /// The list reorders under an action; keep the highlight and the scroll on the row that moved.
