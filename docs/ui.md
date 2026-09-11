@@ -10,7 +10,7 @@ Read this before touching any view body, `Theme` value, or the panel chrome.
 
 ## The look, in one paragraph
 
-Tinycast is a **Raycast-style command palette**: a borderless floating panel whose surface is just the
+Tinycast is a **command palette**: a borderless floating panel whose surface is just the
 OS behind-window blur under a 40% black scrim — there is no gray chrome. Everything on that surface is
 white at a fixed alpha ramp. The header and bottom bar **float over the list as fully transparent
 overlays**; there are no hard-edged bars, strips, or dividers. Rows don't clip under the bars, they

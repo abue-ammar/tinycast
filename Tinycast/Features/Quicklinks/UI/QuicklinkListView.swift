@@ -155,7 +155,7 @@ struct QuicklinkPreview: View {
         }
     }
 
-    /// Large enough to read as the artwork Raycast shows there, not as an oversized row icon.
+    /// Large enough to read as artwork, not as an oversized row icon.
     private static let glyphSize: CGFloat = 64
 }
 

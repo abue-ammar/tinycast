@@ -95,8 +95,7 @@ private struct ArgumentFieldChrome: ViewModifier {
         return Theme.Colors.cardFill
     }
 
-    /// Focus reads as a brighter edge. An untouched field looks like every other — Raycast marks
-    /// nothing up front — and only one left behind unanswered turns red.
+    /// Focus reads as a brighter edge; only a field left behind unanswered turns red.
     private var stroke: Color {
         if isFocused { return Color.accentColor }
         if isOwed { return Theme.Colors.destructive.opacity(0.55) }

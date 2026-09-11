@@ -657,7 +657,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         accessory.controlledValue ?? accessoryValues[accessory.nodeID]
     }
 
-    /// A pick persists where the dropdown asked it to, then tells the extension, as Raycast does.
+    /// A pick persists where the dropdown asked it to, then tells the extension.
     func chooseAccessorySelection(_ accessory: ExtensionSearchAccessory, value: String) {
         accessoryValues[accessory.nodeID] = value
         if let key = accessory.storageKey, let name = running?.extensionName {

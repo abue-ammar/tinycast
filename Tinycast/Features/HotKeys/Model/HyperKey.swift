@@ -9,7 +9,7 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    /// The single glyph Hyper shortcuts collapse to, Raycast-style.
+    /// The single glyph Hyper shortcuts collapse to.
     static let hyperGlyph = "✦"
 
     var title: String {

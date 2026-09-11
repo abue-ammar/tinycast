@@ -489,7 +489,7 @@ ever asks for location, and a `Model/` file never performs it.
 Where the region names the currency already written, the amount pairs with the **dollar** instead —
 the **euro** where the dollar is the one that was typed. Converting is the only reason to write a
 lone amount, so `25 eur` on a European Mac answering `25.00 EUR` said nothing at all; it now reads
-`28.95 USD`, which is what Raycast answers for the same query.
+`28.95 USD`.
 
 The target only applies where there is genuinely nothing else to say. An operator keeps the currency
 written (`$10 + €5` stays euros), an explicit target overrides everything, a trailing operator holds

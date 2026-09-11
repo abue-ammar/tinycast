@@ -131,8 +131,8 @@ standards, the design system and one document per feature.
 > encouraged. A PR that doesn't close an issue marked `approved` is closed automatically however good
 > the patch is, and the work is wasted. Docs-only fixes are the one exception.
 >
-> Tinycast has already borrowed what it wanted from Raycast, and the borrowing is done. Ask whether a
-> feature is wanted before you ask for it.
+> Tinycast's feature set is deliberately closed, and "another launcher has it" is not a reason on its
+> own. Ask whether a feature is wanted before you ask for it.
 
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first — it covers the memory budget every PR is held to,
 the before/after video requirement for visual changes, and why features get declined. Every PR fills
