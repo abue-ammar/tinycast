@@ -13,8 +13,9 @@ earliest scope wins).
   `orderedResults` *and* `HotKeyManager.perform`, so `Enable Applications` off stops the per-app chords
   as well as the rows — the guard sits in the one dispatch funnel, the way each feature switch already
   guards its own. The per-item checkbox beside it is the narrow tool: it hides one row and leaves that
-  row's shortcut firing. A new category must be wired into `VisibilityStore.allowsHotKey`, or its
-  chords keep running while its pane reads off.
+  row's shortcut firing, and **Hide from Search** in the ⌘K menu ticks that same checkbox off for the
+  kinds whose pane can tick it back on. A new category must be wired into
+  `VisibilityStore.allowsHotKey`, or its chords keep running while its pane reads off.
 - **One command, one pane, one switch.** `SettingsTab.ownedCommands` is the whole table of which pane
   lists a command's shortcut, alias and launcher checkbox. A feature that names its commands there
   already decides whether they exist, so `Enable Commands` neither lists nor gates them — two switches
@@ -245,8 +246,8 @@ entry is an ordinary `.command`, so `VisibilityStore` still gates it — Command
 and its `url` carries the destination instead of the catalog's `tinycast://` placeholder. Nothing
 learns from it and nothing pins it: `LauncherCoordinator.launch` skips `LauncherRankingStore` for a
 contextual row, the way it already skips a category listing, since a pasted URL is not a term any
-row should rank under; and ⇧⌘F is refused, because a favorite the empty query can never resolve is
-dead state a backup would then carry.
+row should rank under; and ⇧⌘F and ⇧⌘H are both refused, because a favorite — or a hidden-item key —
+the empty query can never resolve is dead state a backup would then carry.
 
 The row prints `AppEntry.subtitle` beside its name — the one field for an entry whose name alone
 can't say what it acts on.
@@ -316,8 +317,10 @@ alias in as a `.userAlias` at rank time, keying its memos on the store's revisio
 A launcher row shows its entry's alias as a small chip after the name, so what a badge-bearing
 result will answer to is visible without opening anything.
 
-Editing lives in Settings only — an alias is one-time configuration like a shortcut or a
-visibility checkbox, not a per-invocation action, so the ⌘K menu stays out of it. Every pane built
+Editing lives in Settings only — an alias is one-time configuration like a shortcut, not a
+per-invocation action, so the ⌘K menu stays out of it. Visibility is the one exception, and only in
+one direction: an unwanted result is noticed while searching, so ⌘K can hide a row, but putting it
+back is still the pane's checkbox. Every pane built
 on `LauncherItemsSection` puts an `AliasField` on each row, dressed like the `ShortcutRecorder`
 beside it; edits store as typed and trim when the field loses focus, and a blank means none. That
 list filters by **membership only**, keeping the index's name order — re-ranking it per keystroke
@@ -629,6 +632,32 @@ it any higher would attach it to `RootPaletteView`'s body and rebuild the whole 
 press, where a row-level read re-runs only the handful of rows the `LazyVStack` has realized. The
 digit each row shows is carried on its `Row` case from the section build, so no row searches for its
 own position.
+
+## Hiding one result
+
+**Hide from Search**, on a result's ⌘K menu and on **⇧⌘H**, writes exactly what the checkbox in
+Settings writes — `VisibilityStore.setItemVisible(false,…)` against the entry's `preferenceKey` — so
+the row leaves
+every search until that checkbox is ticked again. Nothing else moves: the app stays installed, its
+favorite, alias and learned ranking survive the round trip, and its shortcut keeps firing, because
+`allowsHotKey` gates by category and never by item.
+
+The row is offered only where Settings can undo it, and `KindDescriptor.canHideFromSearch` is that
+rule — per kind, and a new `Kind` case has to answer it to compile. Applications, System Settings,
+Commands, Quick Actions, System Actions, Window Commands and Window Layouts each draw a per-row
+checkbox in their pane, so they carry it. Custom commands, quicklinks and snippets do not: their
+panes list a record with its own switches, not a launcher checkbox. An extension's pane has one
+toggle for the whole extension, and it still reads *on* while a single command of it is hidden, so
+that kind stays out too — a hide nothing in Settings can visibly undo is a trap, not a shortcut.
+`AppActionsMenu` adds the query-driven guard the favorites row already uses: a typed URL lives only
+for its query and has no preference to write.
+
+Hiding shrinks the list under the action that ran it, so `LauncherScreen.hideFromSearch(at:)`
+re-reads the order and drops the highlight into the index the row vacated, clamped to what is left —
+the move `selectFavorite` already makes. The palette stays open on the same query, with focus
+untouched. One function answers both the menu row and the chord, and it re-tests eligibility rather
+than trusting the caller, so ⇧⌘H falls through to whatever else wants the press on a row that offers
+no such menu item.
 
 ## Reveal in Finder
 
