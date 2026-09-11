@@ -280,6 +280,7 @@ struct RootPaletteView: View {
                         .contentShape(Rectangle())
                         // Not a tap: a drifting press must still dismiss, the way a native menu's does.
                         .gesture(DragGesture(minimumDistance: 0).onEnded { _ in closeMenus() })
+                        .onRightClick { closeMenus() }
                         .allowsHitTesting(menuOpen)
                 }
                 // The menu lives in its own window; this only reports the one to hang it from.

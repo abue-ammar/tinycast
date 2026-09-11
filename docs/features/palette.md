@@ -393,6 +393,11 @@ and states where the highlight starts: the first row, except the pop-up-shaped m
 filter, the AI model and effort menus, an extension's search-bar dropdown — which open on the choice
 they already hold.
 
+**The click-away catcher answers either mouse button.** A left press arrives as a `DragGesture`, so a
+drifting press still dismisses the way a native menu's does; a right press arrives through
+`onRightClick`, whose `NSView` sits above the row catchers beneath it, so a right click on a row
+closes the open menu rather than reopening it on that row.
+
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
 
