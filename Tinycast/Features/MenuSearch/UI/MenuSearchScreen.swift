@@ -44,6 +44,8 @@ struct MenuSearchScreen: PaletteScreen {
                     scroll: scroll,
                     onActivate: { core.menuSearchCoordinator.activate($0) })
             }
+        case .excluded(let name):
+            EmptyResults(text: "Menu search is turned off for \(name)")
         case .selfTarget:
             EmptyResults(text: "Tinycast has no menu to search")
         case .menuLess(let name):

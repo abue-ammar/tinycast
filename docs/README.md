@@ -37,6 +37,7 @@ open with an `## Invariants` section; read it before changing anything in that a
 [snippets](features/snippets.md) ·
 [quicklinks](features/quicklinks.md) ·
 [hotkeys](features/hotkeys.md) ·
+[navigation](features/navigation.md) ·
 [window management](features/window-management.md) ·
 [window layouts](features/window-layouts.md) ·
 [custom commands](features/custom-commands.md) ·

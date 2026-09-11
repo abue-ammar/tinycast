@@ -2,7 +2,10 @@ import AppKit
 
 @MainActor
 final class MenuSearchCoordinator {
+    private let settings: AppSettings
+    private let appIndex: AppIndex
     private let session: MenuSearchSession
+    private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
     private unowned let core: AppCore
     /// The app the open snapshot belongs to; activation re-resolves against this, never a retarget.
@@ -12,14 +15,26 @@ final class MenuSearchCoordinator {
     private(set) var frozenIconStamp: Int = 0
 
     init(
-        session: MenuSearchSession, paletteCoordinator: PaletteCoordinator, core: AppCore
+        settings: AppSettings, appIndex: AppIndex, session: MenuSearchSession,
+        palette: PaletteState, paletteCoordinator: PaletteCoordinator, core: AppCore
     ) {
+        self.settings = settings
+        self.appIndex = appIndex
         self.session = session
+        self.palette = palette
         self.paletteCoordinator = paletteCoordinator
         self.core = core
     }
 
+    func applyEnabled() {
+        appIndex.setCommandsVisible([.searchMenuItems], settings.navigationEnabled)
+        guard !settings.navigationEnabled else { return }
+        session.reset()
+        if palette.mode == .menuSearch { palette.prepare(mode: .launcher) }
+    }
+
     func show() {
+        guard settings.navigationEnabled else { return }
         guard Permissions.ensureAccessibility() else {
             Task { await self.reportPermissionFailure() }
             return
@@ -36,7 +51,9 @@ final class MenuSearchCoordinator {
         let target = MenuSearchTarget.classify(
             appName: app?.localizedName,
             isSelf: app?.bundleIdentifier == Bundle.main.bundleIdentifier,
-            hasMenuBar: app?.activationPolicy == .regular)
+            hasMenuBar: app?.activationPolicy == .regular,
+            isExcluded: app?.bundleIdentifier
+                .map(settings.menuSearchDisabledApps.contains) ?? false)
         switch target {
         case .searchable:
             if let app {
@@ -44,7 +61,7 @@ final class MenuSearchCoordinator {
             } else {
                 session.present(target: .noApplication, snapshot: [])
             }
-        case .selfTarget, .menuLess, .noApplication:
+        case .excluded, .selfTarget, .menuLess, .noApplication:
             session.present(target: target, snapshot: [])
         }
         paletteCoordinator.togglePalette(mode: .menuSearch)

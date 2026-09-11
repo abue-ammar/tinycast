@@ -20,8 +20,9 @@ entries and a still-registered shortcut moves nothing.
   stay Foundation + CoreGraphics and pure** — no AX, no `NSScreen`, no clock (`WindowActionMemory`
   takes `now` as a parameter, `SpaceGesture` takes `timestamp`). Every `AXUIElement` call and the
   Cocoa↔AX flip live in `Service/`; every `CGEvent` call lives in `SpaceSwitcher.swift`.
-- **`AXWindowAccess` is the one AX layer**, shared by the mover and the layout runner. Its `write` is
-  the size → position → size sequence: two copies of it would land a stubborn app two ways.
+- **`AXWindowAccess` is the one AX layer**, shared by the mover, the layout runner and
+  [Navigation](navigation.md)'s window switcher. Its `write` is the size → position → size sequence:
+  two copies of it would land a stubborn app two ways.
 - **A Space command never reaches `WindowMover`.** `WindowPlacementEngine.placement` answers only for
   `.geometry` and `.restore`, and `WindowCommandCoordinator` branches on `SpaceDirection` first — the
   mover requires a target app and a resolvable AX window, and a Space switch has neither.

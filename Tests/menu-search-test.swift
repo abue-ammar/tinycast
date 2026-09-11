@@ -326,23 +326,35 @@ struct MenuSearchTests {
             "the snapshot is a value: the same tree always yields the same items")
     }
 
+    static func classify(
+        _ name: String?, isSelf: Bool = false, hasMenuBar: Bool = true, isExcluded: Bool = false
+    ) -> MenuSearchTarget {
+        MenuSearchTarget.classify(
+            appName: name, isSelf: isSelf, hasMenuBar: hasMenuBar, isExcluded: isExcluded)
+    }
+
     static func targetClassify() {
         expect(
-            MenuSearchTarget.classify(appName: "TextEdit", isSelf: false, hasMenuBar: true)
-                == .searchable(name: "TextEdit"),
+            classify("TextEdit") == .searchable(name: "TextEdit"),
             "a regular app is searchable under its own name")
         expect(
-            MenuSearchTarget.classify(appName: "Tinycast", isSelf: true, hasMenuBar: false)
-                == .selfTarget,
+            classify("Tinycast", isSelf: true, hasMenuBar: false) == .selfTarget,
             "self wins over the menu-bar check, since Tinycast itself runs accessory")
         expect(
-            MenuSearchTarget.classify(appName: "Helper", isSelf: false, hasMenuBar: false)
-                == .menuLess(name: "Helper"),
+            classify("Helper", hasMenuBar: false) == .menuLess(name: "Helper"),
             "a background app keeps its name for the empty state")
         expect(
-            MenuSearchTarget.classify(appName: nil, isSelf: false, hasMenuBar: true)
-                == .noApplication,
+            classify(nil) == .noApplication,
             "no captured app is its own empty state")
+        expect(
+            classify("Passwords", isExcluded: true) == .excluded(name: "Passwords"),
+            "an excluded app is refused by name rather than walked")
+        expect(
+            classify("Helper", hasMenuBar: false, isExcluded: true) == .excluded(name: "Helper"),
+            "excluded is checked before the menu-bar test, so it never reads as menu-less")
+        expect(
+            classify("Tinycast", isSelf: true, isExcluded: true) == .selfTarget,
+            "self still wins: Tinycast has no menu to exclude in the first place")
     }
 
     static func sessionPresent() {

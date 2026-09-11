@@ -1,7 +1,7 @@
 # Menu Search
 
-`Search Menu Items` opens the frontmost app's main menu bar as a palette screen, so any menu item can
-be found by name and pressed without walking the menus. One cold accessibility walk fills a snapshot,
+`Search Menu Bar Items` opens the frontmost app's main menu bar as a palette screen, so any menu item
+can be found by name and pressed without walking the menus. One cold accessibility walk fills a snapshot,
 ranking runs in memory over it, and activating a row re-resolves the live element and presses it.
 
 ## Invariants
@@ -29,6 +29,10 @@ ranking runs in memory over it, and activating a row re-resolves the live elemen
   functions driven by `Task.detached` from `MenuSearchSession`. There is no second actor.
 - **Accessibility is gated twice.** `Permissions.ensureAccessibility()` runs on show *and* on
   activate — a grant revoked while the palette is open must not reach `AXUIElementPerformAction`.
+- **An excluded app is refused, never filtered.** `MenuSearchTarget.classify` answers `.excluded`
+  from `AppSettings.menuSearchDisabledApps`, before the menu-bar test so an excluded accessory app
+  does not read as menu-less, and `show()` starts no walk at all. Filtering a walked snapshot would
+  still have read the menu, which is the whole thing the list exists to prevent.
 
 ## How it is put together
 
@@ -39,17 +43,17 @@ ranking runs in memory over it, and activating a row re-resolves the live elemen
 | `Model/MenuSearchShortcut.swift` | the AX modifier bits and the glyphs a row's keycaps draw |
 | `Model/MenuSnapshotPolicy.swift` | the flatten: the three caps, de-duplication, cancellation |
 | `Model/MenuSearchQuery.swift` | ranking over `SearchRelevance`/`FuzzyMatch`, capped at 200 rows |
-| `Model/MenuSearchTarget.swift` | the four cases a summon can land on, and their empty states |
+| `Model/MenuSearchTarget.swift` | the five cases a summon can land on, and their empty states |
 | `Service/AXMenuAccess.swift` | every `AXUIElement` read: the walk, the path re-resolve, the press |
 | `Service/MenuSearchSession.swift` | the observable state — walk lifecycle, snapshot, filtered rows |
 | `UI/MenuSearchCoordinator.swift` | freezing the target and icon, activation, the failure reports |
 | `UI/MenuSearchScreen.swift` | the `PaletteScreen` conformance and the empty-state switch |
 | `UI/MenuSearchList.swift` | the list and its row: app icon, title, path, keycap chips |
 
-`MenuSearchTarget.classify` splits a summon four ways — `searchable`, `selfTarget`, `menuLess` and
-`noApplication` — so each gets its own sentence instead of an empty list. `selfTarget` is checked
-before the menu-bar test, because Tinycast runs as an accessory and would otherwise read as
-menu-less.
+`MenuSearchTarget.classify` splits a summon five ways — `searchable`, `excluded`, `selfTarget`,
+`menuLess` and `noApplication` — so each gets its own sentence instead of an empty list. `selfTarget`
+is checked before the menu-bar test, because Tinycast runs as an accessory and would otherwise read
+as menu-less; `excluded` is checked next, for the same reason.
 
 `MenuSearchSession` takes its walk as an injected `WalkOperation`, which is what lets
 `Tests/menu-search-test.swift` drive publication, supersession and cancellation without an AX server.
@@ -70,6 +74,10 @@ The list decodes exactly one `NSImage` — the frozen app's icon — and every r
 ## Where it is reachable from
 
 The launcher, as `CommandID.searchMenuItems`, so it takes aliases and a global shortcut like any
-other command and ships unbound. It claims no `SettingsTab.ownedCommands` entry, so Settings ›
-Commands owns its switch; it adds no `AppEntry.Kind` and no `VisibilityStore` category. Rows are not
-`AppEntry`s, so there is no frecency and no learning — ranking is per-query only.
+other command and ships unbound. It is one of the two commands **[Navigation](navigation.md)** owns
+through `SettingsTab.ownedCommands`, so `navigationEnabled` is its switch rather than Settings ›
+Commands; it adds no `AppEntry.Kind` and no `VisibilityStore` category. Rows are not `AppEntry`s, so
+there is no frecency and no learning — ranking is per-query only.
+
+The display name is `Search Menu Bar Items` while the raw id stays `command:search-menu-items`, which
+is what keeps a recorded shortcut, an alias and a visibility flag pointing at the same command.

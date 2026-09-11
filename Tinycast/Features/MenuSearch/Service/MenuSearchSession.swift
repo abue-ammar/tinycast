@@ -39,7 +39,7 @@ final class MenuSearchSession {
 
     var targetName: String? {
         switch target {
-        case .searchable(let name), .menuLess(let name): name
+        case .searchable(let name), .excluded(let name), .menuLess(let name): name
         case .selfTarget, .noApplication: nil
         }
     }

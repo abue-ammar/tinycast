@@ -300,6 +300,15 @@ final class AppSettings {
         didSet { defaults.set(snippetsShowInLauncher, forKey: Key.snippetsShowInLauncher.rawValue) }
     }
 
+    var navigationEnabled: Bool {
+        didSet { defaults.set(navigationEnabled, forKey: Key.navigationEnabled.rawValue) }
+    }
+
+    /// Bundle IDs whose menu bar Search Menu Bar Items refuses to read at all.
+    var menuSearchDisabledApps: [String] {
+        didSet { defaults.set(menuSearchDisabledApps, forKey: Key.menuSearchDisabledApps.rawValue) }
+    }
+
     /// Consent to run third-party JavaScript: it confirms, defaults off, rides no backup.
     var extensionsEnabled: Bool {
         didSet { defaults.set(extensionsEnabled, forKey: Key.extensionsEnabled.rawValue) }
@@ -597,6 +606,9 @@ final class AppSettings {
             defaults.object(forKey: Key.hideCurrentEvent.rawValue)
             .flatMap { $0 as? Int }
             .flatMap(HideCurrentEvent.init(rawValue:)) ?? .dontHide
+        navigationEnabled = defaults.bool(forKey: Key.navigationEnabled.rawValue)
+        menuSearchDisabledApps =
+            defaults.stringArray(forKey: Key.menuSearchDisabledApps.rawValue) ?? []
         windowManagementEnabled = defaults.bool(forKey: Key.windowManagementEnabled.rawValue)
         windowManagementShowInLauncher =
             defaults.object(forKey: Key.windowManagementShowInLauncher.rawValue) == nil

@@ -14,6 +14,7 @@ struct RootPaletteView: View {
     @Environment(FrequentEmojiStore.self) private var frequentEmoji
     @Environment(FileSearchSession.self) private var fileSearch
     @Environment(MenuSearchSession.self) private var menuSearch
+    @Environment(WindowSwitchSession.self) private var windowSwitch
     @Environment(CalendarStore.self) private var calendarStore
     /// Observed so the join card's countdown redraws on the minute boundary.
     @Environment(MeetingClock.self) private var meetingClock
@@ -77,6 +78,8 @@ struct RootPaletteView: View {
         case .menuSearch:
             return MenuSearchScreen(
                 session: menuSearch, core: core, vm: vm, openActions: openActions)
+        case .switchWindows:
+            return WindowSwitchScreen(session: windowSwitch, core: core)
         case .schedule:
             return ScheduleScreen(
                 store: calendarStore, clock: meetingClock, core: core, vm: vm,
@@ -311,6 +314,7 @@ struct RootPaletteView: View {
                 scroll = ScrollIntent(kind: .top)
                 if vm.mode == .fileSearch { fileSearch.search(vm.query) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
+                if vm.mode == .switchWindows { windowSwitch.filter(vm.query) }
                 // A command that took over the search text filters its own list.
                 if vm.mode == .extensionCommand, let handler = extensionScreen.searchTextHandler {
                     extensions.dispatch(handler: handler, arguments: [vm.query])
@@ -336,6 +340,7 @@ struct RootPaletteView: View {
                 if vm.mode != .uninstall { uninstall.cancel() }
                 if vm.mode != .fileSearch { fileSearch.cancel() }
                 if vm.mode != .menuSearch { menuSearch.reset() }
+                if vm.mode != .switchWindows { windowSwitch.reset() }
                 // Leaving the screen any other way than Escape still ends the command's session.
                 if vm.mode != .extensionCommand, extensions.running != nil, !extensions.isAuthorizing {
                     Task { await extensions.stop() }

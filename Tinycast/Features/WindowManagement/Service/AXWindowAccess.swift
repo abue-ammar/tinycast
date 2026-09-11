@@ -56,6 +56,24 @@ enum AXWindowAccess {
         return (value as? Bool) ?? false
     }
 
+    // MARK: - Bringing one forward
+
+    static func unminimize(_ window: AXUIElement) -> Bool {
+        AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            == .success
+    }
+
+    /// Raises the window inside its own app; the app still has to be activated separately.
+    static func raise(_ window: AXUIElement) -> Bool {
+        AXUIElementPerformAction(window, kAXRaiseAction as CFString) == .success
+    }
+
+    /// Belt and braces with `NSRunningApplication.activate`: an agent-policy app ignores one.
+    static func makeFrontmost(_ application: AXUIElement) {
+        AXUIElementSetAttributeValue(
+            application, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+    }
+
     // MARK: - Writing a frame
 
     /// The one write sequence, so a stubborn app lands the same way from any caller.
