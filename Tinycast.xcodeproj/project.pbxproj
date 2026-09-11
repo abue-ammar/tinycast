@@ -177,6 +177,7 @@
 		4D462D0F116A5C04E4DEFCCF /* PseudoTerminal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C6A905C247E0A5C349125EA /* PseudoTerminal.swift */; };
 		4D8C05DD67FAB9F2DA1F31FB /* AIStreamDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0337B056DA2D31772534F1EF /* AIStreamDecoder.swift */; };
 		4DA03A170E95F0D08E3569F9 /* ExtensionColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0266BAF4643A4B5C41B600DE /* ExtensionColors.swift */; };
+		4E1BFE20BD4308D1EF05A5F2 /* ClipDrag.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB74C73EB33F368E0890E839 /* ClipDrag.swift */; };
 		4E5F73461C417BE2B3472E6E /* WindowChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D61199EE7B60E91ACBDE2E2 /* WindowChrome.swift */; };
 		4EBFBA1CC7DA9B22C396DBEC /* CommandArgumentsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1590A8769EF787763DE189B7 /* CommandArgumentsRow.swift */; };
 		4F231B3551269815753B8C4C /* BackupCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA4145CFBB855DF1699C744 /* BackupCategory.swift */; };
@@ -1100,6 +1101,7 @@
 		DB1752929BA1ACC0BC54865C /* HUDPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDPanel.swift; sourceTree = "<group>"; };
 		DB44DCF1B6B9C9846CFB053D /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		DB5FA545F484D7666E9A5F14 /* RunningAppsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningAppsMonitor.swift; sourceTree = "<group>"; };
+		DB74C73EB33F368E0890E839 /* ClipDrag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipDrag.swift; sourceTree = "<group>"; };
 		DBD9A72B34E336446F312B30 /* QuicklinkEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkEditorSheet.swift; sourceTree = "<group>"; };
 		DBED1FDAAD4735FDB4B2453A /* MCPProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocol.swift; sourceTree = "<group>"; };
 		DCBC5A9553716C8F03ED0216 /* SettingsToolbarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsToolbarController.swift; sourceTree = "<group>"; };
@@ -1501,6 +1503,7 @@
 				B45A6AB1413A8A08EF7F0A9E /* ClipboardFilterButton.swift */,
 				548C83C4086CD9FB8E85B222 /* ClipboardScreen.swift */,
 				FBF6EF3A2C35F45B82D40968 /* ClipboardView.swift */,
+				DB74C73EB33F368E0890E839 /* ClipDrag.swift */,
 				C214E40D42F4812F141C16A8 /* ColorPreview.swift */,
 				89DBFE62B513EC161F194D0A /* ColorSwatch.swift */,
 				E03A52EBF08AD5C44953DBDC /* FilePreviewStage.swift */,
@@ -2982,6 +2985,7 @@
 				3162C31B1971F738F9CE05E9 /* ChatMessage.swift in Sources */,
 				52D95C1FF343FCD57D5425A0 /* ChatSession.swift in Sources */,
 				E77BF5D26A6D9E9FC7E82259 /* ChatTranscriptView.swift in Sources */,
+				4E1BFE20BD4308D1EF05A5F2 /* ClipDrag.swift in Sources */,
 				A320745F576C5915217DF113 /* ClipboardCoordinator.swift in Sources */,
 				40E28FFBE1DDE737D43A7836 /* ClipboardFileKind.swift in Sources */,
 				AD9753D6EAF202B6E31510EB /* ClipboardFilter.swift in Sources */,

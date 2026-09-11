@@ -117,7 +117,8 @@ struct ClipboardScreen: PaletteScreen {
                     onActions: { item in
                         if let index = rows.firstIndex(of: item) { vm.selection = index }
                         openActions()
-                    }
+                    },
+                    onDropped: { core.paletteCoordinator.hidePalette(restoreFocus: false) }
                 )
                 .frame(width: metrics.size.clipboardListWidth)
                 Rectangle()

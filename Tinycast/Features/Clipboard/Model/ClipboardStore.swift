@@ -470,6 +470,12 @@ final class ClipboardStore {
         return URL(fileURLWithPath: path)
     }
 
+    /// What a drag hands out: our stored blob for an image, the referenced file for a file entry.
+    /// Nil for text, which stays on the row's own gestures.
+    func dragURL(for item: ClipboardItem) -> URL? {
+        imageURL(for: item) ?? fileURL(for: item)
+    }
+
     /// Display order for `query` under `filter`: pinned entries first, each block newest-first.
     func search(_ query: String, filter: ClipboardFilter) -> [ClipboardItem] {
         // Load-bearing: a settled OCR query changes the answer without `items` changing.

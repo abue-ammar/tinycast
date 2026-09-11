@@ -354,3 +354,33 @@ Nothing ever autoplays — arrow-keying a list of twenty videos must not start t
 blob, a file already gone at export time is counted missing, and a restore drops a row whose path
 does not exist on this Mac — the same thing the Raycast import already does for an image path.
 Carrying file bytes would make a backup unbounded and defeat the point of referencing in place.
+
+## Dragging out
+
+An image or file row is a drag source for the file it already is (`ClipDrag.swift`), so reaching
+another app costs one gesture instead of Reveal in Finder and a second drag. `ClipboardStore.dragURL`
+is the payload rule and the whole of it: the stored blob for an image, the referenced path for a
+file, **nil for text** — a text row keeps its SwiftUI gestures untouched.
+
+**Copy, always — this is the reason the drag is AppKit and not `onDrag`.** `imagesDir` lives in
+Application Support, on the boot volume, which is the same volume as almost every drop target. A
+file-URL drag there defaults to a *move*, and a move carries the blob out of the history and strands
+its row. Only an `NSDraggingSource` can answer `sourceOperationMaskFor` at all, and `ClipDragView`
+answers `.copy` for every context. SwiftUI's `onDrag` takes an `NSItemProvider` and nothing else, so
+it cannot make that promise. A `.file` row is copy-only for the same reason turned outward: the path
+is the user's own file, and Tinycast must not move it out from under them.
+
+**It claims mouse-down, like `WindowDragHandle` does, because the hosting view eats the click
+first.** So the overlay owns the whole press: select on the way down, activate on a double click,
+and start the session once the pointer passes 4pt of slop. Below the slop nothing happened but a
+click, which is what the row's own `onTapGesture` used to do and why the handle takes `onSelect` and
+`onActivate` rather than sitting beside them.
+
+The drag preview is `cached` only, never `load` — a decode on mouse-down stalls the frame the drag
+begins on. The row tile is already warm at 64px, which is exactly what the preview asks for, and a
+miss falls through to the file's own icon.
+
+**A landed drop hides the palette**, the same ending a paste has, through `onDropped`. A cancelled
+drag (`operation == []`) leaves it up, because nothing was accomplished. The session outliving the
+panel is safe for the reason the player teardown above is delicate: `orderOut` leaves the SwiftUI
+tree mounted, and the pasteboard holds the URL from the moment the session begins.

@@ -11,6 +11,8 @@ struct ClipboardList: View {
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
     let onActions: (ClipboardItem) -> Void
+    /// A dropped entry is a finished errand, so the palette leaves as it does after a paste.
+    let onDropped: () -> Void
     @Environment(ClipboardStore.self) private var store
 
     private enum Row: Identifiable {
@@ -72,6 +74,17 @@ struct ClipboardList: View {
                                 }
                             )
                             .onRightClick { onActions(item) }
+                            // Last, so the drag overlay sits above the right-click catcher and
+                            // claims the left button the gestures above no longer see.
+                            .clipDraggable(
+                                store.dragURL(for: item),
+                                onSelect: { onSelect(item) },
+                                onActivate: {
+                                    onSelect(item)
+                                    onActivate()
+                                },
+                                onDropped: onDropped
+                            )
                         }
                     }
                 }
