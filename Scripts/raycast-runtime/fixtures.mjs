@@ -276,7 +276,15 @@ export default async function Command() {
     });
   });
 
-  globalThis.__spawn = { iterated: iterated.join(""), late };
+  // Port Manager detaches lsof to get a killable process group, then reads its output.
+  const grouped = await new Promise((resolve) => {
+    const child = spawn("/bin/echo", ["group"], { detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const chunks = [];
+    child.stdout.on("data", (chunk) => chunks.push(chunk.toString()));
+    child.on("close", () => resolve(chunks.join("")));
+  });
+
+  globalThis.__spawn = { iterated: iterated.join(""), late, grouped };
 }
 `;
 
@@ -604,6 +612,7 @@ export async function runFixtures() {
     const result = harness.call("globalThis.__spawn");
     check("async iteration collects stdout", result?.iterated === "hello\n", JSON.stringify(result?.iterated));
     check("a listener attached after exit still gets it", result?.late === "world\n", JSON.stringify(result?.late));
+    check("a detached child that pipes stdout is still awaited", result?.grouped === "group\n", JSON.stringify(result?.grouped));
   });
 
   const httpSpecs = [];
