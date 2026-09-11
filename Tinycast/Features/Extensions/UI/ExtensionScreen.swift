@@ -184,7 +184,7 @@ struct ExtensionScreen: Equatable {
         self.emptyView = emptyView
     }
 
-    /// Title, subtitle and keywords, ranked by the launcher's matcher, as Raycast does.
+    /// Title, subtitle and keywords, ranked by the launcher's matcher.
     static func matches(_ item: RenderNode, _ needle: FuzzyMatch.Query) -> Bool {
         guard !needle.isEmpty else { return true }
         var haystack = [item.string("title") ?? ""]

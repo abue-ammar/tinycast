@@ -307,7 +307,7 @@ screens hold (see [palette.md](palette.md)).
   the palette does not dismiss while it is up (`AppCore.isShowingDialog`), because dismissing pops to
   root, which would tear the command down before its `await confirmAlert(…)` ever returns.
 - **Command arguments** — a command declaring `arguments` shows inline fields sized to their
-  placeholders, right after the typed text, exactly as Raycast does. Tab walks search field → each
+  placeholders, right after the typed text. Tab walks search field → each
   argument → back; Left/Right do the same only when their caret reaches a field boundary. Returning
   to the search field selects its query, so Right first places the caret at its end and then enters
   the first argument. ↵ from any of them runs the command with the values as `props.arguments`; a blank
@@ -456,14 +456,14 @@ global Show in launcher switch, or this extension's — because the ranker never
 ## Background refresh
 
 A `no-view` command declaring `interval` (`"90s"`, `"1m"`, `"12h"`, `"1d"`) re-runs headlessly on that
-schedule, exactly as Raycast's background refresh: the same bundle runs to completion with
+schedule, on the semantics extensions are authored against: the same bundle runs to completion with
 `environment.launchType` and `props.launchType` set to `Background`, and `updateCommandMetadata` is
 the only thing that escapes it — the subtitle it writes appears beside the command's name in launcher
 search, unless it merely restates the owning extension, which the row already carries on the right.
 Coffee's "Caffeinate Status" is the reference case: every minute it rewrites its subtitle to
 `✔ Caffeinated (…)` or `✖ Decaffeinated`.
 
-Like Raycast, refresh is opt-in per command: off until the first manual run or the Settings toggle
+Refresh is opt-in per command: off until the first manual run or the Settings toggle
 (Settings › Extensions › the command › Background refresh), which also shows the last refresh and the
 last error. The launcher row carries the state too: a dot while refresh is on, its dimmed twin
 while it is off, a warning with the error as its tooltip when the last background run failed, and

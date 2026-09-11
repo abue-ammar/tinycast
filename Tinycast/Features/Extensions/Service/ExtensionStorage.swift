@@ -164,7 +164,7 @@ final class ExtensionStorage {
         return resolved
     }
 
-    /// A command with an unset required preference must not run, exactly as in Raycast.
+    /// A command with an unset required preference must not run.
     func missingRequiredPreferences(
         extension name: String, schemas: [ExtensionPreferenceSchema]
     ) -> [ExtensionPreferenceSchema] {

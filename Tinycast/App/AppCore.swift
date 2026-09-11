@@ -41,6 +41,7 @@ final class AppCore {
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
     let fileSearch = FileSearchSession()
+    let menuSearch = MenuSearchSession()
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let customCommandArguments = CustomCommandArgumentSession()
@@ -81,7 +82,7 @@ final class AppCore {
 
     @ObservationIgnored private(set) lazy var paletteCoordinator = PaletteCoordinator(
         palette: palette, settings: settings, appIndex: appIndex,
-        fileSearch: fileSearch,
+        fileSearch: fileSearch, menuSearch: menuSearch,
         windowController: windowController)
     /// Its own window and lifecycle: neither coordinator shows or closes the other's surface.
     @ObservationIgnored private(set) lazy var settingsCoordinator = SettingsCoordinator(core: self)
@@ -126,6 +127,7 @@ final class AppCore {
         windowCommandCoordinator: windowCommandCoordinator,
         windowLayoutCoordinator: windowLayoutCoordinator,
         snippetCoordinator: snippetCoordinator, fileSearchCoordinator: fileSearchCoordinator,
+        menuSearchCoordinator: menuSearchCoordinator,
         notesCoordinator: notesCoordinator, extensionCoordinator: extensionCoordinator,
         calendarCoordinator: calendarCoordinator,
         core: self)
@@ -146,6 +148,8 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var fileSearchCoordinator = FileSearchCoordinator(
         settings: settings, appIndex: appIndex, session: fileSearch, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var menuSearchCoordinator = MenuSearchCoordinator(
+        session: menuSearch, paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var cameraCoordinator = CameraCoordinator(core: self)
     @ObservationIgnored private(set) lazy var updateCoordinator = UpdateCoordinator(
         store: updateChecker, core: self)

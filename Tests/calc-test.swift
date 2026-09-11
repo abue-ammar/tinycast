@@ -1190,7 +1190,7 @@ struct CalcTests {
         expectDisplayAt("tomorrow + 10 work days", "7 August")
         expectDisplayAt("today + 15 workdays", "14 August")
         expectDisplayAt("today + 5 weekdays", "31 July")
-        // Raycast's own shape: the weekday rides the badge rather than the date
+        // The weekday rides the badge rather than the date
         expectBadgesAt("today + 5 business days", source: "Friday, 24 July", target: "Friday")
         expectBadgesAt("today + 1 business day", source: "Friday, 24 July", target: "Monday")
         // The duration may lead, with `from` naming the anchor or `ago` implying today

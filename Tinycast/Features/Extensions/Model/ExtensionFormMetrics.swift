@@ -2,7 +2,7 @@ import Foundation
 
 /// The geometry every form control shares; pure, so a harness drives the placement rule.
 enum ExtensionFormMetrics {
-    /// One control's width and height, matching the proportions Raycast's own form draws.
+    /// One control's width and height, in the proportions an extension's form is authored against.
     static let controlWidth: CGFloat = 360
     static let controlHeight: CGFloat = 32
     /// A text area is a control that grew: same width and chrome, several lines tall.
@@ -15,7 +15,7 @@ enum ExtensionFormMetrics {
     static let textViewGutter: CGFloat = 5
     /// The box a checkbox draws, and the gap to the label beside it.
     static let checkboxSize: CGFloat = 14
-    /// The gap between one labelled row and the next, measured off Raycast's own form.
+    /// The gap between one labelled row and the next, tuned by eye rather than derived.
     static let rowSpacing: CGFloat = 18
     /// The gap a separator adds on each side, so a group reads apart from the one before it.
     static let separatorSpacing: CGFloat = 4

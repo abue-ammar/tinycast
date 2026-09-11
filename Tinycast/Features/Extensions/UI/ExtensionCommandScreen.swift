@@ -49,7 +49,7 @@ struct ExtensionCommandScreen: PaletteScreen {
         }
     }
 
-    /// The panel's first `Action`, exactly as in Raycast.
+    /// The primary action is the panel's first `Action`.
     private func primaryAction(at selection: Int) -> ExtensionAction? {
         ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).first
     }

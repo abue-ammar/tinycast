@@ -106,6 +106,9 @@ run file-search-session-test Tinycast/Platform/Signposts.swift \
                              $L/SearchRelevance.swift \
                              Tinycast/Features/FileSearch/Model/*.swift \
                              Tinycast/Features/FileSearch/Service/*.swift
+run menu-search-test       $L/SearchRelevance.swift \
+                           Tinycast/Features/MenuSearch/Model/*.swift \
+                           Tinycast/Features/MenuSearch/Service/*.swift
 run index file-search-performance Tinycast/Platform/Signposts.swift \
                            $L/SearchRelevance.swift \
                            Tinycast/Features/FileSearch/Model/*.swift \
