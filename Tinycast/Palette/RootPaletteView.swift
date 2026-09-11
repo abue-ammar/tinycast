@@ -309,6 +309,11 @@ struct RootPaletteView: View {
                     extensions.dispatch(handler: handler, arguments: [vm.query])
                 }
             }
+            // Anything typed while the command was still starting predates its handler.
+            .onChange(of: extensionScreen.searchTextHandler) { previous, handler in
+                guard previous == nil, let handler, !vm.query.isEmpty else { return }
+                extensions.dispatch(handler: handler, arguments: [vm.query])
+            }
             // A narrower list means the old index points at a different row, or at none.
             .onChange(of: vm.clipboardFilter) {
                 vm.selection = 0

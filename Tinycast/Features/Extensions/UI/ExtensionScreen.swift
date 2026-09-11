@@ -91,7 +91,8 @@ struct ExtensionScreen: Equatable {
         searchBarAccessory = root.node("searchBarAccessory")
         showsDetail = root.bool("isShowingDetail") ?? false
         screenActions = root.node("actions")
-        filtersLocally = root.bool("filtering") ?? (searchTextHandler == nil)
+        filtersLocally =
+            root.bool("filtering") ?? (root.object("filtering") != nil || searchTextHandler == nil)
 
         switch root.type {
         case "List":
