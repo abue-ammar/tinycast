@@ -14,6 +14,7 @@ final class LauncherCoordinator {
     private let windowLayoutCoordinator: WindowLayoutCoordinator
     private let snippetCoordinator: SnippetCoordinator
     private let fileSearchCoordinator: FileSearchCoordinator
+    private let menuSearchCoordinator: MenuSearchCoordinator
     private let notesCoordinator: NotesCoordinator
     private let extensionCoordinator: ExtensionCoordinator
     private let calendarCoordinator: CalendarCoordinator
@@ -32,6 +33,7 @@ final class LauncherCoordinator {
         windowLayoutCoordinator: WindowLayoutCoordinator,
         snippetCoordinator: SnippetCoordinator,
         fileSearchCoordinator: FileSearchCoordinator,
+        menuSearchCoordinator: MenuSearchCoordinator,
         notesCoordinator: NotesCoordinator,
         extensionCoordinator: ExtensionCoordinator,
         calendarCoordinator: CalendarCoordinator,
@@ -48,6 +50,7 @@ final class LauncherCoordinator {
         self.windowLayoutCoordinator = windowLayoutCoordinator
         self.snippetCoordinator = snippetCoordinator
         self.fileSearchCoordinator = fileSearchCoordinator
+        self.menuSearchCoordinator = menuSearchCoordinator
         self.notesCoordinator = notesCoordinator
         self.extensionCoordinator = extensionCoordinator
         self.calendarCoordinator = calendarCoordinator
@@ -161,6 +164,8 @@ final class LauncherCoordinator {
             paletteCoordinator.togglePalette(mode: .emoji)
         case .searchFiles:
             fileSearchCoordinator.show()
+        case .searchMenuItems:
+            menuSearchCoordinator.show()
         case .openCamera:
             dismissPalette()
             Task { await core.cameraCoordinator.show() }
