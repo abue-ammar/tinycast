@@ -73,8 +73,9 @@ coordinator through `@Environment`; it never receives `AppCore` or mutates the s
 
 Settings > Notes owns `AppSettings.notesEnabled`, which is false when absent. The pane lists **Show
 Notes**, **Create Note**, and **Search Notes** from `CommandCatalog`, so it can still render them while
-`AppIndex` omits them. Every row shares its `VisibilityStore` checkbox and `HotKeyAction` recorder with
-Settings > Commands.
+`AppIndex` omits them. It is their only pane: `SettingsTab.ownedCommands` names the three, which takes
+them out of Settings > Commands and out of reach of `Enable Commands` — Notes' own switch is the one
+that decides they exist.
 
 `AppCore` observes enablement and calls `NotesCoordinator.applyEnabled()`. Disabling hides the panel,
 invalidates pending presentation work, cancels search, flushes the draft, and removes the commands. A

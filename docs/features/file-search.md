@@ -135,12 +135,11 @@ the screen after the feature is disabled. Disabling cancels the session and retu
 screen to the launcher without changing palette visibility.
 
 Search Files is bindable like every other built-in command — `AppEntry.hotKeyAction` answers
-`.command(.searchFiles)`. Two consequences follow: its launcher row prints a bound chord as a keycap,
-and its row in Settings ▸ Commands carries the same recorder as this pane — one binding reachable from
-two places, not two settings.
+`.command(.searchFiles)`, so its launcher row prints a bound chord as a keycap.
 
-Launcher visibility is `VisibilityStore`'s, keyed on the entry's `preferenceKey`, which is why the
-pane's checkbox and the one in Settings ▸ Commands move together. The entry behind it comes from
+This pane is the command's only one: `SettingsTab.ownedCommands` names it, so Settings ▸ Commands
+neither lists it nor gates it behind `Enable Commands`. Launcher visibility is `VisibilityStore`'s,
+keyed on the entry's `preferenceKey`. The entry behind it comes from
 `CommandCatalog.entry(for:)` rather than `AppIndex`, because the index drops the command entirely while
 the feature switch is off — exactly when the pane still has to draw the row. Hiding the command leaves
 the shortcut working, as it does for every other feature.

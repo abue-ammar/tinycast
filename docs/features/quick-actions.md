@@ -112,9 +112,9 @@ takes the choice with it.
 `HotKeyAction.quickAction(id:)` under `hotkey.quickAction.<uuid>`, indexed in `boundQuickActionIDs` so
 `HotKeyManager.start` can prune a binding whose action was deleted while Tinycast was off.
 
-**The pane draws its own `AliasField`.** Leaving `.command` took the four out of
-`LauncherItemsSection(kind: .command)`, which is where Settings → Commands drew theirs. Without it,
-`deleteCustomQuickAction` would be clearing an alias no surface could set.
+**The pane draws its own `AliasField`.** The four are named in `SettingsTab.ownedCommands`, so
+Settings → Commands no longer draws theirs. Without it, `deleteCustomQuickAction` would be clearing an
+alias no surface could set.
 
 **Nothing is saved until it is on disk.** `commit` persists before it moves `actions`, and a write
 that cannot land throws `.storageUnavailable` where the reader sees it. An absent file is a fresh

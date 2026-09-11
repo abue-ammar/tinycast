@@ -8,6 +8,10 @@ enum CommandCatalog {
         .map { makeEntry($0) }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
+    nonisolated static func entries(ownedBy owner: SettingsTab) -> [AppEntry] {
+        owner.ownedCommands.map { makeEntry($0) }
+    }
+
     static func command(for entry: AppEntry) -> CommandID? {
         CommandID(rawValue: entry.id)
     }
@@ -34,7 +38,7 @@ enum CommandCatalog {
     ) -> AppEntry {
         AppEntry(
             id: id.rawValue, name: id.name, url: url ?? placeholderURL(id), bundleID: nil,
-            kind: id.entryKind, subtitle: subtitle)
+            kind: id.entryKind, settingsOwner: id.owner, subtitle: subtitle)
     }
 
     nonisolated private static func placeholderURL(_ id: CommandID) -> URL {
@@ -42,7 +46,36 @@ enum CommandCatalog {
     }
 }
 
+/// The commands a pane lists itself; its own switch, not `Enable Commands`, decides they exist.
+extension SettingsTab {
+    var ownedCommands: [CommandID] {
+        switch self {
+        case .quicklinks:
+            [.createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks]
+        case .ai: [.aiChat]
+        case .quickActions: [.fixGrammar, .rewrite, .translate, .summarize]
+        case .fileSearch: [.searchFiles]
+        case .notes: [.showNotes, .createNote, .searchNotes]
+        case .snippets: [.searchSnippets, .createSnippet]
+        case .windowManagement: [.createWindowLayout, .captureWindowLayout]
+        case .clipboard: [.clipboardHistory]
+        case .emoji: [.searchEmoji]
+        case .calendar:
+            [.joinNextMeeting, .mySchedule, .createEvent, .copyMeetingLink, .openInCalendar]
+        default: []
+        }
+    }
+}
+
 extension CommandID {
+    /// The pane that lists this command's controls; nil leaves it to Settings › Commands.
+    var owner: SettingsTab? { Self.owners[self] }
+
+    nonisolated private static let owners: [CommandID: SettingsTab] =
+        SettingsTab.allCases.reduce(into: [:]) { table, tab in
+            for command in tab.ownedCommands { table[command] = tab }
+        }
+
     var entryKind: AppEntry.Kind {
         builtInQuickAction == nil ? .command : .quickAction
     }

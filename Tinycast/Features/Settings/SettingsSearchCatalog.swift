@@ -223,6 +223,9 @@ enum SettingsSearchCatalog {
             .quicklinksQuicklinks, "Add Quicklink",
             keywords: ["new", "url", "bookmark", "alias"]),
         .init(
+            group: .quicklinksCommands, "Quicklink commands",
+            keywords: ["shortcut", "launcher", "search", "import", "export"]),
+        .init(
             .quicklinksBehaviour, "Open in a new window",
             keywords: ["browser", "tab"]),
         .init(
@@ -337,8 +340,8 @@ enum SettingsSearchCatalog {
             .snippetsSnippets, "Enable snippets",
             keywords: ["expansion", "keystrokes", "accessibility"]),
         .init(
-            .snippetsGlobalShortcut, "Search Snippets",
-            keywords: ["hotkey", "browser"]),
+            group: .snippetsCommands, "Snippet commands",
+            keywords: ["shortcut", "hotkey", "launcher", "browser"]),
         .init(
             .snippetsLibrary, "New Snippet",
             keywords: ["add", "keyword", "expansion"]),
@@ -364,6 +367,9 @@ enum SettingsSearchCatalog {
             group: .windowManagementOptions, "Window commands",
             keywords: ["shortcut", "left half", "maximize", "center"]),
         .init(
+            group: .windowManagementLayoutCommands, "Layout commands",
+            keywords: ["shortcut", "launcher", "create layout", "capture"]),
+        .init(
             group: .windowManagementLayouts, "Window Layouts",
             keywords: [
                 "layout", "arrangement", "workspace", "preset", "restore windows",
@@ -388,8 +394,8 @@ enum SettingsSearchCatalog {
             .clipboardClipboard, "Enable Clipboard History",
             keywords: ["disable", "turn off", "monitor", "record", "privacy"]),
         .init(
-            .clipboardGlobalShortcuts, "Clipboard History",
-            keywords: ["hotkey", "paste", "browser"]),
+            group: .clipboardCommands, "Clipboard commands",
+            keywords: ["shortcut", "hotkey", "launcher", "paste", "browser"]),
         .init(
             .clipboardHistory, "Keep history for",
             keywords: ["retention", "delete", "privacy", "expire"]),
@@ -412,8 +418,8 @@ enum SettingsSearchCatalog {
             pane: .emoji,
             keywords: ["picker", "character", "unicode", "smiley"]),
         .init(
-            .emojiGlobalShortcuts, "Emoji & Symbols",
-            keywords: ["hotkey", "picker"]),
+            group: .emojiCommands, "Emoji commands",
+            keywords: ["shortcut", "hotkey", "launcher", "picker"]),
         .init(
             .emojiAppearance, "Emoji Skin Tone",
             keywords: ["colour", "color", "fitzpatrick", "default"])
@@ -456,6 +462,9 @@ enum SettingsSearchCatalog {
         .init(
             .calendarMenuBar, "Hide Current Event",
             keywords: ["started", "time left", "menubar"]),
+        .init(
+            group: .calendarCommands, "Calendar commands",
+            keywords: ["shortcut", "launcher", "join", "schedule", "create event"]),
         .init(
             group: .calendarCalendars, "Calendars",
             keywords: ["accounts", "sources", "choose", "icloud", "google"])

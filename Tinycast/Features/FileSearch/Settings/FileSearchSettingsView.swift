@@ -15,7 +15,7 @@ struct FileSearchSettingsView: View {
                 SettingsSectionHeader(.fileSearchFileSearch)
             }
 
-            SearchFilesCommandSection()
+            FeatureCommandsSection(owner: .fileSearch, anchor: .fileSearchCommands)
                 .settingsEnabled(settings.fileSearchEnabled)
             FileSearchScopesSection()
                 .settingsEnabled(settings.fileSearchEnabled)
@@ -24,42 +24,6 @@ struct FileSearchSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.fileSearch)
-    }
-}
-
-/// Search Files has a binding of its own, so it carries a recorder as well as a checkbox.
-private struct SearchFilesCommandSection: View {
-    @Environment(VisibilityStore.self) private var visibility
-
-    private let entry = CommandCatalog.entry(for: .searchFiles)
-
-    var body: some View {
-        Section {
-            if let entry {
-                SettingsRow(title: entry.name) {
-                    Image(systemName: CommandID.searchFiles.sfSymbol)
-                        .frame(width: Theme.Size.settingsRowIcon)
-                } trailing: {
-                    ShortcutRecorder(action: .command(.searchFiles))
-                    Toggle("", isOn: visibilityBinding(entry))
-                        .labelsHidden()
-                        .toggleStyle(.checkbox)
-                        .accessibilityLabel("Show \(entry.name) in launcher")
-                }
-            }
-        } header: {
-            SettingsSectionHeader(.fileSearchCommands)
-        } footer: {
-            Text("The shortcut works even when the command is hidden from the launcher.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func visibilityBinding(_ entry: AppEntry) -> Binding<Bool> {
-        Binding(
-            get: { visibility.isItemVisible(entry) },
-            set: { visibility.setItemVisible($0, for: entry) })
     }
 }
 

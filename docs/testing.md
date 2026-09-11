@@ -344,6 +344,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - A conflicting binding is rejected and names its current owner
 - A double-tap binding fires; Hyper Key remaps and its status dot is green
 - Every binding survives quit and relaunch
+- `Enable Commands` off leaves every pane-owned command listed, searchable and firing — Notes,
+  Clipboard, Emoji, File Search, Snippets, Quicklinks, Calendar, AI and the two layout commands
 
 ### Uninstall
 
@@ -380,7 +382,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Adding `*.log` takes effect on the next query with no relaunch; removing it restores those results
 - Built-in ignore rows carry no remove button; user rows do, and a duplicate or blank is refused
 - Recording a shortcut opens the palette straight into File Search, hidden from the launcher or not
-- The pane's checkbox and the Search Files row in Settings ▸ Commands move together
+- Search Files is absent from Settings ▸ Commands, and `Enable Commands` off leaves its shortcut live
 - Export, clear both lists and the shortcut, re-import: all three return, defaults undo not duplicated
 
 ### Notes
@@ -388,7 +390,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - With Notes **off**: all three commands are absent, their shortcuts no-op, and the Notes directory is
   not created
 - Enabling in Settings projects Show Notes, Create Note, and Search Notes immediately; the pane's
-  visibility checkboxes and recorders match Settings > Commands
+  visibility checkboxes and recorders are the only ones — Settings > Commands lists none of the three
 - Show Notes opens the last active note and focuses an already visible window without hiding it
 - Create Note makes one unique Untitled file, including as the first action in an empty channel
 - Command-P and the Browse button focus search, arrows move selection, Return opens, and Command-N
@@ -480,8 +482,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Create Event writes to the default calendar and shows up on the card, the schedule and the launcher
   without a relaunch; a blank title leaves the dialog up on ↵ and on a click
 - Arrow keys move the caret in the New Event title field, and still step the Set Volume slider
-- Every row of Settings ▸ Calendar has Add Alias, Record Hotkey and a checkbox, and an alias set
-  there is the alias the Commands pane shows
+- Every command row of Settings ▸ Calendar has Add Alias, Record Hotkey and a checkbox, and none of
+  the five appears in Settings ▸ Commands
 - Export with auto join and camera preview on, import onto a clean profile: both come back **off**,
   while the menu-bar settings carry over
 

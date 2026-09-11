@@ -84,6 +84,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let url: URL
     let bundleID: String?
     let kind: Kind
+    /// Set when a feature pane, not this entry's category pane, lists its controls and gates it.
+    var settingsOwner: SettingsTab?
     /// Secondary label beside the name, for an entry whose name alone can't say what it acts on.
     var subtitle: String?
     /// Background-refresh dot for a scheduled extension command; nil everywhere else.

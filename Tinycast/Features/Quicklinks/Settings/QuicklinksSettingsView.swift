@@ -23,6 +23,7 @@ struct QuicklinksSettingsView: View {
 
             Group {
                 if !store.isAvailable { storageNotice }
+                FeatureCommandsSection(owner: .quicklinks, anchor: .quicklinksCommands)
                 library
                 behaviour
                 transfer

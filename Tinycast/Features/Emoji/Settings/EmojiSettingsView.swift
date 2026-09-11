@@ -6,17 +6,7 @@ struct EmojiSettingsView: View {
     var body: some View {
         @Bindable var settings = settings
         return Form {
-            Section {
-                SettingsRow(title: "Emoji & Symbols", anchor: .emojiGlobalShortcuts) {
-                    ShortcutRecorder(action: .command(.searchEmoji))
-                }
-            } header: {
-                SettingsSectionHeader(.emojiGlobalShortcuts)
-            } footer: {
-                Text("Summon the emoji and symbols palette.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            FeatureCommandsSection(owner: .emoji, anchor: .emojiCommands)
 
             Section {
                 // A hand per tone, quicker to scan than a dropdown of tone names.
