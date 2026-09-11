@@ -13,6 +13,7 @@ enum BackupActions {
         var summary: SettingsBackup.ApplySummary
         var clipboardImported: Int
         var snippetsImported: Int
+        var snippetsNeedEnabling: Bool
         /// Set when the snippet files couldn't be written; the rest of the import still applied.
         var snippetsError: String?
         var quicklinksImported: Int
@@ -178,6 +179,7 @@ enum BackupActions {
             summary: summary,
             clipboardImported: imported,
             snippetsImported: snippetsImported,
+            snippetsNeedEnabling: snippetsImported > 0 && !core.settings.snippetsEnabled,
             snippetsError: snippetsError,
             quicklinksImported: quicklinksImported,
             quicklinksError: quicklinksError,
@@ -230,6 +232,7 @@ enum BackupActions {
         if !imported.isEmpty {
             parts.append("Imported " + imported.joined(separator: ", ") + ".")
         }
+        if summary.snippetsNeedEnabling { parts.append(snippetsNeedEnablingText) }
         parts.append(contentsOf: summary.problems)
         return parts.isEmpty ? nothingImportedText : parts.joined(separator: " ")
     }
@@ -250,6 +253,10 @@ enum BackupActions {
 
     static let nothingImportedText = "Nothing to import from this file."
 
+    /// No import may grant keystroke listening, so say the switch an imported keyword needs is off.
+    private static let snippetsNeedEnablingText =
+        "Turn on Snippets in Settings to use their keywords."
+
     /// One sentence per Raycast category that actually moved, shared by the pane and onboarding.
     static func raycastText(_ outcome: RaycastOutcome) -> String {
         var parts: [String] = []
@@ -261,6 +268,7 @@ enum BackupActions {
             let noun = outcome.snippetsImported == 1 ? "snippet" : "snippets"
             parts.append("Imported \(outcome.snippetsImported) \(noun).")
         }
+        if outcome.snippetsNeedEnabling { parts.append(snippetsNeedEnablingText) }
         if let snippetsError = outcome.snippetsError {
             parts.append("Couldn’t import snippets: \(snippetsError)")
         }

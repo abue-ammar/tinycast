@@ -7,6 +7,7 @@ enum BackupApplier {
         var settings: SettingsBackup.ApplySummary?
         var clipboard = 0
         var snippets = 0
+        var snippetsNeedEnabling = false
         var notes = 0
         var learning = 0
         /// Reported rather than thrown: a failure here must not abort the categories after it.
@@ -29,6 +30,8 @@ enum BackupApplier {
         if categories.contains(.snippets) {
             do {
                 summary.snippets = try await applySnippets(bundle, to: core)
+                summary.snippetsNeedEnabling =
+                    summary.snippets > 0 && !core.settings.snippetsEnabled
             } catch {
                 summary.problems.append("Couldn't import snippets: \(error.localizedDescription)")
             }
