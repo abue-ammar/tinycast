@@ -1,19 +1,21 @@
 import SwiftUI
 
-/// AI Chat's own row: a shortcut of its own, and a checkbox for its place in launcher search.
-struct AICommandSection: View {
+struct FeatureCommandsSection: View {
+    let owner: SettingsTab
+    let anchor: SettingsAnchor
     @Environment(VisibilityStore.self) private var visibility
-
-    private let entry = CommandCatalog.entry(for: .aiChat)
 
     var body: some View {
         Section {
-            if let entry {
+            ForEach(CommandCatalog.entries(ownedBy: owner)) { entry in
                 SettingsRow(title: entry.name) {
-                    Image(systemName: CommandID.aiChat.sfSymbol)
-                        .frame(width: Theme.Size.settingsRowIcon)
+                    AppIconView(app: entry)
+                        .frame(width: Theme.Size.settingsRowIcon, height: Theme.Size.settingsRowIcon)
                 } trailing: {
-                    ShortcutRecorder(action: .command(.aiChat))
+                    AliasField(entry: entry)
+                    if let action = entry.hotKeyAction {
+                        ShortcutRecorder(action: action)
+                    }
                     Toggle("", isOn: visibilityBinding(entry))
                         .labelsHidden()
                         .toggleStyle(.checkbox)
@@ -21,9 +23,9 @@ struct AICommandSection: View {
                 }
             }
         } header: {
-            SettingsSectionHeader(.aiCommands)
+            SettingsSectionHeader(anchor)
         } footer: {
-            Text("The shortcut works even when the command is hidden from the launcher.")
+            Text("A shortcut works even when its command is hidden from the launcher.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

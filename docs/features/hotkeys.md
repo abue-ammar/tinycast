@@ -62,11 +62,11 @@ names the three exceptions. Open in Browser and Run Shell Command are query-driv
 typed text a chord has none of — and Quit is withheld so no chord can terminate the app outright. The
 list is a deny-list rather than an allow-list, so a new command still arrives bindable without an edit
 there. A binding therefore persists under `hotkey.<command raw value>`, as in
-`hotkey.command:clipboard-history`, which is also what puts a recorder on every row in
-Settings ▸ Commands and a keycap on every launcher row. `hotkey.togglePalette` is the one fixed action
-with no command row. A command reachable from its own feature pane is one binding shown in two places,
-not two settings, and `HotKeyManager` names them all through `CommandID`, so a conflict callout spells
-an action exactly as its command row does.
+`hotkey.command:clipboard-history`, which is also what puts a recorder on the command's row and a
+keycap on every launcher row. That row is in exactly one pane — Settings ▸ Commands, or the feature's
+own pane when `SettingsTab.ownedCommands` names it. `hotkey.togglePalette` is the one fixed action with
+no command row. `HotKeyManager` names them all through `CommandID`, so a conflict callout spells an
+action exactly as its command row does.
 
 Like a window command, the chord registers regardless of the launcher row. Search Files and Notes both
 re-check their feature switches before opening; see [file-search.md](file-search.md#invocation) and

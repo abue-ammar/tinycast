@@ -15,6 +15,11 @@ earliest scope wins).
   guards its own. The per-item checkbox beside it is the narrow tool: it hides one row and leaves that
   row's shortcut firing. A new category must be wired into `VisibilityStore.allowsHotKey`, or its
   chords keep running while its pane reads off.
+- **One command, one pane, one switch.** `SettingsTab.ownedCommands` is the whole table of which pane
+  lists a command's shortcut, alias and launcher checkbox. A feature that names its commands there
+  already decides whether they exist, so `Enable Commands` neither lists nor gates them — two switches
+  over one row is how somebody ends up with Notes on and its shortcut dead. Everything the table does
+  not name belongs to Settings › Commands and answers to that switch.
 - **`Model/SearchRelevance.swift` is Foundation-only and pure**, so `fuzz-test` compiles the shipped
   scorer. It owns `FuzzyMatch`, `SearchAlias` and the cell table.
 - **`Model/EntryNaming.swift` is the only place a name is decided, for every kind alike.** Criteria
@@ -512,11 +517,9 @@ than Commands.
 Custom actions arrive through `AppIndex.setCustomQuickActions` as `quick-action:<uuid>` entries,
 sorted by when they were made, and bind `HotKeyAction.quickAction(id:)`.
 
-`VisibilityStore.allowsHotKey` reads `entryKind` to let a Quick Action command through ungated, like
-every other feature carrying its own switch. **There is deliberately no `Enable Quick Actions`
-category toggle**: a `LauncherItemsSection(kind: .quickAction)` would be a second switch over rows the
-pane already lists. This did move a gate, though. `Enable Commands` off used to stop the shipped four,
-and no longer does.
+Quick Actions are one of the panes in `SettingsTab.ownedCommands`, so `Enable Commands` does not reach
+them. **There is deliberately no `Enable Quick Actions` category toggle** either: a
+`LauncherItemsSection(kind: .quickAction)` would be a second switch over rows the pane already lists.
 
 Activation hands the action to `QuickActionCoordinator.run(_:)` **without** hiding the palette first:
 the coordinator reads the displaced app and then hides, because after the hide the frontmost app is
@@ -530,7 +533,27 @@ feature is enabled. Activation hides the palette without restoring focus and cal
 
 `AppIndex` projects the three commands together from `notesEnabled`, independently of File Search and
 Quicklinks. They represent collection actions rather than individual notes, so Notes adds no
-`AppEntry.Kind` or launcher section. See [notes.md](notes.md).
+`AppEntry.Kind` or launcher section — it owns them through `SettingsTab.ownedCommands` instead, which
+is what keeps them out of Settings › Commands while they stay in the launcher's Commands section. See
+[notes.md](notes.md).
+
+## Pane-owned commands
+
+`SettingsTab.ownedCommands` names, per pane, the commands that pane lists itself. `CommandID.owner`
+inverts it once into a lookup, `CommandCatalog.makeEntry` stamps the answer onto `AppEntry.settingsOwner`,
+and three places read it: `FeatureCommandsSection` draws the pane's rows from it,
+`LauncherItemsSection` filters an owned row out of Settings › Commands, and `VisibilityStore` skips the
+category gate for it in both `isVisible` and `allowsHotKey`. Stamping the entry rather than sniffing its
+id is what keeps "which pane owns this" out of the entry-ID namespace.
+
+Ten panes own commands today — AI, Quick Actions, File Search, Notes, Snippets, Window Management,
+Clipboard, Emoji, Calendar and Quicklinks. What is left in Settings › Commands is the set no feature
+switch governs: Calculator History, Open Camera, the three backup commands, Check for Updates,
+Settings, About, Support and Quit.
+
+A pane's list is also its display order, so `CommandID`'s declaration order is grouped by owner.
+Nothing keys on that order — `CommandCatalog.all` sorts by name and every preference keys on the raw
+value — so a command may be moved between owners without migrating anything.
 
 > **Invariant:** `Tests/fuzz-test.swift` compiles the real `Tinycast/Features/Launcher/Model/SearchRelevance.swift`, so
 > that file must stay Foundation-only and pure. There is no copy of the scorer to keep in sync.

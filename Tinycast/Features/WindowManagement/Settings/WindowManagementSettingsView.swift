@@ -21,6 +21,8 @@ struct WindowManagementSettingsView: View {
             Group {
                 options
                 WindowLayoutsSection(onDelete: { pendingDeletion = $0 })
+                FeatureCommandsSection(
+                    owner: .windowManagement, anchor: .windowManagementLayoutCommands)
                 commands
             }
             .settingsEnabled(settings.windowManagementEnabled)

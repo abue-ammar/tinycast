@@ -25,6 +25,7 @@ extension SettingsAnchor {
     static let commandsCustomCommands = Self(tab: .commands, title: "Custom Commands")
 
     static let quicklinksQuicklinks = Self(tab: .quicklinks, title: "Quicklinks")
+    static let quicklinksCommands = Self(tab: .quicklinks, title: "Commands")
     static let quicklinksBehaviour = Self(tab: .quicklinks, title: "Behaviour")
     static let quicklinksImportExport = Self(tab: .quicklinks, title: "Import & Export")
 
@@ -55,24 +56,27 @@ extension SettingsAnchor {
     static let notesCommands = Self(tab: .notes, title: "Commands")
 
     static let snippetsSnippets = Self(tab: .snippets, title: "Snippets")
-    static let snippetsGlobalShortcut = Self(tab: .snippets, title: "Global Shortcut")
+    static let snippetsCommands = Self(tab: .snippets, title: "Commands")
     static let snippetsLibrary = Self(tab: .snippets, title: "Library")
 
     static let windowManagementWindowManagement = Self(
         tab: .windowManagement, title: "Window Management")
     static let windowManagementLayouts = Self(tab: .windowManagement, title: "Window Layouts")
+    static let windowManagementLayoutCommands = Self(
+        tab: .windowManagement, title: "Layout Commands")
     static let windowManagementOptions = Self(tab: .windowManagement, title: "Options")
 
     static let clipboardClipboard = Self(tab: .clipboard, title: "Clipboard")
-    static let clipboardGlobalShortcuts = Self(tab: .clipboard, title: "Global Shortcuts")
+    static let clipboardCommands = Self(tab: .clipboard, title: "Commands")
     static let clipboardHistory = Self(tab: .clipboard, title: "History")
     static let clipboardDisabledApplications = Self(
         tab: .clipboard, title: "Disabled Applications")
 
-    static let emojiGlobalShortcuts = Self(tab: .emoji, title: "Global Shortcuts")
+    static let emojiCommands = Self(tab: .emoji, title: "Commands")
     static let emojiAppearance = Self(tab: .emoji, title: "Appearance")
 
     static let calendarCalendar = Self(tab: .calendar, title: "Calendar")
+    static let calendarCommands = Self(tab: .calendar, title: "Commands")
     static let calendarSchedule = Self(tab: .calendar, title: "Schedule")
     static let calendarJoining = Self(tab: .calendar, title: "Joining")
     static let calendarMenuBar = Self(tab: .calendar, title: "Menu Bar")

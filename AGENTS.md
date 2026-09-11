@@ -90,8 +90,9 @@ feature's doc, under its own `## Invariants`.
   colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
   "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
   precisely because the palette's own menu and the emoji grid must stay free to change without them.
-- **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
-  `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
+- **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section and
+  per `VisibilityStore` category — never re-derive a category by sniffing an entry ID. Which *pane*
+  lists a command is a separate fact, and `SettingsTab.ownedCommands` is the only place that states it.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from
   `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`, and
   `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is

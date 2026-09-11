@@ -34,7 +34,7 @@ struct AISettingsView: View {
                 SettingsSectionHeader(.aiAI)
             }
 
-            AICommandSection()
+            FeatureCommandsSection(owner: .ai, anchor: .aiCommands)
                 .settingsEnabled(appSettings.aiEnabled)
 
             Group {

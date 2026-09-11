@@ -19,18 +19,8 @@ struct ClipboardSettingsView: View {
                 SettingsSectionHeader(.clipboardClipboard)
             }
 
-            Section {
-                SettingsRow(title: "Clipboard History", anchor: .clipboardGlobalShortcuts) {
-                    ShortcutRecorder(action: .command(.clipboardHistory))
-                }
-            } header: {
-                SettingsSectionHeader(.clipboardGlobalShortcuts)
-            } footer: {
-                Text("Open the clipboard history browser.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .settingsEnabled(settings.clipboardEnabled)
+            FeatureCommandsSection(owner: .clipboard, anchor: .clipboardCommands)
+                .settingsEnabled(settings.clipboardEnabled)
 
             Section {
                 Picker(selection: $settings.clipboardRetention) {
