@@ -69,6 +69,7 @@ struct MenuSearchTests {
         snapshotCollect()
         snapshotDepth()
         snapshotLimit()
+        snapshotPerSubmenu()
         snapshotCancel()
         snapshotFrozen()
         snapshotDuplicates()
@@ -212,14 +213,49 @@ struct MenuSearchTests {
     }
 
     static func snapshotLimit() {
-        let bar: [MenuTreeNode] = [tree("", children: (0..<4_500).map { tree("Item \($0)") })]
+        let bar: [MenuTreeNode] = [tree("", children: (0..<25).map { menu in
+            tree("Menu \(menu)", children: (0..<200).map { tree("Item \($0)") })
+        })]
         let items = MenuSnapshotPolicy.collect(bar)
         expect(
             items.count == MenuSnapshotPolicy.itemLimit,
             "the snapshot truncates silently at the item cap")
         expect(
-            items.first?.title == "Item 0" && items.last?.title == "Item 3999",
+            items.first?.displayPath == "Menu 0 > Item 0"
+                && items.last?.displayPath == "Menu 19 > Item 199",
             "truncation keeps pre-order, so ranking still sees the front of the menu")
+    }
+
+    static func snapshotPerSubmenu() {
+        let history: [MenuTreeNode] = [tree("", children: [
+            tree("History", children: (0..<500).map { tree("Item \($0)") })
+        ])]
+        let capped = MenuSnapshotPolicy.collect(history)
+        expect(
+            capped.count == MenuSnapshotPolicy.perSubmenuLimit,
+            "one giant submenu stops at the per-submenu cap, not the global one")
+        expect(
+            capped.first?.title == "Item 0" && capped.last?.title == "Item 199",
+            "the cap keeps pre-order, so the submenu's front stays searchable")
+
+        let nested: [MenuTreeNode] = [tree("", children: [
+            tree("File", children: (0..<150).map { tree("File \($0)") }
+                + [tree("More", children: (0..<150).map { tree("Deep \($0)") })])
+        ])]
+        let nestedItems = MenuSnapshotPolicy.collect(nested)
+        expect(
+            nestedItems.count == 300,
+            "nested submenus carry their own budget instead of sharing one")
+
+        let trailing: [MenuTreeNode] = [tree("", children: [
+            tree("History", children: (0..<250).map { tree("Item \($0)") }
+                + [tree("More", children: [tree("Extra A"), tree("Extra B")])])
+        ])]
+        let trailingItems = MenuSnapshotPolicy.collect(trailing)
+        expect(
+            trailingItems.count == MenuSnapshotPolicy.perSubmenuLimit + 2
+                && trailingItems.last?.title == "Extra B",
+            "a full frame still walks later parents into their own budget")
     }
 
     static func snapshotCancel() {
@@ -317,6 +353,18 @@ struct MenuSearchTests {
         expect(
             MenuSearchShortcut.commandEquivalent(character: "E", modifiers: 24) == nil,
             "higher bits mark keys outside ⌘ chords, which have no glyph to show")
+        expect(
+            MenuSearchShortcut(
+                character: "x", hasCommand: true, hasShift: true, hasOption: true,
+                hasControl: true
+            ).keycaps == ["⌃", "⌥", "⇧", "⌘", "X"],
+            "keycaps split the chord in menu order for the row's chips")
+        expect(
+            MenuSearchShortcut(
+                character: "s", hasCommand: false, hasShift: false, hasOption: false,
+                hasControl: false
+            ).keycaps.isEmpty,
+            "a chord with no glyph carries no chips")
     }
 
     static func snapshotDuplicates() {

@@ -29,4 +29,16 @@ struct MenuSearchShortcut: Hashable, Sendable {
         if hasCommand { glyphs += "⌘" }
         return glyphs + character.uppercased()
     }
+
+    // One chip per cap, so rows reuse the launcher's keycap grammar instead of a glyph string.
+    var keycaps: [String] {
+        guard displayString != nil else { return [] }
+        var caps: [String] = []
+        if hasControl { caps.append("⌃") }
+        if hasOption { caps.append("⌥") }
+        if hasShift { caps.append("⇧") }
+        if hasCommand { caps.append("⌘") }
+        caps.append(character.uppercased())
+        return caps
+    }
 }

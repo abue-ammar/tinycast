@@ -555,6 +555,19 @@ A pane's list is also its display order, so `CommandID`'s declaration order is g
 Nothing keys on that order — `CommandCatalog.all` sorts by name and every preference keys on the raw
 value — so a command may be moved between owners without migrating anything.
 
+## Search Menu Items
+
+`CommandID.searchMenuItems` opens the frontmost app's main menu bar as a palette screen (a port of
+Raycast 1.20.0's Search Menu Items), from its launcher row or its own global chord, which ships
+unbound. The target is frozen at open with no app picker; only enabled, visible, pressable leaves
+become rows, and a collapsed submenu with no exposed children is accepted as missing coverage. One
+off-main walk (20 levels, 4,000 items with 200 per submenu, 1-second budget) then in-memory
+filtering capped at 200 rows; activation re-resolves by path and `AXPress`es after
+dismiss-and-reactivate, with the Accessibility gate on show and on activate. Hiding the palette
+resets the session, so the snapshot never outlives the show. No new `AppEntry.Kind`, no visibility
+gate, no frecency — this stays a command entry rather than a feature doc by design, since the
+code carries no policy beyond the caps above.
+
 > **Invariant:** `Tests/fuzz-test.swift` compiles the real `Tinycast/Features/Launcher/Model/SearchRelevance.swift`, so
 > that file must stay Foundation-only and pure. There is no copy of the scorer to keep in sync.
 

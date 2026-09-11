@@ -7,6 +7,9 @@ final class MenuSearchCoordinator {
     private unowned let core: AppCore
     /// The app the open snapshot belongs to; activation re-resolves against this, never a retarget.
     private var frozenApp: NSRunningApplication?
+    /// One decode shared by every row; resolved once per show so the list never re-hits icons.
+    private(set) var frozenIconURL: URL?
+    private(set) var frozenIconStamp: Int = 0
 
     init(
         session: MenuSearchSession, paletteCoordinator: PaletteCoordinator, core: AppCore
@@ -23,6 +26,13 @@ final class MenuSearchCoordinator {
         }
         let app = paletteCoordinator.targetApp
         frozenApp = app
+        if let url = app?.bundleURL {
+            frozenIconURL = url
+            frozenIconStamp = FileIconStamp.value(for: url)
+        } else {
+            frozenIconURL = nil
+            frozenIconStamp = 0
+        }
         let target = MenuSearchTarget.classify(
             appName: app?.localizedName,
             isSelf: app?.bundleIdentifier == Bundle.main.bundleIdentifier,

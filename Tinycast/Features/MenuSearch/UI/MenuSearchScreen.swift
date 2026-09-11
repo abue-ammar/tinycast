@@ -38,6 +38,8 @@ struct MenuSearchScreen: PaletteScreen {
             } else {
                 MenuSearchList(
                     items: rows, targetName: name,
+                    iconURL: core.menuSearchCoordinator.frozenIconURL,
+                    iconStamp: core.menuSearchCoordinator.frozenIconStamp,
                     selectedID: rows.indices.contains(selection) ? rows[selection].id : nil,
                     scroll: scroll,
                     onActivate: { core.menuSearchCoordinator.activate($0) })
