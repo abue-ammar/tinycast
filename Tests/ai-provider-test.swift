@@ -99,6 +99,7 @@ struct AIProviderTests {
         toolCatalogsAndTurnsEncodePerProvider()
         toolArgumentsSurviveArrivingInFragments()
         toolCapabilitiesFollowTheRoute()
+        aGatewayOffersNoneAsItsReasoningEffort()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -263,6 +264,48 @@ struct AIProviderTests {
         expect(
             (router["reasoning"] as? [String: String])?["effort"] == "low",
             "OpenRouter receives the reasoning effort its catalog offered")
+    }
+
+    /// A body that named the default would 400 on every endpoint without a thinking mode.
+    static func aGatewayOffersNoneAsItsReasoningEffort() {
+        let gateway = AIConnection(
+            provider: .openAI, baseURL: "https://api.fusioncode.app/v1", models: ["m"])
+        expect(
+            gateway.reasoningOptions(for: "m")?.efforts == ["default", "none"],
+            "a preset pointed away from its own API offers the one effort a gateway can honour")
+        expect(
+            gateway.reasoningOptions(for: "m")?.resolvedEffort(nil) == "default",
+            "and reasoning stays on until the reader picks None")
+        expect(
+            AIConnection(provider: .openAI, models: ["m"]).reasoningOptions(for: "m") == nil,
+            "a preset on its own API offers none, because a vendor rejects what it does not define")
+        expect(
+            AIConnection(provider: .anthropic, baseURL: "https://gateway.example", models: ["m"])
+                .reasoningOptions(for: "m") == nil,
+            "the Anthropic shape is out of scope whatever it points at")
+
+        let catalogued = AIConnection(
+            id: UUID(), provider: .openRouter, baseURL: "https://gateway.example", models: ["m"],
+            reasoningOptions: ["m": .init(efforts: ["high", "low"], defaultEffort: "high")])
+        expect(
+            catalogued.reasoningOptions(for: "m")?.efforts == ["high", "low"],
+            "a published catalog always wins over the synthesized switch")
+
+        let turn = AIRequest(messages: [AIMessage(role: .user, text: "hi")])
+        let url = URL(string: "https://api.fusioncode.app/v1")!
+        let on = AIRequestBody.make(
+            turn,
+            configuration: AIHTTPConfiguration(provider: .openAI, baseURL: url, model: "m"))
+        expect(on["thinking"] == nil, "reasoning left alone sends no key at all")
+
+        let off = AIRequestBody.make(
+            turn,
+            configuration: AIHTTPConfiguration(
+                provider: .openAI, baseURL: url, model: "m", effort: "none",
+                disablesThinking: true))
+        expect(
+            (off["thinking"] as? [String: String])?["type"] == "disabled",
+            "None asks the endpoint to answer directly")
     }
 
     static func providerPresetsResolveEndpoints() {

@@ -1094,8 +1094,9 @@ struct ExtensionTests {
             session: "archive", code: command, file: directory.appendingPathComponent("test.js"),
             mode: .noView, context: launchContext(mode: .noView))
         await settle()
-        check("node file, zlib and stream contracts", host.huds == ["archive IO passed"],
-              recorder.failures.joined(separator: "|"))
+        check(
+            "node file, zlib and stream contracts", host.huds == ["archive IO passed"],
+            recorder.failures.joined(separator: "|"))
         await runtime.stop(session: "archive")
         runtime.shutdown()
     }

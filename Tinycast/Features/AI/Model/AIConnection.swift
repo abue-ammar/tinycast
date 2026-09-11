@@ -36,8 +36,14 @@ enum AIProviderKind: String, CaseIterable, Codable, Identifiable, Sendable {
 
 struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     struct ReasoningOptions: Codable, Equatable, Sendable {
+        static let noEffort = "none"
+
         let efforts: [String]
         let defaultEffort: String?
+
+        /// Named for OpenRouter's own spelling, where `none` likewise disables reasoning entirely.
+        static let thinkingSwitch = ReasoningOptions(
+            efforts: ["default", "none"], defaultEffort: "default")
 
         func resolvedEffort(_ preferred: String?) -> String? {
             guard !efforts.isEmpty else { return nil }
@@ -69,6 +75,17 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         self.models = models
         self.visionModels = visionModels
         self.reasoningOptions = reasoningOptions
+    }
+
+    /// A preset pointed away from its own API is a gateway, and only a gateway takes a thinking field.
+    var takesThinkingField: Bool {
+        provider.apiShape == .openAICompatible
+            && baseURL.trimmingCharacters(in: .whitespacesAndNewlines) != provider.defaultBaseURL
+    }
+
+    /// A gateway publishes no catalog, so the only effort it is known to honour is the off switch.
+    func reasoningOptions(for model: String) -> ReasoningOptions? {
+        reasoningOptions?[model] ?? (takesThinkingField ? .thinkingSwitch : nil)
     }
 
     var title: String {
@@ -248,12 +265,17 @@ struct AIHTTPConfiguration: Equatable, Sendable {
     let baseURL: URL
     let model: String
     let effort: String?
+    let disablesThinking: Bool
 
-    init(provider: AIProviderKind, baseURL: URL, model: String, effort: String? = nil) {
+    init(
+        provider: AIProviderKind, baseURL: URL, model: String, effort: String? = nil,
+        disablesThinking: Bool = false
+    ) {
         self.provider = provider
         self.baseURL = baseURL
         self.model = model
         self.effort = effort
+        self.disablesThinking = disablesThinking
     }
 
     var shape: APIShape { provider.apiShape }

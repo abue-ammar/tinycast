@@ -159,6 +159,17 @@ and reasoning efforts from `model/list`; OpenCode gets identifiers and model-spe
 `opencode models --pure --verbose`. Claude exposes the CLI's stable `sonnet`, `opus` and `haiku`
 aliases, with the CLI's effort levels on the supported Opus and Sonnet families.
 
+Turning thinking off is a reasoning effort, not a second control: `reasoningOptions(for:)` answers with
+the connection's catalogued efforts, or — for a connection with no catalog to publish one — `Default`
+and `None`. `takesThinkingField` decides who gets that pair: an OpenAI-shaped preset whose base URL is
+not that preset's own, because a preset pointed away from its own API is a gateway, and a gateway is
+the only destination Tinycast can offer the switch to honestly. Picking `None` sends
+`"thinking": {"type": "disabled"}`, which is how DeepSeek and the endpoints that copied its contract
+answer without reasoning first. A vendor API is never offered the pair and so is never sent a field it
+does not define — which matters precisely because the preset alone says nothing about the destination
+when every base URL is editable. Only `None` is ever written, so every other body is the one it always
+was, and the choice rides in `AIModelSelection.effort` like every other route's.
+
 ## Provider interface
 
 `AIProvider.stream(_:)` accepts provider-neutral messages, optional instructions, a maximum output

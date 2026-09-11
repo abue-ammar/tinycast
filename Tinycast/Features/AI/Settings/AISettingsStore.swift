@@ -113,19 +113,19 @@ final class AISettingsStore {
             if connection.models.contains(model) {
                 defaultModel = .api(
                     connection: connection.id, model: model,
-                    effort: connection.reasoningOptions?[model]?.resolvedEffort(effort))
+                    effort: connection.reasoningOptions(for: model)?.resolvedEffort(effort))
             } else {
                 defaultModel = connection.models.first.map {
                     .api(
                         connection: connection.id, model: $0,
-                        effort: connection.reasoningOptions?[$0]?.resolvedEffort(nil))
+                        effort: connection.reasoningOptions(for: $0)?.resolvedEffort(nil))
                 }
             }
         }
         if defaultModel == nil, let model = connection.models.first {
             defaultModel = .api(
                 connection: connection.id, model: model,
-                effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
+                effort: connection.reasoningOptions(for: model)?.resolvedEffort(nil))
         }
     }
 
@@ -218,7 +218,7 @@ final class AISettingsStore {
             if let model = connection.models.first {
                 return .api(
                     connection: connection.id, model: model,
-                    effort: connection.reasoningOptions?[model]?.resolvedEffort(nil))
+                    effort: connection.reasoningOptions(for: model)?.resolvedEffort(nil))
             }
         }
         return nil

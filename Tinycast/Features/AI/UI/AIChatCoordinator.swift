@@ -620,7 +620,7 @@ struct AIModelOption: Identifiable {
                 .first { $0.id == model }?.resolvedEffort(nil)
         case .api(let connection):
             effort = settings.connection(id: connection)?
-                .reasoningOptions?[model]?.resolvedEffort(nil)
+                .reasoningOptions(for: model)?.resolvedEffort(nil)
         }
         return selection.withEffort(effort)
     }
@@ -640,7 +640,7 @@ struct AIModelOption: Identifiable {
         case .claude, .openCode:
             return installedAI.models(for: selection.source).first { $0.id == model }?.efforts ?? []
         case .api(let connection):
-            return settings.connection(id: connection)?.reasoningOptions?[model]?
+            return settings.connection(id: connection)?.reasoningOptions(for: model)?
                 .efforts.map { ChatGPTSubscription.Effort(id: $0, detail: nil) } ?? []
         }
     }
