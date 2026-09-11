@@ -1,0 +1,98 @@
+name: Extension Bug
+description: A Raycast extension misbehaves inside Tinycast
+title: "[Extension]: "
+labels: ["bug", "extension"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Read this first.** Tinycast runs Raycast extensions in its own runtime — a different system,
+        not Raycast. An extension that reaches for something only Raycast has cannot be made to work
+        here, and the issue is closed as `wontfix`:
+
+        - Raycast AI — `AI.ask`, AI commands, `tools/` AI extensions
+        - the Raycast browser extension (`BrowserExtension`)
+        - Raycast's `WindowManagement` service
+        - Raycast's OAuth proxy, `oauth.raycast.com`
+        - Raycast Pro, cloud sync, accounts or teams
+        - an OS permission or entitlement Tinycast doesn't hold
+        - Raycast-internal APIs, private modules and unpublished behaviour
+
+        The full list of gaps is in
+        [docs/features/extensions.md](https://github.com/abue-ammar/tinycast/blob/main/docs/features/extensions.md#what-isnt-supported-yet).
+        A missing API that Tinycast *could* reasonably implement is worth reporting. "It works in
+        Raycast" on its own is not.
+  - type: checkboxes
+    id: existing-search
+    attributes:
+      label: Existing issues
+      options:
+        - label: I searched open and closed issues and didn't find this already reported
+          required: false
+  - type: input
+    id: extension-url
+    attributes:
+      label: Extension URL
+      description: Its page in the Raycast store, or the repository it comes from.
+      placeholder: https://www.raycast.com/author/extension
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      placeholder: |
+        What you did, what you expected, what you got instead.
+        A short recording beats a paragraph.
+    validations:
+      required: true
+  - type: textarea
+    id: repro-steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or recording
+      description: >
+        Required. Drag and drop a screenshot or a screen recording of the extension failing — an
+        extension bug with nothing to look at is closed.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Tinycast version + channel
+      placeholder: 0.1.0 stable
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "26.0"
+    validations:
+      required: true
+  - type: checkboxes
+    id: extension-ack
+    attributes:
+      label: Extension limits
+      options:
+        - label: I understand this is closed if the extension depends on Raycast-only capabilities
+          required: true
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Contribution
+      description: >
+        Optional. Don't start until the issue is marked `approved` — an unapproved PR is
+        closed automatically.
+      options:
+        - label: I'm willing to implement this myself
+          required: false

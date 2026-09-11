@@ -1,4 +1,4 @@
-name: Feature request
+name: Feature Request
 description: Suggest an idea
 title: "[Feature]: "
 labels: ["enhancement"]
@@ -13,6 +13,19 @@ body:
     id: why
     attributes:
       label: Why does it belong in Tinycast?
-      description: Tinycast stays small on purpose — quality over quantity. Tell us why this is worth its weight.
+      description: >
+        Tinycast stays small on purpose — quality over quantity. It has already borrowed what it
+        wanted from Raycast, so "Raycast has it" is not a reason. Tell us why this is worth its
+        weight.
     validations:
       required: true
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Contribution
+      description: >
+        Optional. Don't start until the issue is marked `approved` — an unapproved PR is
+        closed automatically.
+      options:
+        - label: I'm willing to implement this myself
+          required: false

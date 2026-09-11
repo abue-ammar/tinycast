@@ -128,8 +128,11 @@ standards, the design system and one document per feature.
 > [!IMPORTANT]
 > **Open an issue before you write code — this is mandatory.** Get the bug or the feature agreed on
 > first; discussing it in the issue (or on [Discord](https://discord.gg/v2Eeb4QQy3)) is strongly
-> encouraged. A PR with no agreed issue behind it gets closed however good the patch is, and the
-> work is wasted. Typo and docs-only fixes are the one exception.
+> encouraged. A PR that doesn't close an issue marked `approved` is closed automatically however good
+> the patch is, and the work is wasted. Docs-only fixes are the one exception.
+>
+> Tinycast has already borrowed what it wanted from Raycast, and the borrowing is done. Ask whether a
+> feature is wanted before you ask for it.
 
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first — it covers the memory budget every PR is held to,
 the before/after video requirement for visual changes, and why features get declined. Every PR fills

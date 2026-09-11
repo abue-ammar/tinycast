@@ -50,3 +50,13 @@ body:
       placeholder: "26.0"
     validations:
       required: true
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Contribution
+      description: >
+        Optional. Don't start until the issue is marked `approved` — an unapproved PR is
+        closed automatically.
+      options:
+        - label: I'm willing to implement this myself
+          required: false
