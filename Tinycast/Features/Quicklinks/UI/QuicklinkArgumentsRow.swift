@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The inline argument fields beside the search field, one per `{argument}` the link declares.
 struct QuicklinkArgumentsRow: View {
+    @Environment(\.metrics) private var metrics
     let arguments: [SnippetTemplateEngine.MissingArgument]
     /// The quicklink's glyph, anchoring the strip to the row; nil where that row is already listed.
     let symbol: String?
@@ -16,11 +17,11 @@ struct QuicklinkArgumentsRow: View {
     @State private var visited: Set<String> = []
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
+        HStack(spacing: metrics.spacing.xs) {
             if let symbol {
                 Image(nsImage: IconCache.symbolIcon(named: symbol))
                     .resizable()
-                    .frame(width: Self.height, height: Self.height)
+                    .frame(width: Self.height(metrics), height: Self.height(metrics))
             }
             ForEach(arguments, id: \.name) { argument in
                 if argument.options.isEmpty {
@@ -49,24 +50,29 @@ struct QuicklinkArgumentsRow: View {
         }
     }
 
-    static let height: CGFloat = 26
+    static func height(_ metrics: InterfaceMetrics) -> CGFloat { metrics.scaled(26) }
 
     /// The header shrinks the search field to exactly the room left over.
     static func totalWidth(
-        for arguments: [SnippetTemplateEngine.MissingArgument], hasIcon: Bool
+        for arguments: [SnippetTemplateEngine.MissingArgument], hasIcon: Bool,
+        metrics: InterfaceMetrics
     ) -> CGFloat {
-        let fields = arguments.reduce(0) { $0 + fieldWidth(for: $1) }
-        let gaps = CGFloat(arguments.count + (hasIcon ? 0 : -1)) * Theme.Spacing.xs
-        return fields + gaps + (hasIcon ? height : 0)
+        let fields = arguments.reduce(0) { $0 + fieldWidth(for: $1, metrics: metrics) }
+        let gaps = CGFloat(arguments.count + (hasIcon ? 0 : -1)) * metrics.spacing.xs
+        return fields + gaps + (hasIcon ? height(metrics) : 0)
     }
 
-    static func fieldWidth(for argument: SnippetTemplateEngine.MissingArgument) -> CGFloat {
-        min(max(CGFloat(argument.name.count) * 7 + 34, 72), 160)
+    static func fieldWidth(
+        for argument: SnippetTemplateEngine.MissingArgument, metrics: InterfaceMetrics
+    ) -> CGFloat {
+        let name = CGFloat(argument.name.count) * metrics.scaled(7)
+        return min(max(name + metrics.scaled(34), metrics.scaled(72)), metrics.scaled(160))
     }
 }
 
 /// Shared chrome, so a typed field and a chosen one read as the same control.
 private struct ArgumentFieldChrome: ViewModifier {
+    @Environment(\.metrics) private var metrics
     let argument: SnippetTemplateEngine.MissingArgument
     let isFocused: Bool
     /// Visited, left, and still empty — the only state that earns a warning edge.
@@ -75,14 +81,14 @@ private struct ArgumentFieldChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .frame(width: QuicklinkArgumentsRow.fieldWidth(for: argument))
-            .padding(.horizontal, Theme.Spacing.sm)
-            .frame(height: QuicklinkArgumentsRow.height)
+            .frame(width: QuicklinkArgumentsRow.fieldWidth(for: argument, metrics: metrics))
+            .padding(.horizontal, metrics.spacing.sm)
+            .frame(height: QuicklinkArgumentsRow.height(metrics))
             .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous).fill(fill)
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                     .strokeBorder(stroke, lineWidth: 1)
             )
             .onHover { hovered = $0 }
@@ -104,6 +110,8 @@ private struct ArgumentFieldChrome: ViewModifier {
 }
 
 private struct ArgumentField: View {
+
+    @Environment(\.metrics) private var metrics
     let argument: SnippetTemplateEngine.MissingArgument
     @Binding var text: String
     let isFocused: Bool
@@ -117,7 +125,7 @@ private struct ArgumentField: View {
             prompt: Text(argument.name).foregroundStyle(Theme.Colors.textTertiary)
         )
         .textFieldStyle(.plain)
-        .font(Theme.Typography.rowTrailing)
+        .font(metrics.typography.rowTrailing)
         .tint(Theme.Colors.textPrimary)
         .onSubmit(onSubmit)
         .multilineTextAlignment(.center)
@@ -130,6 +138,7 @@ private struct ArgumentField: View {
 
 /// An `options=` argument: the value is picked from the palette's own menu, never typed.
 private struct ArgumentChoiceField: View {
+    @Environment(\.metrics) private var metrics
     let argument: SnippetTemplateEngine.MissingArgument
     @Binding var text: String
     let isFocused: Bool
@@ -138,9 +147,9 @@ private struct ArgumentChoiceField: View {
     @State private var hovered = false
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xxs) {
+        HStack(spacing: metrics.spacing.xxs) {
             Text(text.isEmpty ? argument.name : text)
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(
                     text.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
                 )

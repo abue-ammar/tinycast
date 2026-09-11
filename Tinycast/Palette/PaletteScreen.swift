@@ -28,7 +28,7 @@ enum PaletteAxis {
     }
 
     init(
-        popover: PopoverMenuContent, selection: Binding<Int>, width: CGFloat = Theme.Size.menuWidth,
+        popover: PopoverMenuContent, selection: Binding<Int>, width: CGFloat? = nil,
         onActivate: @escaping (Int) -> Void
     ) {
         self.init(

@@ -162,6 +162,8 @@ enum Theme {
         static let settingsDetailMinimum: CGFloat = 420
         static let settingsRowIcon: CGFloat = 20
         static let paletteTransparencySlider: CGFloat = 190
+        /// One "Aa" segment of the Interface Size control; three sit in a grouped row's trailing slot.
+        static let interfaceSizeSegment: CGFloat = 40
         /// The sidebar's search field; matches a grouped `Form` row's control height.
         static let settingsSearchField: CGFloat = 28
         /// The layout editor. Height is stated so selecting an entry cannot resize the sheet.

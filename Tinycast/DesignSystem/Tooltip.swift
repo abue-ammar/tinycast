@@ -4,6 +4,7 @@ import SwiftUI
 private struct TooltipModifier: ViewModifier {
     let text: String?
     @State private var hovered = false
+    @Environment(\.metrics) private var metrics
 
     func body(content: Content) -> some View {
         content
@@ -11,14 +12,14 @@ private struct TooltipModifier: ViewModifier {
             .overlay(alignment: .top) {
                 if let text, hovered {
                     Text(text)
-                        .font(Theme.Typography.keyCap)
+                        .font(metrics.typography.keyCap)
                         .foregroundStyle(Theme.Colors.textSecondary)
-                        .padding(.horizontal, Theme.Spacing.sm)
-                        .padding(.vertical, Theme.Spacing.xxs)
+                        .padding(.horizontal, metrics.spacing.sm)
+                        .padding(.vertical, metrics.spacing.xxs)
                         .background(Capsule().fill(Theme.Colors.controlSurface))
                         .overlay(Capsule().strokeBorder(Theme.Colors.border, lineWidth: 1))
                         .fixedSize()
-                        .offset(y: -Theme.Spacing.xxl)
+                        .offset(y: -metrics.spacing.xxl)
                         .transition(.opacity)
                         .allowsHitTesting(false)
                 }

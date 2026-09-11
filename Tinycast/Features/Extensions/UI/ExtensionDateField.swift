@@ -2,6 +2,8 @@ import SwiftUI
 
 /// `Form.DatePicker`: presets plus an expression, typed into the control itself.
 struct ExtensionDateField: View {
+    private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
+    @Environment(\.metrics) private var metrics
     let node: RenderNode
     let index: Int?
     @FocusState.Binding var focus: Int?
@@ -104,22 +106,22 @@ struct ExtensionDateField: View {
     }
 
     private var control: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: metrics.spacing.sm) {
             Image(systemName: "calendar")
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(Theme.Colors.textSecondary)
             // While the list is open the control is the expression field, caret and all.
             if open {
                 ExtensionQueryText(query: query, prompt: "tomorrow at 10am", phase: typedAt)
             } else {
                 Text(label)
-                    .font(Theme.Typography.rowTitle)
+                    .font(metrics.typography.rowTitle)
                     .foregroundStyle(
                         value == nil ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
                     )
                     .lineLimit(1)
             }
-            Spacer(minLength: Theme.Spacing.sm)
+            Spacer(minLength: metrics.spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: flipped)
         }
         .extensionFieldChrome(focused: isFocused, open: open, hovered: hovered)
@@ -139,7 +141,7 @@ struct ExtensionDateField: View {
 
     /// The panel's own height, which the placement rule then seats above or below the control.
     private var listHeight: CGFloat {
-        ExtensionFormMetrics.popoverHeight(rows: suggestions.count, hasSearchField: false)
+        form.popoverHeight(rows: suggestions.count, hasSearchField: false)
     }
 
     /// What the hosted list draws; a change to any of it re-pushes the panel's tree.

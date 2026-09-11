@@ -2,6 +2,8 @@ import SwiftUI
 
 /// The one control surface a form draws, kept here rather than in `DesignSystem`.
 struct ExtensionFieldChrome: ViewModifier {
+    private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
+    @Environment(\.metrics) private var metrics
     var focused: Bool
     /// A control that opens a popover keeps its focused edge while the popover has the keyboard.
     var open = false
@@ -11,27 +13,27 @@ struct ExtensionFieldChrome: ViewModifier {
     var multiline = false
 
     private var height: CGFloat {
-        multiline ? ExtensionFormMetrics.textAreaHeight : ExtensionFormMetrics.controlHeight
+        multiline ? form.textAreaHeight : form.controlHeight
     }
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, ExtensionFormMetrics.textInset)
+            .padding(.horizontal, form.textInset)
             // One inset either way, so a text area's first line sits where a field's does.
-            .padding(.vertical, ExtensionFormMetrics.verticalInset)
+            .padding(.vertical, form.verticalInset)
             .frame(
-                width: ExtensionFormMetrics.controlWidth, height: height,
+                width: form.controlWidth, height: height,
                 alignment: multiline ? .topLeading : .leading
             )
             .background(
                 RoundedRectangle(
-                    cornerRadius: Theme.Radius.row, style: .continuous
+                    cornerRadius: metrics.radius.row, style: .continuous
                 )
                 .fill(fill)
             )
             .overlay(
                 RoundedRectangle(
-                    cornerRadius: Theme.Radius.row, style: .continuous
+                    cornerRadius: metrics.radius.row, style: .continuous
                 )
                 .strokeBorder(stroke, lineWidth: 1)
             )
@@ -62,13 +64,14 @@ extension View {
 
 /// The chevron a control that opens a popover carries, pointing the way it will open.
 struct ExtensionDisclosureChevron: View {
+    @Environment(\.metrics) private var metrics
     let open: Bool
     var flipped = false
 
     var body: some View {
         // Closed it always points down; open, it points back at the list it dropped.
         Image(systemName: pointsUp ? "chevron.up" : "chevron.down")
-            .font(Theme.Typography.disclosure)
+            .font(metrics.typography.disclosure)
             .foregroundStyle(Theme.Colors.textSecondary)
     }
 
@@ -77,6 +80,8 @@ struct ExtensionDisclosureChevron: View {
 
 /// One row of a picker popover: an optional icon, a title, and a trailing detail.
 struct ExtensionPickerRow: View {
+    private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
+    @Environment(\.metrics) private var metrics
     let title: String
     var detail: String?
     var icon: ExtensionImage.Resolved?
@@ -87,35 +92,35 @@ struct ExtensionPickerRow: View {
 
     var body: some View {
         Button(action: onActivate) {
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: metrics.spacing.sm) {
                 if let icon {
-                    ExtensionIconView(resolved: icon, size: Theme.Size.menuIcon)
+                    ExtensionIconView(resolved: icon, size: metrics.size.menuIcon)
                 }
                 Text(title)
-                    .font(Theme.Typography.menuRow)
+                    .font(metrics.typography.menuRow)
                     .lineLimit(1)
-                Spacer(minLength: Theme.Spacing.sm)
+                Spacer(minLength: metrics.spacing.sm)
                 if let detail {
                     Text(detail)
-                        .font(Theme.Typography.menuShortcut)
+                        .font(metrics.typography.menuShortcut)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 if checked {
                     Image(systemName: "checkmark")
-                        .font(Theme.Typography.disclosure)
+                        .font(metrics.typography.disclosure)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
-            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.horizontal, metrics.spacing.md)
             // Stated, not padded: the height maths counts rows, so a row is one exact height.
             .frame(
-                maxWidth: .infinity, minHeight: ExtensionFormMetrics.popoverRowHeight,
-                maxHeight: ExtensionFormMetrics.popoverRowHeight, alignment: .leading
+                maxWidth: .infinity, minHeight: form.popoverRowHeight,
+                maxHeight: form.popoverRowHeight, alignment: .leading
             )
             .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.menuRow, style: .continuous)
                     .fill(selected ? Theme.Colors.menuHover : Color.clear)
             )
         }

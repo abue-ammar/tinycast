@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The My Schedule list, bucketed into Today and Tomorrow.
 struct ScheduleList: View {
+    @Environment(\.metrics) private var metrics
     let results: [MeetingEvent]
     let selectedID: MeetingEvent.ID?
     let now: Date
@@ -59,9 +60,9 @@ struct ScheduleList: View {
                         }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -74,6 +75,8 @@ struct ScheduleList: View {
 }
 
 private struct MeetingRow: View {
+
+    @Environment(\.metrics) private var metrics
     let meeting: MeetingEvent
     let now: Date
     let selected: Bool
@@ -86,25 +89,25 @@ private struct MeetingRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: metrics.spacing.lg) {
             SymbolImage(
-                name: meeting.link?.provider.sfSymbol ?? "calendar", size: Theme.Size.rowIcon * 0.7
+                name: meeting.link?.provider.sfSymbol ?? "calendar", size: metrics.size.rowIcon * 0.7
             )
-            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
             .foregroundStyle(meeting.isInProgress(now: now) ? Theme.Colors.brand : .secondary)
             Text(meeting.title)
-                .font(Theme.Typography.rowTitle)
+                .font(metrics.typography.rowTitle)
                 .lineLimit(1)
-            Spacer(minLength: Theme.Spacing.md)
+            Spacer(minLength: metrics.spacing.md)
             Text(trailing)
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.vertical, metrics.spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                 .fill(fill)
         )
         .armedHover($hovered)

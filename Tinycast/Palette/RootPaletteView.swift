@@ -23,6 +23,7 @@ struct RootPaletteView: View {
     @Environment(SnippetsStore.self) private var snippets
     @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
+    @Environment(\.metrics) private var metrics
     @FocusState private var searchFocused: Bool
     /// Kept apart from the search field's own focus. See docs/features/palette.md.
     @FocusState private var argumentFocused: String?
@@ -86,12 +87,12 @@ struct RootPaletteView: View {
                 scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
         case .ai:
             return AIScreen(
-                vm: vm, chat: core.aiChat, settings: core.aiSettings,
+                vm: vm, metrics: metrics, chat: core.aiChat, settings: core.aiSettings,
                 coordinator: core.aiChatCoordinator)
         case .aiHistory:
             return ChatHistoryScreen(
                 history: core.chatHistory, chat: core.aiChat, coordinator: core.aiChatCoordinator,
-                vm: vm, openActions: openActions)
+                vm: vm, openActions: openActions, metrics: metrics)
         case .calculatorHistory:
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
@@ -291,7 +292,7 @@ struct RootPaletteView: View {
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .background(PaletteBackground(window: hostWindow))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))),
+                .clipShape(RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))),
             selection: sel)
     }
 
@@ -589,7 +590,7 @@ struct RootPaletteView: View {
     /// A thin strip along the top edge for grabbing the window; the Appearance setting gates it.
     private var topDragStrip: some View {
         Color.clear
-            .frame(height: Theme.Size.headerPadding)
+            .frame(height: metrics.size.headerPadding)
             .windowDraggable(settings.paletteDraggable, onBegan: beginDrag, onEnded: endDrag)
     }
 
@@ -612,18 +613,18 @@ struct RootPaletteView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 0) {
             // Matches the list rows and section headers' own indent below.
-            headerGutter(width: Theme.Spacing.md * 2)
+            headerGutter(width: metrics.spacing.md * 2)
             // Every sub-screen leaves the same way, so the slot reads the same on all of them.
             if vm.mode != .launcher {
                 HeaderBackButton(help: backHelp, action: goBack)
             } else {
                 Image(systemName: vm.mode.systemImage)
-                    .font(Theme.Typography.headerIcon)
+                    .font(metrics.typography.headerIcon)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
-                    .frame(width: Theme.Size.headerIconSlot)
+                    .frame(width: metrics.size.headerIconSlot)
             }
-            headerGutter(width: Theme.Spacing.md)
+            headerGutter(width: metrics.spacing.md)
             // One structural position: a field inside a branch loses first responder when it flips.
             headerField
             if let accessory = headerAccessory {
@@ -631,25 +632,25 @@ struct RootPaletteView: View {
                 Spacer(minLength: 0)
             }
             if tabOpensChat {
-                headerGutter(width: Theme.Spacing.md)
+                headerGutter(width: metrics.spacing.md)
                 aiChatTabHint
             }
             // Keyed off the mode, which says which screen is up; the field just flexes narrower.
             if !isCollapsed, vm.mode == .clipboard {
-                headerGutter(width: Theme.Spacing.md)
+                headerGutter(width: metrics.spacing.md)
                 ClipboardFilterButton(
                     filter: vm.clipboardFilter, isOpen: openMenu == .clipboardFilter,
                     action: toggleClipboardFilter)
             }
             if !isCollapsed, vm.mode == .ai {
-                headerGutter(width: Theme.Spacing.md)
+                headerGutter(width: metrics.spacing.md)
                 AIModelButton(
                     title: core.aiChatCoordinator.selectedModelTitle,
                     icon: core.aiChatCoordinator.selectedModelIcon,
                     isOpen: openMenu == .aiModel,
                     action: toggleAIModel)
                 if !core.aiChatCoordinator.reasoningEfforts.isEmpty {
-                    headerGutter(width: Theme.Spacing.md)
+                    headerGutter(width: metrics.spacing.md)
                     AIReasoningButton(
                         title: core.aiChatCoordinator.selectedReasoningTitle,
                         isOpen: openMenu == .aiReasoning,
@@ -662,7 +663,7 @@ struct RootPaletteView: View {
             {
                 let favorites = launcher.compactFavorites
                 if !favorites.isEmpty {
-                    headerGutter(width: Theme.Spacing.md)
+                    headerGutter(width: metrics.spacing.md)
                     CompactFavoritesRow(
                         favorites: favorites,
                         showsOverflow: launcher.hasUnshownFavorites,
@@ -674,16 +675,16 @@ struct RootPaletteView: View {
             if !isCollapsed, let command = extensionCommandScreen,
                 let accessory = command.searchAccessory
             {
-                headerGutter(width: Theme.Spacing.md)
+                headerGutter(width: metrics.spacing.md)
                 command.searchAccessoryButton(
                     accessory, isOpen: openMenu == .extensionAccessory,
                     action: toggleExtensionSearchAccessory)
             }
-            headerGutter(width: Theme.Spacing.md * 2)
+            headerGutter(width: metrics.spacing.md * 2)
         }
         // Identical metrics in both states, so typing can't move the search bar.
-        .frame(height: Theme.Size.headerHeight)
-        .padding(.top, Theme.Size.headerPadding)
+        .frame(height: metrics.size.headerHeight)
+        .padding(.top, metrics.size.headerPadding)
         .frame(maxWidth: .infinity)
         // Set after the show, so the field it names is focused rather than the search field.
         .onChange(of: vm.pendingArgumentEntryID) { focusPendingArgument() }
@@ -705,9 +706,9 @@ struct RootPaletteView: View {
     /// Nothing else advertises Tab, so the launcher says where it goes.
     private var aiChatTabHint: some View {
         BarButton(chrome: .rounded, action: cycleMode) {
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: metrics.spacing.sm) {
                 Text("AI Chat")
-                    .font(Theme.Typography.bar)
+                    .font(metrics.typography.bar)
                     .foregroundStyle(Theme.Colors.textSecondary)
                 KeyCapChip(text: "⇥", style: .outline)
             }
@@ -748,13 +749,14 @@ struct RootPaletteView: View {
     /// The field's own text, floored for the caret and capped so the strip stays on screen.
     /// Empty, that is the prompt where one is drawn — which is what seats the strip right after it.
     private func searchFieldWidth(for accessory: PaletteHeaderAccessory) -> CGFloat {
-        let font = Theme.Typography.searchFieldNSFont
+        let font = metrics.typography.searchFieldNSFont
         let text = vm.query.isEmpty ? searchPrompt : vm.query
         let typed = (text as NSString).size(withAttributes: [.font: font]).width
-        let chrome = Theme.Size.headerIconSlot + Theme.Spacing.md * 4
+        let chrome = metrics.size.headerIconSlot + metrics.spacing.md * 4
         // +3pt so the caret sits after the last glyph rather than on top of it.
         return min(
-            max(typed + 3, 18), max(Theme.Size.panelWidth - accessory.width - chrome, 60))
+            max(typed + metrics.scaled(3), metrics.scaled(18)),
+            max(metrics.size.panelWidth - accessory.width - chrome, metrics.scaled(60)))
     }
 
     /// In the argument form the field is that argument's input, so it names the argument.
@@ -776,7 +778,7 @@ struct RootPaletteView: View {
         @Bindable var vm = vm
         return TextField("", text: $vm.query)
             .textFieldStyle(.plain)
-            .font(Theme.Typography.searchField)
+            .font(metrics.typography.searchField)
             .tint(Theme.Colors.textPrimary)
             .focused($searchFocused)
             // Fills the row's height, so there's no gap above it for topDragStrip to meet.
@@ -785,7 +787,7 @@ struct RootPaletteView: View {
                 // An IME's marked text leaves `query` empty, so the placeholder would overlap it.
                 if vm.query.isEmpty, !vm.isComposing {
                     Text(searchPrompt)
-                        .font(Theme.Typography.searchField)
+                        .font(metrics.typography.searchField)
                         .foregroundStyle(Theme.Colors.textTertiary)
                         .lineLimit(1)
                         // Never a click target: tapping the placeholder must still land the caret.
@@ -798,7 +800,7 @@ struct RootPaletteView: View {
             .overlay {
                 if settings.paletteDraggable {
                     TextTrailingDragHandle(
-                        text: vm.query, font: Theme.Typography.searchFieldNSFont,
+                        text: vm.query, font: metrics.typography.searchFieldNSFont,
                         onBegan: beginDrag, onEnded: endDrag)
                 }
             }
@@ -829,8 +831,8 @@ struct RootPaletteView: View {
                     showActions: showActions)
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .frame(height: Theme.Size.bottomBarHeight)
+        .padding(.horizontal, metrics.spacing.md)
+        .frame(height: metrics.size.bottomBarHeight)
         .frame(maxWidth: .infinity)
     }
 
@@ -846,12 +848,12 @@ struct RootPaletteView: View {
     ) -> some View {
         HStack(spacing: 2) {
             BarButton(action: activateSelection) {
-                HStack(spacing: Theme.Spacing.sm) {
+                HStack(spacing: metrics.spacing.sm) {
                     Text(pillLabel)
-                        .font(Theme.Typography.bar)
+                        .font(metrics.typography.bar)
                         .foregroundStyle(pillTint)
                     if formPrimaryShortcut {
-                        HStack(spacing: Theme.Spacing.xxs) {
+                        HStack(spacing: metrics.spacing.xxs) {
                             KeyCapChip(text: "⌘", style: .outline)
                             KeyCapChip(text: "↵", style: .outline)
                         }
@@ -862,11 +864,11 @@ struct RootPaletteView: View {
             }
             if showActions {
                 BarButton(action: toggleActions) {
-                    HStack(spacing: Theme.Spacing.sm) {
+                    HStack(spacing: metrics.spacing.sm) {
                         Text("Actions")
-                            .font(Theme.Typography.bar)
+                            .font(metrics.typography.bar)
                             .foregroundStyle(Theme.Colors.textSecondary)
-                        HStack(spacing: Theme.Spacing.xxs) {
+                        HStack(spacing: metrics.spacing.xxs) {
                             KeyCapChip(text: "⌘", style: .outline)
                             KeyCapChip(text: "K", style: .outline)
                         }
@@ -874,7 +876,7 @@ struct RootPaletteView: View {
                 }
             }
         }
-        .padding(Theme.Spacing.xs)
+        .padding(metrics.spacing.xs)
         .frosted(in: Capsule())
     }
 
@@ -963,8 +965,8 @@ struct RootPaletteView: View {
 
     private var headerMenuWidth: CGFloat {
         switch openMenu {
-        case .aiModel, .aiReasoning, .argumentOptions: Theme.Size.menuWidth
-        default: Theme.Size.clipboardFilterMenuWidth
+        case .aiModel, .aiReasoning, .argumentOptions: metrics.size.menuWidth
+        default: metrics.size.clipboardFilterMenuWidth
         }
     }
 
@@ -1226,6 +1228,7 @@ private struct SearchFieldHiding: ViewModifier {
 private struct MenuCircleButton: View {
     let action: () -> Void
     @State private var hovered = false
+    @Environment(\.metrics) private var metrics
 
     var body: some View {
         Button(action: action) {
@@ -1234,7 +1237,7 @@ private struct MenuCircleButton: View {
                 Capsule().frame(width: 8, height: 1.5)
             }
             .foregroundStyle(Theme.Colors.textSecondary)
-            .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
+            .frame(width: metrics.size.menuButton, height: metrics.size.menuButton)
             .background(Circle().fill(hovered ? Theme.Colors.rowHover : Color.clear))
             .contentShape(.circle)
         }
@@ -1249,14 +1252,15 @@ private struct HeaderBackButton: View {
     let help: String
     let action: () -> Void
     @State private var hovered = false
+    @Environment(\.metrics) private var metrics
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "chevron.left")
-                .font(Theme.Typography.headerIcon)
+                .font(metrics.typography.headerIcon)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(hovered ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
-                .frame(width: Theme.Size.headerIconSlot)
+                .frame(width: metrics.size.headerIconSlot)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1308,16 +1312,17 @@ private struct CompactFavoritesRow: View {
     let showsOverflow: Bool
     let onLaunch: (AppEntry) -> Void
     let onOverflow: () -> Void
+    @Environment(\.metrics) private var metrics
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
+        HStack(spacing: metrics.spacing.xs) {
             // Identified by the app, so a reorder moves an icon with its app, not by position.
             ForEach(Array(favorites.enumerated()), id: \.element.id) { index, app in
                 CompactFavoriteButton(help: help(for: app, at: index)) {
                     onLaunch(app)
                 } content: {
                     AppIconView(app: app)
-                        .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                        .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
                 }
             }
             if showsOverflow {
@@ -1325,11 +1330,11 @@ private struct CompactFavoritesRow: View {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 10))
                         .foregroundStyle(Theme.Colors.textSecondary)
-                        .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                        .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
                         .background(
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
                                 .fill(Theme.Colors.controlSurface)
-                                .padding(Theme.Spacing.xxs)
+                                .padding(metrics.spacing.xxs)
                         )
                 }
             }
@@ -1347,11 +1352,12 @@ private struct CompactFavoriteButton<Content: View>: View {
     let help: String
     let action: () -> Void
     @ViewBuilder let content: Content
+    @Environment(\.metrics) private var metrics
 
     var body: some View {
         Button(action: action) {
             content
-                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous))
         }
         .buttonStyle(.plain)
         .help(help)
@@ -1362,6 +1368,7 @@ private struct PaletteBackground: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.metrics) private var metrics
     let window: NSWindow?
 
     private var usesSystemShadow: Bool {
@@ -1373,7 +1380,7 @@ private struct PaletteBackground: View {
             .background(VisualEffectView())
             .overlay {
                 if settings.paletteTransparency != 0 {
-                    let edge = RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous)
+                    let edge = RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
                     if usesSystemShadow {
                         edge.strokeBorder(
                             Theme.Colors.panelEdgeHighlight(transparency: settings.paletteTransparency),

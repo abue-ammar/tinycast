@@ -9,6 +9,7 @@ enum ExtensionArgumentsAccessory {
         coordinator: ExtensionCoordinator,
         values: @escaping (String) -> Binding<String>,
         focus: FocusState<String?>.Binding,
+        metrics: InterfaceMetrics,
         onSubmit: @escaping () -> Void
     ) -> PaletteHeaderAccessory? {
         guard let entry, let arguments = coordinator.commandArguments(for: entry),
@@ -17,7 +18,7 @@ enum ExtensionArgumentsAccessory {
 
         let icon = entry.iconSource
         return PaletteHeaderAccessory(
-            width: CommandArgumentsRow.totalWidth(for: arguments, hasIcon: true),
+            width: CommandArgumentsRow.totalWidth(for: arguments, hasIcon: true, metrics: metrics),
             fieldNames: arguments.map(\.name),
             firstIncompleteField: arguments.first {
                 $0.required && values($0.name).wrappedValue.isEmpty

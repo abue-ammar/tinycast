@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The `Detail` screen, and the pane a `List` shows when `isShowingDetail` is on.
 struct ExtensionDetailBody: View {
+    @Environment(\.metrics) private var metrics
     let markdown: String?
     let metadata: RenderNode?
     let isLoading: Bool
@@ -9,7 +10,7 @@ struct ExtensionDetailBody: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: metrics.spacing.md) {
                 if isLoading && (markdown ?? "").isEmpty {
                     Text("Loading…").foregroundStyle(.secondary)
                 }
@@ -24,8 +25,8 @@ struct ExtensionDetailBody: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.vertical, Theme.Spacing.md)
+            .padding(.horizontal, metrics.spacing.lg)
+            .padding(.vertical, metrics.spacing.md)
             .hideNativeScrollers()
         }
         .edgeDissolve()
@@ -35,17 +36,18 @@ struct ExtensionDetailBody: View {
 
 /// `Detail.Metadata` — label / link / tag-list / separator rows.
 struct ExtensionMetadataView: View {
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let metadata: RenderNode
     let assetsPath: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: metrics.spacing.sm) {
             ForEach(metadata.children) { child in
                 switch child.type {
                 case "Detail.Metadata.Label":
                     row(title: child.string("title")) {
-                        HStack(spacing: Theme.Spacing.xs) {
+                        HStack(spacing: metrics.spacing.xs) {
                             if let icon = child.props["icon"] {
                                 ExtensionIconView(
                                     resolved: ExtensionImage.resolve(
@@ -53,7 +55,7 @@ struct ExtensionMetadataView: View {
                                     size: 14)
                             }
                             Text(labelText(child))
-                                .font(Theme.Typography.rowTitle)
+                                .font(metrics.typography.rowTitle)
                                 .textSelection(.enabled)
                         }
                     }
@@ -61,9 +63,9 @@ struct ExtensionMetadataView: View {
                     row(title: child.string("title")) {
                         if let target = child.string("target"), let url = URL(string: target) {
                             Link(child.string("text") ?? target, destination: url)
-                                .font(Theme.Typography.rowTitle)
+                                .font(metrics.typography.rowTitle)
                         } else {
-                            Text(child.string("text") ?? "").font(Theme.Typography.rowTitle)
+                            Text(child.string("text") ?? "").font(metrics.typography.rowTitle)
                         }
                     }
                 case "Detail.Metadata.TagList":
@@ -91,7 +93,7 @@ struct ExtensionMetadataView: View {
         VStack(alignment: .leading, spacing: 2) {
             if let title, !title.isEmpty {
                 Text(title)
-                    .font(Theme.Typography.sectionHeader)
+                    .font(metrics.typography.sectionHeader)
                     .foregroundStyle(.secondary)
             }
             content()
@@ -100,13 +102,15 @@ struct ExtensionMetadataView: View {
 }
 
 private struct ExtensionTagListView: View {
+
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let tags: [RenderNode]
     let assetsPath: String?
 
     var body: some View {
         // Wrapping matters here: a metadata tag list is frequently longer than the pane is wide.
-        FlowLayout(spacing: Theme.Spacing.xs) {
+        FlowLayout(spacing: metrics.spacing.xs) {
             ForEach(tags) { tag in
                 let color =
                     ExtensionImage.color(tag.props["color"], isDark: isDark) ?? Theme.Colors.textSecondary
@@ -117,10 +121,10 @@ private struct ExtensionTagListView: View {
                             size: 12)
                     }
                     Text(tag.string("text") ?? "")
-                        .font(Theme.Typography.rowTrailing)
+                        .font(metrics.typography.rowTrailing)
                 }
                 .foregroundStyle(color)
-                .padding(.horizontal, Theme.Spacing.xs)
+                .padding(.horizontal, metrics.spacing.xs)
                 .padding(.vertical, 2)
                 .background(
                     RoundedRectangle(cornerRadius: 4, style: .continuous).fill(color.opacity(0.16))
@@ -178,6 +182,7 @@ struct FlowLayout: Layout {
 
 /// Inline styling comes from `AttributedString`; block structure is laid out here.
 struct ExtensionMarkdownView: View {
+    @Environment(\.metrics) private var metrics
     let markdown: String
 
     private enum Block: Identifiable {
@@ -205,32 +210,32 @@ struct ExtensionMarkdownView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: metrics.spacing.sm) {
             ForEach(Self.parse(markdown)) { block in
                 switch block {
                 case .heading(let level, let text):
                     Text(inline(text))
                         .font(.system(size: headingSize(level), weight: .semibold))
-                        .padding(.top, Theme.Spacing.xs)
+                        .padding(.top, metrics.spacing.xs)
                 case .paragraph(let text):
                     Text(inline(text))
-                        .font(Theme.Typography.rowTitle)
+                        .font(metrics.typography.rowTitle)
                         .textSelection(.enabled)
                 case .bullet(let text):
-                    HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                    HStack(alignment: .top, spacing: metrics.spacing.sm) {
                         Text("•").foregroundStyle(.secondary)
-                        Text(inline(text)).font(Theme.Typography.rowTitle)
+                        Text(inline(text)).font(metrics.typography.rowTitle)
                     }
                 case .numbered(let index, let text):
-                    HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                    HStack(alignment: .top, spacing: metrics.spacing.sm) {
                         Text("\(index).").foregroundStyle(.secondary).monospacedDigit()
-                        Text(inline(text)).font(Theme.Typography.rowTitle)
+                        Text(inline(text)).font(metrics.typography.rowTitle)
                     }
                 case .quote(let text):
-                    HStack(spacing: Theme.Spacing.sm) {
+                    HStack(spacing: metrics.spacing.sm) {
                         Rectangle().fill(Theme.Colors.separator).frame(width: 2)
                         Text(inline(text))
-                            .font(Theme.Typography.rowTitle)
+                            .font(metrics.typography.rowTitle)
                             .foregroundStyle(.secondary)
                     }
                 case .code(let text):
@@ -238,11 +243,11 @@ struct ExtensionMarkdownView: View {
                         Text(text)
                             .font(.system(.callout, design: .monospaced))
                             .textSelection(.enabled)
-                            .padding(Theme.Spacing.sm)
+                            .padding(metrics.spacing.sm)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
-                        RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                        RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
                             .fill(ExtensionColors.detailCardFill)
                     )
                     .hideNativeScrollers()
@@ -375,6 +380,7 @@ extension String {
 
 /// An image inside a Detail's markdown, capped so a large asset can't push the layout around.
 private struct ExtensionMarkdownImage: View {
+    @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
     let url: URL
     @State private var image: NSImage?
@@ -390,9 +396,9 @@ private struct ExtensionMarkdownImage: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: 220)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous))
             } else {
-                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
                     .fill(ExtensionColors.detailCardFill)
                     .frame(height: 120)
             }

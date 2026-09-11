@@ -9,20 +9,21 @@ final class EventDraftState {
 
 /// The New Event dialog's controls: a title, then when and how long, as chips.
 struct EventDraftFields: View {
+    @Environment(\.metrics) private var metrics
     @Bindable var state: EventDraftState
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+        VStack(alignment: .leading, spacing: metrics.spacing.xl) {
             TextField("", text: $state.draft.title, prompt: Text("Event title"))
                 .textFieldStyle(.plain)
                 .labelsHidden()
-                .font(Theme.Typography.rowTitle)
+                .font(metrics.typography.rowTitle)
                 .focused($focused)
-                .padding(.horizontal, Theme.Spacing.lg)
-                .frame(height: Theme.Size.barButtonHeight)
+                .padding(.horizontal, metrics.spacing.lg)
+                .frame(height: metrics.size.barButtonHeight)
                 .background(
-                    RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                    RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
                         .fill(Theme.Colors.controlSurface))
             ChipRow(
                 label: "Starts", values: EventDraft.startOffsets,
@@ -37,17 +38,18 @@ struct EventDraftFields: View {
 
 /// Our own chips: a menu-style `Picker` drops an AppKit popover onto a vibrancy surface.
 private struct ChipRow: View {
+    @Environment(\.metrics) private var metrics
     let label: String
     let values: [Int]
     let title: (Int) -> String
     @Binding var selection: Int
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
+        HStack(spacing: metrics.spacing.md) {
             Text(label)
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: Theme.Size.dialogIcon, alignment: .leading)
+                .frame(width: metrics.size.dialogIcon, alignment: .leading)
             ForEach(values, id: \.self) { value in
                 Chip(title: title(value), selected: value == selection) { selection = value }
             }
@@ -57,6 +59,8 @@ private struct ChipRow: View {
 }
 
 private struct Chip: View {
+
+    @Environment(\.metrics) private var metrics
     let title: String
     let selected: Bool
     let onTap: () -> Void
@@ -71,10 +75,10 @@ private struct Chip: View {
     var body: some View {
         Button(action: onTap) {
             Text(title)
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(selected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
-                .padding(.horizontal, Theme.Spacing.lg)
-                .frame(height: Theme.Size.barButtonHeight)
+                .padding(.horizontal, metrics.spacing.lg)
+                .frame(height: metrics.size.barButtonHeight)
                 .contentShape(Capsule())
                 .background(Capsule().fill(fill))
         }

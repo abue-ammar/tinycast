@@ -87,7 +87,8 @@ feature's doc, under its own `## Invariants`.
   control, so it must never be able to force a change on a launcher surface.
   **Duplicating a view or a piece of layout maths to keep it here is the correct trade**, and the one
   place the no-duplication rule yields. What *is* shared: `Theme`'s base tokens (spacing, radius,
-  colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
+  colour), `InterfaceMetrics` as the view over those same base tokens, `PopoverMenuItem` as a data
+  shape, and `Platform/`. What is never shared: anything with
   "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
   precisely because the palette's own menu and the emoji grid must stay free to change without them.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section and

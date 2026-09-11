@@ -96,40 +96,40 @@ struct ExtensionFormTests {
     static func popoverGeometry() {
         print("\n# popover geometry")
 
-        let pitch = ExtensionFormMetrics.popoverRowHeight + ExtensionFormMetrics.popoverRowSpacing
+        let pitch = ExtensionFormMetrics.base.popoverRowHeight + ExtensionFormMetrics.base.popoverRowSpacing
         check(
             "three rows measure exactly three rows",
-            ExtensionFormMetrics.popoverListHeight(rows: 3)
-                == pitch * 3 - ExtensionFormMetrics.popoverRowSpacing)
-        check("no rows measure nothing", ExtensionFormMetrics.popoverListHeight(rows: 0) == 0)
+            ExtensionFormMetrics.base.popoverListHeight(rows: 3)
+                == pitch * 3 - ExtensionFormMetrics.base.popoverRowSpacing)
+        check("no rows measure nothing", ExtensionFormMetrics.base.popoverListHeight(rows: 0) == 0)
         check(
             "a long list caps at the visible rows",
-            ExtensionFormMetrics.popoverListHeight(rows: 40)
-                == ExtensionFormMetrics.popoverRowsMaxHeight)
+            ExtensionFormMetrics.base.popoverListHeight(rows: 40)
+                == ExtensionFormMetrics.base.popoverRowsMaxHeight)
         check(
             "the cap is a half row, so it reads as scrollable",
-            ExtensionFormMetrics.popoverVisibleRows
-                != ExtensionFormMetrics.popoverVisibleRows
+            ExtensionFormMetrics.base.popoverVisibleRows
+                != ExtensionFormMetrics.base.popoverVisibleRows
                 .rounded())
         check(
             "a search row adds its own height",
-            ExtensionFormMetrics.popoverHeight(rows: 3, hasSearchField: true)
-                - ExtensionFormMetrics.popoverHeight(rows: 3, hasSearchField: false)
-                == ExtensionFormMetrics.popoverSearchHeight)
+            ExtensionFormMetrics.base.popoverHeight(rows: 3, hasSearchField: true)
+                - ExtensionFormMetrics.base.popoverHeight(rows: 3, hasSearchField: false)
+                == ExtensionFormMetrics.base.popoverSearchHeight)
         check(
             "a section heading takes room of its own",
-            ExtensionFormMetrics.popoverListHeight(rows: 4, headers: 2)
-                - ExtensionFormMetrics.popoverListHeight(rows: 4)
-                == (ExtensionFormMetrics.popoverSectionHeaderHeight
-                    + ExtensionFormMetrics.popoverRowSpacing) * 2)
+            ExtensionFormMetrics.base.popoverListHeight(rows: 4, headers: 2)
+                - ExtensionFormMetrics.base.popoverListHeight(rows: 4)
+                == (ExtensionFormMetrics.base.popoverSectionHeaderHeight
+                    + ExtensionFormMetrics.base.popoverRowSpacing) * 2)
         check(
             "and a headed list still caps at the visible rows",
-            ExtensionFormMetrics.popoverListHeight(rows: 40, headers: 6)
-                == ExtensionFormMetrics.popoverRowsMaxHeight)
+            ExtensionFormMetrics.base.popoverListHeight(rows: 40, headers: 6)
+                == ExtensionFormMetrics.base.popoverRowsMaxHeight)
         check(
             "an empty list still measures the row it draws, since the panel is sized to this",
-            ExtensionFormMetrics.popoverHeight(rows: 0, hasSearchField: false)
-                == ExtensionFormMetrics.popoverRowHeight + ExtensionFormMetrics.popoverPadding * 2)
+            ExtensionFormMetrics.base.popoverHeight(rows: 0, hasSearchField: false)
+                == ExtensionFormMetrics.base.popoverRowHeight + ExtensionFormMetrics.base.popoverPadding * 2)
     }
 
     static func popoverPlacement() {
@@ -137,30 +137,30 @@ struct ExtensionFormTests {
 
         let control = CGRect(x: 0, y: 100, width: 360, height: 32)
 
-        let below = ExtensionFormMetrics.placement(
+        let below = ExtensionFormMetrics.base.placement(
             anchor: control, popoverHeight: 200, containerHeight: 600)
         check("it opens downward when there is room", !below.flipped)
         check(
             "and sits one gap under the control",
-            below.y == control.maxY + ExtensionFormMetrics.popoverGap)
+            below.y == control.maxY + ExtensionFormMetrics.base.popoverGap)
 
         // A control near the bottom of a tall form: no room under it, plenty over it.
         let low = CGRect(x: 0, y: 500, width: 360, height: 32)
-        let above = ExtensionFormMetrics.placement(
+        let above = ExtensionFormMetrics.base.placement(
             anchor: low, popoverHeight: 200, containerHeight: 600)
         check("it flips up when the bottom would cut it off", above.flipped)
         check(
             "and sits one gap over the control",
-            above.y == low.minY - ExtensionFormMetrics.popoverGap - 200)
+            above.y == low.minY - ExtensionFormMetrics.base.popoverGap - 200)
 
         // Taller than the container either way; showing its start beats showing its middle.
-        let cramped = ExtensionFormMetrics.placement(
+        let cramped = ExtensionFormMetrics.base.placement(
             anchor: low, popoverHeight: 500, containerHeight: 300)
         check("a list taller than the form still starts on screen", cramped.y >= 0)
         check("and does not claim to have flipped", !cramped.flipped)
 
         // Exactly enough room below is still room: the rule may not flip on a tie.
-        let exact = ExtensionFormMetrics.placement(
+        let exact = ExtensionFormMetrics.base.placement(
             anchor: control, popoverHeight: 100, containerHeight: 238)
         check("a list that exactly fits opens downward", !exact.flipped)
     }

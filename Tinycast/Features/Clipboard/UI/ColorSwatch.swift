@@ -2,12 +2,14 @@ import SwiftUI
 
 /// The one place a colour is drawn, over the checkerboard that makes its alpha visible.
 struct ColorSwatch: View {
+    @Environment(\.metrics) private var metrics
     let color: ColorValue
-    var cornerRadius: CGFloat = Theme.Radius.thumbnail
+    var cornerRadius: CGFloat?
 
     /// A colour is content, not chrome, so it carries the same hairline a thumbnail does.
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let shape = RoundedRectangle(
+            cornerRadius: cornerRadius ?? metrics.radius.thumbnail, style: .continuous)
         shape
             .fill(Theme.Colors.controlSurface)
             // Built only where there is alpha, else every row pays for a Canvas nothing can see.

@@ -7,7 +7,8 @@ enum SnippetArgumentsPrompt {
     /// The collected values, or nil on cancel. Modal: expansion is mid-flight and blocking.
     static func run(
         snippetName: String,
-        arguments: [SnippetTemplateEngine.MissingArgument]
+        arguments: [SnippetTemplateEngine.MissingArgument],
+        metrics: InterfaceMetrics
     ) -> [String: String]? {
         guard !arguments.isEmpty else { return [:] }
 
@@ -22,10 +23,11 @@ enum SnippetArgumentsPrompt {
         alert.addButton(withTitle: "Expand")
         alert.addButton(withTitle: "Cancel")
 
-        let form = NSHostingView(rootView: SnippetArgumentsForm(values: values))
+        let form = NSHostingView(
+            rootView: SnippetArgumentsForm(values: values).environment(\.metrics, metrics))
         form.frame = NSRect(
             x: 0, y: 0,
-            width: Theme.Size.argumentPromptWidth,
+            width: metrics.size.argumentPromptWidth,
             height: form.fittingSize.height)
         alert.accessoryView = form
 
@@ -59,13 +61,15 @@ private final class ArgumentValues {
 }
 
 private struct SnippetArgumentsForm: View {
+
+    @Environment(\.metrics) private var metrics
     let values: ArgumentValues
     @FocusState private var focusedArgument: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+        VStack(alignment: .leading, spacing: metrics.spacing.lg) {
             ForEach(values.arguments, id: \.name) { argument in
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                VStack(alignment: .leading, spacing: metrics.spacing.sm) {
                     Text(argument.name)
                         .font(.callout.weight(.medium))
                     if argument.options.isEmpty {
@@ -86,7 +90,7 @@ private struct SnippetArgumentsForm: View {
                 .accessibilityLabel("Snippet argument \(argument.name)")
             }
         }
-        .frame(width: Theme.Size.argumentPromptWidth, alignment: .leading)
+        .frame(width: metrics.size.argumentPromptWidth, alignment: .leading)
         // Focus the first text field so the prompt is typeable without a click.
         .onAppear { focusedArgument = values.arguments.first { $0.options.isEmpty }?.name }
     }

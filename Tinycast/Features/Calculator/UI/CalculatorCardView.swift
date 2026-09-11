@@ -25,6 +25,7 @@ enum CalcMemo {
 
 /// The inline answer card above the app results; selectable like a row, Enter copies.
 struct CalculatorCard: View {
+    @Environment(\.metrics) private var metrics
     let result: CalcResult
     let selected: Bool
 
@@ -45,7 +46,7 @@ struct CalculatorCard: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
             case .error(let message):
-                HStack(spacing: Theme.Spacing.md) {
+                HStack(spacing: metrics.spacing.md) {
                     Image(systemName: "exclamationmark.triangle")
                         .symbolRenderingMode(.hierarchical)
                     Text(message)
@@ -56,8 +57,8 @@ struct CalculatorCard: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.xxxl)
+        .padding(.horizontal, metrics.spacing.xl)
+        .padding(.vertical, metrics.spacing.xxxl)
         .leadCard(selected: selected)
     }
 }

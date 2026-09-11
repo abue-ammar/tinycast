@@ -3,10 +3,13 @@ import SwiftUI
 /// Scroll-driven edge mask for a list underlapping the palette's floating bars. See `docs/ui.md`.
 struct EdgeDissolveMask: ViewModifier {
     /// Band lengths: the bar's height plus its overshoot into the list — 32px top, 28px bottom.
-    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Size.headerPadding + 32
-    var bottomFade: CGFloat = Theme.Size.bottomBarHeight + 28
+    private var topFade: CGFloat {
+        metrics.size.headerHeight + metrics.size.headerPadding + metrics.scaled(32)
+    }
+    private var bottomFade: CGFloat { metrics.size.bottomBarHeight + metrics.scaled(28) }
     private static let topMinAlpha: CGFloat = 0.15
     private static let bottomMinAlpha: CGFloat = 0.25
+    @Environment(\.metrics) private var metrics
 
     /// How much content is hidden beyond each edge, 0 when the list rests against it.
     @State private var topDistance: CGFloat = 0

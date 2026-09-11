@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Section label above a group of rows, shared by every palette list.
 struct SectionHeader: View {
+    @Environment(\.metrics) private var metrics
     let title: String
     /// The first header hugs the top; later ones get spacing above, reading as below.
     var isFirst = false
@@ -10,7 +11,7 @@ struct SectionHeader: View {
     var configureHelp = "Configure…"
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: metrics.spacing.sm) {
             Text(title)
                 .lineLimit(1)
             if let configure {
@@ -24,10 +25,10 @@ struct SectionHeader: View {
             }
             Spacer(minLength: 0)
         }
-        .font(Theme.Typography.sectionHeader)
+        .font(metrics.typography.sectionHeader)
         .foregroundStyle(.secondary)
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.top, isFirst ? Theme.Spacing.xs : Theme.Spacing.sectionSpacing)
-        .padding(.bottom, Theme.Spacing.sectionHeaderBottom)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.top, isFirst ? metrics.spacing.xs : metrics.spacing.sectionSpacing)
+        .padding(.bottom, metrics.spacing.sectionHeaderBottom)
     }
 }

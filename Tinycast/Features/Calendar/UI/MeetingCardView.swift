@@ -2,40 +2,41 @@ import SwiftUI
 
 /// The join card above the launcher results; selectable like a row, Enter joins.
 struct MeetingCard: View {
+    @Environment(\.metrics) private var metrics
     let meeting: MeetingEvent
     let now: Date
     let selected: Bool
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xl) {
+        HStack(spacing: metrics.spacing.xl) {
             SymbolImage(
                 name: meeting.link?.provider.sfSymbol ?? "calendar",
-                size: Theme.Size.headerIconSlot
+                size: metrics.size.headerIconSlot
             )
             .foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            VStack(alignment: .leading, spacing: metrics.spacing.xs) {
                 Text(meeting.title)
-                    .font(Theme.Typography.calcResult.weight(.semibold))
+                    .font(metrics.typography.calcResult.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text(subtitle)
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: Theme.Spacing.md)
+            Spacer(minLength: metrics.spacing.md)
             Text(UpcomingWindow.countdown(to: meeting.start, now: now))
-                .font(Theme.Typography.rowTitle.weight(.medium))
+                .font(metrics.typography.rowTitle.weight(.medium))
                 .lineLimit(1)
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, Theme.Spacing.xxs)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.vertical, metrics.spacing.xxs)
                 .background(
-                    RoundedRectangle(cornerRadius: Theme.Radius.keyCap, style: .continuous)
+                    RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
                         .fill(Theme.Colors.controlSurface)
                 )
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.xxl)
+        .padding(.horizontal, metrics.spacing.xl)
+        .padding(.vertical, metrics.spacing.xxl)
         .leadCard(selected: selected)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(

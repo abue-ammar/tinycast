@@ -5,6 +5,8 @@ struct SnippetsScreen: PaletteScreen {
     let store: SnippetsStore
     let core: AppCore
     let vm: PaletteState
+
+    private var metrics: InterfaceMetrics { core.settings.interfaceSize.metrics }
     let openActions: () -> Void
 
     /// A disabled snippet is off everywhere, so the browser lists exactly what the launcher does.
@@ -60,7 +62,7 @@ struct SnippetsScreen: PaletteScreen {
                         openActions()
                     }
                 )
-                .frame(width: Theme.Size.clipboardListWidth)
+                .frame(width: metrics.size.clipboardListWidth)
                 Rectangle().fill(Theme.Colors.separator).frame(width: Theme.Size.hairline)
                 SnippetPreview(record: selected)
             }

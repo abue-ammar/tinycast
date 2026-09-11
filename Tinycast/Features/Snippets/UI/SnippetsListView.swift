@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SnippetsList: View {
+
+    @Environment(\.metrics) private var metrics
     let results: [StoredSnippet]
     let selectedID: StoredSnippet.ID?
     let scroll: ScrollIntent
@@ -30,9 +32,9 @@ struct SnippetsList: View {
                             .onRightClick { onActions(record) }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -45,6 +47,8 @@ struct SnippetsList: View {
 }
 
 private struct SnippetRow: View {
+
+    @Environment(\.metrics) private var metrics
     let record: StoredSnippet
     let selected: Bool
     @State private var hovered = false
@@ -56,30 +60,30 @@ private struct SnippetRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
-            RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
+        HStack(spacing: metrics.spacing.lg) {
+            RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous)
                 .fill(Theme.Colors.controlSurface)
-                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
                 .overlay(
                     Image(systemName: "curlybraces")
                         .font(.system(size: 12))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.secondary))
             Text(record.snippet.name)
-                .font(Theme.Typography.rowTitle)
+                .font(metrics.typography.rowTitle)
                 .lineLimit(1)
-            Spacer(minLength: Theme.Spacing.lg)
+            Spacer(minLength: metrics.spacing.lg)
             if let keyword = record.snippet.keyword, !keyword.isEmpty {
                 Text(keyword)
-                    .font(Theme.Typography.keyCap)
+                    .font(metrics.typography.keyCap)
                     .foregroundStyle(Theme.Colors.textTertiary)
                     .lineLimit(1)
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.vertical, metrics.spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous).fill(fill)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
         )
         .armedHover($hovered)
     }
@@ -110,6 +114,7 @@ struct SnippetPreview: View {
 
 /// The "Information" block; everything in it is already in memory, so nothing is gathered off-main.
 private struct SnippetInfoSection: View {
+    @Environment(\.metrics) private var metrics
     let record: StoredSnippet
 
     private struct InfoRow: Identifiable {
@@ -130,24 +135,24 @@ private struct SnippetInfoSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: metrics.spacing.sm) {
             Text("Information")
-                .font(Theme.Typography.sectionHeader)
+                .font(metrics.typography.sectionHeader)
                 .foregroundStyle(.secondary)
             VStack(spacing: 0) {
                 let rows = self.rows
                 ForEach(rows) { row in
                     if row.id != rows.first?.id { Divider() }
-                    HStack(spacing: Theme.Spacing.sm) {
+                    HStack(spacing: metrics.spacing.sm) {
                         Text(row.label).foregroundStyle(.secondary)
-                        Spacer(minLength: Theme.Spacing.lg)
+                        Spacer(minLength: metrics.spacing.lg)
                         Text(row.value).lineLimit(1).truncationMode(.middle)
                     }
-                    .font(Theme.Typography.keyCap)
-                    .padding(.vertical, Theme.Spacing.xs)
+                    .font(metrics.typography.keyCap)
+                    .padding(.vertical, metrics.spacing.xs)
                 }
             }
         }
-        .padding(.vertical, Theme.Spacing.md)
+        .padding(.vertical, metrics.spacing.md)
     }
 }

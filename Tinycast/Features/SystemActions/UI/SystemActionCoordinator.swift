@@ -4,7 +4,7 @@ import AppKit
 @MainActor
 final class SystemActionCoordinator {
     private let paletteCoordinator: PaletteCoordinator
-    private let volumeHUD = VolumeHUDController()
+    @ObservationIgnored private lazy var volumeHUD = VolumeHUDController(settings: core.settings)
     /// Dialog and message-HUD presentation only — never for state this type owns.
     private unowned let core: AppCore
 

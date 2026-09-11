@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ChatCopyButton: View {
+
+    @Environment(\.metrics) private var metrics
     let text: String
     var subject = "Message"
 
@@ -15,9 +17,9 @@ struct ChatCopyButton: View {
             copiedAt = Date()
         } label: {
             Image(systemName: copied ? "checkmark" : "square.on.square")
-                .font(Theme.Typography.keyCap)
+                .font(metrics.typography.keyCap)
                 .foregroundStyle(tint)
-                .frame(width: Theme.Size.chatMessageAction, height: Theme.Size.chatMessageAction)
+                .frame(width: metrics.size.chatMessageAction, height: metrics.size.chatMessageAction)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

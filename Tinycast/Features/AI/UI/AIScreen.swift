@@ -3,6 +3,7 @@ import SwiftUI
 /// AI chat as one native palette screen: the search field is its composer.
 struct AIScreen: PaletteScreen {
     let vm: PaletteState
+    let metrics: InterfaceMetrics
     let chat: AIChatState
     let settings: AISettingsStore
     let coordinator: AIChatCoordinator
@@ -74,13 +75,13 @@ struct AIScreen: PaletteScreen {
         let addressed = coordinator.addressedServer(in: vm.query)
         guard !attachments.isEmpty || addressed != nil else { return nil }
         let width =
-            PendingAttachmentsChips.width(for: attachments)
-            + (addressed.map { ComposerChip.width(of: "@\($0.slug)") } ?? 0)
+            PendingAttachmentsChips.width(for: attachments, metrics)
+            + (addressed.map { ComposerChip.width(of: "@\($0.slug)", metrics) } ?? 0)
         return PaletteHeaderAccessory(
-            width: width + Theme.Size.menuWidth,
+            width: width + metrics.size.menuWidth,
             fieldNames: [], firstIncompleteField: nil,
             view: AnyView(
-                HStack(spacing: Theme.Spacing.sm) {
+                HStack(spacing: metrics.spacing.sm) {
                     if let addressed {
                         ComposerChip(symbol: "wrench.and.screwdriver", label: "@\(addressed.slug)")
                     }
@@ -129,12 +130,14 @@ private struct AIChatView: View {
 }
 
 private struct AIEmptyState: View {
+
+    @Environment(\.metrics) private var metrics
     let message: String?
     let canConfigure: Bool
     let onConfigure: () -> Void
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.md) {
+        VStack(spacing: metrics.spacing.md) {
             Image(systemName: "sparkles")
                 .font(.largeTitle)
                 .symbolRenderingMode(.hierarchical)
@@ -143,55 +146,57 @@ private struct AIEmptyState: View {
                 .foregroundStyle(.secondary)
             if let message {
                 Text(message)
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textTertiary)
                     .multilineTextAlignment(.center)
                 if canConfigure { Button("Configure AI", action: onConfigure) }
             } else {
-                HStack(spacing: Theme.Spacing.sm) {
+                HStack(spacing: metrics.spacing.sm) {
                     Text("Send a message")
                     KeyCapChip(text: "↵")
                 }
-                .font(Theme.Typography.rowTrailing)
+                .font(metrics.typography.rowTrailing)
                 .foregroundStyle(Theme.Colors.textTertiary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, Theme.Spacing.xxl)
+        .padding(.horizontal, metrics.spacing.xxl)
     }
 }
 
 /// The MCP `@server` pill: a glyph and a word, unchanged by what attachments do.
 private struct ComposerChip: View {
+    @Environment(\.metrics) private var metrics
     let symbol: String
     let label: String
 
     /// Load-bearing: `RootPaletteView.searchFieldWidth(for:)` shrinks the field by exactly this.
-    static func width(of label: String) -> CGFloat {
-        let font = Theme.Typography.chipNSFont
+    static func width(of label: String, _ metrics: InterfaceMetrics) -> CGFloat {
+        let font = metrics.typography.chipNSFont
         let text = (label as NSString).size(withAttributes: [.font: font]).width
-        return Theme.Size.chatAttachmentGlyph + text + Theme.Spacing.md * 3
+        return metrics.size.chatAttachmentGlyph + text + metrics.spacing.md * 3
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
+        HStack(spacing: metrics.spacing.xs) {
             Image(systemName: symbol)
-                .font(Theme.Typography.chip)
+                .font(metrics.typography.chip)
                 .symbolRenderingMode(.hierarchical)
-                .frame(width: Theme.Size.chatAttachmentGlyph)
+                .frame(width: metrics.size.chatAttachmentGlyph)
             Text(label)
-                .font(Theme.Typography.chip)
+                .font(metrics.typography.chip)
                 .lineLimit(1)
         }
         .foregroundStyle(Theme.Colors.textSecondary)
-        .padding(.horizontal, Theme.Spacing.sm)
-        .padding(.vertical, Theme.Spacing.xxs)
+        .padding(.horizontal, metrics.spacing.sm)
+        .padding(.vertical, metrics.spacing.xxs)
         .background(Capsule().fill(Theme.Colors.controlSurface))
     }
 }
 
 /// A staged file: an image states itself, a document names itself, and either can be taken back.
 private struct AttachmentChip: View {
+    @Environment(\.metrics) private var metrics
     let attachment: ChatAttachment
     let onRemove: () -> Void
 
@@ -208,27 +213,27 @@ private struct AttachmentChip: View {
         return "\(head)…\(tail)"
     }
 
-    static func width(for attachment: ChatAttachment) -> CGFloat {
+    static func width(for attachment: ChatAttachment, _ metrics: InterfaceMetrics) -> CGFloat {
         let text = (Self.shortened(attachment.name) as NSString).size(
-            withAttributes: [.font: Theme.Typography.chipNSFont]
+            withAttributes: [.font: metrics.typography.chipNSFont]
         ).width
-        return Theme.Size.chatAttachmentInset * 2 + Theme.Size.chatAttachmentThumb
-            + Theme.Spacing.sm + text + Theme.Spacing.sm + Theme.Size.chatAttachmentRemove
+        return metrics.size.chatAttachmentInset * 2 + metrics.size.chatAttachmentThumb
+            + metrics.spacing.sm + text + metrics.spacing.sm + metrics.size.chatAttachmentRemove
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: metrics.spacing.sm) {
             leading
             Text(Self.shortened(attachment.name))
-                .font(Theme.Typography.chip)
+                .font(metrics.typography.chip)
                 .lineLimit(1)
                 .foregroundStyle(Theme.Colors.textSecondary)
             Button(action: onRemove) {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .semibold))
                     .frame(
-                        width: Theme.Size.chatAttachmentRemove,
-                        height: Theme.Size.chatAttachmentRemove
+                        width: metrics.size.chatAttachmentRemove,
+                        height: metrics.size.chatAttachmentRemove
                     )
                     .foregroundStyle(hovered ? Theme.Colors.textPrimary : Theme.Colors.textTertiary)
                     .contentShape(Rectangle())
@@ -237,10 +242,10 @@ private struct AttachmentChip: View {
             .help("Remove \(attachment.name)")
         }
         // Inset under the inner gap, so the thumbnail reads as filling the pill.
-        .padding(.horizontal, Theme.Size.chatAttachmentInset)
-        .padding(.vertical, Theme.Size.chatAttachmentInset)
+        .padding(.horizontal, metrics.size.chatAttachmentInset)
+        .padding(.vertical, metrics.size.chatAttachmentInset)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.attachmentChip, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.attachmentChip, style: .continuous)
                 .fill(Theme.Colors.controlSurface)
         )
         .onHover { hovered = $0 }
@@ -254,18 +259,19 @@ private struct AttachmentChip: View {
             ComposerThumbnail(data: attachment.preview, id: attachment.id)
         case .pdf, .text:
             Image(systemName: attachment.kind == .pdf ? "doc.richtext" : "doc.plaintext")
-                .font(Theme.Typography.chip)
+                .font(metrics.typography.chip)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(
-                    width: Theme.Size.chatAttachmentThumb,
-                    height: Theme.Size.chatAttachmentThumb)
+                    width: metrics.size.chatAttachmentThumb,
+                    height: metrics.size.chatAttachmentThumb)
         }
     }
 }
 
 /// Decoded once per attachment: `ForEach` keys on its id, so a per-keystroke re-render reuses it.
 private struct ComposerThumbnail: View {
+    @Environment(\.metrics) private var metrics
     let data: Data?
     let id: UUID
 
@@ -277,18 +283,19 @@ private struct ComposerThumbnail: View {
                 Image(nsImage: image).resizable().scaledToFill()
             } else {
                 Image(systemName: "photo")
-                    .font(Theme.Typography.chip)
+                    .font(metrics.typography.chip)
                     .symbolRenderingMode(.hierarchical)
             }
         }
-        .frame(width: Theme.Size.chatAttachmentThumb, height: Theme.Size.chatAttachmentThumb)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
+        .frame(width: metrics.size.chatAttachmentThumb, height: metrics.size.chatAttachmentThumb)
+        .clipShape(RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous))
         .task(id: id) { image = data.flatMap(NSImage.init(data:)) }
     }
 }
 
 /// Staged files follow the typed text; past two they become a count, the width being the field's.
 private struct PendingAttachmentsChips: View {
+    @Environment(\.metrics) private var metrics
     let attachments: [ChatAttachment]
     let onRemove: (UUID) -> Void
 
@@ -304,32 +311,32 @@ private struct PendingAttachmentsChips: View {
         return hidden > 0 ? "+\(hidden)" : nil
     }
 
-    static func width(for attachments: [ChatAttachment]) -> CGFloat {
-        var total = visible(attachments).reduce(0) { $0 + AttachmentChip.width(for: $1) }
-        total += CGFloat(max(0, visible(attachments).count - 1)) * Theme.Spacing.xs
+    static func width(for attachments: [ChatAttachment], _ metrics: InterfaceMetrics) -> CGFloat {
+        var total = visible(attachments).reduce(0) { $0 + AttachmentChip.width(for: $1, metrics) }
+        total += CGFloat(max(0, visible(attachments).count - 1)) * metrics.spacing.xs
         if let label = overflowLabel(attachments) {
             let text = (label as NSString).size(
-                withAttributes: [.font: Theme.Typography.chipNSFont]
+                withAttributes: [.font: metrics.typography.chipNSFont]
             ).width
-            total += Theme.Spacing.xs + text + Theme.Spacing.sm * 2
+            total += metrics.spacing.xs + text + metrics.spacing.sm * 2
         }
         return total
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
+        HStack(spacing: metrics.spacing.xs) {
             ForEach(Self.visible(attachments)) { attachment in
                 AttachmentChip(attachment: attachment) { onRemove(attachment.id) }
             }
             if let label = Self.overflowLabel(attachments) {
                 Text(label)
-                    .font(Theme.Typography.chip)
+                    .font(metrics.typography.chip)
                     .foregroundStyle(Theme.Colors.textTertiary)
-                    .padding(.horizontal, Theme.Spacing.sm)
-                    .padding(.vertical, Theme.Spacing.xs)
+                    .padding(.horizontal, metrics.spacing.sm)
+                    .padding(.vertical, metrics.spacing.xs)
                     .background(
                         RoundedRectangle(
-                            cornerRadius: Theme.Radius.attachmentChip, style: .continuous
+                            cornerRadius: metrics.radius.attachmentChip, style: .continuous
                         ).fill(Theme.Colors.controlSurface)
                     )
                     .help("\(attachments.count) files attached")

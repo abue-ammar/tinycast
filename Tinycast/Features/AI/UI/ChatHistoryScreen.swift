@@ -7,6 +7,7 @@ struct ChatHistoryScreen: PaletteScreen {
     let coordinator: AIChatCoordinator
     let vm: PaletteState
     let openActions: () -> Void
+    let metrics: InterfaceMetrics
 
     var rows: [ChatConversation] { history.search(vm.query) }
     let primaryActionTitle = "Open Chat"
@@ -64,7 +65,7 @@ struct ChatHistoryScreen: PaletteScreen {
                         openActions()
                     }
                 )
-                .frame(width: Theme.Size.clipboardListWidth)
+                .frame(width: metrics.size.clipboardListWidth)
                 Rectangle().fill(Theme.Colors.separator).frame(width: Theme.Size.hairline)
                 ChatHistoryPreview(history: history, chat: chat, conversationID: selected?.id)
             }

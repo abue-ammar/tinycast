@@ -191,6 +191,11 @@ final class AppSettings {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance.rawValue) }
     }
 
+    /// Scales the palette and its floating siblings only. Read through `InterfaceSize.metrics`.
+    var interfaceSize: InterfaceSize {
+        didSet { defaults.set(interfaceSize.rawValue, forKey: Key.interfaceSize.rawValue) }
+    }
+
     var paletteTransparency: Int {
         didSet { defaults.set(paletteTransparency, forKey: Key.paletteTransparency.rawValue) }
     }
@@ -505,6 +510,9 @@ final class AppSettings {
             ?? .navigateBackOrClose
         appearance =
             defaults.string(forKey: Key.appearance.rawValue).flatMap(AppAppearance.init) ?? .system
+        interfaceSize =
+            defaults.string(forKey: Key.interfaceSize.rawValue).flatMap(InterfaceSize.init)
+            ?? .standard
         paletteTransparency = max(-100, min(100, defaults.integer(forKey: Key.paletteTransparency.rawValue)))
         compactMode = defaults.bool(forKey: Key.compactMode.rawValue)
         // Defaults to true, so absence must be distinguished from a stored `false`.
