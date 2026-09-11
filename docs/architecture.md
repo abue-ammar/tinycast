@@ -26,7 +26,8 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ RaycastDecoder · Scrypt · AppSettingsKey · SettingsBackupCoverage          │
 │ MeetingLink · MeetingEvent · UpcomingWindow · MeetingDay · MenuBarSummary  │
 │ AutoJoinPolicy · EventDraft · SupportReminderSchedule ·                    │
-│ MenuSearch{Item,Shortcut,Query,TreeNode,SnapshotPolicy,Target}             │
+│ MenuSearch{Item,Shortcut,Query,TreeNode,SnapshotPolicy,Target} ·           │
+│ WindowSwitch{Entry,Order,Query}                                            │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ consumed by
 ┌─ EFFECT ─────────────────────────▼─────────────────────────────────────────┐
@@ -38,11 +39,11 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
 │ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor ·       │
 │ CalendarStore · MeetingLauncher · MeetingClock · CameraSession ·           │
-│ SupportReminderStore · AXMenuAccess                                        │
+│ SupportReminderStore · AXMenuAccess · WindowZOrder · WindowSwitchSweep     │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
-│ 38 @MainActor @Observable stores, sessions, indices and State types        │
+│ 39 @MainActor @Observable stores, sessions, indices and State types        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
@@ -156,7 +157,7 @@ macOS by itself. Nothing else in the app sets an appearance.
 
 ## Observation
 
-38 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
+39 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
 state through `@Environment` rather than `@EnvironmentObject`.
 
 Three things about this model are easy to get wrong:

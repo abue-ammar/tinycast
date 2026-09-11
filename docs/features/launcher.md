@@ -549,21 +549,22 @@ and three places read it: `FeatureCommandsSection` draws the pane's rows from it
 category gate for it in both `isVisible` and `allowsHotKey`. Stamping the entry rather than sniffing its
 id is what keeps "which pane owns this" out of the entry-ID namespace.
 
-Ten panes own commands today — AI, Quick Actions, File Search, Notes, Snippets, Window Management,
-Clipboard, Emoji, Calendar and Quicklinks. What is left in Settings › Commands is the set no feature
-switch governs: Calculator History, Open Camera, the three backup commands, Check for Updates,
-Settings, About, Support and Quit.
+Eleven panes own commands today — AI, Quick Actions, File Search, Notes, Snippets, Navigation,
+Window Management, Clipboard, Emoji, Calendar and Quicklinks. What is left in Settings › Commands is
+the set no feature switch governs: Calculator History, Open Camera, the three backup commands, Check
+for Updates, Settings, About, Support and Quit.
 
 A pane's list is also its display order, so `CommandID`'s declaration order is grouped by owner.
 Nothing keys on that order — `CommandCatalog.all` sorts by name and every preference keys on the raw
 value — so a command may be moved between owners without migrating anything.
 
-## Search Menu Items
+## Navigation commands
 
-`CommandID.searchMenuItems` opens the frontmost app's main menu bar as a palette screen. It is a
-plain command entry — no new `AppEntry.Kind`, no `VisibilityStore` category and no
-`SettingsTab.ownedCommands` claim, so Settings › Commands owns its switch. Its invariants and
-internals live in [menu-search.md](menu-search.md).
+`CommandID.switchWindows` opens every running app's windows as a palette screen, and
+`CommandID.searchMenuItems` does the same for the front app's menu bar. Both are plain command
+entries — no new `AppEntry.Kind` and no `VisibilityStore` category — owned by Settings › Navigation
+through `SettingsTab.ownedCommands`, so `navigationEnabled` is their switch. Their invariants and
+internals live in [navigation.md](navigation.md) and [menu-search.md](menu-search.md).
 
 > **Invariant:** `Tests/fuzz-test.swift` compiles the real `Tinycast/Features/Launcher/Model/SearchRelevance.swift`, so
 > that file must stay Foundation-only and pure. There is no copy of the scorer to keep in sync.

@@ -47,6 +47,8 @@ struct SettingsBackup: Codable {
         var customCommandsShowInLauncher: Bool?
         var snippetsShowInLauncher: Bool?
         // Safe to carry: it grants no permission class paste doesn't already prompt for.
+        var navigationEnabled: Bool?
+        var menuSearchDisabledApps: [String]?
         var windowManagementEnabled: Bool?
         var windowManagementShowInLauncher: Bool?
         var windowGap: Int?
@@ -138,6 +140,8 @@ extension SettingsBackup {
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
             snippetsShowInLauncher: s.snippetsShowInLauncher,
+            navigationEnabled: s.navigationEnabled,
+            menuSearchDisabledApps: s.menuSearchDisabledApps,
             windowManagementEnabled: s.windowManagementEnabled,
             windowManagementShowInLauncher: s.windowManagementShowInLauncher,
             windowGap: s.windowGap,
@@ -353,6 +357,14 @@ extension SettingsBackup {
         }
         if let flag = s.snippetsShowInLauncher {
             settings.snippetsShowInLauncher = flag
+            count += 1
+        }
+        if let flag = s.navigationEnabled {
+            settings.navigationEnabled = flag
+            count += 1
+        }
+        if let apps = s.menuSearchDisabledApps {
+            settings.menuSearchDisabledApps = apps
             count += 1
         }
         if let flag = s.windowManagementEnabled {
