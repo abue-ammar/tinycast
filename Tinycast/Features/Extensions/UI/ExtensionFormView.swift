@@ -31,6 +31,7 @@ struct ExtensionFormView: View {
                 .background {
                     Color.clear.contentShape(Rectangle())
                         .onTapGesture { palette.dismissControlList() }
+                        .onRightClick { palette.dismissControlList() }
                 }
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
