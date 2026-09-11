@@ -181,8 +181,10 @@ private struct ExtensionItemRow: View {
 
     var body: some View {
         HStack(spacing: metrics.spacing.lg) {
-            ExtensionIconView(
-                resolved: ExtensionImage.resolve(node.props["icon"], assetsPath: assetsPath, isDark: isDark))
+            if let icon = node.props["icon"], icon != .null {
+                ExtensionIconView(
+                    resolved: ExtensionImage.resolve(icon, assetsPath: assetsPath, isDark: isDark))
+            }
             Text(node.string("title") ?? "")
                 .font(metrics.typography.rowTitle)
                 .lineLimit(1)
