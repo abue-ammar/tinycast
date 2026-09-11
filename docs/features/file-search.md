@@ -104,18 +104,33 @@ orders of magnitude, not budgets; rerun the benchmark after query-policy work.
 ## Palette and actions
 
 `FileSearchScreen.rows` is the exact flat selection order rendered by `FileSearchList`. The list uses
-the shared Results header, row metrics, edge dissolve, thin scrollbar and scroll intent. A row shows a
-fitted native file icon, the full filename, and its tilde-abbreviated parent path.
+the shared Results header, row metrics, edge dissolve, thin scrollbar and scroll intent.
 
-Fitted row icons use a separate 8 MB transient cache. Leaving the list or hiding the palette purges it
-and invalidates in-flight decodes, so scrolling stays warm within one result set without retaining its
-icons after File Search closes. Persistent launcher icons remain in their own cache.
+When results are present, a right-side preview and metadata panel (`FileSearchPreview`) is open by
+default beside the list, separated by a hairline divider. The top stage displays a QuickLook thumbnail
+card with rounded corners; the bottom section displays key-value metadata: Name, Where, Type, Size,
+Created, Modified, and Accessed dates. Filesystem resource values are gathered off-main via
+`FileMetadataProbe` in a detached task. Pressing **⌘I** toggles the info panel, expanding the results list
+to full width with middle-truncated parent paths.
+
+Fitted row icons use a separate 8 MB transient cache, and preview thumbnails use `FilePreviewThumbnail`'s
+32 MB cache. Leaving the list or hiding the palette purges both and invalidates in-flight decodes, so
+scrolling stays warm within one result set without retaining previews after File Search closes.
 
 - Return calls `FileSearchCoordinator.open`, hides the palette without restoring focus, and uses the
   asynchronous `NSWorkspace` configuration API. A failure goes through Tinycast's dialog controller.
 - Command-Return reveals the item in Finder and dismisses the palette.
+- Quick Look (⌘Y) previews the selection using the system Quick Look generator.
+- Show Info in Finder (⌥⌘I) reveals Finder's Get Info window for the file.
+- Toggle Info Panel (⌘I) collapses or expands the right-side preview pane.
+- Copy File (⇧⌘C) writes the file reference to the general pasteboard for pasting into Finder.
+- Copy Name (⌥⌘C) copies the filename to the clipboard and reports through the message HUD.
 - Copy Path writes the standardized path through `Paster`, leaves the palette open, and reports through
   the message HUD.
+- Save as Quicklink (⌘S) dismisses the palette and opens the Quicklink editor with the file prefilled.
+
+Single-clicking a row selects the item and immediately loads its metadata preview (opening the preview
+panel if hidden). Double-clicking or pressing Return opens the file in its default application.
 
 The empty screen runs no query. The first in-flight query says "Searching files…", an empty completed
 query says "No files found", and query creation or execution failure says
@@ -123,7 +138,8 @@ query says "No files found", and query creation or execution failure says
 
 ## Invocation
 
-Settings ▸ File Search owns the `fileSearchEnabled` switch, which is off when its preference is absent,
+Settings ▸ File Search owns the `fileSearchEnabled` switch, preview image size (`fileSearchPreviewSize`),
+search history retention duration (`fileSearchResetTimeout`), individual ⌘K action visibility toggles,
 along with the scope list, the ignore patterns and the Search Files command row. All of them are
 ordinary settings carried by Tinycast settings backups; importing them grants no permission or
 background access.

@@ -5,7 +5,9 @@ struct FileSearchList: View {
     @Environment(\.metrics) private var metrics
     let results: [FileSearchResult]
     let selectedID: FileSearchResult.ID?
+    var showsInfoPanel = false
     let scroll: ScrollIntent
+    let onSelect: (FileSearchResult) -> Void
     let onActivate: (FileSearchResult) -> Void
     let onActions: (FileSearchResult) -> Void
 
@@ -19,11 +21,20 @@ struct FileSearchList: View {
                 LazyVStack(spacing: 0) {
                     SectionHeader(title: "Results", isFirst: true)
                     ForEach(results) { result in
-                        FileSearchRow(result: result, selected: result.id == selectedID)
-                            .selectionFrame(result.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onActivate(result) }
-                            .onRightClick { onActions(result) }
+                        FileSearchRow(
+                            result: result,
+                            selected: result.id == selectedID,
+                            showsInfoPanel: showsInfoPanel
+                        )
+                        .id(result.id)
+                        .selectionFrame(result.id == selectedID)
+                        .contentShape(Rectangle())
+                        .overlay {
+                            RowClickHandle(
+                                onSelect: { onSelect(result) },
+                                onActivate: { onActivate(result) })
+                        }
+                        .onRightClick { onActions(result) }
                     }
                 }
                 .padding(.horizontal, metrics.spacing.md)
@@ -37,7 +48,10 @@ struct FileSearchList: View {
             .scrollFollowsSelection(
                 scroll, row: selectedID, atOrigin: firstRowSelected, proxy: proxy)
         }
-        .onDisappear { IconCache.purgeFitted() }
+        .onDisappear {
+            IconCache.purgeFitted()
+            FilePreviewThumbnail.purgePreviews()
+        }
     }
 }
 
@@ -46,12 +60,14 @@ private struct FileSearchRow: View {
     @Environment(\.metrics) private var metrics
     let result: FileSearchResult
     let selected: Bool
+    let showsInfoPanel: Bool
     @State private var image: NSImage?
     @State private var hovered = false
 
-    init(result: FileSearchResult, selected: Bool) {
+    init(result: FileSearchResult, selected: Bool, showsInfoPanel: Bool) {
         self.result = result
         self.selected = selected
+        self.showsInfoPanel = showsInfoPanel
         _image = State(initialValue: IconCache.cachedFitted(forFile: result.id))
     }
 
@@ -75,12 +91,15 @@ private struct FileSearchRow: View {
             Text(result.name)
                 .font(metrics.typography.rowTitle)
                 .lineLimit(1)
-            Spacer(minLength: metrics.spacing.md)
-            Text(result.parentPath)
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+                .truncationMode(showsInfoPanel ? .tail : .middle)
+            Spacer(minLength: showsInfoPanel ? 0 : metrics.spacing.md)
+            if !showsInfoPanel {
+                Text(result.parentPath)
+                    .font(metrics.typography.rowTrailing)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
         }
         .padding(.horizontal, metrics.spacing.md)
         .padding(.vertical, metrics.spacing.sm)
@@ -99,6 +118,39 @@ private struct FileSearchRow: View {
                 return
             }
             image = await IconCache.loadFittedAsync(forFile: result.id)
+        }
+    }
+}
+
+private struct RowClickHandle: NSViewRepresentable {
+    var onSelect: () -> Void
+    var onActivate: () -> Void
+
+    func makeNSView(context: Context) -> RowClickView {
+        RowClickView()
+    }
+
+    func updateNSView(_ nsView: RowClickView, context: Context) {
+        nsView.onSelect = onSelect
+        nsView.onActivate = onActivate
+    }
+}
+
+private final class RowClickView: NSView {
+    var onSelect: (() -> Void)?
+    var onActivate: (() -> Void)?
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        switch NSApp.currentEvent?.type {
+        case .rightMouseDown, .rightMouseUp, .rightMouseDragged: return nil
+        default: return super.hitTest(point)
+        }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onSelect?()
+        if event.clickCount == 2 {
+            onActivate?()
         }
     }
 }

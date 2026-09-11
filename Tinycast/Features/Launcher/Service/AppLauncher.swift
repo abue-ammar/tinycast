@@ -16,6 +16,9 @@ enum AppLauncher {
     @MainActor
     static func showInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])
+        if let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first {
+            finder.activate(options: .activateIgnoringOtherApps)
+        }
     }
 
     /// No AppKit route for Get Info, so this drives Finder over Apple events — seconds when cold.

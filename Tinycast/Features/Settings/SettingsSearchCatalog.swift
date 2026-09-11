@@ -318,6 +318,18 @@ enum SettingsSearchCatalog {
             group: .fileSearchCommands, "File search commands",
             keywords: ["shortcut", "launcher"]),
         .init(
+            .fileSearchPreview, "Show Preview Panel",
+            keywords: ["preview", "metadata", "panel", "sidebar", "toggle"]),
+        .init(
+            .fileSearchPreview, "Preview image size",
+            keywords: ["thumbnail", "height", "scale", "image", "preview"]),
+        .init(
+            .fileSearchPreview, "Keep search history for",
+            keywords: ["retention", "timeout", "reset", "query", "persist"]),
+        .init(
+            group: .fileSearchActions, "Actions (⌘K)",
+            keywords: ["actions", "menu", "context menu", "copy", "finder", "quick look"]),
+        .init(
             group: .fileSearchSearchScopes, "Search Scopes",
             keywords: ["folders", "locations", "home", "add folder"]),
         .init(

@@ -35,6 +35,16 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     init(core: AppCore) {
         self.core = core
+        super.init()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleApplicationDidResignActive),
+            name: NSApplication.didResignActiveNotification, object: nil)
+    }
+
+    @objc private func handleApplicationDidResignActive() {
+        guard isVisible, !core.isShowingDialog else { return }
+        FileQuickLookController.shared.close()
+        core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 
     var isVisible: Bool { panel?.isVisible ?? false }
@@ -204,6 +214,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Not for one of our own dialogs: hiding would tear down a command mid-`confirmAlert`.
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, !core.isShowingDialog else { return }
+        if FileQuickLookController.shared.isVisible { return }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 

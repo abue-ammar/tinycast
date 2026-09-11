@@ -362,6 +362,7 @@ struct RootPaletteView: View {
             .onChange(of: menuSelection) { syncMenuPanel(presenting: false) }
             .onDisappear {
                 menuPanel.hide()
+                core.fileSearchCoordinator.closeQuickLook()
                 (hostWindow as? PalettePanel)?.onHeaderFieldBoundaryArrow = nil
             }
             .onAppear { searchFocused = !screen.hidesSearchField }
@@ -437,6 +438,10 @@ struct RootPaletteView: View {
                 return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
             }
             .onKeyPress(.escape) {
+                if FileQuickLookController.shared.isVisible {
+                    core.fileSearchCoordinator.closeQuickLook()
+                    return .handled
+                }
                 // An open list closes itself first, exactly as the ⌘K menu does.
                 if vm.isControlListOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
@@ -548,6 +553,71 @@ struct RootPaletteView: View {
                 case .clipboardFilter: toggleClipboardFilter()
                 case .ignored: return .ignored
                 }
+                return .handled
+            }
+            // ⌘Y opens Quick Look on the selected file search item.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.intersection([.command, .shift, .option, .control]) == .command,
+                    ASCIIKeyboardLayout.matches(press.key, character: "y"),
+                    let fileSearch = screen as? FileSearchScreen,
+                    let item = fileSearch.result(at: selection(in: fileSearch))
+                else { return .ignored }
+                core.fileSearchCoordinator.quickLook(item)
+                if menuOpen { closeMenus() }
+                return .handled
+            }
+            // ⌥⌘I opens Get Info in Finder on the selected file search item.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.intersection([.command, .shift, .option, .control]) == [.command, .option],
+                    ASCIIKeyboardLayout.matches(press.key, character: "i"),
+                    let fileSearch = screen as? FileSearchScreen,
+                    let item = fileSearch.result(at: selection(in: fileSearch))
+                else { return .ignored }
+                core.fileSearchCoordinator.showInfoInFinder(item)
+                if menuOpen { closeMenus() }
+                return .handled
+            }
+            // ⇧⌘C copies the selected file to the pasteboard.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.intersection([.command, .shift, .option, .control]) == [.command, .shift],
+                    ASCIIKeyboardLayout.matches(press.key, character: "c"),
+                    let fileSearch = screen as? FileSearchScreen,
+                    let item = fileSearch.result(at: selection(in: fileSearch))
+                else { return .ignored }
+                core.fileSearchCoordinator.copyFile(item)
+                if menuOpen { closeMenus() }
+                return .handled
+            }
+            // ⌥⌘C copies the selected file name to the pasteboard.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.intersection([.command, .shift, .option, .control]) == [.command, .option],
+                    ASCIIKeyboardLayout.matches(press.key, character: "c"),
+                    let fileSearch = screen as? FileSearchScreen,
+                    let item = fileSearch.result(at: selection(in: fileSearch))
+                else { return .ignored }
+                core.fileSearchCoordinator.copyName(item)
+                if menuOpen { closeMenus() }
+                return .handled
+            }
+            // ⌘S saves the selected file as a quicklink.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.intersection([.command, .shift, .option, .control]) == .command,
+                    ASCIIKeyboardLayout.matches(press.key, character: "s"),
+                    let fileSearch = screen as? FileSearchScreen,
+                    let item = fileSearch.result(at: selection(in: fileSearch))
+                else { return .ignored }
+                core.fileSearchCoordinator.saveAsQuicklink(item)
+                if menuOpen { closeMenus() }
+                return .handled
+            }
+            // ⌘I toggles the File Search info panel.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.intersection([.command, .shift, .option, .control]) == .command,
+                    ASCIIKeyboardLayout.matches(press.key, character: "i"),
+                    vm.mode == .fileSearch
+                else { return .ignored }
+                core.fileSearchCoordinator.toggleInfoPanel()
+                if menuOpen { closeMenus() }
                 return .handled
             }
             // ⇧⌘F mirrors the Add/Remove Favorites row, closing an open menu the way that row does.

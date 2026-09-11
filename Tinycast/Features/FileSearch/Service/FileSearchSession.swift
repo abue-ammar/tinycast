@@ -15,6 +15,10 @@ final class FileSearchSession {
 
     private(set) var results: [FileSearchResult] = []
     private(set) var state: State = .idle
+    var showsInfoPanel = true
+    var lastSelectedID: String?
+    private(set) var lastQuery = ""
+    private(set) var lastActiveAt: Date?
     private var query = ""
     private var revision = 0
     @ObservationIgnored private var pendingSearch: PendingSearch?
@@ -62,7 +66,7 @@ final class FileSearchSession {
         guard policy != self.policy else { return }
         self.policy = policy
         // A result found under the old rules must not publish, and the same query has to re-run.
-        cancel()
+        reset()
     }
 
     func search(_ rawQuery: String) {
@@ -71,6 +75,9 @@ final class FileSearchSession {
             cancel()
             return
         }
+        lastActiveAt = Date()
+        if query != self.query { lastSelectedID = nil }
+        lastQuery = query
         guard query != self.query || state == .failed else { return }
         revision &+= 1
         self.query = query
@@ -85,12 +92,31 @@ final class FileSearchSession {
         }
     }
 
-    func cancel() {
+    /// Stops background work while the palette hides, keeping query and results for return.
+    func cancelActiveSearch() {
         revision &+= 1
         pendingSearch = nil
+        workerTask?.cancel()
+        workerTask = nil
+        if state == .searching { state = results.isEmpty ? .idle : .ready }
+    }
+
+    func cancel() {
+        cancelActiveSearch()
         query = ""
         results = []
         state = .idle
+    }
+
+    func reset() {
+        cancel()
+        lastSelectedID = nil
+        lastQuery = ""
+        lastActiveAt = nil
+    }
+
+    func toggleInfoPanel() {
+        showsInfoPanel.toggle()
     }
 
     private func runWorker() async {

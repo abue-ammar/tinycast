@@ -41,6 +41,10 @@ struct SettingsBackup: Codable {
         var fileSearchEnabled: Bool?
         var fileSearchScopes: [String]?
         var fileSearchIgnorePatterns: [String]?
+        var fileSearchPreviewSize: String?
+        var fileSearchShowsInfoPanel: Bool?
+        var fileSearchDisabledActions: [String]?
+        var fileSearchResetTimeout: Int?
         var notesEnabled: Bool?
         // `snippetsEnabled` is absent: an import must not enable keystroke listening.
         var customCommandsEnabled: Bool?
@@ -134,6 +138,10 @@ extension SettingsBackup {
             fileSearchEnabled: s.fileSearchEnabled,
             fileSearchScopes: s.fileSearchScopes,
             fileSearchIgnorePatterns: s.fileSearchIgnorePatterns,
+            fileSearchPreviewSize: s.fileSearchPreviewSize.rawValue,
+            fileSearchShowsInfoPanel: s.fileSearchShowsInfoPanel,
+            fileSearchDisabledActions: s.fileSearchDisabledActions,
+            fileSearchResetTimeout: s.fileSearchResetTimeout.rawValue,
             notesEnabled: s.notesEnabled,
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
@@ -337,6 +345,22 @@ extension SettingsBackup {
         }
         if let patterns = s.fileSearchIgnorePatterns {
             settings.fileSearchIgnorePatterns = patterns
+            count += 1
+        }
+        if let raw = s.fileSearchPreviewSize, let size = FileSearchPreviewSize(rawValue: raw) {
+            settings.fileSearchPreviewSize = size
+            count += 1
+        }
+        if let flag = s.fileSearchShowsInfoPanel {
+            settings.fileSearchShowsInfoPanel = flag
+            count += 1
+        }
+        if let actions = s.fileSearchDisabledActions {
+            settings.fileSearchDisabledActions = actions
+            count += 1
+        }
+        if let raw = s.fileSearchResetTimeout, let timeout = FileSearchResetTimeout(rawValue: raw) {
+            settings.fileSearchResetTimeout = timeout
             count += 1
         }
         if let flag = s.notesEnabled {

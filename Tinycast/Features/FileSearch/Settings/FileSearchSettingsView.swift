@@ -17,6 +17,10 @@ struct FileSearchSettingsView: View {
 
             FeatureCommandsSection(owner: .fileSearch, anchor: .fileSearchCommands)
                 .settingsEnabled(settings.fileSearchEnabled)
+            FileSearchPreviewSection()
+                .settingsEnabled(settings.fileSearchEnabled)
+            FileSearchActionsSection()
+                .settingsEnabled(settings.fileSearchEnabled)
             FileSearchScopesSection()
                 .settingsEnabled(settings.fileSearchEnabled)
             FileSearchIgnoreSection()
@@ -24,6 +28,90 @@ struct FileSearchSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.fileSearch)
+    }
+}
+
+private struct FileSearchPreviewSection: View {
+    @Environment(AppSettings.self) private var settings
+
+    var body: some View {
+        @Bindable var settings = settings
+        Section {
+            Toggle(isOn: $settings.fileSearchShowsInfoPanel) {
+                SettingsRowTitle(.fileSearchPreview, "Show Preview Panel")
+                Text("Display file preview and metadata alongside search results.")
+            }
+            Picker(selection: $settings.fileSearchPreviewSize) {
+                ForEach(FileSearchPreviewSize.allCases) { size in
+                    Text(size.title).tag(size)
+                }
+            } label: {
+                SettingsRowTitle(.fileSearchPreview, "Preview image size")
+                Text("Maximum height for file and image thumbnails in the preview panel.")
+            }
+            Picker(selection: $settings.fileSearchResetTimeout) {
+                ForEach(FileSearchResetTimeout.allCases) { timeout in
+                    Text(timeout.title).tag(timeout)
+                }
+            } label: {
+                SettingsRowTitle(.fileSearchPreview, "Keep search history for")
+                Text("How long a closed file search preserves its query and results before resetting.")
+            }
+        } header: {
+            SettingsSectionHeader(.fileSearchPreview)
+        }
+    }
+}
+
+private struct FileSearchActionsSection: View {
+    @Environment(AppSettings.self) private var settings
+
+    private var isDefault: Bool {
+        settings.fileSearchDisabledActions.isEmpty
+    }
+
+    var body: some View {
+        @Bindable var settings = settings
+        Section {
+            ForEach(FileSearchActionOption.allCases) { action in
+                SettingsRow(title: action.title) {
+                    Image(systemName: action.systemImage)
+                        .frame(width: Theme.Size.settingsRowIcon)
+                        .foregroundStyle(.secondary)
+                } trailing: {
+                    if let shortcut = action.defaultShortcut {
+                        HStack(spacing: Theme.Spacing.xxs) {
+                            ForEach(Array(shortcut.enumerated()), id: \.offset) { _, glyph in
+                                KeyCapChip(text: String(glyph), style: .outline)
+                            }
+                        }
+                    }
+                    Toggle("", isOn: actionBinding(action))
+                        .labelsHidden()
+                        .toggleStyle(.checkbox)
+                        .accessibilityLabel("Include \(action.title) in ⌘K menu")
+                }
+            }
+
+            if !isDefault {
+                Button("Restore Default Actions") {
+                    settings.fileSearchDisabledActions = []
+                }
+            }
+        } header: {
+            SettingsSectionHeader(.fileSearchActions)
+        } footer: {
+            Text("Checked actions appear in the ⌘K action menu when a file or folder is selected.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func actionBinding(_ action: FileSearchActionOption) -> Binding<Bool> {
+        Binding(
+            get: { settings.isFileSearchActionVisible(action) },
+            set: { settings.setFileSearchAction(action, visible: $0) }
+        )
     }
 }
 

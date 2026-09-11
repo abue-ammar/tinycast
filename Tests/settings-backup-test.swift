@@ -52,6 +52,18 @@ struct SettingsBackupTest {
         check(
             "user ignore patterns ride the settings backup",
             mirrored["fileSearchIgnorePatterns"] == .fileSearchIgnorePatterns)
+        check(
+            "file search preview size rides the settings backup",
+            mirrored["fileSearchPreviewSize"] == .fileSearchPreviewSize)
+        check(
+            "file search shows info panel rides the settings backup",
+            mirrored["fileSearchShowsInfoPanel"] == .fileSearchShowsInfoPanel)
+        check(
+            "file search disabled actions ride the settings backup",
+            mirrored["fileSearchDisabledActions"] == .fileSearchDisabledActions)
+        check(
+            "file search reset timeout rides the settings backup",
+            mirrored["fileSearchResetTimeout"] == .fileSearchResetTimeout)
         check("notes enablement rides the settings backup", mirrored["notesEnabled"] == .notesEnabled)
         check(
             "clipboard enablement rides the settings backup",

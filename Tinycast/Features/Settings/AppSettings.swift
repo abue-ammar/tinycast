@@ -262,6 +262,45 @@ final class AppSettings {
         }
     }
 
+    var fileSearchPreviewSize: FileSearchPreviewSize {
+        didSet {
+            defaults.set(fileSearchPreviewSize.rawValue, forKey: Key.fileSearchPreviewSize.rawValue)
+        }
+    }
+
+    var fileSearchShowsInfoPanel: Bool {
+        didSet {
+            defaults.set(
+                fileSearchShowsInfoPanel, forKey: Key.fileSearchShowsInfoPanel.rawValue)
+        }
+    }
+
+    var fileSearchDisabledActions: [String] {
+        didSet {
+            defaults.set(
+                fileSearchDisabledActions, forKey: Key.fileSearchDisabledActions.rawValue)
+        }
+    }
+
+    var fileSearchResetTimeout: FileSearchResetTimeout {
+        didSet {
+            defaults.set(
+                fileSearchResetTimeout.rawValue, forKey: Key.fileSearchResetTimeout.rawValue)
+        }
+    }
+
+    func isFileSearchActionVisible(_ action: FileSearchActionOption) -> Bool {
+        !fileSearchDisabledActions.contains(action.rawValue)
+    }
+
+    func setFileSearchAction(_ action: FileSearchActionOption, visible: Bool) {
+        if visible {
+            fileSearchDisabledActions.removeAll { $0 == action.rawValue }
+        } else if !fileSearchDisabledActions.contains(action.rawValue) {
+            fileSearchDisabledActions.append(action.rawValue)
+        }
+    }
+
     var notesEnabled: Bool {
         didSet { defaults.set(notesEnabled, forKey: Key.notesEnabled.rawValue) }
     }
@@ -537,6 +576,18 @@ final class AppSettings {
             ?? FileSearchScope.defaultScopes
         fileSearchIgnorePatterns =
             defaults.stringArray(forKey: Key.fileSearchIgnorePatterns.rawValue) ?? []
+        fileSearchPreviewSize =
+            defaults.string(forKey: Key.fileSearchPreviewSize.rawValue)
+            .flatMap(FileSearchPreviewSize.init) ?? .medium
+        fileSearchShowsInfoPanel =
+            defaults.object(forKey: Key.fileSearchShowsInfoPanel.rawValue) == nil
+            || defaults.bool(forKey: Key.fileSearchShowsInfoPanel.rawValue)
+        fileSearchDisabledActions =
+            defaults.stringArray(forKey: Key.fileSearchDisabledActions.rawValue) ?? []
+        fileSearchResetTimeout =
+            defaults.object(forKey: Key.fileSearchResetTimeout.rawValue)
+            .flatMap { $0 as? Int }
+            .flatMap(FileSearchResetTimeout.init(rawValue:)) ?? .afterThreeMinutes
         notesEnabled = defaults.bool(forKey: Key.notesEnabled.rawValue)
         aiEnabled = defaults.bool(forKey: Key.aiEnabled.rawValue)
         mcpEnabled = defaults.bool(forKey: Key.mcpEnabled.rawValue)

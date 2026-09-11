@@ -85,7 +85,8 @@ final class PaletteCoordinator {
     }
 
     func hidePalette(restoreFocus: Bool = true) {
-        fileSearch.cancel()
+        fileSearch.cancelActiveSearch()
+        FileQuickLookController.shared.close()
         menuSearch.reset()
         windowController.hide(restoreFocus: restoreFocus)
     }
