@@ -5,8 +5,8 @@ import SwiftUI
 ///
 /// AppKit rather than SwiftUI's `onDrag`, which takes an `NSItemProvider` and cannot declare the
 /// operation mask. Images live under `imagesDir` on the boot volume, where a same-volume drop
-/// defaults to a move and would carry the blob out of the history. Only `NSDraggingSource` can
-/// answer `.copy`.
+/// defaults to a move and would carry the blob out of the history. Only an `NSDraggingSource`
+/// answers `.copy`. See docs/features/clipboard.md#dragging-out.
 struct ClipDragHandle: NSViewRepresentable {
     /// Read when the drag starts, not when the row draws: resolving it stats the file.
     var payload: () -> ClipDragPayload?
@@ -23,7 +23,7 @@ struct ClipDragHandle: NSViewRepresentable {
 }
 
 extension View {
-    /// The handle owns the press, so it answers the click and the double click too — a SwiftUI tap
+    /// The handle owns the press, so it answers the click and the double click too. A SwiftUI tap
     /// gesture underneath it never sees either.
     func clipDraggable(
         payload: @escaping () -> ClipDragPayload?,
@@ -89,7 +89,7 @@ private final class ClipDragView: NSView, NSDraggingSource {
     private func beginDrag(_ payload: ClipDragPayload, with event: NSEvent) {
         let image = dragImage(for: payload)
         let item = NSDraggingItem(pasteboardWriter: pasteboardWriter(for: payload))
-        // Sized to the image and centred on the cursor; the row's shape would stretch a thumbnail.
+        // Sized to the image and centred on the cursor. The row's shape would stretch a thumbnail.
         let origin = convert(event.locationInWindow, from: nil)
         item.setDraggingFrame(
             NSRect(

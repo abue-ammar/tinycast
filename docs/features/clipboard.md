@@ -357,30 +357,39 @@ Carrying file bytes would make a backup unbounded and defeat the point of refere
 
 ## Dragging out
 
-An image or file row is a drag source for the file it already is (`ClipDrag.swift`), so reaching
-another app costs one gesture instead of Reveal in Finder and a second drag. `ClipboardStore.dragURL`
-is the payload rule and the whole of it: the stored blob for an image, the referenced path for a
-file, **nil for text** — a text row keeps its SwiftUI gestures untouched.
+Every row is a drag source (`ClipDrag.swift`), so reaching another app costs one gesture instead of
+Reveal in Finder and a second drag. `ClipboardItem.dragPayload` says in what flavour: the file URL
+for an image or a referenced file, a URL and its text for a link, plain text for the rest. It is
+derived and never persisted, like `textForm` beside it, and `textForm` stays the one answer to
+whether an entry is a link, so the drag and the type filter cannot disagree.
+`QuicklinkDestination.detect` builds the URL rather than a second parser.
 
-**Copy, always — this is the reason the drag is AppKit and not `onDrag`.** `imagesDir` lives in
-Application Support, on the boot volume, which is the same volume as almost every drop target. A
-file-URL drag there defaults to a *move*, and a move carries the blob out of the history and strands
-its row. Only an `NSDraggingSource` can answer `sourceOperationMaskFor` at all, and `ClipDragView`
-answers `.copy` for every context. SwiftUI's `onDrag` takes an `NSItemProvider` and nothing else, so
-it cannot make that promise. A `.file` row is copy-only for the same reason turned outward: the path
-is the user's own file, and Tinycast must not move it out from under them.
+**Copy, always. That is why the drag is AppKit and not `onDrag`.** `imagesDir` lives in Application
+Support, on the boot volume, which is the same volume as almost every drop target. A file-URL drag
+there defaults to a move, and a move carries the blob out of the history and strands its row. Only
+an `NSDraggingSource` can answer `sourceOperationMaskFor`, and `ClipDragView` answers `.copy` for
+every context. SwiftUI's `onDrag` takes an `NSItemProvider` and nothing else. A `.file` row is
+copy-only for the reverse reason: the path is the user's own file, and Tinycast must not move it.
 
 **It claims mouse-down, like `WindowDragHandle` does, because the hosting view eats the click
-first.** So the overlay owns the whole press: select on the way down, activate on a double click,
-and start the session once the pointer passes 4pt of slop. Below the slop nothing happened but a
-click, which is what the row's own `onTapGesture` used to do and why the handle takes `onSelect` and
-`onActivate` rather than sitting beside them.
+first.** The overlay owns the whole press: select on the way down, activate on a double click, and
+start the session once the pointer passes 4pt of slop. A press that stays inside the slop was a
+click, which is why the handle takes `onSelect` and `onActivate` instead of sitting beside a tap
+gesture that would never fire.
 
-The drag preview is `cached` only, never `load` — a decode on mouse-down stalls the frame the drag
-begins on. The row tile is already warm at 64px, which is exactly what the preview asks for, and a
-miss falls through to the file's own icon.
+**The payload resolves on mouse-down, not on every row render.**
+`ClipboardCoordinator.dragPayload` stats the file first, so a vanished one raises the HUD rather
+than handing another app a dead path, the same answer Reveal and Open give. That is one stat per
+drag instead of one per row per frame.
 
-**A landed drop hides the palette**, the same ending a paste has, through `onDropped`. A cancelled
-drag (`operation == []`) leaves it up, because nothing was accomplished. The session outliving the
-panel is safe for the reason the player teardown above is delicate: `orderOut` leaves the SwiftUI
-tree mounted, and the pasteboard holds the URL from the moment the session begins.
+**Previews are drawn, never snapshotted.** SwiftUI renders into layers, so `cacheDisplay` on the row
+returns a transparent bitmap and the drag carries nothing the eye can follow. A file uses the row
+tile, `cached` only and never `load`, because a decode on mouse-down stalls the frame the drag
+begins on. A link or a copy gets a drawn text tile. The dragging frame is sized to that image and
+centred on the cursor, since the row's own shape would stretch a thumbnail.
+
+**A landed drop hides the palette**, the ending a paste has, through `clipDropped()`. A cancelled
+drag leaves it up and animates back to the row it came from, so a drag that achieved nothing says
+so. The session outliving the panel is safe for the reason the player teardown above is delicate:
+`orderOut` leaves the SwiftUI tree mounted, and the pasteboard holds the payload from the moment the
+session begins.
