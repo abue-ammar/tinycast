@@ -8,7 +8,10 @@ struct LauncherItemsSection: View {
 
     @Environment(AppIndex.self) private var appIndex
     @Environment(VisibilityStore.self) private var visibility
+    @Environment(AliasStore.self) private var aliases
+    @Environment(HotKeyManager.self) private var hotKeys
     @State private var query = ""
+    @State private var recorderFrame: CGRect?
 
     private var entries: [AppEntry] {
         let scoped = appIndex.apps.filter { $0.kind == kind && $0.settingsOwner == nil }
@@ -31,27 +34,35 @@ struct LauncherItemsSection: View {
         Section {
             SettingsFilterField(prompt: searchPrompt, query: $query)
 
+            let entries = entries
             if entries.isEmpty {
                 Text(query.isEmpty ? "Nothing here yet." : "No matches for “\(query)”.")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
             } else {
-                // One row holding a lazy stack: a `Form` realizes every row it is handed.
-                LazyVStack(spacing: 0) {
-                    ForEach(entries) { entry in
-                        if entry.id != entries.first?.id { Divider() }
-                        LauncherItemRow(entry: entry)
-                            .padding(.vertical, Self.rowPadding)
-                    }
-                }
-                .padding(.vertical, -Self.rowPadding)
+                // One row holding the table: a `Form` realizes every row it is handed.
+                LauncherItemsTable(
+                    entries: entries, isEnabled: visibility.isKindEnabled(kind),
+                    visibility: visibility, aliases: aliases, hotKeys: hotKeys,
+                    recorderFrame: $recorderFrame
+                )
+                .overlay(alignment: .topLeading) { recorderStandIn }
             }
         }
         .settingsEnabled(visibility.isKindEnabled(kind))
     }
 
-    /// A grouped `Form` row's own vertical padding.
-    private static let rowPadding: CGFloat = 15
+    /// The open recorder's anchor can't leave its hosted row, so this republishes its bounds here.
+    @ViewBuilder
+    private var recorderStandIn: some View {
+        if let recorderFrame {
+            Color.clear
+                .frame(width: recorderFrame.width, height: recorderFrame.height)
+                .anchorPreference(key: ShortcutRecorderAnchorKey.self, value: .bounds) { $0 }
+                .position(x: recorderFrame.midX, y: recorderFrame.midY)
+                .allowsHitTesting(false)
+        }
+    }
 
     private var enabledBinding: Binding<Bool> {
         Binding(
@@ -61,13 +72,15 @@ struct LauncherItemsSection: View {
     }
 }
 
-private struct LauncherItemRow: View {
+/// One launcher item's row; a table cell hosts it and hands it new entries as the list scrolls.
+struct LauncherItemRow: View {
     let entry: AppEntry
     @Environment(VisibilityStore.self) private var visibility
 
     var body: some View {
         SettingsRow(title: entry.name) {
-            AppIconView(app: entry).frame(width: 18, height: 18)
+            // Keyed so a reused cell seeds the new entry's icon on its first frame.
+            AppIconView(app: entry).frame(width: 18, height: 18).id(entry.iconKey)
         } trailing: {
             AliasField(entry: entry)
             if let action = entry.hotKeyAction {

@@ -161,6 +161,14 @@ struct AliasField: View {
         .onChange(of: aliases.revision) { _, _ in
             if !focused { draft = aliases.alias(for: key) ?? "" }
         }
+        // A reused table row hands the field another entry; unsaved text belongs to the old one.
+        .onChange(of: key) { old, new in
+            if focused {
+                aliases.setAlias(draft, for: old)
+                focused = false
+            }
+            draft = aliases.alias(for: new) ?? ""
+        }
         .padding(.horizontal, Theme.Spacing.sm)
         .frame(width: Theme.Size.shortcutRecorder, height: 24)
         .background(shape.fill(Theme.Colors.cardFill))
