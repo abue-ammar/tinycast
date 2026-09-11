@@ -1,12 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Drags a clipboard entry out to another app.
-///
-/// AppKit rather than SwiftUI's `onDrag`, which takes an `NSItemProvider` and cannot declare the
-/// operation mask. Images live under `imagesDir` on the boot volume, where a same-volume drop
-/// defaults to a move and would carry the blob out of the history. Only an `NSDraggingSource`
-/// answers `.copy`. See docs/features/clipboard.md#dragging-out.
+/// AppKit, not `onDrag`: only an `NSDraggingSource` can force `.copy` over a same-volume move.
 struct ClipDragHandle: NSViewRepresentable {
     /// Read when the drag starts, not when the row draws: resolving it stats the file.
     var payload: () -> ClipDragPayload?
@@ -23,8 +18,7 @@ struct ClipDragHandle: NSViewRepresentable {
 }
 
 extension View {
-    /// The handle owns the press, so it answers the click and the double click too. A SwiftUI tap
-    /// gesture underneath it never sees either.
+    /// The handle owns the press, so a tap gesture underneath never sees click or double click.
     func clipDraggable(
         payload: @escaping () -> ClipDragPayload?,
         onSelect: @escaping () -> Void,
@@ -56,6 +50,14 @@ private final class ClipDragView: NSView, NSDraggingSource {
         self.onSelect = onSelect
         self.onActivate = onActivate
         self.onDropped = onDropped
+    }
+
+    /// Left button only, so the row's right-click catcher underneath still opens the actions menu.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        switch NSApp.currentEvent?.type {
+        case .rightMouseDown, .rightMouseUp, .rightMouseDragged: return nil
+        default: return super.hitTest(point)
+        }
     }
 
     /// Tracks the gesture itself, like `WindowDragHandle`: the hosting view eats the click first.
@@ -116,8 +118,7 @@ private final class ClipDragView: NSView, NSDraggingSource {
         }
     }
 
-    /// Drawn, never snapshotted: SwiftUI renders into layers, so `cacheDisplay` on the row returns
-    /// a transparent bitmap and the drag carries nothing visible.
+    /// Drawn, not snapshotted: SwiftUI draws into layers, so `cacheDisplay` returns a clear bitmap.
     private func dragImage(for payload: ClipDragPayload) -> NSImage {
         switch payload {
         case .file(let url):
@@ -142,19 +143,17 @@ private final class ClipDragView: NSView, NSDraggingSource {
         let text = string.size()
         let size = NSSize(
             width: min(text.width, 320) + inset.width * 2, height: text.height + inset.height * 2)
-        let image = NSImage(size: size)
-        image.lockFocus()
-        NSColor.controlBackgroundColor.withAlphaComponent(0.95).setFill()
-        NSBezierPath(
-            roundedRect: NSRect(origin: .zero, size: size),
-            xRadius: Theme.Radius.thumbnail, yRadius: Theme.Radius.thumbnail
-        ).fill()
-        string.draw(
-            in: NSRect(
-                x: inset.width, y: inset.height, width: size.width - inset.width * 2,
-                height: text.height))
-        image.unlockFocus()
-        return image
+        return NSImage(size: size, flipped: false) { rect in
+            NSColor.controlBackgroundColor.withAlphaComponent(0.95).setFill()
+            NSBezierPath(
+                roundedRect: rect, xRadius: Theme.Radius.thumbnail, yRadius: Theme.Radius.thumbnail
+            ).fill()
+            string.draw(
+                in: NSRect(
+                    x: inset.width, y: inset.height, width: rect.width - inset.width * 2,
+                    height: text.height))
+            return true
+        }
     }
 
     // MARK: - NSDraggingSource

@@ -375,7 +375,9 @@ copy-only for the reverse reason: the path is the user's own file, and Tinycast 
 first.** The overlay owns the whole press: select on the way down, activate on a double click, and
 start the session once the pointer passes 4pt of slop. A press that stays inside the slop was a
 click, which is why the handle takes `onSelect` and `onActivate` instead of sitting beside a tap
-gesture that would never fire.
+gesture that would never fire. It declines the right button in `hitTest`, the mirror of what
+`RightClickCatcher` does with the left one — an overlay that answers every event would sit on top of
+the actions catcher and silently swallow the menu.
 
 **The payload resolves on mouse-down, not on every row render.**
 `ClipboardCoordinator.dragPayload` stats the file first, so a vanished one raises the HUD rather

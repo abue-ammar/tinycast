@@ -509,8 +509,7 @@ final class ClipboardStore {
         let unpinned = ordinary.filter { !$0.isPinned }
         // OCR-only rows fill what is left of the budget the FTS `LIMIT` gives ordinary ones.
         let remaining = max(0, Self.searchLimit - filter.apply(to: unpinned).count)
-        // `Array(…)` spelled out: left open, the type checker reads `prefix` as the `Sequence`
-        // overload and the whole `+` chain stops resolving.
+        // `Array(…)` spelled out: left open, `prefix` resolves as `Sequence` and the chain fails.
         let extra = Array(filter.apply(to: additional.filter { !$0.isPinned }).prefix(remaining))
         return pins + unpinned + extra
     }

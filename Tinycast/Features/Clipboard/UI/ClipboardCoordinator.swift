@@ -141,8 +141,7 @@ final class ClipboardCoordinator {
         AppLauncher.showInFinder(url)
     }
 
-    /// Nil when there is nothing to hand over, which only a vanished file is — reported by the HUD
-    /// rather than dragged out as a dead path, the same answer Reveal and Open give.
+    /// Nil only for a vanished file, which the HUD reports rather than hand over a dead path.
     func dragPayload(for item: ClipboardItem) -> ClipDragPayload? {
         let payload = item.dragPayload
         guard case .file = payload else { return payload }

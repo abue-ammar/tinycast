@@ -68,9 +68,6 @@ struct ClipboardList: View {
                             .contentShape(Rectangle())
                             // The light catcher: `.contextMenu` stalls.
                             .onRightClick { onActions(item) }
-                            // Last, so it sits above the right-click catcher. It claims the left
-                            // button outright, which is why the click lives here and not in a tap
-                            // gesture underneath.
                             .clipDraggable(
                                 payload: { onDragPayload(item) },
                                 onSelect: { onSelect(item) },

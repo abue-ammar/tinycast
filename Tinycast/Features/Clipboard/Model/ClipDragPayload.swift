@@ -9,8 +9,7 @@ enum ClipDragPayload: Equatable, Sendable {
 }
 
 extension ClipboardItem {
-    /// Derived and never persisted, like `textForm` beside it. `textForm` stays the one answer to
-    /// whether an entry is a link, so the drag and the type filter cannot disagree.
+    /// `textForm` stays the one answer to a link, so the drag and the type filter cannot disagree.
     var dragPayload: ClipDragPayload {
         if let path = imagePath ?? filePath { return .file(URL(fileURLWithPath: path)) }
         let copy = text ?? ""
