@@ -1,9 +1,35 @@
+--- a/Tinycast/App/AppCore.swift
++++ b/Tinycast/App/AppCore.swift
+@@ -455,7 +455,7 @@
+         return try AIProviderFactory.make(
+             selection: selection, settings: aiSettings, subscription: chatGPTSubscription,
+             installedAI: installedAI,
+-            guardrails: .permissiveContentTransformations)
++            permissiveGuardrails: true)
+     }
+ 
+     // MARK: - Feature switches
+--- a/Tinycast/DesignSystem/PopoverMenu.swift
++++ b/Tinycast/DesignSystem/PopoverMenu.swift
+@@ -85,8 +85,8 @@
+         }
+         .padding(metrics.spacing.sm)
+         .frame(width: width ?? metrics.size.menuWidth)
+-        .glassEffect(
+-            .regular, in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
++        .frostedMenu(
++            in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
+         )
+     }
+ 
 --- a/Tinycast/DesignSystem/Theme.swift
 +++ b/Tinycast/DesignSystem/Theme.swift
-@@ -225,10 +225,48 @@
+@@ -373,10 +373,48 @@
      }
  }
  
+-extension View {
+-    /// A floating glass control surface, frosted so it reads brighter than clear glass.
 +/// The floating-control surface, resolved per OS: Liquid Glass on macOS 26+, native vibrancy on Sequoia.
 +private struct FrostedSurface<S: Shape>: ViewModifier {
 +    let shape: S
@@ -38,8 +64,7 @@
 +    }
 +}
 +
- extension View {
--    /// A floating glass control surface, frosted so it reads brighter than clear glass.
++extension View {
 +    /// A floating control surface, frosted so it reads brighter than clear glass.
      func frosted(in shape: some Shape) -> some View {
 -        glassEffect(.regular.interactive().tint(Theme.Colors.glassFrost), in: shape)
@@ -52,19 +77,112 @@
 +        modifier(FrostedSurface(shape: shape, isInteractive: false))
 +    }
  }
---- a/Tinycast/DesignSystem/PopoverMenu.swift
-+++ b/Tinycast/DesignSystem/PopoverMenu.swift
-@@ -82,8 +82,8 @@
-         .padding(Theme.Spacing.sm)
-         .frame(width: width)
-         // Glass carries its own elevation, so a drop shadow on top reads heavy.
--        .glassEffect(
--            .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
-+        .frostedMenu(
-+            in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
-         )
+--- a/Tinycast/Features/AI/Model/AppleIntelligence.swift
++++ b/Tinycast/Features/AI/Model/AppleIntelligence.swift
+@@ -6,6 +6,7 @@
+     case deviceNotEligible
+     case notEnabled
+     case modelNotReady
++    case unsupportedOS
+ 
+     var isAvailable: Bool { self == .available }
+ 
+@@ -20,6 +21,8 @@
+             return "Turn on Apple Intelligence in System Settings to chat on device."
+         case .modelNotReady:
+             return "Apple Intelligence is still downloading its model. Try again shortly."
++        case .unsupportedOS:
++            return "On-device Apple Intelligence needs macOS 26 or later."
+         }
      }
  }
+--- a/Tinycast/Features/AI/Service/AIProviderFactory.swift
++++ b/Tinycast/Features/AI/Service/AIProviderFactory.swift
+@@ -1,4 +1,3 @@
+-import FoundationModels
+ import Foundation
+ 
+ @MainActor
+@@ -18,21 +17,21 @@
+             installedAI: installedAI, keyStore: keyStore)
+     }
+ 
+-    /// `guardrails` reaches only the on-device model, the one route that filters locally.
++    /// The guardrail choice reaches only the on-device model, the one route that filters locally.
+     static func make(
+         selection: AIModelSelection,
+         settings: AISettingsStore,
+         subscription: ChatGPTSubscriptionManager,
+         installedAI: InstalledAIManager,
+         keyStore: KeychainSecretStore = .aiAPIKeys,
+-        guardrails: SystemLanguageModel.Guardrails = .default
++        permissiveGuardrails: Bool = false
+     ) throws -> any AIProvider {
+         switch selection {
+         case .appleIntelligence:
+             if let message = AppleIntelligenceProvider.status().message {
+                 throw AIProviderError.unavailable(message)
+             }
+-            return AppleIntelligenceProvider(guardrails: guardrails)
++            return try AppleIntelligenceProvider.make(permissiveGuardrails: permissiveGuardrails)
+         case .codex(let model, let effort):
+             guard settings.enabledInstalledProviders.contains(.codex) else {
+                 throw AIProviderError.unavailable("Codex is disabled in AI Settings.")
+--- a/Tinycast/Features/AI/Service/AppleIntelligenceProvider.swift
++++ b/Tinycast/Features/AI/Service/AppleIntelligenceProvider.swift
+@@ -1,8 +1,25 @@
+ import FoundationModels
+ import Foundation
+ 
++/// Sequoia ships no FoundationModels, so on-device AI is absent there rather than merely idle.
++enum AppleIntelligenceProvider {
++    static func status() -> AppleIntelligenceStatus {
++        guard #available(macOS 26.0, *) else { return .unsupportedOS }
++        return AppleIntelligenceModel.status()
++    }
++
++    static func make(permissiveGuardrails: Bool) throws -> any AIProvider {
++        guard #available(macOS 26.0, *) else {
++            throw AIProviderError.unavailable(AppleIntelligenceStatus.unsupportedOS.message ?? "")
++        }
++        return AppleIntelligenceModel(
++            guardrails: permissiveGuardrails ? .permissiveContentTransformations : .default)
++    }
++}
++
+ /// The only provider with nothing to configure, so a first run may select it unasked.
+-struct AppleIntelligenceProvider: AIProvider {
++@available(macOS 26.0, *)
++struct AppleIntelligenceModel: AIProvider {
+     /// The caller's, not a constant: the default filter refuses text the reader already wrote.
+     let guardrails: SystemLanguageModel.Guardrails
+ 
+--- a/Tinycast/Features/Extensions/UI/ExtensionActionsPanel.swift
++++ b/Tinycast/Features/Extensions/UI/ExtensionActionsPanel.swift
+@@ -88,8 +88,8 @@
+         }
+         .padding(metrics.spacing.sm)
+         .frame(width: panel.width)
+-        .glassEffect(
+-            .regular, in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
++        .frostedMenu(
++            in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
+         )
+     }
+ 
+--- a/Tinycast/Features/Extensions/UI/ExtensionPickerList.swift
++++ b/Tinycast/Features/Extensions/UI/ExtensionPickerList.swift
+@@ -25,8 +25,8 @@
+         }
+         .padding(metrics.spacing.sm)
+         .frame(width: width ?? form.controlWidth)
+-        .glassEffect(
+-            .regular, in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
++        .frostedMenu(
++            in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
+         )
+     }
+ 
 --- a/Tinycast/Features/HotKeys/UI/ShortcutRecorderPopover.swift
 +++ b/Tinycast/Features/HotKeys/UI/ShortcutRecorderPopover.swift
 @@ -52,8 +52,8 @@
@@ -78,19 +196,48 @@
      }
  
      private var state: State {
---- a/Tinycast/Features/Extensions/UI/ExtensionActionsPanel.swift
-+++ b/Tinycast/Features/Extensions/UI/ExtensionActionsPanel.swift
-@@ -69,8 +69,8 @@
-         .padding(Theme.Spacing.sm)
-         .frame(width: Metrics.width)
-         // Glass carries its own elevation, so a drop shadow on top reads heavy.
--        .glassEffect(
--            .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
-+        .frostedMenu(
-+            in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
-         )
+--- a/Tinycast/Features/Launcher/Service/AppLauncher.swift
++++ b/Tinycast/Features/Launcher/Service/AppLauncher.swift
+@@ -83,15 +83,34 @@
+         launch(url)
      }
- }
+ 
++    /// macOS 26 carries the typed workspace message; Sequoia has only the name-based notification.
++    @MainActor
++    private static func observeTerminations(
++        _ exited: @escaping @Sendable (pid_t) -> Void
++    ) -> @MainActor () -> Void {
++        let center = NSWorkspace.shared.notificationCenter
++        if #available(macOS 26.0, *) {
++            let observer = center.addObserver(
++                of: NSWorkspace.shared, for: NSWorkspace.DidTerminateApplicationMessage.self
++            ) { exited($0.application.processIdentifier) }
++            return { center.removeObserver(observer) }
++        }
++        let observer = center.addObserver(
++            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main
++        ) { note in
++            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
++            guard let app else { return }
++            exited(app.processIdentifier)
++        }
++        return { center.removeObserver(observer) }
++    }
++
+     /// Observes before it terminates, so an instance that exits at once can't outrun the wait.
+     @MainActor
+     private static func quitAwaitingExit(_ apps: [NSRunningApplication]) async -> Bool {
+-        let center = NSWorkspace.shared.notificationCenter
+         let (exits, continuation) = AsyncStream.makeStream(of: pid_t.self)
+-        let observer = center.addObserver(
+-            of: NSWorkspace.shared, for: NSWorkspace.DidTerminateApplicationMessage.self
+-        ) { continuation.yield($0.application.processIdentifier) }
+-        defer { center.removeObserver(observer) }
++        let stopObserving = observeTerminations { continuation.yield($0) }
++        defer { stopObserving() }
+ 
+         var pending = Set(apps.map(\.processIdentifier))
+         for app in apps { app.terminate() }
 --- a/Tinycast/Features/Notes/UI/NoteSwitcherView.swift
 +++ b/Tinycast/Features/Notes/UI/NoteSwitcherView.swift
 @@ -15,7 +15,7 @@
@@ -102,3 +249,112 @@
          .clipShape(surface)
          .onAppear(perform: focusSearch)
          .onChange(of: notes.switcherFocusRevision) { _, _ in focusSearch() }
+--- a/Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift
++++ b/Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift
+@@ -6,6 +6,12 @@
+     case translate
+     case summarize
+ 
++    /// Sequoia can't build a `TranslationSession` outside SwiftUI, so Translate isn't offered there.
++    static var allCases: [BuiltInQuickAction] {
++        if #available(macOS 26.0, *) { return [.fixGrammar, .rewrite, .translate, .summarize] }
++        return [.fixGrammar, .rewrite, .summarize]
++    }
++
+     var id: String { rawValue }
+ 
+     var title: String {
+--- a/Tinycast/Features/QuickActions/Service/TextTranslator.swift
++++ b/Tinycast/Features/QuickActions/Service/TextTranslator.swift
+@@ -48,6 +48,8 @@
+         @unknown default:
+             throw Failure.unsupported
+         }
++        // Unreachable on Sequoia: `allCases` drops Translate there, so nothing can reach this.
++        guard #available(macOS 26.0, *) else { throw Failure.unsupported }
+         do {
+             let session = TranslationSession(installedSource: source, target: target)
+             return try await session.translate(text).targetText
+--- a/Tinycast/Features/Settings/Panes/GeneralSettingsView.swift
++++ b/Tinycast/Features/Settings/Panes/GeneralSettingsView.swift
+@@ -278,30 +278,48 @@
+             })
+     }
+ 
+-    var body: some View {
+-        SettingsRow(
+-            title: "Background transparency",
+-            subtitle: "The level of transparency of the glass background.",
+-            subtitleLineLimit: 2,
+-            anchor: .generalAppearance
+-        ) {
++    /// macOS 26's slider carries a neutral detent and ticks; Sequoia gets the same steps without them.
++    @ViewBuilder
++    private var slider: some View {
++        if #available(macOS 26.0, *) {
+             Slider(
+                 value: value, in: -100...100, step: 50, neutralValue: 0,
+                 label: { EmptyView() },
+                 minimumValueLabel: { Text("Less") },
+                 maximumValueLabel: { Text("More") },
+                 tick: { SliderTick($0) },
+-                onEditingChanged: { editing in
+-                    isEditing = editing
+-                    if !editing, let draft {
+-                        settings.paletteTransparency = Int(draft)
+-                        self.draft = nil
+-                    }
+-                }
++                onEditingChanged: endEditing
+             )
+-            .labelsHidden()
+-            .accessibilityLabel("Background transparency")
+-            .frame(width: Theme.Size.paletteTransparencySlider)
++        } else {
++            Slider(
++                value: value, in: -100...100, step: 50,
++                label: { EmptyView() },
++                minimumValueLabel: { Text("Less") },
++                maximumValueLabel: { Text("More") },
++                onEditingChanged: endEditing
++            )
++        }
++    }
++
++    private func endEditing(_ editing: Bool) {
++        isEditing = editing
++        if !editing, let draft {
++            settings.paletteTransparency = Int(draft)
++            self.draft = nil
++        }
++    }
++
++    var body: some View {
++        SettingsRow(
++            title: "Background transparency",
++            subtitle: "The level of transparency of the glass background.",
++            subtitleLineLimit: 2,
++            anchor: .generalAppearance
++        ) {
++            slider
++                .labelsHidden()
++                .accessibilityLabel("Background transparency")
++                .frame(width: Theme.Size.paletteTransparencySlider)
+             Button("Reset") {
+                 draft = nil
+                 settings.paletteTransparency = 0
+--- a/Tinycast/Platform/PseudoTerminal.swift
++++ b/Tinycast/Platform/PseudoTerminal.swift
+@@ -29,7 +29,11 @@
+ 
+         var actions: posix_spawn_file_actions_t?
+         posix_spawn_file_actions_init(&actions)
+-        posix_spawn_file_actions_addchdir(&actions, workingDirectory)
++        if #available(macOS 26.0, *) {
++            posix_spawn_file_actions_addchdir(&actions, workingDirectory)
++        } else {
++            posix_spawn_file_actions_addchdir_np(&actions, workingDirectory)
++        }
+         for descriptor in Int32(0)...Int32(2) {
+             posix_spawn_file_actions_adddup2(&actions, childEnd, descriptor)
+         }
