@@ -46,12 +46,8 @@ struct FileSearchQuickLook: View {
         .padding(metrics.spacing.md)
     }
 
-    @ViewBuilder private var surface: some View {
-        let shape = RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous)
-        if FileSearchMediaPlayer.plays(result.url) {
-            FileSearchMediaPlayer(url: result.url).clipShape(shape)
-        } else {
-            QuickLookSurface(url: result.url).clipShape(shape)
-        }
+    private var surface: some View {
+        FileSearchFileView(url: result.url)
+            .clipShape(RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
     }
 }

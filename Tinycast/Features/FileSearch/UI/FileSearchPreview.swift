@@ -70,13 +70,9 @@ private struct FileSearchPreviewStage: View {
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tertiary)
         } else if isLive {
-            if FileSearchMediaPlayer.plays(result.url) {
-                FileSearchMediaPlayer(url: result.url).clipShape(card)
-            } else {
-                QuickLookSurface(url: result.url)
-                    .clipShape(card)
-                    .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
-            }
+            FileSearchFileView(url: result.url)
+                .clipShape(card)
+                .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
         } else {
             Color.clear
         }
