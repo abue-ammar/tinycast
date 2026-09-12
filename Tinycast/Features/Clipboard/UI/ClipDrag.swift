@@ -3,17 +3,21 @@ import SwiftUI
 
 /// AppKit, not `onDrag`: only an `NSDraggingSource` can force `.copy` over a same-volume move.
 struct ClipDragHandle: NSViewRepresentable {
+    /// The handle is what knows when the gesture starts and ends, so it holds the palette open
+    /// itself. Reporting that out to the screen and back down bought nothing but parameters.
+    @Environment(AppCore.self) private var core
     /// Read when the drag starts, not when the row draws: resolving it stats the file.
     var payload: () -> ClipDragPayload?
     var onSelect: () -> Void
     var onActivate: () -> Void
-    var onDropped: () -> Void
 
     func makeNSView(context: Context) -> NSView { ClipDragView() }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        (nsView as? ClipDragView)?
-            .bind(payload: payload, onSelect: onSelect, onActivate: onActivate, onDropped: onDropped)
+        let palette = core.paletteCoordinator
+        (nsView as? ClipDragView)?.bind(
+            payload: payload, onSelect: onSelect, onActivate: onActivate,
+            onDragBegan: { palette.beginDragOut() })
     }
 }
 
@@ -22,12 +26,10 @@ extension View {
     func clipDraggable(
         payload: @escaping () -> ClipDragPayload?,
         onSelect: @escaping () -> Void,
-        onActivate: @escaping () -> Void,
-        onDropped: @escaping () -> Void
+        onActivate: @escaping () -> Void
     ) -> some View {
         overlay {
-            ClipDragHandle(
-                payload: payload, onSelect: onSelect, onActivate: onActivate, onDropped: onDropped)
+            ClipDragHandle(payload: payload, onSelect: onSelect, onActivate: onActivate)
         }
     }
 }
@@ -40,16 +42,16 @@ private final class ClipDragView: NSView, NSDraggingSource {
     private var payload: (() -> ClipDragPayload?)?
     private var onSelect: (() -> Void)?
     private var onActivate: (() -> Void)?
-    private var onDropped: (() -> Void)?
+    private var onDragBegan: (() -> Void)?
 
     func bind(
         payload: @escaping () -> ClipDragPayload?, onSelect: @escaping () -> Void,
-        onActivate: @escaping () -> Void, onDropped: @escaping () -> Void
+        onActivate: @escaping () -> Void, onDragBegan: @escaping () -> Void
     ) {
         self.payload = payload
         self.onSelect = onSelect
         self.onActivate = onActivate
-        self.onDropped = onDropped
+        self.onDragBegan = onDragBegan
     }
 
     /// Left button only, so the row's right-click catcher underneath still opens the actions menu.
@@ -98,6 +100,8 @@ private final class ClipDragView: NSView, NSDraggingSource {
                 x: origin.x - image.size.width / 2, y: origin.y - image.size.height / 2,
                 width: image.size.width, height: image.size.height),
             contents: image)
+        // Before the session starts: the drop target takes the key the moment the drag is in flight.
+        onDragBegan?()
         let session = beginDraggingSession(with: [item], event: event, source: self)
         // A refused drop flies back, so a drag that achieved nothing says so.
         session.animatesToStartingPositionsOnCancelOrFail = true
@@ -163,12 +167,5 @@ private final class ClipDragView: NSView, NSDraggingSource {
         _ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
         .copy
-    }
-
-    func draggingSession(
-        _ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation
-    ) {
-        guard operation != [] else { return }
-        onDropped?()
     }
 }

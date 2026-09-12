@@ -17,6 +17,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private let dropGuides = PaletteDropGuideController()
     /// ⌘V: `Edit ▸ Paste` claims it before `sendEvent` whenever the board also carries text.
     private var pasteMonitor: Any?
+    /// Non-nil while a drag has carried an entry out of the app: the palette ignores losing the
+    /// key, and this is what closes it on the first click outside.
+    private var dragOutMonitor: Any?
     /// ⌘⎋: the window server claims it, so no keystroke is left for the responder chain to see.
     private lazy var commandEscapeTap = CommandEscapeTap { [weak self] in
         guard let self, self.panel?.isKeyWindow == true else { return false }
@@ -123,6 +126,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        clearDragOut()
         commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
@@ -199,16 +203,48 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         Paster.pasteStringInPlace(text, into: previousApp)
     }
 
+    // MARK: - Dragging content out
+
+    /// Hold the palette up for a drag that leaves the app, until the first click outside it.
+    /// See docs/features/clipboard.md#dragging-out.
+    ///
+    /// Armed when the drag starts, not when it ends: the button stays down for the whole gesture,
+    /// so no mouse-down can reach the monitor before the drop. That lets one piece of state answer
+    /// both questions, whether to ignore losing the key and what closes the palette afterwards.
+    func beginDragOut() {
+        guard isVisible, dragOutMonitor == nil else { return }
+        // Global only, which is the test itself: a click inside the palette never reaches one.
+        dragOutMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.clearDragOut()
+                guard self.isVisible, !self.core.isShowingDialog else { return }
+                self.core.paletteCoordinator.hidePalette(restoreFocus: false)
+            }
+        }
+    }
+
+    private func clearDragOut() {
+        guard let dragOutMonitor else { return }
+        NSEvent.removeMonitor(dragOutMonitor)
+        self.dragOutMonitor = nil
+    }
+
     // MARK: - NSWindowDelegate
 
     /// Not for one of our own dialogs: hiding would tear down a command mid-`confirmAlert`.
+    /// Not during a drag-out either: the drop target takes the key, and the palette must survive it.
     func windowDidResignKey(_ notification: Notification) {
-        guard isVisible, !core.isShowingDialog else { return }
+        guard isVisible, !core.isShowingDialog, dragOutMonitor == nil else { return }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 
     /// Re-bump a turn later: on the first show a synchronous bump lands before `onChange`.
     func windowDidBecomeKey(_ notification: Notification) {
+        // Clicking back into the palette ends the drag-out hold, so the normal rules apply again.
+        clearDragOut()
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             core.palette.focusToken = UUID()

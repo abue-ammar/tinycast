@@ -118,8 +118,7 @@ struct ClipboardScreen: PaletteScreen {
                         if let index = rows.firstIndex(of: item) { vm.selection = index }
                         openActions()
                     },
-                    onDragPayload: { core.clipboardCoordinator.dragPayload(for: $0) },
-                    onDropped: { core.clipboardCoordinator.clipDropped() }
+                    onDragPayload: { core.clipboardCoordinator.dragPayload(for: $0) }
                 )
                 .frame(width: metrics.size.clipboardListWidth)
                 Rectangle()

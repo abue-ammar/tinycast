@@ -390,8 +390,21 @@ tile, `cached` only and never `load`, because a decode on mouse-down stalls the 
 begins on. A link or a copy gets a drawn text tile. The dragging frame is sized to that image and
 centred on the cursor, since the row's own shape would stretch a thumbnail.
 
-**A landed drop hides the palette**, the ending a paste has, through `clipDropped()`. A cancelled
-drag leaves it up and animates back to the row it came from, so a drag that achieved nothing says
-so. The session outliving the panel is safe for the reason the player teardown above is delicate:
+**The palette stays up through the drag and past the drop**, so a run of entries goes over in one
+summon. The drop target takes the keyboard the moment the drag is in flight, and `windowDidResignKey`
+closed the palette on that alone.
+
+One piece of state answers the whole behaviour. `beginDragOut` arms a global mouse monitor when the
+session starts, and `dragOutMonitor` being non-nil is both the reason `windowDidResignKey` leaves the
+panel alone and the thing that closes it later. Arming at the start rather than the end is what
+collapses the two: the button stays down for the whole gesture, so no mouse-down can reach the
+monitor before the drop, and the first one that does is the click that dismisses. The monitor is
+global on purpose, since a click inside the palette never reaches one, which is the test itself.
+Clicking back into the panel returns it to the normal rules through `windowDidBecomeKey`.
+
+The handle asks for this itself rather than reporting out to the screen: `ClipDragHandle` reads
+`AppCore` from the palette environment, so no row, list or screen carries a drag callback. A
+cancelled drag animates back to the row it came from, so a drag that achieved nothing still says so.
+The session outliving the panel is safe for the reason the player teardown above is delicate:
 `orderOut` leaves the SwiftUI tree mounted, and the pasteboard holds the payload from the moment the
 session begins.

@@ -128,4 +128,11 @@ final class PaletteCoordinator {
     func endPaletteDrag() {
         windowController.endDrag()
     }
+
+    // MARK: - Dragging content out
+
+    /// A drag that carries an entry to another app. Moving the panel itself is `beginPaletteDrag`.
+    func beginDragOut() {
+        windowController.beginDragOut()
+    }
 }

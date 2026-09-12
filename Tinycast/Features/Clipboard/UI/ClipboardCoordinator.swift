@@ -148,11 +148,6 @@ final class ClipboardCoordinator {
         return clipURL(for: item).map(ClipDragPayload.file)
     }
 
-    /// A landed drop is a finished errand, so the palette leaves as it does after a paste.
-    func clipDropped() {
-        paletteCoordinator.hidePalette(restoreFocus: false)
-    }
-
     func openClip(_ item: ClipboardItem) {
         guard let url = clipURL(for: item) else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)

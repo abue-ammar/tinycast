@@ -13,7 +13,6 @@ struct ClipboardList: View {
     let onActions: (ClipboardItem) -> Void
     /// Nil when the entry has nothing left to hand over, which is reported rather than dragged.
     let onDragPayload: (ClipboardItem) -> ClipDragPayload?
-    let onDropped: () -> Void
     @Environment(ClipboardStore.self) private var store
 
     private enum Row: Identifiable {
@@ -74,8 +73,7 @@ struct ClipboardList: View {
                                 onActivate: {
                                     onSelect(item)
                                     onActivate()
-                                },
-                                onDropped: onDropped
+                                }
                             )
                         }
                     }
