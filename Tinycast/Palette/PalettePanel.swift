@@ -32,6 +32,10 @@ final class PalettePanel: NSPanel {
     /// SwiftUI's text fields all edit through the window's one shared field editor.
     private var fieldEditor: NSTextView? { firstResponder as? NSTextView }
 
+    func selectAllFieldEditorText() {
+        fieldEditor?.selectAll(nil)
+    }
+
     /// Nil while a selection can still collapse normally, or when the caret is not at an edge.
     private func headerFieldBoundary(for event: NSEvent) -> HeaderFieldBoundary? {
         guard event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),

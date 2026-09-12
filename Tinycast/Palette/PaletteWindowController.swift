@@ -10,6 +10,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
+    // Reopen beat the timeout, so select the preserved query.
+    private var queryWasPreserved = false
     /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
@@ -185,6 +187,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         guard let timer = popToRootTimer else { return false }
         timer.invalidate()
         popToRootTimer = nil
+        queryWasPreserved = true
         return true
     }
 
@@ -216,6 +219,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             panel?.trackComposition()
             if let context = panel?.fieldEditorContext {
                 core.inputSourceSwitcher.applySession(to: context)
+            }
+            if queryWasPreserved {
+                queryWasPreserved = false
+                panel?.selectAllFieldEditorText()
             }
         }
     }
