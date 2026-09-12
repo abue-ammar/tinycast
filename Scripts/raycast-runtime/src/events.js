@@ -70,5 +70,14 @@ export class EventEmitter {
 
 EventEmitter.EventEmitter = EventEmitter;
 EventEmitter.defaultMaxListeners = 10;
+EventEmitter.setMaxListeners = () => {};
+EventEmitter.addAbortListener = (signal, listener) => (signal.addEventListener("abort", listener), { [Symbol.dispose]: () => signal.removeEventListener("abort", listener) });
+EventEmitter.on = (emitter, event, { signal } = {}) => {
+  const queue = [], waiters = [], listener = (...args) => waiters.length ? waiters.shift()({ value: args, done: false }) : queue.push(args);
+  const stop = () => { emitter.off(event, listener); while (waiters.length) waiters.shift()({ done: true }); };
+  emitter.on(event, listener);
+  signal?.addEventListener("abort", stop, { once: true });
+  return { [Symbol.asyncIterator]() { return this; }, next() { return queue.length ? Promise.resolve({ value: queue.shift(), done: false }) : signal?.aborted ? Promise.resolve({ done: true }) : new Promise(resolve => waiters.push(resolve)); }, return() { stop(); return Promise.resolve({ done: true }); } };
+};
 EventEmitter.once = (emitter, event) =>
   new Promise((resolve) => emitter.once(event, (...args) => resolve(args)));
