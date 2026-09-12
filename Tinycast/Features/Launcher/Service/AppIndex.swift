@@ -477,7 +477,8 @@ final class AppIndex {
             let languages = BundleLocalization.indexedLanguages(Locale.preferredLanguages)
             let reusing = BundleNameCache(reusing: nameCache, languages: languages)
             let (found, cache, panes) = await Task.detached(priority: .utility) {
-                AppIndex.scan(scopes: scopes, cache: reusing, paneCache: reusingPanes)
+                AppIndex.scan(
+                    scopes: scopes, languages: languages, cache: reusing, paneCache: reusingPanes)
             }.value
             nameCache = cache
             paneCache = panes
@@ -488,7 +489,8 @@ final class AppIndex {
     }
 
     nonisolated private static func scan(
-        scopes: [String], cache: BundleNameCache, paneCache: SettingsPaneScanner.Cache?
+        scopes: [String], languages: [String], cache: BundleNameCache,
+        paneCache: SettingsPaneScanner.Cache?
     ) -> ([AppEntry], BundleNameCache, SettingsPaneScanner.Cache?) {
         Signposts.interval("AppIndex.scan") {
             var cache = cache
@@ -504,8 +506,9 @@ final class AppIndex {
                     continue
                 }
 
-                let names = cache.names(for: url)
                 // Finder's rule: LaunchServices ignores a display name the file name contradicts.
+                let names = cache.names(
+                    for: url, base: fileName, developmentRegion: bundle?.developmentLocalization)
                 let name = names.localized.first ?? fileName
                 let executable =
                     bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String
@@ -525,7 +528,7 @@ final class AppIndex {
                 $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
             // Settings panes are `.appex` bundles, which carry no Spotlight alternate names.
-            let (panes, panesCache) = SettingsPaneScanner.scan(cache: paneCache)
+            let (panes, panesCache) = SettingsPaneScanner.scan(languages: languages, cache: paneCache)
             // Named here, not at publish: romanizing a CJK index is ~50 ms of main-actor time.
             return (AppIndex.named(apps + panes), cache, panesCache)
         }

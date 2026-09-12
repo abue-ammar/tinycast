@@ -122,6 +122,13 @@ struct AppNameTest {
             return url
         }
 
+        /// The scan's own call: an app's untranslated name is the file name it sits under on disk.
+        func names(_ url: URL, _ preferred: [String], region: String? = "en") -> [String] {
+            BundleLocalization.names(
+                for: url, base: url.deletingPathExtension().lastPathComponent,
+                developmentRegion: region, languages: codes(preferred))
+        }
+
         let monitor = makeLocalizedApp(
             "Activity Monitor.app",
             table: [
@@ -131,12 +138,46 @@ struct AppNameTest {
             ])
         check(
             "a loctable app is found by its Chinese name, English still indexed",
-            BundleLocalization.names(for: monitor, languages: codes(["zh-Hans-CN"]))
-                == ["活动监视器", "Activity Monitor"])
+            names(monitor, ["zh-Hans-CN"]) == ["活动监视器", "Activity Monitor"])
         check(
             "an English Mac indexes only the English name",
-            BundleLocalization.names(for: monitor, languages: codes(["en-US"]))
-                == ["Activity Monitor"])
+            names(monitor, ["en-US"]) == ["Activity Monitor"])
+
+        // Tips.app ships every language but its own: `en` is the one key Apple's loctables omit.
+        let tips = makeLocalizedApp(
+            "Tips.app", table: ["ru": ["CFBundleName": "Советы"], "de": ["CFBundleName": "Tipps"]])
+        check(
+            "an untranslated name outranks a language the user reads less well",
+            names(tips, ["en-US", "ru-RU"]) == ["Tips", "Советы"])
+        check(
+            "the language a Mac actually prefers still wins over the untranslated name",
+            names(tips, ["ru-RU"]) == ["Советы", "Tips"])
+        check(
+            "a language nobody asked for is never indexed",
+            !names(tips, ["en-US", "ru-RU"]).contains("Tipps"))
+
+        // Safari's `CFBundleDevelopmentRegion` still reads "English", not "en".
+        check(
+            "a pre-BCP-47 development region names the same language",
+            names(tips, ["en-US", "ru-RU"], region: "English") == ["Tips", "Советы"])
+        check(
+            "a bundle claiming no region leaves its name last, still searchable",
+            names(tips, ["en-US", "ru-RU"], region: nil) == ["Советы", "Tips"])
+
+        // Print Center ships `en_GB` but no `en`; the file name is the English name it already has.
+        let printCenter = makeLocalizedApp(
+            "Print Center.app", table: ["en_GB": ["CFBundleName": "Print Centre"]])
+        check(
+            "a regional spelling never relabels the app the file name already names",
+            names(printCenter, ["en-US"]).first == "Print Center")
+
+        // VoiceMemos.app names itself nowhere on disk, so `en` carries the name the user sees.
+        let memos = makeLocalizedApp(
+            "VoiceMemos.app",
+            table: ["en": ["CFBundleName": "Voice Memos"], "ru": ["CFBundleName": "Диктофон"]])
+        check(
+            "a translated English name still beats the file name it was written for",
+            names(memos, ["en-US", "ru-RU"]) == ["Voice Memos", "VoiceMemos", "Диктофон"])
 
         try? fm.removeItem(at: root)
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")

@@ -168,7 +168,20 @@ ICU entirely on a fast scalar check.
 all 65 of them read English on every Mac, whatever language it is set to.
 
 The user's own language wins the **display name**, so a row reads the way Finder reads it. The rest,
-English included, ride along as `.translation`. `AppDisplayName.inInfo` reads the `-macos` variant of
+English included, ride along as `.translation`.
+
+**A bundle ships no table for the language it is already written in, so `CFBundleDevelopmentRegion`
+places its untranslated name — an app's file name, a pane's `Info.plist` — in the walk at that
+language's own position.** Apple omits a loctable's `en` key exactly when the base name already says
+it in English: `Tips.app`, `Calculator.app` and `AppleIDSettings.appex` all do, and without this the
+walk fell straight past English into whatever *second* language the Mac listed, so an English Mac
+with Russian under it labelled them `Советы` and `Аккаунт Apple`. The base name still loses to a real
+table for that same language — `VoiceMemos.app` does ship `en`, and `Voice Memos` beats the file name
+it was written for. Reading the `en_GB` those bundles *do* carry is the wrong repair: it relabels
+`Print Center` as `Print Centre`. Below the development region the walk carries on, so every language
+under it stays indexed as a `.translation`. The region is canonicalized before it is matched, because
+`CFBundleDevelopmentRegion` still ships its pre-BCP-47 spelling — Safari's and Terminal's read
+`English`. `AppDisplayName.inInfo` reads the `-macos` variant of
 each key before the bare one, the way `CFBundle` does: Image Playground's loctable spells the bare
 `CFBundleDisplayName` `Playground` and only the suffixed key `Image Playground`. A non-English user finds their app by the name they
 see *and* by the English name the vendor advertises.
@@ -374,8 +387,9 @@ reruns on every launcher open — so `BundleNameCache` memoizes **both** per bun
 only when the bundle's modification date moves. Caching one and not the other leaves most of a warm
 pass uncached. Each pass is seeded from the last and keeps only what it looked at, so uninstalled apps
 fall out instead of accumulating; a changed system language drops the whole table, because the names
-in it are in the old one. `.appex` Settings panes carry no alternate names, so `SettingsPaneScanner`
-doesn't ask.
+in it are in the old one. `.appex` Settings panes carry no Spotlight alternates, so `SettingsPaneScanner`
+doesn't ask — it runs the same `BundleLocalization` walk for its own names, and retires its cache
+when either the extensions folder or the language list moves.
 
 Selecting a launcher result records **one row for the submitted query** — `submittedQuery`, named
 so because a table written when the field held one row per *prefix* cannot decode here, which is the
