@@ -165,14 +165,19 @@ icons after File Search closes. Persistent launcher icons remain in their own ca
 The preview pane is the file itself over an Information block — Name, Where, Type, Size, Created,
 Modified. The stage is **16:9 and sized before the block beneath it**, which then scrolls in whatever is
 left; without that layout priority the aspect ratio shrinks to the leftover height instead of claiming
-it. The live view mounts once the selection has held for 150 ms, so arrow-keying a list never opens a
-preview it is about to drop, and nothing stands in before it: a thumbnail in that gap read as a white box
-flashing between rows. `FileSearchMediaPlayer` takes movies and audio, `QuickLookSurface` takes everything
-else — QuickLook draws a movie's first frame but never plays one inside a non-activating panel. The
-player is File Search's own, deliberately: the clipboard's preview is a separate surface with its own
-sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade. The live view is torn
-down whenever the palette is ordered out, the ⌘Y overlay covers it, or a folder is selected, whose
-preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
+it. `FileSearchSurface` picks what draws the file: `FileSearchMediaPlayer` for movies and audio, since
+QuickLook draws a movie's first frame but never plays one inside a non-activating panel, and
+`QuickLookSurface` for everything else, which renders a document better than a monospaced `Text` would.
+The player is File Search's own, deliberately: the clipboard's preview is a separate surface with its own
+sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade.
+
+**The surface outlives the selection**, which is what a moving highlight costs. Only the settled URL
+changes, so a move hands the same `QLPreviewView` another item rather than closing one and building the
+next — the rebuild left a blank frame between every row, and nothing stands in during it, a thumbnail
+there having read as a white box flashing. The settle is 80 ms: enough to coalesce a held arrow key, and
+the whole of what a click waits for, since the first QuickLook load in a process measures ~130 ms and
+every one after it ~10 ms. The surface is torn down only when the palette is ordered out, the ⌘Y overlay
+covers it, or a folder is selected, whose preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
 in a detached task, never in `body`, and a folder shows no Size — its own record is a few bytes, which is
 never what the row means.
 
