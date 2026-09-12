@@ -78,8 +78,10 @@ Accessibility once on their next update, then it's stable again.
 
 ## Hardened runtime
 
-Every build — local and CI, both targets — is signed with `ENABLE_HARDENED_RUNTIME: YES`, which
-notarization requires. The flag is not part of the designated requirement, so turning it on costs no
+**Release only**, on both targets: `ENABLE_HARDENED_RUNTIME: YES`, which notarization requires. Debug
+must stay without it — hardened runtime turns on library validation, and Xcode's
+`Tinycast Dev.debug.dylib` is refused at launch because a self-signed identity carries no Team ID for
+the loader to match. The flag is not part of the designated requirement, so turning it on costs no
 Accessibility grant. Two exceptions in `Tinycast/Tinycast.entitlements` earn their place:
 
 | Entitlement | Without it |
