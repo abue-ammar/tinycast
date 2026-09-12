@@ -10,6 +10,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
+    /// What the query held at the moment of hiding; Pop to Root may have since cleared the live
+    /// one, but the next summon puts this back, selected, so closing by accident costs nothing.
+    private var queryAtHide: String?
     /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
@@ -58,6 +61,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             }
             // Once per summon, and from `previousApp`, so the label names the paste target.
             core.palette.pasteTarget = PasteTarget(app: previousApp)
+            // Nothing else has put fresh text in the field, so Pop to Root's clear wasn't final.
+            if core.palette.query.isEmpty, let queryAtHide, !queryAtHide.isEmpty {
+                core.palette.query = queryAtHide
+            }
+            queryAtHide = nil
             let panel = ensurePanel()
             // Open disarmed: a pointer already over a row must not highlight it.
             core.palette.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
@@ -122,6 +130,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     func hide(restoreFocus: Bool) {
+        queryAtHide = core.palette.query
         panel?.orderOut(nil)
         commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
@@ -217,6 +226,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             if let context = panel?.fieldEditorContext {
                 core.inputSourceSwitcher.applySession(to: context)
             }
+            // Same reason: select what's left so typing right away replaces last time's search.
+            panel?.selectAllFieldEditorText()
         }
     }
 
