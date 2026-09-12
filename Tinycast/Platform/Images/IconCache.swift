@@ -50,12 +50,38 @@ enum EntryIcon: Hashable, Sendable {
     case artwork(path: String, extent: CGFloat)
 }
 
+struct IconSize: Hashable, Sendable {
+    let points: CGFloat
+    let scale: CGFloat
+
+    var pixels: Int { Int((points * scale).rounded(.up)) }
+}
+
 /// App icons by path, downsampled and byte-bounded, so rows don't re-hit `NSWorkspace`.
 enum IconCache {
     /// `NSCache` is thread-safe but not `Sendable`, so assert the guarantee once here.
     private final class Cache: NSCache<NSString, NSImage>, @unchecked Sendable {}
 
-    // Plenty for the ≤24pt draw, and a scrolled `LazyVStack` pins every row's icon.
+    /// Carries the size so a lookup can reject a bitmap the interface has since resized past.
+    private final class RowImage {
+        let size: IconSize
+        let image: NSImage
+
+        init(size: IconSize, image: NSImage) {
+            self.size = size
+            self.image = image
+        }
+    }
+
+    private final class RowCache: NSCache<NSString, RowImage>, @unchecked Sendable {}
+
+    // One entry per file, not per file and size: resizing must replace rows, never accumulate them.
+    private static let rowCache: RowCache = {
+        let cache = RowCache()
+        cache.totalCostLimit = 8 * 1024 * 1024
+        return cache
+    }()
+
     private static let displayPixel: CGFloat = 48
 
     private static let cache: Cache = {
@@ -73,8 +99,11 @@ enum IconCache {
     private static let fittedGeneration = Mutex(IconCacheGeneration())
 
     /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
-    static func cached(forFile path: String, stamp: Int = 0) -> NSImage? {
-        cache.object(forKey: fileKey(path, stamp))
+    static func cached(forFile path: String, stamp: Int = 0, size: IconSize? = nil) -> NSImage? {
+        let key = fileKey(path, stamp)
+        guard let size else { return cache.object(forKey: key) }
+        guard let entry = rowCache.object(forKey: key), entry.size == size else { return nil }
+        return entry.image
     }
     static func cachedSymbol(named name: String, tint: SymbolTint? = nil) -> NSImage? {
         cache.object(forKey: symbolKey(name, tint))
@@ -105,6 +134,7 @@ enum IconCache {
     @MainActor static func invalidateStyled() {
         styleGeneration.withLock { $0 &+= 1 }
         cache.removeAllObjects()
+        rowCache.removeAllObjects()
         purgeFitted()
         style.bump()
     }
@@ -152,11 +182,11 @@ enum IconCache {
     }
 
     /// Returns the decode directly, so a purge mid-decode can't strand a placeholder.
-    static func loadAsync(forFile path: String, stamp: Int = 0) async -> NSImage? {
-        if let cached = cached(forFile: path, stamp: stamp) { return cached }
+    static func loadAsync(forFile path: String, stamp: Int = 0, size: IconSize? = nil) async -> NSImage? {
+        if let cached = cached(forFile: path, stamp: stamp, size: size) { return cached }
         return await Task.detached(priority: .userInitiated) { () -> Decoded in
             guard FileManager.default.fileExists(atPath: path) else { return Decoded(image: nil) }
-            return Decoded(image: icon(forFile: path, stamp: stamp))
+            return Decoded(image: icon(forFile: path, stamp: stamp, size: size))
         }.value.image
     }
     static func loadSymbolAsync(named name: String, tint: SymbolTint? = nil) async -> NSImage? {
@@ -166,12 +196,44 @@ enum IconCache {
         }.value.image
     }
 
-    static func icon(forFile path: String, stamp: Int = 0) -> NSImage {
+    static func icon(forFile path: String, stamp: Int = 0, size: IconSize? = nil) -> NSImage {
+        if let size { return rowIcon(forFile: path, stamp: stamp, size: size) }
         let key = fileKey(path, stamp)
         if let cached = cache.object(forKey: key) { return cached }
         let (icon, cost) = downsampled(NSWorkspace.shared.icon(forFile: path))
         cache.setObject(icon, forKey: key, cost: cost)
         return icon
+    }
+
+    private static func rowIcon(forFile path: String, stamp: Int, size: IconSize) -> NSImage {
+        if let warm = cached(forFile: path, stamp: stamp, size: size) { return warm }
+        let (image, cost) = autoreleasepool { () -> (NSImage, Int) in
+            let (source, sourceCost) = downsampled(NSWorkspace.shared.icon(forFile: path))
+            return resized(source, to: size) ?? (source, sourceCost)
+        }
+        rowCache.setObject(RowImage(size: size, image: image), forKey: fileKey(path, stamp), cost: cost)
+        return image
+    }
+
+    /// Redraws the 96px result rather than the file's icon: AppKit picks its rep and shadow there.
+    private static func resized(_ source: NSImage, to size: IconSize) -> (NSImage, Int)? {
+        guard size.pixels < Int(displayPixel * 2) else { return nil }
+        guard
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: size.pixels, pixelsHigh: size.pixels,
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else { return nil }
+        rep.size = NSSize(width: size.points, height: size.points)
+        guard let context = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.imageInterpolation = .high
+        source.draw(in: NSRect(origin: .zero, size: rep.size))
+        NSGraphicsContext.restoreGraphicsState()
+        let image = NSImage(size: rep.size)
+        image.addRepresentation(rep)
+        return (image, rep.bytesPerRow * rep.pixelsHigh)
     }
 
     /// A symbol on an app-icon-shaped tile; a tint fills it and brightens the glyph to white.
@@ -274,18 +336,18 @@ enum IconCache {
         }
     }
 
-    static func cached(_ source: EntryIcon, fileURL: URL) -> NSImage? {
+    static func cached(_ source: EntryIcon, fileURL: URL, size: IconSize? = nil) -> NSImage? {
         switch source {
-        case .file(let stamp): return cached(forFile: fileURL.path, stamp: stamp)
+        case .file(let stamp): return cached(forFile: fileURL.path, stamp: stamp, size: size)
         case .symbol(let name): return cachedSymbol(named: name)
         case .tintedSymbol(let name, let tint): return cachedSymbol(named: name, tint: tint)
         case .artwork(let path, let extent): return cachedArtwork(atPath: path, extent: extent)
         }
     }
 
-    static func loadAsync(_ source: EntryIcon, fileURL: URL) async -> NSImage? {
+    static func loadAsync(_ source: EntryIcon, fileURL: URL, size: IconSize? = nil) async -> NSImage? {
         switch source {
-        case .file(let stamp): return await loadAsync(forFile: fileURL.path, stamp: stamp)
+        case .file(let stamp): return await loadAsync(forFile: fileURL.path, stamp: stamp, size: size)
         case .symbol(let name): return await loadSymbolAsync(named: name)
         case .tintedSymbol(let name, let tint): return await loadSymbolAsync(named: name, tint: tint)
         case .artwork(let path, let extent):
