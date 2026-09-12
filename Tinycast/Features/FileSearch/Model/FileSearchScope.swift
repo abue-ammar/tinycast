@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 enum FileSearchScope {
     /// Stored tilde-abbreviated, so a settings backup stays portable between machines.
@@ -9,7 +10,10 @@ enum FileSearchScope {
         let isDirectory: Bool
         let isHidden: Bool
         let isPackage: Bool
-        let isApplication: Bool
+        /// Resolved from disk, so the home-root branch classifies exactly as Spotlight does.
+        let contentType: UTType?
+
+        var isApplication: Bool { contentType?.conforms(to: .application) == true }
     }
 
     struct Selection: Sendable {

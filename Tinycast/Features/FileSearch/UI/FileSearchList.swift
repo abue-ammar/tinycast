@@ -3,9 +3,11 @@ import SwiftUI
 struct FileSearchList: View {
 
     @Environment(\.metrics) private var metrics
+    let title: String
     let results: [FileSearchResult]
     let selectedID: FileSearchResult.ID?
     let scroll: ScrollIntent
+    let onSelect: (FileSearchResult) -> Void
     let onActivate: (FileSearchResult) -> Void
     let onActions: (FileSearchResult) -> Void
 
@@ -17,12 +19,14 @@ struct FileSearchList: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    SectionHeader(title: "Results", isFirst: true)
+                    SectionHeader(title: title, isFirst: true)
                     ForEach(results) { result in
                         FileSearchRow(result: result, selected: result.id == selectedID)
                             .selectionFrame(result.id == selectedID)
                             .contentShape(Rectangle())
-                            .onTapGesture { onActivate(result) }
+                            .onRowClick(
+                                select: { onSelect(result) }, activate: { onActivate(result) }
+                            )
                             .onRightClick { onActions(result) }
                     }
                 }
@@ -61,6 +65,13 @@ private struct FileSearchRow: View {
         return .clear
     }
 
+    /// A folder is named by where it sits: half the hits are some `src` or `Tinycast`.
+    private var label: Text {
+        guard result.isDirectory, !result.parentName.isEmpty else { return Text(result.name) }
+        let parent = Text("\(result.parentName)/").foregroundStyle(.secondary)
+        return Text("\(parent)\(result.name)")
+    }
+
     var body: some View {
         HStack(spacing: metrics.spacing.lg) {
             Group {
@@ -72,15 +83,12 @@ private struct FileSearchRow: View {
                 }
             }
             .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
-            Text(result.name)
+            // The column is too narrow for a path beside the name; the preview states it instead.
+            label
                 .font(metrics.typography.rowTitle)
                 .lineLimit(1)
-            Spacer(minLength: metrics.spacing.md)
-            Text(result.parentPath)
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
                 .truncationMode(.middle)
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, metrics.spacing.md)
         .padding(.vertical, metrics.spacing.sm)

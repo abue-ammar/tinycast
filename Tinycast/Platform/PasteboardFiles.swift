@@ -5,6 +5,15 @@ enum PasteboardFiles {
     /// Written by anything that still speaks the pre-UTI pasteboard.
     private static let legacyFilenames = NSPasteboard.PasteboardType("NSFilenamesPboardType")
 
+    /// The file itself on the board, so a paste in Finder copies it rather than its path.
+    static func write(_ url: URL, to pasteboard: NSPasteboard) {
+        pasteboard.clearContents()
+        pasteboard.declareTypes([.fileURL, .string], owner: nil)
+        pasteboard.setData(url.dataRepresentation, forType: .fileURL)
+        // Both types: a file-taking app receives the file, a text field receives the path.
+        pasteboard.setString(url.path, forType: .string)
+    }
+
     /// Empty when the board names no file, so a caller falls through to text or bytes.
     static func urls(on pasteboard: NSPasteboard) -> [URL] {
         urls(on: pasteboard, limit: .max) { _ in true }

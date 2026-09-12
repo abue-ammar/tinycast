@@ -30,6 +30,9 @@ struct PaletteFilterTests {
             resolve(mode: .clipboard), .clipboardFilter,
             "the clipboard's type filter is what ⌘P has always opened")
         expect(
+            resolve(mode: .fileSearch), .fileSearchFilter,
+            "file search has a header filter of its own")
+        expect(
             resolve(mode: .extensionCommand, accessory: true), .extensionAccessory,
             "a running command's own dropdown answers ⌘P on its own screen")
 
@@ -42,9 +45,13 @@ struct PaletteFilterTests {
             resolve(mode: .clipboard, accessory: true), .clipboardFilter,
             "off an extension screen the flag cannot reach the clipboard's own filter")
 
+        expect(
+            resolve(mode: .fileSearch, accessory: true), .fileSearchFilter,
+            "off an extension screen the flag cannot reach file search's own filter either")
+
         // Every other mode was untouched by ⌘P before and has to stay that way.
         for mode in [
-            PaletteMode.launcher, .ai, .aiHistory, .emoji, .fileSearch, .calculatorHistory,
+            PaletteMode.launcher, .ai, .aiHistory, .emoji, .calculatorHistory,
             .quicklinks, .snippets, .schedule, .uninstall, .customCommandArguments
         ] {
             expect(
@@ -55,8 +62,8 @@ struct PaletteFilterTests {
                 "\(mode.rawValue) opens no filter even if a stale accessory flag says so")
         }
 
-        // Collapsed there is no header to hang a button off, so neither filter may open.
-        for mode in [PaletteMode.clipboard, .extensionCommand, .launcher] {
+        // Collapsed there is no header to hang a button off, so no filter may open.
+        for mode in [PaletteMode.clipboard, .fileSearch, .extensionCommand, .launcher] {
             expect(
                 resolve(collapsed: true, mode: mode, accessory: true), .ignored,
                 "the compact bar draws no filter button, so ⌘P opens nothing on \(mode.rawValue)")
