@@ -10,7 +10,6 @@ struct FileSearchScreen: PaletteScreen {
 
     var rows: [FileSearchResult] { session.results }
 
-    /// True on the blank screen, where the rows are what was opened lately rather than matches.
     private var isShowingRecents: Bool {
         vm.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -41,7 +40,7 @@ struct FileSearchScreen: PaletteScreen {
         return true
     }
 
-    /// ⌘⌫ — mirrors the Actions row; trashing is undoable, so it asks nothing first.
+    /// ⌃X — mirrors the Actions row, as the clipboard's delete does; trashing asks nothing first.
     func trash(at selection: Int) -> Bool {
         guard let result = result(at: selection) else { return false }
         core.fileSearchCoordinator.trash(result)
@@ -91,7 +90,8 @@ struct FileSearchScreen: PaletteScreen {
                     onActions: { result in
                         if let index = rows.firstIndex(of: result) { vm.selection = index }
                         openActions()
-                    })
+                    }
+                )
                 .frame(width: metrics.size.clipboardListWidth)
                 Rectangle()
                     .fill(Theme.Colors.separator)
@@ -147,22 +147,22 @@ enum FileSearchActionsMenu {
                     vm.fileSearchQuickLook = true
                 },
                 PopoverMenuItem(
-                    title: "Copy File", systemImage: "doc.on.doc", startsSection: true,
+                    title: "Copy File", systemImage: "doc.on.clipboard", startsSection: true,
                     shortcut: "⇧⌘C"
                 ) { coordinator.copyFile(result) },
-                PopoverMenuItem(
-                    title: "Copy Name", systemImage: "textformat", shortcut: "⌥⌘C"
-                ) { coordinator.copyName(result) },
-                PopoverMenuItem(
-                    title: "Copy Path", systemImage: "doc.on.clipboard", shortcut: "⌃⌘C"
-                ) { coordinator.copyPath(result) },
                 PopoverMenuItem(
                     title: target.map { "Paste File to \($0.name)" } ?? "Paste File",
                     icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: "⇧⌘V"
                 ) { coordinator.pasteFile(result) },
                 PopoverMenuItem(
+                    title: "Copy Name", systemImage: "doc.on.clipboard", shortcut: "⌥⌘C"
+                ) { coordinator.copyName(result) },
+                PopoverMenuItem(
+                    title: "Copy Path", systemImage: "doc.on.clipboard", shortcut: "⌃⌘C"
+                ) { coordinator.copyPath(result) },
+                PopoverMenuItem(
                     title: "Move to Trash", systemImage: "trash", startsSection: true,
-                    shortcut: "⌘⌫", isDestructive: true
+                    shortcut: "⌃X", isDestructive: true
                 ) { coordinator.trash(result) }
             ])
     }

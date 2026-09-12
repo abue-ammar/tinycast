@@ -4,8 +4,7 @@ import Foundation
 @Observable
 final class FileSearchSession {
     typealias SearchOperation =
-        @Sendable (String, String, FileSearchPolicy, FileSearchFilter) async throws ->
-            [FileSearchResult]
+        @Sendable (String, FileSearchFilter, FileSearchPolicy) async throws -> [FileSearchResult]
 
     enum State: Equatable {
         case idle
@@ -44,10 +43,9 @@ final class FileSearchSession {
             scopes: FileSearchScope.defaultScopes, ignorePatterns: [],
             homeDirectory: homeDirectory)
         debounce = .milliseconds(120)
-        searchOperation = { query, expression, policy, filter in
+        searchOperation = { query, filter, policy in
             try await Task.detached(priority: .userInitiated) {
-                try FileSearchService.search(
-                    query: query, expression: expression, policy: policy, filter: filter)
+                try FileSearchService.search(query: query, policy: policy, filter: filter)
             }.value
         }
     }
@@ -80,9 +78,10 @@ final class FileSearchSession {
         revision &+= 1
         self.request = request
         state = .searching
+        // No debounce on the blank screen: there is no next keystroke for it to coalesce with.
         pendingSearch = PendingSearch(
             request: request, revision: revision,
-            earliestStart: ContinuousClock.now.advanced(by: debounce))
+            earliestStart: ContinuousClock.now.advanced(by: query.isEmpty ? .zero : debounce))
         guard workerTask == nil else { return }
         workerTask = Task { [weak self] in
             guard let self else { return }
@@ -110,16 +109,8 @@ final class FileSearchSession {
             guard pendingSearch?.revision == pending.revision else { continue }
             pendingSearch = nil
             let request = pending.request
-            let exclusions = policy.ignore.spotlightNameExclusions
-            let expression =
-                request.query.isEmpty
-                ? FileSearchQuery.recentExpression(excluding: exclusions, filter: request.filter)
-                : FileSearchQuery.expression(
-                    for: request.query, excluding: exclusions, filter: request.filter)
-            guard let expression else { continue }
             do {
-                let candidates = try await searchOperation(
-                    request.query, expression, policy, request.filter)
+                let candidates = try await searchOperation(request.query, request.filter, policy)
                 guard revision == pending.revision, self.request == request else { continue }
                 results = candidates
                 state = .ready

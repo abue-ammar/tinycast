@@ -547,9 +547,6 @@ struct RootPaletteView: View {
                     history.delete(at: selection)
                     return .handled
                 }
-                if let files = screen as? FileSearchScreen {
-                    return files.trash(at: selection) ? .handled : .ignored
-                }
                 return .ignored
             }
             // ⇧⌘C / ⌥⌘C / ⌃⌘C mirror the three copy rows; bare ⌘C stays with the search field.
@@ -605,6 +602,9 @@ struct RootPaletteView: View {
                     if all { history.deleteAll() } else { history.delete(at: selection) }
                 case let history as ChatHistoryScreen:
                     if all { history.deleteAll() } else { history.delete(at: selection) }
+                case let files as FileSearchScreen:
+                    // No ⌃⇧X here: there is no "all" to trash, only the row under the selection.
+                    guard !all, files.trash(at: selection) else { return .ignored }
                 default:
                     return .ignored
                 }

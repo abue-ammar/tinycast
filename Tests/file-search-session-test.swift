@@ -187,7 +187,7 @@ struct FileSearchSessionTests {
     static func makeSession(probe: FileSearchProbe, debounce: Duration) -> FileSearchSession {
         let policy = FileSearchPolicy(
             scopes: FileSearchScope.defaultScopes, ignorePatterns: [], homeDirectory: home)
-        return FileSearchSession(policy: policy, debounce: debounce) { query, _, policy, filter in
+        return FileSearchSession(policy: policy, debounce: debounce) { query, filter, policy in
             await probe.search(query: query, filter: filter, policy: policy)
         }
     }

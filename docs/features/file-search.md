@@ -51,26 +51,36 @@ words in the filename without requiring them to be adjacent or in that order. Th
 `FileSearchSession.search` retains the previous rows, debounces for 120 ms, then drives
 `FileSearchService.search` in a detached user-initiated task. One worker serializes synchronous
 Spotlight calls and coalesces changes to the newest pending query, so slower typing cannot accumulate
-overlapping queries. The service resolves the configured roots, then
-keeps the `MDQuery` reference inside one nonisolated synchronous function. Spotlight returns at most
-1,000 candidates. `FileSearchQuery` removes hidden path components and app-bundle contents, applies the
-ignore list, then applies `FuzzyMatch` and publishes at most 200. Localized filename then path order
+overlapping queries. The session owns *when* a search runs and nothing else — the expressions are the
+service's, built where the policy that shapes them already is. The service resolves the configured roots,
+then keeps every `MDQuery` reference inside one nonisolated synchronous function. Spotlight returns at
+most 1,000 candidates. `FileSearchQuery` removes hidden path components and app-bundle contents, applies
+the ignore list, then applies `FuzzyMatch` and publishes at most 200. Localized filename then path order
 makes ties deterministic.
+
+**`kMDItemPath` is the only attribute read from a result.** `MDQuery` hands the path back from its own
+cache; every other attribute is a metadata fetch costing about half a millisecond, which over a thousand
+candidates was the whole of the old latency — a broad query spent a full second fetching content types
+alone. What a row needs beyond the path (is it a folder, is it hidden, is it an application) comes from
+one `resourceValues` stat, taken only for candidates the ignore list did not already drop. Measured on
+the developer home: 200 URLs stat in 13 ms, where 200 metadata fetches cost 200 ms.
 
 Visible files and document packages directly under home are matched locally with the same case- and
 diacritic-insensitive all-terms rule, since scoping Spotlight to home itself would pull in `~/Library`.
 
 ## Recently used
 
-An empty query is a request of its own: `FileSearchQuery.recentExpression` asks for anything used in the
-last 30 days or changed in the last 3, narrowed by the active filter and the ignore list. Both stamps are
-needed because macOS writes `kMDItemLastUsedDate` for very few opens now — a used-only window answers with
-a handful of downloads. The shorter change window is what keeps a busy machine's matches under the
-1,000-candidate cap.
+An empty query is a request of its own, and it skips the typing debounce — there is no next keystroke for
+it to coalesce with. `FileSearchQuery.RecentStamp` names the two stamps it asks about, each with its own
+window: changed in the last 3 days, used in the last 30. Both are needed because macOS writes
+`kMDItemLastUsedDate` for very few opens now — a used-only list is a handful of downloads — and the
+shorter change window is what keeps a busy machine's matches under the candidate cap.
 
-`FileSearchService` sorts those candidates itself, newest of the two stamps first, then publishes 20.
-`MDQuerySetSortOrder` is deliberately unused: measured against this index it honors neither key reliably,
-and the rows it returned were not in date order in either direction.
+Spotlight sorts on one attribute, so the service runs **one sorted query per stamp** and merges their heads
+by date, newest first, before publishing 20. Only the first 20 rows of each list are dated: no row past
+that can reach the merged list, and every date read costs a metadata fetch. The sort attribute has to be
+named in `MDQueryCreate`; set afterwards through `MDQuerySetSortOrder` it is ignored, which is what the
+first attempt at this measured.
 
 ## Type filter
 
@@ -127,13 +137,15 @@ cancels and clears the session as well.
 against the current user's Spotlight index and reports first-run and repeated-query latency; it stays
 outside `run-tests.sh` because filesystem contents and Spotlight state are machine-dependent.
 
-The 2026-08-11 baseline used a release-optimized standalone process against the developer home. Across
-`a`, `e`, `swift`, `pdf` and `project` on the shipped settings, first runs took 192–831 ms, repeated
-medians took 191–668 ms and the process reached 26 MB maximum RSS. The benchmark runs every query twice,
-once on the shipped rules and once with five extra user patterns, and the second pass costs 5–10 ms more
-— so pattern matching is not where the time goes, and the two broad single-letter queries dominate
-either way. The palette's debounce adds 120 ms before that measured service interval. These are local
-orders of magnitude, not budgets; rerun the benchmark after query-policy work.
+The 2026-09-12 baseline used a release-optimized standalone process against the developer home, after
+the path-only rewrite above. The blank screen's recents took 41 ms on a repeat and 184 ms cold; across
+`a`, `e`, `swift`, `pdf` and `project` on the shipped settings, first runs took 88–397 ms and repeated
+medians 54–107 ms. The 2026-08-11 measurement of the same queries, when every candidate's content type
+and invisible flag were fetched, was 192–831 ms first and 191–668 ms repeated. The benchmark runs every
+query twice, once on the shipped rules and once with five extra user patterns, and the second pass is
+within a few ms — so pattern matching is not where the time goes. The palette's debounce adds 120 ms
+before a typed query's measured interval and nothing before the recents one. These are local orders of
+magnitude, not budgets; rerun the benchmark after query-policy work.
 
 ## Palette and actions
 
@@ -173,11 +185,12 @@ window.
 | Copy Name | ⌥⌘C | through `Paster`, palette stays open |
 | Copy Path | ⌃⌘C | the standardized path, palette stays open |
 | Paste File to … | ⇧⌘V | `Paster.pasteFile` into the app the palette was summoned over, named by `PasteTarget` |
-| Move to Trash | ⌘⌫ | `FileManager.trashItem` off the main actor, then the row leaves the session |
+| Move to Trash | ⌃X | `FileManager.trashItem` off the main actor, then the row leaves the session |
 
 None of the copies is marked with `ClipboardManager.internalType`, so a copied file enters clipboard
-history like any other copy. Move to Trash asks nothing first: trashing is undoable, as it is for
-Uninstall and for an extension's `trash`. The three ⌘C chords differ only by their second modifier, so one
+history like any other copy. Move to Trash rides the clipboard's own ⌃X, asks nothing first — trashing is
+undoable, as it is for Uninstall and for an extension's `trash` — and has no ⌃⇧X counterpart, since there
+is no "all" to trash. The three ⌘C chords differ only by their second modifier, so one
 key handler resolves them into a `FileSearchPasteboardAction`; bare ⌘C stays with the search field.
 
 The first in-flight query says nothing — the rows it is about to replace would only flash a message — an

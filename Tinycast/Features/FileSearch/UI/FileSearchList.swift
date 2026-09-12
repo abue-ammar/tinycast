@@ -3,7 +3,6 @@ import SwiftUI
 struct FileSearchList: View {
 
     @Environment(\.metrics) private var metrics
-    /// "Results" for a query, "Recently Used" for the blank screen the rows came from.
     let title: String
     let results: [FileSearchResult]
     let selectedID: FileSearchResult.ID?

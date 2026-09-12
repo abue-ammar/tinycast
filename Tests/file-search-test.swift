@@ -65,29 +65,23 @@ struct FileSearchTests {
     }
 
     static func recents() {
-        let expression = FileSearchQuery.recentExpression(excluding: ["*.tmp"], filter: .images)
         expect(
-            expression == "(kMDItemLastUsedDate > $time.now(-2592000)"
-                + " || kMDItemFSContentChangeDate > $time.now(-259200))"
+            FileSearchQuery.recentExpression(stamp: .changed, excluding: ["*.tmp"], filter: .images)
+                == "kMDItemFSContentChangeDate > $time.now(-259200)"
                 + " && kMDItemContentTypeTree == \"public.image\""
                 + " && kMDItemFSName != \"*.tmp\"cd",
-            "the blank screen asks for either stamp, narrowed by the filter and the ignore list")
+            "a recents query is one stamp, narrowed by the filter and the ignore list")
         expect(
-            FileSearchQuery.recentExpression().hasPrefix("(kMDItemLastUsedDate"),
-            "an unfiltered recents query is the two date clauses alone")
-
-        let shipped = FileSearchIgnoreList(patterns: FileSearchIgnoreList.defaults)
-        let ordered = [
-            result("Documents/recent.txt"), result("Documents/node_modules/dep.js"),
-            result("Documents/second.txt"), result("Documents/third.txt")
-        ]
-        let kept = FileSearchQuery.filtered(ordered, ignoring: shipped, limit: 2)
+            FileSearchQuery.recentExpression(stamp: .used)
+                == "kMDItemLastUsedDate > $time.now(-2592000)",
+            "an unfiltered recents query is the one date clause alone")
         expect(
-            kept.map(\.name) == ["recent.txt", "second.txt"],
-            "recents keep the order they arrived in, minus the ignored paths, up to the limit")
+            FileSearchQuery.RecentStamp.allCases.map(\.rawValue)
+                == ["kMDItemFSContentChangeDate", "kMDItemLastUsedDate"],
+            "both stamps are asked about: macOS records a last-used date for very few opens")
         expect(
-            FileSearchQuery.filtered(ordered, ignoring: shipped, limit: 0).isEmpty,
-            "a zero limit publishes nothing rather than everything")
+            FileSearchQuery.RecentStamp.changed.window != FileSearchQuery.RecentStamp.used.window,
+            "editing is constant, so the changed window is not the used one")
         expect(FileSearchQuery.recentLimit == 20, "the blank screen's row count is fixed")
     }
 
