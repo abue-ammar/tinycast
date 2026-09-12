@@ -136,6 +136,7 @@ const process = {
   versions: { node: "22.0.0", v8: "12.0.0", tinycast: "1" },
   argv: ["node", "extension"],
   argv0: "node",
+  execArgv: [],
   execPath: "",
   pid: 1,
   ppid: 0,
@@ -236,7 +237,7 @@ const os = {
   networkInterfaces: () => ({}),
   endianness: () => "LE",
   devNull: "/dev/null",
-  constants: { signals: {}, errno: {} },
+  constants: { signals: { SIGTERM: 15 }, errno: {} },
 };
 
 // ─── fs ─────────────────────────────────────────────────────────────
@@ -771,21 +772,12 @@ class BufferedChildProcess extends EventEmitter {
     this._started = false;
 
     const self = this;
-    this.stdin = {
-      writable: true,
-      write(chunk) {
-        self._input.push(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : Buffer.from(chunk));
-        return true;
-      },
-      end(chunk) {
-        if (chunk !== undefined) this.write(chunk);
-        self._start(file, args, options);
-      },
-      destroy() {},
-      on() {},
-      once() {},
-      emit() {},
-    };
+    this.stdin = new EventEmitter();
+    this.stdin.writable = true;
+    this.stdin.write = (chunk) => (self._input.push(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : Buffer.from(chunk)), true);
+    this.stdin.end = (chunk) => { if (chunk !== undefined) this.stdin.write(chunk); self._start(file, args, options); return this.stdin; };
+    this.stdin.destroy = () => {};
+    this.stdio = [this.stdin, this.stdout, this.stderr];
 
     // Start on a microtask, not a timer. Callers write stdin synchronously right after `spawn()`
     // (`p.stdin.write(q); p.stdin.end()`), so a microtask still collects it — but unlike a timer it is
@@ -814,6 +806,8 @@ class BufferedChildProcess extends EventEmitter {
     ]).then(
       (raw) => {
         this.exitCode = raw.status;
+        this.stdin.emit("finish");
+        this.emit("spawn");
         this.stdout.end(Buffer.from(base64ToBytes(raw.stdout)));
         this.stderr.end(Buffer.from(base64ToBytes(raw.stderr)));
         // One host reply carries both, but a reader still expects the output before the exit code.
@@ -826,6 +820,7 @@ class BufferedChildProcess extends EventEmitter {
         // Close the streams even on failure: a consumer that awaits stdout (execa does) would
         // otherwise see `undefined` where Node guarantees an empty string.
         this.exitCode = 1;
+        this.stdin.emit("finish");
         this.stdout.end();
         this.stderr.end(Buffer.from(String(error?.message ?? error), "utf8"));
         this.emit("error", error);
@@ -1345,6 +1340,7 @@ const streamModule = unsupportedModule(
   "stream",
   Object.assign(streamClasses.Stream, {
     ...streamClasses,
+    getDefaultHighWaterMark: (objectMode) => (objectMode ? 16 : 16 * 1024),
     pipeline,
     finished,
     promises: { pipeline: (...stages) => pipelinePromise(stages), finished: finishedPromise },
