@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 @main
 struct FileSearchTests {
@@ -18,6 +19,8 @@ struct FileSearchTests {
 
     static func main() {
         queryGrammar()
+        recents()
+        typeFilter()
         scopePolicy()
         pathPolicy()
         ignoreRules()
@@ -61,14 +64,82 @@ struct FileSearchTests {
             "every term is required for a home-root match")
     }
 
+    static func recents() {
+        let expression = FileSearchQuery.recentExpression(excluding: ["*.tmp"], filter: .images)
+        expect(
+            expression == "(kMDItemLastUsedDate > $time.now(-2592000)"
+                + " || kMDItemFSContentChangeDate > $time.now(-259200))"
+                + " && kMDItemContentTypeTree == \"public.image\""
+                + " && kMDItemFSName != \"*.tmp\"cd",
+            "the blank screen asks for either stamp, narrowed by the filter and the ignore list")
+        expect(
+            FileSearchQuery.recentExpression().hasPrefix("(kMDItemLastUsedDate"),
+            "an unfiltered recents query is the two date clauses alone")
+
+        let shipped = FileSearchIgnoreList(patterns: FileSearchIgnoreList.defaults)
+        let ordered = [
+            result("Documents/recent.txt"), result("Documents/node_modules/dep.js"),
+            result("Documents/second.txt"), result("Documents/third.txt")
+        ]
+        let kept = FileSearchQuery.filtered(ordered, ignoring: shipped, limit: 2)
+        expect(
+            kept.map(\.name) == ["recent.txt", "second.txt"],
+            "recents keep the order they arrived in, minus the ignored paths, up to the limit")
+        expect(
+            FileSearchQuery.filtered(ordered, ignoring: shipped, limit: 0).isEmpty,
+            "a zero limit publishes nothing rather than everything")
+        expect(FileSearchQuery.recentLimit == 20, "the blank screen's row count is fixed")
+    }
+
+    static func typeFilter() {
+        expect(
+            FileSearchQuery.expression(for: "report", filter: .all)
+                == FileSearchQuery.expression(for: "report"),
+            "an unfiltered search asks Spotlight exactly what it always has")
+        expect(
+            FileSearchQuery.expression(for: "report", filter: .images)
+                == "kMDItemFSName == \"*report*\"cd && kMDItemContentTypeTree == \"public.image\"",
+            "a single-type filter joins the expression as one clause")
+        expect(
+            FileSearchQuery.expression(for: "report", excluding: ["*.tmp"], filter: .folders)
+                == "kMDItemFSName == \"*report*\"cd && kMDItemContentTypeTree == \"public.folder\""
+                + " && kMDItemFSName != \"*.tmp\"cd",
+            "the type clause sits between the name terms and the ignored names")
+        expect(
+            FileSearchFilter.documents.spotlightClause?.hasPrefix("(") == true,
+            "a filter naming several types parenthesizes them, so the OR cannot leak")
+        expect(FileSearchFilter.all.spotlightClause == nil, "All Types constrains nothing")
+
+        expect(
+            FileSearchFilter.all.accepts(contentType: nil, isDirectory: false),
+            "All Types admits a file whose type never resolved")
+        expect(
+            FileSearchFilter.folders.accepts(contentType: .folder, isDirectory: true)
+                && FileSearchFilter.folders.accepts(contentType: nil, isDirectory: true),
+            "Folders admits a directory whether or not its type resolved")
+        expect(
+            !FileSearchFilter.folders.accepts(contentType: .png, isDirectory: false),
+            "Folders rejects a file")
+        expect(
+            FileSearchFilter.images.accepts(contentType: .png, isDirectory: false)
+                && !FileSearchFilter.images.accepts(contentType: .mp3, isDirectory: false),
+            "a type filter admits what conforms to it and nothing else")
+        expect(
+            FileSearchFilter.documents.accepts(contentType: .swiftSource, isDirectory: false),
+            "source files conform to public.text, so Documents keeps them")
+        expect(
+            !FileSearchFilter.images.accepts(contentType: nil, isDirectory: false),
+            "an unresolved type is a folder or nothing, never a guessed image")
+    }
+
     static func scopePolicy() {
         func candidate(
             _ name: String, directory: Bool, hidden: Bool = false, package: Bool = false,
-            application: Bool = false
+            type: UTType? = nil
         ) -> FileSearchScope.Candidate {
             FileSearchScope.Candidate(
                 url: home.appending(path: name), isDirectory: directory, isHidden: hidden,
-                isPackage: package, isApplication: application)
+                isPackage: package, contentType: type)
         }
         let selection = FileSearchScope.select([
             candidate("Documents", directory: true),
@@ -76,7 +147,7 @@ struct FileSearchTests {
             candidate("Library", directory: true),
             candidate(".cache", directory: true, hidden: true),
             candidate("Project.xcodeproj", directory: true, package: true),
-            candidate("Local.app", directory: true, package: true, application: true),
+            candidate("Local.app", directory: true, package: true, type: .application),
             candidate("Notes.txt", directory: false)
         ])
         expect(
@@ -195,6 +266,9 @@ struct FileSearchTests {
         expect(nested.name == "Annual Report.pdf", "the full filename keeps its extension")
         expect(nested.parentPath == "~/Documents", "the parent path abbreviates home")
         expect(result("Notes.txt").parentPath == "~", "a home-root item has a bare tilde parent")
+        expect(
+            nested.parentName == "Documents" && result("Notes.txt").parentName == "test",
+            "the parent's own name is what a folder row prefixes itself with")
     }
 
     static func ranking() {

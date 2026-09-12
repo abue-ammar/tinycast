@@ -3,18 +3,47 @@ import Foundation
 enum FileSearchQuery {
     static let candidateLimit = 1_000
     static let resultLimit = 200
+    /// A blank screen is a shortlist, not a browser: enough rows to reach, never to scroll far.
+    static let recentLimit = 20
+    /// Spotlight's own relative-time literals, so no clock is injected to name "a month ago".
+    private static let lastUsedWindow = "$time.now(-2592000)"
+    /// Far shorter than the used window: editing is constant, and the cap has to stay reachable.
+    private static let changedWindow = "$time.now(-259200)"
 
     static func terms(in query: String) -> [String] {
         query.split(whereSeparator: \Character.isWhitespace).map(String.init)
     }
 
-    static func expression(for query: String, excluding exclusions: [String] = []) -> String? {
+    static func expression(
+        for query: String, excluding exclusions: [String] = [], filter: FileSearchFilter = .all
+    ) -> String? {
         let terms = terms(in: query)
         guard !terms.isEmpty else { return nil }
         let matches = terms.map { "kMDItemFSName == \"*\(escape($0))*\"cd" }
         // Excluding in the predicate keeps ignored files from consuming the candidate cap.
         let excludes = exclusions.map { "kMDItemFSName != \"\(escapeGlob($0))\"cd" }
-        return (matches + excludes).joined(separator: " && ")
+        let types = filter.spotlightClause.map { [$0] } ?? []
+        return (matches + types + excludes).joined(separator: " && ")
+    }
+
+    /// The blank screen's query. Both dates: macOS stamps `kMDItemLastUsedDate` on few opens now,
+    /// so a used-only window answers with almost nothing.
+    static func recentExpression(
+        excluding exclusions: [String] = [], filter: FileSearchFilter = .all
+    ) -> String {
+        let touched =
+            "(kMDItemLastUsedDate > \(lastUsedWindow)"
+            + " || kMDItemFSContentChangeDate > \(changedWindow))"
+        let types = filter.spotlightClause.map { [$0] } ?? []
+        let excludes = exclusions.map { "kMDItemFSName != \"\(escapeGlob($0))\"cd" }
+        return ([touched] + types + excludes).joined(separator: " && ")
+    }
+
+    /// Recents arrive in the order the service sorted them, so these are only dropped and capped.
+    static func filtered(
+        _ results: [FileSearchResult], ignoring ignore: FileSearchIgnoreList, limit: Int
+    ) -> [FileSearchResult] {
+        results.lazy.filter { !isExcludedPath($0.id, ignoring: ignore) }.prefix(limit).map { $0 }
     }
 
     static func rank(

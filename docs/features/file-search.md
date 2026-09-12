@@ -12,9 +12,16 @@ feature is enabled in Settings.
   feature uses `MDQuery`; `NSMetadataQuery` has no source-result cap and can break the 100 MB budget on
   a broad filename.
 - **Everything under `Model/` stays Foundation-only and pure**, `FileSearchIgnoreList`'s `import Darwin`
-  included. `file-search-test` compiles the shipped files together with the existing pure fuzzy scorer.
-- **Search is filename-only and on demand.** An empty query does no work and Tinycast creates no
-  content index, history, query cache, watcher or search data.
+  and `FileSearchFilter`'s `UniformTypeIdentifiers` included — value types with no environment of their
+  own. `file-search-test` compiles the shipped files together with the existing pure fuzzy scorer.
+- **Search is filename-only, and every list comes from Spotlight.** Tinycast creates no content index,
+  history, query cache, watcher or search data — the blank screen's Recently Used rows are one more
+  Spotlight query over the configured scopes, read from the system's own `kMDItemLastUsedDate` and
+  `kMDItemFSContentChangeDate`, never from anything Tinycast recorded. The type filter narrows *which*
+  files Spotlight is asked for; it never adds a second pass over the ones it returned.
+- **The filter belongs to the query, not to the rows.** `FileSearchSession` keys its de-dup and its
+  supersession check on the query and the filter together, so narrowing re-runs the same words rather
+  than thinning a result set that was already capped at 200.
 - **Hidden paths and application-bundle contents are structural, not patterns.** They are what keeps
   the feature permission-free, so no user setting can re-admit them. Everything else that is dropped
   comes from the ignore list.
@@ -38,7 +45,8 @@ feature is enabled in Settings.
 
 `FileSearchQuery` trims and tokenizes input on whitespace, escapes Spotlight metacharacters, and builds
 one `kMDItemFSName` clause per term. The clauses are joined with AND, so `annual report` requires both
-words in the filename without requiring them to be adjacent or in that order.
+words in the filename without requiring them to be adjacent or in that order. The active filter's
+`kMDItemContentTypeTree` clause joins them, ahead of the ignore-list exclusions.
 
 `FileSearchSession.search` retains the previous rows, debounces for 120 ms, then drives
 `FileSearchService.search` in a detached user-initiated task. One worker serializes synchronous
@@ -51,6 +59,32 @@ makes ties deterministic.
 
 Visible files and document packages directly under home are matched locally with the same case- and
 diacritic-insensitive all-terms rule, since scoping Spotlight to home itself would pull in `~/Library`.
+
+## Recently used
+
+An empty query is a request of its own: `FileSearchQuery.recentExpression` asks for anything used in the
+last 30 days or changed in the last 3, narrowed by the active filter and the ignore list. Both stamps are
+needed because macOS writes `kMDItemLastUsedDate` for very few opens now — a used-only window answers with
+a handful of downloads. The shorter change window is what keeps a busy machine's matches under the
+1,000-candidate cap.
+
+`FileSearchService` sorts those candidates itself, newest of the two stamps first, then publishes 20.
+`MDQuerySetSortOrder` is deliberately unused: measured against this index it honors neither key reliably,
+and the rows it returned were not in date order in either direction.
+
+## Type filter
+
+`FileSearchFilter` is the header's **All Types** pop-up: All Types, Folders, Documents, Images, Audio,
+Videos, Archives. Each case names the `UTType`s it admits, and everything else is derived from that list —
+the Spotlight clause (`kMDItemContentTypeTree == "public.image"`, parenthesized when a case names several)
+and `accepts(contentType:isDirectory:)`, which the home-root branch uses because it never reaches
+Spotlight. A type resolved from disk answers both, so a `.pages` package files under Documents and a plain
+folder under Folders.
+
+The filter lives on `PaletteState` beside the clipboard's, is reset on every summon, and is never
+persisted. ⌘P and the header button open it through `PaletteFilterAction` and the one `PopoverMenu` path
+`RootPaletteView` uses for every in-window menu; changing it resets the selection, snaps the scroll and
+re-runs the query.
 
 ## Scopes and ignore patterns
 
@@ -103,23 +137,53 @@ orders of magnitude, not budgets; rerun the benchmark after query-policy work.
 
 ## Palette and actions
 
-`FileSearchScreen.rows` is the exact flat selection order rendered by `FileSearchList`. The list uses
-the shared Results header, row metrics, edge dissolve, thin scrollbar and scroll intent. A row shows a
-fitted native file icon, the full filename, and its tilde-abbreviated parent path.
+`FileSearchScreen.rows` is the exact flat selection order rendered by `FileSearchList`. Results sit in a
+290pt column beside a preview pane, split by the same `Theme.Colors.separator` hairline the clipboard
+draws. The list uses the shared Results header, row metrics, edge dissolve, thin scrollbar and scroll
+intent; its header reads **Recently Used** on the blank screen and **Results** under a query. A row shows
+a fitted native file icon and the full filename — a folder prefixed by its parent's name, dimmed, since
+half the folder hits on a developer machine are some `src` or `Tinycast`. The path itself is the preview's
+`Where` row rather than a second column the narrow list has no width for. A click selects, a double click
+opens.
 
 Fitted row icons use a separate 8 MB transient cache. Leaving the list or hiding the palette purges it
 and invalidates in-flight decodes, so scrolling stays warm within one result set without retaining its
 icons after File Search closes. Persistent launcher icons remain in their own cache.
 
-- Return calls `FileSearchCoordinator.open`, hides the palette without restoring focus, and uses the
-  asynchronous `NSWorkspace` configuration API. A failure goes through Tinycast's dialog controller.
-- Command-Return reveals the item in Finder and dismisses the palette.
-- Copy Path writes the standardized path through `Paster`, leaves the palette open, and reports through
-  the message HUD.
+The preview pane is a QuickLook still over an Information block — Name, Where, Type, Size, Created,
+Modified. One still serves every kind: `FilePreviewThumbnail` asks for `representationTypes: .all`, which
+falls back to the file's own type icon, so no per-kind branching is needed and no clipboard view is
+reached into. The block's disk reads happen once per selection in a detached task, never in `body`, and a
+folder shows no Size — its own record is a few bytes, which is never what the row means.
 
-The empty screen runs no query. The first in-flight query says "Searching files…", an empty completed
-query says "No files found", and query creation or execution failure says
-"File search is unavailable" inline.
+Quick Look (⌘Y) draws **inside the panel**: the palette hides itself on `windowDidResignKey` and the panel
+is non-activating, so a system `QLPreviewPanel` would take key and close the palette under itself.
+`FileSearchQuickLook` hosts a `QLPreviewView` that follows the selection, never autostarts, and is closed
+through `PaletteEscapeAction.closeQuickLook` — which ranks ahead of an open menu, since the overlay covers
+it. Its corners are concentric, each radius the one outside it less its own inset, and the overlay is
+cleared whenever the palette is ordered out: the tree stays mounted, and a preview must not outlive the
+window.
+
+| Row | Chord | What it does |
+| --- | --- | --- |
+| Open File / Open Folder | ↵ | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller |
+| Show in Finder | ⌘↵ | reveals and dismisses |
+| Quick Look | ⌘Y | the in-panel overlay above |
+| Copy File | ⇧⌘C | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string` |
+| Copy Name | ⌥⌘C | through `Paster`, palette stays open |
+| Copy Path | ⌃⌘C | the standardized path, palette stays open |
+| Paste File to … | ⇧⌘V | `Paster.pasteFile` into the app the palette was summoned over, named by `PasteTarget` |
+| Move to Trash | ⌘⌫ | `FileManager.trashItem` off the main actor, then the row leaves the session |
+
+None of the copies is marked with `ClipboardManager.internalType`, so a copied file enters clipboard
+history like any other copy. Move to Trash asks nothing first: trashing is undoable, as it is for
+Uninstall and for an extension's `trash`. The three ⌘C chords differ only by their second modifier, so one
+key handler resolves them into a `FileSearchPasteboardAction`; bare ⌘C stays with the search field.
+
+The first in-flight query says nothing — the rows it is about to replace would only flash a message — an
+empty completed query says what the active filter admits ("No files found", "No images found"), a blank
+screen with no recents says "Type to search files and folders", and query creation or execution failure
+says "File search is unavailable" inline.
 
 ## Invocation
 

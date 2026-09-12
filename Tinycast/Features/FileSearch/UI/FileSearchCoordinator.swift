@@ -7,17 +7,20 @@ final class FileSearchCoordinator {
     private let session: FileSearchSession
     private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
+    private let windowController: PaletteWindowController
     private unowned let core: AppCore
 
     init(
         settings: AppSettings, appIndex: AppIndex, session: FileSearchSession,
-        palette: PaletteState, paletteCoordinator: PaletteCoordinator, core: AppCore
+        palette: PaletteState, paletteCoordinator: PaletteCoordinator,
+        windowController: PaletteWindowController, core: AppCore
     ) {
         self.settings = settings
         self.appIndex = appIndex
         self.session = session
         self.palette = palette
         self.paletteCoordinator = paletteCoordinator
+        self.windowController = windowController
         self.core = core
     }
 
@@ -62,5 +65,40 @@ final class FileSearchCoordinator {
     func copyPath(_ result: FileSearchResult) {
         Paster.copyPlainText(result.id)
         core.showMessage("Copied path")
+    }
+
+    func copyName(_ result: FileSearchResult) {
+        Paster.copyPlainText(result.name)
+        core.showMessage("Copied name")
+    }
+
+    /// The file itself rather than its path, so Finder and Mail paste a copy of it.
+    func copyFile(_ result: FileSearchResult) {
+        PasteboardFiles.write(result.url, to: .general)
+        core.showMessage("Copied file")
+    }
+
+    /// Into whichever app the palette was summoned over, which is what the row's title names.
+    func pasteFile(_ result: FileSearchResult) {
+        let previous = windowController.previousApp
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Paster.pasteFile(result.url, previousApp: previous)
+    }
+
+    func trash(_ result: FileSearchResult) {
+        Task {
+            do {
+                try await Task.detached(priority: .userInitiated) {
+                    try FileManager.default.trashItem(at: result.url, resultingItemURL: nil)
+                }.value
+                session.remove(result)
+                core.showMessage("Moved to Trash")
+            } catch {
+                await core.showNotice(
+                    title: "Couldn’t Move \(result.name) to Trash",
+                    message: error.localizedDescription,
+                    symbol: "trash", tone: .danger)
+            }
+        }
     }
 }

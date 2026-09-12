@@ -13,9 +13,11 @@ actor FileSearchProbe {
         pauseEnabled = query != nil
     }
 
-    func search(query: String, policy: FileSearchPolicy) async -> [FileSearchResult] {
+    func search(
+        query: String, filter: FileSearchFilter, policy: FileSearchPolicy
+    ) async -> [FileSearchResult] {
         active += 1
-        calls.append(query)
+        calls.append(filter == .all ? query : "\(query) [\(filter.title)]")
         maximumActive = max(maximumActive, active)
         if pauseEnabled, query == pausedQuery {
             await withCheckedContinuation { continuation in
@@ -74,6 +76,8 @@ struct FileSearchSessionTests {
         await cancellationPreventsPendingWork()
         await policyChangeDiscardsStaleResults()
         await unchangedPolicyKeepsResults()
+        await blankQueryLoadsRecents()
+        await filterChangeRerunsTheQuery()
 
         print(failures == 0 ? "File search session tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -150,11 +154,41 @@ struct FileSearchSessionTests {
             "re-applying identical settings leaves the published results alone")
     }
 
+    static func blankQueryLoadsRecents() async {
+        let probe = FileSearchProbe()
+        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        session.search("")
+        await waitUntil { session.state == .ready }
+        session.search("report")
+        await waitUntil { session.state == .ready && session.results.first?.name == "report" }
+
+        let snapshot = await probe.snapshot()
+        expect(
+            snapshot.calls == ["", "report"],
+            "the blank screen is a request of its own, not the absence of one")
+    }
+
+    static func filterChangeRerunsTheQuery() async {
+        let probe = FileSearchProbe()
+        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        session.search("report")
+        await waitUntil { session.state == .ready }
+        session.search("report", filter: .images)
+        await waitUntil { session.state == .ready }
+        session.search("report", filter: .images)
+        try? await Task.sleep(for: .milliseconds(40))
+
+        let snapshot = await probe.snapshot()
+        expect(
+            snapshot.calls == ["report", "report [Images]"],
+            "narrowing the filter re-runs the same words, and re-stating it runs nothing")
+    }
+
     static func makeSession(probe: FileSearchProbe, debounce: Duration) -> FileSearchSession {
         let policy = FileSearchPolicy(
             scopes: FileSearchScope.defaultScopes, ignorePatterns: [], homeDirectory: home)
-        return FileSearchSession(policy: policy, debounce: debounce) { query, _, policy in
-            await probe.search(query: query, policy: policy)
+        return FileSearchSession(policy: policy, debounce: debounce) { query, _, policy, filter in
+            await probe.search(query: query, filter: filter, policy: policy)
         }
     }
 

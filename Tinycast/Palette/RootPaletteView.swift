@@ -150,6 +150,16 @@ struct RootPaletteView: View {
             })
     }
 
+    /// The file search type filter's rows, built the way the clipboard's are.
+    private var fileSearchFilterContent: PopoverMenuContent {
+        PopoverMenuContent(
+            items: FileSearchFilter.allCases.map { filter in
+                PopoverMenuItem(title: filter.title, systemImage: filter.systemImage) {
+                    vm.fileSearchFilter = filter
+                }
+            })
+    }
+
     /// Every model configured for chat; selecting one updates the app-wide default route.
     private var aiModelContent: PopoverMenuContent {
         let groups = core.aiChatCoordinator.modelGroups
@@ -220,6 +230,10 @@ struct RootPaletteView: View {
         case .clipboardFilter:
             return PaletteMenuContent(
                 popover: clipboardFilterContent, selection: $menuSelection,
+                width: headerMenuWidth, onActivate: activateMenuItem)
+        case .fileSearchFilter:
+            return PaletteMenuContent(
+                popover: fileSearchFilterContent, selection: $menuSelection,
                 width: headerMenuWidth, onActivate: activateMenuItem)
         case .aiModel:
             return PaletteMenuContent(
@@ -312,7 +326,7 @@ struct RootPaletteView: View {
             .onChange(of: vm.query) {
                 vm.selection = 0
                 scroll = ScrollIntent(kind: .top)
-                if vm.mode == .fileSearch { fileSearch.search(vm.query) }
+                if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
                 if vm.mode == .switchWindows { windowSwitch.filter(vm.query) }
                 // A command that took over the search text filters its own list.
@@ -330,15 +344,28 @@ struct RootPaletteView: View {
                 vm.selection = 0
                 scroll = ScrollIntent(kind: .top)
             }
+            // The filter is part of the query, so narrowing re-runs it rather than thinning rows.
+            .onChange(of: vm.fileSearchFilter) {
+                vm.selection = 0
+                scroll = ScrollIntent(kind: .top)
+                fileSearch.search(vm.query, filter: vm.fileSearchFilter)
+            }
             .onChange(of: vm.mode) {
                 vm.selection = 0
                 vm.clipboardFilter = .all
+                vm.fileSearchFilter = .all
+                vm.fileSearchQuickLook = false
                 openMenu = nil
                 scroll = ScrollIntent(kind: .top)
                 searchFocused = !screen.hidesSearchField
                 // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
                 if vm.mode != .uninstall { uninstall.cancel() }
-                if vm.mode != .fileSearch { fileSearch.cancel() }
+                // Entering with no query is the blank screen's own request for recents.
+                if vm.mode == .fileSearch {
+                    fileSearch.search(vm.query, filter: vm.fileSearchFilter)
+                } else {
+                    fileSearch.cancel()
+                }
                 if vm.mode != .menuSearch { menuSearch.reset() }
                 if vm.mode != .switchWindows { windowSwitch.reset() }
                 // Leaving the screen any other way than Escape still ends the command's session.
@@ -445,10 +472,13 @@ struct RootPaletteView: View {
                 // An open list closes itself first, exactly as the ⌘K menu does.
                 if vm.isControlListOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
-                    menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
+                    quickLookOpen: vm.fileSearchQuickLook, menuOpen: menuOpen,
+                    argumentFocused: argumentFocused != nil, query: vm.query,
                     mode: vm.mode, canGoBack: vm.canGoBack,
                     behavior: settings.escapeKeyBehavior)
                 {
+                case .closeQuickLook:
+                    vm.fileSearchQuickLook = false
                 case .closeMenu:
                     closeMenus()
                 case .leaveArgumentField:
@@ -517,7 +547,48 @@ struct RootPaletteView: View {
                     history.delete(at: selection)
                     return .handled
                 }
+                if let files = screen as? FileSearchScreen {
+                    return files.trash(at: selection) ? .handled : .ignored
+                }
                 return .ignored
+            }
+            // ⇧⌘C / ⌥⌘C / ⌃⌘C mirror the three copy rows; bare ⌘C stays with the search field.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.contains(.command), !isCollapsed,
+                    ASCIIKeyboardLayout.matches(press.key, character: "c"),
+                    let files = screen as? FileSearchScreen
+                else { return .ignored }
+                let action: FileSearchPasteboardAction
+                if press.modifiers.contains(.shift) {
+                    action = .copyFile
+                } else if press.modifiers.contains(.option) {
+                    action = .copyName
+                } else if press.modifiers.contains(.control) {
+                    action = .copyPath
+                } else {
+                    return .ignored
+                }
+                guard files.run(action, at: selection(in: files)) else { return .ignored }
+                if menuOpen { closeMenus() }
+                return .handled
+            }
+            // ⇧⌘V mirrors the Paste File row, which hands the file to the app below the palette.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.contains(.command), press.modifiers.contains(.shift),
+                    ASCIIKeyboardLayout.matches(press.key, character: "v"), !isCollapsed,
+                    let files = screen as? FileSearchScreen
+                else { return .ignored }
+                return files.run(.pasteFile, at: selection(in: files)) ? .handled : .ignored
+            }
+            // ⌘Y mirrors the Quick Look row; an open menu closes the way ⌃X's rows close it.
+            .onKeyPress(phases: .down) { press in
+                guard press.modifiers.contains(.command),
+                    ASCIIKeyboardLayout.matches(press.key, character: "y"), !isCollapsed,
+                    let files = screen as? FileSearchScreen
+                else { return .ignored }
+                guard files.toggleQuickLook(at: selection(in: files)) else { return .ignored }
+                if menuOpen { closeMenus() }
+                return .handled
             }
             // ⌃X / ⌃⇧X mirror the delete rows — both cases, Shift uppercasing — and close an open menu.
             .onKeyPress(phases: .down) { press in
@@ -551,6 +622,7 @@ struct RootPaletteView: View {
                 {
                 case .extensionAccessory: toggleExtensionSearchAccessory()
                 case .clipboardFilter: toggleClipboardFilter()
+                case .fileSearchFilter: toggleFileSearchFilter()
                 case .ignored: return .ignored
                 }
                 return .handled
@@ -647,6 +719,13 @@ struct RootPaletteView: View {
                 ClipboardFilterButton(
                     filter: vm.clipboardFilter, isOpen: openMenu == .clipboardFilter,
                     action: toggleClipboardFilter)
+            }
+            if !isCollapsed, vm.mode == .fileSearch {
+                headerGutter(width: metrics.spacing.md)
+                HeaderMenuButton(
+                    title: vm.fileSearchFilter.title, systemImage: vm.fileSearchFilter.systemImage,
+                    isOpen: openMenu == .fileSearchFilter, help: "Filter by type  ⌘P",
+                    action: toggleFileSearchFilter)
             }
             if !isCollapsed, vm.mode == .ai {
                 headerGutter(width: metrics.spacing.md)
@@ -911,6 +990,15 @@ struct RootPaletteView: View {
         open(.clipboardFilter, highlighting: active)
     }
 
+    private func toggleFileSearchFilter() {
+        if openMenu == .fileSearchFilter {
+            closeMenus()
+            return
+        }
+        let active = FileSearchFilter.allCases.firstIndex(of: vm.fileSearchFilter) ?? 0
+        open(.fileSearchFilter, highlighting: active)
+    }
+
     /// Opens on the choice the dropdown holds, exactly as the clipboard filter opens on its own.
     private func toggleExtensionSearchAccessory() {
         if openMenu == .extensionAccessory {
@@ -1009,7 +1097,8 @@ struct RootPaletteView: View {
         case .app: .bottomLeading
         case .actions: .bottomTrailing
         case .argumentOptions: .belowHeaderTrailing
-        case .clipboardFilter, .aiModel, .aiReasoning, .extensionAccessory: .belowHeaderTrailing
+        case .clipboardFilter, .fileSearchFilter, .aiModel, .aiReasoning, .extensionAccessory:
+            .belowHeaderTrailing
         case nil: nil
         }
     }
@@ -1216,6 +1305,7 @@ private enum OpenMenu {
     case argumentOptions
     case app
     case clipboardFilter
+    case fileSearchFilter
     case aiModel
     case aiReasoning
 }
