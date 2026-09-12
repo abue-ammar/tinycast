@@ -32,8 +32,6 @@ final class PalettePanel: NSPanel {
     /// SwiftUI's text fields all edit through the window's one shared field editor.
     private var fieldEditor: NSTextView? { firstResponder as? NSTextView }
 
-    /// A re-summon leaves the field editor's selection as it was; select its text outright
-    /// so a fresh search replaces last time's instead of requiring a manual clear first.
     func selectAllFieldEditorText() {
         fieldEditor?.selectAll(nil)
     }

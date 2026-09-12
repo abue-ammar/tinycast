@@ -10,8 +10,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
-    /// True when the last `consumePreservedState` found the delay still running: the reopen
-    /// beat Pop to Root, so the query it kept deserves to be selected rather than just left as-is.
+    // Reopen beat the timeout, so select the preserved query.
     private var queryWasPreserved = false
     /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
@@ -188,7 +187,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         guard let timer = popToRootTimer else { return false }
         timer.invalidate()
         popToRootTimer = nil
-        // The delay hadn't run out, so the query beat it back — worth selecting on the show.
         queryWasPreserved = true
         return true
     }
@@ -222,7 +220,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             if let context = panel?.fieldEditorContext {
                 core.inputSourceSwitcher.applySession(to: context)
             }
-            // Only a reopen that beat Pop to Root left a query worth selecting.
             if queryWasPreserved {
                 queryWasPreserved = false
                 panel?.selectAllFieldEditorText()
