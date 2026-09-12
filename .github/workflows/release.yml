@@ -121,6 +121,13 @@ jobs:
             fi
           done
 
+      # Notarization rejects a nested binary without the hardened runtime, and the helper is signed
+      # by a separate embed phase — so assert the flag reached it rather than trusting Xcode.
+      - name: Assert the signature is notarizable
+        env:
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+        run: ./Scripts/verify-signature.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
+
       # Two artifacts from one build: the DMG people download and the cask installs, and the zip
       # the in-app updater installs — it expands with `ditto` instead of mounting a volume.
       - name: Package DMG and ZIP
@@ -347,6 +354,9 @@ jobs:
               fi
             done
           done
+
+      - name: Assert the signature is notarizable
+        run: ./Scripts/verify-signature.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
 
       - name: Package DMG and ZIP
         run: |

@@ -4,5 +4,11 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
+	<!-- JavaScriptCore compiles every extension command, so the hardened runtime must allow JIT. -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<!-- Without this the hardened runtime refuses every Apple event with no prompt to recover from. -->
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
 </dict>
 </plist>

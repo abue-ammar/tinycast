@@ -16,10 +16,11 @@ settings:
     # Stable self-signed identity so macOS keeps the Accessibility grant across rebuilds.
     # Create it once — see docs/signing.md.
     CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
-    ENABLE_HARDENED_RUNTIME: NO
     SWIFT_STRICT_CONCURRENCY: complete
   configs:
     Release:
+      # Release-only: library validation refuses Debug's `.debug.dylib`, whose team never matches.
+      ENABLE_HARDENED_RUNTIME: YES
       # Strip the shipped binary (dSYM is still generated first) and drop unused code.
       DEPLOYMENT_POSTPROCESSING: YES
       STRIP_INSTALLED_PRODUCT: YES
