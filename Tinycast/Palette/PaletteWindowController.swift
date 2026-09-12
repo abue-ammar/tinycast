@@ -10,9 +10,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
-    /// What the query held at the moment of hiding; Pop to Root may have since cleared the live
-    /// one, but the next summon puts this back, selected, so closing by accident costs nothing.
-    private var queryAtHide: String?
     /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
@@ -61,11 +58,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             }
             // Once per summon, and from `previousApp`, so the label names the paste target.
             core.palette.pasteTarget = PasteTarget(app: previousApp)
-            // Nothing else has put fresh text in the field, so Pop to Root's clear wasn't final.
-            if core.palette.query.isEmpty, let queryAtHide, !queryAtHide.isEmpty {
-                core.palette.query = queryAtHide
-            }
-            queryAtHide = nil
             let panel = ensurePanel()
             // Open disarmed: a pointer already over a row must not highlight it.
             core.palette.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
@@ -130,7 +122,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     func hide(restoreFocus: Bool) {
-        queryAtHide = core.palette.query
         panel?.orderOut(nil)
         commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
@@ -161,7 +152,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         // Don't pop to root if an extension is waiting for OAuth authorization in the browser.
         guard !core.extensions.isAuthorizing else { return }
         popToRootTimer?.invalidate()
+        popToRootTimer = nil
         let timeout = core.settings.popToRootTimeout
+        // Never pops: `consumePreservedState` treats this option as permanently preserved.
+        guard timeout != .selectPreviousQuery else { return }
         guard timeout != .immediately else {
             popToRoot()
             return
@@ -191,6 +185,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
     func consumePreservedState() -> Bool {
+        // This option never schedules a reset in the first place, so it's always preserved.
+        guard core.settings.popToRootTimeout != .selectPreviousQuery else { return true }
         guard let timer = popToRootTimer else { return false }
         timer.invalidate()
         popToRootTimer = nil
@@ -226,8 +222,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             if let context = panel?.fieldEditorContext {
                 core.inputSourceSwitcher.applySession(to: context)
             }
-            // Same reason: select what's left so typing right away replaces last time's search.
-            panel?.selectAllFieldEditorText()
+            // Only this option ever leaves old text behind to begin with.
+            if core.settings.popToRootTimeout == .selectPreviousQuery {
+                panel?.selectAllFieldEditorText()
+            }
         }
     }
 
