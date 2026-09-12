@@ -31,7 +31,7 @@ struct BundleNameCache: Sendable {
         previous = cache.languages == languages ? cache.current : [:]
     }
 
-    mutating func names(for url: URL) -> Names {
+    mutating func names(for url: URL, base: String, developmentRegion: String?) -> Names {
         let modified = try? url.resourceValues(forKeys: [.contentModificationDateKey])
             .contentModificationDate
         if let cached = previous[url.path], cached.modified == modified {
@@ -39,7 +39,8 @@ struct BundleNameCache: Sendable {
             return cached.names
         }
         let names = Names(
-            localized: BundleLocalization.names(for: url, languages: languages),
+            localized: BundleLocalization.names(
+                for: url, base: base, developmentRegion: developmentRegion, languages: languages),
             alternates: SpotlightNames.alternateNames(for: url))
         current[url.path] = Entry(modified: modified, names: names)
         return names
