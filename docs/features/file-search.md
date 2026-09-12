@@ -162,19 +162,24 @@ Fitted row icons use a separate 8 MB transient cache. Leaving the list or hiding
 and invalidates in-flight decodes, so scrolling stays warm within one result set without retaining its
 icons after File Search closes. Persistent launcher icons remain in their own cache.
 
-The preview pane is a QuickLook still over an Information block — Name, Where, Type, Size, Created,
-Modified. One still serves every kind: `FilePreviewThumbnail` asks for `representationTypes: .all`, which
-falls back to the file's own type icon, so no per-kind branching is needed and no clipboard view is
-reached into. The block's disk reads happen once per selection in a detached task, never in `body`, and a
-folder shows no Size — its own record is a few bytes, which is never what the row means.
+The preview pane is the file itself over an Information block — Name, Where, Type, Size, Created,
+Modified. A `QuickLookSurface` mounts once the selection has held for 180 ms, so the document is
+scrollable and a movie playable where the format allows it, and a still from `FilePreviewThumbnail` stands
+in until then: arrow-keying a list must never open a preview it is about to drop. The still needs no
+per-kind branching of its own — `representationTypes: .all` falls back to the file's type icon — and no
+clipboard view is reached into. The live view is torn down whenever the palette is ordered out, the
+⌘Y overlay covers it, or a folder is selected, whose preview is the icon already drawn. The block's disk
+reads happen once per selection in a detached task, never in `body`, and a folder shows no Size — its own
+record is a few bytes, which is never what the row means.
 
 Quick Look (⌘Y) draws **inside the panel**: the palette hides itself on `windowDidResignKey` and the panel
 is non-activating, so a system `QLPreviewPanel` would take key and close the palette under itself.
-`FileSearchQuickLook` hosts a `QLPreviewView` that follows the selection, never autostarts, and is closed
-through `PaletteEscapeAction.closeQuickLook` — which ranks ahead of an open menu, since the overlay covers
-it. Its corners are concentric, each radius the one outside it less its own inset, and the overlay is
-cleared whenever the palette is ordered out: the tree stays mounted, and a preview must not outlive the
-window.
+`FileSearchQuickLook` hosts the same `QuickLookSurface` the pane does, following the selection, and is
+closed through `PaletteEscapeAction.closeQuickLook` — which ranks ahead of an open menu, since the overlay
+covers it. **Only the margin around the card dismisses it**: a tap over the preview belongs to the
+preview's own transport, and a dismissing gesture laid over the whole overlay swallowed the play button.
+Its corners are concentric, each radius the one outside it less its own inset, and the overlay is cleared
+whenever the palette is ordered out: the tree stays mounted, and a preview must not outlive the window.
 
 | Row | Chord | What it does |
 | --- | --- | --- |

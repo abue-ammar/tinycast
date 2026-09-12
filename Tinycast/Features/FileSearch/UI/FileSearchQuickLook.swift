@@ -1,4 +1,3 @@
-import QuickLookUI
 import SwiftUI
 
 /// Quick Look inside the panel: a system preview window would take key and close the palette.
@@ -13,6 +12,16 @@ struct FileSearchQuickLook: View {
     private var surfaceRadius: CGFloat { cardRadius - metrics.spacing.md }
 
     var body: some View {
+        ZStack {
+            // Only the margin dismisses: a tap over the preview belongs to its own transport.
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onClose)
+            card
+        }
+    }
+
+    private var card: some View {
         VStack(spacing: metrics.spacing.md) {
             QuickLookSurface(url: result.url)
                 .clipShape(RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
@@ -32,30 +41,5 @@ struct FileSearchQuickLook: View {
         .padding(metrics.spacing.md)
         .frosted(in: RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
         .padding(metrics.spacing.md)
-        // Everything the preview itself doesn't take dismisses it, the way a light box does.
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onClose)
-    }
-}
-
-private struct QuickLookSurface: NSViewRepresentable {
-    let url: URL
-
-    func makeNSView(context: Context) -> QLPreviewView {
-        let view = QLPreviewView(frame: .zero, style: .normal) ?? QLPreviewView()
-        // Arrow-keying the list must not start a movie, and the panel outlives one preview.
-        view.autostarts = false
-        view.shouldCloseWithWindow = false
-        return view
-    }
-
-    func updateNSView(_ view: QLPreviewView, context: Context) {
-        guard view.previewItem as? URL != url else { return }
-        view.previewItem = url as NSURL
-    }
-
-    /// The preview holds its decoder open until it is closed, and this is the last chance.
-    static func dismantleNSView(_ view: QLPreviewView, coordinator: ()) {
-        view.close()
     }
 }

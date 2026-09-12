@@ -20,42 +20,77 @@ struct FileSearchPreview: View {
     }
 }
 
-/// One still for every kind: `representationTypes: .all` falls back to the file's own type icon.
+/// The file itself once the selection settles, over the still that stands in until it does.
 private struct FileSearchPreviewStage: View {
 
     @Environment(\.metrics) private var metrics
+    @Environment(PaletteState.self) private var palette
     let result: FileSearchResult
     @State private var image: NSImage?
+    @State private var isLive = false
+
+    /// Long enough that arrow-keying a list never opens a preview it is about to drop.
+    private static let settle = Duration.milliseconds(180)
+
+    /// Every teardown trigger in one key, so no `onChange` races the task.
+    private struct LiveKey: Equatable {
+        let id: FileSearchResult.ID
+        let isVisible: Bool
+        let isCovered: Bool
+    }
+
+    private var card: RoundedRectangle {
+        RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
+    }
 
     var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
-                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-                    )
-            } else {
-                Image(systemName: result.isDirectory ? "folder" : "doc")
-                    .font(.system(.largeTitle))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.tertiary)
+        stage
+            .frame(maxWidth: .infinity)
+            .padding(.top, metrics.spacing.xl)
+            .task(id: result.id) { await loadThumbnail() }
+            .task(
+                id: LiveKey(
+                    id: result.id, isVisible: palette.isVisible,
+                    isCovered: palette.fileSearchQuickLook)
+            ) {
+                isLive = false
+                // A folder previews as the icon the still already drew, and the overlay covers this.
+                guard palette.isVisible, !palette.fileSearchQuickLook, !result.isDirectory else {
+                    return
+                }
+                try? await Task.sleep(for: Self.settle)
+                isLive = !Task.isCancelled
             }
+    }
+
+    @ViewBuilder private var stage: some View {
+        if isLive {
+            QuickLookSurface(url: result.url)
+                .clipShape(card)
+                .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
+        } else if let image {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .clipShape(card)
+                .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
+        } else {
+            Image(systemName: result.isDirectory ? "folder" : "doc")
+                .font(.system(.largeTitle))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.tertiary)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, metrics.spacing.xl)
-        .task(id: result.id) {
-            let maxPixel = metrics.size.clipboardPreviewPixel
-            if let hit = FilePreviewThumbnail.cached(result.url, maxPixel: maxPixel) {
-                image = hit
-                return
-            }
-            image = nil
-            image = await FilePreviewThumbnail.loadAsync(result.url, maxPixel: maxPixel)
+    }
+
+    /// One still for every kind: `representationTypes: .all` falls back to the file's type icon.
+    private func loadThumbnail() async {
+        let maxPixel = metrics.size.clipboardPreviewPixel
+        if let hit = FilePreviewThumbnail.cached(result.url, maxPixel: maxPixel) {
+            image = hit
+            return
         }
+        image = nil
+        image = await FilePreviewThumbnail.loadAsync(result.url, maxPixel: maxPixel)
     }
 }
 
