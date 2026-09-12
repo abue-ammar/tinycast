@@ -70,7 +70,7 @@ private struct FileSearchPreviewStage: View {
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tertiary)
         } else if isLive {
-            FileSearchFileView(url: result.url)
+            FileSearchSurface(url: result.url)
                 .clipShape(card)
                 .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
         } else {
