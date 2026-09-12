@@ -57,7 +57,9 @@ final class MenuSearchCoordinator {
         switch target {
         case .searchable:
             if let app {
-                session.startWalk(target: target, pid: app.processIdentifier)
+                session.startWalk(
+                    target: target, pid: app.processIdentifier,
+                    showsAppleMenu: settings.menuSearchShowsAppleMenu)
             } else {
                 session.present(target: .noApplication, snapshot: [])
             }

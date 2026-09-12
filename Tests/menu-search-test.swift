@@ -11,7 +11,7 @@ struct MenuSearchTests {
 
         init(firstSlow: Bool = false) { self.firstSlow = firstSlow }
 
-        func walk(_ pid: pid_t) async -> [MenuSearchItem] {
+        func walk(_ pid: pid_t, _ showsAppleMenu: Bool) async -> [MenuSearchItem] {
             calls += 1
             let call = calls
             if firstSlow, call == 1 { try? await Task.sleep(for: .milliseconds(200)) }
@@ -73,6 +73,7 @@ struct MenuSearchTests {
         snapshotCancel()
         snapshotFrozen()
         snapshotDuplicates()
+        snapshotAppleMenu()
         targetClassify()
         sessionPresent()
         shortcutDecoding()
@@ -95,9 +96,20 @@ struct MenuSearchTests {
 
     static func pathModel() {
         let nested = item("PDF", parents: ["File", "Export as"])
-        expect(nested.displayPath == "File > Export as > PDF", "the path spans bar to leaf")
+        expect(
+            nested.displayPath == "File → Export as → PDF", "the path spans bar to leaf")
         expect(item("About", parents: []).displayPath == "About", "a top-level leaf is bare")
         expect(nested.id != item("PDF", parents: ["Edit"]).id, "identity includes the path")
+        expect(nested.menu == "File", "the top-level menu is what the list groups on")
+        expect(
+            nested.menuPath == "File → Export as",
+            "the searching row trails its parents only")
+        expect(
+            nested.submenuPath == "Export as",
+            "a grouped row trails the path below its own header")
+        expect(
+            item("About", parents: ["Apple"]).submenuPath.isEmpty,
+            "a direct child of a menu repeats nothing under its header")
     }
 
     static func searchMapping() {
@@ -133,9 +145,9 @@ struct MenuSearchTests {
             ).displayString == nil, "a missing character shows no glyph")
         expect(
             MenuSearchShortcut(
-                character: "s", hasCommand: false, hasShift: false, hasOption: false,
+                character: "\u{F707}", hasCommand: false, hasShift: false, hasOption: false,
                 hasControl: false
-            ).displayString == nil, "a modifier-less character shows no glyph")
+            ).displayString == "F4", "a bare function key still shows its own cap")
         expect(item("Save").shortcut == nil, "a shortcut-less item carries path alone")
     }
 
@@ -164,7 +176,7 @@ struct MenuSearchTests {
         let ties = MenuSearchQuery.rank(
             [item("Copy", parents: ["Edit"]), item("Copy", parents: ["Format"])], for: "copy")
         expect(
-            ties.map(\.displayPath) == ["Edit > Copy", "Format > Copy"],
+            ties.map(\.displayPath) == ["Edit → Copy", "Format → Copy"],
             "identical titles break ties on the path")
 
         let capped = (0..<205).map { item("Report \($0)", parents: ["File"]) }
@@ -201,7 +213,8 @@ struct MenuSearchTests {
         ]
         let items = MenuSnapshotPolicy.collect(bar)
         expect(
-            items.map(\.displayPath) == ["File > New", "File > Export as > PDF", "Edit > Copy"],
+            items.map(\.displayPath)
+                == ["File → New", "File → Export as → PDF", "Edit → Copy"],
             "one snapshot holds every eligible leaf with its full path")
         expect(
             items.first { $0.title == "PDF" }?.shortcut == nil,
@@ -233,8 +246,8 @@ struct MenuSearchTests {
             items.count == MenuSnapshotPolicy.itemLimit,
             "the snapshot truncates silently at the item cap")
         expect(
-            items.first?.displayPath == "Menu 0 > Item 0"
-                && items.last?.displayPath == "Menu 19 > Item 199",
+            items.first?.displayPath == "Menu 0 → Item 0"
+                && items.last?.displayPath == "Menu 19 → Item 199",
             "truncation keeps pre-order, so ranking still sees the front of the menu")
     }
 
@@ -364,18 +377,25 @@ struct MenuSearchTests {
         expect(
             session.filtered == items,
             "presenting shows the whole snapshot before anything is typed")
+        expect(!session.isSearching, "an untouched query browses rather than searches")
         session.filter("copy")
         expect(
             session.filtered.map(\.title) == ["Copy"],
             "a typed query filters the frozen snapshot")
+        expect(session.isSearching, "a typed query flips the list to one Results section")
+        session.filter("   ")
+        expect(
+            !session.isSearching && session.filtered == items,
+            "whitespace alone is no query, so browsing resumes")
         session.filter("zzz")
         expect(session.filtered.isEmpty, "a matchless query empties the rows, not the snapshot")
         expect(session.snapshot == items, "filtering never shrinks what was captured")
         session.filter("")
         expect(session.filtered == items, "clearing the query browses the whole snapshot again")
+        session.filter("copy")
         session.reset()
         expect(
-            session.snapshot.isEmpty && session.filtered.isEmpty
+            session.snapshot.isEmpty && session.filtered.isEmpty && !session.isSearching
                 && session.target == .noApplication,
             "reset clears the show back to no application")
     }
@@ -395,8 +415,16 @@ struct MenuSearchTests {
             MenuSearchShortcut.commandEquivalent(character: "", modifiers: 0) == nil,
             "a missing character carries no shortcut, whatever the modifiers claim")
         expect(
-            MenuSearchShortcut.commandEquivalent(character: "E", modifiers: 24) == nil,
-            "higher bits mark keys outside ⌘ chords, which have no glyph to show")
+            MenuSearchShortcut.commandEquivalent(character: "E", modifiers: 0b10000) == nil,
+            "bits above the four AX flags mark a chord we cannot render")
+        expect(
+            MenuSearchShortcut.commandEquivalent(character: "\u{8}", modifiers: 0b001)?
+                .displayString == "⇧⌘⌫",
+            "a control scalar renders as its keycap glyph, never as a blank chip")
+        expect(
+            MenuSearchShortcut.commandEquivalent(character: "\u{1B}", modifiers: 0b011)?
+                .displayString == "⌥⇧⌘⎋",
+            "Escape renders as ⎋ rather than an unrenderable control scalar")
         expect(
             MenuSearchShortcut(
                 character: "x", hasCommand: true, hasShift: true, hasOption: true,
@@ -405,10 +433,18 @@ struct MenuSearchTests {
             "keycaps split the chord in menu order for the row's chips")
         expect(
             MenuSearchShortcut(
-                character: "s", hasCommand: false, hasShift: false, hasOption: false,
+                character: "", hasCommand: true, hasShift: true, hasOption: false,
                 hasControl: false
             ).keycaps.isEmpty,
-            "a chord with no glyph carries no chips")
+            "a chord with no character carries no chips")
+        let noCommand = MenuSearchShortcut.commandEquivalent(character: "f", modifiers: 0b1100)
+        expect(
+            noCommand?.displayString == "⌃F",
+            "bit 3 clears the implied ⌘ instead of dropping the whole chord")
+        expect(
+            MenuSearchShortcut.commandEquivalent(character: "\u{F70A}", modifiers: 0b1000)?
+                .displayString == "F7",
+            "a modifier-less function key survives the no-command bit")
         let upArrow = MenuSearchShortcut.commandEquivalent(character: "\u{F700}", modifiers: 0b100)
         expect(
             upArrow?.displayString == "⌃⌘↑",
@@ -430,8 +466,25 @@ struct MenuSearchTests {
         ]
         let items = MenuSnapshotPolicy.collect(bar).map(\.displayPath)
         expect(
-            items == ["File > Eject", "Special > Eject"],
+            items == ["File → Eject", "Special → Eject"],
             "an exact repeated path keeps its first row only: \(items)")
+    }
+
+    static func snapshotAppleMenu() {
+        let bar: [MenuTreeNode] = [
+            tree("Apple", children: [tree("", children: [tree("About This Mac")])]),
+            tree("File", children: [tree("", children: [tree("New")])])
+        ]
+        expect(
+            MenuSnapshotPolicy.collect(bar).map(\.title) == ["About This Mac", "New"],
+            "the whole bar is collected when the Apple menu is shown")
+        expect(
+            MenuSnapshotPolicy.collect(MenuSnapshotPolicy.excludingAppleMenu(bar)).map(\.title)
+                == ["New"],
+            "dropping the bar's first item drops the Apple menu and nothing else")
+        expect(
+            MenuSnapshotPolicy.excludingAppleMenu([]).isEmpty,
+            "a bar that read as empty stays empty rather than trapping")
     }
 
     static func waitForReady(_ session: MenuSearchSession) async {
@@ -444,7 +497,7 @@ struct MenuSearchTests {
     static func sessionWalk() async {
         let probe = WalkProbe()
         let session = MenuSearchSession(walkOperation: probe.walk)
-        session.startWalk(target: .searchable(name: "TextEdit"), pid: 42)
+        session.startWalk(target: .searchable(name: "TextEdit"), pid: 42, showsAppleMenu: true)
         expect(session.state == .reading, "the walk starts reading with empty rows")
         expect(session.filtered.isEmpty, "nothing publishes before the walk lands")
         await waitForReady(session)
@@ -461,8 +514,8 @@ struct MenuSearchTests {
     static func sessionWalkSuperseded() async {
         let probe = WalkProbe(firstSlow: true)
         let session = MenuSearchSession(walkOperation: probe.walk)
-        session.startWalk(target: .searchable(name: "A"), pid: 1)
-        session.startWalk(target: .searchable(name: "B"), pid: 2)
+        session.startWalk(target: .searchable(name: "A"), pid: 1, showsAppleMenu: true)
+        session.startWalk(target: .searchable(name: "B"), pid: 2, showsAppleMenu: true)
         await waitForReady(session)
         expect(
             session.target == .searchable(name: "B")

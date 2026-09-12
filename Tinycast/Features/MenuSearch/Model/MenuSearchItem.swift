@@ -14,8 +14,16 @@ struct MenuSearchItem: Identifiable, Hashable, Sendable {
     }
 
     var displayPath: String {
-        Self.joined(title: title, parents: parentComponents, separator: " > ")
+        Self.joined(title: title, parents: parentComponents, separator: Self.separator)
     }
+
+    var menu: String { parentComponents.first ?? "" }
+
+    var menuPath: String { parentComponents.joined(separator: Self.separator) }
+
+    var submenuPath: String { parentComponents.dropFirst().joined(separator: Self.separator) }
+
+    private static let separator = " → "
 
     private static func joined(title: String, parents: [String], separator: String) -> String {
         (parents + [title]).joined(separator: separator)

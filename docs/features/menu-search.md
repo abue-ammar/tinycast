@@ -9,7 +9,18 @@ ranking runs in memory over it, and activating a row re-resolves the live elemen
 - **The target is frozen at open, and activation never retargets.** `MenuSearchCoordinator.show()`
   captures `paletteCoordinator.targetApp` once, into `frozenApp`; `activate` re-resolves against that
   app, not against whatever is frontmost by the time the user hits ↵. There is no app picker, so the
-  app named in the section header is the only app a row can ever reach.
+  app whose icon every row paints is the only app a row can ever reach.
+- **The Apple menu is dropped by position, not by name.** `menuSearchShowsAppleMenu` ships **off**,
+  and `MenuSnapshotPolicy.excludingAppleMenu` drops the menu bar's *first* item — the one slot macOS
+  reserves for it — rather than matching a title that may localise. The flag is read once, in
+  `show()`, and rides into `startWalk` beside the pid: a snapshot always answers the question the
+  summon asked, whatever Settings says by the time the walk lands.
+- **Sections are runs of the snapshot, never a regrouping.** While browsing, `MenuSearchList` cuts
+  the rows into consecutive runs of one top-level menu; the walk emits a menu's leaves contiguously,
+  so a run *is* a section. A query ranks across menus, so the list collapses to a single `Results`
+  section instead. Either way the drawn order stays exactly `session.filtered`, which is what the
+  palette's selection index counts — a `Dictionary`-based grouping would silently reorder it and
+  make every row activate its neighbour.
 - **The walk never opens a menu.** `AXMenuAccess` reads the bar cold. Opening submenus to index them
   would flash the target app's UI on every summon, so a submenu macOS has not built yet exposes no
   children and contributes no rows — accepted coverage loss, not a bug to fix by opening menus.
@@ -48,25 +59,34 @@ ranking runs in memory over it, and activating a row re-resolves the live elemen
 | `Service/MenuSearchSession.swift` | the observable state — walk lifecycle, snapshot, filtered rows |
 | `UI/MenuSearchCoordinator.swift` | freezing the target and icon, activation, the failure reports |
 | `UI/MenuSearchScreen.swift` | the `PaletteScreen` conformance and the empty-state switch |
-| `UI/MenuSearchList.swift` | the list and its row: app icon, title, path, keycap chips |
+| `UI/MenuSearchList.swift` | the menu sections and the row: app icon, title, path, keycap chips |
 
 `MenuSearchTarget.classify` splits a summon five ways — `searchable`, `excluded`, `selfTarget`,
 `menuLess` and `noApplication` — so each gets its own sentence instead of an empty list. `selfTarget`
 is checked before the menu-bar test, because Tinycast runs as an accessory and would otherwise read
 as menu-less; `excluded` is checked next, for the same reason.
 
-`MenuSearchSession` takes its walk as an injected `WalkOperation`, which is what lets
-`Tests/menu-search-test.swift` drive publication, supersession and cancellation without an AX server.
+`MenuSearchSession` takes its walk as an injected `WalkOperation` — `(pid, showsAppleMenu)` — which
+is what lets `Tests/menu-search-test.swift` drive publication, supersession and cancellation without
+an AX server.
 
 Ranking scores the title and the `File > Export As` display path together, but the path rides as a
 `.owner` field rather than a name one: a hierarchy string is shared by every row beneath it, so
 letting it match as a name would pull unrelated rows in.
 
+A row reads left to right — icon, title, then the path in secondary text — so the right edge carries
+keycaps and nothing else. The path says only what the header has not: while browsing, the trail
+*below* the section menu, which is empty for a direct child of it; while searching, the whole parent
+path. The leaf title never rides along, because the row already draws it, and `MenuSearchItem`
+joins every path on one ` → ` so the id, the row and the search field cannot drift apart.
+
 Two AX details are worth knowing before touching `MenuSearchShortcut`. The modifier field is **not**
-`NSEvent.ModifierFlags` — bit 0 is Shift, bit 1 is Option, bit 2 is Control, ⌘ is implied, and
-anything above bit 2 is unrenderable, so the shortcut is dropped. And AX reports special keys as
-private-use scalars (`0xF700`…) that no text font draws, so `displayCharacter` maps them to
-`↑ ↓ ← → ↖ ↘ ⇞ ⇟`; without it an arrow-key row renders as tofu.
+`NSEvent.ModifierFlags` — bit 0 is Shift, bit 1 is Option, bit 2 is Control, and ⌘ is implied *unless*
+bit 3 clears it; only a bit above those four is unrenderable, so the shortcut is dropped. And AX
+reports a non-typing key either as a control scalar (`0x1B` Escape, `0x08` Delete) or as a private-use
+one (`0xF700`…), neither of which a text font draws, so `displayCharacter` names them instead:
+`⎋ ⌫ ⇥ ↩ ⌤ ⇤ ␣ ⌦ ⌧ ↑ ↓ ← → ↖ ↘ ⇞ ⇟` and `F1`…`F35`. Without both, a chord renders as tofu, as a blank
+chip, or not at all.
 
 The list decodes exactly one `NSImage` — the frozen app's icon — and every row paints it, so a
 4,000-row snapshot never costs more than one bitmap.

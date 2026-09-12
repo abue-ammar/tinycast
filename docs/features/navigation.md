@@ -100,9 +100,18 @@ window's app quit between the sweep and the ↵.
   reprojects into both coordinators; each owns only its own command and its own palette mode, so
   neither knows about the other. `AppIndex.isCommandEnabled` feeds `hotKeys.allowsAction`, so both
   shortcuts go dead with the switch, and each `show()` re-guards the flag anyway.
-- **`menuSearchDisabledApps`** (empty) is the exclusion list, rendered by the shared
-  `DisabledApplicationsSection` that Settings › Clipboard also uses. It ships with no seeded entries,
-  unlike the clipboard's: a menu read only ever happens because the user asked for one.
+- **`menuSearchDisabledApps`** (empty) is the exclusion list. It ships with no seeded entries, unlike
+  the clipboard's: a menu read only ever happens because the user asked for one.
+- **`menuSearchShowsAppleMenu`** (off) lists the Apple menu's own items. Off by default because that
+  menu is identical under every app, so it would pad every snapshot with the same ~50 rows;
+  [menu-search.md](menu-search.md) owns how it is applied.
+- **Both ride in the pane's own `Search Menu Bar Items` section, beside the command row itself.**
+  `FeatureCommandsSection` takes `excluding: [.searchMenuItems]` and the section draws that one
+  command through `FeatureCommandRow`, so a command added to `ownedCommands` later still appears
+  under `Commands` without a second edit. A list of excluded apps in a box of its own read as
+  belonging to the pane rather than to one command, which is what this section exists to fix;
+  `DisabledApplicationsList` is the shared half — the rows and the picker — that Settings ›
+  Clipboard still wraps in a `DisabledApplicationsSection` of its own.
 - Both settings ride in backups. Neither grants a permission class of its own — Accessibility is
   already required for paste — which is the call `windowManagementEnabled` made, and the opposite of
   `snippetsEnabled`.

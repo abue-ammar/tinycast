@@ -1,28 +1,38 @@
 import SwiftUI
 
-/// The excluded-apps list a feature offers: rows with a remove button, and a picker below.
+/// The excluded-apps control: one row per exclusion, then the picker that adds another. The caller
+/// owns the label above it, so a pane can seat the list beside the command the exclusions belong to.
+struct DisabledApplicationsList: View {
+    @Binding var bundleIDs: [String]
+
+    @State private var picking = false
+
+    var body: some View {
+        ForEach(bundleIDs, id: \.self) { bundleID in
+            DisabledAppRow(bundleID: bundleID) {
+                bundleIDs.removeAll { $0 == bundleID }
+            }
+        }
+
+        Button("Add Application…") { picking = true }
+            .popover(isPresented: $picking, arrowEdge: .bottom) {
+                AppPickerPopover(excluded: Set(bundleIDs)) { bundleID in
+                    if let bundleID { bundleIDs.append(bundleID) }
+                    picking = false
+                }
+            }
+    }
+}
+
+/// A whole section of them, for a pane whose exclusions are a subject of their own.
 struct DisabledApplicationsSection: View {
     @Binding var bundleIDs: [String]
     let anchor: SettingsAnchor
     let footer: String
 
-    @State private var picking = false
-
     var body: some View {
         Section {
-            ForEach(bundleIDs, id: \.self) { bundleID in
-                DisabledAppRow(bundleID: bundleID) {
-                    bundleIDs.removeAll { $0 == bundleID }
-                }
-            }
-
-            Button("Add Application…") { picking = true }
-                .popover(isPresented: $picking, arrowEdge: .bottom) {
-                    AppPickerPopover(excluded: Set(bundleIDs)) { bundleID in
-                        if let bundleID { bundleIDs.append(bundleID) }
-                        picking = false
-                    }
-                }
+            DisabledApplicationsList(bundleIDs: $bundleIDs)
         } header: {
             SettingsSectionHeader(anchor)
         } footer: {

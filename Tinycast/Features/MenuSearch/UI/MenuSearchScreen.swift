@@ -37,7 +37,7 @@ struct MenuSearchScreen: PaletteScreen {
                 EmptyResults(text: "No menu items found in \(name)")
             } else {
                 MenuSearchList(
-                    items: rows, targetName: name,
+                    items: rows, targetName: name, isSearching: session.isSearching,
                     iconURL: core.menuSearchCoordinator.frozenIconURL,
                     iconStamp: core.menuSearchCoordinator.frozenIconStamp,
                     selectedID: rows.indices.contains(selection) ? rows[selection].id : nil,
