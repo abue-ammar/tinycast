@@ -61,8 +61,7 @@ extension SettingsAnchor {
 
     static let navigationNavigation = Self(tab: .navigation, title: "Navigation")
     static let navigationCommands = Self(tab: .navigation, title: "Commands")
-    static let navigationDisabledApplications = Self(
-        tab: .navigation, title: "Disabled Applications")
+    static let navigationMenuSearch = Self(tab: .navigation, title: "Search Menu Bar Items")
 
     static let windowManagementWindowManagement = Self(
         tab: .windowManagement, title: "Window Management")

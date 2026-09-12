@@ -31,6 +31,7 @@ enum SettingsBackupCoverage {
         "snippetsShowInLauncher": .snippetsShowInLauncher,
         "navigationEnabled": .navigationEnabled,
         "menuSearchDisabledApps": .menuSearchDisabledApps,
+        "menuSearchShowsAppleMenu": .menuSearchShowsAppleMenu,
         "windowManagementEnabled": .windowManagementEnabled,
         "windowManagementShowInLauncher": .windowManagementShowInLauncher,
         "windowGap": .windowGap,

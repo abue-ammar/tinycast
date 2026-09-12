@@ -49,6 +49,7 @@ struct SettingsBackup: Codable {
         // Safe to carry: it grants no permission class paste doesn't already prompt for.
         var navigationEnabled: Bool?
         var menuSearchDisabledApps: [String]?
+        var menuSearchShowsAppleMenu: Bool?
         var windowManagementEnabled: Bool?
         var windowManagementShowInLauncher: Bool?
         var windowGap: Int?
@@ -142,6 +143,7 @@ extension SettingsBackup {
             snippetsShowInLauncher: s.snippetsShowInLauncher,
             navigationEnabled: s.navigationEnabled,
             menuSearchDisabledApps: s.menuSearchDisabledApps,
+            menuSearchShowsAppleMenu: s.menuSearchShowsAppleMenu,
             windowManagementEnabled: s.windowManagementEnabled,
             windowManagementShowInLauncher: s.windowManagementShowInLauncher,
             windowGap: s.windowGap,
@@ -365,6 +367,10 @@ extension SettingsBackup {
         }
         if let apps = s.menuSearchDisabledApps {
             settings.menuSearchDisabledApps = apps
+            count += 1
+        }
+        if let flag = s.menuSearchShowsAppleMenu {
+            settings.menuSearchShowsAppleMenu = flag
             count += 1
         }
         if let flag = s.windowManagementEnabled {

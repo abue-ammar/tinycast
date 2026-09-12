@@ -7,6 +7,11 @@ enum MenuSnapshotPolicy {
     // One History-like submenu must not eat the snapshot: each submenu contributes this many at most.
     static let perSubmenuLimit = 200
 
+    // The Apple menu is always the bar's first item, which beats matching a title that localises.
+    static func excludingAppleMenu(_ roots: [MenuTreeNode]) -> [MenuTreeNode] {
+        Array(roots.dropFirst())
+    }
+
     static func collect(
         _ roots: [MenuTreeNode], isCancelled: () -> Bool = { false }
     ) -> [MenuSearchItem] {

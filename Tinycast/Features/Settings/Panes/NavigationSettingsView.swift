@@ -18,14 +18,36 @@ struct NavigationSettingsView: View {
             }
 
             // No "show in launcher" switch: the per-command checkboxes below already are one.
-            FeatureCommandsSection(owner: .navigation, anchor: .navigationCommands)
-                .settingsEnabled(settings.navigationEnabled)
-
-            DisabledApplicationsSection(
-                bundleIDs: $settings.menuSearchDisabledApps,
-                anchor: .navigationDisabledApplications,
-                footer: "Search Menu Bar Items won't read the menu bar of these apps."
+            FeatureCommandsSection(
+                owner: .navigation, anchor: .navigationCommands,
+                excluding: [.searchMenuItems]
             )
+            .settingsEnabled(settings.navigationEnabled)
+
+            // The menu-search command sits with the two settings that only it reads.
+            Section {
+                if let entry = CommandCatalog.entry(for: .searchMenuItems) {
+                    FeatureCommandRow(entry: entry)
+                }
+
+                Toggle(isOn: $settings.menuSearchShowsAppleMenu) {
+                    SettingsRowTitle(.navigationMenuSearch, "Show Apple menu items")
+                    Text("Include the Apple menu, which is the same under every application.")
+                }
+
+                SettingsRow(
+                    title: "Disabled Applications",
+                    subtitle:
+                        "Search Menu Bar Items will not show menu items from these applications.",
+                    anchor: .navigationMenuSearch
+                ) {
+                    EmptyView()
+                }
+
+                DisabledApplicationsList(bundleIDs: $settings.menuSearchDisabledApps)
+            } header: {
+                SettingsSectionHeader(.navigationMenuSearch)
+            }
             .settingsEnabled(settings.navigationEnabled)
         }
         .formStyle(.grouped)

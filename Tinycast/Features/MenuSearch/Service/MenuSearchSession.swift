@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 @Observable
 final class MenuSearchSession {
-    typealias WalkOperation = @Sendable (pid_t) async -> [MenuSearchItem]
+    typealias WalkOperation = @Sendable (pid_t, _ showsAppleMenu: Bool) async -> [MenuSearchItem]
 
     enum State {
         case idle
@@ -16,6 +16,8 @@ final class MenuSearchSession {
     private(set) var snapshot: [MenuSearchItem] = []
     /// The rows the list reads: filtered once per query change, so one keystroke ranks once.
     private(set) var filtered: [MenuSearchItem] = []
+    /// Whether a query narrows the rows, so the list groups by menu only while browsing.
+    private(set) var isSearching = false
 
     private var query = ""
     private var revision = 0
@@ -23,11 +25,12 @@ final class MenuSearchSession {
     @ObservationIgnored private let walkOperation: WalkOperation
 
     init() {
-        walkOperation = { pid in
+        walkOperation = { pid, showsAppleMenu in
             await Task.detached(priority: .userInitiated) {
                 let deadline = ContinuousClock.now + AXMenuAccess.walkBudget
                 let application = AXMenuAccess.application(for: pid)
-                let roots = AXMenuAccess.readTopLevel(in: application, deadline: deadline)
+                let bar = AXMenuAccess.readTopLevel(in: application, deadline: deadline)
+                let roots = showsAppleMenu ? bar : MenuSnapshotPolicy.excludingAppleMenu(bar)
                 return MenuSnapshotPolicy.collect(roots) { ContinuousClock.now >= deadline }
             }.value
         }
@@ -54,7 +57,7 @@ final class MenuSearchSession {
         applyQuery()
     }
 
-    func startWalk(target: MenuSearchTarget, pid: pid_t) {
+    func startWalk(target: MenuSearchTarget, pid: pid_t, showsAppleMenu: Bool) {
         revision &+= 1
         walkTask?.cancel()
         self.target = target
@@ -63,7 +66,7 @@ final class MenuSearchSession {
         state = .reading
         let revision = self.revision
         walkTask = Task { [weak self] in
-            let items = await self?.walkOperation(pid) ?? []
+            let items = await self?.walkOperation(pid, showsAppleMenu) ?? []
             guard let self, self.revision == revision else { return }
             self.snapshot = items
             self.state = .ready
@@ -80,6 +83,7 @@ final class MenuSearchSession {
         snapshot = []
         filtered = []
         query = ""
+        isSearching = false
         state = .idle
     }
 
@@ -90,7 +94,8 @@ final class MenuSearchSession {
 
     private func applyQuery() {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        isSearching = !trimmed.isEmpty
+        guard isSearching else {
             filtered = snapshot
             return
         }

@@ -364,7 +364,10 @@ enum SettingsSearchCatalog {
             group: .navigationCommands, "Navigation commands",
             keywords: ["shortcut", "hotkey", "alias", "launcher"]),
         .init(
-            group: .navigationDisabledApplications, "Disabled Applications",
+            .navigationMenuSearch, "Show Apple menu items",
+            keywords: ["apple menu", "about this mac", "recent items", "sleep", "logo"]),
+        .init(
+            .navigationMenuSearch, "Disabled Applications",
             keywords: ["exclude", "password manager", "ignore", "privacy", "menu bar"])
     ]
 
