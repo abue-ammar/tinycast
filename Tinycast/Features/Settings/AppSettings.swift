@@ -15,17 +15,11 @@ enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
     case afterThirty = 30
     case afterSixty = 60
     case afterNinety = 90
-    /// Never pops: the next summon shows the last query selected, ready to be typed over.
-    case selectPreviousQuery = -1
 
     var id: Int { rawValue }
 
     var title: String {
-        switch self {
-        case .immediately: return "Immediately"
-        case .selectPreviousQuery: return "Select previous query"
-        default: return "After \(rawValue) seconds"
-        }
+        self == .immediately ? "Immediately" : "After \(rawValue) seconds"
     }
 
     var interval: TimeInterval { TimeInterval(rawValue) }
