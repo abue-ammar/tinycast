@@ -25,16 +25,17 @@ struct FileSearchPreview: View {
     }
 }
 
-/// The file itself, once the selection has held long enough to be worth opening.
+/// The file itself, on a surface that outlives the selection so a swap is a load, not a rebuild.
 private struct FileSearchPreviewStage: View {
 
     @Environment(\.metrics) private var metrics
     @Environment(PaletteState.self) private var palette
     let result: FileSearchResult
-    @State private var isLive = false
+    /// The settled selection: `nil` tears the surface down, a change only hands it another file.
+    @State private var shown: FileSearchResult?
 
-    /// Long enough that arrow-keying a list never opens a preview it is about to drop.
-    private static let settle = Duration.milliseconds(150)
+    /// Long enough to coalesce a held arrow key, short enough that a click reads as immediate.
+    private static let settle = Duration.milliseconds(80)
 
     /// Every teardown trigger in one key, so no `onChange` races the task.
     private struct LiveKey: Equatable {
@@ -56,10 +57,13 @@ private struct FileSearchPreviewStage: View {
                     id: result.id, isVisible: palette.isVisible,
                     isCovered: palette.fileSearchQuickLook)
             ) {
-                isLive = false
-                guard palette.isVisible, !palette.fileSearchQuickLook else { return }
-                try? await Task.sleep(for: Self.settle)
-                isLive = !Task.isCancelled
+                guard palette.isVisible, !palette.fileSearchQuickLook, !result.isDirectory else {
+                    shown = nil
+                    return
+                }
+                if shown != nil { try? await Task.sleep(for: Self.settle) }
+                guard !Task.isCancelled else { return }
+                shown = result
             }
     }
 
@@ -69,8 +73,8 @@ private struct FileSearchPreviewStage: View {
                 .font(.system(.largeTitle))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tertiary)
-        } else if isLive {
-            FileSearchSurface(url: result.url)
+        } else if let shown {
+            FileSearchSurface(url: shown.url)
                 .clipShape(card)
                 .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
         } else {
