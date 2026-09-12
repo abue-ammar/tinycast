@@ -95,7 +95,7 @@ struct UpdateInstaller: Sendable {
             throw UpdateFailure.versionMismatch(
                 expected: release.version.description, found: found ?? "unknown")
         }
-        guard BundleSignature.matchesRunningApp(staged) else { throw UpdateFailure.identityMismatch }
+        guard BundleSignature.isTrusted(staged) else { throw UpdateFailure.identityMismatch }
     }
 
     /// Off disk, not through `Bundle`, whose cache would answer for the old copy.

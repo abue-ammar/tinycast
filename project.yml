@@ -16,7 +16,8 @@ settings:
     # Stable self-signed identity so macOS keeps the Accessibility grant across rebuilds.
     # Create it once — see docs/signing.md.
     CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
-    ENABLE_HARDENED_RUNTIME: NO
+    # Notarization requires it, and no TCC grant is lost: the designated requirement omits the flag.
+    ENABLE_HARDENED_RUNTIME: YES
     SWIFT_STRICT_CONCURRENCY: complete
   configs:
     Release:
