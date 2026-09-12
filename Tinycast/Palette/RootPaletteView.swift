@@ -1414,7 +1414,7 @@ private struct CompactFavoritesRow: View {
                 CompactFavoriteButton(help: help(for: app, at: index)) {
                     onLaunch(app)
                 } content: {
-                    AppIconView(app: app)
+                    AppIconView(app: app, pointSize: metrics.size.rowIcon)
                         .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
                 }
             }

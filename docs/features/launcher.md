@@ -586,8 +586,16 @@ internals live in [navigation.md](navigation.md) and [menu-search.md](menu-searc
 The ranking harness covers prefix learning, frequency/recency scoring, persistence, and both reset
 paths; see the command in `development.md`.
 
-Launcher icons use a persistent 32 MB cost-capped `NSCache`. Fitted file-row icons use a separate
-transient 8 MB cache that is purged when its palette list disappears (`IconCache`).
+Launcher rows and compact favorites ask for the point size they actually draw at, scaled by the
+view's `displayScale`: 24/26/29pt becomes 48/52/58px at 2×. `IconCache` still rasterizes through its
+96px canvas first — AppKit picks the representation and the drop shadow from that size — and then
+keeps only the row-sized bitmap, in an 8 MB cost-capped row cache separate from the 32 MB one.
+
+That cache holds **one size per path and stamp**: switching interface size replaces each entry
+rather than accumulating all three. A lookup carrying a different size is a miss, so a row can never
+paint a bitmap meant for another layout. Everything else — settings, symbols, artwork — keeps the
+96px path and the persistent 32 MB cache. Fitted file-row icons keep their own transient 8 MB cache,
+purged when its palette list disappears.
 
 A file-icon key carries a `FileIconStamp` as well as the path — the bundle's own modification and
 attribute dates plus its `Icon\r` — because pasting a custom icon in Finder leaves the bundle's
