@@ -23,8 +23,7 @@ struct FileSearchQuickLook: View {
 
     private var card: some View {
         VStack(spacing: metrics.spacing.md) {
-            QuickLookSurface(url: result.url)
-                .clipShape(RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+            surface
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: metrics.spacing.sm) {
                 Text(result.name)
@@ -32,14 +31,27 @@ struct FileSearchQuickLook: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: metrics.spacing.lg)
-                Text("Close")
-                    .font(metrics.typography.bar)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                KeyCapChip(text: "esc", style: .outline)
+                BarButton(action: onClose) {
+                    HStack(spacing: metrics.spacing.sm) {
+                        Text("Close")
+                            .font(metrics.typography.bar)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        KeyCapChip(text: "esc", style: .outline)
+                    }
+                }
             }
         }
         .padding(metrics.spacing.md)
         .frosted(in: RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
         .padding(metrics.spacing.md)
+    }
+
+    @ViewBuilder private var surface: some View {
+        let shape = RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous)
+        if FileSearchMediaPlayer.plays(result.url) {
+            FileSearchMediaPlayer(url: result.url).clipShape(shape)
+        } else {
+            QuickLookSurface(url: result.url).clipShape(shape)
+        }
     }
 }

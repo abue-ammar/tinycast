@@ -163,23 +163,29 @@ and invalidates in-flight decodes, so scrolling stays warm within one result set
 icons after File Search closes. Persistent launcher icons remain in their own cache.
 
 The preview pane is the file itself over an Information block — Name, Where, Type, Size, Created,
-Modified. A `QuickLookSurface` mounts once the selection has held for 180 ms, so the document is
-scrollable and a movie playable where the format allows it, and a still from `FilePreviewThumbnail` stands
-in until then: arrow-keying a list must never open a preview it is about to drop. The still needs no
-per-kind branching of its own — `representationTypes: .all` falls back to the file's type icon — and no
-clipboard view is reached into. The live view is torn down whenever the palette is ordered out, the
-⌘Y overlay covers it, or a folder is selected, whose preview is the icon already drawn. The block's disk
-reads happen once per selection in a detached task, never in `body`, and a folder shows no Size — its own
-record is a few bytes, which is never what the row means.
+Modified. The stage is **16:9 and sized before the block beneath it**, which then scrolls in whatever is
+left; without that layout priority the aspect ratio shrinks to the leftover height instead of claiming
+it. The live view mounts once the selection has held for 150 ms, so arrow-keying a list never opens a
+preview it is about to drop, and nothing stands in before it: a thumbnail in that gap read as a white box
+flashing between rows. `FileSearchMediaPlayer` takes movies and audio, `QuickLookSurface` takes everything
+else — QuickLook draws a movie's first frame but never plays one inside a non-activating panel. The
+player is File Search's own, deliberately: the clipboard's preview is a separate surface with its own
+sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade. The live view is torn
+down whenever the palette is ordered out, the ⌘Y overlay covers it, or a folder is selected, whose
+preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
+in a detached task, never in `body`, and a folder shows no Size — its own record is a few bytes, which is
+never what the row means.
 
 Quick Look (⌘Y) draws **inside the panel**: the palette hides itself on `windowDidResignKey` and the panel
 is non-activating, so a system `QLPreviewPanel` would take key and close the palette under itself.
-`FileSearchQuickLook` hosts the same `QuickLookSurface` the pane does, following the selection, and is
-closed through `PaletteEscapeAction.closeQuickLook` — which ranks ahead of an open menu, since the overlay
-covers it. **Only the margin around the card dismisses it**: a tap over the preview belongs to the
-preview's own transport, and a dismissing gesture laid over the whole overlay swallowed the play button.
-Its corners are concentric, each radius the one outside it less its own inset, and the overlay is cleared
-whenever the palette is ordered out: the tree stays mounted, and a preview must not outlive the window.
+`FileSearchQuickLook` hosts the same two surfaces the pane does, following the selection. **Escape is
+answered by `PalettePanel.onEscape`**, not by the palette's own key handler: a focused `AVPlayerView`
+takes the key window's Escape first, and `sendEvent` is the one place ahead of it. **Only the margin
+around the card dismisses on a click** — a tap over the preview belongs to the preview's own transport,
+and a dismissing gesture laid over the whole overlay swallowed the play button — so the Close button is
+the pointer's way out. Its corners are concentric, each radius the one outside it less its own inset, and
+the overlay is cleared whenever the palette is ordered out: the tree stays mounted, and a preview must
+not outlive the window.
 
 | Row | Chord | What it does |
 | --- | --- | --- |

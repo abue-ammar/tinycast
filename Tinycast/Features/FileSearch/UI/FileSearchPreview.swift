@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The pane beside the results: a QuickLook still over what the filesystem says about the file.
+/// The pane beside the results: the file itself over what the filesystem says about it.
 struct FileSearchPreview: View {
 
     @Environment(\.metrics) private var metrics
@@ -9,9 +9,14 @@ struct FileSearchPreview: View {
     var body: some View {
         if let result {
             VStack(alignment: .leading, spacing: 0) {
+                // Sized before the block below it, which then scrolls in whatever is left.
                 FileSearchPreviewStage(result: result)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                FileSearchInfoSection(result: result)
+                    .aspectRatio(Theme.Size.previewAspectRatio, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .layoutPriority(1)
+                ScrollView {
+                    FileSearchInfoSection(result: result)
+                }
             }
             .padding(.horizontal, metrics.spacing.xl)
         } else {
@@ -20,17 +25,16 @@ struct FileSearchPreview: View {
     }
 }
 
-/// The file itself once the selection settles, over the still that stands in until it does.
+/// The file itself, once the selection has held long enough to be worth opening.
 private struct FileSearchPreviewStage: View {
 
     @Environment(\.metrics) private var metrics
     @Environment(PaletteState.self) private var palette
     let result: FileSearchResult
-    @State private var image: NSImage?
     @State private var isLive = false
 
     /// Long enough that arrow-keying a list never opens a preview it is about to drop.
-    private static let settle = Duration.milliseconds(180)
+    private static let settle = Duration.milliseconds(150)
 
     /// Every teardown trigger in one key, so no `onChange` races the task.
     private struct LiveKey: Equatable {
@@ -45,52 +49,37 @@ private struct FileSearchPreviewStage: View {
 
     var body: some View {
         stage
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.top, metrics.spacing.xl)
-            .task(id: result.id) { await loadThumbnail() }
             .task(
                 id: LiveKey(
                     id: result.id, isVisible: palette.isVisible,
                     isCovered: palette.fileSearchQuickLook)
             ) {
                 isLive = false
-                // A folder previews as the icon the still already drew, and the overlay covers this.
-                guard palette.isVisible, !palette.fileSearchQuickLook, !result.isDirectory else {
-                    return
-                }
+                guard palette.isVisible, !palette.fileSearchQuickLook else { return }
                 try? await Task.sleep(for: Self.settle)
                 isLive = !Task.isCancelled
             }
     }
 
     @ViewBuilder private var stage: some View {
-        if isLive {
-            QuickLookSurface(url: result.url)
-                .clipShape(card)
-                .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
-        } else if let image {
-            Image(nsImage: image)
-                .resizable()
-                .scaledToFit()
-                .clipShape(card)
-                .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
-        } else {
-            Image(systemName: result.isDirectory ? "folder" : "doc")
+        if result.isDirectory {
+            Image(systemName: "folder")
                 .font(.system(.largeTitle))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tertiary)
+        } else if isLive {
+            if FileSearchMediaPlayer.plays(result.url) {
+                FileSearchMediaPlayer(url: result.url).clipShape(card)
+            } else {
+                QuickLookSurface(url: result.url)
+                    .clipShape(card)
+                    .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
+            }
+        } else {
+            Color.clear
         }
-    }
-
-    /// One still for every kind: `representationTypes: .all` falls back to the file's type icon.
-    private func loadThumbnail() async {
-        let maxPixel = metrics.size.clipboardPreviewPixel
-        if let hit = FilePreviewThumbnail.cached(result.url, maxPixel: maxPixel) {
-            image = hit
-            return
-        }
-        image = nil
-        image = await FilePreviewThumbnail.loadAsync(result.url, maxPixel: maxPixel)
     }
 }
 
@@ -137,12 +126,12 @@ private struct FileSearchInfoSection: View {
                         Spacer(minLength: metrics.spacing.lg)
                         Text(row.value).lineLimit(1).truncationMode(.middle)
                     }
-                    .font(.callout)
-                    .padding(.vertical, metrics.spacing.sm)
+                    .font(metrics.typography.keyCap)
+                    .padding(.vertical, metrics.spacing.xs)
                 }
             }
         }
-        .padding(.top, metrics.spacing.xl)
+        .padding(.vertical, metrics.spacing.md)
         .task(id: result.id) { await loadDetails() }
     }
 

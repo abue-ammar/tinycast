@@ -154,6 +154,8 @@ enum Theme {
         static let clipboardMediaHeight: CGFloat = 260
         /// The preview pane is ~460pt wide, so 900px stays crisp at 2× without over-decoding.
         static let clipboardPreviewPixel: CGFloat = 900
+        /// File search's preview stage: video's own shape, and enough height to read a page in.
+        static let previewAspectRatio: CGFloat = 16 / 9
         /// Opening size and resize floor: the Quick Actions row's width, the sidebar's full height.
         static let settingsWindow = CGSize(width: 900, height: 700)
         /// Settings sidebar: a fixed column, wide enough for "Window Management".

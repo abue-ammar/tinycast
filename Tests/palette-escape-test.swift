@@ -28,20 +28,16 @@ struct PaletteEscapeTests {
 
     /// The shipped default, so a case only spells out what it is actually about.
     static func resolve(
-        quickLookOpen: Bool = false, menuOpen: Bool = false, argumentFocused: Bool = false,
-        query: String = "", mode: PaletteMode = .launcher, canGoBack: Bool = false,
+        menuOpen: Bool = false, argumentFocused: Bool = false, query: String = "",
+        mode: PaletteMode = .launcher, canGoBack: Bool = false,
         behavior: EscapeKeyBehavior = .navigateBackOrClose
     ) -> PaletteEscapeAction {
         PaletteEscapeAction.resolve(
-            quickLookOpen: quickLookOpen, menuOpen: menuOpen, argumentFocused: argumentFocused,
-            query: query, mode: mode, canGoBack: canGoBack, behavior: behavior)
+            menuOpen: menuOpen, argumentFocused: argumentFocused, query: query, mode: mode,
+            canGoBack: canGoBack, behavior: behavior)
     }
 
     static func main() {
-        expect(
-            resolve(quickLookOpen: true, menuOpen: true, query: "notes", mode: .fileSearch),
-            .closeQuickLook,
-            "the Quick Look overlay covers the screen, so it closes before the menu under it")
         expect(
             resolve(menuOpen: true, query: "notes"),
             .closeMenu,

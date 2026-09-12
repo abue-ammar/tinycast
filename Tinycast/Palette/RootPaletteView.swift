@@ -472,13 +472,10 @@ struct RootPaletteView: View {
                 // An open list closes itself first, exactly as the ⌘K menu does.
                 if vm.isControlListOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
-                    quickLookOpen: vm.fileSearchQuickLook, menuOpen: menuOpen,
-                    argumentFocused: argumentFocused != nil, query: vm.query,
+                    menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
                     mode: vm.mode, canGoBack: vm.canGoBack,
                     behavior: settings.escapeKeyBehavior)
                 {
-                case .closeQuickLook:
-                    vm.fileSearchQuickLook = false
                 case .closeMenu:
                     closeMenus()
                 case .leaveArgumentField:
