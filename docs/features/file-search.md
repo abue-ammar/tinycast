@@ -155,8 +155,10 @@ draws. The list uses the shared Results header, row metrics, edge dissolve, thin
 intent; its header reads **Recently Used** on the blank screen and **Results** under a query. A row shows
 a fitted native file icon and the full filename — a folder prefixed by its parent's name, dimmed, since
 half the folder hits on a developer machine are some `src` or `Tinycast`. The path itself is the preview's
-`Where` row rather than a second column the narrow list has no width for. A click selects, a double click
-opens.
+`Where` row rather than a second column the narrow list has no width for. A click selects and a double
+click opens, both through `onRowClick`, which answers on the press: `.onTapGesture(count: 2)` makes the
+single tap wait out the system's double-click interval first, and that wait *is* the second a click used
+to take before the preview moved.
 
 Fitted row icons use a separate 8 MB transient cache. Leaving the list or hiding the palette purges it
 and invalidates in-flight decodes, so scrolling stays warm within one result set without retaining its
@@ -171,13 +173,13 @@ QuickLook draws a movie's first frame but never plays one inside a non-activatin
 The player is File Search's own, deliberately: the clipboard's preview is a separate surface with its own
 sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade.
 
-**The surface outlives the selection**, which is what a moving highlight costs. Only the settled URL
-changes, so a move hands the same `QLPreviewView` another item rather than closing one and building the
-next — the rebuild left a blank frame between every row, and nothing stands in during it, a thumbnail
-there having read as a white box flashing. The settle is 80 ms: enough to coalesce a held arrow key, and
-the whole of what a click waits for, since the first QuickLook load in a process measures ~130 ms and
-every one after it ~10 ms. The surface is torn down only when the palette is ordered out, the ⌘Y overlay
-covers it, or a folder is selected, whose preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
+**The surface outlives the selection**, and there is no timer in front of it. A move hands the same
+`QLPreviewView` another item rather than closing one and building the next, which is the whole cost:
+measured against the real machinery inside a panel shaped like the palette's — borderless, floating,
+non-activating — a swap paints in about 8 ms, and the first load in a process in about 130 ms. Nothing
+about that is worth debouncing, and the debounce that was there only made a click feel slow. The surface
+is torn down by not being mounted: when the palette is ordered out, when the ⌘Y overlay covers it, or on
+a folder, whose preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
 in a detached task, never in `body`, and a folder shows no Size — its own record is a few bytes, which is
 never what the row means.
 

@@ -25,24 +25,12 @@ struct FileSearchPreview: View {
     }
 }
 
-/// The file itself, on a surface that outlives the selection so a swap is a load, not a rebuild.
+/// The file itself. One surface, held across selections: QuickLook renders a swap in about 8 ms.
 private struct FileSearchPreviewStage: View {
 
     @Environment(\.metrics) private var metrics
     @Environment(PaletteState.self) private var palette
     let result: FileSearchResult
-    /// The settled selection: `nil` tears the surface down, a change only hands it another file.
-    @State private var shown: FileSearchResult?
-
-    /// Long enough to coalesce a held arrow key, short enough that a click reads as immediate.
-    private static let settle = Duration.milliseconds(80)
-
-    /// Every teardown trigger in one key, so no `onChange` races the task.
-    private struct LiveKey: Equatable {
-        let id: FileSearchResult.ID
-        let isVisible: Bool
-        let isCovered: Bool
-    }
 
     private var card: RoundedRectangle {
         RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
@@ -52,29 +40,17 @@ private struct FileSearchPreviewStage: View {
         stage
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.top, metrics.spacing.xl)
-            .task(
-                id: LiveKey(
-                    id: result.id, isVisible: palette.isVisible,
-                    isCovered: palette.fileSearchQuickLook)
-            ) {
-                guard palette.isVisible, !palette.fileSearchQuickLook, !result.isDirectory else {
-                    shown = nil
-                    return
-                }
-                if shown != nil { try? await Task.sleep(for: Self.settle) }
-                guard !Task.isCancelled else { return }
-                shown = result
-            }
     }
 
+    /// Unmounting is the teardown: an ordered-out panel keeps its tree, and the overlay hides this.
     @ViewBuilder private var stage: some View {
         if result.isDirectory {
             Image(systemName: "folder")
                 .font(.system(.largeTitle))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tertiary)
-        } else if let shown {
-            FileSearchSurface(url: shown.url)
+        } else if palette.isVisible, !palette.fileSearchQuickLook {
+            FileSearchSurface(url: result.url)
                 .clipShape(card)
                 .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
         } else {

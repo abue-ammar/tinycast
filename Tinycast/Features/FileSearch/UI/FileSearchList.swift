@@ -24,9 +24,9 @@ struct FileSearchList: View {
                         FileSearchRow(result: result, selected: result.id == selectedID)
                             .selectionFrame(result.id == selectedID)
                             .contentShape(Rectangle())
-                            // A click moves the preview; opening takes the second one.
-                            .onTapGesture(count: 2) { onActivate(result) }
-                            .onTapGesture { onSelect(result) }
+                            .onRowClick(
+                                select: { onSelect(result) }, activate: { onActivate(result) }
+                            )
                             .onRightClick { onActions(result) }
                     }
                 }
