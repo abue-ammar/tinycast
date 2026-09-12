@@ -586,8 +586,18 @@ internals live in [navigation.md](navigation.md) and [menu-search.md](menu-searc
 The ranking harness covers prefix learning, frequency/recency scoring, persistence, and both reset
 paths; see the command in `development.md`.
 
-Launcher icons use a persistent 32 MB cost-capped `NSCache`. Fitted file-row icons use a separate
-transient 8 MB cache that is purged when its palette list disappears (`IconCache`).
+Launcher and compact-favorite file icons request their actual row size and SwiftUI display scale:
+24/26/29pt becomes 48/52/58px at 2×. `IconCache` first uses the existing 96px source rendering to
+preserve AppKit's representation selection and shadow, then retains the smaller bitmap in an 8 MB
+cost-capped row cache. A path/stamp/style key holds one size; another size replaces it rather than
+accumulating layout variants. A mismatched size never satisfies a lookup. Views key asynchronous
+loads on the icon, rendering size and style generation, and reject cancelled completions.
+
+Settings, larger consumers, symbols and artwork keep the existing 96px path and persistent 32 MB
+cache. Fitted file-row icons use a separate transient 8 MB cache purged when their list disappears.
+Cache limits are advisory, and views can retain images after eviction. Repeated requests from two
+row consumers at different sizes can regenerate each other's cache slot without returning a wrong
+size. See the [measurement and validation record](../validation/icon-cache-sizing.md).
 
 A file-icon key carries a `FileIconStamp` as well as the path — the bundle's own modification and
 attribute dates plus its `Icon\r` — because pasting a custom icon in Finder leaves the bundle's

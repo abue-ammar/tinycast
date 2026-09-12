@@ -1,0 +1,549 @@
+{
+  "environment": {
+    "date": "2026-09-12T15:30:35.265274+00:00",
+    "base": "8b3f80239109af988f788b3c534ce3629aaafa56",
+    "sourceSHA256": {
+      "Tinycast/Platform/Images/IconCache.swift": "61f43203ae7d84ddadbedb1a139bdcb63bde56aa602f64590584c5dc152fe064",
+      "Tinycast/Platform/Appearance.swift": "8bb373f644ed3d99bae4a7c9e23309a0b944abea822c418548827d17551ad87d",
+      "Tests/icon-cache-memory.swift": "62d70af3f63603e12483dff631b65670b3aebea3557a3368abb5723f6dad2338"
+    },
+    "system": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83\n",
+    "cpu": "Apple M4 Pro\n"
+  },
+  "runs": [
+    {
+      "before": 7406264,
+      "bitmapBytes": 3686400,
+      "coldMilliseconds": 48.008208,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 12616424,
+      "points": 0,
+      "settled": 7701224,
+      "transitions": [],
+      "warmMilliseconds": 0.021833,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7570104,
+      "bitmapBytes": 921600,
+      "coldMilliseconds": 41.895958,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9683664,
+      "points": 24,
+      "settled": 8045264,
+      "transitions": [],
+      "warmMilliseconds": 0.023625,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7471800,
+      "bitmapBytes": 1164800,
+      "coldMilliseconds": 64.070667,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9650920,
+      "points": 26,
+      "settled": 8012520,
+      "transitions": [],
+      "warmMilliseconds": 0.026584,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7504544,
+      "bitmapBytes": 1484800,
+      "coldMilliseconds": 45.92725,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9618104,
+      "points": 29,
+      "settled": 8012472,
+      "transitions": [],
+      "warmMilliseconds": 0.024583,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7291552,
+      "bitmapBytes": 18432000,
+      "coldMilliseconds": 169.536375,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 32457400,
+      "points": 0,
+      "settled": 7897784,
+      "transitions": [],
+      "warmMilliseconds": 0.112417,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7488184,
+      "bitmapBytes": 4608000,
+      "coldMilliseconds": 190.007291,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16581328,
+      "points": 24,
+      "settled": 8405712,
+      "transitions": [],
+      "warmMilliseconds": 0.118959,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7652048,
+      "bitmapBytes": 5824000,
+      "coldMilliseconds": 222.56625,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16712424,
+      "points": 26,
+      "settled": 8520424,
+      "transitions": [],
+      "warmMilliseconds": 0.121583,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7291552,
+      "bitmapBytes": 7424000,
+      "coldMilliseconds": 197.130042,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16417464,
+      "points": 29,
+      "settled": 8241848,
+      "transitions": [],
+      "warmMilliseconds": 0.13,
+      "repeat": 1,
+      "policy": "fixed"
+    },
+    {
+      "before": 7422624,
+      "bitmapBytes": 18432000,
+      "coldMilliseconds": 171.072625,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 32588496,
+      "points": 0,
+      "settled": 8012472,
+      "transitions": [
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32604880,
+          "milliseconds": 0.135292,
+          "points": 26
+        },
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32604880,
+          "milliseconds": 0.122833,
+          "points": 29
+        },
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32604880,
+          "milliseconds": 0.122083,
+          "points": 24
+        }
+      ],
+      "warmMilliseconds": 0.114541,
+      "repeat": 1,
+      "policy": "switch"
+    },
+    {
+      "before": 7783072,
+      "bitmapBytes": 4608000,
+      "coldMilliseconds": 211.414667,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16909008,
+      "points": 24,
+      "settled": 9306808,
+      "transitions": [
+        {
+          "bitmapBytes": 5824000,
+          "footprint": 17220304,
+          "milliseconds": 196.397625,
+          "points": 26
+        },
+        {
+          "bitmapBytes": 7424000,
+          "footprint": 17498832,
+          "milliseconds": 194.954792,
+          "points": 29
+        },
+        {
+          "bitmapBytes": 4608000,
+          "footprint": 17515216,
+          "milliseconds": 189.700125,
+          "points": 24
+        }
+      ],
+      "warmMilliseconds": 0.1185,
+      "repeat": 1,
+      "policy": "switch"
+    },
+    {
+      "before": 7766688,
+      "bitmapBytes": 4608000,
+      "coldMilliseconds": 200.128417,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16859856,
+      "points": 24,
+      "settled": 9355984,
+      "transitions": [
+        {
+          "bitmapBytes": 5824000,
+          "footprint": 17269456,
+          "milliseconds": 175.676584,
+          "points": 26
+        },
+        {
+          "bitmapBytes": 7424000,
+          "footprint": 17547984,
+          "milliseconds": 175.377625,
+          "points": 29
+        },
+        {
+          "bitmapBytes": 4608000,
+          "footprint": 17547984,
+          "milliseconds": 175.506375,
+          "points": 24
+        }
+      ],
+      "warmMilliseconds": 0.110625,
+      "repeat": 2,
+      "policy": "switch"
+    },
+    {
+      "before": 7701176,
+      "bitmapBytes": 18432000,
+      "coldMilliseconds": 192.601625,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 32932560,
+      "points": 0,
+      "settled": 8372944,
+      "transitions": [
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32948944,
+          "milliseconds": 0.13675,
+          "points": 26
+        },
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32948944,
+          "milliseconds": 0.122542,
+          "points": 29
+        },
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32948944,
+          "milliseconds": 0.120709,
+          "points": 24
+        }
+      ],
+      "warmMilliseconds": 0.118958,
+      "repeat": 2,
+      "policy": "switch"
+    },
+    {
+      "before": 7733944,
+      "bitmapBytes": 7424000,
+      "coldMilliseconds": 201.781375,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16843496,
+      "points": 29,
+      "settled": 8651496,
+      "transitions": [],
+      "warmMilliseconds": 0.108042,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7602848,
+      "bitmapBytes": 5824000,
+      "coldMilliseconds": 191.708583,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16679632,
+      "points": 26,
+      "settled": 8504016,
+      "transitions": [],
+      "warmMilliseconds": 0.11575,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7586464,
+      "bitmapBytes": 4608000,
+      "coldMilliseconds": 201.974833,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16876240,
+      "points": 24,
+      "settled": 8389328,
+      "transitions": [],
+      "warmMilliseconds": 0.113875,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7340704,
+      "bitmapBytes": 18432000,
+      "coldMilliseconds": 183.045416,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 32506600,
+      "points": 0,
+      "settled": 7930576,
+      "transitions": [],
+      "warmMilliseconds": 0.10925,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7357112,
+      "bitmapBytes": 1484800,
+      "coldMilliseconds": 55.905167,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9454288,
+      "points": 29,
+      "settled": 7815888,
+      "transitions": [],
+      "warmMilliseconds": 0.025875,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7389880,
+      "bitmapBytes": 1164800,
+      "coldMilliseconds": 62.509625,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9503464,
+      "points": 26,
+      "settled": 7865064,
+      "transitions": [],
+      "warmMilliseconds": 0.026708,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7291528,
+      "bitmapBytes": 921600,
+      "coldMilliseconds": 61.506292,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9388704,
+      "points": 24,
+      "settled": 7750304,
+      "transitions": [],
+      "warmMilliseconds": 0.026583,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7324344,
+      "bitmapBytes": 3686400,
+      "coldMilliseconds": 56.235625,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 12419792,
+      "points": 0,
+      "settled": 7504592,
+      "transitions": [],
+      "warmMilliseconds": 0.025834,
+      "repeat": 2,
+      "policy": "fixed"
+    },
+    {
+      "before": 7439032,
+      "bitmapBytes": 3686400,
+      "coldMilliseconds": 41.55225,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 12550888,
+      "points": 0,
+      "settled": 7635688,
+      "transitions": [],
+      "warmMilliseconds": 0.023,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7324344,
+      "bitmapBytes": 921600,
+      "coldMilliseconds": 57.848834,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9437904,
+      "points": 24,
+      "settled": 7799504,
+      "transitions": [],
+      "warmMilliseconds": 0.027166,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7225992,
+      "bitmapBytes": 1164800,
+      "coldMilliseconds": 65.387708,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9323168,
+      "points": 26,
+      "settled": 7684768,
+      "transitions": [],
+      "warmMilliseconds": 0.025875,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7258760,
+      "bitmapBytes": 1484800,
+      "coldMilliseconds": 61.393708,
+      "count": 100,
+      "imageAndBitmapReleased": true,
+      "open": 9388704,
+      "points": 29,
+      "settled": 7750304,
+      "transitions": [],
+      "warmMilliseconds": 0.027167,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7275168,
+      "bitmapBytes": 18432000,
+      "coldMilliseconds": 180.10825,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 32359096,
+      "points": 0,
+      "settled": 7799480,
+      "transitions": [],
+      "warmMilliseconds": 0.109667,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7357064,
+      "bitmapBytes": 4608000,
+      "coldMilliseconds": 198.887791,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16466640,
+      "points": 24,
+      "settled": 8258232,
+      "transitions": [],
+      "warmMilliseconds": 0.113208,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7340728,
+      "bitmapBytes": 5824000,
+      "coldMilliseconds": 192.206125,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16384720,
+      "points": 26,
+      "settled": 8209104,
+      "transitions": [],
+      "warmMilliseconds": 0.118209,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7357088,
+      "bitmapBytes": 7424000,
+      "coldMilliseconds": 201.197125,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16401080,
+      "points": 29,
+      "settled": 8225464,
+      "transitions": [],
+      "warmMilliseconds": 0.112625,
+      "repeat": 3,
+      "policy": "fixed"
+    },
+    {
+      "before": 7307912,
+      "bitmapBytes": 18432000,
+      "coldMilliseconds": 179.590875,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 32604880,
+      "points": 0,
+      "settled": 8012472,
+      "transitions": [
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32604880,
+          "milliseconds": 0.139208,
+          "points": 26
+        },
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32604880,
+          "milliseconds": 0.1285,
+          "points": 29
+        },
+        {
+          "bitmapBytes": 18432000,
+          "footprint": 32604880,
+          "milliseconds": 0.133083,
+          "points": 24
+        }
+      ],
+      "warmMilliseconds": 0.10575,
+      "repeat": 3,
+      "policy": "switch"
+    },
+    {
+      "before": 7439032,
+      "bitmapBytes": 4608000,
+      "coldMilliseconds": 204.176125,
+      "count": 500,
+      "imageAndBitmapReleased": true,
+      "open": 16581352,
+      "points": 24,
+      "settled": 8995560,
+      "transitions": [
+        {
+          "bitmapBytes": 5824000,
+          "footprint": 16892648,
+          "milliseconds": 174.1655,
+          "points": 26
+        },
+        {
+          "bitmapBytes": 7424000,
+          "footprint": 17187560,
+          "milliseconds": 178.062875,
+          "points": 29
+        },
+        {
+          "bitmapBytes": 4608000,
+          "footprint": 17187560,
+          "milliseconds": 176.071,
+          "points": 24
+        }
+      ],
+      "warmMilliseconds": 0.109667,
+      "repeat": 3,
+      "policy": "switch"
+    }
+  ]
+}
