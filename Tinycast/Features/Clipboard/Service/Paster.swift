@@ -49,6 +49,16 @@ enum Paster {
         }
     }
 
+    /// A file, pasted into `previousApp`; the receiver takes the file or its path, as it reads.
+    @MainActor
+    static func pasteFile(_ url: URL, previousApp: NSRunningApplication?) {
+        PasteboardFiles.write(url, to: .general)
+        previousApp?.activate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + activationDelay) {
+            postCommandV()
+        }
+    }
+
     /// String counterpart of `copy(_:store:)`.
     @MainActor
     static func copyString(_ text: String) {
@@ -90,8 +100,9 @@ enum Paster {
 
     /// Whether anything was written; a vanished item leaves the pasteboard untouched.
     @MainActor @discardableResult
-    private static func write(_ item: ClipboardItem, store: ClipboardStore) -> Bool {
-        let pb = NSPasteboard.general
+    static func write(
+        _ item: ClipboardItem, store: ClipboardStore, to pb: NSPasteboard = .general
+    ) -> Bool {
         switch item.kind {
         case .text:
             guard let text = item.text else { return false }
@@ -99,12 +110,23 @@ enum Paster {
             pb.declareTypes([.string, ClipboardManager.internalType], owner: nil)
             pb.setString(text, forType: .string)
         case .image:
-            guard let url = store.imageURL(for: item), let data = try? Data(contentsOf: url) else {
+            guard let url = store.imageURL(for: item),
+                let data = try? Data(contentsOf: url, options: .mappedIfSafe)
+            else {
                 return false
             }
             pb.clearContents()
             pb.declareTypes([.png, ClipboardManager.internalType], owner: nil)
             pb.setData(data, forType: .png)
+        case .file:
+            guard let url = store.fileURL(for: item),
+                FileManager.default.fileExists(atPath: url.path)
+            else { return false }
+            pb.clearContents()
+            pb.declareTypes([.fileURL, .string, ClipboardManager.internalType], owner: nil)
+            pb.setData(url.dataRepresentation, forType: .fileURL)
+            // Both types: a file-taking app receives the file, a text field receives the path.
+            pb.setString(url.path, forType: .string)
         }
         pb.setData(Data(), forType: ClipboardManager.internalType)
         // The poller skips marked writes, so this is the only promotion point.
@@ -115,12 +137,22 @@ enum Paster {
     /// Synthesize ⌘V, to `pid` alone when given, else through the system tap.
     @MainActor
     static func postCommandV(toPid pid: pid_t? = nil) {
+        postCommand(key: CGKeyCode(kVK_ANSI_V), toPid: pid)
+    }
+
+    /// Synthesize ⌘C, for reading a selection an app will not surface over Accessibility.
+    @MainActor
+    static func postCommandC(toPid pid: pid_t? = nil) {
+        postCommand(key: CGKeyCode(kVK_ANSI_C), toPid: pid)
+    }
+
+    @MainActor
+    private static func postCommand(key: CGKeyCode, toPid pid: pid_t?) {
         guard Permissions.ensureAccessibility() else { return }
         let source = CGEventSource(stateID: .combinedSessionState)
 
-        let v = CGKeyCode(kVK_ANSI_V)
-        guard let down = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: true),
-            let up = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: false)
+        guard let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
+            let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false)
         else { return }
 
         down.flags = .maskCommand

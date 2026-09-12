@@ -3,8 +3,8 @@ title: Install
 description: Homebrew, the release channels, and the one manual step a direct download needs.
 ---
 
-Tinycast needs **macOS 26 or later**. There is a separate cask for macOS 15 Sequoia — see
-[Older macOS](#older-macos).
+Tinycast needs **macOS 26 or later**, on Apple silicon or Intel. There is a separate cask for macOS
+15 Sequoia — see [Older macOS](#older-macos).
 
 ## Homebrew
 
@@ -19,15 +19,30 @@ brew install --cask abue-ammar/tinycast/tinycast
 `brew trust` is required once for any third-party tap; Homebrew refuses to install from an untrusted
 tap without it.
 
+### Intel Macs
+
+macOS 26 Tahoe is the last release that boots on Intel, so stable ships twice from the same build.
+The command above installs a lean Apple-silicon-only build; on an Intel Mac, install the universal
+cask instead:
+
+```bash
+brew install --cask abue-ammar/tinycast/tinycast-universal
+```
+
+You do not have to work out which you need — `tinycast` refuses to install on Intel, and both casks
+give you the same `Tinycast.app`. The universal build runs on Apple silicon too; it is simply the
+larger download.
+
 ### Channels
 
 Each channel is a **separate application** with its own bundle identifier, settings, permissions and
 login item. They run side by side, so you can keep stable installed while trying a beta.
 
-| Channel | Cask            | App                 |
-| ------- | --------------- | ------------------- |
-| Stable  | `tinycast`      | `Tinycast.app`      |
-| Beta    | `tinycast@beta` | `Tinycast Beta.app` |
+| Channel | Cask                 | App                 |
+| ------- | -------------------- | ------------------- |
+| Stable  | `tinycast`           | `Tinycast.app`      |
+| Stable  | `tinycast-universal` | `Tinycast.app`      |
+| Beta    | `tinycast@beta`      | `Tinycast Beta.app` |
 
 ```bash
 brew install --cask abue-ammar/tinycast/tinycast@beta
@@ -35,7 +50,8 @@ brew install --cask abue-ammar/tinycast/tinycast@beta
 
 Because the channels are separate apps, installing the beta does not upgrade your stable install and
 does not share its settings. To move settings across, use
-[Backup](/docs/reference/backup).
+[Backup](/docs/reference/backup). The two stable casks are the *same* app, so they cannot be
+installed at once — Homebrew picks the right one for your Mac.
 
 ### Older macOS
 

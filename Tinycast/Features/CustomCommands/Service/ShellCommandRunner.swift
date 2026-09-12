@@ -1,67 +1,299 @@
 import Darwin
 import Foundation
 
-enum ShellCommandOutcome: Sendable, Equatable {
-    case success
-    case launchFailure(String)
-    case nonZeroExit(status: Int32, stderr: String?)
+/// How a run ended. `launchFailed` means the shell never started, so nothing was captured.
+enum ShellCommandTermination: Sendable, Equatable {
+    case exited(status: Int32)
+    case launchFailed(String)
+    /// Apart from the status, which a signalled shell reports as 143 or 15.
+    case stopped
+
+    /// A signal death reports the signal as its status, so it fails here like any non-zero exit.
+    var succeeded: Bool { self == .exited(status: 0) }
+}
+
+enum ShellCommandEvent: Sendable {
+    case output(String)
+    case finished(ShellCommandResult)
+}
+
+/// `stop` is not the stream's cancellation: abandoning events must not kill the command.
+struct ShellCommandSession: Sendable {
+    let events: AsyncStream<ShellCommandEvent>
+    let stop: @Sendable () -> Void
+}
+
+/// Both tails are filled only by the non-streaming path; a streamed run reports events.
+struct ShellCommandResult: Sendable, Equatable {
+    let termination: ShellCommandTermination
+    /// Kept short: all it feeds is the one-line report a finished command shows.
+    let standardOutput: String?
+    let standardError: String?
+
+    var succeeded: Bool { termination.succeeded }
+
+    /// What a command said about itself, for a report with room for one line.
+    var lastOutputLine: String? {
+        standardOutput?
+            .split(whereSeparator: \.isNewline).last
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    init(
+        termination: ShellCommandTermination, standardOutput: String? = nil,
+        standardError: String? = nil
+    ) {
+        self.termination = termination
+        self.standardOutput = standardOutput
+        self.standardError = standardError
+    }
 }
 
 enum ShellCommandRunner {
-    private static let stderrLimit = 8 * 1024
+    /// Only ever surfaces on failure, where the last few lines are the whole story.
+    private static let standardErrorLimit = 8 * 1024
+    /// Only the last line is ever shown, so this is a generous bound on one of them.
+    private static let standardOutputLimit = 4 * 1024
+    private static let shell = "/bin/zsh"
+    /// Big enough that a chatty command needs few reads, small enough to stay live.
+    private static let readSize = 16 * 1024
+    /// Coalesces bursts so a flood cannot drive a redraw per line.
+    private static let flushInterval: Duration = .milliseconds(40)
+    /// A prompt or a progress bar never ends a line; past this it is shown anyway.
+    private static let unlinedLimit = 4 * 1024
+    /// How long a stopped command is given to leave politely before it is killed.
+    private static let stopGrace: DispatchTimeInterval = .seconds(2)
     /// `waitUntilExit` blocks, so it stays off the cooperative pool; concurrent, not serial.
     private static let queue = DispatchQueue(
         label: "com.tinycast.shell-command", qos: .userInitiated, attributes: .concurrent)
 
-    /// Defaults to the fast path, so forgetting it gets the cheap shell, not the config.
+    /// Fire-and-forget, keeping only the error tail; shown output goes through `stream`.
     nonisolated static func run(
-        _ command: String, loadingShellEnvironment: Bool = false
-    ) async -> ShellCommandOutcome {
+        _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false,
+        workingDirectory: String? = nil
+    ) async -> ShellCommandResult {
         await withCheckedContinuation { continuation in
             queue.async {
                 continuation.resume(
-                    returning: execute(command, loadingShellEnvironment: loadingShellEnvironment))
+                    returning: execute(
+                        command, arguments: arguments,
+                        loadingShellEnvironment: loadingShellEnvironment,
+                        workingDirectory: workingDirectory))
             }
         }
     }
 
     nonisolated private static func execute(
-        _ command: String, loadingShellEnvironment: Bool
-    ) -> ShellCommandOutcome {
+        _ command: String, arguments: [String], loadingShellEnvironment: Bool,
+        workingDirectory: String?
+    ) -> ShellCommandResult {
+        guard let directory = resolvedWorkingDirectory(workingDirectory) else {
+            return ShellCommandResult(termination: .launchFailed(missingDirectory(workingDirectory)))
+        }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        // zsh reads `.zshrc` only for interactive shells, so `-l` alone sees no aliases.
-        process.arguments = [loadingShellEnvironment ? "-ilc" : "-lc", command]
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+        process.executableURL = URL(fileURLWithPath: shell)
+        process.arguments = shellArguments(
+            command: command, arguments: arguments,
+            loadingShellEnvironment: loadingShellEnvironment)
+        process.currentDirectoryURL = URL(fileURLWithPath: directory)
         // Lets a shell config skip slow sections when Tinycast is the caller.
         process.environment = ProcessInfo.processInfo.environment.merging(["TINYCAST": "1"]) { _, new in
             new
         }
         // Load-bearing: a config that prompts reads EOF and moves on, never hanging.
         process.standardInput = FileHandle.nullDevice
-        process.standardOutput = FileHandle.nullDevice
 
-        let capture = makeStderrCapture()
-        process.standardError = capture?.handle ?? FileHandle.nullDevice
-        defer { capture?.remove() }
+        let output = StreamCapture.make()
+        let errors = StreamCapture.make()
+        process.standardOutput = output?.handle ?? FileHandle.nullDevice
+        process.standardError = errors?.handle ?? FileHandle.nullDevice
+        defer {
+            output?.remove()
+            errors?.remove()
+        }
 
         do {
             try process.run()
         } catch {
-            return .launchFailure(error.localizedDescription)
+            return ShellCommandResult(termination: .launchFailed(error.localizedDescription))
         }
         process.waitUntilExit()
 
-        guard process.terminationReason == .exit, process.terminationStatus == 0 else {
-            return .nonZeroExit(
-                status: process.terminationStatus,
-                stderr: capture?.readSuffix(limit: stderrLimit))
-        }
-        return .success
+        return ShellCommandResult(
+            termination: .exited(status: process.terminationStatus),
+            standardOutput: output?.readSuffix(limit: standardOutputLimit),
+            standardError: errors?.readSuffix(limit: standardErrorLimit))
     }
 
-    /// Immutable, confined to one `execute` on `queue`, and only read after `waitUntilExit`.
-    private final class StderrCapture: @unchecked Sendable {
+    // MARK: - Streaming
+
+    /// Runs under a pseudo-terminal; see `PseudoTerminal` for why a pipe cannot do this.
+    nonisolated static func stream(
+        _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false,
+        workingDirectory: String? = nil
+    ) -> ShellCommandSession {
+        var environment = ProcessInfo.processInfo.environment
+        environment["TINYCAST"] = "1"
+        // A terminal makes tools colour output, so ask for colour the window can draw.
+        environment["TERM"] = "xterm-256color"
+
+        let directory = resolvedWorkingDirectory(workingDirectory)
+        let terminal = directory.flatMap {
+            PseudoTerminal.spawn(
+                executable: shell,
+                arguments: shellArguments(
+                    command: command, arguments: arguments,
+                    loadingShellEnvironment: loadingShellEnvironment),
+                environment: environment, workingDirectory: $0)
+        }
+
+        guard let terminal else {
+            let reason =
+                directory == nil
+                ? missingDirectory(workingDirectory) : "The shell could not be started."
+            return ShellCommandSession(
+                events: AsyncStream { continuation in
+                    continuation.yield(
+                        .finished(ShellCommandResult(termination: .launchFailed(reason))))
+                    continuation.finish()
+                },
+                stop: {})
+        }
+
+        let stopped = StopFlag()
+        let events = AsyncStream<ShellCommandEvent> { continuation in
+            queue.async {
+                drain(terminal, stopped: stopped, into: continuation)
+            }
+        }
+        return ShellCommandSession(
+            events: events,
+            stop: { [weak stopFlag = stopped] in
+                stopFlag?.mark()
+                terminal.signalSession(SIGTERM)
+                // The backstop, for a command that ignores a polite ask.
+                queue.asyncAfter(deadline: .now() + stopGrace) {
+                    terminal.signalSession(SIGKILL)
+                }
+            })
+    }
+
+    /// One queue, one reader: the decode buffer is touched from here alone, so it needs no lock.
+    nonisolated private static func drain(
+        _ terminal: PseudoTerminal, stopped: StopFlag,
+        into continuation: AsyncStream<ShellCommandEvent>.Continuation
+    ) {
+        var decoder = TerminalTextDecoder()
+        var buffer = [UInt8](repeating: 0, count: readSize)
+        var lastYield = ContinuousClock().now
+
+        while true {
+            // Zero is EOF; -1 with EIO is what a pty master returns once its child is gone.
+            let count = read(terminal.parentEnd, &buffer, readSize)
+            guard count > 0 else { break }
+            decoder.append(buffer, count: count)
+            let due = ContinuousClock().now - lastYield >= flushInterval
+            if let text = decoder.take(force: due) {
+                continuation.yield(.output(text))
+                lastYield = ContinuousClock().now
+            }
+        }
+        if let text = decoder.take(force: true) { continuation.yield(.output(text)) }
+
+        let status = terminal.wait()
+        terminal.close()
+        continuation.yield(
+            .finished(
+                ShellCommandResult(
+                    termination: stopped.isSet ? .stopped : .exited(status: status))))
+        continuation.finish()
+    }
+
+    /// Set from the main actor and read on the drain queue, so the flag carries its own lock.
+    private final class StopFlag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = false
+
+        var isSet: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return value
+        }
+
+        func mark() {
+            lock.lock()
+            value = true
+            lock.unlock()
+        }
+    }
+
+    /// Whole lines only: a newline is a scalar boundary, so no read decodes mid-character.
+    private struct TerminalTextDecoder {
+        private var pending: [UInt8] = []
+
+        mutating func append(_ bytes: [UInt8], count: Int) {
+            pending.append(contentsOf: bytes[0..<count])
+        }
+
+        /// `force` flushes at exit and for a prompt that never ends a line, still on a boundary.
+        mutating func take(force: Bool) -> String? {
+            guard !pending.isEmpty else { return nil }
+            var end = pending.lastIndex(of: 0x0A).map { $0 + 1 }
+            if end == nil {
+                guard force || pending.count >= unlinedLimit else { return nil }
+                end = scalarBoundary(before: pending.count)
+            }
+            guard let end, end > 0 else { return nil }
+            // Latin-1 cannot fail, so other encodings still reach the reader.
+            let bytes = Array(pending[0..<end])
+            pending.removeFirst(end)
+            return String(bytes: bytes, encoding: .utf8) ?? String(bytes: bytes, encoding: .isoLatin1)
+        }
+
+        /// Walks back over at most three continuation bytes to the start of a whole character.
+        private func scalarBoundary(before index: Int) -> Int {
+            var boundary = index
+            var stepped = 0
+            while boundary > 0, stepped < 4, pending[boundary - 1] & 0xC0 == 0x80 {
+                boundary -= 1
+                stepped += 1
+            }
+            // A lead byte only holds back when its own sequence is still incomplete.
+            guard boundary > 0 else { return index }
+            let lead = pending[boundary - 1]
+            let width = lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1
+            return index - boundary + 1 >= width ? index : boundary - 1
+        }
+    }
+
+    /// Nil when the named directory is gone: running somewhere unexpected is worse than not.
+    nonisolated private static func resolvedWorkingDirectory(_ path: String?) -> String? {
+        guard let path, !path.isEmpty else {
+            return FileManager.default.homeDirectoryForCurrentUser.path
+        }
+        let expanded = (path as NSString).expandingTildeInPath
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: expanded, isDirectory: &isDirectory),
+            isDirectory.boolValue
+        else { return nil }
+        return expanded
+    }
+
+    nonisolated private static func missingDirectory(_ path: String?) -> String {
+        "The folder “\(path ?? "")” no longer exists."
+    }
+
+    /// Values follow as `$1`, `$2`, never spliced where zsh would re-parse them as syntax.
+    nonisolated private static func shellArguments(
+        command: String, arguments: [String], loadingShellEnvironment: Bool
+    ) -> [String] {
+        // zsh reads `.zshrc` only for interactive shells, so `-l` alone sees no aliases.
+        [loadingShellEnvironment ? "-ilc" : "-lc", command, "tinycast"] + arguments
+    }
+
+    /// A temp file, not a `Pipe`: nothing drains a pipe until `waitUntilExit` returns.
+    private final class StreamCapture: @unchecked Sendable {
         let url: URL
         let handle: FileHandle
 
@@ -76,7 +308,9 @@ enum ShellCommandRunner {
             let start = end > UInt64(limit) ? end - UInt64(limit) : 0
             try? handle.seek(toOffset: start)
             guard let data = try? handle.readToEnd(), !data.isEmpty else { return nil }
-            return String(decoding: data, as: UTF8.self)
+            // A byte-offset tail can open mid-scalar; dropping the orphans avoids a leading U+FFFD.
+            let body = start > 0 ? data.drop { $0 & 0xC0 == 0x80 } : data[...]
+            return String(decoding: body, as: UTF8.self)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .nilIfEmpty
         }
@@ -85,21 +319,21 @@ enum ShellCommandRunner {
             try? handle.close()
             try? FileManager.default.removeItem(at: url)
         }
-    }
 
-    nonisolated private static func makeStderrCapture() -> StderrCapture? {
-        let template = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tinycast-command-stderr.XXXXXX").path
-        var bytes = Array(template.utf8CString)
-        let descriptor = bytes.withUnsafeMutableBufferPointer { buffer in
-            mkstemp(buffer.baseAddress!)
+        static func make() -> StreamCapture? {
+            let template = FileManager.default.temporaryDirectory
+                .appendingPathComponent("tinycast-command-stream.XXXXXX").path
+            var bytes = Array(template.utf8CString)
+            let descriptor = bytes.withUnsafeMutableBufferPointer { buffer in
+                mkstemp(buffer.baseAddress!)
+            }
+            guard descriptor >= 0 else { return nil }
+            let path = String(
+                decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+            return StreamCapture(
+                url: URL(fileURLWithPath: path),
+                handle: FileHandle(fileDescriptor: descriptor, closeOnDealloc: true))
         }
-        guard descriptor >= 0 else { return nil }
-        let path = String(
-            decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
-        return StderrCapture(
-            url: URL(fileURLWithPath: path),
-            handle: FileHandle(fileDescriptor: descriptor, closeOnDealloc: true))
     }
 }
 

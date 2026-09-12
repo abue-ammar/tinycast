@@ -1,16 +1,34 @@
 import Foundation
 
-/// Per-extension `LocalStorage`, `Cache` and preference values, persisted as one JSON file per
-/// extension under the app-support directory.
-///
-/// A file rather than SQLite on purpose: an extension's store is small, read whole at launch (the
-/// `Cache` API is synchronous, so its contents must be handed over up front) and written rarely.
+/// One JSON file per extension: small, read whole at launch and written rarely.
 @MainActor
 final class ExtensionStorage {
     private struct Store: Codable {
         var localStorage: [String: StoredValue] = [:]
         var caches: [String: [String: String]] = [:]
         var preferences: [String: StoredValue] = [:]
+        /// A search-bar dropdown's `storeValue` pick — host UI state, so not `LocalStorage`.
+        var accessoryValues: [String: String] = [:]
+
+        enum CodingKeys: String, CodingKey {
+            case localStorage, caches, preferences, accessoryValues
+        }
+
+        init() {}
+
+        /// Each section decodes on its own: one absent key must not take an extension's whole
+        /// store — API keys included — down with it, since a failed decode resets the file.
+        init(from decoder: Decoder) throws {
+            let store = try decoder.container(keyedBy: CodingKeys.self)
+            localStorage =
+                try store.decodeIfPresent([String: StoredValue].self, forKey: .localStorage) ?? [:]
+            caches =
+                try store.decodeIfPresent([String: [String: String]].self, forKey: .caches) ?? [:]
+            preferences =
+                try store.decodeIfPresent([String: StoredValue].self, forKey: .preferences) ?? [:]
+            accessoryValues =
+                try store.decodeIfPresent([String: String].self, forKey: .accessoryValues) ?? [:]
+        }
     }
 
     /// `LocalStorage` accepts strings, numbers and booleans and must return them with their type.
@@ -55,8 +73,7 @@ final class ExtensionStorage {
 
     private let directory: URL
     private var stores: [String: Store] = [:]
-    /// Extensions whose store changed and hasn't been written yet — writes are coalesced so a busy
-    /// `Cache` doesn't hit the disk per key.
+    /// Writes are coalesced, so a busy `Cache` doesn't hit the disk per key.
     private var dirty: Set<String> = []
     private var flushTask: Task<Void, Never>?
 
@@ -85,6 +102,16 @@ final class ExtensionStorage {
 
     func clearLocalStorage(extension name: String) {
         mutate(name) { $0.localStorage.removeAll() }
+    }
+
+    // MARK: - Search-bar dropdowns
+
+    func accessoryValue(extension name: String, key: String) -> String? {
+        store(for: name).accessoryValues[key]
+    }
+
+    func setAccessoryValue(extension name: String, key: String, value: String) {
+        mutate(name) { $0.accessoryValues[key] = value }
     }
 
     // MARK: - Cache
@@ -126,8 +153,7 @@ final class ExtensionStorage {
         }
     }
 
-    /// Manifest defaults overlaid with whatever the user has set — what a command sees from
-    /// `getPreferenceValues()`.
+    /// Manifest defaults overlaid with the user's — what `getPreferenceValues()` sees.
     func resolvedPreferences(
         extension name: String, schemas: [ExtensionPreferenceSchema]
     ) -> [String: ExtensionPreferenceValue] {
@@ -138,8 +164,7 @@ final class ExtensionStorage {
         return resolved
     }
 
-    /// True when every required preference has a non-empty value — a command with an unset required
-    /// preference must not run, exactly as in Raycast.
+    /// A command with an unset required preference must not run.
     func missingRequiredPreferences(
         extension name: String, schemas: [ExtensionPreferenceSchema]
     ) -> [ExtensionPreferenceSchema] {

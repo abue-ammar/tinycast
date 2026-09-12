@@ -3,6 +3,7 @@
 import { Action, ActionPanel, Detail, Form, Grid, List, MenuBarExtra, Navigation, setActionEffects, useNavigation } from "./components.js";
 import * as enums from "./enums.generated.js";
 import * as system from "./system.js";
+import { PKCEClient, TokenSet } from "./oauth.js";
 
 const { nestedEnums, ...flatEnums } = enums;
 
@@ -88,11 +89,8 @@ const AI = {
 
 const OAuth = {
   RedirectMethod: nestedEnums.OAuth.RedirectMethod,
-  PKCEClient: class PKCEClient {
-    constructor() {
-      throw new Error("OAuth.PKCEClient is not supported in Tinycast extensions yet. See docs/extensions.md.");
-    }
-  },
+  PKCEClient,
+  TokenSet,
 };
 
 const BrowserExtension = rejectingNamespace("BrowserExtension", ["getContent", "getTabs"]);
@@ -153,9 +151,10 @@ export const raycastApi = {
   launchCommand: system.launchCommand,
   updateCommandMetadata: system.updateCommandMetadata,
 
+  OAuth,
+
   // Unimplemented namespaces
   AI,
-  OAuth,
   BrowserExtension,
   WindowManagement,
 

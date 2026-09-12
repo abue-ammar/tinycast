@@ -5,9 +5,8 @@ import { useState } from "react";
 import { nav, site } from "../data/site";
 import { cn } from "../lib/cn";
 import { Button } from "./ui/button";
-import { AppleLogo, DiscordLogo, Logo } from "./ui/icon";
+import { AppleLogo, DiscordLogo, GitHubLogo, Logo } from "./ui/icon";
 import { Link } from "./ui/link";
-import { ThemeToggle } from "./ui/theme-toggle";
 
 export function Nav() {
   const [open, setOpen] = useState(false);
@@ -41,7 +40,17 @@ export function Nav() {
             </div>
 
             <div className="hidden items-center gap-2 md:flex">
-              <ThemeToggle />
+              {/* Moved out of the hero, so its pair stays Download and Support. */}
+              <a
+                href={site.repo}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="View source on GitHub"
+                title="View source on GitHub"
+                className="flex size-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg"
+              >
+                <GitHubLogo size={18} />
+              </a>
               <a
                 href={discord}
                 target="_blank"
@@ -114,12 +123,6 @@ export function Nav() {
                   <DiscordLogo size={16} />
                   Join the Discord
                 </a>
-                <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                  <span className="text-body font-medium text-fg-muted">
-                    Appearance
-                  </span>
-                  <ThemeToggle />
-                </div>
                 <Button
                   href="/#install"
                   size="sm"

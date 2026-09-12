@@ -1,19 +1,20 @@
 import AppKit
 import SwiftUI
 
-/// Shows the drop guides over one screen for the length of a drag. The window controller drives it;
-/// nothing else may, since only a live drag has a home placement to point at.
+/// Driven by the window controller: only a live drag has a home placement to point at.
 @MainActor
 final class PaletteDropGuideController {
     private var panel: NSPanel?
     private var host: NSHostingView<PaletteDropGuideView>?
     private var screenFrame: CGRect = .zero
     private var home: CGPoint = .zero
+    private var width: CGFloat = 0
     private var armed = false
 
     /// Reveal the guides, with `home` the default placement's top-left in screen coordinates.
-    func show(home: CGPoint, screenFrame: CGRect, armed: Bool) {
+    func show(home: CGPoint, width: CGFloat, screenFrame: CGRect, armed: Bool) {
         self.home = home
+        self.width = width
         self.screenFrame = screenFrame
         self.armed = armed
         let panel = ensurePanel()
@@ -44,7 +45,7 @@ final class PaletteDropGuideController {
 
     // MARK: - Private
 
-    /// One step under `.floating`, so the guides clear other apps but never the panel being dragged.
+    /// One step under `.floating`, so guides clear other apps but not the dragged panel.
     private static let level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue - 1)
 
     private func ensurePanel() -> NSPanel {
@@ -67,7 +68,7 @@ final class PaletteDropGuideController {
     private var guides: PaletteDropGuideView {
         PaletteDropGuideView(
             topLeft: CGPoint(x: home.x - screenFrame.minX, y: screenFrame.maxY - home.y),
-            width: Theme.Size.panelWidth,
+            width: width,
             armed: armed)
     }
 }

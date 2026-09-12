@@ -1,12 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Clicking away from a text field leaves it focused: a SwiftUI text field on macOS holds first
-/// responder until another focusable view claims it, and blank form space claims nothing. So the
-/// window is watched for clicks that land outside the open field editor, and focus is dropped there.
-///
-/// A local event monitor rather than a gesture: a gesture over the form would either swallow the
-/// click or fire alongside the one that is focusing a *different* field, and take its focus away.
+/// A field holds first responder until another claims it, and blank form space claims nothing.
 private struct FocusReleaseOnOutsideClick: ViewModifier {
     @State private var monitor: Any?
     // A box, not `@State` on the window: resolving it must not invalidate the view mid-layout.
@@ -17,6 +12,7 @@ private struct FocusReleaseOnOutsideClick: ViewModifier {
             .background(HostWindowReader { host.window = $0 })
             .onAppear {
                 guard monitor == nil else { return }
+                // A monitor, not a gesture: a gesture would swallow the click or steal focus.
                 monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
                     release(on: event)
                     return event
@@ -35,7 +31,7 @@ private struct FocusReleaseOnOutsideClick: ViewModifier {
             let editor = window.firstResponder as? NSTextView, editor.isFieldEditor
         else { return }
         let hit = window.contentView?.hitTest(event.locationInWindow)
-        // A click on the field being edited, or on another text control, is that control's business.
+        // A click on the edited field, or another text control, is that control's business.
         guard let hit, !hit.isDescendant(of: editor), !(hit is NSTextView) else { return }
         window.makeFirstResponder(nil)
     }

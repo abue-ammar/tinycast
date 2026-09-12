@@ -9,6 +9,8 @@ verifying a change is [testing.md](testing.md).
 - Xcode 26 — it provides the SwiftUI macro plugin and the SDK.
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen), and for linting:
   `brew install swiftlint`.
+- Node, for the generators and for the two stub servers `run-tests.sh` drives. It is the only
+  scripting runtime here — building the app still needs none of it.
 
 ## First-time setup
 
@@ -39,14 +41,23 @@ Xcode, prefix with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (t
 project settings in `project.yml`, run `xcodegen generate` and commit the result. There is no
 `Package.swift`, and `Bundle.module` must never be used.
 
+The app target builds and embeds `ClipboardTextHelper` under `Contents/Helpers`, signing it on copy.
+Build the app scheme to include it; copying only the main executable omits OCR support. The helper's
+executable name stays fixed even when release builds override the app's product name for a channel.
+
 ### The dev channel
 
 Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Every
 persisted thing is keyed by bundle id — `~/Library/Preferences/<id>.plist` (settings and hotkey
-bindings), `~/Library/Caches/<id>/` (clipboard history, calculator history, exchange rates, frequent
-emoji), `~/Library/Application Support/<id>/` (the onboarding marker, Notes and snippets), the
-`SMAppService` login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can
-neither read nor clobber an installed app's state, and both run side by side.
+bindings), `~/Library/Application Support/<id>/` (the onboarding marker, Notes, snippets, quicklinks,
+clipboard history, calculator history, launch ranking and frequent emoji),
+`~/Library/Caches/<id>/` (exchange rates, the update check, staged downloads), the `SMAppService`
+login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can neither read
+nor clobber an installed app's state, and both run side by side.
+
+**What earns a place in Caches is refetchable, and nothing else.** Anything the user would notice the
+loss of goes in Application Support: `~/Library/Caches` is excluded from Time Machine and the system
+reclaims it under disk pressure without saying so.
 
 Consequences worth knowing:
 
@@ -100,9 +111,13 @@ It reads the source lists from `run-tests.sh` itself, so they cannot drift from 
 compiles. `Scripts/sync-lsp.sh` runs it too. Three things it has to get right, all of which fail
 silently otherwise: every path is absolute, because `sourcekit-lsp` resolves the command itself and does
 not apply `directory` to relative arguments; the command carries an explicit `-sdk`; and each entry
-claims **only its own harness** in `files`. The command still lists every shipped source it compiles, so
-symbols resolve inside the harness — but claiming those sources too would hand them this three-file
-command instead of the app's, and `.compile` is last-wins.
+claims **only files under `Tests/`** — its harness plus any helper compiled beside it. The command
+still lists every shipped source it compiles, so symbols resolve inside the harness, but claiming a
+shipped source too would hand it this three-file command instead of the app's, and `.compile` is
+last-wins.
+
+A benchmark that stays out of the suite still needs flags, so `run-tests.sh` registers it as
+`run index <name> <source...>`: `--index` emits its compile command and the runner never queues it.
 
 Re-run it after adding a harness, then **Swift: Restart LSP Server** from the Command Palette — an
 already-running server does not re-read `.compile`.

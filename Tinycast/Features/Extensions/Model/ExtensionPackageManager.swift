@@ -33,7 +33,7 @@ enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Not the frozen-lockfile variants: a committed lockfile is often stale, and failing helps nobody.
+    /// Not the frozen-lockfile variants: a committed lockfile is often stale.
     var installArguments: [String] {
         switch self {
         case .automatic: return []
@@ -55,9 +55,7 @@ enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Where to look, for a GUI app inheriting none of a shell's PATH: Homebrew, Volta, asdf, fnm, nvm,
-    /// mise. A version manager too obscure or too machine-specific to hardcode (Nix among them) is what
-    /// `extensionCustomSearchPaths` is for.
+    /// A GUI app inherits no shell PATH; anything rarer is `extensionCustomSearchPaths`.
     static let searchPaths: [String] = [
         "/opt/homebrew/bin",
         "/usr/local/bin",
@@ -73,8 +71,7 @@ enum ExtensionPackageManager: String, CaseIterable, Identifiable, Sendable {
         NSHomeDirectory() + "/.npm-global/bin"
     ]
 
-    /// The executable, or nil when it isn't installed. `automatic` resolves to the first one found.
-    /// `additionalSearchPaths` is checked first, so a user-supplied folder can win over a built-in one.
+    /// `additionalSearchPaths` is checked first, so a user folder can win over a built-in.
     func resolve(
         in fileManager: FileManager = .default, additionalSearchPaths: [String] = []
     ) -> (manager: ExtensionPackageManager, url: URL)? {

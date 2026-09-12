@@ -161,14 +161,14 @@ private struct NoteSwitcherRow: View {
                     .onSubmit(onCommitRename)
                     .onExitCommand(perform: onCancelRename)
             } else {
-                Text(summary.title)
+                Text(summary.displayTitle)
                     .font(Theme.Typography.rowTitle)
                     .lineLimit(1)
             }
             Spacer(minLength: Theme.Spacing.md)
             if !editing, selected || hovered {
-                rowButton(title: "Rename \(summary.title)", symbol: "pencil", action: onBeginRename)
-                rowButton(title: "Move \(summary.title) to Trash", symbol: "trash", action: onTrash)
+                rowButton(title: "Rename \(summary.displayTitle)", symbol: "pencil", action: onBeginRename)
+                rowButton(title: "Move \(summary.displayTitle) to Trash", symbol: "trash", action: onTrash)
                     .foregroundStyle(Theme.Colors.destructive)
             }
         }
@@ -185,17 +185,17 @@ private struct NoteSwitcherRow: View {
         }
         .onHover { hovered = $0 }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(summary.title)
+        .accessibilityLabel(summary.displayTitle)
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityAction {
             guard !editing else { return }
             onActivate()
         }
-        .accessibilityAction(named: "Rename \(summary.title)") {
+        .accessibilityAction(named: "Rename \(summary.displayTitle)") {
             guard !editing else { return }
             onBeginRename()
         }
-        .accessibilityAction(named: "Move \(summary.title) to Trash") {
+        .accessibilityAction(named: "Move \(summary.displayTitle) to Trash") {
             guard !editing else { return }
             onTrash()
         }

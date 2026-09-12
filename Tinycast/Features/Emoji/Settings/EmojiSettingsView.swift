@@ -6,28 +6,20 @@ struct EmojiSettingsView: View {
     var body: some View {
         @Bindable var settings = settings
         return Form {
-            Section {
-                SettingsRow(title: "Emoji & Symbols") {
-                    ShortcutRecorder(action: .toggleEmoji)
-                }
-            } header: {
-                Text("Global Shortcuts")
-            } footer: {
-                Text("Summon the emoji and symbols palette.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            FeatureCommandsSection(owner: .emoji, anchor: .emojiCommands)
 
             Section {
                 // A hand per tone, quicker to scan than a dropdown of tone names.
-                Picker("Emoji Skin Tone", selection: $settings.emojiSkinTone) {
+                Picker(selection: $settings.emojiSkinTone) {
                     ForEach(EmojiSkinTone.allCases) { tone in
                         Text(tone.sample).tag(tone)
                     }
+                } label: {
+                    SettingsRowTitle(.emojiAppearance, "Emoji Skin Tone")
                 }
                 .pickerStyle(.segmented)
             } header: {
-                Text("Appearance")
+                SettingsSectionHeader(.emojiAppearance)
             } footer: {
                 Text("Applied when an emoji supports skin tones; pastes use it too.")
                     .font(.caption)
@@ -35,5 +27,6 @@ struct EmojiSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.emoji)
     }
 }

@@ -22,8 +22,7 @@ enum DialogTone: Sendable {
 struct DialogRequest {
     let title: String
     var message: String?
-    /// The subject's own glyph, resolved through `SymbolImage` so a bundled asset name works too.
-    /// Nil where the title already names the subject and a glyph would only repeat it.
+    /// Nil where the title already names the subject and a glyph would repeat it.
     let symbol: String?
     var tone: DialogTone = .neutral
     var actions: [DialogAction]
@@ -31,6 +30,18 @@ struct DialogRequest {
     var defaultIndex: Int
     /// Resolved when the dialog goes without a choice: Esc, or losing key status.
     var cancelIndex: Int
-    /// Set only by the Set Volume prompt; the slider binds to it and the caller reads the result.
-    var volume: VolumeState?
+    /// The caller reads the result back out of the state object it passed in.
+    var accessory: DialogAccessory?
+}
+
+/// A dialog carries at most one control, so the cases are exclusive by construction.
+enum DialogAccessory {
+    case volume(VolumeState)
+    case eventDraft(EventDraftState)
+
+    /// Whether ←/→/↑/↓ belong to the control rather than to whatever has focus inside it.
+    var claimsArrowKeys: Bool {
+        if case .volume = self { return true }
+        return false
+    }
 }

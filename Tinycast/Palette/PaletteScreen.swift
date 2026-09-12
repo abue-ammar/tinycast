@@ -6,16 +6,69 @@ enum PaletteAxis {
     case horizontal
 }
 
+/// A menu supplied by a palette screen, including its rendering and row activation.
+@MainActor struct PaletteMenuContent {
+    let rowCount: Int
+    let isLoading: (Int) -> Bool
+    let clipsToMenuCorners: Bool
+    /// Built on demand: `moveMenu` resolves the open menu on every arrow key.
+    let view: () -> AnyView
+    /// Bounds-checked by the caller against `rowCount`, so a row index is always one this menu has.
+    let activate: (Int) -> Void
+
+    init(
+        rowCount: Int, view: @escaping () -> AnyView, activate: @escaping (Int) -> Void,
+        isLoading: @escaping (Int) -> Bool = { _ in false }, clipsToMenuCorners: Bool = false
+    ) {
+        self.rowCount = rowCount
+        self.view = view
+        self.activate = activate
+        self.isLoading = isLoading
+        self.clipsToMenuCorners = clipsToMenuCorners
+    }
+
+    init(
+        popover: PopoverMenuContent, selection: Binding<Int>, width: CGFloat? = nil,
+        onActivate: @escaping (Int) -> Void
+    ) {
+        self.init(
+            rowCount: popover.items.count,
+            view: {
+                AnyView(
+                    PopoverMenu(
+                        header: popover.header, items: popover.items, selection: selection,
+                        width: width, onActivate: onActivate))
+            },
+            activate: { popover.items[$0].action() },
+            isLoading: { popover.items[$0].isLoading }, clipsToMenuCorners: true)
+    }
+}
+
 /// One palette mode. `rows` is its single source of visible order, so selection indexes it.
 @MainActor protocol PaletteScreen {
     associatedtype Row: Identifiable
 
     var rows: [Row] { get }
     var primaryActionTitle: String { get }
+    /// True when the screen owns the keyboard, so the header's field is hidden and unfocused.
+    var hidesSearchField: Bool { get }
+    /// True when the footer and ⌘K still act with no rows — a form's action belongs to the screen.
+    var actsWithoutRows: Bool { get }
 
     /// False when the selection can't be acted on, which hides the footer pill and swallows ⌘K.
     func hasPrimaryAction(at selection: Int) -> Bool
+    /// False when ⌘K would open on nothing, which hides the Actions half of the footer group.
+    func hasActions(at selection: Int) -> Bool
+    /// True while the selected row edits with ↑/↓ itself, which leaves those keys to it.
+    func ownsVerticalKeys(at selection: Int) -> Bool
+    /// Where ⇥ goes inside the screen, or nil to leave the key to the palette's own ring.
+    func tabTarget(from selection: Int, backwards: Bool) -> Int?
+    /// The ⌘K rows as the palette's own menu; nil when there are none.
     func actions(at selection: Int) -> PopoverMenuContent?
+    /// Defaults to wrapping `actions(at:)`, so a screen implements one or the other.
+    func menuContent(
+        at selection: Int, menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent?
     func activate(at selection: Int)
     /// ⌘↵. False when the selection has no secondary action, leaving the key unhandled.
     func secondary(at selection: Int) -> Bool
@@ -23,7 +76,7 @@ enum PaletteAxis {
     func pasteKeepingWindowOpen(at selection: Int) -> Bool
     /// The selection an arrow key lands on, or nil to leave the key to the palette's own default.
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int?
-    /// Controls the row wants beside the search field. `focus` is lent: the palette owns it either way.
+    /// Controls the row wants beside the search field; `focus` is lent, never owned.
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
     )
@@ -33,6 +86,19 @@ enum PaletteAxis {
 
 extension PaletteScreen {
     func hasPrimaryAction(at selection: Int) -> Bool { true }
+    func hasActions(at selection: Int) -> Bool { true }
+    var hidesSearchField: Bool { false }
+    var actsWithoutRows: Bool { false }
+    func ownsVerticalKeys(at selection: Int) -> Bool { false }
+    func tabTarget(from selection: Int, backwards: Bool) -> Int? { nil }
+    func actions(at selection: Int) -> PopoverMenuContent? { nil }
+    func menuContent(
+        at selection: Int, menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent? {
+        guard let content = actions(at: selection) else { return nil }
+        return PaletteMenuContent(
+            popover: content, selection: menuSelection, onActivate: onActivate)
+    }
     func pasteKeepingWindowOpen(at selection: Int) -> Bool { false }
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? { nil }
     func headerAccessory(
@@ -44,19 +110,45 @@ extension PaletteScreen {
 
 /// Controls beside the search field, in terms the palette can act on without knowing what they are.
 struct PaletteHeaderAccessory {
+    /// Where the strip sits, which is the whole of what it does to the search field beside it.
+    enum Placement {
+        /// Right after the typed text, which the field therefore shrinks to fit — root search.
+        case afterQuery
+        /// Beside a search field that stays a search field, prompt and full width intact.
+        case besideSearchField
+    }
+
     /// How much room the strip needs, so the search field can give it up.
     let width: CGFloat
     /// Focusable fields in visual order; Tab walks these before it leaves the header.
     let fieldNames: [String]
     /// The first field that still has to be filled before ↵ can act, if any.
     let firstIncompleteField: String?
+    /// A field whose value is chosen rather than typed hands back its menu; nil means free text.
+    let optionsMenu: (String) -> PopoverMenuContent?
+    let placement: Placement
     let view: AnyView
 
-    /// Tab order: the next field, or nil once focus belongs back in the search field.
-    func fieldAfter(_ current: String?) -> String? {
+    init(
+        width: CGFloat, fieldNames: [String], firstIncompleteField: String?,
+        optionsMenu: @escaping (String) -> PopoverMenuContent? = { _ in nil },
+        placement: Placement = .afterQuery,
+        view: AnyView
+    ) {
+        self.width = width
+        self.fieldNames = fieldNames
+        self.firstIncompleteField = firstIncompleteField
+        self.optionsMenu = optionsMenu
+        self.placement = placement
+        self.view = view
+    }
+
+    /// Adjacent Tab field, or nil once focus belongs back in the search field.
+    func field(after current: String?, backwards: Bool) -> String? {
         guard let current, let index = fieldNames.firstIndex(of: current) else {
-            return fieldNames.first
+            return backwards ? fieldNames.last : fieldNames.first
         }
-        return fieldNames.indices.contains(index + 1) ? fieldNames[index + 1] : nil
+        let next = index + (backwards ? -1 : 1)
+        return fieldNames.indices.contains(next) ? fieldNames[next] : nil
     }
 }

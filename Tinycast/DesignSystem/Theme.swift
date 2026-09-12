@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Central design tokens. Colours resolve per appearance; every dark branch is the literal the
-/// forced-dark build shipped, so Dark is the baseline and may never be re-derived.
+/// Central design tokens; every dark colour is the literal the forced-dark build shipped.
 enum Theme {
     enum Spacing {
         static let xxs: CGFloat = 2
@@ -15,6 +14,10 @@ enum Theme {
         static let xxxl: CGFloat = 28
         /// Gap under a category header, shared by every palette list's `SectionHeader`.
         static let sectionHeaderBottom: CGFloat = 4
+        /// Clearance under the last message, so its actions row belongs to it, not to the footer.
+        static let chatTranscriptBottom: CGFloat = 28
+        /// A stream grows the transcript as the reader descends, so an exact-bottom test runs away.
+        static let chatFollowTailSlack: CGFloat = 44
         /// Space above every header but the first, reading as the previous section's close.
         static let sectionSpacing: CGFloat = 12
     }
@@ -25,14 +28,25 @@ enum Theme {
         static let menu: CGFloat = 6
         /// Hover highlight behind a popover menu row.
         static let menuRow: CGFloat = 10
+        /// A header pop-up button; the footer's action pills stay capsules.
+        static let barControl: CGFloat = 8
         static let menuPanel: CGFloat = 16
         /// The dialog and HUD surface, so a dialog reads as a sibling of the palette.
         static let dialog: CGFloat = 20
         static let thumbnail: CGFloat = 6
+        /// A shape small enough that `thumbnail` would round it into a circle.
+        static let glyph: CGFloat = 2
+        /// A pill holding a square thumbnail; a full capsule fights the thumbnail's own corners.
+        static let attachmentChip: CGFloat = 8
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 4
+    }
+
+    enum Blur {
+        /// Unreadable at full size without smearing the row; the scramble is what hides it.
+        static let redaction: CGFloat = 3
     }
 
     enum Size {
@@ -66,7 +80,7 @@ enum Theme {
         static let compactHeight: CGFloat = headerHeight + headerPadding * 2
         /// How near the default placement a drag has to land before it snaps home.
         static let paletteSnapDistance: CGFloat = 24
-        /// A restored position needs this much of the compact bar on a display to still be grabbable.
+        /// A restored position needs this much bar on a display to still be grabbable.
         static let paletteMinimumVisible: CGFloat = 44
         /// Dash and gap of the drop guides, equal so the line reads evenly.
         static let dropGuideDash: CGFloat = 4
@@ -97,22 +111,81 @@ enum Theme {
         static let menuButton: CGFloat = 36
         static let noteGlyph: CGFloat = 16
         static let noteEmptyGlyph: CGFloat = 28
+        /// Hit target for a chat message footer glyph; its caption symbol floats inside it.
+        static let chatMessageAction: CGFloat = 16
+        /// A one-pixel markdown rule and table header separator.
+        static let hairline: CGFloat = 1
+        static let markdownListMarker: CGFloat = 20
+        static let markdownQuoteBar: CGFloat = 2
         /// The uninstall list's leading checkbox / lock glyph.
         static let checkbox: CGFloat = 16
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
-        /// The clipboard type filter's menu; `menuWidth` is far too wide for five short rows.
+        /// The clipboard type filter's menu; `menuWidth` is far too wide for six short rows.
         static let clipboardFilterMenuWidth: CGFloat = 200
+        /// Stated, not padded: the cap below counts rows, so a capped menu would land mid-row.
+        static let menuRowHeight: CGFloat = menuIcon + Spacing.md * 2
+        static let menuRowSpacing: CGFloat = 1
+        /// Stated, not measured: `viewportHeight` counts headers, so a capped menu lands on a row.
+        static let menuSectionHeader: CGFloat = 16
+        /// Six rows and half of the seventh, so a capped menu reads as scrollable, not clipped.
+        static let menuVisibleRows: CGFloat = 6.5
+        /// Rounded: a half-row of an odd pitch lands the glass edge on a half pixel.
+        static var menuRowsMaxHeight: CGFloat {
+            (menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()
+        }
         /// A menu row's glyph slot, sized so symbol and app-icon rows read the same.
         static let menuIcon: CGFloat = 20
-        /// Opening size and the resize floor; tall enough that the sidebar's rows never scroll.
-        static let settingsWindow = CGSize(width: 860, height: 700)
+        /// A brand mark inside the menu icon slot, sized to the optical weight of a symbol.
+        static let menuBrandIcon: CGFloat = 14
+        /// The same mark in a header bar button, matched to the callout symbol beside it.
+        static let barBrandIcon: CGFloat = 12
+        /// A sent image in the transcript; a staged one is a small preview in a composer pill.
+        static let chatImageThumb: CGFloat = 96
+        static let chatAttachmentGlyph: CGFloat = 16
+        /// A staged file's preview in its pill, kept under the pill's height so it reads inside it.
+        static let chatAttachmentThumb: CGFloat = 18
+        /// The pill's remove button; small, but the whole reason a mispaste is recoverable.
+        static let chatAttachmentRemove: CGFloat = 14
+        /// Tighter than the gap inside the pill, so the thumbnail reads as filling it.
+        static let chatAttachmentInset: CGFloat = 3
+        /// The clipboard preview's player; `VideoPlayer` expands unbounded without a height.
+        static let clipboardMediaHeight: CGFloat = 260
+        /// The preview pane is ~460pt wide, so 900px stays crisp at 2× without over-decoding.
+        static let clipboardPreviewPixel: CGFloat = 900
+        /// File search's preview stage: video's own shape, and enough height to read a page in.
+        static let previewAspectRatio: CGFloat = 16 / 9
+        /// Opening size and resize floor: the Quick Actions row's width, the sidebar's full height.
+        static let settingsWindow = CGSize(width: 900, height: 700)
         /// Settings sidebar: a fixed column, wide enough for "Window Management".
         static let settingsSidebar: CGFloat = 215
         /// The narrowest the pane column may get before a grouped row's control starts colliding.
         static let settingsDetailMinimum: CGFloat = 420
         static let settingsRowIcon: CGFloat = 20
+        static let paletteTransparencySlider: CGFloat = 190
+        /// One "Aa" segment of the Interface Size control; three sit in a grouped row's trailing slot.
+        static let interfaceSizeSegment: CGFloat = 40
+        /// The sidebar's search field; matches a grouped `Form` row's control height.
+        static let settingsSearchField: CGFloat = 28
+        /// The layout editor. Height is stated so selecting an entry cannot resize the sheet.
+        static let layoutEditorSheet = CGSize(width: 900, height: 660)
+        /// The inspector column; the preview takes the rest, keeping the split two-to-one.
+        static let layoutInspectorColumn: CGFloat = 300
+        /// The entry dropdown's list, wider than its button so a long app name still reads.
+        static let layoutEntryPopover: CGFloat = 260
+        /// An app icon inside a preview rect, small enough a narrow window still shows one.
+        static let layoutPreviewIcon: CGFloat = 22
+        /// A numbered display tab under the preview.
+        static let layoutDisplayTab: CGFloat = 24
+        /// Every inspector control — field, dropdown, add button — sits on this one height.
+        static let layoutControlHeight: CGFloat = 28
+        /// The unit slot in a numeric field, stated so "%" and "pt" put their digits on one x.
+        static let layoutFieldUnit: CGFloat = 16
+        static let layoutPositionGlyph = CGSize(width: 26, height: 19)
+        static let layoutPositionStroke: CGFloat = 1.5
+        /// A position cell's clickable row; the glyph floats inside it, so the whole cell hits.
+        static let layoutPositionCell: CGFloat = 34
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
         /// Label column of an extension's `Form`, so every field's input starts on one line.
@@ -128,6 +201,20 @@ enum Theme {
         static let dialogWidth: CGFloat = 420
         /// A dialog's leading glyph, larger than a row icon: it carries the subject.
         static let dialogIcon: CGFloat = 32
+        /// 16:9 at the dialog's own width, so the two surfaces read as siblings.
+        static let cameraPreview = CGSize(width: 420, height: 236)
+        /// 16:9 again, wider: the standalone camera is the surface, not a confirmation on one.
+        static let cameraStage = CGSize(width: 560, height: 315)
+        /// Wider than a dialog: a Quick Action's result is prose to read, not a sentence to answer.
+        static let quickActionPanel: CGFloat = 520
+        /// Matched to the title's cap height; a row-sized glyph beside it reads as an error.
+        static let quickActionHeaderIcon: CGFloat = 14
+        /// The dissolve ramp below each bar's clear zone, measured against text behind the title.
+        static let quickActionScrollFade: CGFloat = 40
+        /// Past this the result scrolls, so a long summary cannot grow the panel off the screen.
+        static let quickActionPanelBody: CGFloat = 320
+        /// Keeps a two-word grammar fix from collapsing the panel to a slot.
+        static let quickActionPanelMinBody: CGFloat = 44
         /// Transient volume HUD shown after any volume or mute command.
         static let hudWidth: CGFloat = 200
         static let hudHeight: CGFloat = 100
@@ -147,6 +234,14 @@ enum Theme {
         static let exit: TimeInterval = 0.12
         /// Fade-in/out for a hover `Tooltip`.
         static let tooltip: TimeInterval = 0.15
+        /// A control lighting up under the pointer; short enough to feel like a response.
+        static let hover: TimeInterval = 0.12
+        static let copyFeedback: TimeInterval = 1.2
+        static let chatFooter: TimeInterval = 0.12
+        /// A Settings search result scrolling its section into view, then the pulse that marks it.
+        static let settingsReveal: TimeInterval = 0.28
+        static let settingsFlash: TimeInterval = 2.0
+        static let settingsFlashOut: TimeInterval = 0.6
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
@@ -161,13 +256,23 @@ enum Theme {
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
         static let sectionHeader = Font.subheadline.weight(.medium)
+        /// A borderless panel's own title, which names the surface rather than a section inside it.
+        static let panelTitle = Font.headline
         /// The big value line on the calculator answer card (both source and target sides).
         static let calcResult = Font.title
         static let keyCap = Font.caption
         /// Pair with the matching `Size` for `KeyCapChip.Scale`.
         static let compactKeyCap = Font.caption2
         static let heroKeyCap = Font.body
+        static let markdownHeading1 = Font.title2.weight(.semibold)
+        static let markdownHeading2 = Font.title3.weight(.semibold)
+        static let markdownHeading3 = Font.headline
+        static let code = Font.system(.callout, design: .monospaced)
+        static let inlineCode = Font.body.monospaced()
         static let bar = Font.callout.weight(.medium)
+        /// A staged chat attachment's name beside the search text; the NSFont measures the chip.
+        static let chip = Font.callout
+        @MainActor static let chipNSFont = NSFont.preferredFont(forTextStyle: .callout)
         /// A dropdown control's trailing chevron, deliberately smaller than the label it follows.
         static let disclosure = Font.caption.weight(.semibold)
         static let menuRow = Font.body
@@ -177,8 +282,7 @@ enum Theme {
     }
 
     enum Colors {
-        /// Resolves against the window's `effectiveAppearance`, which `NSHostingView` republishes as
-        /// SwiftUI's `colorScheme`, so a token repaints without anything observing the setting.
+        /// Resolves against the window's `effectiveAppearance`, so a token repaints on its own.
         static func adaptive(dark: NSColor, light: NSColor) -> Color {
             Color(nsColor: NSColor(name: nil) { $0.isDark ? dark : light })
         }
@@ -190,6 +294,31 @@ enum Theme {
 
         /// The ramp's inverse: the scrim darkens the dark surface and lightens the light one.
         static let panelScrim = adaptive(dark: .srgbInk(0, alpha: 0.40), light: .srgbInk(1, alpha: 0.55))
+
+        static func panelScrim(transparency: Int) -> Color {
+            guard transparency != 0 else { return panelScrim }
+            let amount = Double(max(-100, min(100, transparency))) / 100
+            func alpha(_ baseline: Double) -> Double {
+                amount > 0 ? baseline * (1 - amount) : baseline - (1 - baseline) * amount
+            }
+            return adaptive(
+                dark: .srgbInk(0, alpha: alpha(0.40)), light: .srgbInk(1, alpha: alpha(0.55)))
+        }
+
+        static func panelEdgeHighlight(transparency: Int) -> Color {
+            let amount = Double(max(-100, min(100, transparency))) / 100
+            let dark = amount > 0 ? 0.58 - amount * 0.20 : -amount * 0.04
+            let light = amount > 0 ? amount * 0.10 : -amount * 0.02
+            return adaptive(dark: .srgbInk(1, alpha: dark), light: .srgbInk(1, alpha: light))
+        }
+
+        static func panelEdgeGradient(transparency: Int) -> LinearGradient {
+            let highlight = panelEdgeHighlight(transparency: transparency)
+            return LinearGradient(
+                colors: [highlight, highlight.opacity(0.35), highlight.opacity(0.65)],
+                startPoint: .top, endPoint: .bottom)
+        }
+
         /// Selection fill, shared by every list so they look identical.
         static let selection = ramp(dark: 0.10, light: 0.09)
         /// Mouse hover: a fainter layer, visually distinct from selection.
@@ -211,8 +340,22 @@ enum Theme {
         /// The Settings card: a faint surface whose border doubles as the row divider.
         static let cardFill = ramp(dark: 0.05, light: 0.04)
         static let cardStroke = ramp(dark: 0.10, light: 0.10)
-        /// White in both: the frost brightens glass, and light glass needs more of it to read at all.
+        /// White in both: the frost brightens glass, and light glass needs more to read at all.
+        /// A window on the preview's plate. White in both, since the plate is always dark.
+        static let layoutPreviewWindow = adaptive(
+            dark: .srgbInk(1, alpha: 0.22), light: .srgbInk(1, alpha: 0.28))
+        /// The selected one, lifted enough to read as chosen before the accent stroke is seen.
+        static let layoutPreviewWindowSelected = adaptive(
+            dark: .srgbInk(1, alpha: 0.38), light: .srgbInk(1, alpha: 0.44))
+        /// The preview's plate: a display is dark in both appearances, so `adaptive`, not `ramp`.
+        static let layoutPreviewGround = adaptive(
+            dark: .srgbInk(0, alpha: 0.55), light: .srgbInk(0, alpha: 0.50))
         static let glassFrost = adaptive(dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(1, alpha: 0.25))
+        /// The pill behind the header of the section a Settings search jumped to.
+        static let searchFlash = Color.accentColor.opacity(0.35)
+        /// The two squares of a checkerboard, behind a colour with alpha to show.
+        static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
+        static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.
@@ -222,6 +365,11 @@ enum Theme {
         static let destructive = Color.red
         /// Success tint: the leading glyph of a `.success` dialog.
         static let success = Color.green
+        /// Progress tint: the message pill's spinner while the work behind it is still running.
+        static let progress = Color.blue
+        /// The command output window's page: a flat surface the log sits directly on.
+        static let terminalSurface = adaptive(
+            dark: .srgbInk(0.07, alpha: 1), light: .srgbInk(0.99, alpha: 1))
     }
 }
 

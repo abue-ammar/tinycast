@@ -5,11 +5,10 @@ import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { cn } from "../../lib/cn";
 
-// The same three choices the app's Appearance setting offers, in the same
-// order, so the site and Settings › General read as one product.
+// Three explicit targets, never a cycling button: landing on Light at night blinds the reader.
 const options = [
-  { value: "system", label: "System", Icon: Monitor },
   { value: "light", label: "Light", Icon: Sun },
+  { value: "system", label: "System", Icon: Monitor },
   { value: "dark", label: "Dark", Icon: Moon },
 ] as const;
 
@@ -28,7 +27,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5",
+        "inline-flex items-center gap-1 rounded-full border border-border p-1",
         className,
       )}
       role="radiogroup"
@@ -46,13 +45,13 @@ export function ThemeToggle({ className }: { className?: string }) {
             title={label}
             onClick={() => setTheme(value)}
             className={cn(
-              "flex size-7 items-center justify-center rounded-md transition-colors",
+              "flex size-8 items-center justify-center rounded-full transition-colors",
               active
-                ? "bg-tint/8 text-fg"
+                ? "bg-tint/10 text-fg"
                 : "text-fg-subtle hover:bg-tint/5 hover:text-fg",
             )}
           >
-            <Icon size={15} strokeWidth={1.9} />
+            <Icon size={16} strokeWidth={1.9} />
           </button>
         );
       })}

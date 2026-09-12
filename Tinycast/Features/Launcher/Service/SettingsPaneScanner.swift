@@ -18,15 +18,18 @@ enum SettingsPaneScanner {
     /// Panes change only on an OS update, and an unreadable listing or date is never cached.
     struct Cache: Sendable {
         fileprivate let modified: Date
+        fileprivate let languages: [String]
         fileprivate let panes: [AppEntry]
     }
 
     /// All Settings panes, sorted by display name.
-    nonisolated static func scan(cache: Cache?) -> ([AppEntry], Cache?) {
+    nonisolated static func scan(languages: [String], cache: Cache?) -> ([AppEntry], Cache?) {
         let fm = FileManager.default
         let modified = try? extensionsDir.resourceValues(forKeys: [.contentModificationDateKey])
             .contentModificationDate
-        if let cache, cache.modified == modified { return (cache.panes, cache) }
+        if let cache, cache.modified == modified, cache.languages == languages {
+            return (cache.panes, cache)
+        }
         guard
             let items = try? fm.contentsOfDirectory(
                 at: extensionsDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
@@ -39,17 +42,23 @@ enum SettingsPaneScanner {
                 isSettingsPane(info: info),
                 let bundleID = info["CFBundleIdentifier"] as? String,
                 !skippedBundleIDs.contains(bundleID),
-                let name = displayName(appexURL: url, info: info, bundleID: bundleID)
+                let base = AppDisplayName.inInfo(info)
             else { continue }
+            let names = BundleLocalization.names(
+                for: url, base: base,
+                developmentRegion: info["CFBundleDevelopmentRegion"] as? String,
+                languages: languages)
             result.append(
                 AppEntry(
-                    id: url.path, name: name, url: url, bundleID: bundleID,
-                    kind: .systemSettings))
+                    id: url.path, name: nameOverrides[bundleID] ?? names.first ?? base, url: url,
+                    bundleID: bundleID, kind: .systemSettings,
+                    // `EntryNaming` drops whatever repeats the name, so the whole list can go in.
+                    alternateNames: names))
         }
         let panes = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        return (panes, modified.map { Cache(modified: $0, panes: panes) })
+        return (panes, modified.map { Cache(modified: $0, languages: languages, panes: panes) })
     }
 
     private static func isSettingsPane(info: [String: Any]) -> Bool {
@@ -57,36 +66,6 @@ enum SettingsPaneScanner {
         if ex as? String == settingsExtensionPoint { return true }
         let ns = (info["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"]
         return ns as? String == settingsExtensionPoint
-    }
-
-    /// Overrides, then loctable, then Info.plist; nil skips the pane entirely.
-    private static func displayName(
-        appexURL: URL, info: [String: Any], bundleID: String
-    ) -> String? {
-        if let override = nameOverrides[bundleID] { return override }
-        if let localized = loctableName(appexURL: appexURL) { return localized }
-        return (info["CFBundleDisplayName"] as? String) ?? (info["CFBundleName"] as? String)
-    }
-
-    /// Localized name from `InfoPlist.loctable`, preferred languages first, then English.
-    private static func loctableName(appexURL: URL) -> String? {
-        let url = appexURL.appendingPathComponent("Contents/Resources/InfoPlist.loctable")
-        guard let table = plist(at: url) else { return nil }
-        var codes = Locale.preferredLanguages.flatMap { tag -> [String] in
-            // loctable keys use underscores where language tags use hyphens.
-            let underscored = tag.replacingOccurrences(of: "-", with: "_")
-            let bare = tag.split(separator: "-").first.map(String.init)
-            return ([underscored, bare].compactMap { $0 }).filter { !$0.isEmpty }
-        }
-        codes.append("en")
-        for code in codes {
-            if let entry = table[code] as? [String: Any],
-                let name = entry["CFBundleDisplayName"] as? String
-            {
-                return name
-            }
-        }
-        return nil
     }
 
     private static func plist(at url: URL) -> [String: Any]? {

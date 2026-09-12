@@ -1,13 +1,9 @@
 import SwiftUI
 
-/// The palette mode a running view command draws into.
-///
-/// `ExtensionScreen` decides the row order; this only adapts it to the palette, so the flat
-/// `selection` index still maps 1:1 onto visible rows (see docs/features/palette.md).
+/// `ExtensionScreen` decides the row order; this maps `selection` 1:1 onto visible rows.
 struct ExtensionCommandScreen: PaletteScreen {
     let screen: ExtensionScreen
     let extensions: ExtensionManager
-    let core: AppCore
     let vm: PaletteState
     let openActions: () -> Void
 
@@ -19,23 +15,41 @@ struct ExtensionCommandScreen: PaletteScreen {
         return owner.assetsPath
     }
 
-    /// Selectable rows only: a section header is drawn but never landed on.
-    var rows: [RenderNode] { screen.items }
+    /// Selectable rows only: a section header is drawn but never landed on, and so is a separator.
+    var rows: [ExtensionScreen.Item] { screen.items }
 
-    /// A Grid needs both axes: ↑/↓ move a whole row, ←/→ move one cell. Without this the palette's
-    /// linear step applies, and ↓ walked sideways through the grid one tile at a time.
+    /// A form owns the whole keyboard: its fields are the text, so the search field steps aside.
+    var hidesSearchField: Bool { isForm }
+
+    /// A form's primary action stands even with no field to land on.
+    var actsWithoutRows: Bool { isForm }
+
+    /// A text area edits with ↑/↓ itself, so only ⇥ leaves it.
+    func ownsVerticalKeys(at selection: Int) -> Bool {
+        guard isForm, rows.indices.contains(selection) else { return false }
+        return ExtensionFormField(type: rows[selection].node.type).ownsVerticalKeys
+    }
+
+    /// ⇥ / ⇧⇥ walk the fields, wrapping at either end as Raycast's form does.
+    func tabTarget(from selection: Int, backwards: Bool) -> Int? {
+        guard isForm, !rows.isEmpty else { return nil }
+        return (selection + (backwards ? -1 : 1) + rows.count) % rows.count
+    }
+
+    /// A Grid needs both axes: without this ↓ walks sideways one tile at a time.
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? {
-        guard case .grid(let columns) = screen.kind, columns > 0, !rows.isEmpty else { return nil }
+        guard case .grid(let layout) = screen.kind, !rows.isEmpty else { return nil }
         switch axis {
         case .vertical:
-            let geometry = ExtensionGridGeometry(counts: screen.sectionCounts, columns: columns)
+            let geometry = ExtensionGridGeometry(
+                counts: screen.sectionCounts, columns: layout.columns)
             return delta > 0 ? geometry.down(from: selection) : geometry.up(from: selection)
         case .horizontal:
             return min(max(selection + delta, 0), rows.count - 1)
         }
     }
 
-    /// The panel's first `Action`, exactly as in Raycast.
+    /// The primary action is the panel's first `Action`.
     private func primaryAction(at selection: Int) -> ExtensionAction? {
         ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).first
     }
@@ -46,9 +60,40 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }
 
-    func actions(at selection: Int) -> PopoverMenuContent? {
-        ExtensionActionsMenu.content(
-            screen: screen, selection: selection, assetsPath: assetsPath, core: core)
+    /// A form usually ships one Submit action, and a one-row ⌘K panel is noise beside its pill.
+    func hasActions(at selection: Int) -> Bool {
+        guard isForm else { return true }
+        return ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).count > 1
+    }
+
+    /// A form's pill stands even with no field to land on: the action belongs to the screen.
+    var isForm: Bool {
+        if case .form = screen.kind { return true }
+        return false
+    }
+
+    /// A command's rows carry tinted icons and its panel scrolls; a menu row cannot.
+    func menuContent(
+        at selection: Int, menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent? {
+        let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
+        guard !actions.isEmpty else { return nil }
+        let screen = screen
+        let assetsPath = assetsPath
+        let extensions = extensions
+        return PaletteMenuContent(
+            rowCount: actions.count,
+            view: {
+                AnyView(
+                    ExtensionActionsPanel(
+                        header: ExtensionActionsMenu.header(screen: screen, selection: selection),
+                        items: ExtensionActionsMenu.rows(actions, assetsPath: assetsPath),
+                        selection: menuSelection, onActivate: onActivate))
+            },
+            activate: { index in
+                guard let handler = actions[index].handler else { return }
+                extensions.dispatch(handler: handler)
+            })
     }
 
     func activate(at selection: Int) {
@@ -57,6 +102,47 @@ struct ExtensionCommandScreen: PaletteScreen {
     }
 
     func secondary(at selection: Int) -> Bool { false }
+
+    /// The `searchBarAccessory` dropdown; an empty one states and opens nothing, so it is none.
+    var searchAccessory: ExtensionSearchAccessory? {
+        guard let accessory = ExtensionSearchAccessory(node: screen.searchBarAccessory),
+            !accessory.items.isEmpty
+        else { return nil }
+        return accessory
+    }
+
+    /// The header control for it, as an opaque box the palette only seats and toggles.
+    func searchAccessoryButton(
+        _ accessory: ExtensionSearchAccessory, isOpen: Bool, action: @escaping () -> Void
+    ) -> AnyView {
+        AnyView(
+            ExtensionSearchAccessoryButton(
+                accessory: accessory, value: extensions.accessorySelection(accessory),
+                assetsPath: assetsPath, isOpen: isOpen, action: action))
+    }
+
+    /// Its choices as a palette menu, so the arrows, ↵, Escape and the click-away come free.
+    func searchAccessoryMenu(
+        menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+    ) -> PaletteMenuContent? {
+        guard let accessory = searchAccessory else { return nil }
+        let chosen = extensions.accessorySelection(accessory).map { Set([$0]) } ?? []
+        let assetsPath = assetsPath
+        let extensions = extensions
+        return PaletteMenuContent(
+            rowCount: accessory.items.count,
+            view: {
+                AnyView(
+                    ExtensionPickerList(
+                        items: accessory.items, selection: menuSelection.wrappedValue,
+                        chosen: chosen, assetsPath: assetsPath,
+                        width: ExtensionSearchAccessoryButton.listWidth, onSelect: onActivate,
+                        onHighlight: { menuSelection.wrappedValue = $0 }))
+            },
+            activate: { index in
+                extensions.chooseAccessorySelection(accessory, value: accessory.items[index].value)
+            })
+    }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         AnyView(
@@ -67,7 +153,7 @@ struct ExtensionCommandScreen: PaletteScreen {
                 assetsPath: assetsPath,
                 scroll: scroll,
                 onSelect: { vm.selection = $0 },
-                onActivate: { activate(at: selection) },
+                onActivate: { activate(at: $0) },
                 onActions: { index in
                     vm.selection = index
                     openActions()
@@ -79,8 +165,7 @@ struct ExtensionCommandScreen: PaletteScreen {
             ))
     }
 
-    /// An extension action can declare its own shortcut; a modified keystroke is matched against the
-    /// panel before the palette's own handling. Returns true when one fired.
+    /// Matched before the palette's own handling; true when an action fired.
     func dispatchShortcut(key: KeyEquivalent, modifiers: EventModifiers, at selection: Int) -> Bool {
         let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
         guard

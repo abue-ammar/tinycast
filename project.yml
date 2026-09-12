@@ -16,10 +16,11 @@ settings:
     # Stable self-signed identity so macOS keeps the Accessibility grant across rebuilds.
     # Create it once — see docs/signing.md.
     CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
-    ENABLE_HARDENED_RUNTIME: NO
     SWIFT_STRICT_CONCURRENCY: complete
   configs:
     Release:
+      # Release-only: library validation refuses Debug's `.debug.dylib`, whose team never matches.
+      ENABLE_HARDENED_RUNTIME: YES
       # Strip the shipped binary (dSYM is still generated first) and drop unused code.
       DEPLOYMENT_POSTPROCESSING: YES
       STRIP_INSTALLED_PRODUCT: YES
@@ -32,6 +33,22 @@ targets:
     platform: macOS
     sources:
       - path: Tinycast
+        # The helper's own sources: compiling them in would link Vision and PDFKit into the app,
+        # which is the whole thing running recognition out of process avoids.
+        excludes:
+          - Features/Clipboard/Service/ClipboardTextExtractor.swift
+          - Features/Clipboard/Service/ClipboardTextHelper.swift
+      # The MIT mark's licence asks the notice to travel with the binary, not just the repo.
+      - path: NOTICE.md
+        buildPhase: resources
+    dependencies:
+      - target: ClipboardTextHelper
+        link: false
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app
@@ -49,3 +66,18 @@ targets:
         Debug:
           PRODUCT_NAME: Tinycast Dev
           PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+
+  ClipboardTextHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift
+      - Tinycast/Features/Clipboard/Service/ClipboardTextHelper.swift
+    settings:
+      base:
+        # release.yml passes PRODUCT_NAME on the xcodebuild line, which hits every target: without
+        # these two pinned, a channel build renames the executable `ClipboardTextWorker` looks for
+        # and gives the module a name with a space in it.
+        EXECUTABLE_NAME: ClipboardTextHelper
+        PRODUCT_MODULE_NAME: ClipboardTextHelper
+        SKIP_INSTALL: YES

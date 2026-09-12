@@ -1,20 +1,21 @@
 import Foundation
 
-/// One learned launcher choice for a normalized query prefix.
+/// One learned launcher choice, keyed by the whole query the user submitted, never a prefix of it.
+/// A table written when this field held one row per prefix cannot decode here — that is the reset.
 struct LauncherRankingRecord: Codable, Hashable, Sendable {
     let itemKey: String
-    let query: String
+    let submittedQuery: String
     var count: Int
     var lastUsed: Date
 }
 
-/// Learns which result a query leads to, as bounded on-device frecency data in Caches.
+/// Learns which result a query leads to, as bounded on-device frecency data.
 @MainActor
 @Observable
 final class LauncherRankingStore {
     private static let cap = 1_000
-    /// Below half a tier gap, so a learned boost reorders within a tier but never across.
-    private static let maximumBoost = 4_500
+    /// Bounded, so `SearchRelevance.protectionFloor` stays out of reach however deep a habit runs.
+    nonisolated static let maximumUsage = SearchRelevance.usageCeiling - 1
 
     private let fileURL: URL
     private let now: () -> Date
@@ -23,8 +24,6 @@ final class LauncherRankingStore {
     /// Part of `AppIndex`'s cache key, invalidating a result after a visit or a reset.
     private(set) var revision = 0
 
-    /// `boosts(query:)` builds this from a launcher render; tracked, the write lands mid-body.
-    @ObservationIgnored private var lookup: [String: [String: LauncherRankingRecord]]?
     /// The in-flight persist, awaited by the next one so a burst can't land out of order.
     @ObservationIgnored private var writeTask: Task<Void, Never>?
 
@@ -36,7 +35,7 @@ final class LauncherRankingStore {
             let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data)
         {
             records = decoded.filter {
-                !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0
+                !$0.itemKey.isEmpty && !$0.submittedQuery.isEmpty && $0.count > 0
             }
         } else {
             records = []
@@ -50,23 +49,21 @@ final class LauncherRankingStore {
         await writeTask?.value
     }
 
-    /// Records every prefix, so the preferred result surfaces for shorter input too.
+    /// One row per submitted query; `usage` recalls it under every prefix the user might type.
     func record(itemKey: String, query: String) {
         let query = Self.normalize(query)
-        guard !itemKey.isEmpty, !query.isEmpty else { return }
+        guard !itemKey.isEmpty, !query.isEmpty, query.count <= Self.queryLimit else { return }
 
         let timestamp = now()
-        for prefix in Self.prefixes(of: query) {
-            if let index = records.firstIndex(where: {
-                $0.itemKey == itemKey && $0.query == prefix
-            }) {
-                records[index].count += 1
-                records[index].lastUsed = timestamp
-            } else {
-                records.append(
-                    LauncherRankingRecord(
-                        itemKey: itemKey, query: prefix, count: 1, lastUsed: timestamp))
-            }
+        if let index = records.firstIndex(where: {
+            $0.itemKey == itemKey && $0.submittedQuery == query
+        }) {
+            records[index].count += 1
+            records[index].lastUsed = timestamp
+        } else {
+            records.append(
+                LauncherRankingRecord(
+                    itemKey: itemKey, submittedQuery: query, count: 1, lastUsed: timestamp))
         }
 
         if records.count > Self.cap {
@@ -78,20 +75,35 @@ final class LauncherRankingStore {
         didMutate()
     }
 
-    /// Boosts for one query; the fold and the clock read happen once, not per candidate.
-    func boosts(query: String) -> [String: Int] {
+    /// What the user has taught this query; the fold and the clock read happen once, not per row.
+    func usage(query: String) -> [String: Int] {
         let query = Self.normalize(query)
-        guard !query.isEmpty, let learned = rankingLookup()[query] else { return [:] }
+        guard !query.isEmpty else { return [:] }
+        var totals: [String: (count: Int, lastUsed: Date)] = [:]
+        for record in records where record.submittedQuery.hasPrefix(query) {
+            let running = totals[record.itemKey]
+            totals[record.itemKey] = (
+                (running?.count ?? 0) + record.count,
+                max(running?.lastUsed ?? .distantPast, record.lastUsed)
+            )
+        }
+        guard !totals.isEmpty else { return [:] }
+        let bucket = totals.values.reduce(0) { $0 + $1.count }
         let timestamp = now()
-        return learned.mapValues { boost($0, at: timestamp) }
+        return totals.mapValues {
+            Self.usage(
+                count: $0.count, lastUsed: $0.lastUsed, share: Double($0.count) / Double(bucket),
+                at: timestamp)
+        }
     }
 
-    private func boost(_ record: LauncherRankingRecord, at timestamp: Date) -> Int {
-        let ageInDays = max(0, timestamp.timeIntervalSince(record.lastUsed)) / 86_400
-        // Cap frequency separately, so an old habit cannot stay permanently pinned.
-        let frequency = min(3_000, log2(Double(record.count) + 1) * 600)
-        let recency = 1_500 * exp(-ageInDays / 14)
-        return min(Self.maximumBoost, Int((frequency + recency).rounded()))
+    /// Frequency never flattens, recency decays, and confidence falls as a query's picks spread.
+    nonisolated static func usage(count: Int, lastUsed: Date, share: Double, at timestamp: Date) -> Int {
+        let ageInDays = max(0, timestamp.timeIntervalSince(lastUsed)) / 86_400
+        let frequency = 2_000 * (1 - pow(Double(count) + 1, -0.30))
+        let recency = 700 * exp(-ageInDays / 14)
+        let confidence = 300 * share * min(1, Double(count) / 3)
+        return min(maximumUsage, Int((frequency + recency + confidence).rounded()))
     }
 
     func hasRanking(for itemKey: String) -> Bool {
@@ -111,38 +123,24 @@ final class LauncherRankingStore {
         didMutate()
     }
 
-    /// Locale-independent: a Turkish fold maps "I" to "ı" and orphans every stored key.
-    static func normalize(_ query: String) -> String {
-        query
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+    /// Replaces the table wholesale from a backup; the same filter and cap the initialiser applies.
+    func replace(_ imported: [LauncherRankingRecord]) {
+        records = Array(
+            imported
+                .filter { !$0.itemKey.isEmpty && !$0.submittedQuery.isEmpty && $0.count > 0 }
+                .prefix(Self.cap))
+        didMutate()
     }
 
-    private static func prefixes(of query: String) -> [String] {
-        // Cap pasted input, so one visit cannot evict the whole bounded table.
-        let limit = min(query.count, 64)
-        var result: [String] = []
-        result.reserveCapacity(limit)
-        var end = query.startIndex
-        for _ in 0..<limit {
-            end = query.index(after: end)
-            result.append(String(query[..<end]))
-        }
-        return result
+    /// The launcher's own fold, so a query matches and is learned under one key.
+    nonisolated static func normalize(_ query: String) -> String {
+        FuzzyMatch.normalized(query.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    private func rankingLookup() -> [String: [String: LauncherRankingRecord]] {
-        if let lookup { return lookup }
-        var built: [String: [String: LauncherRankingRecord]] = [:]
-        for record in records {
-            built[record.query, default: [:]][record.itemKey] = record
-        }
-        lookup = built
-        return built
-    }
+    /// Caps pasted input, so one visit cannot evict the bounded table with a novel key.
+    private static let queryLimit = 64
 
     private func didMutate() {
-        lookup = nil
         revision &+= 1
         // Off-main: this lands on ↵, in front of the launch. Chained, so writes stay ordered.
         let snapshot = records
@@ -155,10 +153,11 @@ final class LauncherRankingStore {
         }
     }
 
+    /// Application Support, not Caches: relearning a ranking takes the user weeks of use.
     private static func defaultFileURL() -> URL {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
         let base = FileManager.default
-            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(bundleID, isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appendingPathComponent("launcher-ranking.json")

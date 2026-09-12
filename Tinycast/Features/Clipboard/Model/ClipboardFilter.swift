@@ -5,6 +5,8 @@ enum ClipboardFilter: CaseIterable, Sendable {
     case all
     case text
     case image
+    case file
+    case color
     case link
     case email
 
@@ -13,6 +15,8 @@ enum ClipboardFilter: CaseIterable, Sendable {
         case .all: return "All Types"
         case .text: return "Text Only"
         case .image: return "Images Only"
+        case .file: return "Files Only"
+        case .color: return "Colors Only"
         case .link: return "Links Only"
         case .email: return "Emails Only"
         }
@@ -24,6 +28,8 @@ enum ClipboardFilter: CaseIterable, Sendable {
         case .all: return "list.bullet"
         case .text: return "textformat"
         case .image: return "photo"
+        case .file: return "doc"
+        case .color: return "eyedropper"
         case .link: return "link"
         case .email: return "at"
         }
@@ -35,17 +41,21 @@ enum ClipboardFilter: CaseIterable, Sendable {
         case .all: return "Clipboard history is empty"
         case .text: return "No text in clipboard history"
         case .image: return "No images in clipboard history"
+        case .file: return "No files in clipboard history"
+        case .color: return "No colors in clipboard history"
         case .link: return "No links in clipboard history"
         case .email: return "No email addresses in clipboard history"
         }
     }
 
-    /// The five are exclusive: a copied URL is a link rather than a narrower kind of text.
+    /// The kinds are exclusive: a copied URL is a link rather than a narrower kind of text.
     func matches(_ item: ClipboardItem) -> Bool {
         switch self {
         case .all: return true
         case .image: return item.kind == .image
+        case .file: return item.kind == .file
         case .text: return item.textForm == .plain
+        case .color: return item.textForm == .color
         case .link: return item.textForm == .link
         case .email: return item.textForm == .email
         }
@@ -61,8 +71,15 @@ extension ClipboardItem {
     /// What a text entry holds; `Kind` says how an entry is stored, this says what it is.
     enum TextForm: Sendable {
         case plain
+        case color
         case link
         case email
+    }
+
+    /// The parsed colour a `.color` entry states, or nil for every other entry.
+    var colorValue: ColorValue? {
+        guard kind == .text, let text else { return nil }
+        return ColorValue.parse(text)
     }
 
     /// Derived and never persisted, so reclassifying is a code change rather than a migration.
@@ -86,7 +103,10 @@ extension ClipboardItem {
         // `utf8.count` is O(1); `count` would walk graphemes across a multi-MB copy.
         guard text.utf8.count <= detectionLimit else { return .plain }
         let token = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty, !token.contains(where: \.isWhitespace) else { return .plain }
+        guard !token.isEmpty else { return .plain }
+        // Before the whitespace reject: `rgb(255, 87, 51)` is one value written with spaces.
+        if ColorValue.parse(token) != nil { return .color }
+        guard !token.contains(where: \.isWhitespace) else { return .plain }
         if let form = schemeForm(of: token) { return form }
         if isAddress(token) { return .email }
         return isBareDomain(token) ? .link : .plain
@@ -123,8 +143,7 @@ extension ClipboardItem {
         return commonTopLevelDomains.contains(String(tld))
     }
 
-    /// The last label of a host, or nil unless every label is one — which is what rejects
-    /// an address-shaped token like `@apple.com` before it can read as a bare domain.
+    /// Nil unless every label is one, which rejects `@apple.com` before it reads as a domain.
     private static func topLevelLabel(of host: Substring) -> Substring? {
         let labels = host.split(separator: ".", omittingEmptySubsequences: false)
         guard labels.count >= 2, labels.allSatisfy(isHostLabel), let tld = labels.last,

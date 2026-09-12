@@ -1,6 +1,13 @@
 // Globals JavaScriptCore doesn't ship that extension bundles (and React's scheduler) assume.
 
 import { hostCall, hostRaw, log } from "./host.js";
+import {
+  ReadableStream,
+  TransformStream,
+  WritableStream,
+  bytesOfReadableStream,
+  readableStreamOfBytes,
+} from "./web-streams.js";
 
 const g = globalThis;
 
@@ -136,38 +143,48 @@ class TinycastHeaders {
   }
 }
 
+const EMPTY_BYTES = new Uint8Array(0);
+
 class TinycastResponse {
-  constructor({ status, statusText, headers, url, bodyBase64 }) {
-    this.status = status;
-    this.statusText = statusText || "";
-    this.headers = new TinycastHeaders(headers);
-    this.url = url || "";
-    this.ok = status >= 200 && status < 300;
+  // Spec shape: axios and friends construct a Response at module scope to probe the platform.
+  constructor(body = null, init = {}, url = "") {
+    this.status = init.status ?? 200;
+    this.statusText = init.statusText ?? "";
+    this.headers = new TinycastHeaders(init.headers);
+    this.url = url;
+    this.ok = this.status >= 200 && this.status < 300;
     this.redirected = false;
     this.type = "basic";
-    this._bodyBase64 = bodyBase64 || "";
+    this._stream = body instanceof ReadableStream ? body : null;
+    this._bytes = this._stream ? null : (bodyToBytes(body) ?? EMPTY_BYTES);
+    this._hasBody = body !== null && body !== undefined;
     this.bodyUsed = false;
   }
+  // The bytes are already here, so the "stream" hands them out in reader-sized pieces — enough for
+  // an extension that guards on `response.body` and pipes it, but never progressive.
+  get body() {
+    if (!this._hasBody) return null;
+    if (!this._stream) this._stream = readableStreamOfBytes(this._bytes);
+    return this._stream;
+  }
   clone() {
-    return new TinycastResponse({
-      status: this.status,
-      statusText: this.statusText,
-      headers: this.headers.toJSON(),
-      url: this.url,
-      bodyBase64: this._bodyBase64,
-    });
+    const { status, statusText, headers } = this;
+    return new TinycastResponse(this._bytes ?? this._stream, { status, statusText, headers }, this.url);
   }
   async arrayBuffer() {
     this.bodyUsed = true;
-    return base64ToBytes(this._bodyBase64).buffer;
+    return (await this.bytes()).buffer;
   }
+  // A copy: the body outlives the read, so a caller mutating it must not affect the next reader.
   async bytes() {
     this.bodyUsed = true;
-    return base64ToBytes(this._bodyBase64);
+    if (this._bytes === null) this._bytes = await bytesOfReadableStream(this._stream);
+    return this._bytes.slice();
   }
   async text() {
     this.bodyUsed = true;
-    return utf8Decode(base64ToBytes(this._bodyBase64));
+    if (this._bytes === null) this._bytes = await bytesOfReadableStream(this._stream);
+    return utf8Decode(this._bytes);
   }
   async json() {
     return JSON.parse(await this.text());
@@ -208,7 +225,11 @@ async function tinycastFetch(input, init = {}) {
     },
   ]);
   if (signal?.aborted) throw abortError();
-  return new TinycastResponse(raw);
+  return new TinycastResponse(
+    base64ToBytes(raw.bodyBase64 || ""),
+    { status: raw.status, statusText: raw.statusText, headers: raw.headers },
+    raw.url || "",
+  );
 }
 
 function abortError() {
@@ -224,14 +245,25 @@ function timeoutError() {
   return error;
 }
 
-function encodeBody(body) {
+function bodyToBytes(body) {
   if (body === undefined || body === null) return null;
-  if (typeof body === "string") return bytesToBase64(utf8Encode(body));
-  if (body instanceof Uint8Array) return bytesToBase64(body);
-  if (body instanceof ArrayBuffer) return bytesToBase64(new Uint8Array(body));
-  if (g.Buffer && g.Buffer.isBuffer?.(body)) return bytesToBase64(new Uint8Array(body));
-  if (body instanceof URLSearchParams) return bytesToBase64(utf8Encode(body.toString()));
-  return bytesToBase64(utf8Encode(String(body)));
+  if (typeof body === "string") return utf8Encode(body);
+  if (body instanceof Uint8Array) return body;
+  if (body instanceof ArrayBuffer) return new Uint8Array(body);
+  if (ArrayBuffer.isView(body)) return new Uint8Array(body.buffer, body.byteOffset, body.byteLength);
+  if (body instanceof URLSearchParams) return utf8Encode(body.toString());
+  return utf8Encode(String(body));
+}
+
+function encodeBody(body) {
+  const bytes = bodyToBytes(body);
+  return bytes === null ? null : bytesToBase64(bytes);
+}
+
+if (!g.ReadableStream) {
+  g.ReadableStream = ReadableStream;
+  g.WritableStream = WritableStream;
+  g.TransformStream = TransformStream;
 }
 
 if (!g.fetch) {
@@ -244,12 +276,17 @@ if (!g.fetch) {
 // ─── AbortController ────────────────────────────────────────────────
 
 if (!g.AbortController) {
-  class AbortSignalShim {
+  // node-fetch brand-checks a signal by constructor name and by tag before it will send.
+  class AbortSignal {
+    static name = "AbortSignal";
     constructor() {
       this.aborted = false;
       this.reason = undefined;
       this._listeners = new Set();
       this.onabort = null;
+    }
+    get [Symbol.toStringTag]() {
+      return "AbortSignal";
     }
     addEventListener(type, listener) {
       if (type === "abort") this._listeners.add(listener);
@@ -263,17 +300,17 @@ if (!g.AbortController) {
     // The statics, not just the instance shape: a signal missing them still reads as supported at
     // the type level, so an extension calls `AbortSignal.timeout` and gets "is not a function".
     static abort(reason) {
-      const signal = new AbortSignalShim();
+      const signal = new AbortSignal();
       signal._fire(reason);
       return signal;
     }
     static timeout(ms) {
-      const signal = new AbortSignalShim();
+      const signal = new AbortSignal();
       setTimeout(() => signal._fire(timeoutError()), ms);
       return signal;
     }
     static any(signals) {
-      const merged = new AbortSignalShim();
+      const merged = new AbortSignal();
       for (const source of signals) {
         if (source?.aborted) {
           merged._fire(source.reason);
@@ -298,10 +335,10 @@ if (!g.AbortController) {
       }
     }
   }
-  g.AbortSignal = AbortSignalShim;
+  g.AbortSignal = AbortSignal;
   g.AbortController = class {
     constructor() {
-      this.signal = new AbortSignalShim();
+      this.signal = new AbortSignal();
     }
     abort(reason) {
       this.signal._fire(reason);

@@ -10,8 +10,7 @@ struct SymbolCategory: Identifiable, Hashable, Sendable {
     static let bundled = SymbolCategory(id: "tinycast.bundled", title: "Tinycast")
 }
 
-/// Read from `CoreGlyphs.bundle` at runtime, so the list matches the OS. A system resource, not API:
-/// every read is optional and the curated list stands in if its layout ever changes.
+/// Read from `CoreGlyphs.bundle` at runtime; every read is optional, with a curated fallback.
 struct SymbolCatalog: Sendable {
     let symbols: [String]
     let categories: [SymbolCategory]
@@ -92,7 +91,7 @@ struct SymbolCatalog: Sendable {
         guard let order = plist("symbol_order.plist", as: [String].self), !order.isEmpty else {
             return fallback
         }
-        // Apple reserves ~600 for its own products; labelling an extension with one misuses the mark.
+        // Apple reserves ~600 for its own products; labelling with one misuses the mark.
         let restricted = Set(
             (plist("symbol_restrictions.strings", as: [String: String].self) ?? [:]).keys)
         let categoriesBySymbol = plist("symbol_categories.plist", as: [String: [String]].self) ?? [:]
@@ -155,8 +154,7 @@ struct SymbolCatalog: Sendable {
         return symbol.split(separator: ".").contains { suffixes.contains(String($0)) }
     }
 
-    /// Readable names for the CoreGlyphs category keys; anything absent here is a rendering-mode bucket
-    /// (all / whatsnew / variable / multicolor / draw) and isn't browsable as a subject.
+    /// Anything absent is a rendering-mode bucket, not a browsable subject.
     private nonisolated static let categoryTitles: [String: String] = [
         "communication": "Communication", "weather": "Weather", "maps": "Maps",
         "objectsandtools": "Objects & Tools", "devices": "Devices",

@@ -20,6 +20,43 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Raycast and Tinycast URL Scheme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>raycast</string>
+				<string>tinycast</string>
+				<string>com.raycast</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Exported, but deliberately no CFBundleDocumentTypes: claiming the type would make a
+	     double-clicked .tinycast launch straight into writing over someone's data. The identifier
+	     is fixed rather than per-channel so Dev and stable can read each other's exports. -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.tinycast.backup</string>
+			<key>UTTypeDescription</key>
+			<string>Tinycast Backup</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.archive</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>tinycast</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
@@ -28,6 +65,10 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Tinycast uses automation to perform system actions you explicitly run.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Tinycast shows a camera preview so you can check yourself, and take a photo to the clipboard.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Tinycast reads today's and tomorrow's events so you can join a meeting from the palette.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Tinycast uses Bluetooth access only when you run the Toggle Bluetooth action.</string>
 	<key>NSHumanReadableCopyright</key>

@@ -14,7 +14,7 @@ export function Ethos() {
     >
       {/* Stat strip — the one place numbers get loud. */}
       <Reveal className="mb-10 md:mb-14">
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-tint/5 shadow-key md:grid-cols-4">
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-tint/5 shadow-key">
           {stats.map((stat) => (
             <div
               key={stat.label}

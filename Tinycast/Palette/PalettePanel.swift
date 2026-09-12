@@ -4,12 +4,21 @@ import SwiftUI
 
 /// Borderless floating panel that hosts the SwiftUI command palette.
 final class PalettePanel: NSPanel {
+    enum HeaderFieldBoundary {
+        case leading
+        case trailing
+    }
+
     /// Bare backspace, which the field editor swallows before `onKeyPress` could see it.
     var onBareBackspace: (() -> Bool)?
+    /// Escape, which an `AVPlayerView` in the preview answers before `onKeyPress` could see it.
+    var onEscape: (() -> Bool)?
     /// Command chords the field editor swallows, plus the ones no main menu handles.
     var onCommandShortcut: ((NSEvent) -> Bool)?
     /// The palette's typing context, handed over each time a field takes focus.
     var onFieldEditorFocused: ((NSTextInputContext) -> Void)?
+    /// Inline argument fields use arrows at their text boundaries to continue their focus ring.
+    var onHeaderFieldBoundaryArrow: ((HeaderFieldBoundary) -> Bool)?
     /// Arms hover from `sendEvent`, the one place both event streams pass through.
     weak var paletteState: PaletteState? {
         didSet {
@@ -22,6 +31,23 @@ final class PalettePanel: NSPanel {
 
     /// SwiftUI's text fields all edit through the window's one shared field editor.
     private var fieldEditor: NSTextView? { firstResponder as? NSTextView }
+
+    func selectAllFieldEditorText() {
+        fieldEditor?.selectAll(nil)
+    }
+
+    /// Nil while a selection can still collapse normally, or when the caret is not at an edge.
+    private func headerFieldBoundary(for event: NSEvent) -> HeaderFieldBoundary? {
+        guard event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
+            let editor = fieldEditor, editor.selectedRange().length == 0
+        else { return nil }
+        switch Int(event.keyCode) {
+        case kVK_LeftArrow where editor.selectedRange().location == 0: return .leading
+        case kVK_RightArrow where editor.selectedRange().location == (editor.string as NSString).length:
+            return .trailing
+        default: return nil
+        }
+    }
 
     /// Mirrors the field editor's marked text. docs/features/palette.md#ime-composition
     private var compositionObserver: NotificationToken?
@@ -63,8 +89,10 @@ final class PalettePanel: NSPanel {
         guard event.modifierFlags.intersection([.command, .option, .control, .shift]) == .control
         else { return nil }
         let arrow: (key: KeyEquivalent, code: Int)
-        // Character chords, not key codes: Dvorak transposes the two.
-        switch event.charactersIgnoringModifiers?.lowercased() {
+        // Through the ASCII-capable layout: an IME must not move ⌃N off its physical key.
+        switch ASCIIKeyboardLayout.character(for: event)?.lowercased()
+            ?? event.charactersIgnoringModifiers?.lowercased()
+        {
         case "n": arrow = (.downArrow, kVK_DownArrow)
         case "p": arrow = (.upArrow, kVK_UpArrow)
         case "f": arrow = (.rightArrow, kVK_RightArrow)
@@ -99,9 +127,7 @@ final class PalettePanel: NSPanel {
         .leftMouseDown, .leftMouseUp, .leftMouseDragged
     ]
 
-    /// Two AppKit mechanisms disagree over the field — SwiftUI's clip view claims the arrow for
-    /// the whole window as a cursor rect, the field editor claims the I-beam from its tracking
-    /// area — so the panel settles it from the field's own frame, after `super` has had its say.
+    /// Clip view and field editor both claim a cursor, so the panel settles it after `super`.
     private func applyCursorPolicy(for event: NSEvent) {
         guard Self.cursorEvents.contains(event.type) else { return }
         // Outset: the field editor AppKit installs is a point taller than the field it serves.
@@ -149,9 +175,21 @@ final class PalettePanel: NSPanel {
             return
         }
         if event.type == .keyDown,
+            Int(event.keyCode) == kVK_Escape,
+            event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
+            onEscape?() == true
+        {
+            return
+        }
+        if event.type == .keyDown,
             Int(event.keyCode) == kVK_Delete,
             event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
             onBareBackspace?() == true
+        {
+            return
+        }
+        if event.type == .keyDown, let boundary = headerFieldBoundary(for: event),
+            onHeaderFieldBoundaryArrow?(boundary) == true
         {
             return
         }
@@ -166,7 +204,8 @@ final class PalettePanel: NSPanel {
     }
     init<Content: View>(rootView: Content) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 750, height: 475),
+            contentRect: NSRect(
+                x: 0, y: 0, width: Theme.Size.panelWidth, height: Theme.Size.panelHeight),
             styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false

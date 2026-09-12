@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// An action's own shortcut, matched against the running panel before the palette's bindings see it.
+/// An action's own shortcut, matched before the palette's bindings see it.
 struct ExtensionShortcutKeys: ViewModifier {
     let screen: ExtensionCommandScreen?
     let selection: Int
@@ -9,7 +9,9 @@ struct ExtensionShortcutKeys: ViewModifier {
         content.onKeyPress(phases: .down) { press in
             guard let screen, !press.modifiers.isEmpty else { return .ignored }
             return screen.dispatchShortcut(
-                key: press.key, modifiers: press.modifiers, at: selection) ? .handled : .ignored
+                key: ASCIIKeyboardLayout.keyEquivalent(fallingBackTo: press.key),
+                modifiers: press.modifiers,
+                at: selection) ? .handled : .ignored
         }
     }
 }
@@ -26,6 +28,30 @@ struct ExtensionToastOverlay: ViewModifier {
                     toasts: extensions.toasts,
                     onToastAction: { extensions.runToastAction(token: $0) })
             }
+        }
+    }
+}
+
+struct ExtensionFormKeys: ViewModifier {
+    let field: ExtensionFormField
+    let onActivate: () -> Void
+    let onSubmit: () -> Void
+    @Environment(PaletteState.self) private var palette
+
+    func body(content: Content) -> some View {
+        content.onKeyPress(keys: ExtensionFormKey.enterKeys.union([.space]), phases: [.down, .repeat]) {
+            press in
+            switch ExtensionFormKey.resolve(
+                field: field, key: press.key, modifiers: press.modifiers,
+                repeating: press.phase == .repeat, menuOpen: palette.menuOpen,
+                composing: palette.isComposing)
+            {
+            case .activate: onActivate()
+            case .submit: onSubmit()
+            case .consume: break
+            case .ignored: return .ignored
+            }
+            return .handled
         }
     }
 }

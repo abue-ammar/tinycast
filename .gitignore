@@ -62,3 +62,6 @@ node_modules/
 website/.next/
 website/out/
 website/.source/
+
+# Real Raycast exports carry the author's clipboard history; the harness builds its own fixtures.
+*.rayconfig

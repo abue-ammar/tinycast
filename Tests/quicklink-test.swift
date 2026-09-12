@@ -25,6 +25,7 @@ struct QuicklinkTests {
         archiveRoundTrip()
         archiveMerge()
         archiveAcceptsAHandWrittenFile()
+        raycastImport()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -163,12 +164,20 @@ struct QuicklinkTests {
                 store.quicklink(id: github.id)?.showsInRootSearch == false,
                 "hiding from root search is stored")
 
+            expect(github.isEnabled, "a new quicklink is enabled")
+            try? store.setEnabled(false, id: github.id)
+            expect(store.quicklink(id: github.id)?.isEnabled == false, "disabling is stored")
+            expect(
+                store.quicklink(id: github.id)?.link == "https://github.com/issues",
+                "disabling keeps every other field intact")
+
             guard let copy = try? store.duplicate(id: github.id) else {
                 return fail("duplicating a quicklink succeeds")
             }
             expect(copy.id != github.id, "a duplicate is a new identity")
             expect(copy.name == "GitHub Issues Copy", "a duplicate gets a distinct name")
             expect(copy.link == "https://github.com/issues", "a duplicate keeps the destination")
+            expect(!copy.isEnabled, "a duplicate inherits the enabled flag")
 
             try? store.remove(id: copy.id)
             expect(store.quicklinks.map(\.id) == [github.id], "removing drops only that row")
@@ -246,6 +255,7 @@ struct QuicklinkTests {
             draft.openWithBundleID = "com.apple.finder"
             stored = try? store.add(draft).id
             try? store.togglePinned(id: stored!)
+            try? store.setEnabled(false, id: stored!)
         }
 
         let reopened = QuicklinkStore(directory: dir)
@@ -259,10 +269,10 @@ struct QuicklinkTests {
         expect(restored.iconSymbol == "folder", "the icon survives")
         expect(restored.openWithBundleID == "com.apple.finder", "the open-with app survives")
         expect(restored.isPinned, "the pin stamp survives")
+        expect(!restored.isEnabled, "the enabled flag survives")
     }
 
-    /// Proves the column order the store binds matches the column order it reads, independently of
-    /// its own writer.
+    /// The bound column order must match the read order, and an older table must gain `is_enabled`.
     static func readsADatabaseWrittenElsewhere() {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -290,10 +300,15 @@ struct QuicklinkTests {
         expect(row.openWithBundleID == nil, "a null open-with reads as none")
         expect(!row.showsInRootSearch, "the root-search flag lines up")
         expect(!row.isPinned, "a null pin stamp reads as unpinned")
+        expect(row.isEnabled, "a table written before is_enabled loads its rows as enabled")
+
+        // A second open must find the column already there rather than adding it twice.
+        let reopened = QuicklinkStore(directory: dir)
+        reopened.load()
+        expect(reopened.quicklinks.count == 1, "the migrated table reopens cleanly")
     }
 
-    /// The invariant that separates this store from `ClipboardStore`: quicklinks are authored data,
-    /// so an unreadable database is reported, never deleted and recreated.
+    /// Quicklinks are authored data, so an unreadable database is reported, never recreated.
     static func corruptDatabaseIsPreserved() {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -315,12 +330,12 @@ struct QuicklinkTests {
     // MARK: - Archive
 
     static func archiveRoundTrip() {
-        // Whole seconds throughout: the archive is ISO 8601 so a reader can hand-edit it, which
-        // means sub-second precision is deliberately not part of the format.
+        // Whole seconds: the archive is ISO 8601 so a reader can hand-edit it.
         let stamp = Date(timeIntervalSince1970: 500)
         let pinned = Quicklink(
             name: "Pinned", link: "~/Downloads", openWithBundleID: "com.apple.finder",
-            iconSymbol: "folder", showsInRootSearch: false, pinnedAt: stamp, createdAt: stamp)
+            iconSymbol: "folder", isEnabled: false, showsInRootSearch: false, pinnedAt: stamp,
+            createdAt: stamp)
         let plain = Quicklink(name: "GitHub", link: "https://github.com", createdAt: stamp)
         let source = [plain, pinned]
 
@@ -361,6 +376,7 @@ struct QuicklinkTests {
         guard let decoded = try? QuicklinkArchive.decode(handWritten), let first = decoded.first
         else { return fail("a hand-written archive decodes") }
         expect(first.name == "Staging", "the name is read")
+        expect(first.isEnabled, "an omitted enabled flag defaults to on")
         expect(first.showsInRootSearch, "an omitted root-search flag defaults to shown")
         expect(first.pinnedAt == nil, "an omitted pin stamp reads as unpinned")
 
@@ -371,6 +387,81 @@ struct QuicklinkTests {
         expect(
             throwsArchiveError(Data(#"{"version":1,"quicklinks":[]}"#.utf8)) == .empty,
             "an archive with no quicklinks is reported as empty rather than imported")
+    }
+
+    static func raycastImport() {
+        let bundleIDs = ["/Applications/Chrome.app": "com.google.Chrome"]
+        let stamped = Date(timeIntervalSince1970: 1_780_497_120)
+        let imported = RaycastQuicklinkImport.parse(
+            [
+                "schemaVersion": 1,
+                "openWithPlatforms": [
+                    ["id": "plat-1", "macos": "/Applications/Chrome.app"]
+                ],
+                "quicklinks": [
+                    [
+                        "name": " Search ",
+                        "link": " https://google.com/search?q={Query} ",
+                        "createdAt": "2026-06-03T14:32:00Z"
+                    ],
+                    [
+                        "name": "Dash",
+                        "link": "https://kapeli.com",
+                        "openWith": "/Applications/Chrome.app"
+                    ],
+                    [
+                        "name": "Via platform",
+                        "link": "https://via.example",
+                        "openWith": "plat-1"
+                    ],
+                    ["name": "Anna", "link": "https://annas-archive.org/search?q={query}"],
+                    [
+                        "name": "Named",
+                        "link": #"https://x.com?q={argument name="Keyword"}"#
+                    ],
+                    ["name": "  ", "link": "https://skip.example"],
+                    ["name": "No link"],
+                    ["name": "Missing Text"]
+                ]
+            ],
+            bundleIDForAppPath: { bundleIDs[$0] })
+
+        expect(
+            RaycastQuicklinkImport.parse(["quicklinks": []]).isEmpty,
+            "Raycast import ignores an empty container")
+        expect(
+            RaycastQuicklinkImport.parse(["foo": 1]).isEmpty,
+            "Raycast import ignores an unrecognized container")
+        expect(
+            imported.map(\.name) == ["Search", "Dash", "Via platform", "Anna", "Named"],
+            "Raycast import keeps valid entries and source order")
+        guard imported.count == 5 else { return }
+        expect(
+            imported[0].link == "https://google.com/search?q={argument}",
+            "Raycast import rewrites {Query} to {argument}")
+        expect(
+            imported[3].link == "https://annas-archive.org/search?q={argument}",
+            "Raycast import rewrites {query} the same way")
+        expect(
+            imported[4].link == #"https://x.com?q={argument name="Keyword"}"#,
+            "Raycast import leaves a real {argument} token alone")
+        expect(
+            imported[1].openWithBundleID == "com.google.Chrome"
+                && imported[2].openWithBundleID == "com.google.Chrome",
+            "Raycast import resolves an app path and a platform id through the same lookup")
+        expect(
+            imported[0].createdAt == stamped,
+            "Raycast import keeps the export's createdAt")
+
+        let bare = RaycastQuicklinkImport.parse([
+            ["name": "Bare", "link": "https://bare.example"]
+        ])
+        expect(bare.map(\.name) == ["Bare"], "a bare array still parses, matching snippets")
+        expect(
+            RaycastQuicklinkImport.rewrittenLink(
+                #"https://x.com?q={argument name="query"}"#)
+                == #"https://x.com?q={argument name="query"}"#,
+            "a parameter named query is not rewritten as the token")
     }
 
     // MARK: - Helpers

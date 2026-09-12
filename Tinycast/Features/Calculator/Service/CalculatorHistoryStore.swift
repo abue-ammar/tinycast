@@ -8,7 +8,7 @@ struct CalcHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     let createdAt: Date
 }
 
-/// A capped JSON file in Caches, beside `ClipboardStore` so `brew uninstall --zap` gets it too.
+/// A capped JSON file beside `ClipboardStore` so `brew uninstall --zap` gets it too.
 @MainActor
 @Observable
 final class CalculatorHistoryStore {
@@ -29,7 +29,7 @@ final class CalculatorHistoryStore {
     private var revision = 0
 
     init() {
-        fileURL = AppPaths.caches().appendingPathComponent("calculator-history.json")
+        fileURL = AppPaths.applicationSupport().appendingPathComponent("calculator-history.json")
 
         if let data = try? Data(contentsOf: fileURL),
             let decoded = try? JSONDecoder().decode([CalcHistoryEntry].self, from: data)
@@ -59,6 +59,12 @@ final class CalculatorHistoryStore {
 
     func clearAll() {
         entries = []
+        persist()
+    }
+
+    /// Replaces the history wholesale from a backup, newest first and under the same cap.
+    func replace(_ imported: [CalcHistoryEntry]) {
+        entries = Array(imported.sorted { $0.createdAt > $1.createdAt }.prefix(Self.cap))
         persist()
     }
 

@@ -6,7 +6,6 @@ struct ScopesTest {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
             .appendingPathComponent("tinycast-scopes-\(UUID().uuidString)")
-        defer { try? fm.removeItem(at: root) }
 
         var failures = 0
 
@@ -45,7 +44,7 @@ struct ScopesTest {
             "a deeply nested folder works as its own scope",
             SearchScopes.appBundles(in: [deep.path]).map(\.lastPathComponent) == ["TooDeep.app"])
 
-        // A scope may be a single bundle rather than a directory — that's how Finder ships as a default.
+        // A scope may be a single bundle: that is how Finder ships as a default.
         check(
             "an .app scope is indexed directly",
             SearchScopes.appBundles(in: [apps.appendingPathComponent("Alpha.app").path])
@@ -93,6 +92,7 @@ struct ScopesTest {
             "defaults are already normalized",
             SearchScopes.normalize(SearchScopes.defaults) == SearchScopes.defaults)
 
+        try? fm.removeItem(at: root)
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
     }

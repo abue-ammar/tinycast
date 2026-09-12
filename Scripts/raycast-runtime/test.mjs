@@ -9,15 +9,22 @@
 import { createContext, runInContext } from "node:vm";
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID, randomBytes, createHmac } from "node:crypto";
 import { homedir, tmpdir } from "node:os";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
 
-const runtime = readFileSync(resolve("../../Tinycast/Resources/RaycastRuntime.generated.js"), "utf8");
+const runtimePath = [
+  resolve("Tinycast/Resources/RaycastRuntime.generated.js"),
+  resolve("../../Tinycast/Resources/RaycastRuntime.generated.js"),
+  fileURLToPath(new URL("../../Tinycast/Resources/RaycastRuntime.generated.js", import.meta.url)),
+].find(existsSync);
 
-export function createHarness({ onRender, onFail, verbose = false } = {}) {
+const runtime = readFileSync(runtimePath, "utf8");
+
+export function createHarness({ onRender, onFail, verbose = false, stubs = {} } = {}) {
   const context = createContext({});
   const timers = new Map();
   const state = { trees: [], failures: [], logs: [], finished: false, hostCalls: [] };
@@ -56,9 +63,11 @@ export function createHarness({ onRender, onFail, verbose = false } = {}) {
       }
     },
     invoke(callId, api, method, argsJson) {
-      state.hostCalls.push(`${api}.${method}`);
+      const name = `${api}.${method}`;
+      state.hostCalls.push(name);
+      const args = JSON.parse(argsJson);
       Promise.resolve()
-        .then(() => stubHostCall(api, method, JSON.parse(argsJson)))
+        .then(() => (stubs[name] ? stubs[name](args) : stubHostCall(api, method, args)))
         .then(
           (value) => settle(callId, true, value),
           (error) => settle(callId, false, String(error?.message ?? error)),
@@ -121,11 +130,36 @@ export function createHarness({ onRender, onFail, verbose = false } = {}) {
 
 function syncHostCall(api, method, args) {
   switch (`${api}.${method}`) {
+    case "fs.open":
+      return fs.openSync(args[0], args[1], args[2]);
+    case "fs.close":
+      fs.closeSync(args[0]);
+      return null;
+    case "fs.read": {
+      const buffer = Buffer.alloc(args[1]);
+      return buffer.subarray(0, fs.readSync(args[0], buffer, 0, buffer.length, args[2])).toString("base64");
+    }
+    case "fs.write": {
+      const buffer = Buffer.from(args[1], "base64");
+      return fs.writeSync(args[0], buffer, 0, buffer.length, args[2]);
+    }
+    case "fs.chmod":
+      fs.chmodSync(args[0], args[1]);
+      return null;
     case "fs.readFile":
       return fs.readFileSync(args[0]).toString("base64");
     case "fs.writeFile":
       fs[args[2] ? "appendFileSync" : "writeFileSync"](args[0], Buffer.from(args[1], "base64"));
       return null;
+    case "fs.readRange": {
+      const handle = fs.openSync(args[0], "r");
+      try {
+        const buffer = Buffer.alloc(args[2]);
+        return buffer.subarray(0, fs.readSync(handle, buffer, 0, args[2], args[1])).toString("base64");
+      } finally {
+        fs.closeSync(handle);
+      }
+    }
     case "fs.exists":
       return fs.existsSync(args[0]);
     case "fs.stat": {
@@ -177,6 +211,8 @@ function syncHostCall(api, method, args) {
         .digest("base64");
     case "proc.run": {
       const spec = args[0];
+      // Mirrors the Swift host: a detached child answers at launch, with no output.
+      if (spec.detached) return { stdout: "", stderr: "", status: 0 };
       try {
         const stdout = spec.shell
           ? execFileSync("/bin/sh", ["-c", spec.command], { cwd: spec.cwd })
@@ -206,6 +242,8 @@ function syncHostCall(api, method, args) {
       throw new Error(`harness: no sync stub for ${api}.${method}`);
   }
 }
+
+const oauthTokens = new Map();
 
 async function stubHostCall(api, method, args) {
   switch (`${api}.${method}`) {
@@ -239,6 +277,17 @@ async function stubHostCall(api, method, args) {
     }
     case "proc.run":
       return syncHostCall(api, method, args);
+    // Positional arguments throughout, matching `src/api/oauth.js`.
+    case "oauth.authorize":
+      return { authorizationCode: "auth-code-12345", state: args[1] ?? "" };
+    case "oauth.getTokens":
+      return oauthTokens.get(args[0]) ?? null;
+    case "oauth.setTokens":
+      oauthTokens.set(args[0], args[1]);
+      return null;
+    case "oauth.removeTokens":
+      oauthTokens.delete(args[0]);
+      return null;
     default:
       if (["window", "feedback", "cache", "storage", "clipboard", "system"].includes(api)) return null;
       throw new Error(`harness: no async stub for ${api}.${method}`);
@@ -263,7 +312,7 @@ export function bootConfig(overrides = {}) {
       assetsPath: "/tmp",
       supportPath: "/tmp",
       isDevelopment: false,
-      raycastVersion: "1.104.0",
+      raycastVersion: "2.0.3",
       textSize: "medium",
       appearance: "dark",
       launchType: "userInitiated",

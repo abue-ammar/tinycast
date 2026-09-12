@@ -17,7 +17,8 @@ export function Install() {
       title="Install with Homebrew."
       intro="One command and you're running. Each channel installs as its own app, so a pre-release can live beside stable."
     >
-      <div className="mx-auto max-w-2xl">
+      {/* Full width: a 2xl column scrolled the brew commands sideways. */}
+      <div>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div
             className="inline-flex items-center gap-1 rounded-lg bg-tint/5 p-1"

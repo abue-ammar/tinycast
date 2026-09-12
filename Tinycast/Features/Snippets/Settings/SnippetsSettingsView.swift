@@ -5,14 +5,14 @@ struct SnippetsSettingsView: View {
     @Environment(SnippetsStore.self) private var snippetsStore
     @Environment(AppSettings.self) private var settings
 
-    @State private var editor: EditorTarget?
     @State private var pendingDeletion: StoredSnippet?
 
     var body: some View {
         @Bindable var settings = settings
+        @Bindable var core = core
         return Form {
             FeatureSwitchSection(
-                header: "Snippets",
+                anchor: .snippetsSnippets,
                 enableTitle: "Enable snippets",
                 enableSubtitle:
                     "Reusable Markdown templates, expanded from the launcher or a typed keyword.",
@@ -20,7 +20,7 @@ struct SnippetsSettingsView: View {
                 // Enabling is also keyword-expansion consent, so it uses the confirming setter.
                 isEnabled: Binding(
                     get: { settings.snippetsEnabled },
-                    set: { core.snippetExpansion.setSnippetsEnabled($0) }),
+                    set: { core.snippetCoordinator.setSnippetsEnabled($0) }),
                 showsInLauncher: $settings.snippetsShowInLauncher)
 
             if settings.snippetsEnabled, core.snippetListener.status == .needsAccessibility {
@@ -40,14 +40,17 @@ struct SnippetsSettingsView: View {
             }
 
             Group {
+                FeatureCommandsSection(owner: .snippets, anchor: .snippetsCommands)
                 library
                 libraryNotices
             }
             .settingsEnabled(settings.snippetsEnabled)
         }
         .formStyle(.grouped)
-        .sheet(item: $editor) { target in
-            SnippetEditorSheet(record: target.record)
+        .settingsScrollTarget(.snippets)
+        // Presented from the pane, so the browser's Edit and Create rows can open it too.
+        .sheet(item: $core.pendingSnippetEdit) { request in
+            SnippetEditorSheet(record: request.record)
         }
         .alert(item: $pendingDeletion) { record in
             Alert(
@@ -70,27 +73,27 @@ struct SnippetsSettingsView: View {
                 ForEach(sortedSnippets) { record in
                     SnippetSettingsRow(
                         record: record,
-                        onEdit: { editor = EditorTarget(record: record) },
+                        onEdit: { core.snippetCoordinator.editSnippet(record) },
                         onDelete: { pendingDeletion = record })
                 }
             }
 
             LabeledContent {
-                Button("Add…") { editor = EditorTarget(record: nil) }
+                Button("Add…") { core.snippetCoordinator.editSnippet(nil) }
             } label: {
-                Text("New Snippet")
+                SettingsRowTitle(.snippetsLibrary, "New Snippet")
                 Text("Give the snippet a searchable name and an optional expansion keyword.")
             }
 
             LabeledContent {
-                Button("Open Folder", action: core.snippetExpansion.revealSnippetsInFinder)
+                Button("Open Folder", action: core.snippetCoordinator.revealSnippetsInFinder)
                     .accessibilityHint("Reveals this Tinycast channel’s snippets folder in Finder.")
             } label: {
-                Text("Snippets Folder")
+                SettingsRowTitle(.snippetsLibrary, "Snippets Folder")
                 Text("Plain Markdown files in this channel’s Application Support folder.")
             }
         } header: {
-            Text("Library")
+            SettingsSectionHeader(.snippetsLibrary)
         }
     }
 
@@ -109,7 +112,7 @@ struct SnippetsSettingsView: View {
         }
 
         // The editor reports its own failures, so this covers the ones with no sheet behind.
-        if editor == nil, let operationError = snippetsStore.operationError {
+        if core.pendingSnippetEdit == nil, let operationError = snippetsStore.operationError {
             noticeSection(
                 "The snippet operation failed", operationError, tint: .red, retryHint: nil)
         }
@@ -159,7 +162,7 @@ struct SnippetsSettingsView: View {
     }
 }
 
-private struct EditorTarget: Identifiable {
+struct SnippetEditRequest: Identifiable {
     let id = UUID()
     /// nil for a snippet that has no file yet.
     let record: StoredSnippet?

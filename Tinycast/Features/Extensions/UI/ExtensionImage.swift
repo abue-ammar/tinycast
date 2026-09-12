@@ -2,17 +2,20 @@ import SwiftUI
 
 /// Maps Raycast's `Icon` / `Color` / `Image.ImageLike` values onto what the palette can draw.
 extension EnvironmentValues {
-    /// Derived rather than stored, so a view that reads it re-renders when the appearance flips —
-    /// which is what keeps a `{light, dark}` icon following the surface it is drawn on.
+    /// Derived, not stored, so a `{light, dark}` icon follows the surface it is drawn on.
     var isDarkAppearance: Bool { colorScheme == .dark }
 }
 
 enum ExtensionImage {
-    /// A resolved icon: an SF Symbol, a file on disk, a remote URL, or a bare emoji/text glyph.
+    /// A resolved icon: a symbol, an image file, a Finder icon, a URL, or a bare glyph.
     enum Source: Equatable {
         case symbol(String)
         case file(String)
+        /// Raycast's `{ fileIcon }`: the path names a bundle to ask `NSWorkspace` about.
+        case fileIcon(String)
         case remote(URL)
+        /// A `data:` URL — an extension rendering its own SVG hands over bytes.
+        case inline(URL)
         case glyph(String)
     }
 
@@ -22,23 +25,31 @@ enum ExtensionImage {
         var isCircular = false
     }
 
+    /// Source, plus the appearance an SVG's palette colour resolves against.
+    struct LoadKey: Equatable {
+        var source: Source?
+        var isDark: Bool
+    }
+
     /// An `ImageLike`: a string, or `{source, tintColor, mask, fallback}` with a themed `source`.
     static func resolve(_ value: RenderValue?, assetsPath: String?, isDark: Bool) -> Resolved? {
         guard let value else { return nil }
         switch value {
         case .string(let text):
-            guard let source = source(from: text, assetsPath: assetsPath) else { return nil }
+            guard let source = source(from: text, assetsPath: assetsPath, isDark: isDark) else {
+                return nil
+            }
             return Resolved(source: source)
         case .object(let fields):
-            // Raycast's icon-with-tooltip form; unwrap only when it looks like one, not when themed.
+            // Raycast's icon-with-tooltip form; unwrap only when it looks like one.
             if let wrapped = fields["value"]?.objectValue,
-                wrapped["source"] != nil || wrapped["value"] != nil
+                wrapped["source"] != nil || wrapped["value"] != nil || wrapped["fileIcon"] != nil
             {
                 return resolve(.object(wrapped), assetsPath: assetsPath, isDark: isDark)
             }
-            let raw = fields["source"] ?? fields["value"]
-            let text = string(from: raw, isDark: isDark)
-            guard let text, let source = source(from: text, assetsPath: assetsPath) else {
+            // `{fileIcon}` and a bare `{light, dark}` pair are a source rather than carry one.
+            let raw = fields["source"] ?? fields["value"] ?? .object(fields)
+            guard let source = source(from: raw, assetsPath: assetsPath, isDark: isDark) else {
                 // A tinted icon with no usable source still deserves the fallback tile.
                 return nil
             }
@@ -51,8 +62,19 @@ enum ExtensionImage {
         }
     }
 
-    /// A `{light, dark}` themed source picks the side the host is rendering, falling back to the
-    /// other when an extension supplies only one.
+    /// Always resolves: a destructive action with no tint takes red, as a native menu does.
+    static func actionIcon(
+        _ value: RenderValue?, assetsPath: String?, isDark: Bool, isDestructive: Bool
+    ) -> Resolved {
+        var icon =
+            resolve(value, assetsPath: assetsPath, isDark: isDark)
+            ?? Resolved(source: .symbol(isDestructive ? "trash" : "bolt"))
+        // Symbols only: a tint masks artwork, so reddening a delete row's own PNG would erase it.
+        if isDestructive, icon.tint == nil, case .symbol = icon.source { icon.tint = .red }
+        return icon
+    }
+
+    /// Falls back to the other side when an extension supplies only one.
     private static func string(from value: RenderValue?, isDark: Bool) -> String? {
         switch value {
         case .string(let text): return text
@@ -63,15 +85,34 @@ enum ExtensionImage {
         }
     }
 
-    private static func source(from text: String, assetsPath: String?) -> Source? {
+    /// An `Image.Source`: a string, a `{fileIcon}`, or a `{light, dark}` pair naming either.
+    private static func source(
+        from value: RenderValue, assetsPath: String?, isDark: Bool
+    ) -> Source? {
+        switch value {
+        case .string(let text):
+            return source(from: text, assetsPath: assetsPath, isDark: isDark)
+        case .object(let fields):
+            if let path = fields["fileIcon"]?.stringValue, !path.isEmpty {
+                return .fileIcon((path as NSString).expandingTildeInPath)
+            }
+            let preferred = fields[isDark ? "dark" : "light"] ?? fields[isDark ? "light" : "dark"]
+            return preferred.flatMap { source(from: $0, assetsPath: assetsPath, isDark: isDark) }
+        default:
+            return nil
+        }
+    }
+
+    private static func source(from text: String, assetsPath: String?, isDark: Bool) -> Source? {
         guard !text.isEmpty else { return nil }
         // Icon enum values all carry the `-16` suffix Raycast's generated enum uses.
         if text.hasSuffix("-16") {
             if let digits = numberGlyph(forIcon: text) { return .glyph(digits) }
             if let symbol = symbolName(forIcon: text) { return .symbol(symbol) }
         }
-        if let url = URL(string: text), let scheme = url.scheme, scheme.hasPrefix("http") {
-            return .remote(url)
+        if let url = URL(string: text), let scheme = url.scheme {
+            if scheme.hasPrefix("http") { return .remote(url) }
+            if scheme == "data" { return .inline(url) }
         }
         if text.hasPrefix("/") || text.hasPrefix("~") {
             return .file((text as NSString).expandingTildeInPath)
@@ -84,6 +125,33 @@ enum ExtensionImage {
         return text.count <= 4 ? .glyph(text) : nil
     }
 
+    /// Resolved once per appearance: the conversion is main-actor work a decode must skip.
+    static func svgPalette(isDark: Bool) -> [String: String] {
+        isDark ? darkSVGPalette : lightSVGPalette
+    }
+
+    private static let darkSVGPalette = svgPalette(from: palette, isDark: true)
+    private static let lightSVGPalette = svgPalette(from: palette, isDark: false)
+
+    private static func svgPalette(from palette: [String: Color], isDark: Bool) -> [String: String] {
+        palette.compactMapValues { cssColor($0, isDark: isDark) }
+    }
+
+    /// Resolved against the appearance drawn, since `.primary` and the ramps are both dynamic.
+    private static func cssColor(_ color: Color, isDark: Bool) -> String? {
+        var css: String?
+        NSAppearance(named: isDark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+            guard let srgb = NSColor(color).usingColorSpace(.sRGB) else { return }
+            css =
+                "rgba(\(channel(srgb.redComponent)),\(channel(srgb.greenComponent)),"
+                + "\(channel(srgb.blueComponent)),\((srgb.alphaComponent * 1000).rounded() / 1000))"
+        }
+        return css
+    }
+
+    /// Rounded, not truncated: `* 255` on a stored float lands a channel one low often enough.
+    private static func channel(_ value: CGFloat) -> Int { Int((value * 255).rounded()) }
+
     static func color(_ value: RenderValue?, isDark: Bool) -> Color? {
         guard let value else { return nil }
         if let text = value.stringValue { return color(named: text) }
@@ -93,21 +161,22 @@ enum ExtensionImage {
         return nil
     }
 
+    /// The one source for both a SwiftUI tint and the CSS an SVG's own `stroke` is rewritten to.
+    private static let palette: [String: Color] = [
+        "raycast-blue": .blue,
+        "raycast-green": .green,
+        "raycast-magenta": Color(red: 0.85, green: 0.24, blue: 0.62),
+        "raycast-orange": .orange,
+        "raycast-purple": .purple,
+        "raycast-red": .red,
+        "raycast-yellow": .yellow,
+        "raycast-primary-text": .primary,
+        "raycast-secondary-text": Theme.Colors.textSecondary
+    ]
+
     private static func color(named raw: String) -> Color? {
-        switch raw {
-        case "raycast-blue": return .blue
-        case "raycast-green": return .green
-        case "raycast-magenta": return Color(red: 0.85, green: 0.24, blue: 0.62)
-        case "raycast-orange": return .orange
-        case "raycast-purple": return .purple
-        case "raycast-red": return .red
-        case "raycast-yellow": return .yellow
-        case "raycast-primary-text": return .primary
-        case "raycast-secondary-text": return Theme.Colors.textSecondary
-        default:
-            // Extensions also pass raw hex.
-            return hexColor(raw)
-        }
+        // Extensions also pass raw hex.
+        palette[raw] ?? hexColor(raw)
     }
 
     private static func hexColor(_ raw: String) -> Color? {
@@ -206,7 +275,7 @@ enum ExtensionImage {
         "window": "macwindow", "wrench-screwdriver": "wrench.and.screwdriver", "xmark": "xmark",
         "xmark-circle": "xmark.circle", "xmark-circle-filled": "xmark.circle.fill",
         "xmark-top-right-square": "xmark.square",
-        // No plausible transform; every value was checked, since an unknown name draws a placeholder.
+        // Every value was checked: an unknown name draws a placeholder.
         "airplane-filled": "airplane", "airplane-landing": "airplane.arrival",
         "airplane-takeoff": "airplane.departure",
         "alarm-ringing": "bell.and.waves.left.and.right.fill", "align-centre": "text.aligncenter",
@@ -288,19 +357,49 @@ enum ExtensionImage {
     ]
 }
 
+extension ExtensionImage {
+    /// An animating tile takes the image as shipped; the fitted path would hand back one frame.
+    static func load(_ resolved: Resolved?, isDark: Bool, animates: Bool) async -> NSImage? {
+        switch resolved?.source {
+        case .file(let path):
+            return animates
+                ? await ExtensionIconCache.loadOriginalAsync(atPath: path)
+                : await ExtensionIconCache.loadAsync(atPath: path)
+        case .fileIcon(let path):
+            // Fitted, not raw: only the normalized draw keeps bundles and documents one size.
+            return await IconCache.loadFittedAsync(forFile: path)
+        case .remote(let url):
+            return await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
+        case .inline(let url):
+            return await ExtensionIconCache.loadInlineAsync(
+                url, palette: svgPalette(isDark: isDark))
+        default:
+            return nil
+        }
+    }
+}
+
 /// A resolved icon at row size; an unresolvable one draws the faint tile, so rows never jump.
 struct ExtensionIconView: View {
+    @Environment(\.metrics) private var metrics
+    @Environment(\.isDarkAppearance) private var isDark
     let resolved: ExtensionImage.Resolved?
-    var size: CGFloat = Theme.Size.rowIcon
-    /// Opt-in, and off for row icons: a playing GIF at 24pt is noise, and a list is hundreds of rows.
+    var size: CGFloat?
+    /// Opt-in, and off for row icons: a playing GIF at 24pt is noise in a long list.
     var animates = false
     @State private var loaded: NSImage?
 
+    /// Row size unless a caller states one, which only the ⌘K panel's 20pt slot does.
+    private var side: CGFloat { size ?? metrics.size.rowIcon }
+
     var body: some View {
         content
-            .frame(width: size, height: size)
+            .frame(width: side, height: side)
             .clipShape(shape)
-            .task(id: cacheKey) { await load() }
+            // Keyed on appearance too: an inline SVG's palette resolves at decode.
+            .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
+                loaded = await ExtensionImage.load(resolved, isDark: isDark, animates: animates)
+            }
     }
 
     @ViewBuilder
@@ -308,21 +407,26 @@ struct ExtensionIconView: View {
         switch resolved?.source {
         case .symbol(let name):
             Image(systemName: name)
-                .font(.system(size: size * 0.62, weight: .regular))
+                .font(.system(size: side * 0.62, weight: .regular))
                 .symbolRenderingMode(resolved?.tint == nil ? .hierarchical : .monochrome)
                 .foregroundStyle(resolved?.tint ?? Theme.Colors.textSecondary)
-                .frame(width: size, height: size)
+                .frame(width: side, height: side)
         case .glyph(let text):
             Text(text)
-                .font(.system(size: size * 0.72))
-                .frame(width: size, height: size)
-        case .file, .remote:
+                .font(.system(size: side * 0.72))
+                .frame(width: side, height: side)
+        case .file, .fileIcon, .remote, .inline:
             if let loaded {
                 // Only a multi-frame image pays for `NSImageView`; a still stays on SwiftUI's path.
                 if animates, loaded.isAnimated {
                     AnimatedImageView(image: loaded)
                 } else {
-                    Image(nsImage: loaded).resizable().aspectRatio(contentMode: .fit)
+                    // A `tintColor` masks the artwork, which is what colours a `currentColor` SVG.
+                    Image(nsImage: loaded)
+                        .resizable()
+                        .renderingMode(resolved?.tint == nil ? .original : .template)
+                        .scaledToFit()
+                        .foregroundStyle(resolved?.tint ?? .primary)
                 }
             } else {
                 placeholder
@@ -333,36 +437,14 @@ struct ExtensionIconView: View {
     }
 
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
             .fill(Theme.Colors.iconPlaceholder)
     }
 
     private var shape: AnyShape {
         resolved?.isCircular == true
             ? AnyShape(Circle())
-            : AnyShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+            : AnyShape(RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous))
     }
 
-    private var cacheKey: String {
-        switch resolved?.source {
-        case .file(let path): return "file:" + path
-        case .remote(let url): return "remote:" + url.absoluteString
-        default: return ""
-        }
-    }
-
-    /// An animating tile takes the image as shipped; the fitted path would hand back one frame.
-    private func load() async {
-        switch resolved?.source {
-        case .file(let path):
-            loaded =
-                animates
-                ? await ExtensionIconCache.loadOriginalAsync(atPath: path)
-                : await ExtensionIconCache.loadAsync(atPath: path)
-        case .remote(let url):
-            loaded = await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
-        default:
-            loaded = nil
-        }
-    }
 }

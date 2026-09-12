@@ -10,8 +10,13 @@ final class OnboardingCoordinator {
     init(core: AppCore) {
         self.core = core
         window = AppWindowController(
-            title: "Welcome to Tinycast", contentSize: OnboardingView.windowSize,
+            title: "Welcome to Tinycast", contentSize: OnboardingView.initialSize,
             activation: core.activationPolicy)
+    }
+
+    /// The window takes the height the current step measured, so no step is clipped or padded out.
+    func fit(height: CGFloat) {
+        window.fitContent(width: OnboardingView.width, height: height)
     }
 
     func showOnboarding() {

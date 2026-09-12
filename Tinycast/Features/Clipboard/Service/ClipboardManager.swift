@@ -20,6 +20,7 @@ final class ClipboardManager {
     private var timer: Timer?
     private var sessionTokens: [NotificationToken] = []
     private var lastChangeCount = 0
+    private var isCapturing = false
 
     init(store: ClipboardStore, settings: AppSettings) {
         self.store = store
@@ -32,8 +33,17 @@ final class ClipboardManager {
     }
 
     func start() {
+        guard !isCapturing else { return }
+        isCapturing = true
         installSessionObservers()
         startPolling()
+    }
+
+    /// Turning the feature off: the poller, the observers and the drain all go with it.
+    func stop() {
+        isCapturing = false
+        sessionTokens = []
+        stopPolling()
     }
 
     // Fast user switching: another session's clipboard isn't ours, so stop waking up for it.
@@ -60,7 +70,7 @@ final class ClipboardManager {
 
     // Re-baselining first is what stops a clip made in another session reading as new on resume.
     private func startPolling() {
-        guard timer == nil else { return }
+        guard isCapturing, timer == nil else { return }
         lastChangeCount = NSPasteboard.general.changeCount
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.poll() }
@@ -77,6 +87,7 @@ final class ClipboardManager {
 
     // Drain first: the real copy must reach history before we overwrite the pasteboard.
     func prepareForTinycastPasteboardMutation() {
+        guard isCapturing else { return }
         poll()
     }
 
@@ -84,6 +95,35 @@ final class ClipboardManager {
     func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {
         guard NSPasteboard.general.changeCount == changeCount else { return }
         lastChangeCount = changeCount
+    }
+
+    /// A Finder select-all must not insert ten thousand rows on one poll tick.
+    nonisolated static let maxCapturedFiles = 32
+
+    /// Reclaimable roots, without the `/private` that `resolvingSymlinksInPath` strips.
+    nonisolated static let volatileRoots = [
+        "/tmp/", "/var/tmp/", "/var/folders/", NSHomeDirectory() + "/Library/Caches/"
+    ]
+
+    /// Both parameters are injected environment facts, so a harness can drive its own scratch.
+    nonisolated static func fileURLs(
+        on pasteboard: NSPasteboard, volatileRoots roots: [String] = volatileRoots
+    ) -> [String]? {
+        let durable = PasteboardFiles.urls(on: pasteboard, limit: maxCapturedFiles) {
+            isDurable($0, roots: roots)
+        }
+        // Nil rather than empty, so a copied `http` URL falls through and stays a link.
+        guard !durable.isEmpty else { return nil }
+        // Reversed on insert, so the first file copied ends up leading the history.
+        return durable.map(\.standardizedFileURL.path).reversed()
+    }
+
+    /// An app that stages a temp file beside better inline content must keep the inline content.
+    nonisolated private static func isDurable(_ url: URL, roots: [String]) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        var path = url.resolvingSymlinksInPath().path
+        if path.hasPrefix("/private/") { path.removeFirst("/private".count) }
+        return !roots.contains { path.hasPrefix($0) }
     }
 
     private func poll() {
@@ -99,6 +139,12 @@ final class ClipboardManager {
         // The pasteboard carries no source, so attribute it to the frontmost app.
         let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         if let sourceBundleID, settings.clipboardDisabledApps.contains(sourceBundleID) { return }
+
+        // Ahead of the text branch: Finder puts the file's *name* on `.string` beside its URL.
+        if let paths = Self.fileURLs(on: pb) {
+            store.addFiles(paths, sourceBundleID: sourceBundleID)
+            return
+        }
 
         if let text = pb.string(forType: .string),
             !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

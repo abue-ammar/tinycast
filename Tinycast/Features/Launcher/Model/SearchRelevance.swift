@@ -2,7 +2,7 @@ import Foundation
 
 enum FuzzyMatch {
     /// All but `.subsequence` are literal hits: the query's own characters, contiguous.
-    enum Tier: Sendable {
+    enum Tier: Sendable, CaseIterable {
         case exact
         case prefix
         case wordStart
@@ -10,13 +10,21 @@ enum FuzzyMatch {
         case subsequence
 
         var isLiteral: Bool { self != .subsequence }
-        /// Anchored at the candidate's start: what a short, deliberate field must match to win its band.
+        /// Anchored at the candidate's start: what a short, deliberate field must match.
         var isAnchored: Bool { self == .exact || self == .prefix }
     }
 
     struct Match: Sendable {
         let tier: Tier
-        let score: Int
+        /// Characters into the candidate the hit begins; 0 for both anchored tiers.
+        let offset: Int
+        let queryLength: Int
+        let candidateLength: Int
+        /// The subsequence walk's raw bonus total, and 0 for every literal tier.
+        let spread: Int
+
+        /// One ordering for a caller ranking a single field, with no role to weigh.
+        var score: Int { FuzzyMatch.rawScore(self) }
     }
 
     /// A query folded once, so ranking doesn't re-fold it for every candidate field.
@@ -32,7 +40,7 @@ enum FuzzyMatch {
         }
     }
 
-    /// Tiered relevance, or nil; tiers are spaced so a better kind always wins.
+    /// The tier a query hits a candidate at, with the geometry `SearchRelevance.shape` reads.
     static func match(query: String, candidate: String) -> Match? {
         match(Query(query), candidate: candidate)
     }
@@ -40,42 +48,70 @@ enum FuzzyMatch {
     static func match(_ query: Query, candidate: String) -> Match? {
         let q = query.text
         let c = normalized(candidate)
-        guard !q.isEmpty else { return Match(tier: .exact, score: 0) }
-
-        if c == q { return Match(tier: .exact, score: 100_000) }
-        if c.hasPrefix(q) { return Match(tier: .prefix, score: 90_000 - c.count) }
-
-        if let range = c.range(of: q) {
-            let atWordStart = isWordStart(c, range.lowerBound)
+        let length = c.count
+        guard !q.isEmpty else {
             return Match(
-                tier: atWordStart ? .wordStart : .substring,
-                score: (atWordStart ? 80_000 : 70_000) - c.count)
+                tier: .exact, offset: 0, queryLength: 0, candidateLength: length, spread: 0)
         }
 
-        guard let sub = subsequenceScore(query.characters, c) else { return nil }
-        return Match(tier: .subsequence, score: sub)
+        if c == q {
+            return Match(
+                tier: .exact, offset: 0, queryLength: query.characters.count,
+                candidateLength: length, spread: 0)
+        }
+        if c.hasPrefix(q) {
+            return Match(
+                tier: .prefix, offset: 0, queryLength: query.characters.count,
+                candidateLength: length, spread: 0)
+        }
+        if let range = c.range(of: q) {
+            let offset = c.distance(from: c.startIndex, to: range.lowerBound)
+            return Match(
+                tier: isWordStart(c, range.lowerBound) ? .wordStart : .substring, offset: offset,
+                queryLength: query.characters.count, candidateLength: length, spread: 0)
+        }
+        guard let spread = subsequenceScore(query.characters, c) else { return nil }
+        return Match(
+            tier: .subsequence, offset: 0, queryLength: query.characters.count,
+            candidateLength: length, spread: spread)
     }
 
     /// Score-only form, for callers that rank one field and don't band by match strength.
     static func score(query: String, candidate: String) -> Int? {
-        match(query: query, candidate: candidate)?.score
+        match(query: query, candidate: candidate).map(rawScore)
     }
 
-    /// The widest score `match` returns; the bands are sized off it so they never overlap.
-    static let maximumScore = 100_000
+    /// The folded form, for a caller sweeping many candidates against one query.
+    static func score(_ query: Query, candidate: String) -> Int? {
+        match(query, candidate: candidate).map(rawScore)
+    }
 
-    /// No scalar below U+00AD is `.format`, so ASCII names skip the rebuild and the ICU lookup.
-    private static func normalized(_ value: String) -> String {
+    /// FileSearch ranks one field and wants a single ordering, not a role-aware one.
+    fileprivate static func rawScore(_ match: Match) -> Int {
+        switch match.tier {
+        case .exact: 100_000
+        case .prefix: 90_000 - match.candidateLength
+        case .wordStart: 80_000 - match.candidateLength
+        case .substring: 70_000 - match.candidateLength
+        case .subsequence: match.spread
+        }
+    }
+
+    /// The one fold in the launcher: matching, learned-ranking keys and dedup all call it.
+    static func normalized(_ value: String) -> String {
         guard value.unicodeScalars.contains(where: { $0.value >= 0xAD }) else {
             return value.lowercased()
         }
-        guard value.unicodeScalars.contains(where: { $0.properties.generalCategory == .format })
-        else { return value.lowercased() }
-        let scalars = value.unicodeScalars.filter {
-            $0.properties.generalCategory != .format
-        }
-        return String(String.UnicodeScalarView(scalars)).lowercased()
+        // Composed first, so a Korean or Vietnamese IME's decomposed input folds like typed text.
+        let composed = value.precomposedStringWithCanonicalMapping
+        let scalars = composed.unicodeScalars.filter { $0.properties.generalCategory != .format }
+        return String(String.UnicodeScalarView(scalars)).folding(options: folding, locale: nil)
     }
+
+    /// Locale-independent: a Turkish fold maps "I" to "ı" and orphans every stored key.
+    static let folding: String.CompareOptions = [
+        .caseInsensitive, .diacriticInsensitive, .widthInsensitive
+    ]
 
     private static func isWordStart(_ s: String, _ index: String.Index) -> Bool {
         if index == s.startIndex { return true }
@@ -116,106 +152,152 @@ enum FuzzyMatch {
         guard qi == q.count else { return nil }
         return score
     }
-}
 
-/// Never flatten these into one string — which field matched is what picks the band.
-struct SearchFields: Sendable {
-    /// The display name, plus anything identifying the entry just as strongly.
-    var names: [String]
-    /// The user's own alias for the entry; deliberate, so it outranks every vendor field.
-    var userAlias: String?
-    /// Spotlight's `kMDItemAlternateNames`: `iBooks`, `Codex`, `浏览器`.
-    var alternateNames: [String] = []
-    var bundleID: String?
-    var executableName: String?
-}
-
-enum SearchRelevance {
-    /// One band per field and match strength; a literal hit on a weaker field still wins.
-    private enum Band: Int {
-        case executableName = 0
-        case bundleID = 1
-        case alternateNameSubsequence = 2
-        case nameSubsequence = 3
-        case alternateNameLiteral = 4
-        case nameLiteral = 5
-        case userAlias = 6
-
-        var offset: Int { rawValue * SearchRelevance.bandStride }
+    /// What a contiguous run from index 0 would score, so `spread` normalizes to a fraction.
+    static func referenceSpread(_ queryLength: Int) -> Int {
+        guard queryLength > 0 else { return 1 }
+        return 13 + (queryLength - 1) + 3 * queryLength * (queryLength - 1) / 2
     }
+}
 
-    /// Wide enough that a learned boost reorders inside a band, never out of one.
-    static let bandStride = 10 * FuzzyMatch.maximumScore
+/// One string an entry can be found by; ranking reads `role` and `looseness` and nothing else.
+struct SearchAlias: Sendable, Hashable {
+    /// A closed ladder: a new criterion picks a role from it and never adds a case.
+    enum Role: Int, Sendable, CaseIterable {
+        /// Machine-facing: bundle id, executable name.
+        case technical = 0
+        /// What provides the entry rather than what it is — the extension a command came from.
+        case owner = 1
+        /// Another way to say the same name: a localization, an alternate, a romanization.
+        case translation = 2
+        /// The name the entry is presented under, and anything identifying it just as strongly.
+        case name = 3
+        /// The user's own word for the entry; deliberate, so it outranks every vendor string.
+        case userAlias = 4
 
-    /// Base relevance from the strongest matching field, or nil when no field matches.
-    static func score(query: String, fields: SearchFields) -> Int? {
-        let query = FuzzyMatch.Query(query)
-        // Every entry is equally relevant to an empty query, so no field claims a band.
-        guard !query.isEmpty else { return 0 }
-        var best: Int?
-
-        func consider(_ candidate: String, literal: Band, subsequence: Band?) {
-            guard let match = FuzzyMatch.match(query, candidate: candidate) else { return }
-            // No subsequence band on identifiers: it would change which apps appear at all.
-            guard let band = match.tier.isLiteral ? literal : subsequence else { return }
-            best = max(best ?? Int.min, band.offset + match.score)
-        }
-
-        // Only a hit from the alias's start earns the top band; one inside it ranks like a vendor alias.
-        if let alias = fields.userAlias, let match = FuzzyMatch.match(query, candidate: alias),
-            match.tier.isLiteral
-        {
-            let band: Band = match.tier.isAnchored ? .userAlias : .alternateNameLiteral
-            best = max(best ?? Int.min, band.offset + match.score)
-        }
-        for name in fields.names {
-            consider(name, literal: .nameLiteral, subsequence: .nameSubsequence)
-        }
-        for alternate in fields.alternateNames {
-            consider(alternate, literal: .alternateNameLiteral, subsequence: .alternateNameSubsequence)
-        }
-        if let bundleID = fields.bundleID {
-            consider(identifyingPart(of: bundleID), literal: .bundleID, subsequence: nil)
-            // A pasted identifier should still resolve, which the trimmed form alone can't do.
-            if let match = FuzzyMatch.match(query, candidate: bundleID), match.tier == .exact {
-                best = max(best ?? Int.min, Band.bundleID.offset + match.score)
+        /// The loosest match this role trusts. Shared or machine text floods on a fuzzy hit.
+        var looseness: Looseness {
+            switch self {
+            case .translation, .name: .fuzzy
+            case .technical, .owner, .userAlias: .literal
             }
         }
-        if let executableName = fields.executableName {
-            consider(executableName, literal: .executableName, subsequence: nil)
-        }
-        return best
     }
 
-    /// Drops the leading reverse-DNS component, which prefixes nearly every installed app.
-    private static func identifyingPart(of bundleID: String) -> String {
-        guard let dot = bundleID.firstIndex(of: ".") else { return bundleID }
-        return String(bundleID[bundleID.index(after: dot)...])
+    /// How weak a match an alias will accept. Tightening one is how a flood-prone string opts out.
+    enum Looseness: Sendable, Hashable {
+        case fuzzy
+        case literal
+        case exact
+
+        func accepts(_ tier: FuzzyMatch.Tier) -> Bool {
+            switch self {
+            case .fuzzy: true
+            case .literal: tier.isLiteral
+            case .exact: tier == .exact
+            }
+        }
     }
+
+    let text: String
+    let role: Role
+    let looseness: Looseness
+
+    init(_ text: String, _ role: Role, looseness: Looseness? = nil) {
+        self.text = text
+        self.role = role
+        self.looseness = looseness ?? role.looseness
+    }
+
+    static func name(_ text: String) -> Self { Self(text, .name) }
+    static func translation(_ text: String) -> Self { Self(text, .translation) }
+    static func owner(_ text: String) -> Self { Self(text, .owner) }
+    static func technical(_ text: String) -> Self { Self(text, .technical) }
+    static func userAlias(_ text: String) -> Self { Self(text, .userAlias) }
 }
 
-extension SearchFields {
-    /// Spotlight mixes junk in with the real aliases; indexing it makes `app` match all.
-    static func usableAlternateNames(
-        _ raw: [String], displayName: String, fileName: String
-    ) -> [String] {
-        let rejected = Set([displayName, fileName].map(strippingAppExtension).map { $0.lowercased() })
-        var seen = Set<String>()
-        return raw.compactMap { candidate in
-            let name = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !name.isEmpty, !isPlaceholder(name) else { return nil }
-            let key = strippingAppExtension(name).lowercased()
-            guard !key.isEmpty, !rejected.contains(key), seen.insert(key).inserted else { return nil }
-            return name
+/// Never flatten these into one string — which alias matched is half of what picks the cell.
+struct SearchFields: Sendable, Hashable, ExpressibleByArrayLiteral {
+    var aliases: [SearchAlias]
+
+    init(_ aliases: [SearchAlias] = []) { self.aliases = aliases }
+    init(arrayLiteral elements: SearchAlias...) { aliases = elements }
+
+    mutating func append(_ alias: SearchAlias) { aliases.append(alias) }
+}
+
+/// How well a query fits an entry: every gap below is a pick count, and one gap is a firewall.
+enum SearchRelevance {
+    /// The lowest protected cell. Nothing below it is reachable at any usage.
+    static let protectionFloor = 6_500
+    /// The strongest unprotected cell, and the weakest evidence the index will show at all.
+    static let poolTop = 3_100
+    static let poolBottom = 600
+    /// `shape` orders inside one cell and can never leave it.
+    static let shapeSpan = 99
+    /// The exclusive bound every usage term must respect, or the firewall stops holding.
+    static let usageCeiling = 3_000
+
+    /// The closed table. A new naming criterion picks a role; it never adds a row here.
+    static func cell(_ role: SearchAlias.Role, _ tier: FuzzyMatch.Tier) -> Int? {
+        switch (role, tier) {
+        case (.userAlias, .exact): 7_000
+        case (.name, .exact): protectionFloor
+        case (.userAlias, .prefix): poolTop
+        case (.name, .prefix): 3_000
+        case (.translation, .exact): 2_700
+        case (.owner, .exact): 2_500
+        case (.name, .wordStart): 2_400
+        case (.translation, .prefix): 2_200
+        case (.owner, .prefix): 2_000
+        case (.name, .substring): 1_800
+        case (.translation, .wordStart): 1_700
+        case (.owner, .wordStart): 1_500
+        case (.technical, .exact): 1_400
+        case (.translation, .substring): 1_200
+        case (.owner, .substring): 1_100
+        case (.name, .subsequence): 1_000
+        case (.technical, .prefix): 900
+        case (.translation, .subsequence): 800
+        case (.technical, .wordStart): 700
+        case (.technical, .substring): poolBottom
+        // `Looseness` refuses these, so no query can reach them.
+        case (.userAlias, _), (.owner, .subsequence), (.technical, .subsequence): nil
         }
     }
 
-    private static func strippingAppExtension(_ name: String) -> String {
-        name.hasSuffix(".app") ? String(name.dropLast(4)) : name
+    /// Orders candidates inside one cell: how much of the name the query covered, and how early.
+    static func shape(_ match: FuzzyMatch.Match) -> Int {
+        guard match.candidateLength > 0 else { return 0 }
+        let coverage = min(1, Double(match.queryLength) / Double(match.candidateLength))
+        // Absolute, not proportional: a hit five characters in is equally deep in any name.
+        let positional =
+            match.tier == .subsequence
+            ? min(1, Double(match.spread) / Double(FuzzyMatch.referenceSpread(match.queryLength)))
+            : 1 / (1 + Double(match.offset) / 4)
+        return Int((Double(shapeSpan) * (0.6 * coverage + 0.4 * positional)).rounded())
     }
 
-    /// A lone SCREAMING_SNAKE token is an untranslated placeholder, and several ship.
-    private static func isPlaceholder(_ name: String) -> Bool {
-        name.contains("_") && !name.contains(where: { $0.isLowercase || $0.isWhitespace })
+    /// Base relevance from the strongest matching alias, or nil when none matches.
+    static func quality(query: String, fields: SearchFields) -> Int? {
+        quality(FuzzyMatch.Query(query), fields: fields)
+    }
+
+    /// The folded form: an index folds one query once, not once per entry.
+    static func quality(_ query: FuzzyMatch.Query, fields: SearchFields) -> Int? {
+        // Every entry is equally relevant to an empty query, so no alias claims a cell.
+        guard !query.isEmpty else { return 0 }
+        var best: Int?
+        for alias in fields.aliases {
+            guard let match = FuzzyMatch.match(query, candidate: alias.text),
+                alias.looseness.accepts(match.tier)
+            else { continue }
+            // A user alias earns its own cell only from its start; inside, it is a translation.
+            let role: SearchAlias.Role =
+                alias.role == .userAlias && !match.tier.isAnchored ? .translation : alias.role
+            guard let cell = cell(role, match.tier) else { continue }
+            best = max(best ?? Int.min, cell + shape(match))
+        }
+        return best
     }
 }

@@ -1,7 +1,6 @@
 import Foundation
 
-/// What a command renders into. Only `view` and `noView` run today; the rest are recognised so the
-/// launcher can label them and explain why they don't open.
+/// Only `view` and `noView` run; the rest are recognised so the launcher can explain them.
 enum ExtensionCommandMode: String, Sendable, Codable {
     case view
     case noView = "no-view"
@@ -48,8 +47,7 @@ struct ExtensionPreferenceSchema: Sendable, Hashable {
     let kind: Kind
     let required: Bool
     let options: [Option]
-    /// Already resolved for macOS: a manifest default can be platform-keyed
-    /// (`{"macOS": "/var/run/docker.sock", "Windows": "…"}`).
+    /// Already resolved for macOS: a manifest default can be platform-keyed.
     let defaultValue: ExtensionPreferenceValue?
 
     /// The value to use when the user hasn't set one — falls back to a type-appropriate empty.
@@ -146,6 +144,9 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
     let subtitle: String?
     let description: String
     let mode: ExtensionCommandMode
+    let intervalRaw: String?
+    /// Parsed `interval`, clamped to the refresh floor; nil when the manifest sets no schedule.
+    let interval: TimeInterval?
     let keywords: [String]
     let icon: String?
     let disabledByDefault: Bool
@@ -155,9 +156,7 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
     /// Unique within its extension; `ExtensionCommandRef` pairs it with the owner for a global id.
     var id: String { name }
 
-    /// Every declared argument must reach the command, empty string when the user left it blank — that
-    /// is Raycast's contract, and extensions lean on it: `Number(args.seconds)` is `0` for `""` but
-    /// `NaN` for `undefined`, which silently corrupts whatever they compute from it.
+    /// Raycast's contract: a blank argument arrives as empty text, since `undefined` is `NaN`.
     func completeArguments(_ given: [String: String]) -> [String: String] {
         var complete = given
         for argument in arguments where complete[argument.name] == nil {
@@ -175,6 +174,8 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
         subtitle = dict["subtitle"] as? String
         description = dict["description"] as? String ?? ""
         mode = ExtensionCommandMode(rawValue: dict["mode"] as? String ?? "view") ?? .view
+        intervalRaw = dict["interval"] as? String
+        interval = ExtensionRefreshPolicy.parse(intervalRaw)
         keywords = dict["keywords"] as? [String] ?? []
         icon = dict["icon"] as? String
         disabledByDefault = dict["disabledByDefault"] as? Bool ?? false

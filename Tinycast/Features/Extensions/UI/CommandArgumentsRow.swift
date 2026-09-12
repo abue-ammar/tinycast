@@ -1,12 +1,8 @@
 import SwiftUI
 
-/// The inline argument fields Raycast shows beside the search field when the selected command declares
-/// `arguments` — the command's icon, then one compact field per argument, filled before ↵ runs it.
-///
-/// Focus is deliberately separate from the search field's: the palette's whole focus model hangs off
-/// one always-attached `TextField` (see docs/palette.md), so these get their own `FocusState` and Tab
-/// hands focus back and forth rather than replacing it.
+/// The inline argument fields beside the search field; their own `FocusState`, Tab hands over.
 struct CommandArgumentsRow: View {
+    @Environment(\.metrics) private var metrics
     let arguments: [ExtensionCommandArgument]
     /// The selected command's glyph, drawn as a leading chip so the fields read as belonging to it.
     let icon: EntryIcon?
@@ -17,9 +13,10 @@ struct CommandArgumentsRow: View {
     let onSubmit: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
+        HStack(spacing: metrics.spacing.xs) {
             if let icon {
-                EntryIconView(source: icon).frame(width: Self.height, height: Self.height)
+                EntryIconView(source: icon)
+                    .frame(width: Self.height(metrics), height: Self.height(metrics))
             }
             ForEach(arguments, id: \.name) { argument in
                 ArgumentField(
@@ -33,18 +30,24 @@ struct CommandArgumentsRow: View {
         }
     }
 
-    static let height: CGFloat = 26
+    static func height(_ metrics: InterfaceMetrics) -> CGFloat { metrics.scaled(26) }
 
-    /// What the whole strip occupies, so the header can shrink the search field to exactly the room
-    /// left over — the fields sit right after the typed text, as they do in Raycast.
-    static func totalWidth(for arguments: [ExtensionCommandArgument], hasIcon: Bool) -> CGFloat {
-        let fields = arguments.reduce(0) { $0 + fieldWidth(for: $1) }
-        let gaps = CGFloat(arguments.count + (hasIcon ? 0 : -1)) * Theme.Spacing.xs
-        return fields + gaps + (hasIcon ? height : 0)
+    /// The header shrinks the search field to exactly the room left over.
+    static func totalWidth(
+        for arguments: [ExtensionCommandArgument], hasIcon: Bool, metrics: InterfaceMetrics
+    ) -> CGFloat {
+        let fields = arguments.reduce(0) { $0 + fieldWidth(for: $1, metrics: metrics) }
+        let gaps = CGFloat(arguments.count + (hasIcon ? 0 : -1)) * metrics.spacing.xs
+        return fields + gaps + (hasIcon ? height(metrics) : 0)
     }
 
-    static func fieldWidth(for argument: ExtensionCommandArgument) -> CGFloat {
-        min(max(CGFloat(argument.placeholder.count) * 7 + 20, 62), 150)
+    static func fieldWidth(
+        for argument: ExtensionCommandArgument, metrics: InterfaceMetrics
+    )
+        -> CGFloat
+    {
+        let placeholder = CGFloat(argument.placeholder.count) * metrics.scaled(7)
+        return min(max(placeholder + metrics.scaled(20), metrics.scaled(62)), metrics.scaled(150))
     }
 
     /// The order Tab walks: search field (nil) → each argument → back to the search field.
@@ -58,6 +61,8 @@ struct CommandArgumentsRow: View {
 }
 
 private struct ArgumentField: View {
+
+    @Environment(\.metrics) private var metrics
     let argument: ExtensionCommandArgument
     @Binding var text: String
     let isFocused: Bool
@@ -70,19 +75,19 @@ private struct ArgumentField: View {
             prompt: Text(argument.placeholder).foregroundStyle(Theme.Colors.textTertiary)
         )
         .textFieldStyle(.plain)
-        .font(Theme.Typography.rowTrailing)
+        .font(metrics.typography.rowTrailing)
         .tint(.white)
         .onSubmit(onSubmit)
         .multilineTextAlignment(.center)
-        // Sized to the placeholder so a three-argument command (Hours / Minutes / Seconds) still fits.
-        .frame(width: CommandArgumentsRow.fieldWidth(for: argument))
-        .padding(.horizontal, Theme.Spacing.sm)
-        .frame(height: CommandArgumentsRow.height)
+        // Sized to the placeholder so a three-argument command still fits.
+        .frame(width: CommandArgumentsRow.fieldWidth(for: argument, metrics: metrics))
+        .padding(.horizontal, metrics.spacing.sm)
+        .frame(height: CommandArgumentsRow.height(metrics))
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous).fill(fill)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                 .strokeBorder(stroke, lineWidth: 1)
         )
         .onHover { hovered = $0 }
@@ -95,7 +100,7 @@ private struct ArgumentField: View {
         return ExtensionColors.fieldFill
     }
 
-    /// Focus reads as a brighter edge; an unfilled required argument stays amber until it's answered.
+    /// Focus reads as a brighter edge; an unfilled required argument stays amber.
     private var stroke: Color {
         if isFocused { return ExtensionColors.fieldFocusStroke }
         if argument.required && text.isEmpty { return Color.orange.opacity(0.45) }

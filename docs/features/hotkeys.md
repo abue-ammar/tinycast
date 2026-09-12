@@ -17,6 +17,13 @@ the keycap rendering — only the _engine_ differs.
 - **Hotkeys persist as JSON strings under `hotkey.<action>` UserDefaults keys**, and
   `HotKeyAction.defaultsKey` is the one place that computes a key — it is also the `HotKeyCenter`
   registration id, so the two cannot drift.
+- **A command's shortcut and its launcher row run the same funnel.** `HotKeyAction.command(CommandID)`
+  is parameterised over the whole catalog and dispatches through `LauncherCoordinator.runCommand`, so a
+  new built-in command arrives bindable with no hotkey plumbing of its own, and there is one behaviour
+  per command rather than one per invocation route.
+- **A command that opens a palette mode toggles it.** Every one of them enters through
+  `PaletteCoordinator.togglePalette(mode:)`, so a second press closes what the first opened. From a
+  launcher row the palette is in `.launcher`, so the row always re-points instead.
 - **`HotKeyBinding` is the one thing an action is bound to, and it has two cases with two engines.** A
   `.combo` is a Carbon registration; a `.doubleTap` is recognized by `DoubleTapMonitor`, because Carbon
   cannot see a lone modifier at all. Its `Codable` is the synthesised one.
@@ -29,16 +36,16 @@ the keycap rendering — only the _engine_ differs.
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyTap` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
-- `LegacyHotKeyRecords` is scheduled for deletion and nothing new may depend on it.
 
 ## Persistence
 
 Bindings persist as JSON strings under `hotkey.<action>` UserDefaults keys, computed in one place —
 `HotKeyAction.defaultsKey`, which doubles as the `HotKeyCenter` registration id. The set of bound
 bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes use
-`boundPaneBundleIDs`; custom commands and quicklinks use their stable UUIDs in
-`boundCustomCommandIDs` and `boundQuicklinkIDs`. Those two are the per-item case — unlike a fixed
-catalog, there is no `allCases` to walk — so each needs an index for `start()` to re-register from
+`boundPaneBundleIDs`; custom commands, quicklinks and window layouts use their stable UUIDs in
+`boundCustomCommandIDs`, `boundQuicklinkIDs` and `boundWindowLayoutIDs`. Those three are the per-item
+case — unlike a fixed catalog, there is no `allCases` to walk — so each needs an index for `start()`
+to re-register from
 and to prune bindings whose record was deleted while Tinycast wasn't running. That prune is why
 `QuicklinkStore` loads at launch even when the feature is off
 (see [quicklinks.md](quicklinks.md#hotkeys)).
@@ -50,26 +57,22 @@ but the guarantee that every decode runs through the initializer that masks devi
 `SettingsBackup.HotkeyBackup` stores the same values, so the backup file carries this shape too; only
 export → import within one build is guaranteed to round-trip.
 
-`LegacyHotKeyRecords` adopts the records shipped before this namespace existed — `v0.7.5` wrote a bare
-`{"carbonKeyCode":N,"carbonModifiers":N}` under `KeyboardShortcuts_<name>`. It runs once from
-`start()`, consumes each old record, and never overwrites a key the user has already rebound. Its
-`legacyKey` returns nil for an action that postdates the scheme, so nothing new has to invent a
-migration key it never wrote. It is scheduled for deletion.
-
-`hotkey.searchFiles`, `hotkey.toggleClipboard`, `hotkey.toggleEmoji`, `hotkey.showNotes`,
-`hotkey.createNote` and `hotkey.searchNotes` are the built-in launcher commands with an action of their
-own, alongside `hotkey.togglePalette`, which has no command row. They are the only `CommandID`s whose
-`hotKeyAction` is non-nil — which is what puts a recorder on their rows in Settings ▸ Commands, and a
-keycap on their launcher rows. Each is also reachable from its own feature pane, so it is one binding
-from two places, not two settings. `HotKeyManager` names them all through `CommandID`, so a conflict
-callout spells an action exactly as its command row does.
+Every built-in command is bindable: `CommandID.hotKeyAction` answers `.command(self)` by default, and
+names the three exceptions. Open in Browser and Run Shell Command are query-driven — their input is the
+typed text a chord has none of — and Quit is withheld so no chord can terminate the app outright. The
+list is a deny-list rather than an allow-list, so a new command still arrives bindable without an edit
+there. A binding therefore persists under `hotkey.<command raw value>`, as in
+`hotkey.command:clipboard-history`, which is also what puts a recorder on the command's row and a
+keycap on every launcher row. That row is in exactly one pane — Settings ▸ Commands, or the feature's
+own pane when `SettingsTab.ownedCommands` names it. `hotkey.togglePalette` is the one fixed action with
+no command row. `HotKeyManager` names them all through `CommandID`, so a conflict callout spells an
+action exactly as its command row does.
 
 Like a window command, the chord registers regardless of the launcher row. Search Files and Notes both
 re-check their feature switches before opening; see [file-search.md](file-search.md#invocation) and
 [notes.md](notes.md#ownership-and-enablement). A hidden launcher row does not disable its shortcut, but
-disabling the feature does. `SettingsBackup.HotkeyBackup` carries every fixed feature binding. They
-return nil from `LegacyHotKeyRecords.legacyKey` because they postdate the old scheme and must never
-invent migration records.
+disabling the feature does. `SettingsBackup.HotkeyBackup` carries them as one `commands` map keyed by
+`CommandID` raw value.
 
 System actions and window commands are the fixed-catalog case: they persist under
 `hotkey.systemAction.<raw-id>` and `hotkey.windowCommand.<raw-id>`
@@ -142,9 +145,13 @@ window — that is un-remapped HID behaviour, not something Tinycast can stop.
 
 Once remapped, Caps Lock arrives as **keyDown/keyUp** rather than `flagsChanged`. Both ends are
 converted into Left Control `flagsChanged` transitions, so everything downstream sees the Hyper chord
-move with the key rather than a swallowed press. A classic `IOHIDSystem` connection reads and drives
-the Caps Lock LED and lock state; it is used only by the explicit Quick Press toggle and the one-time
-unlatch when the remap is installed.
+move with the key rather than a swallowed press. That conversion is also why the **fn bit is scrubbed
+from both ends**: every function key reports `NX_SECONDARYFNMASK`, harmless on a keyDown but read as a
+real fn press once the event is a `flagsChanged`, which fired anything bound to fn on every Hyper
+press. Only the Hyper key's own two events are scrubbed, so Hyper+F-key and Hyper+arrow keep the fn
+bit they are entitled to. A classic `IOHIDSystem` connection reads and drives the Caps Lock LED and
+lock state; it is used only by the explicit Quick Press toggle and the one-time unlatch when the remap
+is installed.
 
 ### Press tracking uses toggle semantics
 
@@ -160,6 +167,12 @@ flags do not always read as fully pressed. The Hyper key's own residue is scrubb
 Caps Lock's alpha-shift bit, or — for a key modifier outside the Hyper set — its generic mask and both
 device bits. Events the tap posts carry a `"TYCT"` marker in `.eventSourceUserData`, the same FourCC
 `HotKeyCenter` uses, so the tap never reacts to its own synthetics.
+
+A Quick Press key is posted with **`flags` cleared explicitly**, like every other synthetic in the app.
+A keyboard event built from `.combinedSessionState` inherits the source's modifiers, and the release
+that ended the hold is still in flight a runloop turn later — so the Escape went out as ⌃⌥⇧⌘Escape.
+Terminals read the raw `0x1B` and did not care; a focused field editor and any exact-match keymap
+swallowed it, which is why Quick Press worked in Ghostty but never in Zed or the palette itself.
 
 ### ✦ is the notation, not a preference
 

@@ -8,6 +8,8 @@ commands and global shortcuts can show, search, or extend the collection.
 
 - **One regular, non-hidden `.md` file is one note.** Its filename without the extension is its title;
   the source contains no frontmatter, embedded ID, or title field, and there is no database or sidecar.
+- **A note the user has not named shows its first line instead.** Only the names `create` claims yield
+  it, it is presentation and nothing else, and naming the note replaces it.
 - **The editor displays literal source.** The string in `NSTextView`, `NotesStore`, search, and the
   file are identical; there is no parser, projection, preview, or hidden syntax.
 - **Only the active note can be dirty.** Switching, creating, renaming, and deleting first flush it, so
@@ -15,14 +17,19 @@ commands and global shortcuts can show, search, or extend the collection.
 - **Tinycast is the only writer.** There is no watcher and no revision check: a save replaces the file
   with what is in the editor. Every show re-lists the folder, so a note added outside appears, but the
   active draft is never re-read from disk.
-- **Search is on demand and unindexed.** An empty switcher query reads metadata only; a nonempty query
-  reads bodies sequentially off-main and retains no collection-sized source cache.
+- **Search is on demand and unindexed.** An empty switcher query reads metadata plus the head of every
+  unnamed note; a nonempty query reads bodies sequentially off-main and retains no collection-sized
+  source cache.
 - **Off means no entry point or Notes work.** The feature is off by default; its shortcuts no-op, its
   commands are absent, and enabling alone does not enumerate or create the Notes directory.
 - **The collection may be empty.** Deleting the last note is allowed and creates no replacement; the
   window shows its empty state and Create Note still works from there.
 - **The user owns the window size.** AppKit resizes and autosaves the frame; the controller only
   clamps it to the floor below which the title bar's own parts collide.
+- **The editor is the one surface snippets expand into.** `NoteTextView` adopts `InjectableTextView`,
+  so a typed keyword — and the Snippets browser's ↵ — is written straight into the text storage
+  rather than posted as events at whichever app happens to be frontmost. Nothing else in Tinycast
+  adopts it: see [snippets.md](snippets.md#text-delivery-and-pasteboard-safety).
 
 ## Storage and identity
 
@@ -38,10 +45,26 @@ regular `.md` children are sorted by modification date, then localized title. Su
 files, and symbolic links are ignored.
 
 Create uses `Untitled.md`, then `Untitled 2.md`, and so on, and rename claims a free name by the same
-rule. Collisions with *another* note are case- and diacritic-insensitive, so `plán` beside `Plan`
+rule. `importNotes` claims one the same way, so a note restored from a backup lands beside the note it
+shares a title with rather than over it. Collisions with *another* note are case- and diacritic-insensitive, so `plán` beside `Plan`
 becomes `plán 2.md`. A note never collides with itself: only an exact filename match is a no-op, which
 is what lets a rename change nothing but the case or the accents. The active filename is local UI state
 in UserDefaults and does not ride settings backups.
+
+## Derived titles
+
+A note still carrying a name `create` claimed — `Untitled`, `Untitled 2`, … — shows the first line of
+its source that carries visible text. `NoteTitle` owns that rule: leading blank lines are skipped,
+Markdown heading markers are dropped, and the line is capped to 120 characters so no row or title bar
+has to carry a paragraph. `NoteSummary.title` remains the filename; `displayTitle` is what every
+surface renders — switcher rows and their VoiceOver labels, the Trash confirmation, the window title,
+and the title band of `NoteSearch`, so a fuzzy query reaches a note nobody has named.
+
+`list()` reads at most 4 KB of each unnamed note to derive it, and a named note costs nothing beyond
+the enumeration it already pays for. The **active** note derives from the live draft rather than the
+last listing, so its window title follows the first line as it is typed while its switcher row catches
+up on the next autosave. Renaming edits the filename, so the rename field starts from `title`: a
+derived line stands in for a name, and is never one.
 
 `NotesRepository` owns list, create, load, save, rename, Trash, and search reads. Every
 URL is validated as an immediate child of the injected directory. It lives in `Service/` because it
@@ -54,8 +77,9 @@ coordinator through `@Environment`; it never receives `AppCore` or mutates the s
 
 Settings > Notes owns `AppSettings.notesEnabled`, which is false when absent. The pane lists **Show
 Notes**, **Create Note**, and **Search Notes** from `CommandCatalog`, so it can still render them while
-`AppIndex` omits them. Every row shares its `VisibilityStore` checkbox and `HotKeyAction` recorder with
-Settings > Commands.
+`AppIndex` omits them. It is their only pane: `SettingsTab.ownedCommands` names the three, which takes
+them out of Settings > Commands and out of reach of `Enable Commands` — Notes' own switch is the one
+that decides they exist.
 
 `AppCore` observes enablement and calls `NotesCoordinator.applyEnabled()`. Disabling hides the panel,
 invalidates pending presentation work, cancels search, flushes the draft, and removes the commands. A
@@ -63,7 +87,7 @@ failed flush retains the draft for retry.
 
 ## Commands, switcher, and window
 
-- **Show Notes** selects the last active note and shows or focuses the panel without toggling it closed.
+- **Show Notes** toggles the panel: it selects the last active note and shows it, or hides a visible one.
 - **Create Note** creates and selects one unique Untitled note, including from an empty channel.
 - **Search Notes** shows the same panel with the switcher open and its search field focused.
 
@@ -128,8 +152,8 @@ the window re-lists the folder before it presents anything.
 ## Verification
 
 `Tests/notes-test.swift` compiles the shipped Notes model and service sources with the real fuzzy
-matcher. It covers repository safety, unique-name claiming, search, selection, autosave, empty
-collections, switcher interaction, and cancellation.
+matcher. It covers repository safety, unique-name claiming, derived titles, search, selection,
+autosave, empty collections, switcher interaction, and cancellation.
 
 `Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects to cover literal source,
 native Cut/Copy/Paste, Unicode and marked text, and undo isolation. Window chrome is not automated:

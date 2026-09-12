@@ -23,7 +23,6 @@ struct VolumeLevelTests {
         expect(VolumeLevel.steps == 20, "the grid is 20 lines")
         expect(VolumeLevel.step, 0.05, "one step is 5%")
 
-        // Clamping.
         expect(VolumeLevel.clamped(-0.5), 0, "below zero clamps to zero")
         expect(VolumeLevel.clamped(1.5), 1, "above one clamps to one")
         expect(VolumeLevel.clamped(0.42), 0.42, "an in-range level passes through")
@@ -94,7 +93,6 @@ struct VolumeLevelTests {
             "the glyph never steps backwards as the level rises")
         expect(Set(bands).count == 3, "every band is reachable on the step grid")
 
-        // Readout.
         expect(VolumeLevel.percentage(0) == "0%", "zero reads 0%")
         expect(VolumeLevel.percentage(0.45) == "45%", "a grid level reads a round number")
         expect(VolumeLevel.percentage(1) == "100%", "full reads 100%")

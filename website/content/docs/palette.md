@@ -4,7 +4,7 @@ description: The one window Tinycast has — how to move around it, and where it
 ---
 
 Everything Tinycast does happens in one floating panel. Each feature is either the root launcher
-screen or a screen you reach from it, and every screen backs out to the launcher.
+screen or a screen you reach from it, and <kbd>⎋</kbd> walks back the way you came.
 
 ## Moving around
 
@@ -15,7 +15,8 @@ screen or a screen you reach from it, and every screen backs out to the launcher
 | <kbd>⌘</kbd><kbd>K</kbd>  | Open the Actions menu for the selection               |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Move the selection                                    |
 | <kbd>⇥</kbd>              | Cycle between the launcher and clipboard              |
-| <kbd>⎋</kbd>              | Leave a screen, or dismiss the palette                |
+| <kbd>⎋</kbd>              | Clear the search, go back a screen, then close        |
+| <kbd>⌘</kbd><kbd>⎋</kbd>  | Back to the root search from any depth                |
 | <kbd>⌫</kbd>              | On an empty field, step back one screen               |
 | <kbd>⌘</kbd><kbd>,</kbd>  | Open Settings                                         |
 | <kbd>⌘</kbd><kbd>W</kbd>  | Close the window                                      |

@@ -47,11 +47,12 @@ final class EmojiIndex {
         return searchMemo.value(for: SearchKey(query: q, revision: revision)) {
             // Penalized just under half a tier, so an equal-quality name match always wins.
             var scored: [ScoredEntry] = []
+            let query = FuzzyMatch.Query(q)
             for (order, entry) in entries.enumerated() {
-                let nameScore = FuzzyMatch.score(query: q, candidate: entry.name)
+                let nameScore = FuzzyMatch.score(query, candidate: entry.name)
                 var best = nameScore
                 if !entry.keywords.isEmpty,
-                    let keywordScore = FuzzyMatch.score(query: q, candidate: entry.keywords)
+                    let keywordScore = FuzzyMatch.score(query, candidate: entry.keywords)
                 {
                     best = max(best ?? Int.min, keywordScore - 500)
                 }

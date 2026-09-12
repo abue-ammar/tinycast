@@ -1,7 +1,6 @@
 import Foundation
 
-/// Persists the per-extension icon overrides. Keyed by manifest name, the same key
-/// `ExtensionStorage` uses for preferences, so uninstalling and reinstalling keeps the choice.
+/// Keyed by manifest name like preferences, so a reinstall keeps the choice.
 @MainActor
 @Observable
 final class ExtensionAppearanceStore {
@@ -31,12 +30,6 @@ final class ExtensionAppearanceStore {
         } else {
             overrides.removeValue(forKey: extensionName)
         }
-        persist()
-    }
-
-    /// Replace the whole map at once (used when importing a settings backup).
-    func replace(_ newOverrides: [String: ExtensionAppearance]) {
-        overrides = newOverrides
         persist()
     }
 

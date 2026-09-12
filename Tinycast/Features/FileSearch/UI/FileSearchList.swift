@@ -1,9 +1,13 @@
 import SwiftUI
 
 struct FileSearchList: View {
+
+    @Environment(\.metrics) private var metrics
+    let title: String
     let results: [FileSearchResult]
     let selectedID: FileSearchResult.ID?
     let scroll: ScrollIntent
+    let onSelect: (FileSearchResult) -> Void
     let onActivate: (FileSearchResult) -> Void
     let onActions: (FileSearchResult) -> Void
 
@@ -15,18 +19,20 @@ struct FileSearchList: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    SectionHeader(title: "Results", isFirst: true)
+                    SectionHeader(title: title, isFirst: true)
                     ForEach(results) { result in
                         FileSearchRow(result: result, selected: result.id == selectedID)
                             .selectionFrame(result.id == selectedID)
                             .contentShape(Rectangle())
-                            .onTapGesture { onActivate(result) }
+                            .onRowClick(
+                                select: { onSelect(result) }, activate: { onActivate(result) }
+                            )
                             .onRightClick { onActions(result) }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -40,6 +46,8 @@ struct FileSearchList: View {
 }
 
 private struct FileSearchRow: View {
+
+    @Environment(\.metrics) private var metrics
     let result: FileSearchResult
     let selected: Bool
     @State private var image: NSImage?
@@ -57,31 +65,35 @@ private struct FileSearchRow: View {
         return .clear
     }
 
+    /// A folder is named by where it sits: half the hits are some `src` or `Tinycast`.
+    private var label: Text {
+        guard result.isDirectory, !result.parentName.isEmpty else { return Text(result.name) }
+        let parent = Text("\(result.parentName)/").foregroundStyle(.secondary)
+        return Text("\(parent)\(result.name)")
+    }
+
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: metrics.spacing.lg) {
             Group {
                 if let image {
                     Image(nsImage: image).resizable()
                 } else {
-                    RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
+                    RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous)
                         .fill(Theme.Colors.iconPlaceholder)
                 }
             }
-            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
-            Text(result.name)
-                .font(Theme.Typography.rowTitle)
-                .lineLimit(1)
-            Spacer(minLength: Theme.Spacing.md)
-            Text(result.parentPath)
-                .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(.secondary)
+            .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
+            // The column is too narrow for a path beside the name; the preview states it instead.
+            label
+                .font(metrics.typography.rowTitle)
                 .lineLimit(1)
                 .truncationMode(.middle)
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, metrics.spacing.md)
+        .padding(.vertical, metrics.spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                 .fill(fill)
         )
         .armedHover($hovered)

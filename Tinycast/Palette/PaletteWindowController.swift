@@ -10,12 +10,21 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
-    /// The session anchor — the panel's top-left, resolved once per show, the top edge being the
-    /// one that must not drift. See docs/features/palette.md#window-placement.
+    // Reopen beat the timeout, so select the preserved query.
+    private var queryWasPreserved = false
+    /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
     private var drag: DragSession?
     private let dropGuides = PaletteDropGuideController()
+    /// ⌘V: `Edit ▸ Paste` claims it before `sendEvent` whenever the board also carries text.
+    private var pasteMonitor: Any?
+    /// ⌘⎋: the window server claims it, so no keystroke is left for the responder chain to see.
+    private lazy var commandEscapeTap = CommandEscapeTap { [weak self] in
+        guard let self, self.panel?.isKeyWindow == true else { return false }
+        self.core.palette.prepare(mode: .launcher)
+        return true
+    }
 
     /// What a drag in flight needs: where home is, and whether releasing now would land there.
     private struct DragSession {
@@ -31,6 +40,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     var isVisible: Bool { panel?.isVisible ?? false }
+
+    /// What the palette covered when it was summoned, for anything it expands into on dismissal.
+    var previousTarget: InjectionTarget? {
+        InjectionTarget.behindPalette(ownWindow: previousOwnWindow, app: previousApp)
+    }
 
     func show() {
         Signposts.interval("PaletteWindowController.show") {
@@ -57,6 +71,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             panel.contentView?.layoutSubtreeIfNeeded()
             core.inputSourceSwitcher.beginSession(
                 preferredInputSourceID: core.settings.autoSwitchInputSourceID)
+            // Events go stale while the palette is closed, and the countdown only ticks while up.
+            core.calendarCoordinator.paletteDidShow()
+            core.palette.noteVisible(true)
+            core.clipboardStore.setTextSearchActive(true)
+            // Only while we are on screen: a system-wide tap has no business outliving the window.
+            commandEscapeTap.enable()
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
@@ -68,9 +88,48 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    // Isolated so teardown may touch the main-actor monitor; the block is already weak.
+    isolated deinit {
+        if let pasteMonitor { NSEvent.removeMonitor(pasteMonitor) }
+    }
+
+    /// The character a bare-⌘ chord names, through the ASCII layout so an IME cannot move it.
+    private static func commandCharacter(from event: NSEvent) -> String? {
+        guard !event.isARepeat,
+            event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
+        else { return nil }
+        return ASCIIKeyboardLayout.character(for: event)?.lowercased()
+            ?? event.charactersIgnoringModifiers?.lowercased()
+    }
+
+    /// A local monitor sees the key before menu dispatch; returning nil swallows it.
+    private func installPasteMonitor() {
+        pasteMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            guard let self, self.panel?.isKeyWindow == true,
+                Self.commandCharacter(from: event) == "v"
+            else { return event }
+            return self.attachPastedFile() ? nil : event
+        }
+    }
+
+    /// Read once here: ⌘V is a keystroke path, and both routes want the same answer.
+    private func attachPastedFile() -> Bool {
+        let files = PasteboardFiles.urls(on: .general)
+        switch core.palette.mode {
+        case .ai: return core.aiChatCoordinator.attachPastedFile(files: files)
+        case .launcher: return core.aiChatCoordinator.attachPastedFileFromLauncher(files: files)
+        default: return false
+        }
+    }
+
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
+        core.calendarCoordinator.paletteDidHide()
+        core.palette.noteVisible(false)
+        core.clipboardStore.setTextSearchActive(false)
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
         anchor = nil
         // The guides must never outlive the panel they point at.
@@ -78,6 +137,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         dropGuides.hide()
         // Drop the multi-MB preview bitmaps, so idle RAM returns near baseline.
         ImageThumbnail.purgePreviews()
+        FilePreviewThumbnail.purgePreviews()
         IconCache.purgeFitted()
         schedulePopToRoot()
         guard restoreFocus else { return }
@@ -91,19 +151,35 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it.
     private func schedulePopToRoot() {
+        // Don't pop to root if an extension is waiting for OAuth authorization in the browser.
+        guard !core.extensions.isAuthorizing else { return }
         popToRootTimer?.invalidate()
         let timeout = core.settings.popToRootTimeout
         guard timeout != .immediately else {
-            core.palette.prepare(mode: .launcher)
+            popToRoot()
             return
         }
         popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
             [weak self] _ in
             MainActor.assumeIsolated {
-                self?.popToRootTimer = nil
-                self?.core.palette.prepare(mode: .launcher)
+                guard let self, !self.core.extensions.isAuthorizing else { return }
+                self.popToRootTimer = nil
+                self.popToRoot()
             }
         }
+    }
+
+    /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
+    private func popToRoot() {
+        core.palette.prepare(mode: .launcher)
+    }
+
+    /// Skip the Pop to Root Search delay, for a close that means to reset as well as hide.
+    func popToRootNow() {
+        guard !core.extensions.isAuthorizing else { return }
+        popToRootTimer?.invalidate()
+        popToRootTimer = nil
+        popToRoot()
     }
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
@@ -111,6 +187,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         guard let timer = popToRootTimer else { return false }
         timer.invalidate()
         popToRootTimer = nil
+        queryWasPreserved = true
         return true
     }
 
@@ -127,9 +204,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch).
+    /// Not for one of our own dialogs: hiding would tear down a command mid-`confirmAlert`.
     func windowDidResignKey(_ notification: Notification) {
-        guard isVisible else { return }
+        guard isVisible, !core.isShowingDialog else { return }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 
@@ -142,6 +219,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             panel?.trackComposition()
             if let context = panel?.fieldEditorContext {
                 core.inputSourceSwitcher.applySession(to: context)
+            }
+            if queryWasPreserved {
+                queryWasPreserved = false
+                panel?.selectAllFieldEditorText()
             }
         }
     }
@@ -194,7 +275,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         } else {
             session.moved = true
             dropGuides.show(
-                home: session.home, screenFrame: session.screenFrame, armed: session.armed)
+                home: session.home, width: metrics.size.panelWidth,
+                screenFrame: session.screenFrame, armed: session.armed)
         }
         drag = session
     }
@@ -203,26 +285,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     private func ensurePanel() -> PalettePanel {
         if let panel { return panel }
-        let root = RootPaletteView()
-            .environment(core)
-            .environment(core.settings)
-            .environment(core.palette)
-            .environment(core.appIndex)
-            .environment(core.clipboardStore)
-            .environment(core.favorites)
-            .environment(core.visibility)
-            .environment(core.aliases)
-            .environment(core.calcHistory)
-            .environment(core.currencyRates)
-            .environment(core.emojiIndex)
-            .environment(core.frequentEmoji)
-            .environment(core.fileSearch)
-            .environment(core.runningApps)
-            .environment(core.hotKeys)
-            .environment(core.uninstall)
-            .environment(core.quicklinks)
-            .environment(core.quicklinkArguments)
-            .environment(core.extensions)
+        let root = RootPaletteView().paletteEnvironment(core)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteState = core.palette
@@ -230,33 +293,48 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onFieldEditorFocused = { [weak self] context in
             self?.core.inputSourceSwitcher.applySession(to: context)
         }
-        // Backspace in an empty search backs out of a sub-screen to a fresh root.
+        // Backspace takes Escape's back step but never closes: a root screen falls to the launcher.
         panel.onBareBackspace = { [weak self] in
-            guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
-            else { return false }
+            guard let core = self?.core, core.palette.query.isEmpty else { return false }
+            // A form field owns the key: the text it deletes is the field's, not a query's.
+            if core.palette.isEditingField { return false }
             // The argument form steps back through the answers first, one key per field.
-            if core.palette.mode == .quicklinkArguments,
-                let previous = core.quicklinkArguments.retreat()
+            if core.palette.mode == .customCommandArguments,
+                let previous = core.customCommandArguments.retreat()
             {
                 core.palette.query = previous
                 core.palette.selection = 0
                 return true
             }
+            if core.palette.mode == .extensionCommand {
+                core.extensionCoordinator.exitExtensionScreen()
+                return true
+            }
+            if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
+                return true
+            }
+            if core.palette.pop() { return true }
+            guard core.palette.mode != .launcher else { return false }
             core.palette.prepare(mode: .launcher)
+            return true
+        }
+        installPasteMonitor()
+        // Handled at the panel: a focused preview answers Escape before the palette's own handler.
+        panel.onEscape = { [weak self] in
+            guard let self, core.palette.fileSearchQuickLook else { return false }
+            core.palette.fileSearchQuickLook = false
             return true
         }
         // Handled at the panel: the field editor or a missing main menu eats these first.
         panel.onCommandShortcut = { [weak self] event in
-            guard let self, !event.isARepeat,
-                event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
-            else { return false }
-            // Escape has no character, so it matches by key code.
-            if Int(event.keyCode) == kVK_Escape {
-                self.core.palette.prepare(mode: .launcher)
+            guard let self, Self.commandCharacter(from: event) != nil else { return false }
+            if self.core.palette.mode == .launcher || self.core.palette.mode == .clipboard,
+                let index = FavoriteSlots.index(forKeyCode: event.keyCode)
+            {
+                self.core.palette.noteFavoriteSlot(index)
                 return true
             }
-            // Character chords, not key codes: Dvorak transposes the two.
-            guard let character = event.charactersIgnoringModifiers?.lowercased() else { return false }
+            guard let character = Self.commandCharacter(from: event) else { return false }
             switch character {
             case ",":
                 self.core.settingsCoordinator.showSettings()
@@ -282,22 +360,29 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         positionPanel(panel, collapsed: collapsed)
     }
 
+    /// A new width invalidates the placement the cached anchor encoded, so re-resolve it.
+    func applyInterfaceSize() {
+        guard let panel else { return }
+        anchor = nil
+        positionPanel(panel, collapsed: core.paletteCoordinator.paletteIsCollapsed)
+    }
+
     /// Size to height and place against the session anchor, so the list grows downward.
     private func positionPanel(_ panel: NSPanel, collapsed: Bool) {
         guard let anchor = resolveAnchor() else { return }
-        let height = collapsed ? Theme.Size.compactHeight : Theme.Size.panelHeight
+        let size = metrics.size
+        let height = collapsed ? size.compactHeight : size.panelHeight
         let frame = NSRect(
-            x: anchor.x, y: anchor.y - height, width: Theme.Size.panelWidth, height: height)
+            x: anchor.x, y: anchor.y - height, width: size.panelWidth, height: height)
         panel.setFrame(frame, display: true)
     }
 
-    /// The display to anchor to; never `NSScreen.main`, which follows the focused window either way.
+    /// The display to anchor to; never `NSScreen.main`, which follows the focused window.
     private func targetScreen() -> NSScreen? {
         core.settings.openOnCursorScreen ? NSScreen.underCursor : NSScreen.primary
     }
 
-    /// The session anchor, cached until hide so both placements read one `visibleFrame`. A
-    /// remembered drag outranks the display setting; the default is what it falls back to.
+    /// Cached until hide, so both placements read one `visibleFrame`; a drag outranks the setting.
     private func resolveAnchor() -> CGPoint? {
         if let anchor { return anchor }
         let resolved = restoredAnchor() ?? targetScreen().map(defaultAnchor(on:))
@@ -310,7 +395,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         guard let stored = core.settings.palettePosition else { return nil }
         return PalettePlacement.restored(
             stored,
-            graspable: CGSize(width: Theme.Size.panelWidth, height: Theme.Size.compactHeight),
+            graspable: CGSize(width: metrics.size.panelWidth, height: metrics.size.compactHeight),
             visibleFrames: NSScreen.screens.map(\.visibleFrame),
             minimumVisible: Theme.Size.paletteMinimumVisible)
     }
@@ -318,7 +403,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// The untouched placement on one display; the summon path and the drop guides share it.
     private func defaultAnchor(on screen: NSScreen) -> CGPoint {
         PalettePlacement.defaultAnchor(
-            in: screen.visibleFrame, width: Theme.Size.panelWidth,
+            in: screen.visibleFrame, width: metrics.size.panelWidth,
             topMarginFraction: Theme.Size.paletteTopMarginFraction)
     }
+
+    private var metrics: InterfaceMetrics { core.settings.interfaceSize.metrics }
 }

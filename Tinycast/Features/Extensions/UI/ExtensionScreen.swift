@@ -5,21 +5,29 @@ import SwiftUI
 struct ExtensionScreen: Equatable {
     enum Kind: Equatable {
         case list
-        case grid(columns: Int)
+        case grid(ExtensionGridLayout)
         case detail
         case form
         /// A root component Tinycast doesn't render (`MenuBarExtra`), or nothing rendered yet.
         case unsupported(String)
     }
 
+    /// `id` is the scroll target: an `.id()` inside a row exists only once it is realized.
+    struct Item: Equatable, Identifiable {
+        let node: RenderNode
+        let index: Int
+
+        var id: String { "item:\(node.id)" }
+    }
+
     enum Row: Equatable, Identifiable {
         case header(title: String, subtitle: String?, id: String)
-        case item(RenderNode)
+        case item(Item)
 
         var id: String {
             switch self {
             case .header(_, _, let id): return "header:" + id
-            case .item(let node): return "item:\(node.id)"
+            case .item(let item): return item.id
             }
         }
     }
@@ -28,7 +36,7 @@ struct ExtensionScreen: Equatable {
     let root: RenderNode?
     let rows: [Row]
     /// Selectable rows in visible order — what `selection` indexes.
-    let items: [RenderNode]
+    let items: [Item]
     /// Fields of a Form, in order.
     let fields: [RenderNode]
     let isLoading: Bool
@@ -83,13 +91,14 @@ struct ExtensionScreen: Equatable {
         searchBarAccessory = root.node("searchBarAccessory")
         showsDetail = root.bool("isShowingDetail") ?? false
         screenActions = root.node("actions")
-        filtersLocally = root.bool("filtering") ?? (searchTextHandler == nil)
+        filtersLocally =
+            root.bool("filtering") ?? (root.object("filtering") != nil || searchTextHandler == nil)
 
         switch root.type {
         case "List":
             kind = .list
         case "Grid":
-            kind = .grid(columns: ExtensionScreen.gridColumns(root))
+            kind = .grid(ExtensionGridLayout(root))
         case "Detail":
             kind = .detail
         case "Form":
@@ -104,9 +113,16 @@ struct ExtensionScreen: Equatable {
             let sectionType = root.type == "Grid" ? "Grid.Section" : "List.Section"
             let emptyType = root.type == "Grid" ? "Grid.EmptyView" : "List.EmptyView"
             emptyView = root.children.first { $0.type == emptyType }
-            let needle = filtersLocally ? query.trimmingCharacters(in: .whitespaces) : ""
+            let needle = FuzzyMatch.Query(
+                filtersLocally ? query.trimmingCharacters(in: .whitespaces) : "")
             var rows: [Row] = []
-            var items: [RenderNode] = []
+            var items: [Item] = []
+            // Numbering as rows are built keeps `selection` and the drawn order in step.
+            func append(_ node: RenderNode) {
+                let item = Item(node: node, index: items.count)
+                items.append(item)
+                rows.append(.item(item))
+            }
             for child in root.children {
                 if child.type == sectionType {
                     let matching = child.children
@@ -117,11 +133,9 @@ struct ExtensionScreen: Equatable {
                         .header(
                             title: child.string("title") ?? "",
                             subtitle: child.string("subtitle"), id: String(child.id)))
-                    rows.append(contentsOf: matching.map(Row.item))
-                    items.append(contentsOf: matching)
+                    matching.forEach(append)
                 } else if child.type == itemType, ExtensionScreen.matches(child, needle) {
-                    rows.append(.item(child))
-                    items.append(child)
+                    append(child)
                 }
             }
             self.rows = rows
@@ -131,7 +145,12 @@ struct ExtensionScreen: Equatable {
         case .form:
             fields = root.children.filter { $0.type.hasPrefix("Form.") }
             rows = []
-            items = []
+            // A form's focusable fields are its selectable rows, so ↑/↓ and ⇥ walk one order.
+            var fieldItems: [Item] = []
+            for field in fields where ExtensionFormField(type: field.type).isFocusable {
+                fieldItems.append(Item(node: field, index: fieldItems.count))
+            }
+            items = fieldItems
             emptyView = nil
 
         case .detail, .unsupported:
@@ -143,7 +162,7 @@ struct ExtensionScreen: Equatable {
     }
 
     private init(
-        kind: Kind, root: RenderNode?, rows: [Row], items: [RenderNode], fields: [RenderNode],
+        kind: Kind, root: RenderNode?, rows: [Row], items: [Item], fields: [RenderNode],
         isLoading: Bool, navigationTitle: String?, searchPlaceholder: String?, filtersLocally: Bool,
         searchTextHandler: String?, selectionHandler: String?, searchBarAccessory: RenderNode?,
         showsDetail: Bool, screenActions: RenderNode?, emptyView: RenderNode?
@@ -165,34 +184,34 @@ struct ExtensionScreen: Equatable {
         self.emptyView = emptyView
     }
 
-    /// Local filtering mirrors Raycast: title, subtitle and keywords, ranked by the launcher's matcher
-    /// so an extension list feels like the rest of the palette.
-    static func matches(_ item: RenderNode, _ needle: String) -> Bool {
+    /// Title, subtitle and keywords, ranked by the launcher's matcher.
+    static func matches(_ item: RenderNode, _ needle: FuzzyMatch.Query) -> Bool {
         guard !needle.isEmpty else { return true }
         var haystack = [item.string("title") ?? ""]
         if let subtitle = item.string("subtitle") { haystack.append(subtitle) }
         haystack.append(contentsOf: item.array("keywords").compactMap(\.stringValue))
-        return haystack.contains { FuzzyMatch.score(query: needle, candidate: $0) != nil }
-    }
-
-    private static func gridColumns(_ root: RenderNode) -> Int {
-        if let columns = root.double("columns").map({ Int($0) }), columns > 0 { return columns }
-        // Raycast's default is 5; `itemSize` is the legacy way of saying the same thing.
-        switch root.string("itemSize") {
-        case "small": return 8
-        case "large": return 3
-        default: return 5
-        }
+        return haystack.contains { FuzzyMatch.score(needle, candidate: $0) != nil }
     }
 
     /// The `ActionPanel` that applies to the current selection: the item's own, else the screen's.
     func actionPanel(forItemAt index: Int) -> RenderNode? {
-        if items.indices.contains(index), let panel = items[index].node("actions") { return panel }
+        if items.indices.contains(index), let panel = items[index].node.node("actions") {
+            return panel
+        }
         return screenActions
     }
 
-    /// Flatten an `ActionPanel` into the actions the palette offers, sections included. Submenus are
-    /// flattened one level with their title prefixed — the palette's menu is single-level.
+    /// Where a drawn field sits in the focus order, or nil for one that is never landed on.
+    func focusItem(for field: RenderNode) -> Item? {
+        items.first { $0.node.id == field.id }
+    }
+
+    /// The field a form opens on: the one that asked for it, else the first one there is.
+    var autoFocusedField: Int {
+        items.first { $0.node.bool("autoFocus") == true }?.index ?? 0
+    }
+
+    /// Submenus flatten one level with their title prefixed: the palette's menu is flat.
     static func actions(in panel: RenderNode?) -> [ExtensionAction] {
         guard let panel else { return [] }
         var result: [ExtensionAction] = []
@@ -246,8 +265,7 @@ struct ExtensionAction: Equatable, Identifiable {
         return caps
     }
 
-    /// Does a keystroke match this action's declared shortcut? Modifiers must match exactly, so ⌘⇧C
-    /// never fires a plain ⌘C action.
+    /// Modifiers must match exactly, so ⌘⇧C never fires a plain ⌘C action.
     func matches(key: KeyEquivalent, modifiers: EventModifiers) -> Bool {
         guard let shortcut = node.object("shortcut") else { return false }
         let resolved = shortcut["macOS"]?.objectValue ?? shortcut

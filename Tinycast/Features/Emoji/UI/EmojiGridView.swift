@@ -57,6 +57,8 @@ private enum EmojiGridItem: Identifiable {
 }
 
 struct EmojiGridView: View {
+
+    @Environment(\.metrics) private var metrics
     let sections: [EmojiGridSection]
     /// Flat selection index across all sections, as in the list modes.
     let selection: Int
@@ -118,9 +120,9 @@ struct EmojiGridView: View {
                         }
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.md)
+                .padding(.horizontal, metrics.spacing.md)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.md)
                 .hideNativeScrollers()
                 .scrollOriginAnchor()
             }
@@ -135,6 +137,7 @@ struct EmojiGridView: View {
 
 /// One grid row, owning all interaction for its cells. See docs/features/emoji.md#rendering.
 private struct EmojiGridRowView: View {
+    @Environment(\.metrics) private var metrics
     let row: EmojiGridRow
     let selection: Int
     let tone: EmojiSkinTone
@@ -157,7 +160,7 @@ private struct EmojiGridRowView: View {
                     )
                 } else {
                     // Empty trailing slots keep a partial last row aligned with the full rows.
-                    Color.clear.frame(maxWidth: .infinity, minHeight: Theme.Size.emojiCell)
+                    Color.clear.frame(maxWidth: .infinity, minHeight: metrics.size.emojiCell)
                 }
             }
         }
@@ -206,6 +209,7 @@ private struct EmojiGridRowView: View {
 
 /// Pure content: no gestures, overlays or hover tracking. See docs/features/emoji.md#rendering.
 private struct EmojiCell: View {
+    @Environment(\.metrics) private var metrics
     let glyph: String
     let selected: Bool
     let hovered: Bool
@@ -220,9 +224,9 @@ private struct EmojiCell: View {
         Text(glyph)
             .font(.system(size: 30))
             .frame(maxWidth: .infinity)
-            .frame(height: Theme.Size.emojiCell)
+            .frame(height: metrics.size.emojiCell)
             .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                     .fill(fill)
             )
     }

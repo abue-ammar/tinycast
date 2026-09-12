@@ -5,28 +5,41 @@ struct TinycastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     // `@AppStorage` republishes only on change, avoiding a scene ⇄ binding loop.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
+    @AppStorage(SettingsKey.calendarMenuBarDisplay)
+    private var calendarMenuBarDisplay = CalendarMenuBarDisplay.disabled.rawValue
 
     // Channel-aware: "Tinycast", "Tinycast Dev", or "Tinycast Beta".
     private let appName = Bundle.main.appDisplayName
 
+    /// Two independent items: one preference each, no state either can read off the other.
     var body: some Scene {
-        MenuBarExtra(
-            appName, systemImage: "macwindow.on.rectangle", isInserted: $showInMenuBar
-        ) {
-            Button("Open \(appName)") {
-                AppCore.shared.paletteCoordinator.showPalette(mode: .launcher)
-            }
-            Button("Clipboard History") {
-                AppCore.shared.paletteCoordinator.showPalette(mode: .clipboard)
-            }
-            Divider()
-            Button("Settings...") { AppCore.shared.settingsCoordinator.showSettings() }
-                .keyboardShortcut(",")
-            Divider()
-            // No ⌘Q: the app menu binds it to Close Settings, and two contradictory ⌘Qs is a lie.
-            Button("Quit \(appName)") { NSApp.terminate(nil) }
+        MenuBarExtra(isInserted: $showInMenuBar) {
+            MenuBarMenu(appName: appName)
+        } label: {
+            MenuBarLabel(appName: appName)
         }
         .commands { menuBarCommands }
+
+        MenuBarExtra(isInserted: calendarMenuBarInsertion) {
+            CalendarMenuBarMenu()
+        } label: {
+            CalendarMenuBarLabel(appName: appName)
+        }
+    }
+
+    /// Reads the raw preference so the scene invalidates, but writes through `AppSettings`: dragging
+    /// the item out must also stop the clock and move the picker, not just the stored value.
+    private var calendarMenuBarInsertion: Binding<Bool> {
+        Binding(
+            get: { calendarMenuBarDisplay != CalendarMenuBarDisplay.disabled.rawValue },
+            set: { inserted in
+                let settings = AppCore.shared.settings
+                if !inserted {
+                    settings.calendarMenuBarDisplay = .disabled
+                } else if settings.calendarMenuBarDisplay == .disabled {
+                    settings.calendarMenuBarDisplay = .meetingIcon
+                }
+            })
     }
 
     /// Declared, not assigned to `NSApp.mainMenu`: SwiftUI rebuilds the menu on any scene change.
@@ -34,6 +47,7 @@ struct TinycastApp: App {
     private var menuBarCommands: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button("About \(appName)") { AppCore.shared.settingsCoordinator.showAbout() }
+            Button("Check for Updates…") { AppCore.shared.updateCoordinator.checkForUpdates() }
         }
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { AppCore.shared.settingsCoordinator.showSettings() }

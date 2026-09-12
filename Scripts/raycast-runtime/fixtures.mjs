@@ -3,67 +3,75 @@
 //
 //   node fixtures.mjs
 
+import { createHarness, bootConfig, describeTree } from "./test.mjs";
 import { transformSync } from "esbuild";
-import { bootConfig, createHarness, describeTree } from "./test.mjs";
+
+let passes = 0;
+let failures = 0;
+
+function check(label, condition, extra = "") {
+  if (condition) {
+    passes++;
+    console.log(`  ✓ ${label}`);
+  } else {
+    failures++;
+    console.log(`  ✗ ${label}${extra ? ` — ${extra}` : ""}`);
+  }
+}
 
 function compile(source) {
-  return transformSync(source, { loader: "jsx", jsx: "automatic", format: "cjs", target: "es2022" }).code;
+  const { code } = transformSync(source, {
+    loader: "jsx",
+    jsx: "automatic",
+    jsxImportSource: "react",
+    format: "cjs",
+    target: "es2022",
+  });
+  return code;
 }
 
 const wait = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
 
-let failures = 0;
-
-function check(label, condition, detail) {
-  if (condition) {
-    console.log(`  ✓ ${label}`);
-  } else {
-    failures += 1;
-    console.log(`  ✗ ${label}${detail ? ` — ${detail}` : ""}`);
-  }
-}
-
-async function run(name, source, mode, body) {
+async function run(name, source, mode, verify, options) {
   console.log(`\n▶ ${name}`);
-  const harness = createHarness();
+  const harness = createHarness(options);
   harness.boot(bootConfig());
-  harness.start("s1", compile(source), "/fixtures/cmd.js", "/fixtures", mode, {});
+  const code = compile(source);
+  harness.start("s1", code, "/fixtures/cmd.js", "/fixtures", mode, {});
   await wait();
-  if (harness.state.failures.length) {
-    failures += 1;
-    console.log(`  ✗ threw:\n${harness.state.failures.join("\n")}`);
-  }
-  await body(harness);
+  await verify(harness);
   harness.stop("s1");
 }
 
-// ─── Fixtures ───────────────────────────────────────────────────────
+// ─── Fixtures ────────────────────────────────────────────────────────
 
 const listSource = `
-import { List, ActionPanel, Action, Icon, Color } from "@raycast/api";
+import { List, ActionPanel, Action, Icon } from "@raycast/api";
 import { useState } from "react";
 
 export default function Command() {
   const [count, setCount] = useState(0);
   return (
-    <List navigationTitle="Fixtures" searchBarPlaceholder="Type to filter…" isLoading={false}
-      searchBarAccessory={<List.Dropdown tooltip="Scope" value="all"><List.Dropdown.Item title="All" value="all" /></List.Dropdown>}>
-      <List.Section title="Numbers" subtitle="two">
+    <List
+      searchBarPlaceholder="Search…"
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter" onChange={() => {}}>
+          <List.Dropdown.Item title="All" value="all" />
+          <List.Dropdown.Item title="Active" value="active" />
+        </List.Dropdown>
+      }
+    >
+      <List.Section title="Main">
         <List.Item
+          id="item-1"
           title={"Count is " + count}
-          subtitle="tap to bump"
-          icon={{ source: Icon.Circle, tintColor: Color.Green }}
-          accessories={[{ text: String(count) }, { tag: { value: "live", color: Color.Blue } }]}
+          accessories={[{ text: "Tag" }, { icon: Icon.Star }]}
           actions={
-            <ActionPanel title="Row">
-              <Action title="Bump" onAction={() => setCount((value) => value + 1)} />
-              <ActionPanel.Section title="More">
-                <Action.CopyToClipboard title="Copy" content="hello" />
-              </ActionPanel.Section>
+            <ActionPanel>
+              <Action title="Bump" onAction={() => setCount((c) => c + 1)} />
             </ActionPanel>
           }
         />
-        <List.Item title="Second" keywords={["two"]} />
       </List.Section>
     </List>
   );
@@ -71,24 +79,22 @@ export default function Command() {
 `;
 
 const detailSource = `
-import { Detail, ActionPanel, Action } from "@raycast/api";
+import { Detail } from "@raycast/api";
 
 export default function Command() {
   return (
     <Detail
-      markdown={"# Title\\n\\nSome **body** text."}
-      navigationTitle="Doc"
+      markdown="# Hello world"
       metadata={
         <Detail.Metadata>
           <Detail.Metadata.Label title="Author" text="Ada" />
           <Detail.Metadata.Separator />
           <Detail.Metadata.TagList title="Tags">
-            <Detail.Metadata.TagList.Item text="swift" />
+            <Detail.Metadata.TagList.Item text="fast" color="#00ff00" />
           </Detail.Metadata.TagList>
-          <Detail.Metadata.Link title="Home" target="https://example.com" text="example.com" />
+          <Detail.Metadata.Link title="Link" target="https://example.com" text="Home" />
         </Detail.Metadata>
       }
-      actions={<ActionPanel><Action.OpenInBrowser url="https://example.com" /></ActionPanel>}
     />
   );
 }
@@ -121,36 +127,41 @@ export default function Command() {
   return (
     <Form actions={<ActionPanel><Action.SubmitForm title="Save" onSubmit={(values) => { globalThis.__submitted = values; }} /></ActionPanel>}>
       <Form.TextField id="name" title="Name" defaultValue="Ada" />
-      <Form.TextArea id="bio" title="Bio" />
-      <Form.Checkbox id="agree" label="Agree" defaultValue={true} />
+      <Form.TextArea id="bio" title="Bio" defaultValue="" />
+      <Form.Checkbox id="agree" label="I agree" defaultValue={true} />
       <Form.Dropdown id="role" title="Role" defaultValue="dev">
         <Form.Dropdown.Item value="dev" title="Developer" />
-        <Form.Dropdown.Item value="ops" title="Operator" />
       </Form.Dropdown>
-      <Form.TagPicker id="tags" title="Tags" defaultValue={["a"]}>
-        <Form.TagPicker.Item value="a" title="A" />
+      <Form.TagPicker id="tags" title="Tags" defaultValue={["swift"]}>
+        <Form.TagPicker.Item value="swift" title="Swift" />
       </Form.TagPicker>
-      <Form.DatePicker id="due" title="Due" />
+      <Form.DatePicker id="when" title="When" defaultValue={new Date("2026-04-18T10:00:00Z")} />
       <Form.Separator />
-      <Form.Description text="All fields optional." />
+      <Form.Description title="Info" text="All fields are saved locally." />
     </Form>
   );
 }
 `;
 
 const navigationSource = `
-import { List, Detail, ActionPanel, Action } from "@raycast/api";
-import { useNavigation } from "@raycast/api";
+import { List, ActionPanel, Action, useNavigation, Detail } from "@raycast/api";
 
-function Second() {
-  const { pop } = useNavigation();
-  return <Detail markdown="second" actions={<ActionPanel><Action title="Back" onAction={pop} /></ActionPanel>} />;
+function Subscreen() {
+  return <Detail markdown="# Subscreen" />;
 }
 
 export default function Command() {
+  const { push } = useNavigation();
   return (
     <List>
-      <List.Item title="Go" actions={<ActionPanel><Action.Push title="Push" target={<Second />} /></ActionPanel>} />
+      <List.Item
+        title="Push"
+        actions={
+          <ActionPanel>
+            <Action title="Open subscreen" onAction={() => push(<Subscreen />)} />
+          </ActionPanel>
+        }
+      />
     </List>
   );
 }
@@ -160,9 +171,19 @@ const nodeSource = `
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import { Buffer } from "node:buffer";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Detail } from "@raycast/api";
 
 export default function Command() {
+  const errorCode = (fn) => {
+    try {
+      fn();
+      return "none";
+    } catch (error) {
+      return error.code ?? error.name;
+    }
+  };
   const parts = [
     path.join("/a/b", "../c", "d.txt"),
     path.extname("x/y/file.tar.gz"),
@@ -174,8 +195,228 @@ export default function Command() {
     Buffer.from("hello").toString("base64"),
     Buffer.from("aGVsbG8=", "base64").toString("utf8"),
     new TextDecoder().decode(new TextEncoder().encode("héllo")),
+    fileURLToPath("file:///Applications/Tinycast%20Beta.app"),
+    fileURLToPath(new URL("file:///tmp/%ED%95%9C%EA%B8%80.txt")),
+    fileURLToPath("file://localhost/tmp/a?query=ignored#fragment"),
+    fileURLToPath("file:///tmp/a%5Cb"),
+    fileURLToPath("file:tmp/a"),
+    fileURLToPath("file:///tmp/%2e%2e/a"),
+    fileURLToPath("file://%6cocalhost/tmp/a"),
+    fileURLToPath("file:///tmp//a"),
+    fileURLToPath(new URL("file:///tmp/a///b")),
+    fileURLToPath("file:///tmp/a//../b"),
+    fileURLToPath("file:///C:/.."),
+    new URL(
+      "file:///tmp/a?query=" +
+        String.fromCharCode(92) +
+        "keep#fragment=" +
+        String.fromCharCode(92) +
+        "keep",
+    ).href,
+    new URL("https://example.com/C:/..").href,
+    fileURLToPath("file:///a:folder/.."),
+    new URL("..", "file:///a:folder/child").href,
+    new URL("..", "https://example.com/C:/child").href,
+    pathToFileURL("/tmp/My Image.png").href,
+    pathToFileURL("/tmp/a#b.png").href,
+    fileURLToPath(pathToFileURL("/tmp/a#b.png")),
+    fileURLToPath(pathToFileURL("/tmp/a?b.png")),
+    fileURLToPath(pathToFileURL("/Applications/Tinycast Beta.app")),
+    errorCode(() => fileURLToPath("file:///tmp/a%2Fb")),
+    errorCode(() => fileURLToPath("file://a%2Fb/tmp/a")),
+    errorCode(() => fileURLToPath("file://example.com/tmp/a")),
+    errorCode(() => fileURLToPath("https://example.com/a")),
+    errorCode(() => fileURLToPath({})),
+    errorCode(() => fileURLToPath("file://user@localhost/tmp/a")),
+    errorCode(() => fileURLToPath("file://localhost:/tmp/a")),
+    errorCode(() => fileURLToPath("file:///C:/a", { windows: true })),
   ];
   return <Detail markdown={parts.join("\\n")} />;
+}
+`;
+
+// Bundled HTTP clients (axios) construct and probe a Response at module scope, before any component
+// mounts — a host-shaped constructor took the whole command down with them.
+const responseSource = `
+export default async function Command() {
+  const probe = new Response();
+  const created = new Response(JSON.stringify({ id: 7 }), {
+    status: 201,
+    statusText: "Created",
+    headers: { "Content-Type": "application/json" },
+  });
+  const clone = created.clone();
+  globalThis.__response = {
+    probe: [probe.status, probe.ok, probe.statusText, await probe.text()],
+    readers: ["text", "arrayBuffer", "blob"].every((name) => typeof probe[name] === "function"),
+    created: [created.status, created.statusText, created.headers.get("content-type"), (await created.json()).id],
+    clone: [clone.status, clone.headers.get("content-type"), await clone.text()],
+    bytes: Array.from(await new Response(new Uint8Array([104, 105])).bytes()),
+    byteLength: (await new Response("héllo").arrayBuffer()).byteLength,
+  };
+}
+`;
+
+// A child's output arrives in one go once the process has already exited, so both ways of reading a
+// stream have to work after the fact: `execa` async-iterates stdout, others attach a `data` listener.
+const spawnSource = `
+import { spawn } from "node:child_process";
+
+export default async function Command() {
+  const iterated = [];
+  const child = spawn("/bin/echo", ["hello"]);
+  for await (const chunk of child.stdout) iterated.push(chunk.toString());
+
+  const late = await new Promise((resolve) => {
+    const other = spawn("/bin/echo", ["world"]);
+    other.on("close", () => {
+      const chunks = [];
+      other.stdout.on("data", (chunk) => chunks.push(chunk.toString()));
+      other.stdout.on("end", () => resolve(chunks.join("")));
+    });
+  });
+
+  // Port Manager detaches lsof to get a killable process group, then reads its output.
+  const grouped = await new Promise((resolve) => {
+    const child = spawn("/bin/echo", ["group"], { detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const chunks = [];
+    child.stdout.on("data", (chunk) => chunks.push(chunk.toString()));
+    child.on("close", () => resolve(chunks.join("")));
+  });
+
+  globalThis.__spawn = { iterated: iterated.join(""), late, grouped };
+}
+`;
+
+// node-fetch travels inside `@raycast/utils` and drives `http.request` rather than global `fetch`,
+// then reads the response back by async-iterating a stream it pipes through a `PassThrough`.
+const httpSource = `
+import http from "node:http";
+import stream, { PassThrough, pipeline } from "node:stream";
+
+export default async function Command() {
+  globalThis.__http = await new Promise((resolve, reject) => {
+    const request = http.request(
+      "https://example.test/data",
+      { method: "post", headers: { "X-Probe": ["one", "two"], "Accept-Encoding": "gzip, deflate, br" } },
+      async (response) => {
+        const body = pipeline(response, new PassThrough(), () => {});
+        const chunks = [];
+        for await (const chunk of body) chunks.push(chunk.toString());
+        resolve({
+          status: response.statusCode,
+          statusText: response.statusMessage,
+          contentType: response.headers["content-type"],
+          decoding: [response.headers["content-encoding"], response.headers["content-length"]],
+          isStream: body instanceof stream,
+          text: chunks.join(""),
+        });
+      },
+    );
+    request.on("error", reject);
+    request.end("ping");
+  });
+}
+`;
+
+// The Homebrew extension streams its package index to disk rather than buffering it: it guards on
+// `response.body`, counts bytes through a `TransformStream`, and pipes the result into a file — then
+// reads it back through a `Transform`. Issue #429: `Response` had no `body`, so it failed at "HTTP 200".
+const streamSource = `
+import fs from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Readable, Transform, Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+
+export default async function Command() {
+  const target = join(tmpdir(), "tinycast-fixture-index.json");
+  const response = await fetch("https://example.test/index.json");
+  if (!response.ok || !response.body) throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+
+  let observed = 0;
+  const counter = new TransformStream({
+    transform(chunk, controller) {
+      observed += chunk.length;
+      controller.enqueue(chunk);
+    },
+  });
+  const sink = fs.createWriteStream(target);
+  await pipeline(Readable.fromWeb(response.body.pipeThrough(counter)), sink);
+
+  const upper = new Transform({
+    transform(chunk, encoding, done) {
+      done(null, chunk.toString().toUpperCase());
+    },
+  });
+  const read = [];
+  const collect = new Writable({
+    write(chunk, encoding, done) {
+      read.push(chunk.toString());
+      done(null);
+    },
+  });
+  await pipeline(fs.createReadStream(target), upper, collect);
+
+  globalThis.__stream = {
+    observed,
+    bytesWritten: sink.bytesWritten,
+    onDisk: fs.readFileSync(target, "utf8"),
+    piped: read.join(""),
+  };
+  fs.unlinkSync(target);
+}
+`;
+
+const oauthSource = `
+import { OAuth } from "@raycast/api";
+
+export default async function Command() {
+  const client = new OAuth.PKCEClient({
+    redirectMethod: OAuth.RedirectMethod.Web,
+    providerName: "GitHub",
+    providerId: "github",
+    description: "Connect your GitHub account",
+  });
+
+  const req = await client.authorizationRequest({
+    endpoint: "https://github.com/login/oauth/authorize",
+    clientId: "client-123",
+    scope: "repo read:user",
+  });
+
+  const authRes = await client.authorize(req);
+
+  const tokenSet = new OAuth.TokenSet({
+    accessToken: "gho_secret123",
+    refreshToken: "ghr_secret456",
+    expiresIn: 3600,
+  });
+
+  await client.setTokens(tokenSet);
+  const retrieved = await client.getTokens();
+
+  const expiredToken = new OAuth.TokenSet({
+    accessToken: "expired_token",
+    expiresIn: 20,
+    createdAt: Date.now() - 30000,
+  });
+
+  globalThis.__oauthTest = {
+    verifierLen: req.codeVerifier.length,
+    challengeLen: req.codeChallenge.length,
+    stateLen: req.state.length,
+    url: req.toURL(),
+    authCode: authRes.authorizationCode,
+    retrievedAccessToken: retrieved?.accessToken,
+    retrievedRefreshToken: retrieved?.refreshToken,
+    isExpiredLive: tokenSet.isExpired(),
+    isExpiredOld: expiredToken.isExpired(),
+  };
+
+  await client.removeTokens();
+  const afterRemove = await client.getTokens();
+  globalThis.__oauthTest.afterRemove = afterRemove;
 }
 `;
 
@@ -323,8 +564,127 @@ export async function runFixtures() {
       "aGVsbG8=",
       "hello",
       "héllo",
+      "/Applications/Tinycast Beta.app",
+      "/tmp/한글.txt",
+      "/tmp/a",
+      "/tmp/a\\b",
+      "/tmp/a",
+      "/a",
+      "/tmp/a",
+      "/tmp//a",
+      "/tmp/a///b",
+      "/tmp/a/b",
+      "/C:/",
+      String.raw`file:///tmp/a?query=\keep#fragment=\keep`,
+      "https://example.com/",
+      "/a:folder/",
+      "file:///a:folder/",
+      "https://example.com/",
+      "file:///tmp/My%20Image.png",
+      "file:///tmp/a%23b.png",
+      "/tmp/a#b.png",
+      "/tmp/a?b.png",
+      "/Applications/Tinycast Beta.app",
+      "ERR_INVALID_FILE_URL_PATH",
+      "ERR_INVALID_URL",
+      "ERR_INVALID_FILE_URL_HOST",
+      "ERR_INVALID_URL_SCHEME",
+      "ERR_INVALID_ARG_TYPE",
+      "ERR_INVALID_URL",
+      "ERR_INVALID_URL",
+      "Error",
     ];
     expected.forEach((value, index) => check(`shim ${index}: ${value}`, markdown[index] === value, markdown[index]));
+  });
+
+  await run("Response takes the Web spec's constructor", responseSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__response");
+    const equals = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+    check("a zero-arg Response is a 200 with an empty body", equals(result.probe, [200, true, "", ""]), JSON.stringify(result.probe));
+    check("exposes the body readers a feature probe looks for", result.readers === true);
+    check("reads status, headers and JSON back", equals(result.created, [201, "Created", "application/json", 7]), JSON.stringify(result.created));
+    check("clone carries status, headers and body", equals(result.clone, [201, "application/json", '{"id":7}']), JSON.stringify(result.clone));
+    check("keeps a binary body intact", equals(result.bytes, [104, 105]), JSON.stringify(result.bytes));
+    check("encodes a text body as UTF-8", result.byteLength === 6, String(result.byteLength));
+  });
+
+  await run("spawn's stdout survives a late reader", spawnSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__spawn");
+    check("async iteration collects stdout", result?.iterated === "hello\n", JSON.stringify(result?.iterated));
+    check("a listener attached after exit still gets it", result?.late === "world\n", JSON.stringify(result?.late));
+    check("a detached child that pipes stdout is still awaited", result?.grouped === "group\n", JSON.stringify(result?.grouped));
+  });
+
+  const httpSpecs = [];
+  await run(
+    "http.request rides the same bridge as fetch",
+    httpSource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__http");
+      const spec = httpSpecs[0] ?? {};
+      check("sends one request over the fetch bridge", httpSpecs.length === 1, String(httpSpecs.length));
+      check("uppercases the method", spec.method === "POST", String(spec.method));
+      check("joins a multi-valued header", spec.headers?.["x-probe"] === "one, two", JSON.stringify(spec.headers));
+      check("leaves content negotiation to the transport", spec.headers?.["accept-encoding"] === undefined);
+      check("forwards the written body", Buffer.from(spec.bodyBase64 ?? "", "base64").toString() === "ping");
+      check("reports status and message", result.status === 201 && result.statusText === "Created");
+      check("keeps the other headers", result.contentType === "application/json", String(result.contentType));
+      check("drops headers describing bytes the bridge already decoded", JSON.stringify(result.decoding) === "[null,null]", JSON.stringify(result.decoding));
+      check("the body is a Stream", result.isStream === true);
+      check("delivers the body to a late reader", result.text === '{"ok":true}', result.text);
+    },
+    {
+      stubs: {
+        "fetch.request": (args) => {
+          httpSpecs.push(args[0]);
+          return {
+            status: 201,
+            statusText: "Created",
+            headers: { "content-type": "application/json", "content-encoding": "gzip", "content-length": "31" },
+            url: "https://example.test/data",
+            bodyBase64: Buffer.from('{"ok":true}').toString("base64"),
+          };
+        },
+      },
+    },
+  );
+
+  const indexBody = JSON.stringify(Array.from({ length: 4000 }, (_, index) => ({ name: `pkg-${index}` })));
+  await run(
+    "a fetch body streams through a transform onto disk",
+    streamSource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__stream");
+      check("the response exposes a body stream", result !== undefined && result.observed > 0, JSON.stringify(result));
+      check("every byte reaches the transform", result?.observed === indexBody.length, `${result?.observed} of ${indexBody.length}`);
+      check("every byte reaches the file", result?.bytesWritten === indexBody.length, String(result?.bytesWritten));
+      check("the file matches the response", result?.onDisk === indexBody);
+      check("reading it back through a Transform preserves it", result?.piped === indexBody.toUpperCase());
+    },
+    {
+      stubs: {
+        "fetch.request": () => ({
+          status: 200,
+          statusText: "OK",
+          headers: { "content-type": "application/json", "content-length": String(indexBody.length) },
+          url: "https://example.test/index.json",
+          bodyBase64: Buffer.from(indexBody).toString("base64"),
+        }),
+      },
+    },
+  );
+
+  await run("OAuth PKCEClient and TokenSet", oauthSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__oauthTest");
+    check("generates PKCE codeVerifier and challenge", result?.verifierLen >= 43 && result?.challengeLen >= 43, JSON.stringify(result));
+    check("generates OAuth state", result?.stateLen >= 20);
+    check("builds correct authorization URL with redirect_uri", new URL(result.url).searchParams.get("redirect_uri") === "https://raycast.com/redirect?packageName=Extension" && new URL(result.url).searchParams.get("client_id") === "client-123");
+    check("authorize returns authorization code", result?.authCode === "auth-code-12345");
+    check("stores and retrieves TokenSet with tokens", result?.retrievedAccessToken === "gho_secret123" && result?.retrievedRefreshToken === "ghr_secret456");
+    check("TokenSet isExpired calculation works", result?.isExpiredLive === false && result?.isExpiredOld === true);
+    check("removeTokens cleans up tokens", result?.afterRemove === undefined || result?.afterRemove === null);
   });
 
   await run("no-view command", noViewSource, "no-view", async (harness) => {

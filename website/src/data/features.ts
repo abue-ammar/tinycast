@@ -60,7 +60,7 @@ export const features: Feature[] = [
   {
     icon: "windows",
     title: "Window management",
-    body: "Halves, quarters, thirds, nudges and display moves — 30 commands, with no new permission and nothing new to install.",
+    body: "Halves, quarters, thirds, nudges, display moves and instant Space switching — 32 commands, with no new permission and nothing new to install.",
     href: "/docs/features/window-management",
   },
   {

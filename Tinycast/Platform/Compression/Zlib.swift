@@ -3,15 +3,9 @@ import Foundation
 
 enum ZlibError: Error { case notGzip, corrupt, tooLarge }
 
-/// gzip / zlib / raw-DEFLATE, both directions.
-///
-/// Apple's `Compression` framework only speaks raw DEFLATE (`COMPRESSION_ZLIB` is a misnomer — it
-/// omits the zlib wrapper), so the framing and the checksums are done here. That keeps the app free of
-/// any zlib linkage or build-system detour, and serves two callers: the Raycast settings import, and
-/// the `zlib` Node shim extensions reach for.
+/// Apple's `Compression` speaks only raw DEFLATE, so framing and checksums are done here.
 enum Zlib {
-    /// Real inputs here are a Raycast export (a few KB) or an extension's own payload; the cap stops a
-    /// hand-crafted bomb — the import envelope is inflated before it is ever authenticated.
+    /// The cap stops a bomb: the import envelope is inflated before it is authenticated.
     static let defaultMaxOutput = 64 * 1024 * 1024
 
     // MARK: - gzip (RFC 1952)
@@ -92,7 +86,7 @@ enum Zlib {
         let dst = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
         defer { dst.deallocate() }
 
-        // The C struct has no zero-arg init; placeholder pointers are overwritten before processing.
+        // The C struct has no zero-arg init; the placeholders are overwritten before use.
         var handle = compression_stream(
             dst_ptr: dst, dst_size: bufferSize, src_ptr: dst, src_size: 0, state: nil)
         guard compression_stream_init(&handle, operation, COMPRESSION_ZLIB) != COMPRESSION_STATUS_ERROR

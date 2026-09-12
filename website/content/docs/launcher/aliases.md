@@ -12,7 +12,8 @@ and extension commands.
 ## Setting one
 
 Aliases are edited in **Settings**, on the row for the item, in any pane that lists launcher items:
-Applications, System Settings, System Actions, Commands, Quicklinks, and the feature panes.
+Applications, System Settings, System Actions, Commands, Quicklinks, Extensions, and the
+feature panes.
 
 There is a clear button on the field, and one alias per entry.
 

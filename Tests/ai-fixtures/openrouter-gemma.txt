@@ -1,0 +1,14 @@
+: OPENROUTER PROCESSING
+
+: OPENROUTER PROCESSING
+
+: OPENROUTER PROCESSING
+
+data: {"id":"gen-1786242344-muXi24zkaJotBXSqPohR","object":"chat.completion.chunk","created":1786242344,"model":"google/gemma-4-26b-a4b-it:free","provider":"Google AI Studio","choices":[{"index":0,"delta":{"content":"1, 2, 3.","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1786242344-muXi24zkaJotBXSqPohR","object":"chat.completion.chunk","created":1786242344,"model":"google/gemma-4-26b-a4b-it:free","provider":"Google AI Studio","choices":[{"index":0,"delta":{"content":"","role":"assistant"},"finish_reason":"stop","native_finish_reason":"STOP"}]}
+
+data: {"id":"gen-1786242344-muXi24zkaJotBXSqPohR","object":"chat.completion.chunk","created":1786242344,"model":"google/gemma-4-26b-a4b-it:free","provider":"Google AI Studio","service_tier":"default","choices":[{"index":0,"delta":{"content":"","role":"assistant"},"finish_reason":"stop","native_finish_reason":"STOP"}],"usage":{"prompt_tokens":5,"completion_tokens":8,"total_tokens":13,"cost":0,"is_byok":true,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":0,"image_tokens":0,"audio_tokens":0}}}
+
+data: [DONE]
+

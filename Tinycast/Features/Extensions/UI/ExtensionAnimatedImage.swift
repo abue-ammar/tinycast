@@ -9,7 +9,7 @@ struct AnimatedImageView: NSViewRepresentable {
         let view = NSImageView()
         view.imageScaling = .scaleProportionallyUpOrDown
         view.animates = true
-        // Neither axis may drive intrinsic size: a large GIF would otherwise widen the row it sits in.
+        // Neither axis may drive intrinsic size: a large GIF would widen its row.
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         view.setContentHuggingPriority(.defaultLow, for: .vertical)
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)

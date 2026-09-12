@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Row icon decoding off the main thread; warm icons seed synchronously, so no flash.
 struct AppIconView: View {
+    @Environment(\.metrics) private var metrics
     let app: AppEntry
     @State private var image: NSImage?
 
@@ -10,8 +11,7 @@ struct AppIconView: View {
         _image = State(initialValue: Self.cached(app))
     }
 
-    /// Cache-only, so a warm icon paints on the same frame. Which of the four kinds of glyph an entry
-    /// wants is `iconSource`'s answer, not this view's.
+    /// Cache-only, so a warm icon paints on the same frame; the kind is `iconSource`'s answer.
     private static func cached(_ app: AppEntry) -> NSImage? {
         IconCache.cached(app.iconSource, fileURL: app.url)
     }
@@ -25,7 +25,7 @@ struct AppIconView: View {
             if let image {
                 Image(nsImage: image).resizable()
             } else {
-                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                     .fill(Theme.Colors.iconPlaceholder)
             }
         }

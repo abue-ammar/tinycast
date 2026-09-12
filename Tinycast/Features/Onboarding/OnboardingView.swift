@@ -14,26 +14,35 @@ struct OnboardingView: View {
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private static let lastStep = 3
-    /// Fixed content size, so `NSHostingView` can't size the window to its ideal height.
-    static let windowSize = CGSize(width: 520, height: 400)
+    static let width: CGFloat = 520
+    /// Only until the first layout measures the real one, which is what the window then takes.
+    static let initialSize = CGSize(width: width, height: 352)
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
             hero
             stepContent
-                .frame(maxHeight: .infinity, alignment: .top)
             footer
         }
-        .padding(.top, Theme.Spacing.xxl)
+        // Less on top: the title bar adds 32pt, and the lights must be cleared.
+        .padding(.top, Theme.Spacing.xs)
         .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        // The ideal height, not the window's, so sizing to it converges instead of feeding back.
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            core.onboardingCoordinator.fit(height: $0)
+        }
+        // Only the gradient reaches under the titlebar; the content stays in the safe area.
         .background(
             LinearGradient(
                 colors: [Theme.Colors.sheen, Color.clear],
-                startPoint: .top, endPoint: .center)
+                startPoint: .top, endPoint: .center
+            )
+            .ignoresSafeArea()
         )
-        // Extend under the titlebar, so window height equals the fixed content height.
-        .ignoresSafeArea()
         // Onboarding's shortcut step has a recorder too, and it isn't inside a `SettingsPane`.
         .shortcutRecorderPopoverHost()
         .animation(.easeInOut(duration: 0.2), value: step)
@@ -192,7 +201,7 @@ struct OnboardingView: View {
                         .onSubmit { model.run(core: core) }
                 }
             }
-            RaycastImportSelection(selection: $model.selection, format: model.format)
+            RaycastImportSelection(selection: $model.selection)
                 .padding(.horizontal, Theme.Spacing.xs)
             if let status = model.status {
                 importStatus(status)
@@ -366,9 +375,11 @@ final class OnboardingModel {
     var importing = false
     var status: ImportStatus?
     var selection: RaycastImportOptions = .all
-    var format: RaycastFormat?
+    var isRaycastExport = false
 
-    var canImport: Bool { format != nil && !passphrase.isEmpty && !selection.isEmpty && !importing }
+    var canImport: Bool {
+        isRaycastExport && !passphrase.isEmpty && !selection.isEmpty && !importing
+    }
     var didImport: Bool {
         if case .success = status { return true }
         return false
@@ -378,13 +389,13 @@ final class OnboardingModel {
         guard let name = file?.lastPathComponent else {
             return "Choose a .rayconfig file exported from Raycast."
         }
-        return "\(name) — \(format?.title ?? "not a Raycast export")"
+        return "\(name) — \(isRaycastExport ? "Raycast export" : "not a Raycast export")"
     }
 
     func chooseFile() {
         guard let url = BackupActions.pickRaycastFile() else { return }
         file = url
-        format = BackupActions.detectRaycastFormat(of: url)
+        isRaycastExport = BackupActions.isRaycastExport(url)
         status = nil
     }
 
@@ -397,14 +408,7 @@ final class OnboardingModel {
             do {
                 let outcome = try await BackupActions.importRaycast(
                     core: core, file: file, passphrase: passphrase, options: selection)
-                var message = BackupActions.summaryText(outcome.summary)
-                if outcome.clipboardImported > 0 {
-                    message += " Imported \(outcome.clipboardImported) clipboard entries."
-                }
-                if outcome.missingImages > 0 {
-                    message += " \(outcome.missingImages) images were unavailable and skipped."
-                }
-                status = .success(message)
+                status = .success(BackupActions.raycastText(outcome))
                 passphrase = ""
             } catch {
                 status = .failure(error.localizedDescription)

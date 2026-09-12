@@ -13,11 +13,11 @@ struct CommandsSettingsView: View {
         return Form {
             LauncherItemsSection(
                 kind: .command,
-                header: "Commands",
+                anchor: .commandsCommands,
                 searchPrompt: "Search commands…")
 
             FeatureSwitchSection(
-                header: "Custom Commands",
+                anchor: .commandsCustomCommands,
                 enableTitle: "Enable custom commands",
                 enableSubtitle:
                     "Commands run with your user account in /bin/zsh, so use full executable paths.",
@@ -33,19 +33,38 @@ struct CommandsSettingsView: View {
                     ForEach(sortedCommands) { command in
                         CustomCommandSettingsRow(
                             command: command,
+                            isEnabled: Binding(
+                                get: { command.isEnabled },
+                                set: {
+                                    core.customCommandCoordinator.setCustomCommandEnabled(
+                                        $0, id: command.id)
+                                }),
                             onEdit: { editor = EditorTarget(command: command) },
                             onDelete: { pendingDeletion = command })
                     }
                 }
-                Button("Add Custom Command…") { editor = EditorTarget(command: nil) }
+                Button {
+                    editor = EditorTarget(command: nil)
+                } label: {
+                    SettingsRowTitle(.commandsCustomCommands, "Add Custom Command")
+                }
+                Button {
+                    Task { await core.customCommandCoordinator.importScriptDirectory() }
+                } label: {
+                    SettingsRowTitle(.commandsCustomCommands, "Import Raycast Scripts")
+                }
             } footer: {
-                Text("Name it, then give it a shortcut if you want one.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Name it, then give it a shortcut if you want one. Importing reads a folder of "
+                        + "Raycast script commands, one command per script."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             .settingsEnabled(settings.customCommandsEnabled)
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.commands)
         .releasesFocusOnOutsideClick()
         .sheet(item: $editor) { target in
             CustomCommandEditorSheet(command: target.command)
@@ -75,14 +94,17 @@ private struct EditorTarget: Identifiable {
 
 private struct CustomCommandSettingsRow: View {
     let command: CustomCommand
+    @Binding var isEnabled: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         SettingsRow(title: command.name, subtitle: command.command) {
-            Image(systemName: CustomCommand.sfSymbol)
+            Image(systemName: command.symbol)
         } trailing: {
+            // A disabled command's shortcut fires into the funnel's refusal, so it dims too.
             ShortcutRecorder(action: .customCommand(id: command.id))
+                .settingsEnabled(command.isEnabled)
 
             Button(action: onEdit) {
                 Image(systemName: "pencil")
@@ -98,6 +120,12 @@ private struct CustomCommandSettingsRow: View {
             .buttonStyle(.plain)
             .help("Delete Command")
             .accessibilityLabel("Delete \(command.name)")
+
+            Toggle("", isOn: $isEnabled)
+                .labelsHidden()
+                .toggleStyle(.checkbox)
+                .help("Enabled")
+                .accessibilityLabel("Enable \(command.name)")
         }
     }
 }

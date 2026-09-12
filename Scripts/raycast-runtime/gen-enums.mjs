@@ -10,17 +10,20 @@ import { readFileSync, writeFileSync } from "node:fs";
 const dts = readFileSync("node_modules/@raycast/api/types/index.d.ts", "utf8").replace(/\r\n/g, "\n");
 
 /// Walk the declaration file tracking `namespace`/`enum` nesting by brace depth, collecting every
-/// enum member. Namespaced enums are keyed by their dotted path (`Image.Mask`).
+/// enum member. Namespaced enums are keyed by their dotted path (`Image.Mask`), and a namespace that
+/// only re-binds a top-level enum (`const Style: typeof ToastStyle_2;`) is recorded as an alias.
 function collectEnums(source) {
   const lines = source.split("\n");
   const scopes = [];
   const enums = new Map();
+  const aliases = new Map();
   let depth = 0;
   let current = null;
 
   for (const line of lines) {
     const namespaceMatch = /^\s*(?:export\s+)?declare\s+namespace\s+([A-Za-z0-9_]+)\s*\{/.exec(line);
     const enumMatch = /^\s*(?:export\s+)?(?:declare\s+)?enum\s+([A-Za-z0-9_]+)\s*\{/.exec(line);
+    const aliasMatch = /^\s*(?:export\s+)?const\s+([A-Za-z0-9_]+)\s*:\s*typeof\s+([A-Za-z0-9_.]+)\s*;/.exec(line);
 
     if (!current && enumMatch) {
       const path = [...scopes.map((scope) => scope.name), enumMatch[1]].join(".");
@@ -32,6 +35,10 @@ function collectEnums(source) {
     if (!current && namespaceMatch) {
       scopes.push({ name: namespaceMatch[1], depth });
       depth += 1;
+      continue;
+    }
+    if (!current && aliasMatch && scopes.length) {
+      aliases.set([...scopes.map((scope) => scope.name), aliasMatch[1]].join("."), aliasMatch[2]);
       continue;
     }
 
@@ -49,27 +56,23 @@ function collectEnums(source) {
       }
     }
   }
-  return enums;
+  return { enums, aliases };
 }
 
-const rawEnums = collectEnums(dts);
+// `Foo_2` duplicates are the declaration file's way of disambiguating the List/Grid variants of the
+// same public enum, and of hoisting a namespaced one to the top level.
+const publicPath = (path) => path.replace(/_\d+(\.|$)/g, "$1");
+
+const { enums: rawEnums, aliases } = collectEnums(dts);
 const enums = new Map();
 for (const [path, members] of rawEnums) {
   if (!members.length) continue;
-  // `Foo_2` duplicates are the declaration file's way of disambiguating the List/Grid variants of
-  // the same public enum; they carry identical members, so the first one wins.
-  const clean = path.replace(/_\d+(\.|$)/g, "$1");
+  const clean = publicPath(path);
   if (!enums.has(clean)) enums.set(clean, members);
 }
-
-const scopeNames = new Map();
-for (const path of enums.keys()) {
-  const parts = path.split(".");
-  if (parts.length > 1) {
-    const parent = parts.slice(0, -1).join(".");
-    if (!scopeNames.has(parent)) scopeNames.set(parent, []);
-    scopeNames.get(parent).push(parts[parts.length - 1]);
-  }
+for (const [path, target] of aliases) {
+  const members = enums.get(publicPath(target));
+  if (members && !enums.has(path)) enums.set(path, members);
 }
 
 function literal(members) {

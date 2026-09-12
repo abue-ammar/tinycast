@@ -1,8 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Both Notes windows. The editor and the switcher differ only in style mask and in the chords
-/// their controller installs, so one non-activating floating panel serves the two of them.
+/// Editor and switcher differ only in style mask and chords, so one panel serves both.
 final class NotesPanel: NSPanel {
     var onEscape: (() -> Void)?
     /// ⌘⌫ is keyed separately: only its key code survives every keyboard layout.

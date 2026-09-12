@@ -1,9 +1,6 @@
 import Foundation
 
-/// `fetch` for extensions, backed by `URLSession`. Bodies cross the bridge base64-encoded so binary
-/// responses survive; JSON and text go through the same path.
-///
-/// `Sendable` because it holds only an immutable `URLSession`.
+/// Bodies cross the bridge base64-encoded, so binary responses survive.
 final class ExtensionFetcher: Sendable {
     private let session: URLSession
 
@@ -11,7 +8,7 @@ final class ExtensionFetcher: Sendable {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 60
         configuration.httpCookieStorage = nil
-        // Extensions do their own caching through the Cache API; a shared URL cache would surprise them.
+        // Extensions cache through the Cache API; a shared URL cache would surprise them.
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         session = URLSession(configuration: configuration)
     }
@@ -61,9 +58,7 @@ final class ExtensionFetcher: Sendable {
     }
 }
 
-/// The async half of the `child_process` shim: `exec` / `execFile` without blocking the JS queue while
-/// a slow command runs. The synchronous forms live in `ExtensionNodeShims`; both resolve executables
-/// through `resolveExecutable` below.
+/// `exec`/`execFile` off the JS queue; the sync forms live in `ExtensionNodeShims`.
 enum ExtensionAsyncProcess {
     enum ProcessError: LocalizedError {
         case notFound(String)
@@ -79,8 +74,7 @@ enum ExtensionAsyncProcess {
         }
     }
 
-    /// Resolve a bare command name against PATH the way `execFile` does. An app bundle inherits no
-    /// login shell, so `execFile("brew", …)` would otherwise fail for every Homebrew-based extension.
+    /// An app bundle inherits no login shell, so a bare `brew` would otherwise fail.
     static func resolveExecutable(_ command: String) -> URL? {
         let fileManager = FileManager.default
         if command.contains("/") {
@@ -166,8 +160,7 @@ enum ExtensionAsyncProcess {
         } catch {
             throw ProcessError.failedToStart(command, error.localizedDescription)
         }
-        // A detached child is meant to outlive the call (`caffeinate -t 300`); answer as soon as it's
-        // running rather than pinning a worker thread until it exits.
+        // A detached child outlives the call, so answer once running rather than pin a thread.
         if detached {
             return ["stdout": "", "stderr": "", "status": 0, "signal": NSNull()]
         }
@@ -181,8 +174,7 @@ enum ExtensionAsyncProcess {
         ]
     }
 
-    /// Reads a started child to completion. A child that fills the 64 KB pipe buffer blocks before it
-    /// can exit, so the drain has to come first — which leaves the deadline nothing to be but a watchdog.
+    /// A child filling the 64 KB pipe blocks before it can exit, so the drain comes first.
     static func drain(
         _ task: Process, stdout: Pipe, stderr: Pipe, timeout: Double?
     ) -> (Data, Data) {

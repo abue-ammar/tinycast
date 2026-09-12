@@ -50,3 +50,16 @@ body:
       placeholder: "26.0"
     validations:
       required: true
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Contribution
+      description: >
+        **Ticking this is not permission to start.** Wait until a maintainer labels this issue
+        `approved` — that label is the only green light. A pull request whose linked issue isn't
+        `approved` is closed automatically, unreviewed. Docs-only changes are the exception. Read
+        [CONTRIBUTING.md](https://github.com/abue-ammar/tinycast/blob/main/CONTRIBUTING.md)
+        first — it is required reading, and it is what your PR is held to.
+      options:
+        - label: I'm willing to implement this myself **once this issue is labelled `approved`**
+          required: false

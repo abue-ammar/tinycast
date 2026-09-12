@@ -18,10 +18,14 @@ final class NotesStore {
     private(set) var searchQuery = ""
     private(set) var searchResults: [NoteSearchResult] = []
     private(set) var isSearching = false
+    /// Derived from the live draft, not the last listing, so an unnamed note titles itself as typed.
     var activeTitle: String {
-        summaries.first(where: { $0.id == activeID })?.title
-            ?? activeID.map { URL(fileURLWithPath: $0.rawValue).deletingPathExtension().lastPathComponent }
-            ?? "Notes"
+        guard let activeID else { return "Notes" }
+        let title =
+            summaries.first(where: { $0.id == activeID })?.title
+            ?? URL(fileURLWithPath: activeID.rawValue).deletingPathExtension().lastPathComponent
+        guard NoteTitle.isUnnamed(title) else { return title }
+        return NoteTitle.firstLine(of: source) ?? title
     }
     var activeFileURL: URL? { activeID.map(repository.fileURL(for:)) }
     let notesDirectory: URL
@@ -121,6 +125,25 @@ final class NotesStore {
         case .failure(let failure):
             publish(.operation(failure))
             return false
+        }
+    }
+
+    /// Writes imported notes as new files and re-lists, leaving the open draft where it was.
+    func importNotes(_ notes: [NotesRepository.Incoming]) async -> Int {
+        guard !notes.isEmpty else { return 0 }
+        let repository = repository
+        let result = await detached {
+            (try repository.importNotes(notes), try repository.list())
+        } recover: {
+            repository.notesDirectory
+        }
+        switch result {
+        case .success(let payload):
+            summaries = payload.1
+            return payload.0
+        case .failure(let failure):
+            publish(.operation(failure))
+            return 0
         }
     }
 

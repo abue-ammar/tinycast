@@ -1,4 +1,4 @@
-name: Feature request
+name: Feature Request
 description: Suggest an idea
 title: "[Feature]: "
 labels: ["enhancement"]
@@ -13,6 +13,22 @@ body:
     id: why
     attributes:
       label: Why does it belong in Tinycast?
-      description: Tinycast stays small on purpose — quality over quantity. Tell us why this is worth its weight.
+      description: >
+        Tinycast stays small on purpose — quality over quantity. It has already borrowed what it
+        wanted from Raycast, so "Raycast has it" is not a reason. Tell us why this is worth its
+        weight.
     validations:
       required: true
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Contribution
+      description: >
+        **Ticking this is not permission to start.** Wait until a maintainer labels this issue
+        `approved` — that label is the only green light. A pull request whose linked issue isn't
+        `approved` is closed automatically, unreviewed. Docs-only changes are the exception. Read
+        [CONTRIBUTING.md](https://github.com/abue-ammar/tinycast/blob/main/CONTRIBUTING.md)
+        first — it is required reading, and it is what your PR is held to.
+      options:
+        - label: I'm willing to implement this myself **once this issue is labelled `approved`**
+          required: false

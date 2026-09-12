@@ -1,7 +1,6 @@
 import Foundation
 
-/// Reclaims a stranded build workspace and the storage of an extension no longer installed.
-/// It names the workspace too, so creating one and sweeping for one can't disagree.
+/// It names the workspace too, so creating one and sweeping for one cannot disagree.
 enum ExtensionCleanup {
     /// Injected, never read from `Bundle.main`: a harness would otherwise delete the real install.
     struct Roots: Sendable {
@@ -52,7 +51,7 @@ enum ExtensionCleanup {
         return report
     }
 
-    /// A `defer` clears a workspace on every exit an install takes; this collects what a crash left.
+    /// A `defer` clears a workspace on every exit; this collects what a crash left.
     nonisolated static func sweepWorkspaces(in temp: URL) {
         for url in staleWorkspaces(in: temp) {
             try? FileManager.default.removeItem(at: url)

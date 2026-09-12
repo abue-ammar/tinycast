@@ -6,6 +6,9 @@ import SwiftUI
 struct SettingsRow<Icon: View, Trailing: View>: View {
     let title: String
     var subtitle: String?
+    var subtitleLineLimit = 1
+    /// Set when a search result points at this row, so its title can carry the pulse.
+    var anchor: SettingsAnchor?
     @ViewBuilder var icon: Icon
     @ViewBuilder var trailing: Trailing
 
@@ -13,13 +16,20 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
         HStack(spacing: Theme.Spacing.lg) {
             icon
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(title)
-                    .lineLimit(1)
+                Group {
+                    if let anchor {
+                        SettingsRowTitle(anchor, title)
+                    } else {
+                        Text(title)
+                    }
+                }
+                .lineLimit(1)
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(subtitleLineLimit)
+                        .fixedSize(horizontal: false, vertical: true)
                         .truncationMode(.middle)
                         .help(subtitle)
                 }
@@ -31,8 +41,15 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
 }
 
 extension SettingsRow where Icon == EmptyView {
-    init(title: String, subtitle: String? = nil, @ViewBuilder trailing: () -> Trailing) {
-        self.init(title: title, subtitle: subtitle, icon: { EmptyView() }, trailing: trailing)
+    init(
+        title: String, subtitle: String? = nil, subtitleLineLimit: Int = 1,
+        anchor: SettingsAnchor? = nil,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.init(
+            title: title, subtitle: subtitle, subtitleLineLimit: subtitleLineLimit,
+            anchor: anchor, icon: { EmptyView() },
+            trailing: trailing)
     }
 }
 
@@ -45,7 +62,7 @@ extension View {
 
 /// A feature pane's opening section: the master switch, then its launcher-visibility companion.
 struct FeatureSwitchSection: View {
-    let header: String
+    let anchor: SettingsAnchor
     let enableTitle: String
     let enableSubtitle: String
     let launcherSubtitle: String
@@ -55,7 +72,7 @@ struct FeatureSwitchSection: View {
     var body: some View {
         Section {
             Toggle(isOn: $isEnabled) {
-                Text(enableTitle)
+                SettingsRowTitle(anchor, enableTitle)
                 Text(enableSubtitle)
             }
             Toggle(isOn: $showsInLauncher) {
@@ -65,7 +82,7 @@ struct FeatureSwitchSection: View {
             // The switch above stays live so the feature can always be turned back on.
             .settingsEnabled(isEnabled)
         } header: {
-            Text(header)
+            SettingsSectionHeader(anchor)
         }
     }
 }
@@ -74,18 +91,14 @@ struct FeatureSwitchSection: View {
 struct SettingsFilterField: View {
     let prompt: String
     @Binding var query: String
-    /// The field is plain-styled and so has no bezel of its own: without this, only the glyphs
-    /// themselves are a target, and clicking the rest of the row does nothing.
+    /// The plain field has no bezel: without this only the glyphs are a target.
     @FocusState private var focused: Bool
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            // `prompt:`, not the title argument: inside a `Form` a text field's title is rendered as
-            // its label in the left-hand column, which turns the placeholder into a heading. And
-            // `labelsHidden`, or the form reserves that column for the empty title anyway and the
-            // field starts halfway across the row, nowhere near the magnifying glass.
+            // `prompt:` + `labelsHidden`, or the form makes the placeholder a left-column heading.
             TextField("", text: $query, prompt: Text(prompt))
                 .textFieldStyle(.plain)
                 .labelsHidden()
@@ -104,5 +117,80 @@ struct SettingsFilterField: View {
         }
         .contentShape(.rect)
         .onTapGesture { focused = true }
+    }
+}
+
+/// Dressed like `ShortcutRecorder`; a persistent `TextField` — swapping views broke repeat focus.
+struct AliasField: View {
+    /// The owner's `preferenceKey`, taken raw so a row without an `AppEntry` can carry one too.
+    let key: String
+    let name: String
+    @Environment(AliasStore.self) private var aliases
+    @State private var draft = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+        let placeholder = Text("Add Alias").foregroundStyle(Theme.Colors.textSecondary)
+        HStack(spacing: Theme.Spacing.xs) {
+            TextField("", text: $draft, prompt: placeholder)
+                .textFieldStyle(.plain)
+                .labelsHidden()
+                .font(Theme.Typography.keyCap)
+                .focused($focused)
+                // The system ring insets the field editor on focus, hopping the placeholder left.
+                .focusEffectDisabled()
+                .onSubmit(commit)
+                .onExitCommand(perform: revert)
+                // The pane's `releasesFocusOnOutsideClick` resigns; this catches it landing.
+                .onChange(of: focused) { _, now in
+                    if !now { commit() }
+                }
+            if !draft.isEmpty {
+                Button(action: clear) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear alias for \(name)")
+            }
+        }
+        .onAppear { draft = aliases.alias(for: key) ?? "" }
+        // A backup import replaces the table out from under an unfocused row.
+        .onChange(of: aliases.revision) { _, _ in
+            if !focused { draft = aliases.alias(for: key) ?? "" }
+        }
+        .padding(.horizontal, Theme.Spacing.sm)
+        .frame(width: Theme.Size.shortcutRecorder, height: 24)
+        .background(shape.fill(Theme.Colors.cardFill))
+        .overlay(
+            shape.strokeBorder(
+                focused ? Color.accentColor : Theme.Colors.cardStroke, lineWidth: 1)
+        )
+        .clipShape(shape)
+        .accessibilityLabel("Alias for \(name)")
+    }
+
+    /// The one commit path — ↵ or focus landing elsewhere; a blank draft removes the alias.
+    private func commit() {
+        aliases.setAlias(draft, for: key)
+        draft = aliases.alias(for: key) ?? ""
+    }
+
+    private func revert() {
+        draft = aliases.alias(for: key) ?? ""
+        focused = false
+    }
+
+    private func clear() {
+        draft = ""
+        commit()
+    }
+}
+
+extension AliasField {
+    init(entry: AppEntry) {
+        self.init(key: entry.preferenceKey, name: entry.name)
     }
 }

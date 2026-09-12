@@ -14,6 +14,8 @@ export const site = {
   community: {
     discord: "https://discord.gg/v2Eeb4QQy3",
   },
+  support:
+    "https://buy.polar.sh/polar_cl_NDVFC20DKQpLcNawsh97QzbARBXD3WNn8v35R0mbJmT",
 } as const;
 
 // The hero, in as few words as possible — headline plus one punchy line.
@@ -41,6 +43,13 @@ export const channels = [
     note: "Recommended",
   },
   {
+    id: "universal",
+    label: "Intel",
+    command:
+      "brew trust --tap abue-ammar/tinycast && brew install --cask abue-ammar/tinycast/tinycast-universal",
+    note: "Intel Macs",
+  },
+  {
     id: "beta",
     label: "Beta",
     command:
@@ -63,7 +72,6 @@ export const quarantineCommand =
 
 // Headline numbers for the "why it's tiny" band. Kept honest, from the README.
 export const stats = [
-  { value: "<3", unit: "MB", label: "On disk" },
   { value: "<100", unit: "MB", label: "Memory" },
   { value: "0", unit: "", label: "Dependencies" },
   { value: "0", unit: "", label: "Telemetry" },

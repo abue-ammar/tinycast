@@ -7,6 +7,8 @@ struct NotesTests {
 
     static func main() async throws {
         try testRepositoryAndSearch()
+        testDerivedTitles()
+        try testUnnamedNotesTitleThemselves()
         testSwitcherInteraction()
         try await testStoreCollectionAndAutosave()
         try await testCollectionMutationsFlushTheDraft()
@@ -20,16 +22,9 @@ struct NotesTests {
         let root = temporaryRoot("repository")
         defer { try? FileManager.default.removeItem(at: root) }
         let support = root.appendingPathComponent("com.tinycast.app")
-        let trash = root.appendingPathComponent("Trash", isDirectory: true)
-        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
-        let stable = NotesRepository(
-            applicationSupportDirectory: support,
-            trashOperation: { url in
-                try FileManager.default.moveItem(
-                    at: url, to: trash.appendingPathComponent(url.lastPathComponent))
-            })
-        let development = NotesRepository(
-            applicationSupportDirectory: root.appendingPathComponent("com.tinycast.app.dev"))
+        let stable = try repository(in: root, support: support)
+        let development = try repository(
+            in: root, support: root.appendingPathComponent("com.tinycast.app.dev"))
 
         try FileManager.default.createDirectory(
             at: stable.notesDirectory, withIntermediateDirectories: true)
@@ -104,7 +99,7 @@ struct NotesTests {
         check(
             "deletion moves the file through the injected Trash operation",
             FileManager.default.fileExists(
-                atPath: trash.appendingPathComponent(plan.id.rawValue).path))
+                atPath: trashDirectory(in: root).appendingPathComponent(plan.id.rawValue).path))
 
         let outside = root.appendingPathComponent("outside.md")
         try Data("outside".utf8).write(to: outside)
@@ -125,13 +120,69 @@ struct NotesTests {
             "symlinked Markdown files are absent from enumeration",
             !(try stable.list()).contains { $0.id == symlinkID })
 
-        let empty = NotesRepository(
-            applicationSupportDirectory: root.appendingPathComponent("com.tinycast.app.empty"))
+        let empty = try repository(
+            in: root, support: root.appendingPathComponent("com.tinycast.app.empty"))
         let emptyLoad = try empty.load(preferredID: nil)
         check("an empty collection loads no document", emptyLoad.0.isEmpty && emptyLoad.1 == nil)
         check(
             "loading an empty collection creates no file",
             (try FileManager.default.contentsOfDirectory(atPath: empty.notesDirectory.path)).isEmpty)
+    }
+
+    private static func testDerivedTitles() {
+        check(
+            "the names Create claims are unnamed",
+            NoteTitle.isUnnamed("Untitled") && NoteTitle.isUnnamed("Untitled 12"))
+        check(
+            "a typed title is never unnamed",
+            !NoteTitle.isUnnamed("Plan") && !NoteTitle.isUnnamed("untitled")
+                && !NoteTitle.isUnnamed("Untitled notes") && !NoteTitle.isUnnamed("Untitled 2b"))
+
+        check(
+            "a heading marker is not part of the derived title",
+            NoteTitle.firstLine(of: "#  Groceries \n\nmilk") == "Groceries")
+        check(
+            "leading blank lines are skipped",
+            NoteTitle.firstLine(of: "\n \t \n  café snow\nmore") == "café snow")
+        check(
+            "a hashtag is literal text, not a heading",
+            NoteTitle.firstLine(of: "####### seven\n") == "####### seven"
+                && NoteTitle.firstLine(of: "#tag") == "#tag")
+        check(
+            "a blank note derives no title",
+            NoteTitle.firstLine(of: "") == nil && NoteTitle.firstLine(of: "\n  \n\t\n") == nil)
+        check(
+            "a wall of text is capped to one row",
+            NoteTitle.firstLine(of: String(repeating: "a", count: 400))?.count == 120)
+    }
+
+    private static func testUnnamedNotesTitleThemselves() throws {
+        let root = temporaryRoot("derived")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = try repository(in: root)
+
+        let unnamed = try repository.create()
+        try repository.save(id: unnamed.id, source: "# Groceries\n\nmilk\n")
+        let named = try repository.create(title: "Plan")
+        try repository.save(id: named.id, source: "# Ignored heading\n")
+
+        let summaries = try repository.list()
+        let unnamedSummary = try require(summaries.first { $0.id == unnamed.id })
+        check("an unnamed note shows its first line", unnamedSummary.displayTitle == "Groceries")
+        check("an unnamed note keeps its filename as its title", unnamedSummary.title == "Untitled")
+        let namedSummary = try require(summaries.first { $0.id == named.id })
+        check(
+            "a named note ignores its first line",
+            namedSummary.firstLine == nil && namedSummary.displayTitle == "Plan")
+
+        let fuzzy = repository.search(NoteSearch.Query("Grcrs"), summaries: summaries, limit: 10)
+        check(
+            "search matches a derived title the body never spells out",
+            fuzzy.count == 1 && fuzzy.first?.id == unnamed.id)
+
+        let renamed = try repository.rename(id: unnamed.id, title: "Shopping")
+        let afterRename = try require((try repository.list()).first { $0.id == renamed })
+        check("naming a note retires its derived title", afterRename.firstLine == nil)
     }
 
     private static func testSwitcherInteraction() {
@@ -174,14 +225,7 @@ struct NotesTests {
     private static func testStoreCollectionAndAutosave() async throws {
         let root = temporaryRoot("store")
         defer { try? FileManager.default.removeItem(at: root) }
-        let trash = root.appendingPathComponent("Trash", isDirectory: true)
-        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
-        let repository = NotesRepository(
-            applicationSupportDirectory: root,
-            trashOperation: { url in
-                try FileManager.default.moveItem(
-                    at: url, to: trash.appendingPathComponent(url.lastPathComponent))
-            })
+        let repository = try repository(in: root)
         let selection = SelectionBox()
         let store = NotesStore(
             repository: repository,
@@ -192,6 +236,11 @@ struct NotesTests {
             "Create Note is one file when it is the first action",
             started && store.activeTitle == "Untitled" && store.summaries.count == 1)
         check("active selection is persisted separately from note files", selection.id == store.activeID)
+
+        store.updateSource("# Draft heading\nbody")
+        check(
+            "an unnamed note titles itself from the live draft",
+            store.activeTitle == "Draft heading")
 
         store.updateSource("first")
         store.updateSource("latest searchable body")
@@ -244,7 +293,7 @@ struct NotesTests {
         check(
             "trashing another note moves it through the injected Trash operation",
             FileManager.default.fileExists(
-                atPath: trash.appendingPathComponent(projectID.rawValue).path))
+                atPath: trashDirectory(in: root).appendingPathComponent(projectID.rawValue).path))
         check("trashing another note keeps the active note", store.activeID == firstID)
 
         for summary in store.summaries {
@@ -264,7 +313,7 @@ struct NotesTests {
     private static func testCollectionMutationsFlushTheDraft() async throws {
         let root = temporaryRoot("mutation-flush")
         defer { try? FileManager.default.removeItem(at: root) }
-        let repository = NotesRepository(applicationSupportDirectory: root)
+        let repository = try repository(in: root)
         let store = NotesStore(repository: repository)
 
         _ = await store.create()
@@ -304,7 +353,7 @@ struct NotesTests {
     private static func testStoreRecoversFromFailures() async throws {
         let root = temporaryRoot("recovery")
         defer { try? FileManager.default.removeItem(at: root) }
-        let repository = NotesRepository(applicationSupportDirectory: root)
+        let repository = try repository(in: root)
         try FileManager.default.createDirectory(
             at: repository.notesDirectory, withIntermediateDirectories: true)
         let unreadable = repository.fileURL(for: NoteID(rawValue: "Unreadable.md"))
@@ -344,6 +393,22 @@ struct NotesTests {
             "an edit that lands during a write is not lost",
             try String(contentsOf: activeURL, encoding: .utf8) == "edit during the write")
         store.stop()
+    }
+
+    /// Deleting trashes for real, so every harness repository redirects that inside the root.
+    private static func repository(in root: URL, support: URL? = nil) throws -> NotesRepository {
+        let trash = trashDirectory(in: root)
+        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
+        return NotesRepository(
+            applicationSupportDirectory: support ?? root,
+            trashOperation: { url in
+                try FileManager.default.moveItem(
+                    at: url, to: trash.appendingPathComponent(url.lastPathComponent))
+            })
+    }
+
+    private static func trashDirectory(in root: URL) -> URL {
+        root.appendingPathComponent("Trash", isDirectory: true)
     }
 
     private static func temporaryRoot(_ name: String) -> URL {

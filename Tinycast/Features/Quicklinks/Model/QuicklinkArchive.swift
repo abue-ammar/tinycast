@@ -71,8 +71,10 @@ enum QuicklinkArchive {
                     link: candidate.link.trimmingCharacters(in: .whitespacesAndNewlines),
                     openWithBundleID: candidate.openWithBundleID,
                     iconSymbol: candidate.iconSymbol,
+                    isEnabled: candidate.isEnabled,
                     showsInRootSearch: candidate.showsInRootSearch,
-                    pinnedAt: candidate.pinnedAt))
+                    pinnedAt: candidate.pinnedAt,
+                    createdAt: candidate.createdAt))
         }
         return MergeResult(additions: additions, skipped: skipped)
     }

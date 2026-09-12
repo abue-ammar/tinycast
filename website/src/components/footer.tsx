@@ -1,14 +1,16 @@
+import { Heart } from "lucide-react";
 import { site } from "../data/site";
 import { DiscordLogo, GitHubLogo, Logo } from "./ui/icon";
 import { Link } from "./ui/link";
 import { MetaStrip } from "./ui/meta-strip";
+import { ThemeToggle } from "./ui/theme-toggle";
 
 export function Footer() {
   const repoPath = site.repo.replace("https://", "");
 
   return (
     <footer className="border-t border-border/50">
-      <div className="container-page flex flex-col items-center gap-6 py-14 text-center">
+      <div className="container-page relative flex flex-col items-center gap-6 py-14 text-center">
         <Link
           href="/"
           className="flex items-center gap-1 text-body font-medium text-fg"
@@ -49,6 +51,20 @@ export function Footer() {
             <DiscordLogo size={16} />
             Join the Discord
           </a>
+          <a
+            href={site.support}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 text-small text-fg-muted transition-colors hover:text-fg"
+          >
+            <Heart size={16} />
+            Support Tinycast
+          </a>
+        </div>
+
+        {/* In flow on mobile, where an absolute one would cover the links. */}
+        <div className="md:absolute md:bottom-14 md:right-6">
+          <ThemeToggle />
         </div>
       </div>
     </footer>

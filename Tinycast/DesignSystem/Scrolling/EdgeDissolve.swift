@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// Scroll-driven edge dissolve for a scroll view underlapping the palette's floating bars, a port of Raycast's scroll-area mask (see `docs/ui.md` → The edge dissolve).
+/// Scroll-driven edge mask for a list underlapping the palette's floating bars. See `docs/ui.md`.
 struct EdgeDissolveMask: ViewModifier {
-    /// Band lengths: the bar's occupied height plus Raycast's overshoot into the list (32px below the header, 28px above the footer).
-    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Size.headerPadding + 32
-    var bottomFade: CGFloat = Theme.Size.bottomBarHeight + 28
+    /// Band lengths: the bar's height plus its overshoot into the list — 32px top, 28px bottom.
+    private var topFade: CGFloat {
+        metrics.size.headerHeight + metrics.size.headerPadding + metrics.scaled(32)
+    }
+    private var bottomFade: CGFloat { metrics.size.bottomBarHeight + metrics.scaled(28) }
     private static let topMinAlpha: CGFloat = 0.15
     private static let bottomMinAlpha: CGFloat = 0.25
+    @Environment(\.metrics) private var metrics
 
     /// How much content is hidden beyond each edge, 0 when the list rests against it.
     @State private var topDistance: CGFloat = 0
@@ -50,7 +53,7 @@ struct EdgeDissolveMask: ViewModifier {
 
     private func stops(height: CGFloat) -> [Gradient.Stop] {
         guard canScroll, height > 0 else { return [.init(color: .black, location: 0)] }
-        // Midpoint alpha eases from 1 toward the floor as a full band of content scrolls past (Raycast: opacity = 1 − (1 − min) · clamp(scrollDistance / fadeHeight, 0, 1)).
+        // Midpoint alpha eases from 1 toward the floor as a full band of content scrolls past.
         let topAlpha = 1 - (1 - Self.topMinAlpha) * min(topDistance / topFade, 1)
         let bottomAlpha = 1 - (1 - Self.bottomMinAlpha) * min(bottomDistance / bottomFade, 1)
         return [

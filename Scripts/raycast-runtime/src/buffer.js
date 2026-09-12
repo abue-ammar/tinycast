@@ -82,6 +82,13 @@ function encode(text, encoding) {
   }
 }
 
+function compareBytes(a, b) {
+  const shared = Math.min(a.length, b.length);
+  for (let i = 0; i < shared; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+  if (a.length === b.length) return 0;
+  return a.length < b.length ? -1 : 1;
+}
+
 export class Buffer extends Uint8Array {
   static from(value, encodingOrOffset, length) {
     if (typeof value === "string") return wrap(encode(value, encodingOrOffset));
@@ -132,6 +139,18 @@ export class Buffer extends Uint8Array {
     return value instanceof Uint8Array;
   }
 
+  static compare(a, b) {
+    if (!(a instanceof Uint8Array) || !(b instanceof Uint8Array)) {
+      throw new TypeError("Buffer.compare: inputs must be Buffers");
+    }
+    return compareBytes(a, b);
+  }
+
+  static isEncoding(encoding) {
+    const name = String(encoding || "").toLowerCase();
+    return ["utf8", "utf-8", "base64", "base64url", "hex", "latin1", "binary", "ascii", "utf16le", "ucs2", "ucs-2", "utf-16le"].includes(name);
+  }
+
   static byteLength(value, encoding) {
     if (typeof value === "string") return encode(value, encoding).length;
     return value?.length ?? 0;
@@ -150,6 +169,25 @@ export class Buffer extends Uint8Array {
     if (!(other instanceof Uint8Array) || other.length !== this.length) return false;
     for (let i = 0; i < this.length; i++) if (this[i] !== other[i]) return false;
     return true;
+  }
+
+  compare(target, targetStart, targetEnd, sourceStart, sourceEnd) {
+    if (!(target instanceof Uint8Array)) throw new TypeError("Buffer.compare: target must be a Buffer");
+    const targetSlice = target.subarray(targetStart ?? 0, targetEnd ?? target.length);
+    const sourceSlice = this.subarray(sourceStart ?? 0, sourceEnd ?? this.length);
+    return compareBytes(sourceSlice, targetSlice);
+  }
+
+  copy(target, targetStart = 0, sourceStart = 0, sourceEnd = this.length) {
+    if (!(target instanceof Uint8Array)) throw new TypeError("Buffer.copy: target must be a Buffer");
+    const count = Math.min(sourceEnd - sourceStart, target.length - targetStart);
+    if (count <= 0) return 0;
+    target.set(this.subarray(sourceStart, sourceStart + count), targetStart);
+    return count;
+  }
+
+  subarray(start, end) {
+    return wrap(super.subarray(start, end));
   }
 
   write(text, offset = 0, length, encoding) {
@@ -177,8 +215,11 @@ function wrap(bytes) {
 
 export const bufferModule = {
   Buffer,
+  SlowBuffer: Buffer,
   atob: globalThis.atob,
   btoa: globalThis.btoa,
   constants: { MAX_LENGTH: 0x7fffffff, MAX_STRING_LENGTH: 0x1fffffe8 },
   kMaxLength: 0x7fffffff,
+  isEncoding: (encoding) => Buffer.isEncoding(encoding),
+  isBuffer: (value) => Buffer.isBuffer(value),
 };

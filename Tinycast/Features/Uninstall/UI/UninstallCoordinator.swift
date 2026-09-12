@@ -50,7 +50,7 @@ final class UninstallCoordinator {
         session.begin(
             app: app, otherAppNames: others.map(\.name),
             otherBundleIDs: others.compactMap(\.bundleID), isRunning: runningApps.isRunning(app))
-        palette.prepare(mode: .uninstall)
+        paletteCoordinator.navigate(to: .uninstall)
     }
 
     /// The one funnel for the screen's ↵ and Actions row, so neither skips the confirmation.
@@ -79,7 +79,7 @@ final class UninstallCoordinator {
                 removeUninstalledReferences(app)
                 await appIndex.refresh()
             }
-            palette.prepare(mode: .launcher)
+            if !palette.pop() { palette.prepare(mode: .launcher) }
             await presentUninstallReport(report)
         }
     }

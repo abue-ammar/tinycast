@@ -20,11 +20,11 @@ struct EntryIconTests {
 
     // MARK: - Identity
 
-    /// `AppEntry.iconKey` interpolates an `EntryIcon` into a string, and a row's async load is keyed
-    /// on it. Two icons that render differently but print the same would serve each other's bitmap.
+    /// Two icons that render differently but print the same would share a bitmap.
     static func everyCasePrintsDistinctly() {
         let icons: [EntryIcon] = [
-            .file,
+            .file(stamp: 0),
+            .file(stamp: 1),
             .symbol("star"),
             .symbol("bolt"),
             .tintedSymbol(name: "star", tint: red),
@@ -54,7 +54,10 @@ struct EntryIconTests {
                 != EntryIcon.artwork(path: "/tmp/a.png", extent: 0.83),
             "one file at two extents differs")
         expect(
-            Set([EntryIcon.file, .symbol("star"), .file]).count == 2,
+            EntryIcon.file(stamp: 0) != EntryIcon.file(stamp: 1),
+            "one file at two stamps differs")
+        expect(
+            Set([EntryIcon.file(stamp: 0), .symbol("star"), .file(stamp: 0)]).count == 2,
             "hashing collapses only equal values")
     }
 
@@ -64,7 +67,7 @@ struct EntryIconTests {
     static func everyCaseDraws() {
         let url = URL(fileURLWithPath: "/System/Applications/Calculator.app")
         let cases: [(String, EntryIcon)] = [
-            ("file", .file),
+            ("file", .file(stamp: 0)),
             ("symbol", .symbol("star")),
             ("tintedSymbol", .tintedSymbol(name: "star", tint: red))
         ]
@@ -120,9 +123,41 @@ struct EntryIconTests {
         expect(IconCache.cached(warm, fileURL: url) != nil, "a drawn icon is reported warm")
     }
 
+    // MARK: - Restamping
+
+    /// The reported bug: a path-only cache key kept painting the first decode.
+    static func aChangedIconRetiresTheCachedBitmap() {
+        guard let bundle = makeBundle() else { return expect(false, "the fixture bundle writes") }
+        defer { try? FileManager.default.removeItem(at: bundle) }
+
+        let cold = FileIconStamp.value(for: bundle)
+        expect(FileIconStamp.value(for: bundle) == cold, "an untouched bundle keeps its stamp")
+        _ = IconCache.icon(for: .file(stamp: cold), fileURL: bundle)
+        expect(
+            IconCache.cached(.file(stamp: cold), fileURL: bundle) != nil, "the first decode is cached")
+
+        try? Data([0]).write(to: URL(fileURLWithPath: bundle.path + "/Icon\r"))
+        let warm = FileIconStamp.value(for: bundle)
+        expect(warm != cold, "gaining a custom icon moves the stamp")
+        expect(
+            IconCache.cached(.file(stamp: warm), fileURL: bundle) == nil,
+            "the moved stamp misses the bitmap decoded before the change")
+    }
+
     // MARK: - Helpers
 
     static func bitmap(_ image: NSImage) -> Data? { image.tiffRepresentation }
+
+    /// A directory shaped like an app bundle is all `NSWorkspace` needs.
+    static func makeBundle() -> URL? {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("entry-icon-test-\(UUID().uuidString).app")
+        guard
+            (try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true))
+                != nil
+        else { return nil }
+        return url
+    }
 
     /// A red square filling its canvas, so fitting it to an extent is visible in the result.
     static func writePNG() -> URL? {
@@ -185,6 +220,7 @@ struct EntryIconTests {
         oneFileAtTwoExtentsDiffers()
         askingTwiceIsStable()
         cacheOnlyLookupMatchesTheDrawnIcon()
+        aChangedIconRetiresTheCachedBitmap()
 
         print(failures == 0 ? "Entry icon tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)

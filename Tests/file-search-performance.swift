@@ -6,7 +6,7 @@ struct FileSearchPerformance {
         let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
         let arguments = Array(CommandLine.arguments.dropFirst())
         let queries = arguments.isEmpty ? ["a", "e", "swift", "pdf", "project"] : arguments
-        // The second list is deliberately heavy, so the run says what pattern matching itself costs.
+        // The second list is deliberately heavy, so the run prices pattern matching.
         let policies = [
             (
                 "shipped",
@@ -26,26 +26,22 @@ struct FileSearchPerformance {
         print("File search service latency; the palette adds a 120 ms debounce")
         print("Home: \(homeDirectory.path)")
         for (label, policy) in policies {
-            for query in queries {
-                guard
-                    let expression = FileSearchQuery.expression(
-                        for: query, excluding: policy.ignore.spotlightNameExclusions)
-                else { continue }
-                try measure(query: query, expression: expression, policy: policy, label: label)
+            // The empty query is the blank screen's own list, and its latency is the one felt most.
+            for query in [""] + queries {
+                try measure(query: query, policy: policy, label: label)
             }
         }
     }
 
     private static func measure(
-        query: String, expression: String, policy: FileSearchPolicy, label: String
+        query: String, policy: FileSearchPolicy, label: String
     ) throws {
         var samples: [Double] = []
         var first = 0.0
         var resultCount = 0
         for run in 0..<6 {
             let start = ContinuousClock.now
-            let results = try FileSearchService.search(
-                query: query, expression: expression, policy: policy)
+            let results = try FileSearchService.search(query: query, policy: policy)
             let elapsed = milliseconds(start.duration(to: .now))
             if run == 0 {
                 first = elapsed
@@ -55,7 +51,8 @@ struct FileSearchPerformance {
             resultCount = results.count
         }
         let ordered = samples.sorted()
-        let name = "\(label) \(query)".padding(toLength: 22, withPad: " ", startingAt: 0)
+        let name = "\(label) \(query.isEmpty ? "(recents)" : query)"
+            .padding(toLength: 22, withPad: " ", startingAt: 0)
         let metrics = String(
             format: "first %7.2f ms  repeat median %7.2f ms  max %7.2f ms  %3d results",
             first, ordered[ordered.count / 2], ordered.last ?? 0, resultCount)

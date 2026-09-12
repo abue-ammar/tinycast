@@ -1,8 +1,5 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: Discord
     url: https://discord.gg/v2Eeb4QQy3
     about: Questions, ideas, and general chat.
-  - name: Report a security vulnerability
-    url: https://github.com/abue-ammar/tinycast/security/advisories/new
-    about: Security issues go here privately, not in the tracker.

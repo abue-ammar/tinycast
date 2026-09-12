@@ -1,4 +1,5 @@
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import { Heart } from "lucide-react";
 import type { ReactNode } from "react";
 import { DocsProvider } from "../../components/docs-provider";
 import { DiscordLogo, GitHubLogo, Logo } from "../../components/ui/icon";
@@ -18,6 +19,18 @@ export default function Layout({ children }: { children: ReactNode }) {
         // beside the theme switch. Passing `githubUrl` instead would put
         // GitHub there but leave Discord with nowhere to go.
         links={[
+          // A button, not an icon: a 16pt glyph would hide it beside GitHub and Discord.
+          {
+            type: "button",
+            text: (
+              <span className="flex items-center gap-1.5">
+                <Heart size={15} />
+                Support
+              </span>
+            ),
+            url: site.support,
+            external: true,
+          },
           {
             type: "icon",
             text: "GitHub",

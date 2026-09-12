@@ -49,7 +49,7 @@ struct NotesRepository: Sendable {
                 includingPropertiesForKeys: Array(keys),
                 options: [.skipsHiddenFiles]
             )
-            // An entry that can't be read is skipped, never fatal: one bad file must not hide the rest.
+            // An unreadable entry is skipped: one bad file must not hide the rest.
             .compactMap { candidate -> NoteSummary? in
                 guard candidate.pathExtension.caseInsensitiveCompare("md") == .orderedSame,
                     let values = try? candidate.resourceValues(forKeys: keys),
@@ -57,9 +57,11 @@ struct NotesRepository: Sendable {
                     values.isHidden != true,
                     let url = try? validatedFileURL(candidate)
                 else { return nil }
+                let title = url.deletingPathExtension().lastPathComponent
                 return NoteSummary(
                     id: NoteID(rawValue: url.lastPathComponent),
-                    title: url.deletingPathExtension().lastPathComponent,
+                    title: title,
+                    firstLine: NoteTitle.isUnnamed(title) ? firstLine(of: url) : nil,
                     modifiedAt: values.contentModificationDate ?? .distantPast)
             }
             .sorted(by: summaryPrecedes)
@@ -94,6 +96,27 @@ struct NotesRepository: Sendable {
                 try writeNewFileAtomically(Data(), to: $0)
             }
             return try load(NoteID(rawValue: url.lastPathComponent))
+        }
+    }
+
+    /// One note as a backup carries it, before it has a file to live in.
+    struct Incoming: Sendable, Equatable {
+        let title: String
+        let source: String
+    }
+
+    /// Beside the existing notes, never over them; an unusable title is skipped, not fatal.
+    func importNotes(_ notes: [Incoming]) throws(Failure) -> Int {
+        try mappedError(at: notesDirectory) {
+            var imported = 0
+            for note in notes {
+                guard let base = try? validatedTitle(note.title) else { continue }
+                _ = try claimUniqueURL(base: base) {
+                    try writeNewFileAtomically(Data(note.source.utf8), to: $0)
+                }
+                imported += 1
+            }
+            return imported
         }
     }
 
@@ -154,6 +177,21 @@ struct NotesRepository: Sendable {
 
     func fileURL(for id: NoteID) -> URL {
         notesDirectory.appendingPathComponent(id.rawValue)
+    }
+
+    /// Only an unnamed note pays for this, and only for the head of its file.
+    private func firstLine(of url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let head = try? handle.read(upToCount: NoteTitle.headByteCount), !head.isEmpty
+        else { return nil }
+        // A fixed-size read can land mid-character, so back off to the last complete one.
+        for dropped in 0...3 where head.count > dropped {
+            if let text = String(bytes: head.dropLast(dropped), encoding: .utf8) {
+                return NoteTitle.firstLine(of: text)
+            }
+        }
+        return nil
     }
 
     private func ensureDirectory() throws {
@@ -220,7 +258,7 @@ struct NotesRepository: Sendable {
 
     private func summaryPrecedes(_ lhs: NoteSummary, _ rhs: NoteSummary) -> Bool {
         if lhs.modifiedAt != rhs.modifiedAt { return lhs.modifiedAt > rhs.modifiedAt }
-        return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        return lhs.displayTitle.localizedCaseInsensitiveCompare(rhs.displayTitle) == .orderedAscending
     }
 
     private func folded(_ value: String) -> String {

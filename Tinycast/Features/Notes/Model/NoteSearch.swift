@@ -21,7 +21,7 @@ enum NoteSearch {
         var titleScore = 0
         var titleMatches = 0
         for term in query.terms {
-            if let match = FuzzyMatch.match(query: term, candidate: summary.title) {
+            if let match = FuzzyMatch.match(query: term, candidate: summary.displayTitle) {
                 titleMatches += 1
                 titleScore += match.score
                 continue
@@ -49,7 +49,7 @@ enum NoteSearch {
         if lhs.summary.modifiedAt != rhs.summary.modifiedAt {
             return lhs.summary.modifiedAt > rhs.summary.modifiedAt
         }
-        return lhs.summary.title.localizedCaseInsensitiveCompare(rhs.summary.title)
+        return lhs.summary.displayTitle.localizedCaseInsensitiveCompare(rhs.summary.displayTitle)
             == .orderedAscending
     }
 }

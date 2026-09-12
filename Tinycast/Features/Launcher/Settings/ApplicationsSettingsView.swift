@@ -8,10 +8,11 @@ struct ApplicationsSettingsView: View {
 
             LauncherItemsSection(
                 kind: .application,
-                header: "Applications",
+                anchor: .applicationsApplications,
                 searchPrompt: "Search applications…")
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.applications)
         .releasesFocusOnOutsideClick()
     }
 }

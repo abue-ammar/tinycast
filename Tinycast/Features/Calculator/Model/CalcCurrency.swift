@@ -63,7 +63,7 @@ enum CalcCurrency {
             let input: Double
             if valueTokens.isEmpty {
                 input = 1
-            } else if let value = CalcParser.evaluate(valueTokens) {
+            } else if let value = CalcExpressionParser.scalar(valueTokens) {
                 input = value
             } else {
                 return nil
@@ -98,7 +98,7 @@ enum CalcCurrency {
         }
     }
 
-    /// The only hand-written currency data: nouns CLDR won't assign. docs/features/calculator.md
+    /// Hand-written because CLDR won't assign a shared noun. docs/features/calculator.md
     private static let contested: [String: [String]] = [
         "USD": ["dollar", "dollars"],  // 22 claimants
         "CHF": ["franc", "francs"],  // 10
@@ -111,6 +111,16 @@ enum CalcCurrency {
         "RON": ["leu", "lei"],  // 2
         "RUB": ["ruble", "rubles"],  // 2
         "SAR": ["riyal", "riyals"]  // 2
+    ]
+
+    /// ISO 4217's own names where CLDR differs; the standard is the source of truth.
+    private static let isoNames: [String: [String]] = [
+        "CNY": ["rmb", "renminbi"]  // ISO 4217 names CNY "Yuan Renminbi"; CLDR says "Chinese Yuan"
+    ]
+
+    /// Codes daily use spells from CLDR's sign, not ISO 4217. docs/features/calculator.md
+    private static let signCodes: [String: [String]] = [
+        "TWD": ["ntd"]  // CLDR writes TWD "NT$", so Taiwan types the sign's code, not TWD
     ]
 
     /// Hand-written because no standards body names a coin. docs/features/calculator.md
@@ -143,7 +153,7 @@ enum CalcCurrency {
     /// `CurrencyRateStore` builds its request from this, so the two lists cannot drift apart.
     static let cryptoCodes: [String] = crypto.map(\.code)
 
-    /// Lookup by lowercased ident, generated data first so `contested` above is applied last.
+    /// Lookup by lowercased ident, generated data first so the hand-written tables above win.
     static let byName: [String: CurrencyDef] = {
         var defs: [String: CurrencyDef] = [:]
         var table: [String: CurrencyDef] = [:]
@@ -163,6 +173,14 @@ enum CalcCurrency {
             for word in entry.aliases { table[word] = def }
         }
         for (code, words) in contested {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
+        }
+        for (code, words) in isoNames {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
+        }
+        for (code, words) in signCodes {
             guard let def = defs[code] else { continue }
             for word in words { table[word] = def }
         }

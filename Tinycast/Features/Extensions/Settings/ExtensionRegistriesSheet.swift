@@ -1,18 +1,12 @@
 import SwiftUI
 
-/// Where searching looks, and what builds what it finds.
-///
-/// A sheet reached from search — from the Install row's "Registries…" and from inside the search
-/// sheet itself — rather than a row of its own in the pane. A registry is not a fourth way to install
-/// something; it is the setting that decides what searching can find, and it belongs where that
-/// question is asked.
+/// A registry decides what search can find, so it belongs where searching is asked.
 struct ExtensionRegistriesSheet: View {
     let onClose: () -> Void
 
     @Environment(AppCore.self) private var core
     @State private var addingRegistry = false
-    /// Mirrors `extensionCustomSearchPaths`, joined with `:`; only written back on a real edit, so a
-    /// live round trip through the setting can't strip the trailing separator mid-keystroke.
+    /// Written back only on a real edit, so a round trip cannot strip the separator.
     @State private var customSearchPathsText = ""
 
     private var settings: AppSettings { core.settings }
@@ -29,9 +23,7 @@ struct ExtensionRegistriesSheet: View {
             .padding(.top, Theme.Spacing.xxl)
 
             Form {
-                // Two sections, because the two kinds are not variants of one thing: the store is a
-                // fixed, prebuilt source you can only switch on or off, and a GitHub registry is
-                // something you add, that serves source, and that has to be built to run.
+                // The store only switches on or off; a GitHub registry serves source to build.
                 Section {
                     ForEach(storeRegistries) { registry in
                         registryRow(registry)
@@ -57,8 +49,7 @@ struct ExtensionRegistriesSheet: View {
                         }
                     }
                     Button("Add Registry…") { addingRegistry = true }
-                    // This section's business and nothing else's: only a GitHub registry serves
-                    // source, and only source has to be built.
+                    // Only a GitHub registry serves source, and only source has to be built.
                     if !gitHubRegistries.isEmpty {
                         buildingRow
                         customSearchPathsRow
@@ -157,10 +148,7 @@ struct ExtensionRegistriesSheet: View {
             : "Found at \(resolved.url.path)."
     }
 
-    /// Extra PATH folders Tinycast checks before its built-in list — for a package manager or Node
-    /// install it wouldn't otherwise find, such as a mise or Nix shim directory. The explanation runs
-    /// as its own wrapping line rather than a `SettingsRow` subtitle, which truncates mid-word instead
-    /// of wrapping — unreadable for anything longer than a few words.
+    /// Extra PATH folders checked before the built-in list, for a mise or Nix shim.
     private var customSearchPathsRow: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             SettingsRow(title: "Custom search paths") {

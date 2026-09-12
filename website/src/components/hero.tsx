@@ -1,7 +1,8 @@
+import { Heart } from "lucide-react";
 import { hero, site } from "../data/site";
 import { AppShot } from "./app-shot";
 import { Button } from "./ui/button";
-import { AppleLogo, GitHubLogo } from "./ui/icon";
+import { AppleLogo } from "./ui/icon";
 import { MetaStrip } from "./ui/meta-strip";
 
 // The one place the system breaks its own austerity: a soft violet/cyan
@@ -25,47 +26,53 @@ export function Hero() {
     <section id="top" className="relative overflow-hidden pb-8 pt-36 md:pt-48">
       <Atmosphere />
       <div className="container-page flex flex-col items-center text-center">
+        {/* A pill, not naked mono text: the dot is the one spot of brand up here. */}
         <p
-          className="rise font-mono text-eyebrow uppercase text-fg-muted"
+          className="rise inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 font-mono text-eyebrow uppercase text-fg-muted"
           style={{ animationDelay: "0ms" }}
         >
+          <span
+            aria-hidden="true"
+            className="size-1.5 rounded-full bg-violet-bright"
+          />
           {hero.eyebrow}
         </p>
 
         <h1
-          className="rise mt-6 max-w-3xl text-display"
+          className="rise mt-7 max-w-3xl text-display"
           style={{ animationDelay: "80ms" }}
         >
           {hero.headline}
         </h1>
 
         <p
-          className="rise mt-6 max-w-lg text-body-lg text-fg-muted"
+          className="rise mt-6 max-w-xl text-body-lg text-fg-muted"
           style={{ animationDelay: "160ms" }}
         >
           {hero.sub}
         </p>
 
+        {/* Two, not three: View source moved to the nav's icon row. */}
         <div
-          className="rise mt-9 flex flex-wrap items-center justify-center gap-3"
+          className="rise mt-10 flex flex-wrap items-center justify-center gap-3"
           style={{ animationDelay: "240ms" }}
         >
-          <Button href="/#install" className="gap-1">
+          <Button href="/#install" size="lg" className="gap-2">
             <AppleLogo size={20} />
             Download for Mac
           </Button>
           <Button
-            href={site.repo}
+            href={site.support}
             variant="ghost"
-            target="_blank"
-            rel="noreferrer"
+            size="lg"
+            className="gap-2"
           >
-            <GitHubLogo size={20} />
-            View source
+            <Heart size={18} />
+            Support
           </Button>
         </div>
 
-        <div className="rise mt-2" style={{ animationDelay: "300ms" }}>
+        <div className="rise mt-5" style={{ animationDelay: "300ms" }}>
           <MetaStrip />
         </div>
 

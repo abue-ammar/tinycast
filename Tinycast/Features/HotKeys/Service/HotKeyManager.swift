@@ -5,19 +5,19 @@ import Foundation
 @Observable
 final class HotKeyManager {
     var onTogglePalette: (() -> Void)?
-    var onToggleClipboard: (() -> Void)?
-    var onToggleEmoji: (() -> Void)?
-    var onShowNotes: (() -> Void)?
-    var onCreateNote: (() -> Void)?
-    var onSearchNotes: (() -> Void)?
-    var onSearchFiles: (() -> Void)?
+    /// The launcher's own command funnel, so a shortcut and a palette row run the same thing.
+    var onRunCommand: ((CommandID) -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
+    var onRunWindowLayout: ((UUID) -> Void)?
     var onOpenQuicklink: ((UUID) -> Void)?
+    var onRunQuickAction: ((UUID) -> Void)?
     var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
+    /// Whether the action's launcher category is switched on. Set in `AppCore.start()`.
+    var allowsAction: ((HotKeyAction) -> Bool)?
 
     /// The recorder currently capturing, which also pauses both engines.
     var recordingAction: HotKeyAction? {
@@ -50,12 +50,18 @@ final class HotKeyManager {
     private let boundPaneKey = "boundPaneBundleIDs"
     private let boundCustomCommandKey = "boundCustomCommandIDs"
     private let boundQuicklinkKey = "boundQuicklinkIDs"
+    private let boundQuickActionKey = "boundQuickActionIDs"
+    private let boundWindowLayoutKey = "boundWindowLayoutIDs"
     private let boundExtensionCommandKey = "boundExtensionCommandEntryIDs"
 
-    func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>) {
-        LegacyHotKeyRecords.adopt(candidateActions, decoder: decoder, encoder: encoder)
+    func start(
+        customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>, windowLayoutIDs: Set<UUID>,
+        quickActionIDs: Set<UUID>
+    ) {
         prune(key: boundCustomCommandKey, live: customCommandIDs) { .customCommand(id: $0) }
         prune(key: boundQuicklinkKey, live: quicklinkIDs) { .quicklink(id: $0) }
+        prune(key: boundWindowLayoutKey, live: windowLayoutIDs) { .windowLayout(id: $0) }
+        prune(key: boundQuickActionKey, live: quickActionIDs) { .quickAction(id: $0) }
         // After the prunes, so a dropped record can't survive in memory this session.
         for action in candidateActions { bindings[action] = storedBinding(for: action) }
 
@@ -70,9 +76,7 @@ final class HotKeyManager {
         syncDoubleTaps()
     }
 
-    /// Entry ids holding an extension-command hotkey. Not pruned in `start()` like the UUID-keyed
-    /// indexes are: the installed set is scanned asynchronously and only when extensions are on, so
-    /// "not installed yet" is indistinguishable from "gone" at launch. Uninstalling clears its own.
+    /// Never pruned at launch: not-installed-yet and gone are indistinguishable there.
     var boundExtensionCommandEntryIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundExtensionCommandKey) ?? []
     }
@@ -92,6 +96,11 @@ final class HotKeyManager {
 
     /// Quicklink UUIDs with a binding — the same index, its own namespace.
     var boundQuicklinkIDs: [UUID] { boundIDs(key: boundQuicklinkKey) }
+
+    /// Window-layout UUIDs with a binding; authored records, so they need an index of their own.
+    var boundWindowLayoutIDs: [UUID] { boundIDs(key: boundWindowLayoutKey) }
+
+    var boundQuickActionIDs: [UUID] { boundIDs(key: boundQuickActionKey) }
 
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
 
@@ -134,12 +143,15 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundCustomCommandKey)
         case .quicklink(let id):
             index(id, bound: binding != nil, key: boundQuicklinkKey)
+        case .quickAction(let id):
+            index(id, bound: binding != nil, key: boundQuickActionKey)
+        case .windowLayout(let id):
+            index(id, bound: binding != nil, key: boundWindowLayoutKey)
         case .extensionCommand(let entryID):
             var set = Set(boundExtensionCommandEntryIDs)
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
             UserDefaults.standard.set(Array(set), forKey: boundExtensionCommandKey)
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .systemAction, .windowCommand:
+        case .togglePalette, .command, .systemAction, .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -179,6 +191,8 @@ final class HotKeyManager {
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
         actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
+        actions += boundQuickActionIDs.map { .quickAction(id: $0) }
+        actions += boundWindowLayoutIDs.map { .windowLayout(id: $0) }
         actions += boundExtensionCommandEntryIDs.map { .extensionCommand(entryID: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
@@ -190,18 +204,8 @@ final class HotKeyManager {
         switch action {
         case .togglePalette:
             return "App Launcher"
-        case .toggleClipboard:
-            return CommandID.clipboardHistory.name
-        case .toggleEmoji:
-            return CommandID.searchEmoji.name
-        case .showNotes:
-            return CommandID.showNotes.name
-        case .createNote:
-            return CommandID.createNote.name
-        case .searchNotes:
-            return CommandID.searchNotes.name
-        case .searchFiles:
-            return CommandID.searchFiles.name
+        case .command(let id):
+            return id.name
         case .app(let bundleID), .settingsPane(let bundleID):
             return displayName?(action) ?? bundleID
         case .customCommand:
@@ -210,8 +214,12 @@ final class HotKeyManager {
             return SystemActionCatalog.action(id: id).name
         case .windowCommand(let id):
             return WindowCommandCatalog.command(id: id)?.name ?? "Window Command"
+        case .windowLayout:
+            return displayName?(action) ?? "Window Layout"
         case .quicklink:
             return displayName?(action) ?? "Quicklink"
+        case .quickAction:
+            return displayName?(action) ?? "Quick Action"
         case .extensionCommand:
             return displayName?(action) ?? "Extension Command"
         }
@@ -236,20 +244,19 @@ final class HotKeyManager {
     }
 
     private func perform(_ action: HotKeyAction) {
+        // The category switch, the way each feature switch already guards its own funnel.
+        guard allowsAction?(action) ?? true else { return }
         switch action {
         case .togglePalette: onTogglePalette?()
-        case .toggleClipboard: onToggleClipboard?()
-        case .toggleEmoji: onToggleEmoji?()
-        case .showNotes: onShowNotes?()
-        case .createNote: onCreateNote?()
-        case .searchNotes: onSearchNotes?()
-        case .searchFiles: onSearchFiles?()
+        case .command(let id): onRunCommand?(id)
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)
         case .systemAction(let id): onRunSystemAction?(id)
         case .windowCommand(let id): onRunWindowCommand?(id)
+        case .windowLayout(let id): onRunWindowLayout?(id)
         case .quicklink(let id): onOpenQuicklink?(id)
+        case .quickAction(let id): onRunQuickAction?(id)
         case .extensionCommand(let entryID): onRunExtensionCommand?(entryID)
         }
     }

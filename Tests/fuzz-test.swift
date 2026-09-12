@@ -1,4 +1,4 @@
-// Standalone test for the launcher matcher, compiling the real scorer so a scoring change is caught.
+// Compiles the real scorer, so a scoring change is caught here.
 import Foundation
 
 @main
@@ -11,15 +11,31 @@ struct FuzzTest {
         var bundleID: String?
         var executable: String?
         var userAlias: String?
+        var owner: String?
+        /// What the bundle is called on disk, when a rename moved it off the display name.
+        var fileName: String?
 
-        /// Mirrors AppEntry.searchFields, including the alternate-name sanitizing the scan applies.
+        /// The sources `AppIndex` hands `EntryNaming`; the aliases below are the shipped ones.
+        var sources: EntryNaming.Sources {
+            var sources = EntryNaming.Sources(name: name)
+            sources.strongNames = [fileName].compactMap { $0 }
+            sources.translations = alternates
+            sources.ownerName = owner
+            sources.bundleID = bundleID
+            sources.executableName = executable
+            return sources
+        }
+
+        /// Everything the alias list carries beyond the display name, as `.translation` text.
+        var translations: [String] {
+            EntryNaming.aliases(for: sources).filter { $0.role == .translation }.map(\.text)
+        }
+
+        /// The shipped lowering, plus the user alias `AppIndex.rank` splices in.
         var fields: SearchFields {
-            SearchFields(
-                names: [name],
-                userAlias: userAlias,
-                alternateNames: SearchFields.usableAlternateNames(
-                    alternates, displayName: name, fileName: name + ".app"),
-                bundleID: bundleID, executableName: executable)
+            var aliases = EntryNaming.aliases(for: sources)
+            if let userAlias { aliases.append(.userAlias(userAlias)) }
+            return SearchFields(aliases)
         }
     }
 
@@ -52,34 +68,49 @@ struct FuzzTest {
         App(name: "Code Explorer"),
         App(name: "Books", alternates: ["Apple Books", "iBooks", "Books.app"]),
         App(name: "Contacts", alternates: ["Address Book", "Contacts.app"]),
-        // Ships an untranslated localization placeholder — see SearchFields.usableAlternateNames.
+        // Ships an untranslated localization placeholder — see EntryNaming.usable.
         App(name: "Maps", alternates: ["ALTERNATE_NAME_1", "Maps.app"]),
         // Alternate that only repeats the display name; contributes nothing.
         App(name: "Image Playground", alternates: ["Image Playground", "Image Playground.app"]),
         // The corpus entries with user aliases, so the property loop exercises the alias bands.
         App(name: "Figma", userAlias: "fg"),
-        // The band-6 overreach repro: `term` inside `iterm` must not beat Terminal's own prefix.
-        App(name: "Kitty", userAlias: "iterm")
+        // The band-7 overreach repro: `term` inside `iterm` must not beat Terminal's own prefix.
+        App(name: "Kitty", userAlias: "iterm"),
+        // Extension commands; "Chess" collides with a real app on purpose, which must still win.
+        App(name: "Search Icons", owner: "Lucide"),
+        App(name: "Browse Categories", owner: "Lucide"),
+        App(name: "New Game", owner: "Chess"),
+        // The localized names. None of these is findable in ASCII by its own display name.
+        App(name: "微信", bundleID: "com.tencent.xinWeChat"),
+        App(name: "网易云音乐", bundleID: "com.netease.163music"),
+        App(name: "Телеграм", bundleID: "org.telegram.desktop"),
+        App(name: "Café Noir"),
+        // Latin, but with a non-ASCII scalar in it — must not mint "acc" as a searchable alias.
+        App(name: "Adobe — Creative Cloud"),
+        // The rename: same bundle in another folder, so the display name never changed.
+        App(name: "Slack", bundleID: "com.tinyspeck.slackmacgap", fileName: "Work Chat")
     ]
 
     static func app(_ name: String) -> App { apps.first { $0.name == name }! }
 
-    static func score(_ query: String, _ name: String) -> Int? {
-        SearchRelevance.score(query: query, fields: app(name).fields)
+    /// The table value a score was built from — the largest cell it could have come from.
+    static func cellOf(_ score: Int) -> Int {
+        SearchAlias.Role.allCases
+            .flatMap { role in FuzzyMatch.Tier.allCases.compactMap { SearchRelevance.cell(role, $0) } }
+            .filter { $0 <= score }.max() ?? 0
     }
 
-    /// Mirrors AppIndex.rank: strongest field, plus the learned boost, then the alphabetical tiebreak.
+    static func score(_ query: String, _ name: String) -> Int? {
+        SearchRelevance.quality(query: query, fields: app(name).fields)
+    }
+
+    /// Mirrors AppIndex.rank: strongest field, learned boost, alphabetical tiebreak.
+    /// The shipped fold, so this harness cannot drift from what `AppIndex.rank` does.
     static func rank(_ query: String, boosts: [String: Int] = [:]) -> [String] {
-        apps.compactMap { app -> (String, Int)? in
-            guard let s = SearchRelevance.score(query: query, fields: app.fields) else { return nil }
-            return (app.name, s + boosts[app.name, default: 0])
-        }
-        .sorted {
-            $0.1 != $1.1
-                ? $0.1 > $1.1
-                : $0.0.localizedCaseInsensitiveCompare($1.0) == .orderedAscending
-        }
-        .map(\.0)
+        LauncherOrder.ranked(
+            apps, query: FuzzyMatch.Query(query), limit: apps.count, fields: \.fields,
+            usage: { boosts[$0.name] ?? 0 }, name: \.name
+        ).map(\.name)
     }
 
     static func above(_ ranked: [String], _ winner: String, _ loser: String) -> Bool {
@@ -106,6 +137,8 @@ struct FuzzTest {
         displayNameRanking()
         fieldPriority()
         userAliases()
+        ownerNames()
+        namingCriteria()
         alternateNameSanitizing()
         identifierFields()
         edgeCases()
@@ -207,27 +240,29 @@ struct FuzzTest {
         let userAlias = score("fg", "Figma")!
         let nameLiteral = score("chatgpt", "ChatGPT")!
         let aliasLiteral = score("codex", "ChatGPT")!
+        let ownerLiteral = score("lucide", "Search Icons")!
         let nameSubsequence = score("codex", "Code Explorer")!
         let aliasSubsequence = score("aplbks", "Books")!
         let identifier = score("openai", "ChatGPT")!
-        let executable = score("electron", "Visual Studio Code")!
         let ordered = [
-            userAlias, nameLiteral, aliasLiteral, nameSubsequence, aliasSubsequence, identifier,
-            executable
+            userAlias, nameLiteral, aliasLiteral, ownerLiteral, nameSubsequence, identifier,
+            aliasSubsequence
         ]
         check(
-            "bands are strictly ordered: user-alias > name > alias > name-fuzzy > alias-fuzzy > id > exec",
+            "cells are strictly ordered: user-alias > name > alias > owner > name-fuzzy > id > alias-fuzzy",
             zip(ordered, ordered.dropFirst()).allSatisfy { $0 > $1 }, "got \(ordered)")
         check(
-            "every band is a whole stride apart",
-            zip(ordered, ordered.dropFirst()).allSatisfy {
-                $0 - $1 > FuzzyMatch.maximumScore
-            }, "got \(ordered)")
+            "a bundle id and an executable name share the technical role",
+            score("electron", "Visual Studio Code")! < SearchRelevance.cell(.owner, .wordStart)!
+                && identifier < SearchRelevance.cell(.owner, .wordStart)!)
+        check(
+            "no two of them land in the same cell",
+            Set(ordered.map(cellOf)).count == ordered.count, "got \(ordered.map(cellOf))")
 
         // The strongest field wins; a weaker field on the same entry never drags it down.
         check(
             "Safari's exact display name beats its own alias band",
-            score("safari", "Safari")! >= 5 * SearchRelevance.bandStride)
+            score("safari", "Safari")! >= SearchRelevance.cell(.name, .exact)!)
         check(
             "an entry with no matching field scores nil", score("qqqq", "Safari") == nil)
     }
@@ -241,38 +276,123 @@ struct FuzzTest {
         check("'fg' finds Figma by user alias", fg.first == "Figma", "got \(fg)")
         check(
             "the user alias sits in the band above the display name",
-            score("fg", "Figma")! >= 6 * SearchRelevance.bandStride)
+            score("fg", "Figma")! >= SearchRelevance.cell(.userAlias, .prefix)!)
         check(
             "a user alias outranks another entry's exact display name",
-            SearchRelevance.score(query: "code", fields: SearchFields(names: ["Mail"], userAlias: "code"))!
-                > SearchRelevance.score(query: "code", fields: SearchFields(names: ["Code"]))!)
+            SearchRelevance.quality(query: "code", fields: SearchFields([.name("Mail"), .userAlias("code")]))!
+                > SearchRelevance.quality(query: "code", fields: SearchFields([.name("Code")]))!)
         check(
             "a user alias matches literally: exact, prefix and substring",
             ["mail2", "mai", "ail"].allSatisfy {
-                SearchRelevance.score(
-                    query: $0, fields: SearchFields(names: ["\u{FFFF}"], userAlias: "mail2")) != nil
+                SearchRelevance.quality(
+                    query: $0, fields: SearchFields([.name("\u{FFFF}"), .userAlias("mail2")])) != nil
             })
         check(
             "a user alias never subsequence-matches",
-            SearchRelevance.score(
-                query: "fga", fields: SearchFields(names: ["\u{FFFF}"], userAlias: "figalias")) == nil)
-        let figma = SearchRelevance.score(query: "figma", fields: app("Figma").fields)!
+            SearchRelevance.quality(
+                query: "fga", fields: SearchFields([.name("\u{FFFF}"), .userAlias("figalias")])) == nil)
+        let figma = SearchRelevance.quality(query: "figma", fields: app("Figma").fields)!
         check(
             "the strongest field still wins on an aliased entry",
-            figma >= 5 * SearchRelevance.bandStride && figma < 6 * SearchRelevance.bandStride)
+            figma >= SearchRelevance.cell(.name, .exact)! && figma < SearchRelevance.cell(.userAlias, .exact)!
+        )
 
-        // Anchoring: only exact and prefix hits earn band 6; inside hits rank with vendor aliases.
+        // Anchoring: only exact and prefix hits earn band 7; inside hits rank with vendor aliases.
         let term = rank("term")
         check(
             "an inside alias hit does not beat another entry's own prefix",
             above(term, "Terminal", "Kitty"), "got \(term)")
         check("...but the aliased entry is still findable", term.contains("Kitty"), "got \(term)")
         check("an alias prefix hit still ranks first", rank("ite").first == "Kitty", "got \(rank("ite"))")
-        let inside = SearchRelevance.score(
-            query: "ail", fields: SearchFields(names: ["\u{FFFF}"], userAlias: "mail2"))!
+        let inside = SearchRelevance.quality(
+            query: "ail", fields: SearchFields([.name("\u{FFFF}"), .userAlias("mail2")]))!
         check(
             "an inside alias hit ranks in the vendor-alias band",
-            inside >= 4 * SearchRelevance.bandStride && inside < 5 * SearchRelevance.bandStride)
+            inside >= SearchRelevance.cell(.translation, .substring)!
+                && inside <= SearchRelevance.cell(.translation, .substring)! + SearchRelevance.shapeSpan)
+    }
+
+    // MARK: - Owner names
+
+    static func ownerNames() {
+        print("\n# owner names")
+
+        let lucide = rank("lucide")
+        check(
+            "an extension's title finds every command it ships",
+            lucide == ["Browse Categories", "Search Icons"], "got \(lucide)")
+        check("a prefix of the title works too", rank("luci") == lucide, "got \(rank("luci"))")
+        check(
+            "the owner band sits below the display name",
+            score("lucide", "Search Icons")! >= SearchRelevance.cell(.owner, .exact)!
+                && score("lucide", "Search Icons")! < SearchRelevance.cell(.name, .prefix)!)
+
+        let chess = rank("chess")
+        check(
+            "an app outranks an extension that took its name", above(chess, "Chess", "New Game"),
+            "got \(chess)")
+        check(
+            "an owner title never subsequence-matches",
+            SearchRelevance.quality(
+                query: "lcd", fields: SearchFields([.name("\u{FFFF}"), .owner("Lucide")])) == nil)
+        check(
+            "a literal owner hit still beats another entry's subsequence name hit",
+            SearchRelevance.quality(
+                query: "lucide", fields: SearchFields([.name("\u{FFFF}"), .owner("Lucide")]))!
+                > SearchRelevance.quality(query: "lucide", fields: SearchFields([.name("Lucid Engine")]))!)
+        check(
+            "the command's own title still wins on the same entry",
+            score("search", "Search Icons")! >= SearchRelevance.cell(.name, .prefix)!)
+    }
+
+    // MARK: - Naming criteria
+
+    /// One line per naming criterion a user has asked for. **A new complaint is a new row here**,
+    /// written before the provider that satisfies it — that is what keeps the ladder from drifting.
+    static let criteria: [(query: String, expected: String, criterion: String)] = [
+        ("chrome", "Google Chrome", "display name"),
+        ("browser", "Safari", "Spotlight alternate name"),
+        ("浏览器", "Safari", "the alternate in its own script"),
+        ("ical", "Calendar", "a vendor's old name for itself"),
+        ("codex", "ChatGPT", "an alternate that is nobody's display name"),
+        ("fg", "Figma", "the user's own alias"),
+        ("openai", "ChatGPT", "the bundle id's vendor component"),
+        ("electron", "Visual Studio Code", "the executable name"),
+        ("lucide", "Browse Categories", "the owning extension's title, on all its commands"),
+        ("微信", "微信", "a Chinese display name typed in Chinese"),
+        ("weixin", "微信", "a Chinese display name typed as pinyin"),
+        ("wx", "微信", "a Chinese display name typed as pinyin initials"),
+        ("wangyiyunyinle", "网易云音乐", "a longer pinyin reading"),
+        ("wyyyl", "网易云音乐", "its initials"),
+        ("llq", "Safari", "pinyin initials of a Chinese *alternate* name"),
+        ("telegram", "Телеграм", "a Cyrillic display name typed in Latin"),
+        ("cafe", "Café Noir", "an accented name typed without the accent"),
+        ("café", "Café Noir", "...and with it"),
+        ("ｃａｆｅ", "Café Noir", "...and in full-width characters"),
+        ("work chat", "Slack", "a renamed bundle, found by the name on disk"),
+        ("slack", "Slack", "...which never displaces its real display name")
+    ]
+
+    static func namingCriteria() {
+        print("\n# naming criteria")
+        for (query, expected, criterion) in criteria {
+            let ranked = rank(query)
+            check("'\(query)' finds \(expected) by \(criterion)", ranked.first == expected, "got \(ranked)")
+        }
+        check(
+            "romanizing an ASCII name adds nothing",
+            Self.app("Terminal").translations.isEmpty)
+        check(
+            "a Latin name carrying a stray non-ASCII scalar romanizes to nothing",
+            Self.app("Café Noir").translations.isEmpty
+                && Self.app("Adobe — Creative Cloud").translations.isEmpty)
+        check(
+            "so its initials rank as a plain name subsequence, not as a literal translation",
+            score("acc", "Adobe — Creative Cloud")! < SearchRelevance.cell(.owner, .substring)!,
+            "got \(score("acc", "Adobe — Creative Cloud")!)")
+        check(
+            "an unreadable script does not invent a match",
+            rank("zzzqqq").isEmpty, "got \(rank("zzzqqq"))")
     }
 
     // MARK: - Spotlight junk
@@ -282,24 +402,27 @@ struct FuzzTest {
 
         let app = rank("app")
         check("'app' still finds App Store", app.first == "App Store", "got \(app)")
-        // The tail here is `com.apple.*` bundle ids, which the identifier band keeps below every name hit.
+        // The tail is `com.apple.*` ids, which the identifier band keeps below name hits.
         check(
             "'app' matches nothing by display name that isn't a real hit",
-            app.filter { score("app", $0)! >= 4 * SearchRelevance.bandStride }
-                == ["App Store", "WhatsApp", "Books"], "got \(app)")
+            app.filter { score("app", $0)! >= SearchRelevance.cell(.name, .substring)! }
+                == ["App Store", "Books", "WhatsApp"],
+            "got \(app.filter { score("app", $0)! >= SearchRelevance.cell(.name, .substring)! })")
         check(
             "'.app' alternates are dropped entirely",
-            !apps.contains { $0.fields.alternateNames.contains { $0.hasSuffix(".app") } })
+            !apps.contains { $0.translations.contains { $0.hasSuffix(".app") } })
         check("'alternate' matches nothing", rank("alternate").isEmpty, "got \(rank("alternate"))")
         check(
-            "the ALL_CAPS placeholder is dropped", Self.app("Maps").fields.alternateNames.isEmpty)
+            "the ALL_CAPS placeholder is dropped", Self.app("Maps").translations.isEmpty)
         check(
             "an alternate repeating the display name is dropped",
-            Self.app("Image Playground").fields.alternateNames.isEmpty)
+            Self.app("Image Playground").translations.isEmpty)
         check(
-            "real aliases survive", Self.app("Books").fields.alternateNames == ["Apple Books", "iBooks"])
+            "real aliases survive", Self.app("Books").translations == ["Apple Books", "iBooks"])
 
-        let sanitize = SearchFields.usableAlternateNames
+        func sanitize(_ raw: [String], _ displayName: String, _ fileName: String) -> [String] {
+            EntryNaming.usable(raw, rejecting: [displayName, fileName])
+        }
         check(
             "empty and whitespace-only names are dropped",
             sanitize(["", "   ", "\n"], "X", "X.app").isEmpty)
@@ -316,6 +439,13 @@ struct FuzzTest {
         check(
             "a multi-word name with an underscore is kept",
             sanitize(["My_App Pro"], "X", "X.app") == ["My_App Pro"])
+        // Find My on a Portuguese Mac: the system-language name arrives beside the file name.
+        check(
+            "a system-language name survives when it differs",
+            sanitize(["FindMy.app", "Buscar"], "Find My", "FindMy.app") == ["Buscar"])
+        check(
+            "a system-language name equal to the display name is dropped",
+            sanitize(["FindMy.app", "Find My"], "Find My", "FindMy.app").isEmpty)
     }
 
     // MARK: - Identifier fields
@@ -332,9 +462,15 @@ struct FuzzTest {
         check(
             "a short query does not drag in every reverse-DNS id",
             !rank("cml").contains("Photos"), "got \(rank("cml"))")
-        // These queries still hit display names, so the check is that nothing lands in the identifier band.
+        // These still hit display names, so nothing may land in the identifier band.
+        // `technical` no longer sits under every human role, so "an id-only hit" is a question
+        // about which alias matched, not about where the score landed.
         func identifierHits(_ query: String) -> [String] {
-            rank(query).filter { score(query, $0)! < 2 * SearchRelevance.bandStride }
+            rank(query).filter { name in
+                let fields = Self.app(name).fields
+                let human = SearchFields(fields.aliases.filter { $0.role != .technical })
+                return SearchRelevance.quality(query: query, fields: human) == nil
+            }
         }
         check(
             "'com' matches nothing by bundle id", identifierHits("com").isEmpty,
@@ -344,18 +480,18 @@ struct FuzzTest {
         check("'com.' matches nothing by bundle id", identifierHits("com.").isEmpty)
         check(
             "a bundle id with no dot still matches",
-            SearchRelevance.score(query: "solo", fields: SearchFields(names: ["X"], bundleID: "solo"))
+            SearchRelevance.quality(query: "solo", fields: SearchFields([.name("X"), .technical("solo")]))
                 != nil)
         check("executable name matches literally", rank("electron").contains("Visual Studio Code"))
         check(
             "executable name does not subsequence-match",
             !rank("etn").contains("Visual Studio Code"), "got \(rank("etn"))")
 
-        let noID = SearchFields(names: ["Solo"])
+        let noID = SearchFields([.name("Solo")])
         check(
             "an entry with no bundle id or executable still matches on its name",
-            SearchRelevance.score(query: "solo", fields: noID) != nil)
-        check("...and matches nothing else", SearchRelevance.score(query: "com", fields: noID) == nil)
+            SearchRelevance.quality(query: "solo", fields: noID) != nil)
+        check("...and matches nothing else", SearchRelevance.quality(query: "com", fields: noID) == nil)
     }
 
     // MARK: - Edge cases
@@ -364,42 +500,48 @@ struct FuzzTest {
         print("\n# edge cases")
 
         let fields = app("Safari").fields
-        check("empty query scores 0", SearchRelevance.score(query: "", fields: fields) == 0)
+        check("empty query scores 0", SearchRelevance.quality(query: "", fields: fields) == 0)
         check(
             "empty query never returns nil for any entry",
-            apps.allSatisfy { SearchRelevance.score(query: "", fields: $0.fields) != nil })
+            apps.allSatisfy { SearchRelevance.quality(query: "", fields: $0.fields) != nil })
         check(
             "a query longer than every candidate matches nothing",
             rank(String(repeating: "z", count: 500)).isEmpty)
         check("emoji query does not trap", rank("🙂🙃") == [])
         check(
             "an RTL query does not trap",
-            SearchRelevance.score(query: "\u{202E}safari\u{202C}", fields: fields) != nil)
+            SearchRelevance.quality(query: "\u{202E}safari\u{202C}", fields: fields) != nil)
         check(
             "a format-scalar-only query is treated as empty",
-            SearchRelevance.score(query: "\u{200E}", fields: fields) == 0)
+            SearchRelevance.quality(query: "\u{200E}", fields: fields) == 0)
         check(
             "an entry with every field empty matches nothing",
-            SearchRelevance.score(query: "x", fields: SearchFields(names: [])) == nil)
+            SearchRelevance.quality(query: "x", fields: SearchFields()) == nil)
         check(
             "a snippet keyword ranks at display-name strength",
-            SearchRelevance.score(
-                query: "sig", fields: SearchFields(names: ["Signature Block", "sig"]))!
-                >= 5 * SearchRelevance.bandStride)
+            SearchRelevance.quality(
+                query: "sig", fields: SearchFields([.name("Signature Block"), .name("sig")]))!
+                >= SearchRelevance.cell(.name, .exact)!)
 
         check(
             "ranking is deterministic across repeats",
             (0..<50).allSatisfy { _ in rank("s") == rank("s") })
+        // P1: the one gap learning may never close, stated over the published constants.
         check(
-            "the learned boost cap cannot cross a FuzzyMatch tier",
-            LauncherRankingBoostCap < 10_000)
+            "P1 an exact name hit survives any rival's habit",
+            SearchRelevance.protectionFloor
+                > SearchRelevance.poolTop + SearchRelevance.shapeSpan + UsageCeiling)
         check(
-            "the learned boost cap cannot cross a band",
-            LauncherRankingBoostCap < SearchRelevance.bandStride - FuzzyMatch.maximumScore)
+            "P2 shape orders inside a cell and never leaves it",
+            SearchRelevance.shapeSpan < 100)
+        check(
+            "P3 the weakest shown match is learnable to the top of the pool",
+            SearchRelevance.poolBottom + UsageCeiling
+                > SearchRelevance.poolTop + SearchRelevance.shapeSpan)
     }
 
-    /// Mirrors LauncherRankingStore.maximumBoost; Tests/ranking-test.swift asserts the real one.
-    static let LauncherRankingBoostCap = 4_500
+    /// Mirrors LauncherRankingStore.maximumUsage; Tests/ranking-test.swift asserts the real one.
+    static let UsageCeiling = SearchRelevance.usageCeiling - 1
 
     // MARK: - Randomized property loop
 
@@ -420,8 +562,13 @@ struct FuzzTest {
 
         let alphabet = Array("abcdefghijklmnopqrstuvwxyz .-_0123456789浏览器사파리🙂\u{200E}\u{0301}")
         let allText = apps.flatMap { app -> [String] in
-            [app.name] + app.alternates
-                + [app.bundleID, app.executable, app.userAlias].compactMap { $0 }
+            [app.name] + app.alternates + app.translations
+                + [app.bundleID, app.executable, app.userAlias, app.owner, app.fileName]
+                .compactMap { $0 }
+        }
+        // Every value the closed table can produce; a score must be one of these plus a shape.
+        let cells = SearchAlias.Role.allCases.flatMap { role in
+            FuzzyMatch.Tier.allCases.compactMap { SearchRelevance.cell(role, $0) }
         }
         var rng = Random(seed: 0x5EED_1234_ABCD_0001)
 
@@ -433,7 +580,7 @@ struct FuzzTest {
         let iterations = 100_000
 
         for i in 0..<iterations {
-            // Three query shapes: a real slice of some field, a scrambled subsequence of one, and junk.
+            // Three query shapes: a real slice, a scrambled subsequence, and junk.
             let query: String
             switch i % 3 {
             case 0:
@@ -443,32 +590,41 @@ struct FuzzTest {
                 query = String(source[start..<min(source.count, start + length)])
             case 1:
                 let source = Array(rng.element(allText))
-                query = String(source.enumerated().compactMap { rng.int(3) == 0 ? $0.element : nil })
+                query = String(source.compactMap { rng.int(3) == 0 ? $0 : nil })
             default:
                 query = String((0..<(1 + rng.int(8))).map { _ in rng.element(alphabet) })
             }
 
             for app in apps {
                 let fields = app.fields
-                guard let score = SearchRelevance.score(query: query, fields: fields) else { continue }
+                guard let score = SearchRelevance.quality(query: query, fields: fields) else { continue }
                 matched += 1
 
-                // Every score sits inside exactly one band, and the boost cap cannot lift it out.
-                let band = score / SearchRelevance.bandStride
-                let offset = score - band * SearchRelevance.bandStride
-                if offset < 0 || offset > FuzzyMatch.maximumScore || band > 6 { bandViolations += 1 }
-                if (score + LauncherRankingBoostCap) / SearchRelevance.bandStride != band {
+                // Every score is one cell plus a shape, and usage may never lift it past P1.
+                // A query that folds away claims no cell; every real one is a cell plus a shape.
+                if !FuzzyMatch.Query(query).isEmpty,
+                    !cells.contains(where: {
+                        score - $0 >= 0 && score - $0 <= SearchRelevance.shapeSpan
+                    })
+                {
+                    bandViolations += 1
+                }
+                if score < SearchRelevance.protectionFloor,
+                    score + UsageCeiling >= SearchRelevance.protectionFloor
+                {
                     boostCrossedBand += 1
                 }
-                if SearchRelevance.score(query: query, fields: fields) != score { nondeterministic += 1 }
+                if SearchRelevance.quality(query: query, fields: fields) != score { nondeterministic += 1 }
             }
 
             if i % 97 == 0, rank(query) != rank(query) { unstableOrder += 1 }
         }
 
-        check("scores always sit inside their band", bandViolations == 0, "\(bandViolations) violations")
         check(
-            "the max learned boost never lifts a score out of its band", boostCrossedBand == 0,
+            "every score is one cell plus a shape", bandViolations == 0,
+            "\(bandViolations) violations")
+        check(
+            "the max learned usage never crosses the firewall", boostCrossedBand == 0,
             "\(boostCrossedBand) crossings")
         check("scoring is deterministic", nondeterministic == 0, "\(nondeterministic) mismatches")
         check("rank order is stable", unstableOrder == 0, "\(unstableOrder) unstable")
@@ -481,31 +637,31 @@ struct FuzzTest {
         var rng2 = Random(seed: 0x5EED_1234_ABCD_0002)
         for _ in 0..<20_000 {
             let text = rng2.element(allText)
-            let asName = SearchFields(names: [text])
-            let asUserAlias = SearchFields(names: ["\u{FFFF}"], userAlias: text)
-            let asAlternate = SearchFields(names: ["\u{FFFF}"], alternateNames: [text])
-            let asBundleID = SearchFields(names: ["\u{FFFF}"], bundleID: text)
-            let asExecutable = SearchFields(names: ["\u{FFFF}"], executableName: text)
+            let asName: SearchFields = [.name(text)]
+            let asUserAlias: SearchFields = [.name("\u{FFFF}"), .userAlias(text)]
+            let asAlternate: SearchFields = [.name("\u{FFFF}"), .translation(text)]
+            let asOwner: SearchFields = [.name("\u{FFFF}"), .owner(text)]
+            let asTechnical: SearchFields = [.name("\u{FFFF}"), .technical(text)]
             let source = Array(text)
             let start = rng2.int(max(1, source.count))
             let query = String(source[start..<min(source.count, start + 1 + rng2.int(6))])
             guard !query.isEmpty,
-                let name = SearchRelevance.score(query: query, fields: asName)
+                let name = SearchRelevance.quality(query: query, fields: asName)
             else { continue }
-            let userAlias = SearchRelevance.score(query: query, fields: asUserAlias)
-            let alternate = SearchRelevance.score(query: query, fields: asAlternate)
-            let bundleID = SearchRelevance.score(query: query, fields: asBundleID)
-            let executable = SearchRelevance.score(query: query, fields: asExecutable)
-            // Same text, weaker field: the score must drop, and identifier fields may drop out entirely.
-            // An anchored alias hit outranks the name; an inside hit ranks below with vendor aliases.
+            let userAlias = SearchRelevance.quality(query: query, fields: asUserAlias)
+            let alternate = SearchRelevance.quality(query: query, fields: asAlternate)
+            let owner = SearchRelevance.quality(query: query, fields: asOwner)
+            let technical = SearchRelevance.quality(query: query, fields: asTechnical)
+            // Same text, weaker field: an anchored alias outranks the name, an inside hit does not.
             if let userAlias, let tier = FuzzyMatch.match(query: query, candidate: text)?.tier,
                 tier.isAnchored ? userAlias <= name : userAlias >= name
             {
                 inversions += 1
             }
             if let alternate, alternate >= name { inversions += 1 }
-            if let bundleID, let alternate, bundleID >= alternate { inversions += 1 }
-            if let executable, let bundleID, executable >= bundleID { inversions += 1 }
+            if let owner, let alternate, owner >= alternate { inversions += 1 }
+            if let technical, let owner, technical >= owner { inversions += 1 }
+            if let technical, let alternate, technical >= alternate { inversions += 1 }
         }
         check(
             "the same text always scores lower in a weaker field", inversions == 0, "\(inversions) inversions"

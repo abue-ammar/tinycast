@@ -50,6 +50,7 @@ See [Hotkeys](/docs/reference/hotkeys#hyper-key).
 | Launch at login          | —                                           | Off             |
 | Show in menu bar         | —                                           | **On**          |
 | Pop to Root Search       | Immediately · 5 · 15 · 30 · 60 · 90 seconds | **Immediately** |
+| Escape Key Behavior      | Navigate back or close window · Close window and pop to root | **Navigate back or close window** |
 | Auto-switch input source | None, plus every enabled keyboard source    | **None**        |
 
 Shortcuts keep working with the menu-bar icon hidden.
@@ -78,10 +79,10 @@ Seven features, all off by default.
 | [File Search](/docs/features/file-search)             | Enable File Search       | Search Scopes, Ignore Patterns                                              |
 | [Notes](/docs/features/notes)                         | Enable Notes             | Per-command visibility and shortcut                                         |
 | [Snippets](/docs/features/snippets)                   | Enable snippets          | Show in launcher, New Snippet, Snippets Folder                              |
-| [Window Management](/docs/features/window-management) | Enable window management | Show in launcher, Cycle sizes on repeat, Gap (0–64 pt, default 0)           |
+| [Window Management](/docs/features/window-management) | Enable window management | Show in launcher, Cycling (**None**), Gap (0–64 pt, default 0)           |
 | [Clipboard](/docs/features/clipboard)                 | _(always on)_            | Keep history for (**3 Months**), Disabled Applications, Clear history       |
 | [Emoji & Symbols](/docs/features/emoji)               | _(always on)_            | Emoji Skin Tone (**Default**)                                               |
-| [Extensions](/docs/extensions)                        | Enable extensions        | Show in launcher, package manager, registries, custom search paths, Storage |
+| [Extensions](/docs/extensions)                        | Enable extensions        | Show in launcher, per-command alias and shortcut, package manager, registries, custom search paths, Storage |
 
 Clipboard and Emoji have no feature switch — they are part of the palette itself.
 

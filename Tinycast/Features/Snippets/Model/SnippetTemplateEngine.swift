@@ -120,6 +120,20 @@ enum SnippetTemplateEngine {
             ))
     }
 
+    /// The `{argument}`s a template declares, in written order — what a form has to ask for.
+    /// One with a `default=` answers itself, so it is not among them, exactly as expansion decides.
+    static func declaredArguments(in text: String) -> [MissingArgument] {
+        var declared: [MissingArgument] = []
+        var seen = Set<String>()
+        for segment in parseSegments(text) {
+            guard case .argument(let token, _, _) = segment, token.defaultValue == nil,
+                seen.insert(token.name).inserted
+            else { continue }
+            declared.append(MissingArgument(name: token.name, options: token.options))
+        }
+        return declared
+    }
+
     /// Whether the template reads the selection. Parsed, so a literal brace run doesn't count.
     static func usesSelection(_ text: String) -> Bool {
         parseSegments(text).contains { segment in
@@ -401,7 +415,8 @@ enum SnippetTemplateEngine {
         case "date", "time", "datetime", "day":
             guard let dateTime = parseDateTime(token) else { return nil }
             return .dateTime(dateTime, modifiers: modifiers)
-        case "argument":
+        // `query` is Raycast's spelling of the same token.
+        case "argument", "query":
             guard let argument = parseArgument(token) else { return nil }
             return .argument(argument, source: source, modifiers: modifiers)
         case "snippet":
@@ -589,14 +604,37 @@ enum SnippetTemplateEngine {
                 guard let decoded = decodeQuoted(&remainder) else { return nil }
                 value = decoded
             } else {
-                let bare = remainder.prefix { !$0.isWhitespace }
-                guard !bare.isEmpty else { return nil }
-                remainder = remainder.dropFirst(bare.count)
-                value = String(bare)
+                guard let bare = takeBareValue(&remainder) else { return nil }
+                value = bare
             }
             guard parameters.updateValue(value, forKey: String(key)) == nil else { return nil }
         }
         return ParsedToken(command: String(command).lowercased(), parameters: parameters)
+    }
+
+    /// Runs to the next `key=`, so an unquoted `format=MMM d, yyyy` keeps the spaces Raycast writes.
+    private static func takeBareValue(_ remainder: inout Substring) -> String? {
+        var index = remainder.startIndex
+        var end = remainder.startIndex
+        while index < remainder.endIndex {
+            if remainder[index].isWhitespace {
+                index = remainder[index...].drop(while: \Character.isWhitespace).startIndex
+                if startsParameter(remainder[index...]) { break }
+            } else {
+                index = remainder.index(after: index)
+                end = index
+            }
+        }
+        guard end > remainder.startIndex else { return nil }
+        let value = String(remainder[..<end])
+        remainder = remainder[end...]
+        return value
+    }
+
+    private static func startsParameter(_ text: Substring) -> Bool {
+        let key = text.prefix { !$0.isWhitespace && $0 != "=" }
+        guard !key.isEmpty else { return false }
+        return text.dropFirst(key.count).drop(while: \Character.isWhitespace).first == "="
     }
 
     /// Consumes a quoted value from `remainder`, leaving it positioned after the closing quote.

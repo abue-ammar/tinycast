@@ -62,8 +62,7 @@ struct ExtensionBootConfig: Sendable {
     }
 }
 
-/// Everything one command needs at mount time: its `environment`, resolved preferences, the cache
-/// namespaces it may read synchronously, and its launch arguments.
+/// Everything one command needs at mount: environment, preferences, caches, arguments.
 struct ExtensionLaunchContext: Sendable {
     var extensionName: String
     var extensionTitle: String
@@ -75,8 +74,8 @@ struct ExtensionLaunchContext: Sendable {
     var caches: [String: [String: String]]
     var arguments: [String: String]
     var fallbackText: String?
-    /// Injected rather than read: a `Model/` type owns no environment. A running command keeps what
-    /// it booted with, so an appearance change reaches it on the next launch.
+    var launchType: ExtensionLaunchType = .userInitiated
+    /// Injected, never read: a running command keeps what it booted with.
     var isDarkAppearance: Bool
 
     func jsonString() -> String {
@@ -91,12 +90,12 @@ struct ExtensionLaunchContext: Sendable {
             "raycastVersion": ExtensionRuntimeVersion.raycastAPI,
             "textSize": "medium",
             "appearance": isDarkAppearance ? "dark" : "light",
-            "launchType": "userInitiated",
+            "launchType": launchType.rawValue,
             "canAccess": false
         ]
         environment["ownerOrAuthorName"] = extensionTitle
 
-        var launchProps: [String: Any] = ["launchType": "userInitiated", "arguments": arguments]
+        var launchProps: [String: Any] = ["launchType": launchType.rawValue, "arguments": arguments]
         if let fallbackText { launchProps["fallbackText"] = fallbackText }
 
         return ExtensionRuntime.jsonString(
@@ -111,5 +110,5 @@ struct ExtensionLaunchContext: Sendable {
 
 enum ExtensionRuntimeVersion {
     /// The @raycast/api version the bundled shim tracks. Surfaced as `environment.raycastVersion`.
-    static let raycastAPI = "1.104.0"
+    static let raycastAPI = "2.0.3"
 }

@@ -116,7 +116,7 @@ final class UninstallSession {
         let info = Bundle(url: url)?.infoDictionary
         return UninstallTarget(
             bundleURL: url, bundleID: bundleID,
-            displayName: (info?["CFBundleDisplayName"] as? String) ?? name,
+            displayName: AppDisplayName.named(info?["CFBundleDisplayName"]) ?? name,
             bundleName: info?["CFBundleName"] as? String)
     }
 }

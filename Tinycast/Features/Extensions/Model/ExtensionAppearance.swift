@@ -1,7 +1,6 @@
 import Foundation
 
-/// A native-looking stand-in for whatever icon an extension shipped: an SF Symbol from a curated set,
-/// on a tinted tile. Chosen in Settings › Extensions, applied to every command of that extension.
+/// A native-looking stand-in for an extension's icon: a curated symbol on a tinted tile.
 struct ExtensionAppearance: Codable, Equatable, Hashable, Sendable {
     var symbol: String
     var tint: ExtensionTint
@@ -9,8 +8,7 @@ struct ExtensionAppearance: Codable, Equatable, Hashable, Sendable {
     static let fallback = ExtensionAppearance(symbol: "puzzlepiece.extension", tint: .purple)
 }
 
-/// The tile colours on offer — the same family the Settings sidebar uses, so an overridden extension
-/// looks like it belongs rather than like a sticker.
+/// The Settings sidebar's own family, so an override belongs rather than sticks out.
 enum ExtensionTint: String, CaseIterable, Identifiable, Codable, Sendable {
     // Declaration order is swatch order: around the wheel, then the earths and neutrals.
     case red, maroon, rose, pink, purple, indigo, blue, cyan, teal, mint

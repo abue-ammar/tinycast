@@ -43,8 +43,7 @@ final class FavoritesStore {
         commit()
     }
 
-    /// Exchange two favorites' stored positions. The caller picks the pair from the visible order,
-    /// so keys for hidden or unindexed entries keep their slots.
+    /// The pair comes from the visible order, so hidden entries keep their slots.
     func exchange(_ first: String, with second: String) {
         guard let a = keys.firstIndex(of: first), let b = keys.firstIndex(of: second), a != b else {
             return

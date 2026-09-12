@@ -3,7 +3,7 @@ import { cn } from "../../lib/cn";
 import { Link } from "./link";
 
 type Variant = "solid" | "ghost";
-type Size = "sm" | "md";
+type Size = "sm" | "md" | "lg";
 
 type ButtonProps = {
   children: ReactNode;
@@ -24,6 +24,8 @@ const variants: Record<Variant, string> = {
 const sizes: Record<Size, string> = {
   sm: "px-3 py-1.5",
   md: "px-4 py-2.5",
+  // Hero only. A CTA carrying the page shouldn't wear the nav's 13px type.
+  lg: "px-5 py-3 text-body",
 };
 
 // A link styled as a button. Everything on this page is a link (download /

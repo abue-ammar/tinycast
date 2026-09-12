@@ -37,8 +37,10 @@ struct DialogView: View {
                 Spacer(minLength: 0)
             }
 
-            if let volume = request.volume {
-                VolumeSlider(state: volume)
+            switch request.accessory {
+            case .volume(let volume): VolumeSlider(state: volume)
+            case .eventDraft(let draft): EventDraftFields(state: draft)
+            case nil: EmptyView()
             }
 
             HStack(spacing: Theme.Spacing.md) {

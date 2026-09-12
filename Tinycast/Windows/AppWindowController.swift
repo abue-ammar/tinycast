@@ -67,6 +67,20 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         window?.close()
     }
 
+    /// The title bar sits inside the frame but outside the layout area, so it is added back.
+    func fitContent(width: CGFloat, height: CGFloat) {
+        guard let window else { return }
+        let titlebar = window.frame.height - window.contentLayoutRect.height
+        let size = CGSize(width: width, height: height + titlebar)
+        guard window.contentMinSize != size else { return }
+        let top = window.frame.maxY
+        window.contentMinSize = size
+        window.setContentSize(size)
+        var frame = window.frame
+        frame.origin.y = top - frame.height
+        window.setFrame(frame, display: true, animate: false)
+    }
+
     // MARK: - NSWindowDelegate
 
     func windowWillClose(_ notification: Notification) {

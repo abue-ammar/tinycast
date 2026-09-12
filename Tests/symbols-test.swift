@@ -1,8 +1,4 @@
-// Standalone test for the SF Symbol catalog — compiles the *real* source (no copy to sync):
-// swiftc Tinycast/Core/Extensions/SymbolCatalog.swift Tools/symbols-test.swift -o /tmp/symbols-test && /tmp/symbols-test
-//
-// It reads this machine's CoreGlyphs bundle, so it asserts shapes and invariants rather than exact
-// counts — those move with every macOS release.
+// Reads this machine's CoreGlyphs, so it asserts shapes rather than exact counts.
 
 import AppKit
 
@@ -21,9 +17,7 @@ struct SymbolTests {
             catalog.symbols.count > SymbolCatalog.suggested.count * 10)
         check("no duplicates", Set(catalog.symbols).count == catalog.symbols.count)
 
-        // Everything offered has to actually render, or the picker shows an empty tile. The app's
-        // own marks are asset-catalog images rather than system symbols — they are exactly the ones
-        // the system cannot draw, which is why they ship — so they're checked separately below.
+        // The app's own marks are asset images — the ones the system cannot draw.
         let unrenderable = catalog.symbols.prefix(400)
             .filter { !SymbolCatalog.isBundled($0) }
             .filter { NSImage(systemSymbolName: $0, accessibilityDescription: nil) == nil }
@@ -83,7 +77,7 @@ struct SymbolTests {
         check(
             "an empty query is the whole category",
             catalog.search("", in: .all).count == catalog.symbols.count)
-        // Searching from Suggested still looks at everything — a curated set of 88 is not a search index.
+        // Searching from Suggested looks at everything: 88 curated is not an index.
         check(
             "search escapes the suggested set",
             catalog.search("thermometer", in: .suggested).count > 1)
