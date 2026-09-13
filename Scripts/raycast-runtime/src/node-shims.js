@@ -230,7 +230,7 @@ const os = {
     uid: 501,
     gid: 20,
   }),
-  cpus: () => Array.from({ length: bootEnvironment.cpus || 8 }, () => ({ model: "Apple Silicon", speed: 0, times: {} })),
+  cpus: () => hostCallSync("os", "cpus", []),
   totalmem: () => bootEnvironment.totalmem || 0,
   freemem: () => 0,
   uptime: () => 0,

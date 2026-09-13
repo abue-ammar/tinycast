@@ -111,7 +111,7 @@ Two host-call flavours:
 | --- | --- |
 | `Service/ExtensionRuntime.swift` | the `JSContext`, host-function installation, timers, exception reporting |
 | `Service/ExtensionHostBridge.swift` | main-actor host APIs (clipboard, storage, cache, window, toasts, system, oauth) |
-| `Service/ExtensionNodeShims.swift` | the synchronous `fs` / `child_process` / `crypto` / `zlib` services |
+| `Service/ExtensionNodeShims.swift` | the synchronous `fs` / `os` / `child_process` / `crypto` / `zlib` services |
 | `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus the async `exec` and the shared PATH resolver |
 | `Service/ExtensionOAuthKeychain.swift` | secure OAuth token storage backed by macOS Keychain |
 | `Service/ExtensionOAuthSession.swift` | PKCE state tracking, browser launch, and callback redirect resolution |

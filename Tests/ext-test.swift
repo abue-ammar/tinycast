@@ -187,6 +187,7 @@ struct ExtensionTests {
         screenChecks()
         actionIconChecks()
         oauthUnitChecks()
+        nodeShimChecks()
         await runtimeChecks()
         await searchAccessoryRuntimeChecks()
         await nodeContractChecks()
@@ -194,6 +195,35 @@ struct ExtensionTests {
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    static func nodeShimChecks() {
+        let result = ExtensionNodeShims().perform(api: "os", method: "cpus", argsJSON: "[]")
+        guard
+            let data = result.data(using: .utf8),
+            let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            envelope["ok"] as? Bool == true,
+            let processors = envelope["value"] as? [[String: Any]]
+        else {
+            check("os.cpus host call succeeds", false, result)
+            return
+        }
+
+        check(
+            "os.cpus returns every processor",
+            processors.count == ProcessInfo.processInfo.processorCount,
+            "\(processors.count)")
+        let expectedStates = Set(["user", "nice", "sys", "idle", "irq"])
+        let valid = processors.allSatisfy { processor in
+            guard
+                processor["model"] is String,
+                processor["speed"] is NSNumber,
+                let times = processor["times"] as? [String: NSNumber],
+                Set(times.keys) == expectedStates
+            else { return false }
+            return times.values.allSatisfy { $0.doubleValue.isFinite && $0.doubleValue >= 0 }
+        }
+        check("os.cpus returns finite Node timing fields", valid, result)
     }
 
     static func manifestChecks() {
@@ -688,6 +718,7 @@ struct ExtensionTests {
             const { List, ActionPanel, Action, Icon, showToast, Toast } = require("@raycast/api");
             const React = require("react");
             const path = require("node:path");
+            const os = require("node:os");
             const crypto = require("node:crypto");
             const { fileURLToPath, pathToFileURL } = require("node:url");
             const util = require("node:util");
@@ -700,6 +731,8 @@ struct ExtensionTests {
                 return () => clearTimeout(timer);
               }, []);
               const digest = crypto.createHash("sha256").update("abc").digest("hex").slice(0, 8);
+              const cpu = os.cpus()[0];
+              const cpuTimes = Object.values(cpu.times).every(Number.isFinite) ? "cpu=ok" : "cpu=bad";
               // AbortSignal's statics, the brand node-fetch checks, and url.parse's legacy `path`.
               const abortable = [
                 typeof AbortSignal.timeout, typeof AbortSignal.abort, typeof AbortSignal.any,
@@ -735,7 +768,7 @@ struct ExtensionTests {
                   icon: Icon.Circle,
                   accessories: [
                     { text: digest }, { text: abortable }, { text: filePaths },
-                    { text: utilShim },
+                    { text: cpuTimes }, { text: utilShim },
                   ],
                   actions: h(ActionPanel, null,
                     h(Action, { title: "Bump", onAction: () => setCount((v) => v + 10) }))
@@ -768,6 +801,11 @@ struct ExtensionTests {
             ExtensionAccessoriesView_labelForTest(screen.items.first?.node.array("accessories").first)
                 == "ba7816bf",
             String(describing: screen.items.first?.node.array("accessories").first))
+        check(
+            "os.cpus crosses the synchronous host bridge",
+            ExtensionAccessoriesView_labelForTest(
+                screen.items.first?.node.array("accessories").dropFirst(3).first) == "cpu=ok",
+            String(describing: screen.items.first?.node.array("accessories")))
         check("toast reached the host", host.toasts == ["hello"], host.toasts.joined(separator: ","))
         check(
             "AbortSignal survives node-fetch's brand checks, and url.parse keeps its path",

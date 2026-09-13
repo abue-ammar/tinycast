@@ -10,7 +10,6 @@ struct ExtensionBootConfig: Sendable {
     var homeDirectory: String
     var temporaryDirectory: String
     var workingDirectory: String
-    var cpuCount: Int
     var totalMemory: Double
     var environmentVariables: [String: String]
 
@@ -36,7 +35,6 @@ struct ExtensionBootConfig: Sendable {
             homeDirectory: FileManager.default.homeDirectoryForCurrentUser.path,
             temporaryDirectory: FileManager.default.temporaryDirectory.path,
             workingDirectory: supportDirectory.path,
-            cpuCount: info.processorCount,
             totalMemory: Double(info.physicalMemory),
             environmentVariables: variables)
     }
@@ -53,7 +51,6 @@ struct ExtensionBootConfig: Sendable {
                     "homedir": homeDirectory,
                     "tmpdir": temporaryDirectory,
                     "cwd": workingDirectory,
-                    "cpus": cpuCount,
                     "totalmem": totalMemory,
                     "env": environmentVariables,
                     "execPath": ""
