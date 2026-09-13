@@ -449,7 +449,7 @@ struct ExtensionTests {
         }
 
         let listJSON = """
-            {"id":2,"type":"List","props":{"filtering":true,"searchBarPlaceholder":"Find…",
+            {"id":2,"type":"List","props":{"filtering":true,"selectedItemId":"banana","searchBarPlaceholder":"Find…",
               "onSelectionChange":{"$fn":"2:onSelectionChange"}},"children":[
               {"id":3,"type":"List.Section","props":{"title":"Alpha","subtitle":"two"},"children":[
                 {"id":4,"type":"List.Item","props":{"id":"apple","title":"Apple"},"children":[]},
@@ -460,6 +460,8 @@ struct ExtensionTests {
         check("kind is list", list.kind == .list)
         check("placeholder", list.searchPlaceholder == "Find…")
         check("filters locally", list.filtersLocally)
+        check("selected item id", list.selectedItemID == "banana")
+        check("selected item index", list.selectedItemIndex == 1)
         check(
             "items flattened in order",
             list.items.map { $0.node.string("title") } == ["Apple", "Banana", "Cherry"])
@@ -486,6 +488,7 @@ struct ExtensionTests {
             "filtered selection resolves after filtering",
             filtered.selectionChange(at: 0)
                 == .init(handler: "2:onSelectionChange", itemID: "banana"))
+        check("filtered selected item index", filtered.selectedItemIndex == 0)
         check(
             "an empty selection reports null",
             filtered.selectionChange(at: 1)

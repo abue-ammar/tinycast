@@ -165,6 +165,7 @@ screens hold (see [palette.md](palette.md)).
   whole signal. `ExtensionScreen.Item`
   carries both the flat `selection` index and the scroll id, and is the `ForEach` identity of the row
   and the grid cell alike — see the scroll-id rule in [ui.md](../ui.md#rows-selection-hover).
+  A matching `selectedItemId` seeds the palette highlight when the screen first appears.
   `onSelectionChange` is reported with that visible item's string id. The observer keys on the id,
   not just the numeric index, because local filtering can replace row zero without changing the
   palette selection; an empty result reports `null`, matching the API contract.
