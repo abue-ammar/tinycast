@@ -449,11 +449,12 @@ struct ExtensionTests {
         }
 
         let listJSON = """
-            {"id":2,"type":"List","props":{"filtering":true,"searchBarPlaceholder":"Find…"},"children":[
+            {"id":2,"type":"List","props":{"filtering":true,"searchBarPlaceholder":"Find…",
+              "onSelectionChange":{"$fn":"2:onSelectionChange"}},"children":[
               {"id":3,"type":"List.Section","props":{"title":"Alpha","subtitle":"two"},"children":[
-                {"id":4,"type":"List.Item","props":{"title":"Apple"},"children":[]},
-                {"id":5,"type":"List.Item","props":{"title":"Banana"},"children":[]}]},
-              {"id":6,"type":"List.Item","props":{"title":"Cherry","keywords":["red"]},"children":[]}]}
+                {"id":4,"type":"List.Item","props":{"id":"apple","title":"Apple"},"children":[]},
+                {"id":5,"type":"List.Item","props":{"id":"banana","title":"Banana"},"children":[]}]},
+              {"id":6,"type":"List.Item","props":{"id":"cherry","title":"Cherry","keywords":["red"]},"children":[]}]}
             """
         let list = ExtensionScreen(tree: tree(listJSON), query: "")
         check("kind is list", list.kind == .list)
@@ -463,6 +464,10 @@ struct ExtensionTests {
             "items flattened in order",
             list.items.map { $0.node.string("title") } == ["Apple", "Banana", "Cherry"])
         check("rows interleave the section header", list.rows.count == 4, "\(list.rows.count)")
+        check(
+            "selection callback resolves the item id",
+            list.selectionChange(at: 1)
+                == .init(handler: "2:onSelectionChange", itemID: "banana"))
         if case .header(let title, let subtitle, _) = list.rows.first {
             check("header title", title == "Alpha")
             check("header subtitle", subtitle == "two")
@@ -477,6 +482,14 @@ struct ExtensionTests {
             filtered.items.map { $0.node.string("title") } == ["Banana"],
             String(describing: filtered.items.map { $0.node.string("title") }))
         check("empty section drops its header", filtered.rows.count == 2, "\(filtered.rows.count)")
+        check(
+            "filtered selection resolves after filtering",
+            filtered.selectionChange(at: 0)
+                == .init(handler: "2:onSelectionChange", itemID: "banana"))
+        check(
+            "an empty selection reports null",
+            filtered.selectionChange(at: 1)
+                == .init(handler: "2:onSelectionChange", itemID: nil))
         let byKeyword = ExtensionScreen(tree: tree(listJSON), query: "red")
         check("keyword match", byKeyword.items.map { $0.node.string("title") } == ["Cherry"])
 

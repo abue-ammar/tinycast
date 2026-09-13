@@ -114,6 +114,13 @@ struct RootPaletteView: View {
         return ExtensionScreen(tree: tree, query: vm.query)
     }
 
+    /// The extension sees selection by item id, not by Tinycast's filtered row index.
+    private var extensionSelectionChange: ExtensionScreen.SelectionChange? {
+        guard vm.mode == .extensionCommand else { return nil }
+        let screen = extensionScreen
+        return screen.selectionChange(at: selection(count: screen.items.count))
+    }
+
     private func handleFormReturn(_ press: KeyPress) -> KeyPress.Result {
         guard !vm.isEditingField, !vm.isComposing else { return .ignored }
         let modifiers = press.modifiers.intersection([.command, .control, .option, .shift])
@@ -341,6 +348,14 @@ struct RootPaletteView: View {
             .onChange(of: extensionScreen.searchTextHandler) { previous, handler in
                 guard previous == nil, let handler, !vm.query.isEmpty else { return }
                 extensions.dispatch(handler: handler, arguments: [vm.query])
+            }
+            // Raycast lists often gate expensive work on their selected item. Observe the item id,
+            // not only the numeric index, because local filtering can replace row zero in place.
+            .onChange(of: extensionSelectionChange, initial: true) { _, change in
+                guard let change else { return }
+                let argument: Any = change.itemID.map { $0 as Any } ?? NSNull()
+                extensions.dispatch(
+                    handler: change.handler, arguments: [argument])
             }
             // A narrower list means the old index points at a different row, or at none.
             .onChange(of: vm.clipboardFilter) {

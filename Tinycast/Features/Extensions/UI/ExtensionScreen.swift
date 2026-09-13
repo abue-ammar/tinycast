@@ -3,6 +3,11 @@ import SwiftUI
 
 /// The one source of row order, so the palette's flat `selection` maps 1:1 onto visible rows.
 struct ExtensionScreen: Equatable {
+    struct SelectionChange: Equatable {
+        let handler: String
+        let itemID: String?
+    }
+
     enum Kind: Equatable {
         case list
         case grid(ExtensionGridLayout)
@@ -182,6 +187,16 @@ struct ExtensionScreen: Equatable {
         self.showsDetail = showsDetail
         self.screenActions = screenActions
         self.emptyView = emptyView
+    }
+
+    /// The List/Grid callback corresponding to Tinycast's currently visible row index.
+    ///
+    /// This is derived after local filtering: index zero may identify a different item when the
+    /// query changes even though the numeric palette selection did not move.
+    func selectionChange(at index: Int) -> SelectionChange? {
+        guard let selectionHandler else { return nil }
+        let itemID = items.indices.contains(index) ? items[index].node.string("id") : nil
+        return SelectionChange(handler: selectionHandler, itemID: itemID)
     }
 
     /// Title, subtitle and keywords, ranked by the launcher's matcher.
