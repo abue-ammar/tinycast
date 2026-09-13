@@ -24,6 +24,19 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 The index and the store are **effects**, so they live under `Service/` — only the three files above them
 are pure.
 
+## Search
+
+- **Keywords keep their CLDR phrase boundaries.** The generator joins them with commas and keeps every
+  annotation, and a single-word query fuzzy-matches the name and each keyword on its own, so a
+  subsequence never spans two keywords.
+- **Every word of a multiword query must start a word** in the name or a keyword, in any order. A literal
+  phrase outranks words found in the name, which outrank words assembled from name and keywords.
+- **A full name ranks first, then a complete leading name word, then an exact keyword**, then a partial
+  leading word: `birthday` keeps 🎂 first, and `pray` favours the annotation over "prayer beads".
+- **Colon-wrapped queries are unwrapped**, so `:+1:` reuses CLDR's `+1` annotation with no alias table.
+- **Usage breaks ties, never tiers.** The top 100 glyphs from `FrequentEmojiStore.top` add a 100…1
+  bonus, and the store's identity and revision are in the search memo key.
+
 ## Rendering
 
 Two structural decisions in `EmojiGridView` are load-bearing, and both are about the ~2,000 cells the

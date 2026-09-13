@@ -75,7 +75,7 @@ struct EmojiEntry: Identifiable, Hashable, Sendable {
     let name: String
     let category: EmojiCategory
     let supportsSkinTone: Bool
-    let keywords: String  // space-joined search terms; empty for most symbols
+    let keywords: String  // comma-joined search terms; empty for most symbols
 
     var id: String { glyph }
     var displayName: String { name.capitalized }

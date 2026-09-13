@@ -2,438 +2,438 @@
 // Unicode emoji ≤ E17.0 + curated symbols; fields: glyph|name|category|tone|keywords.
 enum EmojiData {
     static let raw = """
-😀|grinning face|sp|0|cheerful cheery grin happy laugh nice smile smiling
-😃|grinning face with big eyes|sp|0|awesome grin happy mouth open smile smiling teeth
-😄|grinning face with smiling eyes|sp|0|eye grin happy laugh lol mouth open smile
-😁|beaming face with smiling eyes|sp|0|eye grin grinning happy nice smile teeth
-😆|grinning squinting face|sp|0|closed eyes haha hahaha happy laugh lol mouth
-😅|grinning face with sweat|sp|0|cold dejected excited mouth nervous open smile smiling
-🤣|rolling on the floor laughing|sp|0|crying face funny haha happy hehe hilarious joy
-😂|face with tears of joy|sp|0|crying feels funny haha happy hehe hilarious laugh
-🙂|slightly smiling face|sp|0|happy smile
-🙃|upside-down face|sp|0|hehe smile
-🫠|melting face|sp|0|disappear dissolve embarrassed haha heat hot liquid lol
-😉|winking face|sp|0|flirt heartbreaker sexy slide tease wink winks
-😊|smiling face with smiling eyes|sp|0|blush eye glad satisfied smile
-😇|smiling face with halo|sp|0|angel angelic angels blessed fairy fairytale fantasy happy
-🥰|smiling face with hearts|sp|0|3 adore crush heart ily love romance smile
-😍|smiling face with heart-eyes|sp|0|143 bae eye feels hearts ily kisses love
-🤩|star-struck|sp|0|excited eyes face grinning smile star starry-eyed wow
-😘|face blowing a kiss|sp|0|adorbs bae flirt heart ily love lover miss
-😗|kissing face|sp|0|143 date dating flirt ily kiss love smooch
-☺️|smiling face|sp|0|happy outlined relaxed smile
-😚|kissing face with closed eyes|sp|0|143 bae blush date dating eye flirt ily
-😙|kissing face with smiling eyes|sp|0|143 closed date dating eye flirt ily kiss
-🥲|smiling face with tear|sp|0|glad grateful happy joy pain proud relieved smile
-😋|face savoring food|sp|0|delicious eat full hungry savor smile smiling tasty
-😛|face with tongue|sp|0|awesome cool nice party stuck-out sweet
-😜|winking face with tongue|sp|0|crazy epic eye funny joke loopy nutty party
-🤪|zany face|sp|0|crazy eye eyes goofy large small
-😝|squinting face with tongue|sp|0|closed eye eyes gross horrible omg stuck-out taste
-🤑|money-mouth face|sp|0|money mouth paid
-🤗|smiling face with open hands|sp|0|hug hugging
-🤭|face with hand over mouth|sp|0|giggle giggling oops realization secret shock sudden surprise
-🫢|face with open eyes and hand over mouth|sp|0|amazement awe disbelief embarrass gasp omg quiet scared
-🫣|face with peeking eye|sp|0|captivated embarrass hide hiding peek peep scared shy
-🤫|shushing face|sp|0|quiet shh shush
-🤔|thinking face|sp|0|chin consider hmm ponder pondering wondering
-🫡|saluting face|sp|0|good luck ma’am ok respect salute sir troops
-🤐|zipper-mouth face|sp|0|keep mouth quiet secret shut zip zipper
-🤨|face with raised eyebrow|sp|0|disapproval disbelief distrust emoji hmm mild skeptic skeptical
-😐|neutral face|sp|0|awkward blank deadpan expressionless fine jealous meh oh
-😑|expressionless face|sp|0|awkward dead fine inexpressive jealous meh not oh
-😶|face without mouth|sp|0|awkward blank expressionless mouthless mute quiet secret silence
-🫥|dotted line face|sp|0|depressed disappear hidden hide introvert invisible meh whatever
-😶‍🌫️|face in clouds|sp|0|absentminded fog head
-😏|smirking face|sp|0|boss dapper flirt homie kidding leer shade slick
-😒|unamused face|sp|0|... bored fine jealous jel jelly pissed smh
-🙄|face with rolling eyes|sp|0|eyeroll shade ugh whatever
-😬|grimacing face|sp|0|awk awkward dentist grimace grinning smile smiling
-😮‍💨|face exhaling|sp|0|blow blowing exhale exhausted gasp groan relief sigh
-🤥|lying face|sp|0|liar lie pinocchio
-🫨|shaking face|sp|0|crazy daze earthquake omg panic shock surprise vibrate
-🙂‍↔️|head shaking horizontally|sp|0|no shake
-🙂‍↕️|head shaking vertically|sp|0|nod yes
-😌|relieved face|sp|0|calm peace relief zen
-😔|pensive face|sp|0|awful bored dejected died disappointed losing lost sad
-😪|sleepy face|sp|0|crying good night sad sleep sleeping tired
+😀|grinning face|sp|0|cheerful,cheery,grin,happy,laugh,nice,smile,smiling,teeth
+😃|grinning face with big eyes|sp|0|awesome,grin,happy,mouth,open,smile,smiling,teeth,yay
+😄|grinning face with smiling eyes|sp|0|eye,grin,happy,laugh,lol,mouth,open,smile
+😁|beaming face with smiling eyes|sp|0|eye,grin,grinning,happy,nice,smile,teeth
+😆|grinning squinting face|sp|0|closed,eyes,haha,hahaha,happy,laugh,lol,mouth,open,rofl,smile,smiling
+😅|grinning face with sweat|sp|0|cold,dejected,excited,mouth,nervous,open,smile,smiling,stress,stressed
+🤣|rolling on the floor laughing|sp|0|crying,face,funny,haha,happy,hehe,hilarious,joy,laugh,lmao,lol,rofl,roflmao,tear
+😂|face with tears of joy|sp|0|crying,feels,funny,haha,happy,hehe,hilarious,laugh,lmao,lol,rofl,roflmao,tear
+🙂|slightly smiling face|sp|0|happy,smile
+🙃|upside-down face|sp|0|hehe,smile
+🫠|melting face|sp|0|disappear,dissolve,embarrassed,haha,heat,hot,liquid,lol,melt,sarcasm,sarcastic
+😉|winking face|sp|0|flirt,heartbreaker,sexy,slide,tease,wink,winks
+😊|smiling face with smiling eyes|sp|0|blush,eye,glad,satisfied,smile
+😇|smiling face with halo|sp|0|angel,angelic,angels,blessed,fairy,fairytale,fantasy,happy,innocent,peaceful,smile,spirit,tale
+🥰|smiling face with hearts|sp|0|3,adore,crush,heart,ily,love,romance,smile,you
+😍|smiling face with heart-eyes|sp|0|143,bae,eye,feels,hearts,ily,kisses,love,romance,romantic,smile,xoxo
+🤩|star-struck|sp|0|excited,eyes,face,grinning,smile,star,starry-eyed,wow
+😘|face blowing a kiss|sp|0|adorbs,bae,flirt,heart,ily,love,lover,miss,muah,romantic,smooch,xoxo,you
+😗|kissing face|sp|0|143,date,dating,flirt,ily,kiss,love,smooch,smooches,xoxo,you
+☺️|smiling face|sp|0|happy,outlined,relaxed,smile
+😚|kissing face with closed eyes|sp|0|143,bae,blush,date,dating,eye,flirt,ily,kisses,smooches,xoxo
+😙|kissing face with smiling eyes|sp|0|143,closed,date,dating,eye,flirt,ily,kiss,kisses,love,night,smile
+🥲|smiling face with tear|sp|0|glad,grateful,happy,joy,pain,proud,relieved,smile,smiley,touched
+😋|face savoring food|sp|0|delicious,eat,full,hungry,savor,smile,smiling,tasty,um,yum,yummy
+😛|face with tongue|sp|0|awesome,cool,nice,party,stuck-out,sweet
+😜|winking face with tongue|sp|0|crazy,epic,eye,funny,joke,loopy,nutty,party,stuck-out,wacky,weirdo,wink,yolo
+🤪|zany face|sp|0|crazy,eye,eyes,goofy,large,small
+😝|squinting face with tongue|sp|0|closed,eye,eyes,gross,horrible,omg,stuck-out,taste,whatever,yolo
+🤑|money-mouth face|sp|0|money,mouth,paid
+🤗|smiling face with open hands|sp|0|hug,hugging
+🤭|face with hand over mouth|sp|0|giggle,giggling,oops,realization,secret,shock,sudden,surprise,whoops
+🫢|face with open eyes and hand over mouth|sp|0|amazement,awe,disbelief,embarrass,gasp,omg,quiet,scared,shock,surprise
+🫣|face with peeking eye|sp|0|captivated,embarrass,hide,hiding,peek,peep,scared,shy,stare
+🤫|shushing face|sp|0|quiet,shh,shush
+🤔|thinking face|sp|0|chin,consider,hmm,ponder,pondering,wondering
+🫡|saluting face|sp|0|good,luck,ma’am,ok,respect,salute,sir,troops,yes
+🤐|zipper-mouth face|sp|0|keep,mouth,quiet,secret,shut,zip,zipper
+🤨|face with raised eyebrow|sp|0|disapproval,disbelief,distrust,emoji,hmm,mild,skeptic,skeptical,skepticism,surprise,what
+😐|neutral face|sp|0|awkward,blank,deadpan,expressionless,fine,jealous,meh,oh,shade,straight,unamused,unhappy,unimpressed,whatever
+😑|expressionless face|sp|0|awkward,dead,fine,inexpressive,jealous,meh,not,oh,omg,straight,uh,unhappy,unimpressed,whatever
+😶|face without mouth|sp|0|awkward,blank,expressionless,mouthless,mute,quiet,secret,silence,silent,speechless
+🫥|dotted line face|sp|0|depressed,disappear,hidden,hide,introvert,invisible,meh,whatever,wtv
+😶‍🌫️|face in clouds|sp|0|absentminded,fog,head
+😏|smirking face|sp|0|boss,dapper,flirt,homie,kidding,leer,shade,slick,sly,smirk,smug,snicker,suave,suspicious,swag
+😒|unamused face|sp|0|...,bored,fine,jealous,jel,jelly,pissed,smh,ugh,uhh,unhappy,weird,whatever
+🙄|face with rolling eyes|sp|0|eyeroll,shade,ugh,whatever
+😬|grimacing face|sp|0|awk,awkward,dentist,grimace,grinning,smile,smiling
+😮‍💨|face exhaling|sp|0|blow,blowing,exhale,exhausted,gasp,groan,relief,sigh,smiley,smoke,whisper,whistle
+🤥|lying face|sp|0|liar,lie,pinocchio
+🫨|shaking face|sp|0|crazy,daze,earthquake,omg,panic,shock,surprise,vibrate,whoa,wow
+🙂‍↔️|head shaking horizontally|sp|0|no,shake
+🙂‍↕️|head shaking vertically|sp|0|nod,yes
+😌|relieved face|sp|0|calm,peace,relief,zen
+😔|pensive face|sp|0|awful,bored,dejected,died,disappointed,losing,lost,sad,sucks
+😪|sleepy face|sp|0|crying,good,night,sad,sleep,sleeping,tired
 🤤|drooling face|sp|0|
-😴|sleeping face|sp|0|bed bedtime good goodnight nap night sleep tired
-🫩|face with bags under eyes|sp|0|bored exhausted fatigued late sleepy tired weary
-😷|face with medical mask|sp|0|cold dentist dermatologist doctor dr germs medicine sick
-🤒|face with thermometer|sp|0|ill sick
-🤕|face with head-bandage|sp|0|bandage hurt injury ouch
-🤢|nauseated face|sp|0|gross nasty sick vomit
-🤮|face vomiting|sp|0|barf ew gross puke sick spew throw up
-🤧|sneezing face|sp|0|fever flu gesundheit sick sneeze
-🥵|hot face|sp|0|dying feverish heat panting red-faced stroke sweating tongue
-🥶|cold face|sp|0|blue blue-faced freezing frostbite icicles subzero teeth
-🥴|woozy face|sp|0|dizzy drunk eyes intoxicated mouth tipsy uneven wavy
-😵|face with crossed-out eyes|sp|0|dead dizzy feels knocked out sick tired
-😵‍💫|face with spiral eyes|sp|0|confused dizzy hypnotized omg smiley trouble whoa woah
-🤯|exploding head|sp|0|blown explode mind mindblown no shocked way
+😴|sleeping face|sp|0|bed,bedtime,good,goodnight,nap,night,sleep,tired,whatever,yawn,zzz
+🫩|face with bags under eyes|sp|0|bored,exhausted,fatigued,late,sleepy,tired,weary
+😷|face with medical mask|sp|0|cold,dentist,dermatologist,doctor,dr,germs,medicine,sick
+🤒|face with thermometer|sp|0|ill,sick
+🤕|face with head-bandage|sp|0|bandage,hurt,injury,ouch
+🤢|nauseated face|sp|0|gross,nasty,sick,vomit
+🤮|face vomiting|sp|0|barf,ew,gross,puke,sick,spew,throw,up,vomit
+🤧|sneezing face|sp|0|fever,flu,gesundheit,sick,sneeze
+🥵|hot face|sp|0|dying,feverish,heat,panting,red-faced,stroke,sweating,tongue
+🥶|cold face|sp|0|blue,blue-faced,freezing,frostbite,icicles,subzero,teeth
+🥴|woozy face|sp|0|dizzy,drunk,eyes,intoxicated,mouth,tipsy,uneven,wavy
+😵|face with crossed-out eyes|sp|0|dead,dizzy,feels,knocked,out,sick,tired
+😵‍💫|face with spiral eyes|sp|0|confused,dizzy,hypnotized,omg,smiley,trouble,whoa,woah,woozy
+🤯|exploding head|sp|0|blown,explode,mind,mindblown,no,shocked,way
 🤠|cowboy hat face|sp|0|cowgirl
-🥳|partying face|sp|0|bday birthday celebrate celebration excited happy hat hooray
-🥸|disguised face|sp|0|disguise eyebrow glasses incognito moustache mustache nose person
-😎|smiling face with sunglasses|sp|0|awesome beach bright bro chilling cool rad relaxed
-🤓|nerd face|sp|0|brainy clever expert geek gifted glasses intelligent smart
-🧐|face with monocle|sp|0|classy fancy rich stuffy wealthy
-😕|confused face|sp|0|befuddled confusing dunno frown hm meh not sad
-🫤|face with diagonal mouth|sp|0|confused confusion disappointed doubt doubtful frustrated frustration meh
-😟|worried face|sp|0|anxious butterflies nerves nervous sad stress stressed surprised
-🙁|slightly frowning face|sp|0|frown sad
-☹️|frowning face|sp|0|frown sad
-😮|face with open mouth|sp|0|believe forgot omg shocked surprised sympathy unbelievable unreal
-😯|hushed face|sp|0|epic omg stunned surprised whoa woah
-😲|astonished face|sp|0|cost no omg shocked totally way
-😳|flushed face|sp|0|amazed awkward crazy dazed dead disbelief embarrassed geez
-🫪|distorted face|sp|0|anxiety bloated panic shocked surprised vulnerable
-🥺|pleading face|sp|0|begging big eyes mercy not please pretty puppy
-🥹|face holding back tears|sp|0|admiration aww cry embarrassed feelings grateful gratitude joy
-😦|frowning face with open mouth|sp|0|caught frown guard scared scary surprise what wow
-😧|anguished face|sp|0|forgot scared scary stressed surprise unhappy what wow
-😨|fearful face|sp|0|afraid anxious blame fear scared worried
-😰|anxious face with sweat|sp|0|blue cold eek mouth nervous open rushed scared
-😥|sad but relieved face|sp|0|anxious call close complicated disappointed not sweat time
-😢|crying face|sp|0|awful cry feels miss sad tear triste unhappy
-😭|loudly crying face|sp|0|bawling cry sad sob tear tears unhappy
-😱|face screaming in fear|sp|0|epic fearful munch scared scream screamer shocked surprised
-😖|confounded face|sp|0|annoyed confused cringe distraught feels frustrated mad sad
-😣|persevering face|sp|0|concentrate concentration focus headache persevere
-😞|disappointed face|sp|0|awful blame dejected fail losing sad unhappy
-😓|downcast face with sweat|sp|0|close cold feels headache nervous sad scared yikes
-😩|weary face|sp|0|crying fail feels hungry mad nooo sad sleepy
-😫|tired face|sp|0|cost feels nap sad sneeze
-🥱|yawning face|sp|0|bedtime bored goodnight nap night sleep sleepy tired
-😤|face with steam from nose|sp|0|anger angry feels fume fuming furious fury mad
-😡|enraged face|sp|0|anger angry feels mad maddening pouting rage red
-😠|angry face|sp|0|anger blame feels frustrated mad maddening rage shade
-🤬|face with symbols on mouth|sp|0|censor cursing cussing mad pissed swearing
-😈|smiling face with horns|sp|0|demon devil evil fairy fairytale fantasy purple shade
-👿|angry face with horns|sp|0|demon devil evil fairy fairytale fantasy imp mischievous
-💀|skull|sp|0|body dead death face fairy fairytale i’m lmao
-☠️|skull and crossbones|sp|0|bone dead death face monster
-💩|pile of poo|sp|0|bs comic doo dung face fml monster poop
+🥳|partying face|sp|0|bday,birthday,celebrate,celebration,excited,happy,hat,hooray,horn,party
+🥸|disguised face|sp|0|disguise,eyebrow,glasses,incognito,moustache,mustache,nose,person,spy,tache,tash
+😎|smiling face with sunglasses|sp|0|awesome,beach,bright,bro,chilling,cool,rad,relaxed,shades,slay,smile,style,swag,win
+🤓|nerd face|sp|0|brainy,clever,expert,geek,gifted,glasses,intelligent,smart
+🧐|face with monocle|sp|0|classy,fancy,rich,stuffy,wealthy
+😕|confused face|sp|0|befuddled,confusing,dunno,frown,hm,meh,not,sad,sorry,sure
+🫤|face with diagonal mouth|sp|0|confused,confusion,disappointed,doubt,doubtful,frustrated,frustration,meh,skeptical,unsure,whatever,wtv
+😟|worried face|sp|0|anxious,butterflies,nerves,nervous,sad,stress,stressed,surprised,worry
+🙁|slightly frowning face|sp|0|frown,sad
+☹️|frowning face|sp|0|frown,sad
+😮|face with open mouth|sp|0|believe,forgot,omg,shocked,surprised,sympathy,unbelievable,unreal,whoa,wow,you
+😯|hushed face|sp|0|epic,omg,stunned,surprised,whoa,woah
+😲|astonished face|sp|0|cost,no,omg,shocked,totally,way
+😳|flushed face|sp|0|amazed,awkward,crazy,dazed,dead,disbelief,embarrassed,geez,heat,hot,impressed,jeez,what,wow
+🫪|distorted face|sp|0|anxiety,bloated,panic,shocked,surprised,vulnerable
+🥺|pleading face|sp|0|begging,big,eyes,mercy,not,please,pretty,puppy,sad,why
+🥹|face holding back tears|sp|0|admiration,aww,cry,embarrassed,feelings,grateful,gratitude,joy,please,proud,resist,sad
+😦|frowning face with open mouth|sp|0|caught,frown,guard,scared,scary,surprise,what,wow
+😧|anguished face|sp|0|forgot,scared,scary,stressed,surprise,unhappy,what,wow
+😨|fearful face|sp|0|afraid,anxious,blame,fear,scared,worried
+😰|anxious face with sweat|sp|0|blue,cold,eek,mouth,nervous,open,rushed,scared,yikes
+😥|sad but relieved face|sp|0|anxious,call,close,complicated,disappointed,not,sweat,time,whew
+😢|crying face|sp|0|awful,cry,feels,miss,sad,tear,triste,unhappy
+😭|loudly crying face|sp|0|bawling,cry,sad,sob,tear,tears,unhappy
+😱|face screaming in fear|sp|0|epic,fearful,munch,scared,scream,screamer,shocked,surprised,woah
+😖|confounded face|sp|0|annoyed,confused,cringe,distraught,feels,frustrated,mad,sad
+😣|persevering face|sp|0|concentrate,concentration,focus,headache,persevere
+😞|disappointed face|sp|0|awful,blame,dejected,fail,losing,sad,unhappy
+😓|downcast face with sweat|sp|0|close,cold,feels,headache,nervous,sad,scared,yikes
+😩|weary face|sp|0|crying,fail,feels,hungry,mad,nooo,sad,sleepy,tired,unhappy
+😫|tired face|sp|0|cost,feels,nap,sad,sneeze
+🥱|yawning face|sp|0|bedtime,bored,goodnight,nap,night,sleep,sleepy,tired,whatever,yawn,zzz
+😤|face with steam from nose|sp|0|anger,angry,feels,fume,fuming,furious,fury,mad,triumph,unhappy,won
+😡|enraged face|sp|0|anger,angry,feels,mad,maddening,pouting,rage,red,shade,unhappy,upset
+😠|angry face|sp|0|anger,blame,feels,frustrated,mad,maddening,rage,shade,unhappy,upset
+🤬|face with symbols on mouth|sp|0|censor,cursing,cussing,mad,pissed,swearing
+😈|smiling face with horns|sp|0|demon,devil,evil,fairy,fairytale,fantasy,purple,shade,smile,tale
+👿|angry face with horns|sp|0|demon,devil,evil,fairy,fairytale,fantasy,imp,mischievous,purple,shade,tale
+💀|skull|sp|0|body,dead,death,face,fairy,fairytale,i’m,lmao,monster,tale,yolo
+☠️|skull and crossbones|sp|0|bone,dead,death,face,monster
+💩|pile of poo|sp|0|bs,comic,doo,dung,face,fml,monster,poop,smelly,smh,stink,stinks,stinky,turd
 🤡|clown face|sp|0|
-👹|ogre|sp|0|creature devil face fairy fairytale fantasy mask monster
-👺|goblin|sp|0|angry creature face fairy fairytale fantasy mask mean
-👻|ghost|sp|0|boo creature excited face fairy fairytale fantasy halloween
-👽|alien|sp|0|creature extraterrestrial face fairy fairytale fantasy monster space
-👾|alien monster|sp|0|creature extraterrestrial face fairy fairytale fantasy game gamer
-🤖|robot|sp|0|face monster
-😺|grinning cat|sp|0|animal face mouth open smile smiling
-😸|grinning cat with smiling eyes|sp|0|animal eye face grin smile
-😹|cat with tears of joy|sp|0|animal face laugh laughing lol tear
-😻|smiling cat with heart-eyes|sp|0|animal eye face heart love smile
-😼|cat with wry smile|sp|0|animal face ironic
-😽|kissing cat|sp|0|animal closed eye eyes face kiss
-🙀|weary cat|sp|0|animal face oh surprised
-😿|crying cat|sp|0|animal cry face sad tear
-😾|pouting cat|sp|0|animal face
-🙈|see-no-evil monkey|sp|0|embarrassed evil face forbidden forgot gesture hide no
-🙉|hear-no-evil monkey|sp|0|animal ears evil face forbidden gesture hear listen
-🙊|speak-no-evil monkey|sp|0|animal evil face forbidden gesture no not oops
-💌|love letter|sp|0|heart mail romance valentine
-💘|heart with arrow|sp|0|143 adorbs cupid date emotion ily love romance
-💝|heart with ribbon|sp|0|143 anniversary emotion ily kisses valentine xoxo
-💖|sparkling heart|sp|0|143 emotion excited good ily kisses morning night
-💗|growing heart|sp|0|143 emotion excited heartpulse ily kisses muah nervous
-💓|beating heart|sp|0|143 cardio emotion heartbeat ily love pulsating pulse
-💞|revolving hearts|sp|0|143 adorbs anniversary emotion heart
-💕|two hearts|sp|0|143 anniversary date dating emotion heart ily kisses
-💟|heart decoration|sp|0|143 emotion hearth purple white
-❣️|heart exclamation|sp|0|heavy mark punctuation
-💔|broken heart|sp|0|break crushed emotion heartbroken lonely sad
-❤️‍🔥|heart on fire|sp|0|burn love lust sacred
-❤️‍🩹|mending heart|sp|0|healthier improving recovering recuperating well
-❤️|red heart|sp|0|emotion love
-🩷|pink heart|sp|0|143 adorable cute emotion ily like love special
+👹|ogre|sp|0|creature,devil,face,fairy,fairytale,fantasy,mask,monster,scary,tale
+👺|goblin|sp|0|angry,creature,face,fairy,fairytale,fantasy,mask,mean,monster,tale
+👻|ghost|sp|0|boo,creature,excited,face,fairy,fairytale,fantasy,halloween,haunting,monster,scary,silly,tale
+👽|alien|sp|0|creature,extraterrestrial,face,fairy,fairytale,fantasy,monster,space,tale,ufo
+👾|alien monster|sp|0|creature,extraterrestrial,face,fairy,fairytale,fantasy,game,gamer,games,pixelated,space,tale,ufo
+🤖|robot|sp|0|face,monster
+😺|grinning cat|sp|0|animal,face,mouth,open,smile,smiling
+😸|grinning cat with smiling eyes|sp|0|animal,eye,face,grin,smile
+😹|cat with tears of joy|sp|0|animal,face,laugh,laughing,lol,tear
+😻|smiling cat with heart-eyes|sp|0|animal,eye,face,heart,love,smile
+😼|cat with wry smile|sp|0|animal,face,ironic
+😽|kissing cat|sp|0|animal,closed,eye,eyes,face,kiss
+🙀|weary cat|sp|0|animal,face,oh,surprised
+😿|crying cat|sp|0|animal,cry,face,sad,tear
+😾|pouting cat|sp|0|animal,face
+🙈|see-no-evil monkey|sp|0|embarrassed,evil,face,forbidden,forgot,gesture,hide,no,omg,prohibited,scared,secret,smh,watch
+🙉|hear-no-evil monkey|sp|0|animal,ears,evil,face,forbidden,gesture,hear,listen,no,not,prohibited,secret,shh,tmi
+🙊|speak-no-evil monkey|sp|0|animal,evil,face,forbidden,gesture,no,not,oops,prohibited,quiet,secret,speak,stealth
+💌|love letter|sp|0|heart,mail,romance,valentine
+💘|heart with arrow|sp|0|143,adorbs,cupid,date,emotion,ily,love,romance,valentine
+💝|heart with ribbon|sp|0|143,anniversary,emotion,ily,kisses,valentine,xoxo
+💖|sparkling heart|sp|0|143,emotion,excited,good,ily,kisses,morning,night,sparkle,xoxo
+💗|growing heart|sp|0|143,emotion,excited,heartpulse,ily,kisses,muah,nervous,pulse,xoxo
+💓|beating heart|sp|0|143,cardio,emotion,heartbeat,ily,love,pulsating,pulse
+💞|revolving hearts|sp|0|143,adorbs,anniversary,emotion,heart
+💕|two hearts|sp|0|143,anniversary,date,dating,emotion,heart,ily,kisses,love,loving,xoxo
+💟|heart decoration|sp|0|143,emotion,hearth,purple,white
+❣️|heart exclamation|sp|0|heavy,mark,punctuation
+💔|broken heart|sp|0|break,crushed,emotion,heartbroken,lonely,sad
+❤️‍🔥|heart on fire|sp|0|burn,love,lust,sacred
+❤️‍🩹|mending heart|sp|0|healthier,improving,recovering,recuperating,well
+❤️|red heart|sp|0|emotion,love
+🩷|pink heart|sp|0|143,adorable,cute,emotion,ily,like,love,special,sweet
 🧡|orange heart|sp|0|143
-💛|yellow heart|sp|0|143 cardiac emotion ily love
-💚|green heart|sp|0|143 emotion ily love romantic
-💙|blue heart|sp|0|143 emotion ily love romance
-🩵|light blue heart|sp|0|143 cute cyan emotion ily like love sky
-💜|purple heart|sp|0|143 bestest emotion ily love
+💛|yellow heart|sp|0|143,cardiac,emotion,ily,love
+💚|green heart|sp|0|143,emotion,ily,love,romantic
+💙|blue heart|sp|0|143,emotion,ily,love,romance
+🩵|light blue heart|sp|0|143,cute,cyan,emotion,ily,like,love,sky,special,teal
+💜|purple heart|sp|0|143,bestest,emotion,ily,love
 🤎|brown heart|sp|0|143
-🖤|black heart|sp|0|evil wicked
-🩶|grey heart|sp|0|143 emotion gray ily love silver slate special
+🖤|black heart|sp|0|evil,wicked
+🩶|grey heart|sp|0|143,emotion,gray,ily,love,silver,slate,special
 🤍|white heart|sp|0|143
-💋|kiss mark|sp|0|dating emotion heart kissing lips romance sexy
-💯|hundred points|sp|0|100 a+ agree clearly definitely faithful fleek full
-💢|anger symbol|sp|0|angry comic mad upset
-🫯|fight cloud|sp|0|argument brawl debate disagreement ruckus wrestle
-💥|collision|sp|0|bomb boom collide comic explode
-💫|dizzy|sp|0|comic shining shooting star stars
-💦|sweat droplets|sp|0|comic drip droplet drops splashing squirt water wet
-💨|dashing away|sp|0|cloud comic dash fart fast go gone gotta
+💋|kiss mark|sp|0|dating,emotion,heart,kissing,lips,romance,sexy
+💯|hundred points|sp|0|100,a+,agree,clearly,definitely,faithful,fleek,full,keep,perfect,point,score,true,truth,yup
+💢|anger symbol|sp|0|angry,comic,mad,upset
+🫯|fight cloud|sp|0|argument,brawl,debate,disagreement,ruckus,wrestle
+💥|collision|sp|0|bomb,boom,collide,comic,explode
+💫|dizzy|sp|0|comic,shining,shooting,star,stars
+💦|sweat droplets|sp|0|comic,drip,droplet,drops,splashing,squirt,water,wet,work,workout
+💨|dashing away|sp|0|cloud,comic,dash,fart,fast,go,gone,gotta,running,smoke
 🕳️|hole|sp|0|
-💬|speech balloon|sp|0|bubble comic dialog message sms talk text typing
-👁️‍🗨️|eye in speech bubble|sp|0|balloon witness
-🗨️|left speech bubble|sp|0|balloon dialog
-🗯️|right anger bubble|sp|0|angry balloon mad
-💭|thought balloon|sp|0|bubble cartoon cloud comic daydream decisions dream idea
-💤|zzz|sp|0|comic good goodnight night sleep sleeping sleepy tired
-👋|waving hand|sp|1|bye cya g2g greetings gtg hello hey hi
+💬|speech balloon|sp|0|bubble,comic,dialog,message,sms,talk,text,typing
+👁️‍🗨️|eye in speech bubble|sp|0|balloon,witness
+🗨️|left speech bubble|sp|0|balloon,dialog
+🗯️|right anger bubble|sp|0|angry,balloon,mad
+💭|thought balloon|sp|0|bubble,cartoon,cloud,comic,daydream,decisions,dream,idea,invent,invention,realize,think,thoughts,wonder
+💤|zzz|sp|0|comic,good,goodnight,night,sleep,sleeping,sleepy,tired
+👋|waving hand|sp|1|bye,cya,g2g,greetings,gtg,hello,hey,hi,later,outtie,ttfn,ttyl,wave,yo,you
 🤚|raised back of hand|sp|1|backhand
-🖐️|hand with fingers splayed|sp|1|finger raised stop
-✋|raised hand|sp|1|5 five high stop
-🖖|vulcan salute|sp|1|finger hand hands
-🫱|rightwards hand|sp|1|handshake hold reach right rightward shake
-🫲|leftwards hand|sp|1|handshake hold left leftward reach shake
-🫳|palm down hand|sp|1|dismiss drop dropped pick shoo up
-🫴|palm up hand|sp|1|beckon catch come hold know lift me offer
-🫷|leftwards pushing hand|sp|1|block five halt high hold leftward pause push
-🫸|rightwards pushing hand|sp|1|block five halt high hold pause push refuse
-👌|ok hand|sp|1|awesome bet dope fleek fosho got gotcha legit
-🤌|pinched fingers|sp|1|gesture hand hold huh interrogation patience relax sarcastic
-🤏|pinching hand|sp|1|amount bit fingers little small sort
-✌️|victory hand|sp|1|peace v
-🤞|crossed fingers|sp|1|cross finger hand luck
-🫰|hand with index finger and thumb crossed|sp|1|<3 expensive heart love money snap
-🤟|love-you gesture|sp|1|fingers hand ily love three you
-🤘|sign of the horns|sp|1|finger hand rock-on
-🤙|call me hand|sp|1|hang loose shaka
-👈|backhand index pointing left|sp|1|finger hand point
-👉|backhand index pointing right|sp|1|finger hand point
-👆|backhand index pointing up|sp|1|finger hand point
+🖐️|hand with fingers splayed|sp|1|finger,raised,stop
+✋|raised hand|sp|1|5,five,high,stop
+🖖|vulcan salute|sp|1|finger,hand,hands
+🫱|rightwards hand|sp|1|handshake,hold,reach,right,rightward,shake
+🫲|leftwards hand|sp|1|handshake,hold,left,leftward,reach,shake
+🫳|palm down hand|sp|1|dismiss,drop,dropped,pick,shoo,up
+🫴|palm up hand|sp|1|beckon,catch,come,hold,know,lift,me,offer,tell
+🫷|leftwards pushing hand|sp|1|block,five,halt,high,hold,leftward,pause,push,refuse,slap,stop,wait
+🫸|rightwards pushing hand|sp|1|block,five,halt,high,hold,pause,push,refuse,rightward,slap,stop,wait
+👌|ok hand|sp|1|awesome,bet,dope,fleek,fosho,got,gotcha,legit,okay,pinch,rad,sure,sweet,three
+🤌|pinched fingers|sp|1|gesture,hand,hold,huh,interrogation,patience,relax,sarcastic,ugh,what,zip
+🤏|pinching hand|sp|1|amount,bit,fingers,little,small,sort
+✌️|victory hand|sp|1|peace,v
+🤞|crossed fingers|sp|1|cross,finger,hand,luck
+🫰|hand with index finger and thumb crossed|sp|1|<3,expensive,heart,love,money,snap
+🤟|love-you gesture|sp|1|fingers,hand,ily,love,three,you
+🤘|sign of the horns|sp|1|finger,hand,rock-on
+🤙|call me hand|sp|1|hang,loose,shaka
+👈|backhand index pointing left|sp|1|finger,hand,point
+👉|backhand index pointing right|sp|1|finger,hand,point
+👆|backhand index pointing up|sp|1|finger,hand,point
 🖕|middle finger|sp|1|hand
-👇|backhand index pointing down|sp|1|finger hand point
-☝️|index pointing up|sp|1|finger hand point this
-🫵|index pointing at the viewer|sp|1|finger hand poke you
-👍|thumbs up|sp|1|+1 good hand like thumb yes
-👎|thumbs down|sp|1|-1 bad dislike good hand no nope thumb
-✊|raised fist|sp|1|clenched hand punch solidarity
-👊|oncoming fist|sp|1|absolutely agree boom bro bruh bump clenched correct
+👇|backhand index pointing down|sp|1|finger,hand,point
+☝️|index pointing up|sp|1|finger,hand,point,this
+🫵|index pointing at the viewer|sp|1|finger,hand,poke,you
+👍|thumbs up|sp|1|+1,good,hand,like,thumb,yes
+👎|thumbs down|sp|1|-1,bad,dislike,good,hand,no,nope,thumb
+✊|raised fist|sp|1|clenched,hand,punch,solidarity
+👊|oncoming fist|sp|1|absolutely,agree,boom,bro,bruh,bump,clenched,correct,hand,knuckle,pound,punch,rock,ttyl
 🤛|left-facing fist|sp|1|leftwards
 🤜|right-facing fist|sp|1|rightwards
-👏|clapping hands|sp|1|applause approval awesome clap congrats congratulations excited good
-🙌|raising hands|sp|1|celebration gesture hand hooray praise raised
-🫶|heart hands|sp|1|<3 love you
-👐|open hands|sp|1|hand hug jazz swerve
-🤲|palms up together|sp|1|cupped dua hands pray prayer wish
-🤝|handshake|sp|1|agreement deal hand meeting shake
-🙏|folded hands|sp|1|appreciate ask beg blessed bow cmon five gesture
+👏|clapping hands|sp|1|applause,approval,awesome,clap,congrats,congratulations,excited,good,great,hand,homie,job,nice,prayed,well,yay
+🙌|raising hands|sp|1|celebration,gesture,hand,hooray,praise,raised
+🫶|heart hands|sp|1|<3,love,you
+👐|open hands|sp|1|hand,hug,jazz,swerve
+🤲|palms up together|sp|1|cupped,dua,hands,pray,prayer,wish
+🤝|handshake|sp|1|agreement,deal,hand,meeting,shake
+🙏|folded hands|sp|1|appreciate,ask,beg,blessed,bow,cmon,five,gesture,hand,high,please,pray,thanks,thx
 ✍️|writing hand|sp|1|write
-💅|nail polish|sp|1|bored care cosmetics done makeup manicure whatever
-🤳|selfie|sp|1|camera phone
-💪|flexed biceps|sp|1|arm beast bench bodybuilder bro curls flex gains
-🦾|mechanical arm|sp|0|accessibility prosthetic
-🦿|mechanical leg|sp|0|accessibility prosthetic
-🦵|leg|sp|1|bent foot kick knee limb
-🦶|foot|sp|1|ankle feet kick stomp
-👂|ear|sp|1|body ears hear hearing listen listening sound
-🦻|ear with hearing aid|sp|1|accessibility hard
-👃|nose|sp|1|body noses nosey odor smell smells
-🧠|brain|sp|0|intelligent smart
-🫀|anatomical heart|sp|0|beat cardiology heartbeat organ pulse real red
-🫁|lungs|sp|0|breath breathe exhalation inhalation lung organ respiration
-🦷|tooth|sp|0|dentist pearly teeth white
-🦴|bone|sp|0|bones dog skeleton wishbone
-👀|eyes|sp|0|body eye face googly look looking omg peep
-👁️|eye|sp|0|1 body one
-👅|tongue|sp|0|body lick slurp
-👄|mouth|sp|0|beauty body kiss kissing lips lipstick
-🫦|biting lip|sp|0|anxious bite fear flirt flirting kiss lipstick nervous
-👶|baby|sp|1|babies children goo infant newborn pregnant young
-🧒|child|sp|1|bright-eyed grandchild kid young younger
-👦|boy|sp|1|bright-eyed child grandson kid son young younger
-👧|girl|sp|1|bright-eyed child daughter granddaughter kid virgo young younger
+💅|nail polish|sp|1|bored,care,cosmetics,done,makeup,manicure,whatever
+🤳|selfie|sp|1|camera,phone
+💪|flexed biceps|sp|1|arm,beast,bench,bodybuilder,bro,curls,flex,gains,gym,jacked,muscle,press,ripped,strong,weightlift
+🦾|mechanical arm|sp|0|accessibility,prosthetic
+🦿|mechanical leg|sp|0|accessibility,prosthetic
+🦵|leg|sp|1|bent,foot,kick,knee,limb
+🦶|foot|sp|1|ankle,feet,kick,stomp
+👂|ear|sp|1|body,ears,hear,hearing,listen,listening,sound
+🦻|ear with hearing aid|sp|1|accessibility,hard
+👃|nose|sp|1|body,noses,nosey,odor,smell,smells
+🧠|brain|sp|0|intelligent,smart
+🫀|anatomical heart|sp|0|beat,cardiology,heartbeat,organ,pulse,real,red
+🫁|lungs|sp|0|breath,breathe,exhalation,inhalation,lung,organ,respiration
+🦷|tooth|sp|0|dentist,pearly,teeth,white
+🦴|bone|sp|0|bones,dog,skeleton,wishbone
+👀|eyes|sp|0|body,eye,face,googly,look,looking,omg,peep,see,seeing
+👁️|eye|sp|0|1,body,one
+👅|tongue|sp|0|body,lick,slurp
+👄|mouth|sp|0|beauty,body,kiss,kissing,lips,lipstick
+🫦|biting lip|sp|0|anxious,bite,fear,flirt,flirting,kiss,lipstick,nervous,sexy,uncomfortable,worried,worry
+👶|baby|sp|1|babies,children,goo,infant,newborn,pregnant,young
+🧒|child|sp|1|bright-eyed,grandchild,kid,young,younger
+👦|boy|sp|1|bright-eyed,child,grandson,kid,son,young,younger
+👧|girl|sp|1|bright-eyed,child,daughter,granddaughter,kid,virgo,young,younger,zodiac
 🧑|person|sp|1|adult
-👱|person: blond hair|sp|1|blond-haired human person
-👨|man|sp|1|adult bro
-🧔|person: beard|sp|1|bearded person whiskers
-🧔‍♂️|man: beard|sp|0|bearded man whiskers
-🧔‍♀️|woman: beard|sp|0|bearded whiskers woman
-👨‍🦰|man: red hair|sp|0|adult bro man red hair
-👨‍🦱|man: curly hair|sp|0|adult bro curly hair man
-👨‍🦳|man: white hair|sp|0|adult bro man white hair
-👨‍🦲|man: bald|sp|0|adult bro man
-👩|woman|sp|1|adult lady
-👩‍🦰|woman: red hair|sp|0|adult lady red hair woman
-🧑‍🦰|person: red hair|sp|0|adult person red hair
-👩‍🦱|woman: curly hair|sp|0|adult curly hair lady woman
-🧑‍🦱|person: curly hair|sp|0|adult curly hair person
-👩‍🦳|woman: white hair|sp|0|adult lady white hair woman
-🧑‍🦳|person: white hair|sp|0|adult person white hair
-👩‍🦲|woman: bald|sp|0|adult lady woman
-🧑‍🦲|person: bald|sp|0|adult person
-👱‍♀️|woman: blond hair|sp|0|blond-haired blonde woman
-👱‍♂️|man: blond hair|sp|0|blond-haired man
-🧓|older person|sp|1|adult elderly grandparent old wise
-👴|old man|sp|1|adult bald elderly gramps grandfather grandpa wise
-👵|old woman|sp|1|adult elderly grandma grandmother granny lady wise
-🙍|person frowning|sp|1|annoyed disappointed disgruntled disturbed frown frustrated gesture irritated
-🙍‍♂️|man frowning|sp|0|annoyed disappointed disgruntled disturbed frown frustrated gesture irritated
-🙍‍♀️|woman frowning|sp|0|annoyed disappointed disgruntled disturbed frown frustrated gesture irritated
-🙎|person pouting|sp|1|disappointed downtrodden frown grimace scowl sulk upset whine
-🙎‍♂️|man pouting|sp|0|disappointed downtrodden frown grimace scowl sulk upset whine
-🙎‍♀️|woman pouting|sp|0|disappointed downtrodden frown grimace scowl sulk upset whine
-🙅|person gesturing no|sp|1|forbidden gesture hand not prohibit
-🙅‍♂️|man gesturing no|sp|0|forbidden gesture hand not prohibit
-🙅‍♀️|woman gesturing no|sp|0|forbidden gesture hand not prohibit
-🙆|person gesturing ok|sp|1|exercise gesture hand omg
-🙆‍♂️|man gesturing ok|sp|0|exercise gesture hand omg
-🙆‍♀️|woman gesturing ok|sp|0|exercise gesture hand omg
-💁|person tipping hand|sp|1|fetch flick flip gossip sarcasm sarcastic sassy seriously
-💁‍♂️|man tipping hand|sp|0|fetch flick flip gossip sarcasm sarcastic sassy seriously
-💁‍♀️|woman tipping hand|sp|0|fetch flick flip gossip sarcasm sarcastic sassy seriously
-🙋|person raising hand|sp|1|gesture here know me pick question raise
-🙋‍♂️|man raising hand|sp|0|gesture here know me pick question raise
-🙋‍♀️|woman raising hand|sp|0|gesture here know me pick question raise
-🧏|deaf person|sp|1|accessibility ear gesture hear
-🧏‍♂️|deaf man|sp|0|accessibility ear gesture hear
-🧏‍♀️|deaf woman|sp|0|accessibility ear gesture hear
-🙇|person bowing|sp|1|apology ask beg bow favor forgive gesture meditate
-🙇‍♂️|man bowing|sp|0|apology ask beg bow favor forgive gesture meditate
-🙇‍♀️|woman bowing|sp|0|apology ask beg bow favor forgive gesture meditate
-🤦|person facepalming|sp|1|again bewilder disbelief exasperation facepalm no not oh
-🤦‍♂️|man facepalming|sp|0|again bewilder disbelief exasperation facepalm no not oh
-🤦‍♀️|woman facepalming|sp|0|again bewilder disbelief exasperation facepalm no not oh
-🤷|person shrugging|sp|1|doubt dunno guess idk ignorance indifference knows maybe
-🤷‍♂️|man shrugging|sp|0|doubt dunno guess idk ignorance indifference knows maybe
-🤷‍♀️|woman shrugging|sp|0|doubt dunno guess idk ignorance indifference knows maybe
-🧑‍⚕️|health worker|sp|0|doctor healthcare nurse therapist
-👨‍⚕️|man health worker|sp|0|doctor healthcare nurse therapist
-👩‍⚕️|woman health worker|sp|0|doctor healthcare nurse therapist
+👱|person: blond hair|sp|1|blond-haired,human,person
+👨|man|sp|1|adult,bro
+🧔|person: beard|sp|1|bearded,person,whiskers
+🧔‍♂️|man: beard|sp|0|bearded,man,whiskers
+🧔‍♀️|woman: beard|sp|0|bearded,whiskers,woman
+👨‍🦰|man: red hair|sp|0|adult,bro,man,red hair
+👨‍🦱|man: curly hair|sp|0|adult,bro,curly hair,man
+👨‍🦳|man: white hair|sp|0|adult,bro,man,white hair
+👨‍🦲|man: bald|sp|0|adult,bro,man
+👩|woman|sp|1|adult,lady
+👩‍🦰|woman: red hair|sp|0|adult,lady,red hair,woman
+🧑‍🦰|person: red hair|sp|0|adult,person,red hair
+👩‍🦱|woman: curly hair|sp|0|adult,curly hair,lady,woman
+🧑‍🦱|person: curly hair|sp|0|adult,curly hair,person
+👩‍🦳|woman: white hair|sp|0|adult,lady,white hair,woman
+🧑‍🦳|person: white hair|sp|0|adult,person,white hair
+👩‍🦲|woman: bald|sp|0|adult,lady,woman
+🧑‍🦲|person: bald|sp|0|adult,person
+👱‍♀️|woman: blond hair|sp|0|blond-haired,blonde,woman
+👱‍♂️|man: blond hair|sp|0|blond-haired,man
+🧓|older person|sp|1|adult,elderly,grandparent,old,wise
+👴|old man|sp|1|adult,bald,elderly,gramps,grandfather,grandpa,wise
+👵|old woman|sp|1|adult,elderly,grandma,grandmother,granny,lady,wise
+🙍|person frowning|sp|1|annoyed,disappointed,disgruntled,disturbed,frown,frustrated,gesture,irritated,upset
+🙍‍♂️|man frowning|sp|0|annoyed,disappointed,disgruntled,disturbed,frown,frustrated,gesture,irritated,upset
+🙍‍♀️|woman frowning|sp|0|annoyed,disappointed,disgruntled,disturbed,frown,frustrated,gesture,irritated,upset
+🙎|person pouting|sp|1|disappointed,downtrodden,frown,grimace,scowl,sulk,upset,whine
+🙎‍♂️|man pouting|sp|0|disappointed,downtrodden,frown,grimace,scowl,sulk,upset,whine
+🙎‍♀️|woman pouting|sp|0|disappointed,downtrodden,frown,grimace,scowl,sulk,upset,whine
+🙅|person gesturing no|sp|1|forbidden,gesture,hand,not,prohibit
+🙅‍♂️|man gesturing no|sp|0|forbidden,gesture,hand,not,prohibit
+🙅‍♀️|woman gesturing no|sp|0|forbidden,gesture,hand,not,prohibit
+🙆|person gesturing ok|sp|1|exercise,gesture,hand,omg
+🙆‍♂️|man gesturing ok|sp|0|exercise,gesture,hand,omg
+🙆‍♀️|woman gesturing ok|sp|0|exercise,gesture,hand,omg
+💁|person tipping hand|sp|1|fetch,flick,flip,gossip,sarcasm,sarcastic,sassy,seriously,whatever
+💁‍♂️|man tipping hand|sp|0|fetch,flick,flip,gossip,sarcasm,sarcastic,sassy,seriously,whatever
+💁‍♀️|woman tipping hand|sp|0|fetch,flick,flip,gossip,sarcasm,sarcastic,sassy,seriously,whatever
+🙋|person raising hand|sp|1|gesture,here,know,me,pick,question,raise
+🙋‍♂️|man raising hand|sp|0|gesture,here,know,me,pick,question,raise
+🙋‍♀️|woman raising hand|sp|0|gesture,here,know,me,pick,question,raise
+🧏|deaf person|sp|1|accessibility,ear,gesture,hear
+🧏‍♂️|deaf man|sp|0|accessibility,ear,gesture,hear
+🧏‍♀️|deaf woman|sp|0|accessibility,ear,gesture,hear
+🙇|person bowing|sp|1|apology,ask,beg,bow,favor,forgive,gesture,meditate,meditation,pity,regret,sorry
+🙇‍♂️|man bowing|sp|0|apology,ask,beg,bow,favor,forgive,gesture,meditate,meditation,pity,regret,sorry
+🙇‍♀️|woman bowing|sp|0|apology,ask,beg,bow,favor,forgive,gesture,meditate,meditation,pity,regret,sorry
+🤦|person facepalming|sp|1|again,bewilder,disbelief,exasperation,facepalm,no,not,oh,omg,shock,smh
+🤦‍♂️|man facepalming|sp|0|again,bewilder,disbelief,exasperation,facepalm,no,not,oh,omg,shock,smh
+🤦‍♀️|woman facepalming|sp|0|again,bewilder,disbelief,exasperation,facepalm,no,not,oh,omg,shock,smh
+🤷|person shrugging|sp|1|doubt,dunno,guess,idk,ignorance,indifference,knows,maybe,shrug,whatever,who
+🤷‍♂️|man shrugging|sp|0|doubt,dunno,guess,idk,ignorance,indifference,knows,maybe,shrug,whatever,who
+🤷‍♀️|woman shrugging|sp|0|doubt,dunno,guess,idk,ignorance,indifference,knows,maybe,shrug,whatever,who
+🧑‍⚕️|health worker|sp|0|doctor,healthcare,nurse,therapist
+👨‍⚕️|man health worker|sp|0|doctor,healthcare,nurse,therapist
+👩‍⚕️|woman health worker|sp|0|doctor,healthcare,nurse,therapist
 🧑‍🎓|student|sp|0|graduate
 👨‍🎓|man student|sp|0|graduate
 👩‍🎓|woman student|sp|0|graduate
-🧑‍🏫|teacher|sp|0|instructor lecturer professor
-👨‍🏫|man teacher|sp|0|instructor lecturer professor
-👩‍🏫|woman teacher|sp|0|instructor lecturer professor
-🧑‍⚖️|judge|sp|0|justice law scales
-👨‍⚖️|man judge|sp|0|justice law scales
-👩‍⚖️|woman judge|sp|0|justice law scales
-🧑‍🌾|farmer|sp|0|gardener rancher
-👨‍🌾|man farmer|sp|0|gardener rancher
-👩‍🌾|woman farmer|sp|0|gardener rancher
+🧑‍🏫|teacher|sp|0|instructor,lecturer,professor
+👨‍🏫|man teacher|sp|0|instructor,lecturer,professor
+👩‍🏫|woman teacher|sp|0|instructor,lecturer,professor
+🧑‍⚖️|judge|sp|0|justice,law,scales
+👨‍⚖️|man judge|sp|0|justice,law,scales
+👩‍⚖️|woman judge|sp|0|justice,law,scales
+🧑‍🌾|farmer|sp|0|gardener,rancher
+👨‍🌾|man farmer|sp|0|gardener,rancher
+👩‍🌾|woman farmer|sp|0|gardener,rancher
 🧑‍🍳|cook|sp|0|chef
 👨‍🍳|man cook|sp|0|chef
 👩‍🍳|woman cook|sp|0|chef
-🧑‍🔧|mechanic|sp|0|electrician plumber tradesperson
-👨‍🔧|man mechanic|sp|0|electrician plumber tradesperson
-👩‍🔧|woman mechanic|sp|0|electrician plumber tradesperson
-🧑‍🏭|factory worker|sp|0|assembly industrial
-👨‍🏭|man factory worker|sp|0|assembly industrial
-👩‍🏭|woman factory worker|sp|0|assembly industrial
-🧑‍💼|office worker|sp|0|architect business manager white-collar
-👨‍💼|man office worker|sp|0|architect business manager white-collar
-👩‍💼|woman office worker|sp|0|architect business manager white-collar
-🧑‍🔬|scientist|sp|0|biologist chemist engineer mathematician physicist
-👨‍🔬|man scientist|sp|0|biologist chemist engineer mathematician physicist
-👩‍🔬|woman scientist|sp|0|biologist chemist engineer mathematician physicist
-🧑‍💻|technologist|sp|0|coder computer developer inventor software
-👨‍💻|man technologist|sp|0|coder computer developer inventor software
-👩‍💻|woman technologist|sp|0|coder computer developer inventor software
-🧑‍🎤|singer|sp|0|actor entertainer rock rockstar star
-👨‍🎤|man singer|sp|0|actor entertainer rock rockstar star
-👩‍🎤|woman singer|sp|0|actor entertainer rock rockstar star
+🧑‍🔧|mechanic|sp|0|electrician,plumber,tradesperson
+👨‍🔧|man mechanic|sp|0|electrician,plumber,tradesperson
+👩‍🔧|woman mechanic|sp|0|electrician,plumber,tradesperson
+🧑‍🏭|factory worker|sp|0|assembly,industrial
+👨‍🏭|man factory worker|sp|0|assembly,industrial
+👩‍🏭|woman factory worker|sp|0|assembly,industrial
+🧑‍💼|office worker|sp|0|architect,business,manager,white-collar
+👨‍💼|man office worker|sp|0|architect,business,manager,white-collar
+👩‍💼|woman office worker|sp|0|architect,business,manager,white-collar
+🧑‍🔬|scientist|sp|0|biologist,chemist,engineer,mathematician,physicist
+👨‍🔬|man scientist|sp|0|biologist,chemist,engineer,mathematician,physicist
+👩‍🔬|woman scientist|sp|0|biologist,chemist,engineer,mathematician,physicist
+🧑‍💻|technologist|sp|0|coder,computer,developer,inventor,software
+👨‍💻|man technologist|sp|0|coder,computer,developer,inventor,software
+👩‍💻|woman technologist|sp|0|coder,computer,developer,inventor,software
+🧑‍🎤|singer|sp|0|actor,entertainer,rock,rockstar,star
+👨‍🎤|man singer|sp|0|actor,entertainer,rock,rockstar,star
+👩‍🎤|woman singer|sp|0|actor,entertainer,rock,rockstar,star
 🧑‍🎨|artist|sp|0|palette
 👨‍🎨|man artist|sp|0|palette
 👩‍🎨|woman artist|sp|0|palette
 🧑‍✈️|pilot|sp|0|plane
 👨‍✈️|man pilot|sp|0|plane
 👩‍✈️|woman pilot|sp|0|plane
-🧑‍🚀|astronaut|sp|0|rocket space
-👨‍🚀|man astronaut|sp|0|rocket space
-👩‍🚀|woman astronaut|sp|0|rocket space
-🧑‍🚒|firefighter|sp|0|fire firetruck
-👨‍🚒|man firefighter|sp|0|fire firetruck
-👩‍🚒|woman firefighter|sp|0|fire firetruck
-👮|police officer|sp|1|apprehend arrest citation cop law over pulled undercover
-👮‍♂️|man police officer|sp|0|apprehend arrest citation cop law over pulled undercover
-👮‍♀️|woman police officer|sp|0|apprehend arrest citation cop law over pulled undercover
-🕵️|detective|sp|1|sleuth spy
-🕵️‍♂️|man detective|sp|0|sleuth spy
-🕵️‍♀️|woman detective|sp|0|sleuth spy
-💂|guard|sp|1|buckingham helmet london palace
-💂‍♂️|man guard|sp|0|buckingham helmet london palace
-💂‍♀️|woman guard|sp|0|buckingham helmet london palace
-🥷|ninja|sp|1|assassin fight fighter hidden person secret skills sly
-👷|construction worker|sp|1|build fix hardhat hat man person rebuild remodel
-👷‍♂️|man construction worker|sp|0|build fix hardhat hat rebuild remodel repair work
-👷‍♀️|woman construction worker|sp|0|build fix hardhat hat man rebuild remodel repair
-🫅|person with crown|sp|1|monarch noble regal royal royalty
-🤴|prince|sp|1|crown fairy fairytale fantasy king royal royalty tale
-👸|princess|sp|1|crown fairy fairytale fantasy queen royal royalty tale
+🧑‍🚀|astronaut|sp|0|rocket,space
+👨‍🚀|man astronaut|sp|0|rocket,space
+👩‍🚀|woman astronaut|sp|0|rocket,space
+🧑‍🚒|firefighter|sp|0|fire,firetruck
+👨‍🚒|man firefighter|sp|0|fire,firetruck
+👩‍🚒|woman firefighter|sp|0|fire,firetruck
+👮|police officer|sp|1|apprehend,arrest,citation,cop,law,over,pulled,undercover
+👮‍♂️|man police officer|sp|0|apprehend,arrest,citation,cop,law,over,pulled,undercover
+👮‍♀️|woman police officer|sp|0|apprehend,arrest,citation,cop,law,over,pulled,undercover
+🕵️|detective|sp|1|sleuth,spy
+🕵️‍♂️|man detective|sp|0|sleuth,spy
+🕵️‍♀️|woman detective|sp|0|sleuth,spy
+💂|guard|sp|1|buckingham,helmet,london,palace
+💂‍♂️|man guard|sp|0|buckingham,helmet,london,palace
+💂‍♀️|woman guard|sp|0|buckingham,helmet,london,palace
+🥷|ninja|sp|1|assassin,fight,fighter,hidden,person,secret,skills,sly,soldier,stealth,war
+👷|construction worker|sp|1|build,fix,hardhat,hat,man,person,rebuild,remodel,repair,work
+👷‍♂️|man construction worker|sp|0|build,fix,hardhat,hat,rebuild,remodel,repair,work
+👷‍♀️|woman construction worker|sp|0|build,fix,hardhat,hat,man,rebuild,remodel,repair,work
+🫅|person with crown|sp|1|monarch,noble,regal,royal,royalty
+🤴|prince|sp|1|crown,fairy,fairytale,fantasy,king,royal,royalty,tale
+👸|princess|sp|1|crown,fairy,fairytale,fantasy,queen,royal,royalty,tale
 👳|person wearing turban|sp|1|
 👳‍♂️|man wearing turban|sp|0|
 👳‍♀️|woman wearing turban|sp|0|
-👲|person with skullcap|sp|1|cap chinese gua guapi hat mao pi
-🧕|woman with headscarf|sp|1|bandana head hijab kerchief mantilla tichel
-🤵|person in tuxedo|sp|1|formal wedding
-🤵‍♂️|man in tuxedo|sp|0|formal groom wedding
-🤵‍♀️|woman in tuxedo|sp|0|formal wedding
+👲|person with skullcap|sp|1|cap,chinese,gua,guapi,hat,mao,pi
+🧕|woman with headscarf|sp|1|bandana,head,hijab,kerchief,mantilla,tichel
+🤵|person in tuxedo|sp|1|formal,wedding
+🤵‍♂️|man in tuxedo|sp|0|formal,groom,wedding
+🤵‍♀️|woman in tuxedo|sp|0|formal,wedding
 👰|person with veil|sp|1|wedding
 👰‍♂️|man with veil|sp|0|wedding
-👰‍♀️|woman with veil|sp|0|bride wedding
+👰‍♀️|woman with veil|sp|0|bride,wedding
 🤰|pregnant woman|sp|1|
-🫃|pregnant man|sp|1|belly bloated full overeat
-🫄|pregnant person|sp|1|belly bloated full overeat stuffed
-🤱|breast-feeding|sp|1|baby breast feeding mom mother nursing woman
-👩‍🍼|woman feeding baby|sp|0|feed mom mother nanny newborn nursing
-👨‍🍼|man feeding baby|sp|0|dad father feed nanny newborn nursing
-🧑‍🍼|person feeding baby|sp|0|feed nanny newborn nursing parent
-👼|baby angel|sp|1|church face fairy fairytale fantasy tale
-🎅|santa claus|sp|1|celebration christmas fairy fantasy father holiday merry tale
-🤶|mrs. claus|sp|1|celebration christmas fairy fantasy holiday merry mother mrs
-🧑‍🎄|mx claus|sp|0|celebration christmas fairy fantasy holiday merry santa tale
-🦸|superhero|sp|1|good hero superpower
-🦸‍♂️|man superhero|sp|0|good hero superpower
-🦸‍♀️|woman superhero|sp|0|good hero heroine superpower
-🦹|supervillain|sp|1|bad criminal evil superpower villain
-🦹‍♂️|man supervillain|sp|0|bad criminal evil superpower villain
-🦹‍♀️|woman supervillain|sp|0|bad criminal evil superpower villain
-🧙|mage|sp|1|fantasy magic play sorcerer sorceress sorcery spell summon
-🧙‍♂️|man mage|sp|0|fantasy magic play sorcerer sorceress sorcery spell summon
-🧙‍♀️|woman mage|sp|0|fantasy magic play sorcerer sorceress sorcery spell summon
-🧚|fairy|sp|1|fairytale fantasy myth person pixie tale wings
-🧚‍♂️|man fairy|sp|0|fairytale fantasy myth oberon person pixie puck tale
-🧚‍♀️|woman fairy|sp|0|fairytale fantasy myth person pixie tale titania wings
-🧛|vampire|sp|1|blood dracula fangs halloween scary supernatural teeth undead
-🧛‍♂️|man vampire|sp|0|blood fangs halloween scary supernatural teeth undead
-🧛‍♀️|woman vampire|sp|0|blood fangs halloween scary supernatural teeth undead
-🧜|merperson|sp|1|creature fairytale folklore ocean sea siren trident
-🧜‍♂️|merman|sp|0|creature fairytale folklore neptune ocean poseidon sea siren
-🧜‍♀️|mermaid|sp|0|creature fairytale folklore merwoman ocean sea siren trident
-🧝|elf|sp|1|elves enchantment fantasy folklore magic magical myth
-🧝‍♂️|man elf|sp|0|elves enchantment fantasy folklore magic magical myth
-🧝‍♀️|woman elf|sp|0|elves enchantment fantasy folklore magic magical myth
-🧞|genie|sp|0|djinn fantasy jinn lamp myth rub wishes
-🧞‍♂️|man genie|sp|0|djinn fantasy jinn lamp myth rub wishes
-🧞‍♀️|woman genie|sp|0|djinn fantasy jinn lamp myth rub wishes
-🧟|zombie|sp|0|apocalypse dead halloween horror scary undead walking
-🧟‍♂️|man zombie|sp|0|apocalypse dead halloween horror scary undead walking
-🧟‍♀️|woman zombie|sp|0|apocalypse dead halloween horror scary undead walking
-🧌|troll|sp|0|fairy fantasy monster tale trolling
-🫈|hairy creature|sp|0|bigfoot cryptid forest giant sasquatch woodwose yeti
-💆|person getting massage|sp|1|face headache relax relaxing salon soothe spa tension
-💆‍♂️|man getting massage|sp|0|face headache relax relaxing salon soothe spa tension
-💆‍♀️|woman getting massage|sp|0|face headache relax relaxing salon soothe spa tension
-💇|person getting haircut|sp|1|barber beauty chop cosmetology cut groom hair parlor
-💇‍♂️|man getting haircut|sp|0|barber beauty chop cosmetology cut groom hair parlor
-💇‍♀️|woman getting haircut|sp|0|barber beauty chop cosmetology cut groom hair parlor
-🚶|person walking|sp|1|amble gait hike man pace pedestrian stride stroll
-🚶‍♂️|man walking|sp|0|amble gait hike pace pedestrian stride stroll walk
-🚶‍♀️|woman walking|sp|0|amble gait hike man pace pedestrian stride stroll
-🚶‍➡️|person walking facing right|sp|0|amble gait hike man pace pedestrian stride stroll
-🚶‍♀️‍➡️|woman walking facing right|sp|0|amble gait hike man pace pedestrian stride stroll
-🚶‍♂️‍➡️|man walking facing right|sp|0|amble gait hike pace pedestrian stride stroll walk
+🫃|pregnant man|sp|1|belly,bloated,full,overeat
+🫄|pregnant person|sp|1|belly,bloated,full,overeat,stuffed
+🤱|breast-feeding|sp|1|baby,breast,feeding,mom,mother,nursing,woman
+👩‍🍼|woman feeding baby|sp|0|feed,mom,mother,nanny,newborn,nursing
+👨‍🍼|man feeding baby|sp|0|dad,father,feed,nanny,newborn,nursing
+🧑‍🍼|person feeding baby|sp|0|feed,nanny,newborn,nursing,parent
+👼|baby angel|sp|1|church,face,fairy,fairytale,fantasy,tale
+🎅|santa claus|sp|1|celebration,christmas,fairy,fantasy,father,holiday,merry,tale,xmas
+🤶|mrs. claus|sp|1|celebration,christmas,fairy,fantasy,holiday,merry,mother,mrs,santa,tale,xmas
+🧑‍🎄|mx claus|sp|0|celebration,christmas,fairy,fantasy,holiday,merry,santa,tale,xmas
+🦸|superhero|sp|1|good,hero,superpower
+🦸‍♂️|man superhero|sp|0|good,hero,superpower
+🦸‍♀️|woman superhero|sp|0|good,hero,heroine,superpower
+🦹|supervillain|sp|1|bad,criminal,evil,superpower,villain
+🦹‍♂️|man supervillain|sp|0|bad,criminal,evil,superpower,villain
+🦹‍♀️|woman supervillain|sp|0|bad,criminal,evil,superpower,villain
+🧙|mage|sp|1|fantasy,magic,play,sorcerer,sorceress,sorcery,spell,summon,witch,wizard
+🧙‍♂️|man mage|sp|0|fantasy,magic,play,sorcerer,sorceress,sorcery,spell,summon,witch,wizard
+🧙‍♀️|woman mage|sp|0|fantasy,magic,play,sorcerer,sorceress,sorcery,spell,summon,witch,wizard
+🧚|fairy|sp|1|fairytale,fantasy,myth,person,pixie,tale,wings
+🧚‍♂️|man fairy|sp|0|fairytale,fantasy,myth,oberon,person,pixie,puck,tale,wings
+🧚‍♀️|woman fairy|sp|0|fairytale,fantasy,myth,person,pixie,tale,titania,wings
+🧛|vampire|sp|1|blood,dracula,fangs,halloween,scary,supernatural,teeth,undead
+🧛‍♂️|man vampire|sp|0|blood,fangs,halloween,scary,supernatural,teeth,undead
+🧛‍♀️|woman vampire|sp|0|blood,fangs,halloween,scary,supernatural,teeth,undead
+🧜|merperson|sp|1|creature,fairytale,folklore,ocean,sea,siren,trident
+🧜‍♂️|merman|sp|0|creature,fairytale,folklore,neptune,ocean,poseidon,sea,siren,trident,triton
+🧜‍♀️|mermaid|sp|0|creature,fairytale,folklore,merwoman,ocean,sea,siren,trident
+🧝|elf|sp|1|elves,enchantment,fantasy,folklore,magic,magical,myth
+🧝‍♂️|man elf|sp|0|elves,enchantment,fantasy,folklore,magic,magical,myth
+🧝‍♀️|woman elf|sp|0|elves,enchantment,fantasy,folklore,magic,magical,myth
+🧞|genie|sp|0|djinn,fantasy,jinn,lamp,myth,rub,wishes
+🧞‍♂️|man genie|sp|0|djinn,fantasy,jinn,lamp,myth,rub,wishes
+🧞‍♀️|woman genie|sp|0|djinn,fantasy,jinn,lamp,myth,rub,wishes
+🧟|zombie|sp|0|apocalypse,dead,halloween,horror,scary,undead,walking
+🧟‍♂️|man zombie|sp|0|apocalypse,dead,halloween,horror,scary,undead,walking
+🧟‍♀️|woman zombie|sp|0|apocalypse,dead,halloween,horror,scary,undead,walking
+🧌|troll|sp|0|fairy,fantasy,monster,tale,trolling
+🫈|hairy creature|sp|0|bigfoot,cryptid,forest,giant,sasquatch,woodwose,yeti
+💆|person getting massage|sp|1|face,headache,relax,relaxing,salon,soothe,spa,tension,therapy,treatment
+💆‍♂️|man getting massage|sp|0|face,headache,relax,relaxing,salon,soothe,spa,tension,therapy,treatment
+💆‍♀️|woman getting massage|sp|0|face,headache,relax,relaxing,salon,soothe,spa,tension,therapy,treatment
+💇|person getting haircut|sp|1|barber,beauty,chop,cosmetology,cut,groom,hair,parlor,shears,style
+💇‍♂️|man getting haircut|sp|0|barber,beauty,chop,cosmetology,cut,groom,hair,parlor,person,shears,style
+💇‍♀️|woman getting haircut|sp|0|barber,beauty,chop,cosmetology,cut,groom,hair,parlor,person,shears,style
+🚶|person walking|sp|1|amble,gait,hike,man,pace,pedestrian,stride,stroll,walk
+🚶‍♂️|man walking|sp|0|amble,gait,hike,pace,pedestrian,stride,stroll,walk
+🚶‍♀️|woman walking|sp|0|amble,gait,hike,man,pace,pedestrian,stride,stroll,walk
+🚶‍➡️|person walking facing right|sp|0|amble,gait,hike,man,pace,pedestrian,stride,stroll,walk
+🚶‍♀️‍➡️|woman walking facing right|sp|0|amble,gait,hike,man,pace,pedestrian,stride,stroll,walk
+🚶‍♂️‍➡️|man walking facing right|sp|0|amble,gait,hike,pace,pedestrian,stride,stroll,walk
 🧍|person standing|sp|1|stand
 🧍‍♂️|man standing|sp|0|stand
 🧍‍♀️|woman standing|sp|0|stand
-🧎|person kneeling|sp|1|kneel knees
-🧎‍♂️|man kneeling|sp|0|kneel knees
-🧎‍♀️|woman kneeling|sp|0|kneel knees
-🧎‍➡️|person kneeling facing right|sp|0|kneel knees
-🧎‍♀️‍➡️|woman kneeling facing right|sp|0|kneel knees
-🧎‍♂️‍➡️|man kneeling facing right|sp|0|kneel knees
-🧑‍🦯|person with white cane|sp|0|accessibility blind probing
-🧑‍🦯‍➡️|person with white cane facing right|sp|0|accessibility blind probing
-👨‍🦯|man with white cane|sp|0|accessibility blind probing
-👨‍🦯‍➡️|man with white cane facing right|sp|0|accessibility blind probing
-👩‍🦯|woman with white cane|sp|0|accessibility blind probing
-👩‍🦯‍➡️|woman with white cane facing right|sp|0|accessibility blind probing
+🧎|person kneeling|sp|1|kneel,knees
+🧎‍♂️|man kneeling|sp|0|kneel,knees
+🧎‍♀️|woman kneeling|sp|0|kneel,knees
+🧎‍➡️|person kneeling facing right|sp|0|kneel,knees
+🧎‍♀️‍➡️|woman kneeling facing right|sp|0|kneel,knees
+🧎‍♂️‍➡️|man kneeling facing right|sp|0|kneel,knees
+🧑‍🦯|person with white cane|sp|0|accessibility,blind,probing
+🧑‍🦯‍➡️|person with white cane facing right|sp|0|accessibility,blind,probing
+👨‍🦯|man with white cane|sp|0|accessibility,blind,probing
+👨‍🦯‍➡️|man with white cane facing right|sp|0|accessibility,blind,probing
+👩‍🦯|woman with white cane|sp|0|accessibility,blind,probing
+👩‍🦯‍➡️|woman with white cane facing right|sp|0|accessibility,blind,probing
 🧑‍🦼|person in motorized wheelchair|sp|0|accessibility
 🧑‍🦼‍➡️|person in motorized wheelchair facing right|sp|0|accessibility
 👨‍🦼|man in motorized wheelchair|sp|0|accessibility
@@ -446,424 +446,424 @@ enum EmojiData {
 👨‍🦽‍➡️|man in manual wheelchair facing right|sp|0|accessibility
 👩‍🦽|woman in manual wheelchair|sp|0|accessibility
 👩‍🦽‍➡️|woman in manual wheelchair facing right|sp|0|accessibility
-🏃|person running|sp|1|fast hurry marathon move quick race racing run
-🏃‍♂️|man running|sp|0|fast hurry marathon move quick race racing run
-🏃‍♀️|woman running|sp|0|fast hurry marathon move quick race racing run
-🏃‍➡️|person running facing right|sp|0|fast hurry marathon move quick race racing run
-🏃‍♀️‍➡️|woman running facing right|sp|0|fast hurry marathon move quick race racing run
-🏃‍♂️‍➡️|man running facing right|sp|0|fast hurry marathon move quick race racing run
+🏃|person running|sp|1|fast,hurry,marathon,move,quick,race,racing,run,rush,speed
+🏃‍♂️|man running|sp|0|fast,hurry,marathon,move,quick,race,racing,run,rush,speed
+🏃‍♀️|woman running|sp|0|fast,hurry,marathon,move,quick,race,racing,run,rush,speed
+🏃‍➡️|person running facing right|sp|0|fast,hurry,marathon,move,quick,race,racing,run,rush,speed
+🏃‍♀️‍➡️|woman running facing right|sp|0|fast,hurry,marathon,move,quick,race,racing,run,rush,speed
+🏃‍♂️‍➡️|man running facing right|sp|0|fast,hurry,marathon,move,quick,race,racing,run,rush,speed
 🧑‍🩰|ballet dancer|sp|0|
-💃|woman dancing|sp|1|dance dancer elegant festive flair flamenco groove let’s
-🕺|man dancing|sp|1|dance dancer elegant festive flair flamenco groove let’s
+💃|woman dancing|sp|1|dance,dancer,elegant,festive,flair,flamenco,groove,let’s,salsa,tango
+🕺|man dancing|sp|1|dance,dancer,elegant,festive,flair,flamenco,groove,let’s,salsa,tango
 🕴️|person in suit levitating|sp|1|business
-👯|people with bunny ears|sp|1|bestie bff counterpart dancer double ear identical pair
-👯‍♂️|men with bunny ears|sp|0|bestie bff counterpart dancer double ear identical pair
-👯‍♀️|women with bunny ears|sp|0|bestie bff counterpart dancer double ear identical pair
-🧖|person in steamy room|sp|1|day luxurious pamper relax sauna spa steam steambath
-🧖‍♂️|man in steamy room|sp|0|day luxurious pamper relax sauna spa steam steambath
-🧖‍♀️|woman in steamy room|sp|0|day luxurious pamper relax sauna spa steam steambath
-🧗|person climbing|sp|1|climb climber mountain rock scale up
-🧗‍♂️|man climbing|sp|0|climb climber mountain rock scale up
-🧗‍♀️|woman climbing|sp|0|climb climber mountain rock scale up
-🤺|person fencing|sp|0|fencer sword
-🏇|horse racing|sp|1|jockey racehorse riding sport
-⛷️|skier|sp|0|ski snow
-🏂|snowboarder|sp|1|ski snow snowboard sport
-🏌️|person golfing|sp|1|ball birdie caddy driving golf green pga putt
-🏌️‍♂️|man golfing|sp|0|ball birdie caddy driving golf green pga putt
-🏌️‍♀️|woman golfing|sp|0|ball birdie caddy driving golf green pga putt
-🏄|person surfing|sp|1|beach ocean sport surf surfer swell waves
-🏄‍♂️|man surfing|sp|0|beach ocean sport surf surfer swell waves
-🏄‍♀️|woman surfing|sp|0|beach ocean person sport surf surfer swell waves
-🚣|person rowing boat|sp|1|canoe cruise fishing lake oar paddle raft river
-🚣‍♂️|man rowing boat|sp|0|canoe cruise fishing lake oar paddle raft river
-🚣‍♀️|woman rowing boat|sp|0|canoe cruise fishing lake oar paddle raft river
-🏊|person swimming|sp|1|freestyle sport swim swimmer triathlon
-🏊‍♂️|man swimming|sp|0|freestyle sport swim swimmer triathlon
-🏊‍♀️|woman swimming|sp|0|freestyle man sport swim swimmer triathlon
-⛹️|person bouncing ball|sp|1|athletic basketball championship dribble net player throw
-⛹️‍♂️|man bouncing ball|sp|0|athletic basketball championship dribble net player throw
-⛹️‍♀️|woman bouncing ball|sp|0|athletic basketball championship dribble net player throw
-🏋️|person lifting weights|sp|1|barbell bodybuilder deadlift lifter powerlifting weight weightlifter workout
-🏋️‍♂️|man lifting weights|sp|0|barbell bodybuilder deadlift lifter powerlifting weight weightlifter workout
-🏋️‍♀️|woman lifting weights|sp|0|barbell bodybuilder deadlift lifter powerlifting weight weightlifter workout
-🚴|person biking|sp|1|bicycle bicyclist bike cycle cyclist riding sport
-🚴‍♂️|man biking|sp|0|bicycle bicyclist bike cycle cyclist riding sport
-🚴‍♀️|woman biking|sp|0|bicycle bicyclist bike cycle cyclist riding sport
-🚵|person mountain biking|sp|1|bicycle bicyclist bike cycle cyclist riding sport
-🚵‍♂️|man mountain biking|sp|0|bicycle bicyclist bike cycle cyclist riding sport
-🚵‍♀️|woman mountain biking|sp|0|bicycle bicyclist bike cycle cyclist riding sport
-🤸|person cartwheeling|sp|1|active cartwheel excited flip gymnastics happy somersault
-🤸‍♂️|man cartwheeling|sp|0|active cartwheel excited flip gymnastics happy somersault
-🤸‍♀️|woman cartwheeling|sp|0|active cartwheel excited flip gymnastics happy somersault
-🤼|people wrestling|sp|1|combat duel grapple ring tournament wrestle
-🤼‍♂️|men wrestling|sp|0|combat duel grapple ring tournament wrestle
-🤼‍♀️|women wrestling|sp|0|combat duel grapple ring tournament wrestle
-🤽|person playing water polo|sp|1|sport swimming waterpolo
-🤽‍♂️|man playing water polo|sp|0|sport swimming waterpolo
-🤽‍♀️|woman playing water polo|sp|0|sport swimming waterpolo
-🤾|person playing handball|sp|1|athletics ball catch chuck hurl lob pitch sport
-🤾‍♂️|man playing handball|sp|0|athletics ball catch chuck hurl lob pitch sport
-🤾‍♀️|woman playing handball|sp|0|athletics ball catch chuck hurl lob pitch sport
-🤹|person juggling|sp|1|act balance balancing handle juggle manage multitask skill
-🤹‍♂️|man juggling|sp|0|act balance balancing handle juggle manage multitask skill
-🤹‍♀️|woman juggling|sp|0|act balance balancing handle juggle manage multitask skill
-🧘|person in lotus position|sp|1|cross legged legs meditation peace relax serenity yoga
-🧘‍♂️|man in lotus position|sp|0|cross legged legs meditation peace relax serenity yoga
-🧘‍♀️|woman in lotus position|sp|0|cross legged legs meditation peace relax serenity yoga
-🛀|person taking bath|sp|1|bathtub tub
-🛌|person in bed|sp|1|bedtime good goodnight hotel nap night sleep tired
-🧑‍🤝‍🧑|people holding hands|sp|0|bae bestie bff couple dating flirt friends hand
-👭|women holding hands|sp|1|bae bestie bff couple dating flirt friends girls
-👫|woman and man holding hands|sp|1|bae bestie bff couple dating flirt friends hand
-👬|men holding hands|sp|1|bae bestie bff boys brothers couple dating flirt
-💏|kiss|sp|1|anniversary babe bae couple date dating heart love
-👩‍❤️‍💋‍👨|kiss: woman  man|sp|0|anniversary babe bae couple date dating heart kiss
-👨‍❤️‍💋‍👨|kiss: man  man|sp|0|anniversary babe bae couple date dating heart kiss
-👩‍❤️‍💋‍👩|kiss: woman  woman|sp|0|anniversary babe bae couple date dating heart kiss
-💑|couple with heart|sp|1|anniversary babe bae dating kiss love person relationship
-👩‍❤️‍👨|couple with heart: woman  man|sp|0|anniversary babe bae dating heart kiss love person
-👨‍❤️‍👨|couple with heart: man  man|sp|0|anniversary babe bae dating heart kiss love person
-👩‍❤️‍👩|couple with heart: woman  woman|sp|0|anniversary babe bae dating heart kiss love person
-👨‍👩‍👦|family: man  woman  boy|sp|0|child family man woman
-👨‍👩‍👧|family: man  woman  girl|sp|0|child family man woman
-👨‍👩‍👧‍👦|family: man  woman  girl  boy|sp|0|child family girl man woman
-👨‍👩‍👦‍👦|family: man  woman  boy  boy|sp|0|child family man woman
-👨‍👩‍👧‍👧|family: man  woman  girl  girl|sp|0|child family man woman
-👨‍👨‍👦|family: man  man  boy|sp|0|child family man
-👨‍👨‍👧|family: man  man  girl|sp|0|child family man
-👨‍👨‍👧‍👦|family: man  man  girl  boy|sp|0|child family girl man
-👨‍👨‍👦‍👦|family: man  man  boy  boy|sp|0|child family man
-👨‍👨‍👧‍👧|family: man  man  girl  girl|sp|0|child family man
-👩‍👩‍👦|family: woman  woman  boy|sp|0|child family woman
-👩‍👩‍👧|family: woman  woman  girl|sp|0|child family woman
-👩‍👩‍👧‍👦|family: woman  woman  girl  boy|sp|0|child family girl woman
-👩‍👩‍👦‍👦|family: woman  woman  boy  boy|sp|0|child family woman
-👩‍👩‍👧‍👧|family: woman  woman  girl  girl|sp|0|child family woman
-👨‍👦|family: man  boy|sp|0|child family man
-👨‍👦‍👦|family: man  boy  boy|sp|0|child family man
-👨‍👧|family: man  girl|sp|0|child family man
-👨‍👧‍👦|family: man  girl  boy|sp|0|child family girl man
-👨‍👧‍👧|family: man  girl  girl|sp|0|child family man
-👩‍👦|family: woman  boy|sp|0|child family woman
-👩‍👦‍👦|family: woman  boy  boy|sp|0|child family woman
-👩‍👧|family: woman  girl|sp|0|child family woman
-👩‍👧‍👦|family: woman  girl  boy|sp|0|child family girl woman
-👩‍👧‍👧|family: woman  girl  girl|sp|0|child family woman
-🗣️|speaking head|sp|0|face silhouette speak
-👤|bust in silhouette|sp|0|mysterious shadow
-👥|busts in silhouette|sp|0|bff bust everyone friend friends people
-🫂|people hugging|sp|0|comfort embrace farewell friendship goodbye hello hug love
+👯|people with bunny ears|sp|1|bestie,bff,counterpart,dancer,double,ear,identical,pair,party,partying,soulmate,twin,twinsies
+👯‍♂️|men with bunny ears|sp|0|bestie,bff,counterpart,dancer,double,ear,identical,pair,party,partying,people,soulmate,twin,twinsies
+👯‍♀️|women with bunny ears|sp|0|bestie,bff,counterpart,dancer,double,ear,identical,pair,party,partying,people,soulmate,twin,twinsies
+🧖|person in steamy room|sp|1|day,luxurious,pamper,relax,sauna,spa,steam,steambath,unwind
+🧖‍♂️|man in steamy room|sp|0|day,luxurious,pamper,relax,sauna,spa,steam,steambath,unwind
+🧖‍♀️|woman in steamy room|sp|0|day,luxurious,pamper,relax,sauna,spa,steam,steambath,unwind
+🧗|person climbing|sp|1|climb,climber,mountain,rock,scale,up
+🧗‍♂️|man climbing|sp|0|climb,climber,mountain,rock,scale,up
+🧗‍♀️|woman climbing|sp|0|climb,climber,mountain,rock,scale,up
+🤺|person fencing|sp|0|fencer,sword
+🏇|horse racing|sp|1|jockey,racehorse,riding,sport
+⛷️|skier|sp|0|ski,snow
+🏂|snowboarder|sp|1|ski,snow,snowboard,sport
+🏌️|person golfing|sp|1|ball,birdie,caddy,driving,golf,green,pga,putt,range,tee
+🏌️‍♂️|man golfing|sp|0|ball,birdie,caddy,driving,golf,green,pga,putt,range,tee
+🏌️‍♀️|woman golfing|sp|0|ball,birdie,caddy,driving,golf,green,pga,putt,range,tee
+🏄|person surfing|sp|1|beach,ocean,sport,surf,surfer,swell,waves
+🏄‍♂️|man surfing|sp|0|beach,ocean,sport,surf,surfer,swell,waves
+🏄‍♀️|woman surfing|sp|0|beach,ocean,person,sport,surf,surfer,swell,waves
+🚣|person rowing boat|sp|1|canoe,cruise,fishing,lake,oar,paddle,raft,river,row,rowboat
+🚣‍♂️|man rowing boat|sp|0|canoe,cruise,fishing,lake,oar,paddle,raft,river,row,rowboat
+🚣‍♀️|woman rowing boat|sp|0|canoe,cruise,fishing,lake,oar,paddle,raft,river,row,rowboat
+🏊|person swimming|sp|1|freestyle,sport,swim,swimmer,triathlon
+🏊‍♂️|man swimming|sp|0|freestyle,sport,swim,swimmer,triathlon
+🏊‍♀️|woman swimming|sp|0|freestyle,man,sport,swim,swimmer,triathlon
+⛹️|person bouncing ball|sp|1|athletic,basketball,championship,dribble,net,player,throw
+⛹️‍♂️|man bouncing ball|sp|0|athletic,basketball,championship,dribble,net,player,throw
+⛹️‍♀️|woman bouncing ball|sp|0|athletic,basketball,championship,dribble,net,player,throw
+🏋️|person lifting weights|sp|1|barbell,bodybuilder,deadlift,lifter,powerlifting,weight,weightlifter,workout
+🏋️‍♂️|man lifting weights|sp|0|barbell,bodybuilder,deadlift,lifter,powerlifting,weight,weightlifter,workout
+🏋️‍♀️|woman lifting weights|sp|0|barbell,bodybuilder,deadlift,lifter,powerlifting,weight,weightlifter,workout
+🚴|person biking|sp|1|bicycle,bicyclist,bike,cycle,cyclist,riding,sport
+🚴‍♂️|man biking|sp|0|bicycle,bicyclist,bike,cycle,cyclist,riding,sport
+🚴‍♀️|woman biking|sp|0|bicycle,bicyclist,bike,cycle,cyclist,riding,sport
+🚵|person mountain biking|sp|1|bicycle,bicyclist,bike,cycle,cyclist,riding,sport
+🚵‍♂️|man mountain biking|sp|0|bicycle,bicyclist,bike,cycle,cyclist,riding,sport
+🚵‍♀️|woman mountain biking|sp|0|bicycle,bicyclist,bike,cycle,cyclist,riding,sport
+🤸|person cartwheeling|sp|1|active,cartwheel,excited,flip,gymnastics,happy,somersault
+🤸‍♂️|man cartwheeling|sp|0|active,cartwheel,excited,flip,gymnastics,happy,somersault
+🤸‍♀️|woman cartwheeling|sp|0|active,cartwheel,excited,flip,gymnastics,happy,somersault
+🤼|people wrestling|sp|1|combat,duel,grapple,ring,tournament,wrestle
+🤼‍♂️|men wrestling|sp|0|combat,duel,grapple,ring,tournament,wrestle
+🤼‍♀️|women wrestling|sp|0|combat,duel,grapple,ring,tournament,wrestle
+🤽|person playing water polo|sp|1|sport,swimming,waterpolo
+🤽‍♂️|man playing water polo|sp|0|sport,swimming,waterpolo
+🤽‍♀️|woman playing water polo|sp|0|sport,swimming,waterpolo
+🤾|person playing handball|sp|1|athletics,ball,catch,chuck,hurl,lob,pitch,sport,throw,toss
+🤾‍♂️|man playing handball|sp|0|athletics,ball,catch,chuck,hurl,lob,pitch,sport,throw,toss
+🤾‍♀️|woman playing handball|sp|0|athletics,ball,catch,chuck,hurl,lob,pitch,sport,throw,toss
+🤹|person juggling|sp|1|act,balance,balancing,handle,juggle,manage,multitask,skill
+🤹‍♂️|man juggling|sp|0|act,balance,balancing,handle,juggle,manage,multitask,skill
+🤹‍♀️|woman juggling|sp|0|act,balance,balancing,handle,juggle,manage,multitask,skill
+🧘|person in lotus position|sp|1|cross,legged,legs,meditation,peace,relax,serenity,yoga,yogi,zen
+🧘‍♂️|man in lotus position|sp|0|cross,legged,legs,meditation,peace,relax,serenity,yoga,yogi,zen
+🧘‍♀️|woman in lotus position|sp|0|cross,legged,legs,meditation,peace,relax,serenity,yoga,yogi,zen
+🛀|person taking bath|sp|1|bathtub,tub
+🛌|person in bed|sp|1|bedtime,good,goodnight,hotel,nap,night,sleep,tired,zzz
+🧑‍🤝‍🧑|people holding hands|sp|0|bae,bestie,bff,couple,dating,flirt,friends,hand,hold,twins
+👭|women holding hands|sp|1|bae,bestie,bff,couple,dating,flirt,friends,girls,hand,hold,sisters,twins
+👫|woman and man holding hands|sp|1|bae,bestie,bff,couple,dating,flirt,friends,hand,hold,twins
+👬|men holding hands|sp|1|bae,bestie,bff,boys,brothers,couple,dating,flirt,friends,hand,hold,twins
+💏|kiss|sp|1|anniversary,babe,bae,couple,date,dating,heart,love,mwah,person,romance,together,xoxo
+👩‍❤️‍💋‍👨|kiss: woman man|sp|0|anniversary,babe,bae,couple,date,dating,heart,kiss,love,mwah,person,romance,together,woman,xoxo
+👨‍❤️‍💋‍👨|kiss: man man|sp|0|anniversary,babe,bae,couple,date,dating,heart,kiss,love,mwah,person,romance,together,xoxo
+👩‍❤️‍💋‍👩|kiss: woman woman|sp|0|anniversary,babe,bae,couple,date,dating,heart,kiss,love,mwah,person,romance,together,xoxo
+💑|couple with heart|sp|1|anniversary,babe,bae,dating,kiss,love,person,relationship,romance,together,you
+👩‍❤️‍👨|couple with heart: woman man|sp|0|anniversary,babe,bae,dating,heart,kiss,love,person,relationship,romance,together,woman,you
+👨‍❤️‍👨|couple with heart: man man|sp|0|anniversary,babe,bae,dating,heart,kiss,love,person,relationship,romance,together,you
+👩‍❤️‍👩|couple with heart: woman woman|sp|0|anniversary,babe,bae,dating,heart,kiss,love,person,relationship,romance,together,you
+👨‍👩‍👦|family: man woman boy|sp|0|child,family,man,woman
+👨‍👩‍👧|family: man woman girl|sp|0|child,family,man,woman
+👨‍👩‍👧‍👦|family: man woman girl boy|sp|0|child,family,girl,man,woman
+👨‍👩‍👦‍👦|family: man woman boy boy|sp|0|child,family,man,woman
+👨‍👩‍👧‍👧|family: man woman girl girl|sp|0|child,family,man,woman
+👨‍👨‍👦|family: man man boy|sp|0|child,family,man
+👨‍👨‍👧|family: man man girl|sp|0|child,family,man
+👨‍👨‍👧‍👦|family: man man girl boy|sp|0|child,family,girl,man
+👨‍👨‍👦‍👦|family: man man boy boy|sp|0|child,family,man
+👨‍👨‍👧‍👧|family: man man girl girl|sp|0|child,family,man
+👩‍👩‍👦|family: woman woman boy|sp|0|child,family,woman
+👩‍👩‍👧|family: woman woman girl|sp|0|child,family,woman
+👩‍👩‍👧‍👦|family: woman woman girl boy|sp|0|child,family,girl,woman
+👩‍👩‍👦‍👦|family: woman woman boy boy|sp|0|child,family,woman
+👩‍👩‍👧‍👧|family: woman woman girl girl|sp|0|child,family,woman
+👨‍👦|family: man boy|sp|0|child,family,man
+👨‍👦‍👦|family: man boy boy|sp|0|child,family,man
+👨‍👧|family: man girl|sp|0|child,family,man
+👨‍👧‍👦|family: man girl boy|sp|0|child,family,girl,man
+👨‍👧‍👧|family: man girl girl|sp|0|child,family,man
+👩‍👦|family: woman boy|sp|0|child,family,woman
+👩‍👦‍👦|family: woman boy boy|sp|0|child,family,woman
+👩‍👧|family: woman girl|sp|0|child,family,woman
+👩‍👧‍👦|family: woman girl boy|sp|0|child,family,girl,woman
+👩‍👧‍👧|family: woman girl girl|sp|0|child,family,woman
+🗣️|speaking head|sp|0|face,silhouette,speak
+👤|bust in silhouette|sp|0|mysterious,shadow
+👥|busts in silhouette|sp|0|bff,bust,everyone,friend,friends,people
+🫂|people hugging|sp|0|comfort,embrace,farewell,friendship,goodbye,hello,hug,love,thanks
 👪|family|sp|0|child
-🧑‍🧑‍🧒|family: adult  adult  child|sp|0|adult family
-🧑‍🧑‍🧒‍🧒|family: adult  adult  child  child|sp|0|adult family
-🧑‍🧒|family: adult  child|sp|0|adult family
-🧑‍🧒‍🧒|family: adult  child  child|sp|0|adult family
-👣|footprints|sp|0|barefoot clothing footprint omw print walk
-🫆|fingerprint|sp|0|clue crime detective forensics identity mystery print safety
-🐵|monkey face|an|0|animal banana
-🐒|monkey|an|0|animal banana
+🧑‍🧑‍🧒|family: adult adult child|sp|0|adult,family
+🧑‍🧑‍🧒‍🧒|family: adult adult child child|sp|0|adult,family
+🧑‍🧒|family: adult child|sp|0|adult,family
+🧑‍🧒‍🧒|family: adult child child|sp|0|adult,family
+👣|footprints|sp|0|barefoot,clothing,footprint,omw,print,walk
+🫆|fingerprint|sp|0|clue,crime,detective,forensics,identity,mystery,print,safety,trace
+🐵|monkey face|an|0|animal,banana
+🐒|monkey|an|0|animal,banana
 🦍|gorilla|an|0|animal
-🦧|orangutan|an|0|animal ape monkey
-🐶|dog face|an|0|adorbs animal pet puppies puppy
-🐕|dog|an|0|animal animals dogs pet
-🦮|guide dog|an|0|accessibility animal blind
-🐕‍🦺|service dog|an|0|accessibility animal assistance
-🐩|poodle|an|0|animal dog fluffy
-🐺|wolf|an|0|animal face
-🦊|fox|an|0|animal face
-🦝|raccoon|an|0|animal curious sly
-🐱|cat face|an|0|animal kitten kitty pet
-🐈|cat|an|0|animal animals cats kitten pet
-🐈‍⬛|black cat|an|0|animal feline halloween meow unlucky
-🦁|lion|an|0|alpha animal face leo mane order rawr roar
-🐯|tiger face|an|0|animal big cat predator
-🐅|tiger|an|0|animal big cat predator zoo
-🐆|leopard|an|0|animal big cat predator zoo
-🐴|horse face|an|0|animal dressage equine farm horses
-🫎|moose|an|0|alces animal antlers elk mammal
-🫏|donkey|an|0|animal ass burro hinny mammal mule stubborn
-🐎|horse|an|0|animal equestrian farm racehorse racing
+🦧|orangutan|an|0|animal,ape,monkey
+🐶|dog face|an|0|adorbs,animal,pet,puppies,puppy
+🐕|dog|an|0|animal,animals,dogs,pet
+🦮|guide dog|an|0|accessibility,animal,blind
+🐕‍🦺|service dog|an|0|accessibility,animal,assistance
+🐩|poodle|an|0|animal,dog,fluffy
+🐺|wolf|an|0|animal,face
+🦊|fox|an|0|animal,face
+🦝|raccoon|an|0|animal,curious,sly
+🐱|cat face|an|0|animal,kitten,kitty,pet
+🐈|cat|an|0|animal,animals,cats,kitten,pet
+🐈‍⬛|black cat|an|0|animal,feline,halloween,meow,unlucky
+🦁|lion|an|0|alpha,animal,face,leo,mane,order,rawr,roar,safari,strong,zodiac
+🐯|tiger face|an|0|animal,big,cat,predator
+🐅|tiger|an|0|animal,big,cat,predator,zoo
+🐆|leopard|an|0|animal,big,cat,predator,zoo
+🐴|horse face|an|0|animal,dressage,equine,farm,horses
+🫎|moose|an|0|alces,animal,antlers,elk,mammal
+🫏|donkey|an|0|animal,ass,burro,hinny,mammal,mule,stubborn
+🐎|horse|an|0|animal,equestrian,farm,racehorse,racing
 🦄|unicorn|an|0|face
-🦓|zebra|an|0|animal stripe
+🦓|zebra|an|0|animal,stripe
 🦌|deer|an|0|animal
-🦬|bison|an|0|animal buffalo herd wisent
-🐮|cow face|an|0|animal farm milk moo
-🐂|ox|an|0|animal animals bull farm taurus zodiac
-🐃|water buffalo|an|0|animal zoo
-🐄|cow|an|0|animal animals farm milk moo
-🐷|pig face|an|0|animal bacon farm pork
-🐖|pig|an|0|animal bacon farm pork sow
-🐗|boar|an|0|animal pig
-🐽|pig nose|an|0|animal face farm smell snout
-🐏|ram|an|0|animal aries horns male sheep zodiac zoo
-🐑|ewe|an|0|animal baa farm female fluffy lamb sheep wool
-🐐|goat|an|0|animal capricorn farm milk zodiac
-🐪|camel|an|0|animal desert dromedary hump one
-🐫|two-hump camel|an|0|animal bactrian desert hump two
-🦙|llama|an|0|alpaca animal guanaco vicuña wool
-🦒|giraffe|an|0|animal spots
+🦬|bison|an|0|animal,buffalo,herd,wisent
+🐮|cow face|an|0|animal,farm,milk,moo
+🐂|ox|an|0|animal,animals,bull,farm,taurus,zodiac
+🐃|water buffalo|an|0|animal,zoo
+🐄|cow|an|0|animal,animals,farm,milk,moo
+🐷|pig face|an|0|animal,bacon,farm,pork
+🐖|pig|an|0|animal,bacon,farm,pork,sow
+🐗|boar|an|0|animal,pig
+🐽|pig nose|an|0|animal,face,farm,smell,snout
+🐏|ram|an|0|animal,aries,horns,male,sheep,zodiac,zoo
+🐑|ewe|an|0|animal,baa,farm,female,fluffy,lamb,sheep,wool
+🐐|goat|an|0|animal,capricorn,farm,milk,zodiac
+🐪|camel|an|0|animal,desert,dromedary,hump,one
+🐫|two-hump camel|an|0|animal,bactrian,desert,hump,two
+🦙|llama|an|0|alpaca,animal,guanaco,vicuña,wool
+🦒|giraffe|an|0|animal,spots
 🐘|elephant|an|0|animal
-🦣|mammoth|an|0|animal extinction large tusk wooly
+🦣|mammoth|an|0|animal,extinction,large,tusk,wooly
 🦏|rhinoceros|an|0|animal
-🦛|hippopotamus|an|0|animal hippo
+🦛|hippopotamus|an|0|animal,hippo
 🐭|mouse face|an|0|animal
-🐁|mouse|an|0|animal animals
+🐁|mouse|an|0|animal,animals
 🐀|rat|an|0|animal
-🐹|hamster|an|0|animal face pet
-🐰|rabbit face|an|0|animal bunny pet
-🐇|rabbit|an|0|animal bunny pet
-🐿️|chipmunk|an|0|animal squirrel
-🦫|beaver|an|0|animal dam teeth
-🦔|hedgehog|an|0|animal spiny
-🦇|bat|an|0|animal vampire
-🐻|bear|an|0|animal face grizzly growl honey
-🐻‍❄️|polar bear|an|0|animal arctic white
-🐨|koala|an|0|animal australia bear down face marsupial under
-🐼|panda|an|0|animal bamboo face
-🦥|sloth|an|0|lazy slow
-🦦|otter|an|0|animal fishing playful
-🦨|skunk|an|0|animal stink
-🦘|kangaroo|an|0|animal joey jump marsupial
-🦡|badger|an|0|animal honey pester
-🐾|paw prints|an|0|feet paws print
-🦃|turkey|an|0|bird gobble thanksgiving
-🐔|chicken|an|0|animal bird ornithology
-🐓|rooster|an|0|animal bird ornithology
-🐣|hatching chick|an|0|animal baby bird egg
-🐤|baby chick|an|0|animal bird ornithology
-🐥|front-facing baby chick|an|0|animal bird newborn ornithology
-🐦|bird|an|0|animal ornithology
-🐧|penguin|an|0|animal antarctica bird ornithology
-🕊️|dove|an|0|bird fly ornithology peace
-🦅|eagle|an|0|animal bird ornithology
-🦆|duck|an|0|animal bird ornithology
-🦢|swan|an|0|animal bird cygnet duckling ornithology ugly
-🦉|owl|an|0|animal bird ornithology wise
-🦤|dodo|an|0|animal bird extinction large ornithology
-🪶|feather|an|0|bird flight light plumage
-🦩|flamingo|an|0|animal bird flamboyant ornithology tropical
-🦚|peacock|an|0|animal bird colorful ornithology ostentatious peahen pretty proud
-🦜|parrot|an|0|animal bird ornithology pirate talk
-🪽|wing|an|0|angelic ascend aviation bird fly flying heavenly mythology
-🐦‍⬛|black bird|an|0|animal beak caw corvid crow ornithology raven rook
-🪿|goose|an|0|animal bird duck flock fowl gaggle gander geese
-🐦‍🔥|phoenix|an|0|ascend ascension emerge fantasy firebird glory immortal rebirth
-🐸|frog|an|0|animal face
-🐊|crocodile|an|0|animal zoo
-🐢|turtle|an|0|animal terrapin tortoise
-🦎|lizard|an|0|animal reptile
-🐍|snake|an|0|animal bearer ophiuchus serpent zodiac
-🐲|dragon face|an|0|animal fairy fairytale tale
-🐉|dragon|an|0|animal fairy fairytale knights tale
-🦕|sauropod|an|0|brachiosaurus brontosaurus dinosaur diplodocus
-🦖|t-rex|an|0|dinosaur rex t tyrannosaurus
-🐳|spouting whale|an|0|animal beach face ocean
-🐋|whale|an|0|animal beach ocean
-🐬|dolphin|an|0|animal beach flipper ocean
-🫍|orca|an|0|marine ocean whale
-🦭|seal|an|0|animal lion ocean sea
-🐟|fish|an|0|animal dinner fishes fishing pisces zodiac
-🐠|tropical fish|an|0|animal fishes
-🐡|blowfish|an|0|animal fish
-🦈|shark|an|0|animal fish
-🐙|octopus|an|0|animal creature ocean
-🐚|spiral shell|an|0|animal beach conch sea
-🪸|coral|an|0|change climate ocean reef sea
-🪼|jellyfish|an|0|animal aquarium burn invertebrate jelly life marine ocean
-🦀|crab|an|0|cancer zodiac
-🦞|lobster|an|0|animal bisque claws seafood
-🦐|shrimp|an|0|food shellfish small
-🦑|squid|an|0|animal food mollusk
-🦪|oyster|an|0|diving pearl
-🐌|snail|an|0|animal escargot garden nature slug
-🦋|butterfly|an|0|insect pretty
-🐛|bug|an|0|animal garden insect
-🐜|ant|an|0|animal garden insect
-🐝|honeybee|an|0|animal bee bumblebee honey insect nature spring
-🪲|beetle|an|0|animal bug insect
-🐞|lady beetle|an|0|animal garden insect ladybird ladybug nature
-🦗|cricket|an|0|animal bug grasshopper insect orthoptera
-🪳|cockroach|an|0|animal insect pest roach
-🕷️|spider|an|0|animal insect
+🐹|hamster|an|0|animal,face,pet
+🐰|rabbit face|an|0|animal,bunny,pet
+🐇|rabbit|an|0|animal,bunny,pet
+🐿️|chipmunk|an|0|animal,squirrel
+🦫|beaver|an|0|animal,dam,teeth
+🦔|hedgehog|an|0|animal,spiny
+🦇|bat|an|0|animal,vampire
+🐻|bear|an|0|animal,face,grizzly,growl,honey
+🐻‍❄️|polar bear|an|0|animal,arctic,white
+🐨|koala|an|0|animal,australia,bear,down,face,marsupial,under
+🐼|panda|an|0|animal,bamboo,face
+🦥|sloth|an|0|lazy,slow
+🦦|otter|an|0|animal,fishing,playful
+🦨|skunk|an|0|animal,stink
+🦘|kangaroo|an|0|animal,joey,jump,marsupial
+🦡|badger|an|0|animal,honey,pester
+🐾|paw prints|an|0|feet,paws,print
+🦃|turkey|an|0|bird,gobble,thanksgiving
+🐔|chicken|an|0|animal,bird,ornithology
+🐓|rooster|an|0|animal,bird,ornithology
+🐣|hatching chick|an|0|animal,baby,bird,egg
+🐤|baby chick|an|0|animal,bird,ornithology
+🐥|front-facing baby chick|an|0|animal,bird,newborn,ornithology
+🐦|bird|an|0|animal,ornithology
+🐧|penguin|an|0|animal,antarctica,bird,ornithology
+🕊️|dove|an|0|bird,fly,ornithology,peace
+🦅|eagle|an|0|animal,bird,ornithology
+🦆|duck|an|0|animal,bird,ornithology
+🦢|swan|an|0|animal,bird,cygnet,duckling,ornithology,ugly
+🦉|owl|an|0|animal,bird,ornithology,wise
+🦤|dodo|an|0|animal,bird,extinction,large,ornithology
+🪶|feather|an|0|bird,flight,light,plumage
+🦩|flamingo|an|0|animal,bird,flamboyant,ornithology,tropical
+🦚|peacock|an|0|animal,bird,colorful,ornithology,ostentatious,peahen,pretty,proud
+🦜|parrot|an|0|animal,bird,ornithology,pirate,talk
+🪽|wing|an|0|angelic,ascend,aviation,bird,fly,flying,heavenly,mythology,soar
+🐦‍⬛|black bird|an|0|animal,beak,caw,corvid,crow,ornithology,raven,rook
+🪿|goose|an|0|animal,bird,duck,flock,fowl,gaggle,gander,geese,honk,ornithology,silly
+🐦‍🔥|phoenix|an|0|ascend,ascension,emerge,fantasy,firebird,glory,immortal,rebirth,reincarnation,reinvent,renewal,revival,revive,rise,transform
+🐸|frog|an|0|animal,face
+🐊|crocodile|an|0|animal,zoo
+🐢|turtle|an|0|animal,terrapin,tortoise
+🦎|lizard|an|0|animal,reptile
+🐍|snake|an|0|animal,bearer,ophiuchus,serpent,zodiac
+🐲|dragon face|an|0|animal,fairy,fairytale,tale
+🐉|dragon|an|0|animal,fairy,fairytale,knights,tale
+🦕|sauropod|an|0|brachiosaurus,brontosaurus,dinosaur,diplodocus
+🦖|t-rex|an|0|dinosaur,rex,t,tyrannosaurus
+🐳|spouting whale|an|0|animal,beach,face,ocean
+🐋|whale|an|0|animal,beach,ocean
+🐬|dolphin|an|0|animal,beach,flipper,ocean
+🫍|orca|an|0|marine,ocean,whale
+🦭|seal|an|0|animal,lion,ocean,sea
+🐟|fish|an|0|animal,dinner,fishes,fishing,pisces,zodiac
+🐠|tropical fish|an|0|animal,fishes
+🐡|blowfish|an|0|animal,fish
+🦈|shark|an|0|animal,fish
+🐙|octopus|an|0|animal,creature,ocean
+🐚|spiral shell|an|0|animal,beach,conch,sea
+🪸|coral|an|0|change,climate,ocean,reef,sea
+🪼|jellyfish|an|0|animal,aquarium,burn,invertebrate,jelly,life,marine,ocean,ouch,plankton,sea,sting,stinger,tentacles
+🦀|crab|an|0|cancer,zodiac
+🦞|lobster|an|0|animal,bisque,claws,seafood
+🦐|shrimp|an|0|food,shellfish,small
+🦑|squid|an|0|animal,food,mollusk
+🦪|oyster|an|0|diving,pearl
+🐌|snail|an|0|animal,escargot,garden,nature,slug
+🦋|butterfly|an|0|insect,pretty
+🐛|bug|an|0|animal,garden,insect
+🐜|ant|an|0|animal,garden,insect
+🐝|honeybee|an|0|animal,bee,bumblebee,honey,insect,nature,spring
+🪲|beetle|an|0|animal,bug,insect
+🐞|lady beetle|an|0|animal,garden,insect,ladybird,ladybug,nature
+🦗|cricket|an|0|animal,bug,grasshopper,insect,orthoptera
+🪳|cockroach|an|0|animal,insect,pest,roach
+🕷️|spider|an|0|animal,insect
 🕸️|spider web|an|0|
-🦂|scorpion|an|0|scorpio scorpius zodiac
-🦟|mosquito|an|0|bite disease fever insect malaria pest virus
-🪰|fly|an|0|animal disease insect maggot pest rotting
-🪱|worm|an|0|animal annelid earthworm parasite
-🦠|microbe|an|0|amoeba bacteria science virus
-💐|bouquet|an|0|anniversary birthday date flower love plant romance
-🌸|cherry blossom|an|0|flower plant spring springtime
+🦂|scorpion|an|0|scorpio,scorpius,zodiac
+🦟|mosquito|an|0|bite,disease,fever,insect,malaria,pest,virus
+🪰|fly|an|0|animal,disease,insect,maggot,pest,rotting
+🪱|worm|an|0|animal,annelid,earthworm,parasite
+🦠|microbe|an|0|amoeba,bacteria,science,virus
+💐|bouquet|an|0|anniversary,birthday,date,flower,love,plant,romance
+🌸|cherry blossom|an|0|flower,plant,spring,springtime
 💮|white flower|an|0|
-🪷|lotus|an|0|beauty buddhism calm flower hinduism peace purity serenity
+🪷|lotus|an|0|beauty,buddhism,calm,flower,hinduism,peace,purity,serenity
 🏵️|rosette|an|0|plant
-🌹|rose|an|0|beauty elegant flower love plant red valentine
+🌹|rose|an|0|beauty,elegant,flower,love,plant,red,valentine
 🥀|wilted flower|an|0|dying
-🌺|hibiscus|an|0|flower plant
-🌻|sunflower|an|0|flower outdoors plant sun
-🌼|blossom|an|0|buttercup dandelion flower plant
-🌷|tulip|an|0|blossom flower growth plant
-🪻|hyacinth|an|0|bloom bluebonnet flower indigo lavender lilac lupine plant
-🌱|seedling|an|0|plant sapling sprout young
-🪴|potted plant|an|0|decor grow house nurturing pot
-🌲|evergreen tree|an|0|christmas forest pine
-🌳|deciduous tree|an|0|forest green habitat shedding
-🌴|palm tree|an|0|beach plant tropical
-🌵|cactus|an|0|desert drought nature plant
-🌾|sheaf of rice|an|0|ear grain grains plant
-🌿|herb|an|0|leaf plant
-☘️|shamrock|an|0|irish plant
-🍀|four leaf clover|an|0|4 four-leaf irish lucky plant
+🌺|hibiscus|an|0|flower,plant
+🌻|sunflower|an|0|flower,outdoors,plant,sun
+🌼|blossom|an|0|buttercup,dandelion,flower,plant
+🌷|tulip|an|0|blossom,flower,growth,plant
+🪻|hyacinth|an|0|bloom,bluebonnet,flower,indigo,lavender,lilac,lupine,plant,purple,shrub,snapdragon,spring,violet
+🌱|seedling|an|0|plant,sapling,sprout,young
+🪴|potted plant|an|0|decor,grow,house,nurturing,pot
+🌲|evergreen tree|an|0|christmas,forest,pine
+🌳|deciduous tree|an|0|forest,green,habitat,shedding
+🌴|palm tree|an|0|beach,plant,tropical
+🌵|cactus|an|0|desert,drought,nature,plant
+🌾|sheaf of rice|an|0|ear,grain,grains,plant
+🌿|herb|an|0|leaf,plant
+☘️|shamrock|an|0|irish,plant
+🍀|four leaf clover|an|0|4,four-leaf,irish,lucky,plant
 🍁|maple leaf|an|0|falling
-🍂|fallen leaf|an|0|autumn fall falling
-🍃|leaf fluttering in wind|an|0|blow flutter
-🪹|empty nest|an|0|branch home nesting
-🪺|nest with eggs|an|0|bird branch egg nesting
-🍄|mushroom|an|0|fungus toadstool
-🪾|leafless tree|an|0|bare barren branches dead drought trunk winter wood
-🍇|grapes|fd|0|dionysus fruit grape
-🍈|melon|fd|0|cantaloupe fruit
+🍂|fallen leaf|an|0|autumn,fall,falling
+🍃|leaf fluttering in wind|an|0|blow,flutter
+🪹|empty nest|an|0|branch,home,nesting
+🪺|nest with eggs|an|0|bird,branch,egg,nesting
+🍄|mushroom|an|0|fungus,toadstool
+🪾|leafless tree|an|0|bare,barren,branches,dead,drought,trunk,winter,wood
+🍇|grapes|fd|0|dionysus,fruit,grape
+🍈|melon|fd|0|cantaloupe,fruit
 🍉|watermelon|fd|0|fruit
-🍊|tangerine|fd|0|c citrus fruit nectarine orange vitamin
-🍋|lemon|fd|0|citrus fruit sour
-🍋‍🟩|lime|fd|0|acidity citrus cocktail fruit garnish key margarita mojito
-🍌|banana|fd|0|fruit potassium
-🍍|pineapple|fd|0|colada fruit pina tropical
-🥭|mango|fd|0|food fruit tropical
-🍎|red apple|fd|0|diet food fruit health ripe
+🍊|tangerine|fd|0|c,citrus,fruit,nectarine,orange,vitamin
+🍋|lemon|fd|0|citrus,fruit,sour
+🍋‍🟩|lime|fd|0|acidity,citrus,cocktail,fruit,garnish,key,margarita,mojito,refreshing,salsa,sour,tangy,tequila,tropical,zest
+🍌|banana|fd|0|fruit,potassium
+🍍|pineapple|fd|0|colada,fruit,pina,tropical
+🥭|mango|fd|0|food,fruit,tropical
+🍎|red apple|fd|0|diet,food,fruit,health,ripe
 🍏|green apple|fd|0|fruit
 🍐|pear|fd|0|fruit
 🍑|peach|fd|0|fruit
-🍒|cherries|fd|0|berries cherry fruit red
-🍓|strawberry|fd|0|berry fruit
-🫐|blueberries|fd|0|berries berry bilberry blue blueberry food fruit
+🍒|cherries|fd|0|berries,cherry,fruit,red
+🍓|strawberry|fd|0|berry,fruit
+🫐|blueberries|fd|0|berries,berry,bilberry,blue,blueberry,food,fruit
 🥝|kiwi fruit|fd|0|food
-🍅|tomato|fd|0|food fruit vegetable
+🍅|tomato|fd|0|food,fruit,vegetable
 🫒|olive|fd|0|food
-🥥|coconut|fd|0|colada palm piña
-🥑|avocado|fd|0|food fruit
-🍆|eggplant|fd|0|aubergine vegetable
-🥔|potato|fd|0|food vegetable
-🥕|carrot|fd|0|food vegetable
-🌽|ear of corn|fd|0|crops farm maize maze
+🥥|coconut|fd|0|colada,palm,piña
+🥑|avocado|fd|0|food,fruit
+🍆|eggplant|fd|0|aubergine,vegetable
+🥔|potato|fd|0|food,vegetable
+🥕|carrot|fd|0|food,vegetable
+🌽|ear of corn|fd|0|crops,farm,maize,maze
 🌶️|hot pepper|fd|0|
-🫑|bell pepper|fd|0|capsicum food vegetable
-🥒|cucumber|fd|0|food pickle vegetable
-🥬|leafy green|fd|0|bok burgers cabbage choy kale lettuce salad
-🥦|broccoli|fd|0|cabbage wild
+🫑|bell pepper|fd|0|capsicum,food,vegetable
+🥒|cucumber|fd|0|food,pickle,vegetable
+🥬|leafy green|fd|0|bok,burgers,cabbage,choy,kale,lettuce,salad
+🥦|broccoli|fd|0|cabbage,wild
 🧄|garlic|fd|0|flavoring
 🧅|onion|fd|0|flavoring
-🥜|peanuts|fd|0|food nut peanut vegetable
-🫘|beans|fd|0|food kidney legume small
-🌰|chestnut|fd|0|almond plant
-🫚|ginger root|fd|0|beer health herb natural spice
-🫛|pea pod|fd|0|beans beanstalk edamame legume soybean vegetable veggie
-🍄‍🟫|brown mushroom|fd|0|food fungi fungus nature pizza portobello shiitake shroom
-🫜|root vegetable|fd|0|beet food garden radish salad turnip vegetarian
-🍞|bread|fd|0|carbs food grain loaf restaurant toast wheat
-🥐|croissant|fd|0|bread breakfast crescent food french roll
-🥖|baguette bread|fd|0|food french
-🫓|flatbread|fd|0|arepa bread food gordita lavash naan pita
-🥨|pretzel|fd|0|convoluted twisted
-🥯|bagel|fd|0|bakery bread breakfast schmear
-🥞|pancakes|fd|0|breakfast crêpe food hotcake pancake
-🧇|waffle|fd|0|breakfast indecisive iron
+🥜|peanuts|fd|0|food,nut,peanut,vegetable
+🫘|beans|fd|0|food,kidney,legume,small
+🌰|chestnut|fd|0|almond,plant
+🫚|ginger root|fd|0|beer,health,herb,natural,spice
+🫛|pea pod|fd|0|beans,beanstalk,edamame,legume,soybean,vegetable,veggie
+🍄‍🟫|brown mushroom|fd|0|food,fungi,fungus,nature,pizza,portobello,shiitake,shroom,spore,sprout,toppings,truffle,vegetable,vegetarian,veggie
+🫜|root vegetable|fd|0|beet,food,garden,radish,salad,turnip,vegetarian
+🍞|bread|fd|0|carbs,food,grain,loaf,restaurant,toast,wheat
+🥐|croissant|fd|0|bread,breakfast,crescent,food,french,roll
+🥖|baguette bread|fd|0|food,french
+🫓|flatbread|fd|0|arepa,bread,food,gordita,lavash,naan,pita
+🥨|pretzel|fd|0|convoluted,twisted
+🥯|bagel|fd|0|bakery,bread,breakfast,schmear
+🥞|pancakes|fd|0|breakfast,crêpe,food,hotcake,pancake
+🧇|waffle|fd|0|breakfast,indecisive,iron
 🧀|cheese wedge|fd|0|
 🍖|meat on bone|fd|0|
-🍗|poultry leg|fd|0|bone chicken drumstick hungry turkey
-🥩|cut of meat|fd|0|chop lambchop porkchop red steak
-🥓|bacon|fd|0|breakfast food meat
-🍔|hamburger|fd|0|burger eat fast food hungry
-🍟|french fries|fd|0|fast food
-🍕|pizza|fd|0|cheese food hungry pepperoni slice
-🌭|hot dog|fd|0|frankfurter hotdog sausage
+🍗|poultry leg|fd|0|bone,chicken,drumstick,hungry,turkey
+🥩|cut of meat|fd|0|chop,lambchop,porkchop,red,steak
+🥓|bacon|fd|0|breakfast,food,meat
+🍔|hamburger|fd|0|burger,eat,fast,food,hungry
+🍟|french fries|fd|0|fast,food
+🍕|pizza|fd|0|cheese,food,hungry,pepperoni,slice
+🌭|hot dog|fd|0|frankfurter,hotdog,sausage
 🥪|sandwich|fd|0|bread
 🌮|taco|fd|0|mexican
-🌯|burrito|fd|0|mexican wrap
-🫔|tamale|fd|0|food mexican pamonha wrapped
-🥙|stuffed flatbread|fd|0|falafel food gyro kebab
-🧆|falafel|fd|0|chickpea meatball
-🥚|egg|fd|0|breakfast food
-🍳|cooking|fd|0|breakfast easy egg fry frying over pan restaurant
-🥘|shallow pan of food|fd|0|casserole paella
-🍲|pot of food|fd|0|soup stew
-🫕|fondue|fd|0|cheese chocolate food melted pot ski
-🥣|bowl with spoon|fd|0|breakfast cereal congee oatmeal porridge
+🌯|burrito|fd|0|mexican,wrap
+🫔|tamale|fd|0|food,mexican,pamonha,wrapped
+🥙|stuffed flatbread|fd|0|falafel,food,gyro,kebab
+🧆|falafel|fd|0|chickpea,meatball
+🥚|egg|fd|0|breakfast,food
+🍳|cooking|fd|0|breakfast,easy,egg,fry,frying,over,pan,restaurant,side,sunny,up
+🥘|shallow pan of food|fd|0|casserole,paella
+🍲|pot of food|fd|0|soup,stew
+🫕|fondue|fd|0|cheese,chocolate,food,melted,pot,ski
+🥣|bowl with spoon|fd|0|breakfast,cereal,congee,oatmeal,porridge
 🥗|green salad|fd|0|food
-🍿|popcorn|fd|0|corn movie pop
+🍿|popcorn|fd|0|corn,movie,pop
 🧈|butter|fd|0|dairy
-🧂|salt|fd|0|condiment flavor mad salty shaker taste upset
+🧂|salt|fd|0|condiment,flavor,mad,salty,shaker,taste,upset
 🥫|canned food|fd|0|can
 🍱|bento box|fd|0|food
 🍘|rice cracker|fd|0|food
-🍙|rice ball|fd|0|food japanese
+🍙|rice ball|fd|0|food,japanese
 🍚|cooked rice|fd|0|food
 🍛|curry rice|fd|0|food
-🍜|steaming bowl|fd|0|chopsticks food noodle pho ramen soup
-🍝|spaghetti|fd|0|food meatballs pasta restaurant
+🍜|steaming bowl|fd|0|chopsticks,food,noodle,pho,ramen,soup
+🍝|spaghetti|fd|0|food,meatballs,pasta,restaurant
 🍠|roasted sweet potato|fd|0|food
-🍢|oden|fd|0|food kebab restaurant seafood skewer stick
+🍢|oden|fd|0|food,kebab,restaurant,seafood,skewer,stick
 🍣|sushi|fd|0|food
-🍤|fried shrimp|fd|0|prawn tempura
-🍥|fish cake with swirl|fd|0|food pastry restaurant
-🥮|moon cake|fd|0|autumn festival yuèbǐng
-🍡|dango|fd|0|dessert japanese skewer stick sweet
-🥟|dumpling|fd|0|empanada gyōza jiaozi pierogi potsticker
+🍤|fried shrimp|fd|0|prawn,tempura
+🍥|fish cake with swirl|fd|0|food,pastry,restaurant
+🥮|moon cake|fd|0|autumn,festival,yuèbǐng
+🍡|dango|fd|0|dessert,japanese,skewer,stick,sweet
+🥟|dumpling|fd|0|empanada,gyōza,jiaozi,pierogi,potsticker
 🥠|fortune cookie|fd|0|prophecy
-🥡|takeout box|fd|0|chopsticks delivery food oyster pail
-🍦|soft ice cream|fd|0|dessert food icecream restaurant serve sweet
-🍧|shaved ice|fd|0|dessert restaurant sweet
-🍨|ice cream|fd|0|dessert food restaurant sweet
-🍩|doughnut|fd|0|breakfast dessert donut food sweet
-🍪|cookie|fd|0|chip chocolate dessert sweet
-🎂|birthday cake|fd|0|bday celebration dessert happy pastry sweet
-🍰|shortcake|fd|0|cake dessert pastry slice sweet
-🧁|cupcake|fd|0|bakery dessert sprinkles sugar sweet treat
-🥧|pie|fd|0|apple filling fruit meat pastry pumpkin slice
-🍫|chocolate bar|fd|0|candy dessert halloween sweet tooth
-🍬|candy|fd|0|cavities dessert halloween restaurant sweet tooth wrapper
-🍭|lollipop|fd|0|candy dessert food restaurant sweet
-🍮|custard|fd|0|dessert pudding sweet
-🍯|honey pot|fd|0|barrel bear food honeypot jar sweet
-🍼|baby bottle|fd|0|babies birth born drink infant milk newborn
+🥡|takeout box|fd|0|chopsticks,delivery,food,oyster,pail
+🍦|soft ice cream|fd|0|dessert,food,icecream,restaurant,serve,sweet
+🍧|shaved ice|fd|0|dessert,restaurant,sweet
+🍨|ice cream|fd|0|dessert,food,restaurant,sweet
+🍩|doughnut|fd|0|breakfast,dessert,donut,food,sweet
+🍪|cookie|fd|0|chip,chocolate,dessert,sweet
+🎂|birthday cake|fd|0|bday,celebration,dessert,happy,pastry,sweet
+🍰|shortcake|fd|0|cake,dessert,pastry,slice,sweet
+🧁|cupcake|fd|0|bakery,dessert,sprinkles,sugar,sweet,treat
+🥧|pie|fd|0|apple,filling,fruit,meat,pastry,pumpkin,slice
+🍫|chocolate bar|fd|0|candy,dessert,halloween,sweet,tooth
+🍬|candy|fd|0|cavities,dessert,halloween,restaurant,sweet,tooth,wrapper
+🍭|lollipop|fd|0|candy,dessert,food,restaurant,sweet
+🍮|custard|fd|0|dessert,pudding,sweet
+🍯|honey pot|fd|0|barrel,bear,food,honeypot,jar,sweet
+🍼|baby bottle|fd|0|babies,birth,born,drink,infant,milk,newborn
 🥛|glass of milk|fd|0|drink
-☕|hot beverage|fd|0|cafe caffeine chai coffee drink morning steaming tea
-🫖|teapot|fd|0|brew drink food pot tea
-🍵|teacup without handle|fd|0|beverage cup drink oolong tea
-🍶|sake|fd|0|bar beverage bottle cup drink restaurant
-🍾|bottle with popping cork|fd|0|bar drink
-🍷|wine glass|fd|0|alcohol bar beverage booze club drink drinking drinks
-🍸|cocktail glass|fd|0|alcohol bar booze club drink drinking drinks mad
-🍹|tropical drink|fd|0|alcohol bar booze club cocktail drinking drinks drunk
-🍺|beer mug|fd|0|alcohol ale bar booze drink drinking drinks octoberfest
-🍻|clinking beer mugs|fd|0|alcohol bar booze bottoms cheers clink drinking drinks
-🥂|clinking glasses|fd|0|celebrate clink drink glass
-🥃|tumbler glass|fd|0|liquor scotch shot whiskey whisky
-🫗|pouring liquid|fd|0|accident drink empty glass oops pour spill water
-🥤|cup with straw|fd|0|drink juice malt soda soft water
-🧋|bubble tea|fd|0|boba food milk pearl
-🧃|beverage box|fd|0|juice straw sweet
+☕|hot beverage|fd|0|cafe,caffeine,chai,coffee,drink,morning,steaming,tea
+🫖|teapot|fd|0|brew,drink,food,pot,tea
+🍵|teacup without handle|fd|0|beverage,cup,drink,oolong,tea
+🍶|sake|fd|0|bar,beverage,bottle,cup,drink,restaurant
+🍾|bottle with popping cork|fd|0|bar,drink
+🍷|wine glass|fd|0|alcohol,bar,beverage,booze,club,drink,drinking,drinks,restaurant
+🍸|cocktail glass|fd|0|alcohol,bar,booze,club,drink,drinking,drinks,mad,martini,men
+🍹|tropical drink|fd|0|alcohol,bar,booze,club,cocktail,drinking,drinks,drunk,mai,party,tai,tropics
+🍺|beer mug|fd|0|alcohol,ale,bar,booze,drink,drinking,drinks,octoberfest,oktoberfest,pint,stein,summer
+🍻|clinking beer mugs|fd|0|alcohol,bar,booze,bottoms,cheers,clink,drinking,drinks
+🥂|clinking glasses|fd|0|celebrate,clink,drink,glass
+🥃|tumbler glass|fd|0|liquor,scotch,shot,whiskey,whisky
+🫗|pouring liquid|fd|0|accident,drink,empty,glass,oops,pour,spill,water
+🥤|cup with straw|fd|0|drink,juice,malt,soda,soft,water
+🧋|bubble tea|fd|0|boba,food,milk,pearl
+🧃|beverage box|fd|0|juice,straw,sweet
 🧉|mate|fd|0|drink
-🧊|ice|fd|0|cold cube iceberg
-🥢|chopsticks|fd|0|hashi jeotgarak kuaizi
-🍽️|fork and knife with plate|fd|0|cooking dinner eat
-🍴|fork and knife|fd|0|breakfast breaky cooking cutlery delicious dinner eat feed
-🥄|spoon|fd|0|eat tableware
-🔪|kitchen knife|fd|0|chef cooking hocho tool weapon
-🫙|jar|fd|0|condiment container empty nothing sauce store
-🏺|amphora|fd|0|aquarius cooking drink jug tool weapon zodiac
-🌍|globe showing europe-africa|tp|0|africa earth europe world
-🌎|globe showing americas|tp|0|earth world
-🌏|globe showing asia-australia|tp|0|asia australia earth world
-🌐|globe with meridians|tp|0|earth internet web world worldwide
+🧊|ice|fd|0|cold,cube,iceberg
+🥢|chopsticks|fd|0|hashi,jeotgarak,kuaizi
+🍽️|fork and knife with plate|fd|0|cooking,dinner,eat
+🍴|fork and knife|fd|0|breakfast,breaky,cooking,cutlery,delicious,dinner,eat,feed,food,hungry,lunch,restaurant,yum,yummy
+🥄|spoon|fd|0|eat,tableware
+🔪|kitchen knife|fd|0|chef,cooking,hocho,tool,weapon
+🫙|jar|fd|0|condiment,container,empty,nothing,sauce,store
+🏺|amphora|fd|0|aquarius,cooking,drink,jug,tool,weapon,zodiac
+🌍|globe showing europe-africa|tp|0|africa,earth,europe,world
+🌎|globe showing americas|tp|0|earth,world
+🌏|globe showing asia-australia|tp|0|asia,australia,earth,world
+🌐|globe with meridians|tp|0|earth,internet,web,world,worldwide
 🗺️|world map|tp|0|
 🗾|map of japan|tp|0|
-🧭|compass|tp|0|direction magnetic navigation orienteering
-🏔️|snow-capped mountain|tp|0|cold snow
+🧭|compass|tp|0|direction,magnetic,navigation,orienteering
+🏔️|snow-capped mountain|tp|0|cold,snow
 ⛰️|mountain|tp|0|
-🛘|landslide|tp|0|avalanche danger disaster earthquake mountain mudslide rocks
-🌋|volcano|tp|0|eruption mountain nature
-🗻|mount fuji|tp|0|mountain nature
+🛘|landslide|tp|0|avalanche,danger,disaster,earthquake,mountain,mudslide,rocks
+🌋|volcano|tp|0|eruption,mountain,nature
+🗻|mount fuji|tp|0|mountain,nature
 🏕️|camping|tp|0|
 🏖️|beach with umbrella|tp|0|
 🏜️|desert|tp|0|
@@ -872,81 +872,81 @@ enum EmojiData {
 🏟️|stadium|tp|0|
 🏛️|classical building|tp|0|
 🏗️|building construction|tp|0|crane
-🧱|brick|tp|0|bricks clay mortar wall
-🪨|rock|tp|0|boulder heavy solid stone tough
-🪵|wood|tp|0|log lumber timber
-🛖|hut|tp|0|home house roundhouse shelter yurt
+🧱|brick|tp|0|bricks,clay,mortar,wall
+🪨|rock|tp|0|boulder,heavy,solid,stone,tough
+🪵|wood|tp|0|log,lumber,timber
+🛖|hut|tp|0|home,house,roundhouse,shelter,yurt
 🏘️|houses|tp|0|house
 🏚️|derelict house|tp|0|home
-🏠|house|tp|0|building country heart home ranch settle simple suburban
-🏡|house with garden|tp|0|building country heart home ranch settle simple suburban
-🏢|office building|tp|0|city cubical job
+🏠|house|tp|0|building,country,heart,home,ranch,settle,simple,suburban,suburbia,where
+🏡|house with garden|tp|0|building,country,heart,home,ranch,settle,simple,suburban,suburbia,where
+🏢|office building|tp|0|city,cubical,job
 🏣|japanese post office|tp|0|building
-🏤|post office|tp|0|building european
-🏥|hospital|tp|0|building doctor medicine
+🏤|post office|tp|0|building,european
+🏥|hospital|tp|0|building,doctor,medicine
 🏦|bank|tp|0|building
 🏨|hotel|tp|0|building
 🏩|love hotel|tp|0|building
-🏪|convenience store|tp|0|24 building hours
+🏪|convenience store|tp|0|24,building,hours
 🏫|school|tp|0|building
 🏬|department store|tp|0|building
 🏭|factory|tp|0|building
 🏯|japanese castle|tp|0|building
-🏰|castle|tp|0|building european
-💒|wedding|tp|0|chapel hitched nuptials romance
+🏰|castle|tp|0|building,european
+💒|wedding|tp|0|chapel,hitched,nuptials,romance
 🗼|tokyo tower|tp|0|
-🗽|statue of liberty|tp|0|new ny nyc york
-⛪|church|tp|0|bless chapel christian cross religion
-🕌|mosque|tp|0|islam masjid muslim religion
+🗽|statue of liberty|tp|0|new,ny,nyc,york
+⛪|church|tp|0|bless,chapel,christian,cross,religion
+🕌|mosque|tp|0|islam,masjid,muslim,religion
 🛕|hindu temple|tp|0|
-🕍|synagogue|tp|0|jew jewish judaism religion temple
+🕍|synagogue|tp|0|jew,jewish,judaism,religion,temple
 ⛩️|shinto shrine|tp|0|religion
-🕋|kaaba|tp|0|hajj islam muslim religion umrah
+🕋|kaaba|tp|0|hajj,islam,muslim,religion,umrah
 ⛲|fountain|tp|0|
 ⛺|tent|tp|0|camping
 🌁|foggy|tp|0|fog
 🌃|night with stars|tp|0|star
 🏙️|cityscape|tp|0|city
-🌄|sunrise over mountains|tp|0|morning sun
-🌅|sunrise|tp|0|morning nature sun
-🌆|cityscape at dusk|tp|0|building city evening landscape sun sunset
-🌇|sunset|tp|0|building dusk sun
+🌄|sunrise over mountains|tp|0|morning,sun
+🌅|sunrise|tp|0|morning,nature,sun
+🌆|cityscape at dusk|tp|0|building,city,evening,landscape,sun,sunset
+🌇|sunset|tp|0|building,dusk,sun
 🌉|bridge at night|tp|0|
-♨️|hot springs|tp|0|hotsprings steaming
+♨️|hot springs|tp|0|hotsprings,steaming
 🎠|carousel horse|tp|0|entertainment
-🛝|playground slide|tp|0|amusement park play playing sliding theme
-🎡|ferris wheel|tp|0|amusement park theme
-🎢|roller coaster|tp|0|amusement park theme
-💈|barber pole|tp|0|cut fresh haircut shave
+🛝|playground slide|tp|0|amusement,park,play,playing,sliding,theme
+🎡|ferris wheel|tp|0|amusement,park,theme
+🎢|roller coaster|tp|0|amusement,park,theme
+💈|barber pole|tp|0|cut,fresh,haircut,shave
 🎪|circus tent|tp|0|
-🚂|locomotive|tp|0|caboose engine railway steam train trains travel
-🚃|railway car|tp|0|electric train tram travel trolleybus
-🚄|high-speed train|tp|0|railway shinkansen speed
-🚅|bullet train|tp|0|high-speed nose railway shinkansen speed travel
-🚆|train|tp|0|arrived choo railway
-🚇|metro|tp|0|subway travel
-🚈|light rail|tp|0|arrived monorail railway
-🚉|station|tp|0|railway train
+🚂|locomotive|tp|0|caboose,engine,railway,steam,train,trains,travel
+🚃|railway car|tp|0|electric,train,tram,travel,trolleybus
+🚄|high-speed train|tp|0|railway,shinkansen,speed
+🚅|bullet train|tp|0|high-speed,nose,railway,shinkansen,speed,travel
+🚆|train|tp|0|arrived,choo,railway
+🚇|metro|tp|0|subway,travel
+🚈|light rail|tp|0|arrived,monorail,railway
+🚉|station|tp|0|railway,train
 🚊|tram|tp|0|trolleybus
 🚝|monorail|tp|0|vehicle
-🚞|mountain railway|tp|0|car trip
-🚋|tram car|tp|0|bus trolley trolleybus
-🚌|bus|tp|0|school vehicle
+🚞|mountain railway|tp|0|car,trip
+🚋|tram car|tp|0|bus,trolley,trolleybus
+🚌|bus|tp|0|school,vehicle
 🚍|oncoming bus|tp|0|cars
-🚎|trolleybus|tp|0|bus tram trolley
-🚐|minibus|tp|0|bus drive van vehicle
-🚑|ambulance|tp|0|emergency vehicle
+🚎|trolleybus|tp|0|bus,tram,trolley
+🚐|minibus|tp|0|bus,drive,van,vehicle
+🚑|ambulance|tp|0|emergency,vehicle
 🚒|fire engine|tp|0|truck
-🚓|police car|tp|0|5–0 cops patrol
+🚓|police car|tp|0|5–0,cops,patrol
 🚔|oncoming police car|tp|0|
-🚕|taxi|tp|0|cab cabbie car drive vehicle yellow
-🚖|oncoming taxi|tp|0|cab cabbie cars drove hail yellow
-🚗|automobile|tp|0|car driving vehicle
-🚘|oncoming automobile|tp|0|car cars drove vehicle
-🚙|sport utility vehicle|tp|0|car drive recreational sportutility
-🛻|pickup truck|tp|0|automobile car flatbed pick-up transportation
-🚚|delivery truck|tp|0|car drive vehicle
-🚛|articulated lorry|tp|0|car drive move semi truck vehicle
+🚕|taxi|tp|0|cab,cabbie,car,drive,vehicle,yellow
+🚖|oncoming taxi|tp|0|cab,cabbie,cars,drove,hail,yellow
+🚗|automobile|tp|0|car,driving,vehicle
+🚘|oncoming automobile|tp|0|car,cars,drove,vehicle
+🚙|sport utility vehicle|tp|0|car,drive,recreational,sportutility
+🛻|pickup truck|tp|0|automobile,car,flatbed,pick-up,transportation
+🚚|delivery truck|tp|0|car,drive,vehicle
+🚛|articulated lorry|tp|0|car,drive,move,semi,truck,vehicle
 🚜|tractor|tp|0|vehicle
 🏎️|racing car|tp|0|zoom
 🏍️|motorcycle|tp|0|racing
@@ -954,362 +954,362 @@ enum EmojiData {
 🦽|manual wheelchair|tp|0|accessibility
 🦼|motorized wheelchair|tp|0|accessibility
 🛺|auto rickshaw|tp|0|tuk
-🚲|bicycle|tp|0|bike class cycle cycling cyclist gang ride spin
+🚲|bicycle|tp|0|bike,class,cycle,cycling,cyclist,gang,ride,spin,spinning
 🛴|kick scooter|tp|0|
-🛹|skateboard|tp|0|board skate skater wheels
-🛼|roller skate|tp|0|blades skates sport
+🛹|skateboard|tp|0|board,skate,skater,wheels
+🛼|roller skate|tp|0|blades,skates,sport
 🚏|bus stop|tp|0|busstop
-🛣️|motorway|tp|0|highway road
+🛣️|motorway|tp|0|highway,road
 🛤️|railway track|tp|0|train
 🛢️|oil drum|tp|0|
-⛽|fuel pump|tp|0|diesel fuelpump gas gasoline station
-🛞|wheel|tp|0|car circle tire turn vehicle
-🚨|police car light|tp|0|alarm alert beacon emergency revolving siren
-🚥|horizontal traffic light|tp|0|intersection signal stop stoplight
-🚦|vertical traffic light|tp|0|drove intersection signal stop stoplight
+⛽|fuel pump|tp|0|diesel,fuelpump,gas,gasoline,station
+🛞|wheel|tp|0|car,circle,tire,turn,vehicle
+🚨|police car light|tp|0|alarm,alert,beacon,emergency,revolving,siren
+🚥|horizontal traffic light|tp|0|intersection,signal,stop,stoplight
+🚦|vertical traffic light|tp|0|drove,intersection,signal,stop,stoplight
 🛑|stop sign|tp|0|octagonal
 🚧|construction|tp|0|barrier
-⚓|anchor|tp|0|ship tool
-🛟|ring buoy|tp|0|float life lifesaver preserver rescue safety save saver
-⛵|sailboat|tp|0|boat resort sailing sea yacht
+⚓|anchor|tp|0|ship,tool
+🛟|ring buoy|tp|0|float,life,lifesaver,preserver,rescue,safety,save,saver,swim
+⛵|sailboat|tp|0|boat,resort,sailing,sea,yacht
 🛶|canoe|tp|0|boat
-🚤|speedboat|tp|0|billionaire boat lake luxury millionaire summer travel
+🚤|speedboat|tp|0|billionaire,boat,lake,luxury,millionaire,summer,travel
 🛳️|passenger ship|tp|0|
-⛴️|ferry|tp|0|boat passenger
+⛴️|ferry|tp|0|boat,passenger
 🛥️|motor boat|tp|0|motorboat
-🚢|ship|tp|0|boat passenger travel
-✈️|airplane|tp|0|aeroplane fly flying jet plane travel
-🛩️|small airplane|tp|0|aeroplane plane
-🛫|airplane departure|tp|0|aeroplane check-in departures plane
-🛬|airplane arrival|tp|0|aeroplane arrivals arriving landing plane
-🪂|parachute|tp|0|hang-glide parasail skydive
+🚢|ship|tp|0|boat,passenger,travel
+✈️|airplane|tp|0|aeroplane,fly,flying,jet,plane,travel
+🛩️|small airplane|tp|0|aeroplane,plane
+🛫|airplane departure|tp|0|aeroplane,check-in,departures,plane
+🛬|airplane arrival|tp|0|aeroplane,arrivals,arriving,landing,plane
+🪂|parachute|tp|0|hang-glide,parasail,skydive
 💺|seat|tp|0|chair
-🚁|helicopter|tp|0|copter roflcopter travel vehicle
+🚁|helicopter|tp|0|copter,roflcopter,travel,vehicle
 🚟|suspension railway|tp|0|
-🚠|mountain cableway|tp|0|cable gondola lift ski
-🚡|aerial tramway|tp|0|cable car gondola ropeway
+🚠|mountain cableway|tp|0|cable,gondola,lift,ski
+🚡|aerial tramway|tp|0|cable,car,gondola,ropeway
 🛰️|satellite|tp|0|space
-🚀|rocket|tp|0|launch rockets space travel
-🛸|flying saucer|tp|0|aliens extra terrestrial ufo
+🚀|rocket|tp|0|launch,rockets,space,travel
+🛸|flying saucer|tp|0|aliens,extra,terrestrial,ufo
 🛎️|bellhop bell|tp|0|hotel
-🧳|luggage|tp|0|bag packing roller suitcase travel
-⌛|hourglass done|tp|0|sand time timer
-⏳|hourglass not done|tp|0|flowing hours sand timer waiting yolo
-⌚|watch|tp|0|clock time
-⏰|alarm clock|tp|0|hours hrs late time waiting
-⏱️|stopwatch|tp|0|clock time
+🧳|luggage|tp|0|bag,packing,roller,suitcase,travel
+⌛|hourglass done|tp|0|sand,time,timer
+⏳|hourglass not done|tp|0|flowing,hours,sand,timer,waiting,yolo
+⌚|watch|tp|0|clock,time
+⏰|alarm clock|tp|0|hours,hrs,late,time,waiting
+⏱️|stopwatch|tp|0|clock,time
 ⏲️|timer clock|tp|0|
 🕰️|mantelpiece clock|tp|0|time
-🕛|twelve o’clock|tp|0|12 12:00 clock time
-🕧|twelve-thirty|tp|0|12 12:30 30 clock thirty time twelve
-🕐|one o’clock|tp|0|1 1:00 clock time
-🕜|one-thirty|tp|0|1 1:30 30 clock one thirty time
-🕑|two o’clock|tp|0|2 2:00 clock time
-🕝|two-thirty|tp|0|2 2:30 30 clock thirty time two
-🕒|three o’clock|tp|0|3 3:00 clock time
-🕞|three-thirty|tp|0|3 3:30 30 clock thirty three time
-🕓|four o’clock|tp|0|4 4:00 clock time
-🕟|four-thirty|tp|0|30 4 4:30 clock four thirty time
-🕔|five o’clock|tp|0|5 5:00 clock time
-🕠|five-thirty|tp|0|30 5 5:30 clock five thirty time
-🕕|six o’clock|tp|0|6 6:00 clock time
-🕡|six-thirty|tp|0|30 6 6:30 clock six thirty
-🕖|seven o’clock|tp|0|0 7 7:00 clock
-🕢|seven-thirty|tp|0|30 7 7:30 clock seven thirty
-🕗|eight o’clock|tp|0|8 8:00 clock time
-🕣|eight-thirty|tp|0|30 8 8:30 clock eight thirty time
-🕘|nine o’clock|tp|0|9 9:00 clock time
-🕤|nine-thirty|tp|0|30 9 9:30 clock nine thirty time
-🕙|ten o’clock|tp|0|0 10 10:00 clock
-🕥|ten-thirty|tp|0|10 10:30 30 clock ten thirty time
-🕚|eleven o’clock|tp|0|11 11:00 clock time
-🕦|eleven-thirty|tp|0|11 11:30 30 clock eleven thirty time
-🌑|new moon|tp|0|dark space
-🌒|waxing crescent moon|tp|0|dreams space
+🕛|twelve o’clock|tp|0|12,12:00,clock,time
+🕧|twelve-thirty|tp|0|12,12:30,30,clock,thirty,time,twelve
+🕐|one o’clock|tp|0|1,1:00,clock,time
+🕜|one-thirty|tp|0|1,1:30,30,clock,one,thirty,time
+🕑|two o’clock|tp|0|2,2:00,clock,time
+🕝|two-thirty|tp|0|2,2:30,30,clock,thirty,time,two
+🕒|three o’clock|tp|0|3,3:00,clock,time
+🕞|three-thirty|tp|0|3,3:30,30,clock,thirty,three,time
+🕓|four o’clock|tp|0|4,4:00,clock,time
+🕟|four-thirty|tp|0|30,4,4:30,clock,four,thirty,time
+🕔|five o’clock|tp|0|5,5:00,clock,time
+🕠|five-thirty|tp|0|30,5,5:30,clock,five,thirty,time
+🕕|six o’clock|tp|0|6,6:00,clock,time
+🕡|six-thirty|tp|0|30,6,6:30,clock,six,thirty
+🕖|seven o’clock|tp|0|0,7,7:00,clock
+🕢|seven-thirty|tp|0|30,7,7:30,clock,seven,thirty
+🕗|eight o’clock|tp|0|8,8:00,clock,time
+🕣|eight-thirty|tp|0|30,8,8:30,clock,eight,thirty,time
+🕘|nine o’clock|tp|0|9,9:00,clock,time
+🕤|nine-thirty|tp|0|30,9,9:30,clock,nine,thirty,time
+🕙|ten o’clock|tp|0|0,10,10:00,clock
+🕥|ten-thirty|tp|0|10,10:30,30,clock,ten,thirty,time
+🕚|eleven o’clock|tp|0|11,11:00,clock,time
+🕦|eleven-thirty|tp|0|11,11:30,30,clock,eleven,thirty,time
+🌑|new moon|tp|0|dark,space
+🌒|waxing crescent moon|tp|0|dreams,space
 🌓|first quarter moon|tp|0|space
 🌔|waxing gibbous moon|tp|0|space
 🌕|full moon|tp|0|space
 🌖|waning gibbous moon|tp|0|space
 🌗|last quarter moon|tp|0|space
 🌘|waning crescent moon|tp|0|space
-🌙|crescent moon|tp|0|ramadan space
+🌙|crescent moon|tp|0|ramadan,space
 🌚|new moon face|tp|0|space
 🌛|first quarter moon face|tp|0|space
 🌜|last quarter moon face|tp|0|dreams
 🌡️|thermometer|tp|0|weather
-☀️|sun|tp|0|bright rays space sunny weather
+☀️|sun|tp|0|bright,rays,space,sunny,weather
 🌝|full moon face|tp|0|bright
-🌞|sun with face|tp|0|beach bright day heat shine sunny sunshine weather
-🪐|ringed planet|tp|0|saturn saturnine
-⭐|star|tp|0|astronomy medium stars white
-🌟|glowing star|tp|0|glittery glow night shining sparkle win
-🌠|shooting star|tp|0|falling night space
+🌞|sun with face|tp|0|beach,bright,day,heat,shine,sunny,sunshine,weather
+🪐|ringed planet|tp|0|saturn,saturnine
+⭐|star|tp|0|astronomy,medium,stars,white
+🌟|glowing star|tp|0|glittery,glow,night,shining,sparkle,win
+🌠|shooting star|tp|0|falling,night,space
 🌌|milky way|tp|0|space
 ☁️|cloud|tp|0|weather
-⛅|sun behind cloud|tp|0|cloudy weather
-⛈️|cloud with lightning and rain|tp|0|thunder thunderstorm
+⛅|sun behind cloud|tp|0|cloudy,weather
+⛈️|cloud with lightning and rain|tp|0|thunder,thunderstorm
 🌤️|sun behind small cloud|tp|0|weather
 🌥️|sun behind large cloud|tp|0|weather
 🌦️|sun behind rain cloud|tp|0|weather
 🌧️|cloud with rain|tp|0|weather
-🌨️|cloud with snow|tp|0|cold weather
+🌨️|cloud with snow|tp|0|cold,weather
 🌩️|cloud with lightning|tp|0|weather
-🌪️|tornado|tp|0|cloud weather whirlwind
-🌫️|fog|tp|0|cloud weather
-🌬️|wind face|tp|0|blow cloud
-🌀|cyclone|tp|0|dizzy hurricane twister typhoon weather
-🌈|rainbow|tp|0|gay genderqueer glbt glbtq lesbian lgbt lgbtq lgbtqia
-🌂|closed umbrella|tp|0|clothing rain
-☂️|umbrella|tp|0|clothing rain
-☔|umbrella with rain drops|tp|0|clothing drop weather
-⛱️|umbrella on ground|tp|0|rain sun
-⚡|high voltage|tp|0|danger electric electricity lightning nature thunder thunderbolt zap
-❄️|snowflake|tp|0|cold snow weather
-☃️|snowman|tp|0|cold man snow
-⛄|snowman without snow|tp|0|cold man
+🌪️|tornado|tp|0|cloud,weather,whirlwind
+🌫️|fog|tp|0|cloud,weather
+🌬️|wind face|tp|0|blow,cloud
+🌀|cyclone|tp|0|dizzy,hurricane,twister,typhoon,weather
+🌈|rainbow|tp|0|gay,genderqueer,glbt,glbtq,lesbian,lgbt,lgbtq,lgbtqia,nature,pride,queer,rain,trans,transgender,weather
+🌂|closed umbrella|tp|0|clothing,rain
+☂️|umbrella|tp|0|clothing,rain
+☔|umbrella with rain drops|tp|0|clothing,drop,weather
+⛱️|umbrella on ground|tp|0|rain,sun
+⚡|high voltage|tp|0|danger,electric,electricity,lightning,nature,thunder,thunderbolt,zap
+❄️|snowflake|tp|0|cold,snow,weather
+☃️|snowman|tp|0|cold,man,snow
+⛄|snowman without snow|tp|0|cold,man
 ☄️|comet|tp|0|space
-🔥|fire|tp|0|af burn flame hot lit litaf tool
-💧|droplet|tp|0|cold comic drop nature sad sweat tear water
-🌊|water wave|tp|0|nature ocean surf surfer surfing
-🎃|jack-o-lantern|ac|0|celebration halloween jack lantern pumpkin
+🔥|fire|tp|0|af,burn,flame,hot,lit,litaf,tool
+💧|droplet|tp|0|cold,comic,drop,nature,sad,sweat,tear,water,weather
+🌊|water wave|tp|0|nature,ocean,surf,surfer,surfing
+🎃|jack-o-lantern|ac|0|celebration,halloween,jack,lantern,pumpkin
 🎄|christmas tree|ac|0|celebration
-🎆|fireworks|ac|0|boom celebration entertainment yolo
-🎇|sparkler|ac|0|boom celebration fireworks sparkle
-🧨|firecracker|ac|0|dynamite explosive fire fireworks light pop popping spark
-✨|sparkles|ac|0|* magic sparkle star
-🎈|balloon|ac|0|birthday celebrate celebration
-🎉|party popper|ac|0|awesome birthday celebrate celebration excited hooray tada woohoo
-🎊|confetti ball|ac|0|celebrate celebration party woohoo
-🎋|tanabata tree|ac|0|banner celebration japanese
-🎍|pine decoration|ac|0|bamboo celebration japanese plant
-🎎|japanese dolls|ac|0|celebration doll festival
+🎆|fireworks|ac|0|boom,celebration,entertainment,yolo
+🎇|sparkler|ac|0|boom,celebration,fireworks,sparkle
+🧨|firecracker|ac|0|dynamite,explosive,fire,fireworks,light,pop,popping,spark
+✨|sparkles|ac|0|*,magic,sparkle,star
+🎈|balloon|ac|0|birthday,celebrate,celebration
+🎉|party popper|ac|0|awesome,birthday,celebrate,celebration,excited,hooray,tada,woohoo
+🎊|confetti ball|ac|0|celebrate,celebration,party,woohoo
+🎋|tanabata tree|ac|0|banner,celebration,japanese
+🎍|pine decoration|ac|0|bamboo,celebration,japanese,plant
+🎎|japanese dolls|ac|0|celebration,doll,festival
 🎏|carp streamer|ac|0|celebration
-🎐|wind chime|ac|0|bell celebration
+🎐|wind chime|ac|0|bell,celebration
 🎑|moon viewing ceremony|ac|0|celebration
-🧧|red envelope|ac|0|gift good hóngbāo lai luck money see
+🧧|red envelope|ac|0|gift,good,hóngbāo,lai,luck,money,see
 🎀|ribbon|ac|0|celebration
-🎁|wrapped gift|ac|0|birthday bow box celebration christmas present surprise
+🎁|wrapped gift|ac|0|birthday,bow,box,celebration,christmas,present,surprise
 🎗️|reminder ribbon|ac|0|celebration
 🎟️|admission tickets|ac|0|ticket
-🎫|ticket|ac|0|admission stub
-🎖️|military medal|ac|0|award celebration
-🏆|trophy|ac|0|champion champs prize slay sport victory win winning
-🏅|sports medal|ac|0|award gold winner
-🥇|1st place medal|ac|0|first gold
-🥈|2nd place medal|ac|0|second silver
-🥉|3rd place medal|ac|0|bronze third
-⚽|soccer ball|ac|0|football futbol sport
-⚾|baseball|ac|0|ball sport
-🥎|softball|ac|0|ball glove sports underarm
-🏀|basketball|ac|0|ball hoop sport
-🏐|volleyball|ac|0|ball game
-🏈|american football|ac|0|ball bowl sport super
-🏉|rugby football|ac|0|ball sport
-🎾|tennis|ac|0|ball racquet sport
+🎫|ticket|ac|0|admission,stub
+🎖️|military medal|ac|0|award,celebration
+🏆|trophy|ac|0|champion,champs,prize,slay,sport,victory,win,winning
+🏅|sports medal|ac|0|award,gold,winner
+🥇|1st place medal|ac|0|first,gold
+🥈|2nd place medal|ac|0|second,silver
+🥉|3rd place medal|ac|0|bronze,third
+⚽|soccer ball|ac|0|football,futbol,sport
+⚾|baseball|ac|0|ball,sport
+🥎|softball|ac|0|ball,glove,sports,underarm
+🏀|basketball|ac|0|ball,hoop,sport
+🏐|volleyball|ac|0|ball,game
+🏈|american football|ac|0|ball,bowl,sport,super
+🏉|rugby football|ac|0|ball,sport
+🎾|tennis|ac|0|ball,racquet,sport
 🥏|flying disc|ac|0|ultimate
-🎳|bowling|ac|0|ball game sport strike
-🏏|cricket game|ac|0|ball bat
-🏑|field hockey|ac|0|ball game stick
-🏒|ice hockey|ac|0|game puck stick
-🥍|lacrosse|ac|0|ball goal sports stick
-🏓|ping pong|ac|0|ball bat game paddle pingpong table tennis
-🏸|badminton|ac|0|birdie game racquet shuttlecock
+🎳|bowling|ac|0|ball,game,sport,strike
+🏏|cricket game|ac|0|ball,bat
+🏑|field hockey|ac|0|ball,game,stick
+🏒|ice hockey|ac|0|game,puck,stick
+🥍|lacrosse|ac|0|ball,goal,sports,stick
+🏓|ping pong|ac|0|ball,bat,game,paddle,pingpong,table,tennis
+🏸|badminton|ac|0|birdie,game,racquet,shuttlecock
 🥊|boxing glove|ac|0|
-🥋|martial arts uniform|ac|0|judo karate taekwondo
+🥋|martial arts uniform|ac|0|judo,karate,taekwondo
 🥅|goal net|ac|0|
-⛳|flag in hole|ac|0|golf sport
+⛳|flag in hole|ac|0|golf,sport
 ⛸️|ice skate|ac|0|skating
-🎣|fishing pole|ac|0|entertainment fish sport
-🤿|diving mask|ac|0|scuba snorkeling
-🎽|running shirt|ac|0|athletics sash
-🎿|skis|ac|0|ski snow sport
-🛷|sled|ac|0|luge sledge sleigh snow toboggan
-🥌|curling stone|ac|0|game rock
-🎯|bullseye|ac|0|bull dart direct entertainment game hit target
-🪀|yo-yo|ac|0|fluctuate toy
-🪁|kite|ac|0|fly soar
-🔫|water pistol|ac|0|gun handgun revolver tool weapon
-🎱|pool 8 ball|ac|0|8ball billiard eight game
-🔮|crystal ball|ac|0|fairy fairytale fantasy fortune future magic tale tool
-🪄|magic wand|ac|0|magician witch wizard
-🎮|video game|ac|0|controller entertainment
-🕹️|joystick|ac|0|game video videogame
-🎰|slot machine|ac|0|casino gamble gambling game slots
-🎲|game die|ac|0|dice entertainment
-🧩|puzzle piece|ac|0|clue interlocking jigsaw
-🧸|teddy bear|ac|0|plaything plush stuffed toy
-🪅|piñata|ac|0|candy celebrate celebration cinco de festive mayo party
-🪩|mirror ball|ac|0|dance disco glitter party
-🪆|nesting dolls|ac|0|babooshka baboushka babushka doll matryoshka russia
-♠️|spade suit|ac|0|card game
-♥️|heart suit|ac|0|card emotion game hearts
-♦️|diamond suit|ac|0|card game
-♣️|club suit|ac|0|card clubs game
-♟️|chess pawn|ac|0|dupe expendable
-🃏|joker|ac|0|card game wildcard
+🎣|fishing pole|ac|0|entertainment,fish,sport
+🤿|diving mask|ac|0|scuba,snorkeling
+🎽|running shirt|ac|0|athletics,sash
+🎿|skis|ac|0|ski,snow,sport
+🛷|sled|ac|0|luge,sledge,sleigh,snow,toboggan
+🥌|curling stone|ac|0|game,rock
+🎯|bullseye|ac|0|bull,dart,direct,entertainment,game,hit,target
+🪀|yo-yo|ac|0|fluctuate,toy
+🪁|kite|ac|0|fly,soar
+🔫|water pistol|ac|0|gun,handgun,revolver,tool,weapon
+🎱|pool 8 ball|ac|0|8ball,billiard,eight,game
+🔮|crystal ball|ac|0|fairy,fairytale,fantasy,fortune,future,magic,tale,tool
+🪄|magic wand|ac|0|magician,witch,wizard
+🎮|video game|ac|0|controller,entertainment
+🕹️|joystick|ac|0|game,video,videogame
+🎰|slot machine|ac|0|casino,gamble,gambling,game,slots
+🎲|game die|ac|0|dice,entertainment
+🧩|puzzle piece|ac|0|clue,interlocking,jigsaw
+🧸|teddy bear|ac|0|plaything,plush,stuffed,toy
+🪅|piñata|ac|0|candy,celebrate,celebration,cinco,de,festive,mayo,party,pinada,pinata
+🪩|mirror ball|ac|0|dance,disco,glitter,party
+🪆|nesting dolls|ac|0|babooshka,baboushka,babushka,doll,matryoshka,russia
+♠️|spade suit|ac|0|card,game
+♥️|heart suit|ac|0|card,emotion,game,hearts
+♦️|diamond suit|ac|0|card,game
+♣️|club suit|ac|0|card,clubs,game
+♟️|chess pawn|ac|0|dupe,expendable
+🃏|joker|ac|0|card,game,wildcard
 🀄|mahjong red dragon|ac|0|game
-🎴|flower playing cards|ac|0|card game japanese
-🎭|performing arts|ac|0|actor actress art entertainment mask theater theatre thespian
-🖼️|framed picture|ac|0|art frame museum painting
-🎨|artist palette|ac|0|art artsy arty colorful creative entertainment museum painter
-🧵|thread|ac|0|needle sewing spool string
-🪡|sewing needle|ac|0|embroidery sew stitches sutures tailoring thread
-🧶|yarn|ac|0|ball crochet knit
-🪢|knot|ac|0|cord rope tangled tie twine twist
-👓|glasses|ob|0|clothing eye eyeglasses eyewear
-🕶️|sunglasses|ob|0|dark eye eyewear glasses
-🥽|goggles|ob|0|dive eye protection scuba swimming welding
-🥼|lab coat|ob|0|clothes doctor dr experiment jacket scientist white
+🎴|flower playing cards|ac|0|card,game,japanese
+🎭|performing arts|ac|0|actor,actress,art,entertainment,mask,theater,theatre,thespian
+🖼️|framed picture|ac|0|art,frame,museum,painting
+🎨|artist palette|ac|0|art,artsy,arty,colorful,creative,entertainment,museum,painter,painting
+🧵|thread|ac|0|needle,sewing,spool,string
+🪡|sewing needle|ac|0|embroidery,sew,stitches,sutures,tailoring,thread
+🧶|yarn|ac|0|ball,crochet,knit
+🪢|knot|ac|0|cord,rope,tangled,tie,twine,twist
+👓|glasses|ob|0|clothing,eye,eyeglasses,eyewear
+🕶️|sunglasses|ob|0|dark,eye,eyewear,glasses
+🥽|goggles|ob|0|dive,eye,protection,scuba,swimming,welding
+🥼|lab coat|ob|0|clothes,doctor,dr,experiment,jacket,scientist,white
 🦺|safety vest|ob|0|emergency
-👔|necktie|ob|0|clothing employed serious shirt tie
-👕|t-shirt|ob|0|blue casual clothes clothing collar dressed shirt shopping
-👖|jeans|ob|0|blue casual clothes clothing denim dressed pants shopping
-🧣|scarf|ob|0|bundle cold neck up
+👔|necktie|ob|0|clothing,employed,serious,shirt,tie
+👕|t-shirt|ob|0|blue,casual,clothes,clothing,collar,dressed,shirt,shopping,tshirt,weekend
+👖|jeans|ob|0|blue,casual,clothes,clothing,denim,dressed,pants,shopping,trousers,weekend
+🧣|scarf|ob|0|bundle,cold,neck,up
 🧤|gloves|ob|0|hand
-🧥|coat|ob|0|brr bundle cold jacket up
+🧥|coat|ob|0|brr,bundle,cold,jacket,up
 🧦|socks|ob|0|stocking
-👗|dress|ob|0|clothes clothing dressed fancy shopping
-👘|kimono|ob|0|clothing comfortable
-🥻|sari|ob|0|clothing dress
-🩱|one-piece swimsuit|ob|0|bathing suit
-🩲|briefs|ob|0|bathing one-piece suit swimsuit underwear
-🩳|shorts|ob|0|bathing pants suit swimsuit underwear
-👙|bikini|ob|0|bathing beach clothing pool suit swim
-👚|woman’s clothes|ob|0|blouse clothing collar dress dressed lady shirt shopping
-🪭|folding hand fan|ob|0|clack clap cool cooling dance flirt flutter hot
-👛|purse|ob|0|clothes clothing coin dress fancy handbag shopping
-👜|handbag|ob|0|bag clothes clothing dress lady purse shopping
-👝|clutch bag|ob|0|clothes clothing dress handbag pouch purse
-🛍️|shopping bags|ob|0|bag hotel
-🎒|backpack|ob|0|backpacking bag bookbag education rucksack satchel school
-🩴|thong sandal|ob|0|beach flip flop sandals shoe thongs zōri
-👞|man’s shoe|ob|0|brown clothes clothing feet foot kick man shoes
-👟|running shoe|ob|0|athletic clothes clothing fast kick shoes shopping sneaker
-🥾|hiking boot|ob|0|backpacking brown camping outdoors shoe
-🥿|flat shoe|ob|0|ballet comfy flats slip-on slipper
-👠|high-heeled shoe|ob|0|clothes clothing dress fashion heel heels shoes shopping
-👡|woman’s sandal|ob|0|clothing shoe woman
+👗|dress|ob|0|clothes,clothing,dressed,fancy,shopping
+👘|kimono|ob|0|clothing,comfortable
+🥻|sari|ob|0|clothing,dress
+🩱|one-piece swimsuit|ob|0|bathing,suit
+🩲|briefs|ob|0|bathing,one-piece,suit,swimsuit,underwear
+🩳|shorts|ob|0|bathing,pants,suit,swimsuit,underwear
+👙|bikini|ob|0|bathing,beach,clothing,pool,suit,swim
+👚|woman’s clothes|ob|0|blouse,clothing,collar,dress,dressed,lady,shirt,shopping,woman
+🪭|folding hand fan|ob|0|clack,clap,cool,cooling,dance,flirt,flutter,hot,shy
+👛|purse|ob|0|clothes,clothing,coin,dress,fancy,handbag,shopping
+👜|handbag|ob|0|bag,clothes,clothing,dress,lady,purse,shopping
+👝|clutch bag|ob|0|clothes,clothing,dress,handbag,pouch,purse
+🛍️|shopping bags|ob|0|bag,hotel
+🎒|backpack|ob|0|backpacking,bag,bookbag,education,rucksack,satchel,school
+🩴|thong sandal|ob|0|beach,flip,flop,sandals,shoe,thongs,zōri
+👞|man’s shoe|ob|0|brown,clothes,clothing,feet,foot,kick,man,shoes,shopping
+👟|running shoe|ob|0|athletic,clothes,clothing,fast,kick,shoes,shopping,sneaker,tennis
+🥾|hiking boot|ob|0|backpacking,brown,camping,outdoors,shoe
+🥿|flat shoe|ob|0|ballet,comfy,flats,slip-on,slipper
+👠|high-heeled shoe|ob|0|clothes,clothing,dress,fashion,heel,heels,shoes,shopping,stiletto,woman
+👡|woman’s sandal|ob|0|clothing,shoe,woman
 🩰|ballet shoes|ob|0|dance
-👢|woman’s boot|ob|0|clothes clothing dress shoe shoes shopping woman
-🪮|hair pick|ob|0|afro comb groom
-👑|crown|ob|0|clothing family king medieval queen royal royalty win
-👒|woman’s hat|ob|0|clothes clothing garden hats party woman
-🎩|top hat|ob|0|clothes clothing fancy formal magic tophat
-🎓|graduation cap|ob|0|celebration clothing education hat scholar
-🧢|billed cap|ob|0|baseball bent dad hat
-🪖|military helmet|ob|0|army soldier war warrior
-⛑️|rescue worker’s helmet|ob|0|aid cross face hat
-📿|prayer beads|ob|0|clothing necklace religion
-💄|lipstick|ob|0|cosmetics date makeup
-💍|ring|ob|0|diamond engaged engagement married romance shiny sparkling wedding
-💎|gem stone|ob|0|diamond engagement jewel money romance wedding
-🔇|muted speaker|ob|0|mute quiet silent sound
-🔈|speaker low volume|ob|0|soft sound
+👢|woman’s boot|ob|0|clothes,clothing,dress,shoe,shoes,shopping,woman
+🪮|hair pick|ob|0|afro,comb,groom
+👑|crown|ob|0|clothing,family,king,medieval,queen,royal,royalty,win
+👒|woman’s hat|ob|0|clothes,clothing,garden,hats,party,woman
+🎩|top hat|ob|0|clothes,clothing,fancy,formal,magic,tophat
+🎓|graduation cap|ob|0|celebration,clothing,education,hat,scholar
+🧢|billed cap|ob|0|baseball,bent,dad,hat
+🪖|military helmet|ob|0|army,soldier,war,warrior
+⛑️|rescue worker’s helmet|ob|0|aid,cross,face,hat
+📿|prayer beads|ob|0|clothing,necklace,religion
+💄|lipstick|ob|0|cosmetics,date,makeup
+💍|ring|ob|0|diamond,engaged,engagement,married,romance,shiny,sparkling,wedding
+💎|gem stone|ob|0|diamond,engagement,jewel,money,romance,wedding
+🔇|muted speaker|ob|0|mute,quiet,silent,sound
+🔈|speaker low volume|ob|0|soft,sound
 🔉|speaker medium volume|ob|0|sound
-🔊|speaker high volume|ob|0|loud music sound
-📢|loudspeaker|ob|0|address communication loud public sound
-📣|megaphone|ob|0|cheering sound
+🔊|speaker high volume|ob|0|loud,music,sound
+📢|loudspeaker|ob|0|address,communication,loud,public,sound
+📣|megaphone|ob|0|cheering,sound
 📯|postal horn|ob|0|post
-🔔|bell|ob|0|break church sound
-🔕|bell with slash|ob|0|forbidden mute no not prohibited quiet silent sound
-🎼|musical score|ob|0|music note
-🎵|musical note|ob|0|music sound
-🎶|musical notes|ob|0|music note sound
-🎙️|studio microphone|ob|0|mic music
+🔔|bell|ob|0|break,church,sound
+🔕|bell with slash|ob|0|forbidden,mute,no,not,prohibited,quiet,silent,sound
+🎼|musical score|ob|0|music,note
+🎵|musical note|ob|0|music,sound
+🎶|musical notes|ob|0|music,note,sound
+🎙️|studio microphone|ob|0|mic,music
 🎚️|level slider|ob|0|music
 🎛️|control knobs|ob|0|music
-🎤|microphone|ob|0|karaoke mic music sing sound
-🎧|headphone|ob|0|earbud sound
-📻|radio|ob|0|entertainment tbt video
-🎷|saxophone|ob|0|instrument music sax
-🎺|trumpet|ob|0|instrument music
-🪊|trombone|ob|0|brass instrument jazz music sad slide
-🪗|accordion|ob|0|box concertina instrument music squeeze squeezebox
-🎸|guitar|ob|0|instrument music strat
-🎹|musical keyboard|ob|0|instrument music piano
-🎻|violin|ob|0|instrument music
-🪕|banjo|ob|0|music stringed
-🥁|drum|ob|0|drumsticks music
-🪘|long drum|ob|0|beat conga instrument rhythm
-🪇|maracas|ob|0|cha dance instrument music party percussion rattle shake
-🪈|flute|ob|0|band fife flautist instrument marching music orchestra piccolo
-🪉|harp|ob|0|cupid instrument love music orchestra
-📱|mobile phone|ob|0|cell communication telephone
-📲|mobile phone with arrow|ob|0|build call cell communication receive telephone
+🎤|microphone|ob|0|karaoke,mic,music,sing,sound
+🎧|headphone|ob|0|earbud,sound
+📻|radio|ob|0|entertainment,tbt,video
+🎷|saxophone|ob|0|instrument,music,sax
+🎺|trumpet|ob|0|instrument,music
+🪊|trombone|ob|0|brass,instrument,jazz,music,sad,slide
+🪗|accordion|ob|0|box,concertina,instrument,music,squeeze,squeezebox
+🎸|guitar|ob|0|instrument,music,strat
+🎹|musical keyboard|ob|0|instrument,music,piano
+🎻|violin|ob|0|instrument,music
+🪕|banjo|ob|0|music,stringed
+🥁|drum|ob|0|drumsticks,music
+🪘|long drum|ob|0|beat,conga,instrument,rhythm
+🪇|maracas|ob|0|cha,dance,instrument,music,party,percussion,rattle,shake,shaker
+🪈|flute|ob|0|band,fife,flautist,instrument,marching,music,orchestra,piccolo,pipe,recorder,woodwind
+🪉|harp|ob|0|cupid,instrument,love,music,orchestra
+📱|mobile phone|ob|0|cell,communication,telephone
+📲|mobile phone with arrow|ob|0|build,call,cell,communication,receive,telephone
 ☎️|telephone|ob|0|phone
-📞|telephone receiver|ob|0|communication phone voip
+📞|telephone receiver|ob|0|communication,phone,voip
 📟|pager|ob|0|communication
 📠|fax machine|ob|0|communication
 🔋|battery|ob|0|
-🪫|low battery|ob|0|drained electronic energy power
+🪫|low battery|ob|0|drained,electronic,energy,power
 🔌|electric plug|ob|0|electricity
-💻|laptop|ob|0|computer office pc personal
+💻|laptop|ob|0|computer,office,pc,personal
 🖥️|desktop computer|ob|0|monitor
 🖨️|printer|ob|0|computer
 ⌨️|keyboard|ob|0|computer
 🖱️|computer mouse|ob|0|
 🖲️|trackball|ob|0|computer
-💽|computer disk|ob|0|minidisk optical
+💽|computer disk|ob|0|minidisk,optical
 💾|floppy disk|ob|0|computer
-💿|optical disk|ob|0|blu-ray cd computer dvd
-📀|dvd|ob|0|blu-ray cd computer disk optical
-🧮|abacus|ob|0|calculation calculator
-🎥|movie camera|ob|0|bollywood cinema film hollywood record
-🎞️|film frames|ob|0|cinema movie
-📽️|film projector|ob|0|cinema movie video
-🎬|clapper board|ob|0|action movie
-📺|television|ob|0|tv video
-📷|camera|ob|0|photo selfie snap tbt trip video
+💿|optical disk|ob|0|blu-ray,cd,computer,dvd
+📀|dvd|ob|0|blu-ray,cd,computer,disk,optical
+🧮|abacus|ob|0|calculation,calculator
+🎥|movie camera|ob|0|bollywood,cinema,film,hollywood,record
+🎞️|film frames|ob|0|cinema,movie
+📽️|film projector|ob|0|cinema,movie,video
+🎬|clapper board|ob|0|action,movie
+📺|television|ob|0|tv,video
+📷|camera|ob|0|photo,selfie,snap,tbt,trip,video
 📸|camera with flash|ob|0|video
-📹|video camera|ob|0|camcorder tbt
-📼|videocassette|ob|0|old school tape vcr vhs video
-🔍|magnifying glass tilted left|ob|0|lab left-pointing science search tool
-🔎|magnifying glass tilted right|ob|0|contact lab right-pointing science search tool
+📹|video camera|ob|0|camcorder,tbt
+📼|videocassette|ob|0|old,school,tape,vcr,vhs,video
+🔍|magnifying glass tilted left|ob|0|lab,left-pointing,science,search,tool
+🔎|magnifying glass tilted right|ob|0|contact,lab,right-pointing,science,search,tool
 🕯️|candle|ob|0|light
-💡|light bulb|ob|0|comic electric idea
-🔦|flashlight|ob|0|electric light tool torch
-🏮|red paper lantern|ob|0|bar light restaurant
-🪔|diya lamp|ob|0|light oil
-📔|notebook with decorative cover|ob|0|book decorated education school writing
+💡|light bulb|ob|0|comic,electric,idea
+🔦|flashlight|ob|0|electric,light,tool,torch
+🏮|red paper lantern|ob|0|bar,light,restaurant
+🪔|diya lamp|ob|0|light,oil
+📔|notebook with decorative cover|ob|0|book,decorated,education,school,writing
 📕|closed book|ob|0|education
-📖|open book|ob|0|education fantasy knowledge library novels reading
-📗|green book|ob|0|education fantasy library reading
-📘|blue book|ob|0|education fantasy library reading
-📙|orange book|ob|0|education fantasy library reading
-📚|books|ob|0|book education fantasy knowledge library novels reading school
+📖|open book|ob|0|education,fantasy,knowledge,library,novels,reading
+📗|green book|ob|0|education,fantasy,library,reading
+📘|blue book|ob|0|education,fantasy,library,reading
+📙|orange book|ob|0|education,fantasy,library,reading
+📚|books|ob|0|book,education,fantasy,knowledge,library,novels,reading,school,study
 📓|notebook|ob|0|
 📒|ledger|ob|0|notebook
-📃|page with curl|ob|0|document paper
+📃|page with curl|ob|0|document,paper
 📜|scroll|ob|0|paper
-📄|page facing up|ob|0|document paper
-📰|newspaper|ob|0|communication news paper
-🗞️|rolled-up newspaper|ob|0|news paper rolled
-📑|bookmark tabs|ob|0|mark marker
+📄|page facing up|ob|0|document,paper
+📰|newspaper|ob|0|communication,news,paper
+🗞️|rolled-up newspaper|ob|0|news,paper,rolled
+📑|bookmark tabs|ob|0|mark,marker
 🔖|bookmark|ob|0|mark
 🏷️|label|ob|0|tag
-🪙|coin|ob|0|dollar euro gold metal money rich silver treasure
-💰|money bag|ob|0|bank bet billion cash cost dollar gold million
-🪎|treasure chest|ob|0|gem gold jewels loot money prize silver valuables
-💴|yen banknote|ob|0|bank bill currency money note
-💵|dollar banknote|ob|0|bank bill currency money note
-💶|euro banknote|ob|0|100 bank bill currency money note rich
-💷|pound banknote|ob|0|bank bill billion cash currency money note pounds
-💸|money with wings|ob|0|bank banknote bill billion cash dollar fly million
-💳|credit card|ob|0|bank cash charge money pay
-🧾|receipt|ob|0|accounting bookkeeping evidence invoice proof
-💹|chart increasing with yen|ob|0|bank currency graph growth market money rise trend
-✉️|envelope|ob|0|e-mail email letter
-📧|e-mail|ob|0|email letter mail
-📨|incoming envelope|ob|0|delivering e-mail email letter mail receive sent
-📩|envelope with arrow|ob|0|communication down e-mail email letter mail outgoing send
-📤|outbox tray|ob|0|box email letter mail sent
-📥|inbox tray|ob|0|box email letter mail receive zero
-📦|package|ob|0|box communication delivery parcel shipping
-📫|closed mailbox with raised flag|ob|0|communication mail postbox
-📪|closed mailbox with lowered flag|ob|0|mail postbox
-📬|open mailbox with raised flag|ob|0|mail postbox
-📭|open mailbox with lowered flag|ob|0|mail postbox
-📮|postbox|ob|0|mail mailbox
+🪙|coin|ob|0|dollar,euro,gold,metal,money,rich,silver,treasure
+💰|money bag|ob|0|bank,bet,billion,cash,cost,dollar,gold,million,moneybag,paid,paying,pot,rich,win
+🪎|treasure chest|ob|0|gem,gold,jewels,loot,money,prize,silver,valuables,wealth
+💴|yen banknote|ob|0|bank,bill,currency,money,note
+💵|dollar banknote|ob|0|bank,bill,currency,money,note
+💶|euro banknote|ob|0|100,bank,bill,currency,money,note,rich
+💷|pound banknote|ob|0|bank,bill,billion,cash,currency,money,note,pounds
+💸|money with wings|ob|0|bank,banknote,bill,billion,cash,dollar,fly,million,note,pay
+💳|credit card|ob|0|bank,cash,charge,money,pay
+🧾|receipt|ob|0|accounting,bookkeeping,evidence,invoice,proof
+💹|chart increasing with yen|ob|0|bank,currency,graph,growth,market,money,rise,trend,upward
+✉️|envelope|ob|0|e-mail,email,letter
+📧|e-mail|ob|0|email,letter,mail
+📨|incoming envelope|ob|0|delivering,e-mail,email,letter,mail,receive,sent
+📩|envelope with arrow|ob|0|communication,down,e-mail,email,letter,mail,outgoing,send,sent
+📤|outbox tray|ob|0|box,email,letter,mail,sent
+📥|inbox tray|ob|0|box,email,letter,mail,receive,zero
+📦|package|ob|0|box,communication,delivery,parcel,shipping
+📫|closed mailbox with raised flag|ob|0|communication,mail,postbox
+📪|closed mailbox with lowered flag|ob|0|mail,postbox
+📬|open mailbox with raised flag|ob|0|mail,postbox
+📭|open mailbox with lowered flag|ob|0|mail,postbox
+📮|postbox|ob|0|mail,mailbox
 🗳️|ballot box with ballot|ob|0|
 ✏️|pencil|ob|0|
 ✒️|black nib|ob|0|pen
@@ -1317,239 +1317,239 @@ enum EmojiData {
 🖊️|pen|ob|0|ballpoint
 🖌️|paintbrush|ob|0|painting
 🖍️|crayon|ob|0|
-📝|memo|ob|0|communication media notes pencil
+📝|memo|ob|0|communication,media,notes,pencil
 💼|briefcase|ob|0|office
 📁|file folder|ob|0|
 📂|open file folder|ob|0|
 🗂️|card index dividers|ob|0|
 📅|calendar|ob|0|date
 📆|tear-off calendar|ob|0|
-🗒️|spiral notepad|ob|0|note pad
+🗒️|spiral notepad|ob|0|note,pad
 🗓️|spiral calendar|ob|0|pad
-📇|card index|ob|0|old rolodex school
-📈|chart increasing|ob|0|data graph growth right trend up upward
-📉|chart decreasing|ob|0|data down downward graph negative trend
-📊|bar chart|ob|0|data graph
-📋|clipboard|ob|0|do list notes
-📌|pushpin|ob|0|collage pin
-📍|round pushpin|ob|0|location map pin
+📇|card index|ob|0|old,rolodex,school
+📈|chart increasing|ob|0|data,graph,growth,right,trend,up,upward
+📉|chart decreasing|ob|0|data,down,downward,graph,negative,trend
+📊|bar chart|ob|0|data,graph
+📋|clipboard|ob|0|do,list,notes
+📌|pushpin|ob|0|collage,pin
+📍|round pushpin|ob|0|location,map,pin
 📎|paperclip|ob|0|
-🖇️|linked paperclips|ob|0|link paperclip
-📏|straight ruler|ob|0|angle edge math straightedge
-📐|triangular ruler|ob|0|angle math rule set slide triangle
-✂️|scissors|ob|0|cut cutting paper tool
+🖇️|linked paperclips|ob|0|link,paperclip
+📏|straight ruler|ob|0|angle,edge,math,straightedge
+📐|triangular ruler|ob|0|angle,math,rule,set,slide,triangle
+✂️|scissors|ob|0|cut,cutting,paper,tool
 🗃️|card file box|ob|0|
-🗄️|file cabinet|ob|0|filing paper
-🗑️|wastebasket|ob|0|can garbage trash waste
-🔒|locked|ob|0|closed lock private
-🔓|unlocked|ob|0|cracked lock open unlock
-🔏|locked with pen|ob|0|ink lock nib privacy
-🔐|locked with key|ob|0|bike closed lock secure
-🔑|key|ob|0|keys lock major password unlock
-🗝️|old key|ob|0|clue lock
-🔨|hammer|ob|0|home improvement repairs tool
-🪓|axe|ob|0|ax chop hatchet split wood
-⛏️|pick|ob|0|hammer mining tool
+🗄️|file cabinet|ob|0|filing,paper
+🗑️|wastebasket|ob|0|can,garbage,trash,waste
+🔒|locked|ob|0|closed,lock,private
+🔓|unlocked|ob|0|cracked,lock,open,unlock
+🔏|locked with pen|ob|0|ink,lock,nib,privacy
+🔐|locked with key|ob|0|bike,closed,lock,secure
+🔑|key|ob|0|keys,lock,major,password,unlock
+🗝️|old key|ob|0|clue,lock
+🔨|hammer|ob|0|home,improvement,repairs,tool
+🪓|axe|ob|0|ax,chop,hatchet,split,wood
+⛏️|pick|ob|0|hammer,mining,tool
 ⚒️|hammer and pick|ob|0|tool
-🛠️|hammer and wrench|ob|0|spanner tool
-🗡️|dagger|ob|0|knife weapon
+🛠️|hammer and wrench|ob|0|spanner,tool
+🗡️|dagger|ob|0|knife,weapon
 ⚔️|crossed swords|ob|0|weapon
-💣|bomb|ob|0|boom comic dangerous explosion hot
-🪃|boomerang|ob|0|rebound repercussion weapon
-🏹|bow and arrow|ob|0|archer archery sagittarius tool weapon zodiac
+💣|bomb|ob|0|boom,comic,dangerous,explosion,hot
+🪃|boomerang|ob|0|rebound,repercussion,weapon
+🏹|bow and arrow|ob|0|archer,archery,sagittarius,tool,weapon,zodiac
 🛡️|shield|ob|0|weapon
-🪚|carpentry saw|ob|0|carpenter cut lumber tool trim
-🔧|wrench|ob|0|home improvement spanner tool
-🪛|screwdriver|ob|0|flathead handy screw tool
-🔩|nut and bolt|ob|0|home improvement tool
-⚙️|gear|ob|0|cog cogwheel tool
-🗜️|clamp|ob|0|compress tool vice
-⚖️|balance scale|ob|0|justice libra scales tool weight zodiac
-🦯|white cane|ob|0|accessibility blind probing
+🪚|carpentry saw|ob|0|carpenter,cut,lumber,tool,trim
+🔧|wrench|ob|0|home,improvement,spanner,tool
+🪛|screwdriver|ob|0|flathead,handy,screw,tool
+🔩|nut and bolt|ob|0|home,improvement,tool
+⚙️|gear|ob|0|cog,cogwheel,tool
+🗜️|clamp|ob|0|compress,tool,vice
+⚖️|balance scale|ob|0|justice,libra,scales,tool,weight,zodiac
+🦯|white cane|ob|0|accessibility,blind,probing
 🔗|link|ob|0|links
-⛓️‍💥|broken chain|ob|0|break breaking cuffs freedom
+⛓️‍💥|broken chain|ob|0|break,breaking,cuffs,freedom
 ⛓️|chains|ob|0|chain
-🪝|hook|ob|0|catch crook curve ensnare point selling
-🧰|toolbox|ob|0|box chest mechanic red tool
-🧲|magnet|ob|0|attraction horseshoe magnetic negative positive shape u
-🪜|ladder|ob|0|climb rung step
-🪏|shovel|ob|0|bury dig garden hole plant scoop snow spade
-⚗️|alembic|ob|0|chemistry tool
-🧪|test tube|ob|0|chemist chemistry experiment lab science
-🧫|petri dish|ob|0|bacteria biologist biology culture lab
-🧬|dna|ob|0|biologist evolution gene genetics life
-🔬|microscope|ob|0|experiment lab science tool
-🔭|telescope|ob|0|contact extraterrestrial science tool
-📡|satellite antenna|ob|0|aliens contact dish science
-💉|syringe|ob|0|doctor flu medicine needle shot sick tool vaccination
-🩸|drop of blood|ob|0|bleed donation injury medicine menstruation
-💊|pill|ob|0|doctor drugs medicated medicine pills sick vitamin
+🪝|hook|ob|0|catch,crook,curve,ensnare,point,selling
+🧰|toolbox|ob|0|box,chest,mechanic,red,tool
+🧲|magnet|ob|0|attraction,horseshoe,magnetic,negative,positive,shape,u
+🪜|ladder|ob|0|climb,rung,step
+🪏|shovel|ob|0|bury,dig,garden,hole,plant,scoop,snow,spade
+⚗️|alembic|ob|0|chemistry,tool
+🧪|test tube|ob|0|chemist,chemistry,experiment,lab,science
+🧫|petri dish|ob|0|bacteria,biologist,biology,culture,lab
+🧬|dna|ob|0|biologist,evolution,gene,genetics,life
+🔬|microscope|ob|0|experiment,lab,science,tool
+🔭|telescope|ob|0|contact,extraterrestrial,science,tool
+📡|satellite antenna|ob|0|aliens,contact,dish,science
+💉|syringe|ob|0|doctor,flu,medicine,needle,shot,sick,tool,vaccination
+🩸|drop of blood|ob|0|bleed,donation,injury,medicine,menstruation
+💊|pill|ob|0|doctor,drugs,medicated,medicine,pills,sick,vitamin
 🩹|adhesive bandage|ob|0|
-🩼|crutch|ob|0|aid cane disability help hurt injured mobility stick
-🩺|stethoscope|ob|0|doctor heart medicine
-🩻|x-ray|ob|0|bones doctor medical skeleton skull xray
-🚪|door|ob|0|back closet front
-🛗|elevator|ob|0|accessibility hoist lift
-🪞|mirror|ob|0|makeup reflection reflector speculum
-🪟|window|ob|0|air frame fresh opening transparent view
-🛏️|bed|ob|0|hotel sleep
+🩼|crutch|ob|0|aid,cane,disability,help,hurt,injured,mobility,stick
+🩺|stethoscope|ob|0|doctor,heart,medicine
+🩻|x-ray|ob|0|bones,doctor,medical,skeleton,skull,xray
+🚪|door|ob|0|back,closet,front
+🛗|elevator|ob|0|accessibility,hoist,lift
+🪞|mirror|ob|0|makeup,reflection,reflector,speculum
+🪟|window|ob|0|air,frame,fresh,opening,transparent,view
+🛏️|bed|ob|0|hotel,sleep
 🛋️|couch and lamp|ob|0|hotel
-🪑|chair|ob|0|seat sit
+🪑|chair|ob|0|seat,sit
 🚽|toilet|ob|0|bathroom
-🪠|plunger|ob|0|cup force plumber poop suction toilet
+🪠|plunger|ob|0|cup,force,plumber,poop,suction,toilet
 🚿|shower|ob|0|water
 🛁|bathtub|ob|0|bath
-🪤|mouse trap|ob|0|bait cheese lure mousetrap snare
-🪒|razor|ob|0|sharp shave
-🧴|lotion bottle|ob|0|moisturizer shampoo sunscreen
-🧷|safety pin|ob|0|diaper punk rock
-🧹|broom|ob|0|cleaning sweeping witch
-🧺|basket|ob|0|farming laundry picnic
-🧻|roll of paper|ob|0|toilet towels
-🪣|bucket|ob|0|cask pail vat
-🧼|soap|ob|0|bar bathing clean cleaning lather soapdish
-🫧|bubbles|ob|0|bubble burp clean floating pearl soap underwater
-🪥|toothbrush|ob|0|bathroom brush clean dental hygiene teeth toiletry
-🧽|sponge|ob|0|absorbing cleaning porous soak
-🧯|fire extinguisher|ob|0|extinguish quench
+🪤|mouse trap|ob|0|bait,cheese,lure,mousetrap,snare
+🪒|razor|ob|0|sharp,shave
+🧴|lotion bottle|ob|0|moisturizer,shampoo,sunscreen
+🧷|safety pin|ob|0|diaper,punk,rock
+🧹|broom|ob|0|cleaning,sweeping,witch
+🧺|basket|ob|0|farming,laundry,picnic
+🧻|roll of paper|ob|0|toilet,towels
+🪣|bucket|ob|0|cask,pail,vat
+🧼|soap|ob|0|bar,bathing,clean,cleaning,lather,soapdish
+🫧|bubbles|ob|0|bubble,burp,clean,floating,pearl,soap,underwater
+🪥|toothbrush|ob|0|bathroom,brush,clean,dental,hygiene,teeth,toiletry
+🧽|sponge|ob|0|absorbing,cleaning,porous,soak
+🧯|fire extinguisher|ob|0|extinguish,quench
 🛒|shopping cart|ob|0|trolley
 🚬|cigarette|ob|0|smoking
-⚰️|coffin|ob|0|dead death vampire
-🪦|headstone|ob|0|cemetery dead grave graveyard memorial rip tomb tombstone
-⚱️|funeral urn|ob|0|ashes death
-🧿|nazar amulet|ob|0|bead blue charm evil-eye talisman
-🪬|hamsa|ob|0|amulet fatima fortune guide hand mary miriam palm
-🗿|moai|ob|0|face moyai statue stoneface travel
-🪧|placard|ob|0|card demonstration notice picket plaque protest sign
-🪪|identification card|ob|0|credentials document id license security
-🏧|atm sign|sy|0|automated bank cash money teller
+⚰️|coffin|ob|0|dead,death,vampire
+🪦|headstone|ob|0|cemetery,dead,grave,graveyard,memorial,rip,tomb,tombstone
+⚱️|funeral urn|ob|0|ashes,death
+🧿|nazar amulet|ob|0|bead,blue,charm,evil-eye,talisman
+🪬|hamsa|ob|0|amulet,fatima,fortune,guide,hand,mary,miriam,palm,protect,protection
+🗿|moai|ob|0|face,moyai,statue,stoneface,travel
+🪧|placard|ob|0|card,demonstration,notice,picket,plaque,protest,sign
+🪪|identification card|ob|0|credentials,document,id,license,security
+🏧|atm sign|sy|0|automated,bank,cash,money,teller
 🚮|litter in bin sign|sy|0|litterbin
 🚰|potable water|sy|0|drinking
-♿|wheelchair symbol|sy|0|access handicap
-🚹|men’s room|sy|0|bathroom lavatory man restroom toilet wc
-🚺|women’s room|sy|0|bathroom lavatory restroom toilet wc woman
-🚻|restroom|sy|0|bathroom lavatory toilet wc
+♿|wheelchair symbol|sy|0|access,handicap
+🚹|men’s room|sy|0|bathroom,lavatory,man,restroom,toilet,wc
+🚺|women’s room|sy|0|bathroom,lavatory,restroom,toilet,wc,woman
+🚻|restroom|sy|0|bathroom,lavatory,toilet,wc
 🚼|baby symbol|sy|0|changing
-🚾|water closet|sy|0|bathroom lavatory restroom toilet wc
+🚾|water closet|sy|0|bathroom,lavatory,restroom,toilet,wc
 🛂|passport control|sy|0|
 🛃|customs|sy|0|packing
-🛄|baggage claim|sy|0|arrived bags case checked journey packing plane ready
-🛅|left luggage|sy|0|baggage case locker
+🛄|baggage claim|sy|0|arrived,bags,case,checked,journey,packing,plane,ready,travel,trip
+🛅|left luggage|sy|0|baggage,case,locker
 ⚠️|warning|sy|0|caution
-🚸|children crossing|sy|0|child pedestrian traffic
-⛔|no entry|sy|0|do fail forbidden not pass prohibited traffic
-🚫|prohibited|sy|0|entry forbidden no not smoke
-🚳|no bicycles|sy|0|bicycle bike forbidden not prohibited
-🚭|no smoking|sy|0|forbidden not prohibited smoke
-🚯|no littering|sy|0|forbidden litter not prohibited
-🚱|non-potable water|sy|0|dry non-drinking prohibited
-🚷|no pedestrians|sy|0|forbidden not pedestrian prohibited
-📵|no mobile phones|sy|0|cell forbidden not phone prohibited telephone
-🔞|no one under eighteen|sy|0|18 age forbidden not prohibited restriction underage
+🚸|children crossing|sy|0|child,pedestrian,traffic
+⛔|no entry|sy|0|do,fail,forbidden,not,pass,prohibited,traffic
+🚫|prohibited|sy|0|entry,forbidden,no,not,smoke
+🚳|no bicycles|sy|0|bicycle,bike,forbidden,not,prohibited
+🚭|no smoking|sy|0|forbidden,not,prohibited,smoke
+🚯|no littering|sy|0|forbidden,litter,not,prohibited
+🚱|non-potable water|sy|0|dry,non-drinking,prohibited
+🚷|no pedestrians|sy|0|forbidden,not,pedestrian,prohibited
+📵|no mobile phones|sy|0|cell,forbidden,not,phone,prohibited,telephone
+🔞|no one under eighteen|sy|0|18,age,forbidden,not,prohibited,restriction,underage
 ☢️|radioactive|sy|0|sign
 ☣️|biohazard|sy|0|sign
-⬆️|up arrow|sy|0|cardinal direction north
-↗️|up-right arrow|sy|0|direction intercardinal northeast
-➡️|right arrow|sy|0|cardinal direction east
-↘️|down-right arrow|sy|0|direction intercardinal southeast
-⬇️|down arrow|sy|0|cardinal direction south
-↙️|down-left arrow|sy|0|direction intercardinal southwest
-⬅️|left arrow|sy|0|cardinal direction west
-↖️|up-left arrow|sy|0|direction intercardinal northwest
+⬆️|up arrow|sy|0|cardinal,direction,north
+↗️|up-right arrow|sy|0|direction,intercardinal,northeast
+➡️|right arrow|sy|0|cardinal,direction,east
+↘️|down-right arrow|sy|0|direction,intercardinal,southeast
+⬇️|down arrow|sy|0|cardinal,direction,south
+↙️|down-left arrow|sy|0|direction,intercardinal,southwest
+⬅️|left arrow|sy|0|cardinal,direction,west
+↖️|up-left arrow|sy|0|direction,intercardinal,northwest
 ↕️|up-down arrow|sy|0|
 ↔️|left-right arrow|sy|0|
 ↩️|right arrow curving left|sy|0|
 ↪️|left arrow curving right|sy|0|
 ⤴️|right arrow curving up|sy|0|
 ⤵️|right arrow curving down|sy|0|
-🔃|clockwise vertical arrows|sy|0|arrow refresh reload
-🔄|counterclockwise arrows button|sy|0|again anticlockwise arrow deja refresh rewindershins vu
+🔃|clockwise vertical arrows|sy|0|arrow,refresh,reload
+🔄|counterclockwise arrows button|sy|0|again,anticlockwise,arrow,deja,refresh,rewindershins,vu
 🔙|back arrow|sy|0|
 🔚|end arrow|sy|0|
 🔛|on! arrow|sy|0|mark
-🔜|soon arrow|sy|0|brb omw
-🔝|top arrow|sy|0|homie up
-🛐|place of worship|sy|0|pray religion
+🔜|soon arrow|sy|0|brb,omw
+🔝|top arrow|sy|0|homie,up
+🛐|place of worship|sy|0|pray,religion
 ⚛️|atom symbol|sy|0|atheist
-🕉️|om|sy|0|hindu religion
-✡️|star of david|sy|0|jew jewish judaism religion
-☸️|wheel of dharma|sy|0|buddhist religion
-☯️|yin yang|sy|0|difficult lives religion tao taoist total yinyang
-✝️|latin cross|sy|0|christ christian religion
-☦️|orthodox cross|sy|0|christian religion
-☪️|star and crescent|sy|0|islam muslim ramadan religion
-☮️|peace symbol|sy|0|healing peaceful
-🕎|menorah|sy|0|candelabrum candlestick hanukkah jewish judaism religion
-🔯|dotted six-pointed star|sy|0|fortune jewish judaism
-🪯|khanda|sy|0|deg fateh khalsa religion sikh sikhism tegh
-♈|aries|sy|0|horoscope ram zodiac
-♉|taurus|sy|0|bull horoscope ox zodiac
-♊|gemini|sy|0|horoscope twins zodiac
-♋|cancer|sy|0|crab horoscope zodiac
-♌|leo|sy|0|horoscope lion zodiac
-♍|virgo|sy|0|horoscope zodiac
-♎|libra|sy|0|balance horoscope justice scales zodiac
-♏|scorpio|sy|0|horoscope scorpion scorpius zodiac
-♐|sagittarius|sy|0|archer horoscope zodiac
-♑|capricorn|sy|0|goat horoscope zodiac
-♒|aquarius|sy|0|bearer horoscope water zodiac
-♓|pisces|sy|0|fish horoscope zodiac
-⛎|ophiuchus|sy|0|bearer serpent snake zodiac
-🔀|shuffle tracks button|sy|0|arrow crossed
-🔁|repeat button|sy|0|arrow clockwise
-🔂|repeat single button|sy|0|arrow clockwise once
-▶️|play button|sy|0|arrow right triangle
-⏩|fast-forward button|sy|0|arrow double fast forward
-⏭️|next track button|sy|0|arrow scene triangle
-⏯️|play or pause button|sy|0|arrow right triangle
-◀️|reverse button|sy|0|arrow left triangle
-⏪|fast reverse button|sy|0|arrow double rewind
-⏮️|last track button|sy|0|arrow previous scene triangle
-🔼|upwards button|sy|0|arrow red up
-⏫|fast up button|sy|0|arrow double
-🔽|downwards button|sy|0|arrow down red
-⏬|fast down button|sy|0|arrow double
-⏸️|pause button|sy|0|bar double vertical
+🕉️|om|sy|0|hindu,religion
+✡️|star of david|sy|0|jew,jewish,judaism,religion
+☸️|wheel of dharma|sy|0|buddhist,religion
+☯️|yin yang|sy|0|difficult,lives,religion,tao,taoist,total,yinyang
+✝️|latin cross|sy|0|christ,christian,religion
+☦️|orthodox cross|sy|0|christian,religion
+☪️|star and crescent|sy|0|islam,muslim,ramadan,religion
+☮️|peace symbol|sy|0|healing,peaceful
+🕎|menorah|sy|0|candelabrum,candlestick,hanukkah,jewish,judaism,religion
+🔯|dotted six-pointed star|sy|0|fortune,jewish,judaism
+🪯|khanda|sy|0|deg,fateh,khalsa,religion,sikh,sikhism,tegh
+♈|aries|sy|0|horoscope,ram,zodiac
+♉|taurus|sy|0|bull,horoscope,ox,zodiac
+♊|gemini|sy|0|horoscope,twins,zodiac
+♋|cancer|sy|0|crab,horoscope,zodiac
+♌|leo|sy|0|horoscope,lion,zodiac
+♍|virgo|sy|0|horoscope,zodiac
+♎|libra|sy|0|balance,horoscope,justice,scales,zodiac
+♏|scorpio|sy|0|horoscope,scorpion,scorpius,zodiac
+♐|sagittarius|sy|0|archer,horoscope,zodiac
+♑|capricorn|sy|0|goat,horoscope,zodiac
+♒|aquarius|sy|0|bearer,horoscope,water,zodiac
+♓|pisces|sy|0|fish,horoscope,zodiac
+⛎|ophiuchus|sy|0|bearer,serpent,snake,zodiac
+🔀|shuffle tracks button|sy|0|arrow,crossed
+🔁|repeat button|sy|0|arrow,clockwise
+🔂|repeat single button|sy|0|arrow,clockwise,once
+▶️|play button|sy|0|arrow,right,triangle
+⏩|fast-forward button|sy|0|arrow,double,fast,forward
+⏭️|next track button|sy|0|arrow,scene,triangle
+⏯️|play or pause button|sy|0|arrow,right,triangle
+◀️|reverse button|sy|0|arrow,left,triangle
+⏪|fast reverse button|sy|0|arrow,double,rewind
+⏮️|last track button|sy|0|arrow,previous,scene,triangle
+🔼|upwards button|sy|0|arrow,red,up
+⏫|fast up button|sy|0|arrow,double
+🔽|downwards button|sy|0|arrow,down,red
+⏬|fast down button|sy|0|arrow,double
+⏸️|pause button|sy|0|bar,double,vertical
 ⏹️|stop button|sy|0|square
 ⏺️|record button|sy|0|circle
 ⏏️|eject button|sy|0|
-🎦|cinema|sy|0|camera film movie
-🔅|dim button|sy|0|brightness low
-🔆|bright button|sy|0|brightness light
-📶|antenna bars|sy|0|bar cell communication mobile phone signal telephone
-🛜|wireless|sy|0|broadband computer connectivity hotspot internet network router smartphone
-📳|vibration mode|sy|0|cell communication mobile phone telephone
-📴|mobile phone off|sy|0|cell telephone
+🎦|cinema|sy|0|camera,film,movie
+🔅|dim button|sy|0|brightness,low
+🔆|bright button|sy|0|brightness,light
+📶|antenna bars|sy|0|bar,cell,communication,mobile,phone,signal,telephone
+🛜|wireless|sy|0|broadband,computer,connectivity,hotspot,internet,network,router,smartphone,wi-fi,wifi,wlan
+📳|vibration mode|sy|0|cell,communication,mobile,phone,telephone
+📴|mobile phone off|sy|0|cell,telephone
 ♀️|female sign|sy|0|woman
 ♂️|male sign|sy|0|man
 ⚧️|transgender symbol|sy|0|
-✖️|multiply|sy|0|× cancel multiplication sign x
+✖️|multiply|sy|0|×,cancel,multiplication,sign,x
 ➕|plus|sy|0|+
-➖|minus|sy|0|- − heavy math sign
-➗|divide|sy|0|÷ division heavy math sign
-🟰|heavy equals sign|sy|0|answer equal equality math
-♾️|infinity|sy|0|forever unbounded universal
-‼️|double exclamation mark|sy|0|! !! bangbang punctuation
-⁉️|exclamation question mark|sy|0|! !? ? interrobang punctuation
-❓|red question mark|sy|0|? punctuation
-❔|white question mark|sy|0|? outlined punctuation
-❕|white exclamation mark|sy|0|! outlined punctuation
-❗|red exclamation mark|sy|0|! punctuation
+➖|minus|sy|0|-,−,heavy,math,sign
+➗|divide|sy|0|÷,division,heavy,math,sign
+🟰|heavy equals sign|sy|0|answer,equal,equality,math
+♾️|infinity|sy|0|forever,unbounded,universal
+‼️|double exclamation mark|sy|0|!,!!,bangbang,punctuation
+⁉️|exclamation question mark|sy|0|!,!?,?,interrobang,punctuation
+❓|red question mark|sy|0|?,punctuation
+❔|white question mark|sy|0|?,outlined,punctuation
+❕|white exclamation mark|sy|0|!,outlined,punctuation
+❗|red exclamation mark|sy|0|!,punctuation
 〰️|wavy dash|sy|0|punctuation
-💱|currency exchange|sy|0|bank money
-💲|heavy dollar sign|sy|0|billion cash charge currency million money pay
-⚕️|medical symbol|sy|0|aesculapius medicine staff
+💱|currency exchange|sy|0|bank,money
+💲|heavy dollar sign|sy|0|billion,cash,charge,currency,million,money,pay
+⚕️|medical symbol|sy|0|aesculapius,medicine,staff
 ♻️|recycling symbol|sy|0|recycle
 ⚜️|fleur-de-lis|sy|0|knights
-🔱|trident emblem|sy|0|anchor poseidon ship tool
+🔱|trident emblem|sy|0|anchor,poseidon,ship,tool
 📛|name badge|sy|0|
-🔰|japanese symbol for beginner|sy|0|chevron green leaf tool yellow
-⭕|hollow red circle|sy|0|heavy large o
-✅|check mark button|sy|0|✓ checked checkmark complete completed done fixed tick
-☑️|check box with check|sy|0|✓ ballot checked done off tick
-✔️|check mark|sy|0|✓ checked checkmark done heavy tick
-❌|cross mark|sy|0|× cancel multiplication multiply x
-❎|cross mark button|sy|0|× multiplication multiply square x
+🔰|japanese symbol for beginner|sy|0|chevron,green,leaf,tool,yellow
+⭕|hollow red circle|sy|0|heavy,large,o
+✅|check mark button|sy|0|✓,checked,checkmark,complete,completed,done,fixed,tick
+☑️|check box with check|sy|0|✓,ballot,checked,done,off,tick
+✔️|check mark|sy|0|✓,checked,checkmark,done,heavy,tick
+❌|cross mark|sy|0|×,cancel,multiplication,multiply,x
+❎|cross mark button|sy|0|×,multiplication,multiply,square,x
 ➰|curly loop|sy|0|curl
 ➿|double curly loop|sy|0|curl
 〽️|part alternation mark|sy|0|
@@ -1558,29 +1558,29 @@ enum EmojiData {
 ❇️|sparkle|sy|0|*
 ©️|copyright|sy|0|c
 ®️|registered|sy|0|r
-™️|trade mark|sy|0|tm trademark
-🫟|splatter|sy|0|drip holi ink liquid mess paint spill stain
+™️|trade mark|sy|0|tm,trademark
+🫟|splatter|sy|0|drip,holi,ink,liquid,mess,paint,spill,stain
 #️⃣|keycap: #|sy|0|keycap
 *️⃣|keycap: *|sy|0|keycap
-0️⃣|keycap: 0|sy|0|keycap zero
-1️⃣|keycap: 1|sy|0|keycap one
-2️⃣|keycap: 2|sy|0|keycap two
-3️⃣|keycap: 3|sy|0|keycap three
-4️⃣|keycap: 4|sy|0|four keycap
-5️⃣|keycap: 5|sy|0|five keycap
-6️⃣|keycap: 6|sy|0|keycap six
-7️⃣|keycap: 7|sy|0|keycap seven
-8️⃣|keycap: 8|sy|0|eight keycap
-9️⃣|keycap: 9|sy|0|keycap nine
+0️⃣|keycap: 0|sy|0|keycap,zero
+1️⃣|keycap: 1|sy|0|keycap,one
+2️⃣|keycap: 2|sy|0|keycap,two
+3️⃣|keycap: 3|sy|0|keycap,three
+4️⃣|keycap: 4|sy|0|four,keycap
+5️⃣|keycap: 5|sy|0|five,keycap
+6️⃣|keycap: 6|sy|0|keycap,six
+7️⃣|keycap: 7|sy|0|keycap,seven
+8️⃣|keycap: 8|sy|0|eight,keycap
+9️⃣|keycap: 9|sy|0|keycap,nine
 🔟|keycap: 10|sy|0|keycap
-🔠|input latin uppercase|sy|0|abcd letters
-🔡|input latin lowercase|sy|0|abcd letters
+🔠|input latin uppercase|sy|0|abcd,letters
+🔡|input latin lowercase|sy|0|abcd,letters
 🔢|input numbers|sy|0|1234
-🔣|input symbols|sy|0|& % ♪ 〒
-🔤|input latin letters|sy|0|abc alphabet
-🅰️|a button (blood type)|sy|0|blood type
-🆎|ab button (blood type)|sy|0|blood type
-🅱️|b button (blood type)|sy|0|blood type
+🔣|input symbols|sy|0|&,%,♪,〒
+🔤|input latin letters|sy|0|abc,alphabet
+🅰️|a button (blood type)|sy|0|blood,type
+🆎|ab button (blood type)|sy|0|blood,type
+🅱️|b button (blood type)|sy|0|blood,type
 🆑|cl button|sy|0|
 🆒|cool button|sy|0|
 🆓|free button|sy|0|
@@ -1589,29 +1589,29 @@ enum EmojiData {
 Ⓜ️|circled m|sy|0|circle
 🆕|new button|sy|0|
 🆖|ng button|sy|0|
-🅾️|o button (blood type)|sy|0|blood type
+🅾️|o button (blood type)|sy|0|blood,type
 🆗|ok button|sy|0|okay
 🅿️|p button|sy|0|parking
 🆘|sos button|sy|0|help
-🆙|up! button|sy|0|mark up
+🆙|up! button|sy|0|mark,up
 🆚|vs button|sy|0|versus
-🈁|japanese “here” button|sy|0|here katakana
-🈂️|japanese “service charge” button|sy|0|charge katakana service
-🈷️|japanese “monthly amount” button|sy|0|amount ideograph monthly
-🈶|japanese “not free of charge” button|sy|0|charge ideograph not
-🈯|japanese “reserved” button|sy|0|ideograph reserved
-🉐|japanese “bargain” button|sy|0|bargain ideograph
-🈹|japanese “discount” button|sy|0|discount ideograph
-🈚|japanese “free of charge” button|sy|0|charge free ideograph
-🈲|japanese “prohibited” button|sy|0|ideograph prohibited
-🉑|japanese “acceptable” button|sy|0|acceptable ideograph
-🈸|japanese “application” button|sy|0|application ideograph
-🈴|japanese “passing grade” button|sy|0|grade ideograph passing
-🈳|japanese “vacancy” button|sy|0|ideograph vacancy
-㊗️|japanese “congratulations” button|sy|0|congratulations ideograph
-㊙️|japanese “secret” button|sy|0|ideograph secret
-🈺|japanese “open for business” button|sy|0|business ideograph open
-🈵|japanese “no vacancy” button|sy|0|ideograph no vacancy
+🈁|japanese “here” button|sy|0|here,katakana
+🈂️|japanese “service charge” button|sy|0|charge,katakana,service
+🈷️|japanese “monthly amount” button|sy|0|amount,ideograph,monthly
+🈶|japanese “not free of charge” button|sy|0|charge,ideograph,not
+🈯|japanese “reserved” button|sy|0|ideograph,reserved
+🉐|japanese “bargain” button|sy|0|bargain,ideograph
+🈹|japanese “discount” button|sy|0|discount,ideograph
+🈚|japanese “free of charge” button|sy|0|charge,free,ideograph
+🈲|japanese “prohibited” button|sy|0|ideograph,prohibited
+🉑|japanese “acceptable” button|sy|0|acceptable,ideograph
+🈸|japanese “application” button|sy|0|application,ideograph
+🈴|japanese “passing grade” button|sy|0|grade,ideograph,passing
+🈳|japanese “vacancy” button|sy|0|ideograph,vacancy
+㊗️|japanese “congratulations” button|sy|0|congratulations,ideograph
+㊙️|japanese “secret” button|sy|0|ideograph,secret
+🈺|japanese “open for business” button|sy|0|business,ideograph,open
+🈵|japanese “no vacancy” button|sy|0|ideograph,no,vacancy
 🔴|red circle|sy|0|geometric
 🟠|orange circle|sy|0|
 🟡|yellow circle|sy|0|
@@ -1621,9 +1621,9 @@ enum EmojiData {
 🟤|brown circle|sy|0|
 ⚫|black circle|sy|0|geometric
 ⚪|white circle|sy|0|geometric
-🟥|red square|sy|0|card penalty
+🟥|red square|sy|0|card,penalty
 🟧|orange square|sy|0|
-🟨|yellow square|sy|0|card penalty
+🟨|yellow square|sy|0|card,penalty
 🟩|green square|sy|0|
 🟦|blue square|sy|0|
 🟪|purple square|sy|0|
@@ -1642,18 +1642,18 @@ enum EmojiData {
 🔹|small blue diamond|sy|0|geometric
 🔺|red triangle pointed up|sy|0|geometric
 🔻|red triangle pointed down|sy|0|geometric
-💠|diamond with a dot|sy|0|comic geometric
+💠|diamond with a dot|sy|0|comic,geometric
 🔘|radio button|sy|0|geometric
-🔳|white square button|sy|0|geometric outlined
+🔳|white square button|sy|0|geometric,outlined
 🔲|black square button|sy|0|geometric
-🏁|chequered flag|fl|0|checkered finish flags game race racing sport win
-🚩|triangular flag|fl|0|construction golf post
-🎌|crossed flags|fl|0|celebration cross japanese
+🏁|chequered flag|fl|0|checkered,finish,flags,game,race,racing,sport,win
+🚩|triangular flag|fl|0|construction,golf,post
+🎌|crossed flags|fl|0|celebration,cross,japanese
 🏴|black flag|fl|0|waving
 🏳️|white flag|fl|0|waving
-🏳️‍🌈|rainbow flag|fl|0|bisexual gay genderqueer glbt glbtq lesbian lgbt lgbtq
-🏳️‍⚧️|transgender flag|fl|0|blue light pink white
-🏴‍☠️|pirate flag|fl|0|jolly plunder roger treasure
+🏳️‍🌈|rainbow flag|fl|0|bisexual,gay,genderqueer,glbt,glbtq,lesbian,lgbt,lgbtq,lgbtqia,pride,queer,trans,transgender
+🏳️‍⚧️|transgender flag|fl|0|blue,light,pink,white
+🏴‍☠️|pirate flag|fl|0|jolly,plunder,roger,treasure
 🇦🇨|flag: ascension island|fl|0|flag
 🇦🇩|flag: andorra|fl|0|flag
 🇦🇪|flag: united arab emirates|fl|0|flag
@@ -1916,57 +1916,57 @@ enum EmojiData {
 🏴󠁧󠁢󠁥󠁮󠁧󠁿|flag: england|fl|0|flag
 🏴󠁧󠁢󠁳󠁣󠁴󠁿|flag: scotland|fl|0|flag
 🏴󠁧󠁢󠁷󠁬󠁳󠁿|flag: wales|fl|0|flag
-←|leftwards arrow|xa|0|left back previous
-↑|upwards arrow|xa|0|up top
-→|rightwards arrow|xa|0|right next forward
-↓|downwards arrow|xa|0|down bottom
-↖|north west arrow|xa|0|diagonal up left
-↗|north east arrow|xa|0|diagonal up right
-↘|south east arrow|xa|0|diagonal down right
-↙|south west arrow|xa|0|diagonal down left
-↔|left right arrow|xa|0|horizontal both
-↕|up down arrow|xa|0|vertical both
-↩|leftwards arrow with hook|xa|0|return undo back
-↪|rightwards arrow with hook|xa|0|redo forward
+←|leftwards arrow|xa|0|left,back,previous
+↑|upwards arrow|xa|0|up,top
+→|rightwards arrow|xa|0|right,next,forward
+↓|downwards arrow|xa|0|down,bottom
+↖|north west arrow|xa|0|diagonal,up,left
+↗|north east arrow|xa|0|diagonal,up,right
+↘|south east arrow|xa|0|diagonal,down,right
+↙|south west arrow|xa|0|diagonal,down,left
+↔|left right arrow|xa|0|horizontal,both
+↕|up down arrow|xa|0|vertical,both
+↩|leftwards arrow with hook|xa|0|return,undo,back
+↪|rightwards arrow with hook|xa|0|redo,forward
 ↰|upwards arrow with tip leftwards|xa|0|turn
 ↱|upwards arrow with tip rightwards|xa|0|turn
 ↲|downwards arrow with tip leftwards|xa|0|turn
-↳|downwards arrow with tip rightwards|xa|0|turn branch
-⇄|rightwards arrow over leftwards arrow|xa|0|swap exchange sync
-⇅|upwards arrow leftwards of downwards arrow|xa|0|swap sort
+↳|downwards arrow with tip rightwards|xa|0|turn,branch
+⇄|rightwards arrow over leftwards arrow|xa|0|swap,exchange,sync
+⇅|upwards arrow leftwards of downwards arrow|xa|0|swap,sort
 ⇐|leftwards double arrow|xa|0|implies
 ⇑|upwards double arrow|xa|0|shift
-⇒|rightwards double arrow|xa|0|implies therefore
+⇒|rightwards double arrow|xa|0|implies,therefore
 ⇓|downwards double arrow|xa|0|
-⇔|left right double arrow|xa|0|iff equivalent
-⇧|upwards white arrow|xa|0|shift key
-⇪|upwards white arrow from bar|xa|0|caps lock key
+⇔|left right double arrow|xa|0|iff,equivalent
+⇧|upwards white arrow|xa|0|shift,key
+⇪|upwards white arrow from bar|xa|0|caps,lock,key
 ➔|heavy wide-headed rightwards arrow|xa|0|pointer
 ➜|heavy round-tipped rightwards arrow|xa|0|pointer
-➤|black rightwards arrowhead|xa|0|pointer bullet
-$|dollar sign|xc|0|usd money currency
-¢|cent sign|xc|0|money currency
-£|pound sign|xc|0|gbp sterling money currency
-€|euro sign|xc|0|eur money currency
-¥|yen sign|xc|0|jpy yuan money currency
-₹|indian rupee sign|xc|0|inr money currency
-₩|won sign|xc|0|krw money currency
-₽|ruble sign|xc|0|rub money currency
-₺|turkish lira sign|xc|0|try money currency
-₫|dong sign|xc|0|vnd money currency
-₴|hryvnia sign|xc|0|uah money currency
-₦|naira sign|xc|0|ngn money currency
-₪|new shekel sign|xc|0|ils money currency
-฿|baht sign|xc|0|thb money currency
-₿|bitcoin sign|xc|0|btc crypto money currency
-₡|colon sign|xc|0|crc money currency
-₱|peso sign|xc|0|php money currency
-₨|rupee sign|xc|0|pkr money currency
-₸|tenge sign|xc|0|kzt money currency
+➤|black rightwards arrowhead|xa|0|pointer,bullet
+$|dollar sign|xc|0|usd,money,currency
+¢|cent sign|xc|0|money,currency
+£|pound sign|xc|0|gbp,sterling,money,currency
+€|euro sign|xc|0|eur,money,currency
+¥|yen sign|xc|0|jpy,yuan,money,currency
+₹|indian rupee sign|xc|0|inr,money,currency
+₩|won sign|xc|0|krw,money,currency
+₽|ruble sign|xc|0|rub,money,currency
+₺|turkish lira sign|xc|0|try,money,currency
+₫|dong sign|xc|0|vnd,money,currency
+₴|hryvnia sign|xc|0|uah,money,currency
+₦|naira sign|xc|0|ngn,money,currency
+₪|new shekel sign|xc|0|ils,money,currency
+฿|baht sign|xc|0|thb,money,currency
+₿|bitcoin sign|xc|0|btc,crypto,money,currency
+₡|colon sign|xc|0|crc,money,currency
+₱|peso sign|xc|0|php,money,currency
+₨|rupee sign|xc|0|pkr,money,currency
+₸|tenge sign|xc|0|kzt,money,currency
 ¤|generic currency sign|xc|0|money
-+|plus sign|xm|0|add addition
-−|minus sign|xm|0|subtract subtraction
-×|multiplication sign|xm|0|times multiply
++|plus sign|xm|0|add,addition
+−|minus sign|xm|0|subtract,subtraction
+×|multiplication sign|xm|0|times,multiply
 ÷|division sign|xm|0|divide
 =|equals sign|xm|0|equal
 ≠|not equal to|xm|0|unequal
@@ -1975,18 +1975,18 @@ $|dollar sign|xc|0|usd money currency
 >|greater-than sign|xm|0|
 ≤|less-than or equal to|xm|0|
 ≥|greater-than or equal to|xm|0|
-±|plus-minus sign|xm|0|plus or minus
+±|plus-minus sign|xm|0|plus,or,minus
 ¬|not sign|xm|0|negation
 √|square root|xm|0|radical
 ∛|cube root|xm|0|radical
 ∞|infinity|xm|0|forever
-∑|n-ary summation|xm|0|sum sigma
-∏|n-ary product|xm|0|pi product
+∑|n-ary summation|xm|0|sum,sigma
+∏|n-ary product|xm|0|pi,product
 ∫|integral|xm|0|calculus
-∂|partial differential|xm|0|calculus derivative
-∆|increment|xm|0|delta difference
-∇|nabla|xm|0|gradient del
-∈|element of|xm|0|set member
+∂|partial differential|xm|0|calculus,derivative
+∆|increment|xm|0|delta,difference
+∇|nabla|xm|0|gradient,del
+∈|element of|xm|0|set,member
 ∉|not an element of|xm|0|set
 ∩|intersection|xm|0|set
 ∪|union|xm|0|set
@@ -1995,148 +1995,148 @@ $|dollar sign|xc|0|usd money currency
 ∅|empty set|xm|0|null
 ∧|logical and|xm|0|conjunction
 ∨|logical or|xm|0|disjunction
-⊕|circled plus|xm|0|xor direct sum
+⊕|circled plus|xm|0|xor,direct,sum
 ∝|proportional to|xm|0|
 ∴|therefore|xm|0|
 ∵|because|xm|0|since
-°|degree sign|xm|0|temperature angle
-‰|per mille sign|xm|0|permille thousand
-µ|micro sign|xm|0|mu micro
-π|greek small letter pi|xm|0|math constant
-Ω|greek capital letter omega|xm|0|ohm resistance
+°|degree sign|xm|0|temperature,angle
+‰|per mille sign|xm|0|permille,thousand
+µ|micro sign|xm|0|mu,micro
+π|greek small letter pi|xm|0|math,constant
+Ω|greek capital letter omega|xm|0|ohm,resistance
 ¼|vulgar fraction one quarter|xm|0|fourth
 ½|vulgar fraction one half|xm|0|
 ¾|vulgar fraction three quarters|xm|0|
-ƒ|latin small letter f with hook|xm|0|function florin
-■|black square|xs|0|shape filled
-□|white square|xs|0|shape outline
+ƒ|latin small letter f with hook|xm|0|function,florin
+■|black square|xs|0|shape,filled
+□|white square|xs|0|shape,outline
 ▪|black small square|xs|0|shape
 ▫|white small square|xs|0|shape
 ▲|black up-pointing triangle|xs|0|shape
 △|white up-pointing triangle|xs|0|shape
-▶|black right-pointing triangle|xs|0|play shape
-▷|white right-pointing triangle|xs|0|play shape
+▶|black right-pointing triangle|xs|0|play,shape
+▷|white right-pointing triangle|xs|0|play,shape
 ▼|black down-pointing triangle|xs|0|shape
 ▽|white down-pointing triangle|xs|0|shape
 ◀|black left-pointing triangle|xs|0|shape
 ◁|white left-pointing triangle|xs|0|shape
-●|black circle|xs|0|dot shape filled
-○|white circle|xs|0|shape outline
+●|black circle|xs|0|dot,shape,filled
+○|white circle|xs|0|shape,outline
 ◆|black diamond|xs|0|shape
 ◇|white diamond|xs|0|shape
-★|black star|xs|0|favorite shape filled
-☆|white star|xs|0|favorite shape outline
-✓|check mark|xs|0|tick done yes
-✗|ballot x|xs|0|cross no wrong
+★|black star|xs|0|favorite,shape,filled
+☆|white star|xs|0|favorite,shape,outline
+✓|check mark|xs|0|tick,done,yes
+✗|ballot x|xs|0|cross,no,wrong
 ♠|black spade suit|xs|0|cards
 ♣|black club suit|xs|0|cards
-♥|black heart suit|xs|0|cards love
+♥|black heart suit|xs|0|cards,love
 ♦|black diamond suit|xs|0|cards
-•|bullet|xs|0|list point dot
-◦|white bullet|xs|0|list point
-‣|triangular bullet|xs|0|list point
+•|bullet|xs|0|list,point,dot
+◦|white bullet|xs|0|list,point
+‣|triangular bullet|xs|0|list,point
 ·|middle dot|xs|0|interpunct
-—|em dash|xs|0|long dash punctuation
-–|en dash|xs|0|dash range punctuation
-…|horizontal ellipsis|xs|0|dots punctuation
-«|left-pointing double angle quotation mark|xs|0|guillemet quote
-»|right-pointing double angle quotation mark|xs|0|guillemet quote
+—|em dash|xs|0|long,dash,punctuation
+–|en dash|xs|0|dash,range,punctuation
+…|horizontal ellipsis|xs|0|dots,punctuation
+«|left-pointing double angle quotation mark|xs|0|guillemet,quote
+»|right-pointing double angle quotation mark|xs|0|guillemet,quote
 ‘|left single quotation mark|xs|0|quote
-’|right single quotation mark|xs|0|quote apostrophe
+’|right single quotation mark|xs|0|quote,apostrophe
 “|left double quotation mark|xs|0|quote
 ”|right double quotation mark|xs|0|quote
 „|double low-9 quotation mark|xs|0|quote
 †|dagger|xs|0|footnote
 ‡|double dagger|xs|0|footnote
-§|section sign|xs|0|paragraph law
+§|section sign|xs|0|paragraph,law
 ¶|pilcrow sign|xs|0|paragraph
 ©|copyright sign|xs|0|legal
-®|registered sign|xs|0|trademark legal
-™|trade mark sign|xs|0|trademark legal
+®|registered sign|xs|0|trademark,legal
+™|trade mark sign|xs|0|trademark,legal
 №|numero sign|xs|0|number
-¡|inverted exclamation mark|xs|0|spanish punctuation
-¿|inverted question mark|xs|0|spanish punctuation
-◉|fisheye|xs|0|bullseye target circle dot
-◎|bullseye|xs|0|target circle ring
-#|number sign|xs|0|hash pound sharp
-*|asterisk|xs|0|star multiply wildcard
-@|at sign|xs|0|at arobase email
+¡|inverted exclamation mark|xs|0|spanish,punctuation
+¿|inverted question mark|xs|0|spanish,punctuation
+◉|fisheye|xs|0|bullseye,target,circle,dot
+◎|bullseye|xs|0|target,circle,ring
+#|number sign|xs|0|hash,pound,sharp
+*|asterisk|xs|0|star,multiply,wildcard
+@|at sign|xs|0|at,arobase,email
 &|ampersand|xs|0|and
-%|percent sign|xs|0|percent modulo
-⁉|exclamation question mark|xs|0|interrobang surprise
-‼|double exclamation mark|xs|0|bang emphasis
-℗|sound recording copyright|xs|0|phonogram copyright publishing
-℠|service mark|xs|0|servicemark trademark
-ª|feminine ordinal indicator|xs|0|feminine ordinal spanish
-º|masculine ordinal indicator|xs|0|masculine ordinal spanish portuguese
-※|reference mark|xj|0|kome komejirushi note footnote annotation
-〃|ditto mark|xj|0|same repeat above
+%|percent sign|xs|0|percent,modulo
+⁉|exclamation question mark|xs|0|interrobang,surprise
+‼|double exclamation mark|xs|0|bang,emphasis
+℗|sound recording copyright|xs|0|phonogram,copyright,publishing
+℠|service mark|xs|0|servicemark,trademark
+ª|feminine ordinal indicator|xs|0|feminine,ordinal,spanish
+º|masculine ordinal indicator|xs|0|masculine,ordinal,spanish,portuguese
+※|reference mark|xj|0|kome,komejirushi,note,footnote,annotation
+〃|ditto mark|xj|0|same,repeat,above
 〄|japanese industrial standard symbol|xj|0|jis
-〆|ideographic closing mark|xj|0|shime close seal
-〇|ideographic number zero|xj|0|maru circle zero
-〒|postal mark|xj|0|post yubin mail address
-〓|geta mark|xj|0|tofu missing glyph
-〶|circled postal mark|xj|0|post yubin mail
+〆|ideographic closing mark|xj|0|shime,close,seal
+〇|ideographic number zero|xj|0|maru,circle,zero
+〒|postal mark|xj|0|post,yubin,mail,address
+〓|geta mark|xj|0|tofu,missing,glyph
+〶|circled postal mark|xj|0|post,yubin,mail
 〷|ideographic telegraph line feed separator symbol|xj|0|telegraph
 〻|vertical ideographic iteration mark|xj|0|repeat
 〼|masu mark|xj|0|square
-〜|wave dash|xj|0|tilde range approximately
-～|fullwidth tilde|xj|0|wave dash range
-・|katakana middle dot|xj|0|nakaguro separator interpunct
-―|horizontal bar|xj|0|quotation dash long
-‥|two dot leader|xj|0|ellipsis dots
-々|ideographic iteration mark|xj|0|noma kurikaeshi repeat
+〜|wave dash|xj|0|tilde,range,approximately
+～|fullwidth tilde|xj|0|wave,dash,range
+・|katakana middle dot|xj|0|nakaguro,separator,interpunct
+―|horizontal bar|xj|0|quotation,dash,long
+‥|two dot leader|xj|0|ellipsis,dots
+々|ideographic iteration mark|xj|0|noma,kurikaeshi,repeat
 ゝ|hiragana iteration mark|xj|0|repeat
-ゞ|hiragana voiced iteration mark|xj|0|repeat dakuten
+ゞ|hiragana voiced iteration mark|xj|0|repeat,dakuten
 ヽ|katakana iteration mark|xj|0|repeat
-ヾ|katakana voiced iteration mark|xj|0|repeat dakuten
-゠|katakana-hiragana double hyphen|xj|0|double hyphen
-ヵ|katakana letter small ka|xj|0|counter months
-ヶ|katakana letter small ke|xj|0|counter months ka
-〳|vertical kana repeat mark upper half|xj|0|repeat vertical
-〴|voiced vertical kana repeat mark upper half|xj|0|repeat dakuten
-〵|vertical kana repeat mark lower half|xj|0|repeat vertical
-〈|left angle bracket|xj|0|quote open
-〉|right angle bracket|xj|0|quote close
-《|left double angle bracket|xj|0|quote title open
-》|right double angle bracket|xj|0|quote title close
-「|left corner bracket|xj|0|kagi quote open
-」|right corner bracket|xj|0|kagi quote close
-『|left white corner bracket|xj|0|quote title open
-』|right white corner bracket|xj|0|quote title close
-【|left black lenticular bracket|xj|0|heading open
-】|right black lenticular bracket|xj|0|heading close
-︱|vertical em dash|xj|0|tategaki presentation form
-︵|vertical left parenthesis|xj|0|tategaki presentation form open
-︶|vertical right parenthesis|xj|0|tategaki presentation form close
-︻|vertical left black lenticular bracket|xj|0|tategaki heading open
-︼|vertical right black lenticular bracket|xj|0|tategaki heading close
-﹁|vertical left corner bracket|xj|0|tategaki kagi quote open
-﹂|vertical right corner bracket|xj|0|tategaki kagi quote close
-﹃|vertical left white corner bracket|xj|0|tategaki quote open
-﹄|vertical right white corner bracket|xj|0|tategaki quote close
-⌘|command key|xk|0|cmd looped square place of interest
-⌥|option key|xk|0|opt alt
-⌃|control key|xk|0|ctrl caret up arrowhead
+ヾ|katakana voiced iteration mark|xj|0|repeat,dakuten
+゠|katakana-hiragana double hyphen|xj|0|double,hyphen
+ヵ|katakana letter small ka|xj|0|counter,months
+ヶ|katakana letter small ke|xj|0|counter,months,ka
+〳|vertical kana repeat mark upper half|xj|0|repeat,vertical
+〴|voiced vertical kana repeat mark upper half|xj|0|repeat,dakuten
+〵|vertical kana repeat mark lower half|xj|0|repeat,vertical
+〈|left angle bracket|xj|0|quote,open
+〉|right angle bracket|xj|0|quote,close
+《|left double angle bracket|xj|0|quote,title,open
+》|right double angle bracket|xj|0|quote,title,close
+「|left corner bracket|xj|0|kagi,quote,open
+」|right corner bracket|xj|0|kagi,quote,close
+『|left white corner bracket|xj|0|quote,title,open
+』|right white corner bracket|xj|0|quote,title,close
+【|left black lenticular bracket|xj|0|heading,open
+】|right black lenticular bracket|xj|0|heading,close
+︱|vertical em dash|xj|0|tategaki,presentation,form
+︵|vertical left parenthesis|xj|0|tategaki,presentation,form,open
+︶|vertical right parenthesis|xj|0|tategaki,presentation,form,close
+︻|vertical left black lenticular bracket|xj|0|tategaki,heading,open
+︼|vertical right black lenticular bracket|xj|0|tategaki,heading,close
+﹁|vertical left corner bracket|xj|0|tategaki,kagi,quote,open
+﹂|vertical right corner bracket|xj|0|tategaki,kagi,quote,close
+﹃|vertical left white corner bracket|xj|0|tategaki,quote,open
+﹄|vertical right white corner bracket|xj|0|tategaki,quote,close
+⌘|command key|xk|0|cmd,looped,square,place,of,interest
+⌥|option key|xk|0|opt,alt
+⌃|control key|xk|0|ctrl,caret,up,arrowhead
 ⎋|escape key|xk|0|esc
-⏎|return key|xk|0|enter newline carriage
-⌤|enter key|xk|0|enter numpad
-⌫|delete key|xk|0|backspace erase backward
-⌦|forward delete key|xk|0|delete forward fn
-⇥|tab key|xk|0|tab right
-⇤|backtab key|xk|0|shift tab left
-⇱|home key|xk|0|home corner
-⇲|end key|xk|0|end corner
-⇞|page up key|xk|0|pgup page up
-⇟|page down key|xk|0|pgdn page down
-⏏|eject key|xk|0|eject media disk
-⌧|clear key|xk|0|clear numpad
-⎙|print screen key|xk|0|print screen sysrq
-␣|space symbol|xk|0|space blank open box
-⌀|diameter sign|xk|0|diameter engineering average
-⌂|house|xk|0|home house
+⏎|return key|xk|0|enter,newline,carriage
+⌤|enter key|xk|0|enter,numpad
+⌫|delete key|xk|0|backspace,erase,backward
+⌦|forward delete key|xk|0|delete,forward,fn
+⇥|tab key|xk|0|tab,right
+⇤|backtab key|xk|0|shift,tab,left
+⇱|home key|xk|0|home,corner
+⇲|end key|xk|0|end,corner
+⇞|page up key|xk|0|pgup,page,up
+⇟|page down key|xk|0|pgdn,page,down
+⏏|eject key|xk|0|eject,media,disk
+⌧|clear key|xk|0|clear,numpad
+⎙|print screen key|xk|0|print,screen,sysrq
+␣|space symbol|xk|0|space,blank,open,box
+⌀|diameter sign|xk|0|diameter,engineering,average
+⌂|house|xk|0|home,house
 ⌨|keyboard|xk|0|keyboard
-⚙|gear|xk|0|settings cog preferences
-|apple logo|xk|0|apple logo private
+⚙|gear|xk|0|settings,cog,preferences
+|apple logo|xk|0|apple,logo,private
 """
 }

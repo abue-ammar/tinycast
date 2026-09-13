@@ -19,10 +19,10 @@ final class FrequentEmojiStore {
 
     /// The empty-query grid re-reads `top()` every render, so this sorts once per tally.
     @ObservationIgnored private var sortedMemo = Memo<Int, [String]>()
-    private var revision = 0
+    private(set) var revision = 0
 
-    init() {
-        fileURL = AppPaths.applicationSupport().appendingPathComponent("emoji-frequency.json")
+    init(fileURL: URL = AppPaths.applicationSupport().appendingPathComponent("emoji-frequency.json")) {
+        self.fileURL = fileURL
 
         if let data = try? Data(contentsOf: fileURL),
             let decoded = try? JSONDecoder().decode([FrequentEmoji].self, from: data)

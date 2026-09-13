@@ -30,7 +30,7 @@ enum EmojiGrid {
                 append(section.category.title, section.entries)
             }
         } else {
-            append("Results", index.search(query))
+            append("Results", index.search(query, frequent: frequent))
         }
         return sections
     }

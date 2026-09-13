@@ -95,6 +95,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |
+| `emoji-search-test` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format |
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `interface-size-test` | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift` |
@@ -246,6 +247,18 @@ swiftc -O -swift-version 6 Tinycast/Platform/PasteboardFiles.swift \
     Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
     Tests/clipboard-file-performance.swift -o /tmp/clipboard-file-performance
 /tmp/clipboard-file-performance
+```
+
+`Tests/emoji-search-performance.swift` times uncached queries, typing prefixes and memo hits against
+the loaded catalog, with process RSS and footprint as JSON; `--names` also lists every catalog name
+missing from its own top five results:
+
+```sh
+swiftc -O -swift-version 6 Tinycast/Features/Emoji/Model/{EmojiCatalog,EmojiData.generated}.swift \
+    Tinycast/Features/Emoji/Service/{EmojiIndex,FrequentEmojiStore}.swift \
+    Tinycast/Features/Launcher/Model/SearchRelevance.swift Tinycast/Platform/{AppPaths,Memo}.swift \
+    Tests/emoji-search-performance.swift -o /tmp/emoji-search-performance
+/tmp/emoji-search-performance --names
 ```
 
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
