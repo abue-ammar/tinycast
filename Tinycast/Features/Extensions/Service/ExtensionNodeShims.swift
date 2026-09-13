@@ -62,6 +62,31 @@ final class ExtensionNodeShims: @unchecked Sendable {
     // MARK: - os
 
     private func operatingSystem(method: String) throws -> Any {
+        if method == "uptime" { return ProcessInfo.processInfo.systemUptime }
+        if method == "loadavg" {
+            var averages = [Double](repeating: 0, count: 3)
+            let count = averages.withUnsafeMutableBufferPointer {
+                getloadavg($0.baseAddress, Int32($0.count))
+            }
+            guard count == Int32(averages.count) else {
+                throw ShimError.failed("Could not read system load averages.")
+            }
+            return averages
+        }
+        if method == "freemem" {
+            var statistics = vm_statistics64_data_t()
+            var count = mach_msg_type_number_t(
+                MemoryLayout<vm_statistics64_data_t>.stride / MemoryLayout<integer_t>.stride)
+            let result = withUnsafeMutablePointer(to: &statistics) { pointer in
+                pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                    host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
+                }
+            }
+            guard result == KERN_SUCCESS else {
+                throw ShimError.failed("Could not read free memory (Mach error \(result)).")
+            }
+            return Double(statistics.free_count) * Double(getpagesize())
+        }
         guard method == "cpus" else {
             throw ShimError.failed("os.\(method) is not supported.", "ENOSYS")
         }

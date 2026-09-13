@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID, randomBytes, createHmac } from "node:crypto";
-import { cpus, homedir, tmpdir } from "node:os";
+import { cpus, freemem, homedir, loadavg, tmpdir, uptime } from "node:os";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
 
@@ -132,6 +132,12 @@ function syncHostCall(api, method, args) {
   switch (`${api}.${method}`) {
     case "os.cpus":
       return cpus();
+    case "os.freemem":
+      return freemem();
+    case "os.uptime":
+      return uptime();
+    case "os.loadavg":
+      return loadavg();
     case "fs.open":
       return fs.openSync(args[0], args[1], args[2]);
     case "fs.close":

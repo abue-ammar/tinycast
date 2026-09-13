@@ -577,10 +577,11 @@ Two things decide whether it gets there. Axios enables that adapter only when
 `Object.prototype.toString.call(process)` reads `[object process]`, so `process` carries the tag; and
 follow-redirects inherits with `Writable.call(this)`, so `stream` hands out callable constructors.
 
-**Bundled Swift helpers** — an extension that imports `swift:../swift/<package>` ships the compiled
-Mach-O in `assets/`, and the wrapper Raycast generates chmods it to `755` before spawning it. Store
-zips ship that binary `644`, so the chmod is what makes it runnable at all; the buffered `spawn`
-covers the rest of the wrapper. Color Picker is the reference case.
+**Bundled helpers** — compiled Mach-O files and shebang scripts live in `assets/`. GitHub's raw-file
+downloads and some store zips lose their executable mode, so installation preserves Git tree mode
+`100755`; discovery also repairs known executable payloads already installed as `644`. That covers
+both generated wrappers and extensions that call a helper directly with `execFile`. The buffered
+`spawn` covers the rest of a Swift wrapper. Color Picker is the reference case.
 
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`. A `no-view` command declaring `interval`

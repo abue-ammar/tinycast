@@ -100,9 +100,11 @@ enum ExtensionStoreResponse {
             let path: String
             let type: String
             let sha: String
+            let mode: String?
 
             var isDirectory: Bool { type == "tree" }
             var isFile: Bool { type == "blob" }
+            var isExecutable: Bool { isFile && mode == "100755" }
         }
 
         func directorySHA(named name: String) -> String? {

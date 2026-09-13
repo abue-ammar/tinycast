@@ -173,6 +173,9 @@ struct ExtensionStoreClient: Sendable {
             try fileManager.createDirectory(
                 at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
             try await get(raw).write(to: target, options: .atomic)
+            if entry.isExecutable {
+                try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: target.path)
+            }
         }
     }
 

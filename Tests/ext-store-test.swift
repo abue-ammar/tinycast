@@ -140,20 +140,23 @@ struct ExtensionStoreTests {
     static func gitHubTree() {
         print("\n# github tree")
         let payload = """
-            {"tree":[{"path":"src","type":"tree","sha":"t1"},
-                     {"path":"package.json","type":"blob","sha":"b1"},
-                     {"path":"src/index.ts","type":"blob","sha":"b2"}],"truncated":false}
+            {"tree":[{"path":"src","type":"tree","sha":"t1","mode":"040000"},
+                     {"path":"package.json","type":"blob","sha":"b1","mode":"100644"},
+                     {"path":"bin/helper","type":"blob","sha":"b2","mode":"100755"},
+                     {"path":"src/index.ts","type":"blob","sha":"b3","mode":"100644"}],"truncated":false}
             """
         guard let tree = try? ExtensionStoreResponse.parseTree(Data(payload.utf8)) else {
             check("a tree parses", false)
             return
         }
-        check("every entry parses", tree.tree.count == 3)
+        check("every entry parses", tree.tree.count == 4)
         check("a directory is flagged", tree.tree[0].isDirectory)
         check("a file is flagged", tree.tree[1].isFile)
         check("a directory is not a file", !tree.tree[0].isFile)
+        check("an executable blob keeps its mode", tree.tree[2].isExecutable)
+        check("an ordinary blob is not executable", !tree.tree[1].isExecutable)
         // A recursive listing carries nested paths, which is what makes one call enough.
-        check("nested paths survive", tree.tree[2].path == "src/index.ts")
+        check("nested paths survive", tree.tree[3].path == "src/index.ts")
         check("a directory is found by name", tree.directorySHA(named: "src") == "t1")
         check("only directories are named", tree.directoryNames == ["src"])
 

@@ -118,12 +118,51 @@ enum ExtensionCatalog {
         return
             entries
             .compactMap { directory -> InstalledExtension? in
+                try? restoreExecutablePermissions(in: directory)
                 guard let manifest = try? ExtensionManifest.load(directory: directory),
                     manifest.supportsMacOS
                 else { return nil }
                 return InstalledExtension(manifest: manifest, directory: directory)
             }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    /// GitHub's raw-file downloads lose mode bits, so restore runnable helper assets by content.
+    nonisolated static func restoreExecutablePermissions(in directory: URL) throws {
+        let fileManager = FileManager.default
+        let assets = directory.appendingPathComponent("assets", isDirectory: true)
+        guard
+            let enumerator = fileManager.enumerator(
+                at: assets,
+                includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+                options: [.skipsHiddenFiles])
+        else { return }
+
+        while let file = enumerator.nextObject() as? URL {
+            let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true,
+                !fileManager.isExecutableFile(atPath: file.path), isExecutablePayload(file)
+            else { continue }
+            let attributes = try fileManager.attributesOfItem(atPath: file.path)
+            let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue ?? 0o644
+            let executeBits = (permissions & 0o444) >> 2
+            try fileManager.setAttributes(
+                [.posixPermissions: permissions | executeBits], ofItemAtPath: file.path)
+        }
+    }
+
+    private nonisolated static func isExecutablePayload(_ file: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return false }
+        defer { try? handle.close() }
+        guard let data = try? handle.read(upToCount: 4) else { return false }
+        let bytes = Array(data)
+        if bytes.starts(with: [0x23, 0x21]) { return true }
+        return [
+            [0xCA, 0xFE, 0xBA, 0xBE], [0xBE, 0xBA, 0xFE, 0xCA],
+            [0xCA, 0xFE, 0xBA, 0xBF], [0xBF, 0xBA, 0xFE, 0xCA],
+            [0xCE, 0xFA, 0xED, 0xFE], [0xCF, 0xFA, 0xED, 0xFE],
+            [0xFE, 0xED, 0xFA, 0xCE], [0xFE, 0xED, 0xFA, 0xCF]
+        ].contains(bytes)
     }
 
     // MARK: - Install
@@ -182,6 +221,7 @@ enum ExtensionCatalog {
             if fm.fileExists(atPath: assets.path) {
                 try fm.copyItem(at: assets, to: destination.appendingPathComponent("assets"))
             }
+            try restoreExecutablePermissions(in: destination)
         } catch {
             throw InstallError.copyFailed(error.localizedDescription)
         }

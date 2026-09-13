@@ -224,6 +224,27 @@ struct ExtensionTests {
             return times.values.allSatisfy { $0.doubleValue.isFinite && $0.doubleValue >= 0 }
         }
         check("os.cpus returns finite Node timing fields", valid, result)
+
+        func value(_ method: String) -> Any? {
+            let result = ExtensionNodeShims().perform(api: "os", method: method, argsJSON: "[]")
+            guard let data = result.data(using: .utf8),
+                let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                envelope["ok"] as? Bool == true
+            else { return nil }
+            return envelope["value"]
+        }
+        let uptime = (value("uptime") as? NSNumber)?.doubleValue
+        check("os.uptime returns the system uptime", uptime.map { $0 > 0 } == true)
+        let freeMemory = (value("freemem") as? NSNumber)?.doubleValue
+        check(
+            "os.freemem returns finite bytes",
+            freeMemory.map { $0.isFinite && $0 >= 0 && $0 <= Double(ProcessInfo.processInfo.physicalMemory) }
+                == true)
+        let loadAverages = value("loadavg") as? [NSNumber]
+        check(
+            "os.loadavg returns three finite values",
+            loadAverages?.count == 3
+                && loadAverages?.allSatisfy { $0.doubleValue.isFinite && $0.doubleValue >= 0 } == true)
     }
 
     static func manifestChecks() {
