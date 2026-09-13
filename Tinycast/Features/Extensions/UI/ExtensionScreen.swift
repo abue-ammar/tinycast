@@ -189,10 +189,7 @@ struct ExtensionScreen: Equatable {
         self.emptyView = emptyView
     }
 
-    /// The List/Grid callback corresponding to Tinycast's currently visible row index.
-    ///
-    /// This is derived after local filtering: index zero may identify a different item when the
-    /// query changes even though the numeric palette selection did not move.
+    /// Resolves the List/Grid callback after local filtering changes the visible row order.
     func selectionChange(at index: Int) -> SelectionChange? {
         guard let selectionHandler else { return nil }
         let itemID = items.indices.contains(index) ? items[index].node.string("id") : nil
