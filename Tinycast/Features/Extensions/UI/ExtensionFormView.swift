@@ -16,6 +16,10 @@ struct ExtensionFormView: View {
     @Environment(PaletteState.self) private var palette
     @FocusState private var focused: Int?
 
+    private var labelWidth: CGFloat {
+        form.labelWidth(for: metrics.size.panelWidth, gap: metrics.spacing.md)
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -195,7 +199,7 @@ struct ExtensionFormView: View {
                         .accessibilityHidden(true)
                 }
             }
-            .frame(width: metrics.size.formLabelWidth, alignment: .trailing)
+            .frame(width: labelWidth, alignment: .trailing)
             // Centred on a control's height but free to grow, so a long label wraps.
             .frame(minHeight: form.controlHeight)
 
@@ -212,12 +216,12 @@ struct ExtensionFormView: View {
         }
         // Leading, so content narrower than a control can't pull its label towards the centre.
         .frame(
-            width: metrics.size.formLabelWidth + metrics.spacing.md
+            width: labelWidth + metrics.spacing.md
                 + form.controlWidth,
             alignment: .leading
         )
         .frame(maxWidth: .infinity)
-        .offset(x: -(metrics.size.formLabelWidth + metrics.spacing.md) / 2)
+        .offset(x: -(labelWidth + metrics.spacing.md) / 2)
     }
 }
 

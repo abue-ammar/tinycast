@@ -22,6 +22,7 @@ struct ExtensionFormTests {
 
     static func main() {
         popoverGeometry()
+        labelGeometry()
         popoverPlacement()
         datePresets()
         dateParsing()
@@ -92,6 +93,16 @@ struct ExtensionFormTests {
     }
 
     // MARK: - Geometry
+
+    static func labelGeometry() {
+        let form = ExtensionFormMetrics.base
+        check(
+            "label reaches the panel edge beside its centred control",
+            form.labelWidth(for: 750, gap: 12) == 183)
+        check(
+            "label width clamps when the panel cannot fit the control",
+            form.labelWidth(for: 360, gap: 12) == 0)
+    }
 
     static func popoverGeometry() {
         print("\n# popover geometry")

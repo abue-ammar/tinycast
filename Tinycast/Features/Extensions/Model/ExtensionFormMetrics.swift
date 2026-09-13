@@ -11,6 +11,12 @@ struct ExtensionFormMetrics {
     /// One control's width and height, in the proportions an extension's form is authored against.
     var controlWidth: CGFloat { scaled(360) }
     var controlHeight: CGFloat { scaled(32) }
+
+    /// Fits label beside centred control.
+    func labelWidth(for panelWidth: CGFloat, gap: CGFloat) -> CGFloat {
+        max(0, ((panelWidth - controlWidth) / 2 - gap).rounded())
+    }
+
     /// A text area is a control that grew: same width and chrome, several lines tall.
     var textAreaHeight: CGFloat { scaled(78) }
     /// Inset of a control's own text from its rounded edge.

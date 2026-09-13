@@ -84,7 +84,6 @@ struct InterfaceMetrics: Equatable, Sendable {
         var clipboardMediaHeight: CGFloat { scaledPoints(Theme.Size.clipboardMediaHeight, scale) }
         var clipboardPreviewPixel: CGFloat { scaledPoints(Theme.Size.clipboardPreviewPixel, scale) }
         var emojiCell: CGFloat { scaledPoints(Theme.Size.emojiCell, scale) }
-        var formLabelWidth: CGFloat { scaledPoints(Theme.Size.formLabelWidth, scale) }
         var argumentPromptWidth: CGFloat { scaledPoints(Theme.Size.argumentPromptWidth, scale) }
 
         var markdownListMarker: CGFloat { scaledPoints(Theme.Size.markdownListMarker, scale) }

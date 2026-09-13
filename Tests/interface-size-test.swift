@@ -104,7 +104,6 @@ struct InterfaceSizeTests {
             m.size.clipboardPreviewPixel, Theme.Size.clipboardPreviewPixel,
             "size.clipboardPreviewPixel")
         expect(m.size.emojiCell, Theme.Size.emojiCell, "size.emojiCell")
-        expect(m.size.formLabelWidth, Theme.Size.formLabelWidth, "size.formLabelWidth")
         expect(m.size.argumentPromptWidth, Theme.Size.argumentPromptWidth, "size.argumentPromptWidth")
         expect(m.size.markdownListMarker, Theme.Size.markdownListMarker, "size.markdownListMarker")
         expect(m.size.markdownQuoteBar, Theme.Size.markdownQuoteBar, "size.markdownQuoteBar")
@@ -267,7 +266,7 @@ struct InterfaceSizeTests {
             ("size.menuRowsMaxHeight", m.size.menuRowsMaxHeight),
             ("size.clipboardListWidth", m.size.clipboardListWidth),
             ("size.clipboardMediaHeight", m.size.clipboardMediaHeight),
-            ("size.emojiCell", m.size.emojiCell), ("size.formLabelWidth", m.size.formLabelWidth),
+            ("size.emojiCell", m.size.emojiCell),
             ("size.argumentPromptWidth", m.size.argumentPromptWidth),
             ("size.markdownListMarker", m.size.markdownListMarker),
             ("size.markdownQuoteBar", m.size.markdownQuoteBar),
