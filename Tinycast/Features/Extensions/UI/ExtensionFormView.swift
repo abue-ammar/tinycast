@@ -210,9 +210,11 @@ struct ExtensionFormView: View {
                 }
             }
         }
+        // Leading, so content narrower than a control can't pull its label towards the centre.
         .frame(
             width: metrics.size.formLabelWidth + metrics.spacing.md
-                + form.controlWidth
+                + form.controlWidth,
+            alignment: .leading
         )
         .frame(maxWidth: .infinity)
         .offset(x: -(metrics.size.formLabelWidth + metrics.spacing.md) / 2)
