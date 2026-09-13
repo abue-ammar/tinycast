@@ -72,8 +72,9 @@ would add ~1 MB plus a build-system detour, for an engine that is slower and no 
 work is not in the interpreter, it's in the `@raycast/api` shim and the Node surface, which are the
 same either way. A bare `JSContext` has the full modern language (checked: `Object.groupBy`,
 `Array.fromAsync`, `Intl`, lookbehind regex) and nothing else, so the runtime supplies `console`,
-timers, `fetch`, `URL`, `URLSearchParams`, `TextEncoder`/`TextDecoder`, `AbortController`, `atob`/
-`btoa`, `ReadableStream`/`WritableStream`/`TransformStream` and `structuredClone` itself.
+timers, `fetch`, `URL`, `URLSearchParams`, `Blob`/`File`/`FormData`, `DOMException`,
+`TextEncoder`/`TextDecoder`, `AbortController`, `atob`/`btoa`,
+`ReadableStream`/`WritableStream`/`TransformStream` and `structuredClone` itself.
 
 ## The JS runtime
 

@@ -246,6 +246,10 @@ export default async function Command() {
     headers: { "Content-Type": "application/json" },
   });
   const clone = created.clone();
+  const abort = new DOMException("stopped", "AbortError");
+  const blob = new Blob(["hello", new Uint8Array([33])], { type: "Text/Plain" });
+  const slice = blob.slice(1, 4, "Application/Test");
+  const responseBlob = await new Response("hi", { headers: { "Content-Type": "text/custom" } }).blob();
   globalThis.__response = {
     probe: [probe.status, probe.ok, probe.statusText, await probe.text()],
     readers: ["text", "arrayBuffer", "blob"].every((name) => typeof probe[name] === "function"),
@@ -253,7 +257,60 @@ export default async function Command() {
     clone: [clone.status, clone.headers.get("content-type"), await clone.text()],
     bytes: Array.from(await new Response(new Uint8Array([104, 105])).bytes()),
     byteLength: (await new Response("héllo").arrayBuffer()).byteLength,
+    blob: [blob.size, blob.type, await blob.text(), Array.from(await blob.bytes()).join(",")],
+    slice: [slice.size, slice.type, await slice.text(), await new Response(blob).text()],
+    responseBlob: [responseBlob.size, responseBlob.type, await responseBlob.text()],
+    domException: [abort.name, abort.message, abort instanceof Error, abort instanceof DOMException, new DOMException().name],
   };
+}
+`;
+
+// gaxios reaches for `FormData` on every request, so it has to exist; and a form that exists but
+// serialises to nothing would be worse than one that is absent, so the body has to be real too.
+const formDataSource = `
+export default async function Command() {
+  const form = new FormData();
+  form.append("name", "Ada");
+  form.append("tag", "one");
+  form.append("tag", "two");
+  form.append("file", new Blob(["hi"], { type: "Text/Plain" }), "note.txt");
+  form.append("blobless", new Blob(["x"]));
+  const shape = {
+    get: form.get("tag"),
+    getAll: form.getAll("tag"),
+    has: [form.has("name"), form.has("missing")],
+    entryNames: Array.from(form.keys()),
+    file: [form.get("file").name, form.get("file").type, await form.get("file").text()],
+    defaultName: form.get("blobless").name,
+    isFile: form.get("file") instanceof File,
+  };
+  form.set("tag", "only");
+  form.delete("blobless");
+  shape.afterSet = Array.from(form.keys());
+  shape.afterSetValue = form.getAll("tag");
+
+  await fetch("https://example.test/upload", { method: "POST", body: form });
+  const explicit = new FormData();
+  explicit.append("a", "1");
+  await fetch("https://example.test/upload", { method: "POST", body: explicit, headers: { "Content-Type": "text/custom" } });
+  globalThis.__form = shape;
+}
+`;
+
+// A URLSearchParams body sets no header of its own, so the spec's derived Content-Type is the only
+// thing an OAuth token endpoint has: without it Google reads the form body as JSON and rejects it.
+const contentTypeSource = `
+export default async function Command() {
+  const url = "https://example.test/token";
+  const send = (init) => fetch(url, { method: "POST", ...init });
+  await send({ body: new URLSearchParams({ client_id: "abc" }) });
+  await send({ body: "ping" });
+  await send({ body: new Blob(["z"], { type: "Application/Zip" }) });
+  await send({ body: new Blob(["z"]) });
+  await send({ body: new URLSearchParams({ client_id: "abc" }), headers: { "Content-Type": "application/json" } });
+  await send({});
+  const request = new Request(url, { method: "POST", body: new URLSearchParams({ a: "1" }) });
+  globalThis.__contentType = request.headers.get("content-type");
 }
 `;
 
@@ -606,7 +663,77 @@ export async function runFixtures() {
     check("clone carries status, headers and body", equals(result.clone, [201, "application/json", '{"id":7}']), JSON.stringify(result.clone));
     check("keeps a binary body intact", equals(result.bytes, [104, 105]), JSON.stringify(result.bytes));
     check("encodes a text body as UTF-8", result.byteLength === 6, String(result.byteLength));
+    check(
+      "provides Blob bytes and text semantics",
+      equals(result.blob, [6, "text/plain", "hello!", "104,101,108,108,111,33"]),
+      JSON.stringify(result.blob),
+    );
+    check("slices Blob data and accepts it as a Response body", equals(result.slice, [3, "application/test", "ell", "hello!"]), JSON.stringify(result.slice));
+    check("creates a typed Blob from Response.blob", equals(result.responseBlob, [2, "text/custom", "hi"]), JSON.stringify(result.responseBlob));
+    check("DOMException is an Error carrying its name", equals(result.domException, ["AbortError", "stopped", true, true, "Error"]), JSON.stringify(result.domException));
   });
+
+  const sentTypes = [];
+  await run(
+    "fetch derives Content-Type from the body",
+    contentTypeSource,
+    "no-view",
+    async (harness) => {
+      check("sends every request", sentTypes.length === 6, String(sentTypes.length));
+      check("URLSearchParams implies form encoding", sentTypes[0] === "application/x-www-form-urlencoded;charset=UTF-8", String(sentTypes[0]));
+      check("a string implies text/plain", sentTypes[1] === "text/plain;charset=UTF-8", String(sentTypes[1]));
+      check("a Blob carries its own type", sentTypes[2] === "application/zip", String(sentTypes[2]));
+      check("an untyped Blob implies nothing", sentTypes[3] === undefined, String(sentTypes[3]));
+      check("an explicit header wins", sentTypes[4] === "application/json", String(sentTypes[4]));
+      check("a bodiless request implies nothing", sentTypes[5] === undefined, String(sentTypes[5]));
+      check("Request exposes the derived header", harness.call("globalThis.__contentType") === "application/x-www-form-urlencoded;charset=UTF-8");
+    },
+    {
+      stubs: {
+        "fetch.request": (args) => {
+          sentTypes.push(args[0].headers["content-type"]);
+          return { status: 200, statusText: "OK", headers: {}, url: "https://example.test/token", bodyBase64: "" };
+        },
+      },
+    },
+  );
+
+  const formPosts = [];
+  await run(
+    "FormData holds entries and serialises as multipart",
+    formDataSource,
+    "no-view",
+    async (harness) => {
+      const equals = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+      const shape = harness.call("globalThis.__form");
+      check("get returns the first value", shape.get === "one", JSON.stringify(shape.get));
+      check("getAll returns every value", equals(shape.getAll, ["one", "two"]), JSON.stringify(shape.getAll));
+      check("has distinguishes present from absent", equals(shape.has, [true, false]), JSON.stringify(shape.has));
+      check("keys preserve insertion order", equals(shape.entryNames, ["name", "tag", "tag", "file", "blobless"]), JSON.stringify(shape.entryNames));
+      check("a Blob entry becomes a named File", equals(shape.file, ["note.txt", "text/plain", "hi"]), JSON.stringify(shape.file));
+      check("an unnamed Blob entry defaults to \"blob\"", shape.defaultName === "blob", String(shape.defaultName));
+      check("a Blob entry is a File instance", shape.isFile === true, String(shape.isFile));
+      check("set replaces every value in place", equals(shape.afterSet, ["name", "tag", "file"]), JSON.stringify(shape.afterSet));
+      check("set collapses duplicates to one", equals(shape.afterSetValue, ["only"]), JSON.stringify(shape.afterSetValue));
+
+      const [posted, explicit] = formPosts;
+      const boundary = (posted.type ?? "").split("boundary=")[1];
+      check("derives multipart with a boundary", !!boundary && posted.type.startsWith("multipart/form-data; boundary="), String(posted.type));
+      check("the body uses the header's boundary", posted.body.startsWith(`--${boundary}\r\n`), posted.body.slice(0, 60));
+      check("a string part carries only its name", posted.body.includes(`Content-Disposition: form-data; name="name"\r\n\r\nAda`), posted.body.slice(0, 200));
+      check("a File part carries filename and type", posted.body.includes(`name="file"; filename="note.txt"\r\nContent-Type: text/plain`), posted.body);
+      check("the body ends with the closing boundary", posted.body.endsWith(`--${boundary}--\r\n`), posted.body.slice(-40));
+      check("an explicit Content-Type still wins", explicit.type === "text/custom", String(explicit.type));
+    },
+    {
+      stubs: {
+        "fetch.request": (args) => {
+          formPosts.push({ type: args[0].headers["content-type"], body: Buffer.from(args[0].bodyBase64 ?? "", "base64").toString() });
+          return { status: 200, statusText: "OK", headers: {}, url: "https://example.test/upload", bodyBase64: "" };
+        },
+      },
+    },
+  );
 
   await run("spawn's stdout survives a late reader", spawnSource, "no-view", async (harness) => {
     const result = harness.call("globalThis.__spawn");
