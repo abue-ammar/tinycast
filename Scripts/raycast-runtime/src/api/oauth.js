@@ -50,12 +50,12 @@ export class TokenSet {
     this.tokenType = options.tokenType ?? options.token_type ?? "Bearer";
     this.scope = options.scope;
     this.expiresIn = options.expiresIn ?? options.expires_in;
-    this.createdAt = options.createdAt ?? Date.now();
+    this.updatedAt = new Date(options.updatedAt ?? Date.now());
   }
 
   isExpired() {
     if (this.expiresIn == null) return false;
-    const expiresAt = this.createdAt + (this.expiresIn - 30) * 1000;
+    const expiresAt = this.updatedAt.getTime() + (this.expiresIn - 30) * 1000;
     return Date.now() >= expiresAt;
   }
 }
@@ -161,12 +161,14 @@ export class PKCEClient {
         return undefined;
       }
     }
-    return new TokenSet(raw);
+    // A token stored without a time can't be dated, so it counts as expired and gets refreshed.
+    return new TokenSet({ ...raw, updatedAt: raw.updatedAt ?? 0 });
   }
 
   async setTokens(tokens) {
-    const json = typeof tokens === "string" ? tokens : JSON.stringify(tokens);
-    await hostCall("oauth", "setTokens", [this.providerId, json]);
+    const set = typeof tokens === "string" ? JSON.parse(tokens) : tokens;
+    const stamped = JSON.stringify({ ...set, updatedAt: new Date().toISOString() });
+    await hostCall("oauth", "setTokens", [this.providerId, stamped]);
   }
 
   async removeTokens() {

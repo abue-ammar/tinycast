@@ -456,7 +456,7 @@ export default async function Command() {
   const expiredToken = new OAuth.TokenSet({
     accessToken: "expired_token",
     expiresIn: 20,
-    createdAt: Date.now() - 30000,
+    updatedAt: new Date(Date.now() - 30000),
   });
 
   globalThis.__oauthTest = {
@@ -474,6 +474,30 @@ export default async function Command() {
   await client.removeTokens();
   const afterRemove = await client.getTokens();
   globalThis.__oauthTest.afterRemove = afterRemove;
+}
+`;
+
+// `@raycast/utils` stores the provider's raw token response, which carries no timestamp, so the
+// stored time is the only thing `isExpired()` can count from; without it a token never expired.
+const tokenExpirySource = `
+import { OAuth } from "@raycast/api";
+
+export default async function Command() {
+  const client = new OAuth.PKCEClient({ redirectMethod: OAuth.RedirectMethod.Web, providerName: "Google", providerId: "google" });
+  await client.setTokens({ access_token: "ya29.a", refresh_token: "1//r", expires_in: 3599, token_type: "Bearer" });
+  const fresh = await client.getTokens();
+  const realNow = Date.now;
+  Date.now = () => realNow() + 2 * 3600 * 1000;
+  const laterExpired = (await client.getTokens()).isExpired();
+  Date.now = realNow;
+  const unstamped = new OAuth.PKCEClient({ redirectMethod: OAuth.RedirectMethod.Web, providerName: "Old", providerId: "unstamped" });
+  const legacy = await unstamped.getTokens();
+  globalThis.__expiry = {
+    freshExpired: fresh.isExpired(),
+    freshStampedNow: fresh.updatedAt instanceof Date && Math.abs(fresh.updatedAt.getTime() - realNow()) < 5000,
+    laterExpired,
+    unstampedExpired: legacy.isExpired(),
+  };
 }
 `;
 
@@ -813,6 +837,29 @@ export async function runFixtures() {
     check("TokenSet isExpired calculation works", result?.isExpiredLive === false && result?.isExpiredOld === true);
     check("removeTokens cleans up tokens", result?.afterRemove === undefined || result?.afterRemove === null);
   });
+
+  const storedTokens = new Map([["unstamped", JSON.stringify({ access_token: "ya29.old", expires_in: 3599 })]]);
+  await run(
+    "a stored token expires from the time it was stored",
+    tokenExpirySource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__expiry");
+      check("a just-stored token is not expired", result?.freshExpired === false, JSON.stringify(result));
+      check("setTokens stamps updatedAt with the storage time", result?.freshStampedNow === true, JSON.stringify(result));
+      check("the same token two hours later is expired", result?.laterExpired === true, JSON.stringify(result));
+      check("a stored token with no timestamp counts as expired", result?.unstampedExpired === true, JSON.stringify(result));
+    },
+    {
+      stubs: {
+        "oauth.setTokens": (args) => {
+          storedTokens.set(args[0], args[1]);
+          return null;
+        },
+        "oauth.getTokens": (args) => storedTokens.get(args[0]) ?? null,
+      },
+    },
+  );
 
   await run("no-view command", noViewSource, "no-view", async (harness) => {
     check("ran to completion", harness.state.finished === true);
