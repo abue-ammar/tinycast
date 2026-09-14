@@ -340,7 +340,8 @@ final class ExtensionNodeShims: @unchecked Sendable {
 
     private static let errorNames: [Int32: String] = [
         EACCES: "EACCES", EBADF: "EBADF", EEXIST: "EEXIST", EISDIR: "EISDIR", EMFILE: "EMFILE",
-        ENOENT: "ENOENT", ENOSPC: "ENOSPC", ENOTDIR: "ENOTDIR", EPERM: "EPERM"
+        EINVAL: "EINVAL", ENOENT: "ENOENT", ENOSPC: "ENOSPC", ENOTDIR: "ENOTDIR", EPERM: "EPERM",
+        ESRCH: "ESRCH"
     ]
 
     private func stat(path: String, followLinks: Bool) throws -> [String: Any] {
@@ -371,9 +372,29 @@ final class ExtensionNodeShims: @unchecked Sendable {
     // MARK: - child_process
 
     private func process(method: String, arguments: [Any]) throws -> Any? {
-        guard method == "run", let spec = arguments.first as? [String: Any] else {
+        if method == "kill" { return try signal(arguments) }
+        guard let spec = arguments.first as? [String: Any] else {
+            throw ShimError.failed("No command given.", "EINVAL")
+        }
+        let timeout = (spec["timeout"] as? NSNumber)?.doubleValue
+
+        switch method {
+        case "run":
+            // This runs on the JS queue, so a child that never exits would freeze the whole runtime.
+            return try launch(spec).collect(timeout: timeout)
+        case "start":
+            let child = try launch(spec)
+            // A detached child outlives its caller, so nothing ever waits on it.
+            if spec["detached"] as? Bool != true {
+                ExtensionAsyncProcess.enqueue(child, timeout: timeout)
+            }
+            return Int(child.task.processIdentifier)
+        default:
             throw ShimError.failed("child_process.\(method) is not supported.", "ENOSYS")
         }
+    }
+
+    private func launch(_ spec: [String: Any]) throws -> ExtensionAsyncProcess.Child {
         let command = spec["command"] as? String ?? ""
         guard !command.isEmpty else { throw ShimError.failed("No command given.", "EINVAL") }
         let useShell = spec["shell"] as? Bool ?? false
@@ -402,30 +423,43 @@ final class ExtensionNodeShims: @unchecked Sendable {
         let stderr = Pipe()
         task.standardOutput = stdout
         task.standardError = stderr
-        if let inputBase64 = spec["input"] as? String, let data = Data(base64Encoded: inputBase64) {
-            let stdin = Pipe()
-            task.standardInput = stdin
-            try? stdin.fileHandleForWriting.write(contentsOf: data)
-            try? stdin.fileHandleForWriting.close()
-        }
+        let input = (spec["input"] as? String).flatMap { Data(base64Encoded: $0) }
+        let stdin = input.map { _ in Pipe() }
+        if let stdin { task.standardInput = stdin }
 
         do {
             try task.run()
         } catch {
             throw ShimError.failed("Could not run '\(command)': \(error.localizedDescription)", "ENOENT")
         }
+        if let input, let stdin { feed(input, to: stdin) }
+        return ExtensionAsyncProcess.Child(task: task, stdout: stdout, stderr: stderr)
+    }
 
-        // This runs on the JS queue, so a child that never exits would freeze the whole runtime.
-        let (outData, errData) = ExtensionAsyncProcess.drain(
-            task, stdout: stdout, stderr: stderr,
-            timeout: (spec["timeout"] as? NSNumber)?.doubleValue)
+    /// A pipe holds 64 KB, so a larger input written before the child reads it would never finish.
+    private func feed(_ input: Data, to stdin: Pipe) {
+        let writer = stdin.fileHandleForWriting
+        // A child that exits without reading everything must fail the write, not SIGPIPE Tinycast.
+        _ = fcntl(writer.fileDescriptor, F_SETNOSIGPIPE, 1)
+        DispatchQueue.global(qos: .userInitiated).async {
+            try? writer.write(contentsOf: input)
+            try? writer.close()
+        }
+    }
 
-        return [
-            "stdout": outData.base64EncodedString(),
-            "stderr": errData.base64EncodedString(),
-            "status": Int(task.terminationStatus),
-            "signal": task.terminationReason == .uncaughtSignal ? "SIGTERM" : NSNull()
-        ]
+    /// `process.kill`, refusing every target that would signal Tinycast along with the child.
+    private func signal(_ arguments: [Any]) throws -> Any? {
+        guard let pid = (arguments[safe: 0] as? NSNumber).flatMap({ Int32(exactly: $0.doubleValue) }),
+            let signal = (arguments[safe: 1] as? NSNumber).flatMap({ Int32(exactly: $0.doubleValue) })
+        else { throw ShimError.failed("kill EINVAL", "EINVAL") }
+        guard pid > 0 || pid < -1, pid != getpid(), pid != -getpgrp() else {
+            throw ShimError.failed("kill EPERM", "EPERM")
+        }
+        guard Darwin.kill(pid, signal) == 0 else {
+            let name = Self.errorNames[errno] ?? "EIO"
+            throw ShimError.failed("kill \(name)", name)
+        }
+        return nil
     }
 
     // MARK: - crypto

@@ -147,7 +147,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         case "feedback": return try await feedback(method: method, arguments: arguments)
         case "system": return try await system(method: method, arguments: arguments)
         case "fetch": return try await fetcher.request(arguments.first)
-        case "proc": return try await ExtensionAsyncProcess.run(arguments.first)
+        case "proc": return try await ExtensionAsyncProcess.wait(arguments.first)
         case "oauth": return try await oauth(method: method, arguments: arguments)
         default: throw ExtensionHostError.unknown("\(api).\(method)")
         }

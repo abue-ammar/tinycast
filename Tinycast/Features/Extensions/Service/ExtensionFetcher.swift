@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// Bodies cross the bridge base64-encoded, so binary responses survive.
 final class ExtensionFetcher: Sendable {
@@ -58,21 +59,49 @@ final class ExtensionFetcher: Sendable {
     }
 }
 
-/// `exec`/`execFile` off the JS queue; the sync forms live in `ExtensionNodeShims`.
+/// `ExtensionNodeShims` launches a child on the JS queue; `wait` collects it off that queue.
 enum ExtensionAsyncProcess {
     enum ProcessError: LocalizedError {
-        case notFound(String)
-        case failedToStart(String, String)
+        case notStarted
 
-        var errorDescription: String? {
-            switch self {
-            case .notFound(let command):
-                return "ENOENT: command not found: '\(command)'"
-            case .failedToStart(let command, let reason):
-                return "Could not run '\(command)': \(reason)"
-            }
+        var errorDescription: String? { "No running child process with that pid." }
+    }
+
+    struct Child: Sendable {
+        let task: Process
+        let stdout: Pipe
+        let stderr: Pipe
+
+        /// A child filling the 64 KB pipe blocks before it can exit, so the drain comes first.
+        func collect(timeout: Double?) -> [String: Any] {
+            var watchdog: DispatchSourceTimer?
+            if let timeout, timeout > 0 { watchdog = terminationWatchdog(after: timeout / 1000) }
+            let outData = stdout.fileHandleForReading.readDataToEndOfFile()
+            let errData = stderr.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+            watchdog?.cancel()
+
+            return [
+                "stdout": outData.base64EncodedString(),
+                "stderr": errData.base64EncodedString(),
+                "status": Int(task.terminationStatus),
+                "signal": task.terminationReason == .uncaughtSignal ? "SIGTERM" : NSNull()
+            ]
+        }
+
+        /// Signals the pid rather than the `Process`, which a `@Sendable` timer handler cannot capture.
+        private func terminationWatchdog(after seconds: Double) -> DispatchSourceTimer {
+            let pid = task.processIdentifier
+            let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+            timer.schedule(deadline: .now() + seconds)
+            timer.setEventHandler { kill(pid, SIGTERM) }
+            timer.resume()
+            return timer
         }
     }
+
+    /// Started by `enqueue` and not yet claimed by `wait`, keyed by pid.
+    private static let uncollected = Mutex<[Int32: (child: Child, timeout: Double?)]>([:])
 
     /// An app bundle inherits no login shell, so a bare `brew` would otherwise fail.
     static func resolveExecutable(_ command: String) -> URL? {
@@ -97,105 +126,20 @@ enum ExtensionAsyncProcess {
         return nil
     }
 
-    static func run(_ spec: RenderValue?) async throws -> [String: Any] {
-        let fields = spec?.objectValue ?? [:]
-        let command = fields["command"]?.stringValue ?? ""
-        let useShell = fields["shell"]?.boolValue ?? false
-        let args = (fields["args"]?.arrayValue ?? []).compactMap(\.stringValue)
-        let cwd = fields["cwd"]?.stringValue
-        let environment = (fields["env"]?.objectValue).map { $0.compactMapValues(\.stringValue) }
-        let input = fields["input"]?.stringValue.flatMap { Data(base64Encoded: $0) }
-        let timeout = fields["timeout"]?.doubleValue
-        let detached = fields["detached"]?.boolValue ?? false
+    static func enqueue(_ child: Child, timeout: Double?) {
+        uncollected.withLock { $0[child.task.processIdentifier] = (child, timeout) }
+    }
 
-        return try await withCheckedThrowingContinuation { continuation in
-            // `Process` termination is delivered on a private queue; run the whole thing off-main.
+    static func wait(_ pid: RenderValue?) async throws -> [String: Any] {
+        guard let pid = pid?.doubleValue.flatMap({ Int32(exactly: $0) }),
+            let entry = uncollected.withLock({ $0.removeValue(forKey: pid) })
+        else { throw ProcessError.notStarted }
+
+        return await withCheckedContinuation { continuation in
+            // The drain blocks until the child closes its output, which can be minutes away.
             DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    let result = try execute(
-                        command: command, useShell: useShell, args: args, cwd: cwd,
-                        environment: environment, input: input, timeout: timeout,
-                        detached: detached)
-                    continuation.resume(returning: result)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
+                continuation.resume(returning: entry.child.collect(timeout: entry.timeout))
             }
         }
-    }
-
-    private static func execute(
-        command: String, useShell: Bool, args: [String], cwd: String?,
-        environment: [String: String]?, input: Data?, timeout: Double?, detached: Bool = false
-    ) throws -> [String: Any] {
-        let task = Process()
-        if useShell {
-            task.executableURL = URL(fileURLWithPath: "/bin/sh")
-            task.arguments = ["-c", command]
-        } else {
-            guard let resolved = resolveExecutable(command) else {
-                throw ProcessError.notFound(command)
-            }
-            task.executableURL = resolved
-            task.arguments = args
-        }
-        if let cwd, !cwd.isEmpty {
-            task.currentDirectoryURL = URL(fileURLWithPath: (cwd as NSString).expandingTildeInPath)
-        }
-        task.environment = environment ?? ProcessInfo.processInfo.environment
-
-        let stdout = Pipe()
-        let stderr = Pipe()
-        task.standardOutput = stdout
-        task.standardError = stderr
-        if let input {
-            let stdin = Pipe()
-            task.standardInput = stdin
-            try? stdin.fileHandleForWriting.write(contentsOf: input)
-            try? stdin.fileHandleForWriting.close()
-        }
-
-        do {
-            try task.run()
-        } catch {
-            throw ProcessError.failedToStart(command, error.localizedDescription)
-        }
-        // A detached child outlives the call, so answer once running rather than pin a thread.
-        if detached {
-            return ["stdout": "", "stderr": "", "status": 0, "signal": NSNull()]
-        }
-        let (outData, errData) = drain(task, stdout: stdout, stderr: stderr, timeout: timeout)
-
-        return [
-            "stdout": outData.base64EncodedString(),
-            "stderr": errData.base64EncodedString(),
-            "status": Int(task.terminationStatus),
-            "signal": task.terminationReason == .uncaughtSignal ? "SIGTERM" : NSNull()
-        ]
-    }
-
-    /// A child filling the 64 KB pipe blocks before it can exit, so the drain comes first.
-    static func drain(
-        _ task: Process, stdout: Pipe, stderr: Pipe, timeout: Double?
-    ) -> (Data, Data) {
-        var watchdog: DispatchSourceTimer?
-        if let timeout, timeout > 0 { watchdog = terminationWatchdog(task, after: timeout / 1000) }
-        let outData = stdout.fileHandleForReading.readDataToEndOfFile()
-        let errData = stderr.fileHandleForReading.readDataToEndOfFile()
-        task.waitUntilExit()
-        watchdog?.cancel()
-        return (outData, errData)
-    }
-
-    /// Signals the pid rather than the `Process`, which a `@Sendable` timer handler cannot capture.
-    private static func terminationWatchdog(
-        _ task: Process, after seconds: Double
-    ) -> DispatchSourceTimer {
-        let pid = task.processIdentifier
-        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
-        timer.schedule(deadline: .now() + seconds)
-        timer.setEventHandler { kill(pid, SIGTERM) }
-        timer.resume()
-        return timer
     }
 }

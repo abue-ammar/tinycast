@@ -113,7 +113,7 @@ Two host-call flavours:
 | `Service/ExtensionRuntime.swift` | the `JSContext`, host-function installation, timers, exception reporting |
 | `Service/ExtensionHostBridge.swift` | main-actor host APIs (clipboard, storage, cache, window, toasts, system, oauth) |
 | `Service/ExtensionNodeShims.swift` | the synchronous `fs` / `os` / `child_process` / `crypto` / `zlib` services |
-| `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus the async `exec` and the shared PATH resolver |
+| `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus collecting async `exec` children and the shared PATH resolver |
 | `Service/ExtensionOAuthKeychain.swift` | secure OAuth token storage backed by macOS Keychain |
 | `Service/ExtensionOAuthSession.swift` | PKCE state tracking, browser launch, and callback redirect resolution |
 | `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
@@ -562,7 +562,8 @@ would launch Raycast itself.
 
 **Node built-ins** — `path`, `fs` (+ `fs/promises`, `createReadStream`/`createWriteStream`, and the
 descriptor calls `tar` unpacks through), `os`,
-`child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`),
+`child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`,
+each async form reporting the child's real `pid` for `process.kill` — Timers pauses that way),
 `crypto` (hashes, HMAC, PBKDF2, AES-CBC/ECB, random, UUID), `zlib` (gzip/zlib/raw deflate, both
 directions), `http`/`https` (`request` and `get`, buffered over the same URLSession bridge as
 `fetch`), `stream` (`Readable`, `Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`,

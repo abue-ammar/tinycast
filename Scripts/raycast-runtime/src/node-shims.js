@@ -127,6 +127,21 @@ export function configureNodeShims(info) {
 
 const processListeners = new Map();
 
+const SIGNALS = {
+  SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGILL: 4, SIGTRAP: 5, SIGABRT: 6, SIGIOT: 6, SIGFPE: 8, SIGKILL: 9,
+  SIGBUS: 10, SIGSEGV: 11, SIGSYS: 12, SIGPIPE: 13, SIGALRM: 14, SIGTERM: 15, SIGURG: 16, SIGSTOP: 17,
+  SIGTSTP: 18, SIGCONT: 19, SIGCHLD: 20, SIGTTIN: 21, SIGTTOU: 22, SIGIO: 23, SIGXCPU: 24, SIGXFSZ: 25,
+  SIGVTALRM: 26, SIGPROF: 27, SIGWINCH: 28, SIGINFO: 29, SIGUSR1: 30, SIGUSR2: 31,
+};
+
+function signalNumber(signal) {
+  if (typeof signal === "number") return signal;
+  if (Object.hasOwn(SIGNALS, signal)) return SIGNALS[signal];
+  const error = new TypeError(`Unknown signal: ${signal}`);
+  error.code = "ERR_UNKNOWN_SIGNAL";
+  throw error;
+}
+
 const process = {
   // Axios gates its Node http adapter on this tag; untagged, axios takes the fetch path.
   [Symbol.toStringTag]: "process",
@@ -151,6 +166,10 @@ const process = {
   },
   exit: () => {
     throw new Error("process.exit is not supported in Tinycast extensions.");
+  },
+  kill(pid, signal = "SIGTERM") {
+    hostCallSync("proc", "kill", [Number(pid), signalNumber(signal)]);
+    return true;
   },
   nextTick: (callback, ...args) => {
     queueMicrotask(() => {
@@ -238,7 +257,7 @@ const os = {
   networkInterfaces: () => ({}),
   endianness: () => "LE",
   devNull: "/dev/null",
-  constants: { signals: { SIGTERM: 15 }, errno: {} },
+  constants: { signals: SIGNALS, errno: {} },
 };
 
 // ─── fs ─────────────────────────────────────────────────────────────
@@ -562,6 +581,12 @@ fs.promises = fsPromises;
 
 // ─── child_process ──────────────────────────────────────────────────
 
+/// Node stringifies every defined value, so `{ ...process.env, DEBUG: 1 }` must not drop the override.
+function childEnv(env) {
+  if (env == null) return env;
+  return Object.fromEntries(Object.entries(env).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]));
+}
+
 function normalizeExecResult(raw, options) {
   const wantsBuffer = options?.encoding === "buffer" || options?.encoding === null;
   const decode = (base64) => (wantsBuffer ? Buffer.from(base64ToBytes(base64)) : utf8Decode(base64ToBytes(base64)));
@@ -583,7 +608,7 @@ function execError(result, command) {
 const childProcess = {
   execSync(command, options = {}) {
     const raw = hostCallSync("proc", "run", [
-      { shell: true, command: String(command), args: [], cwd: options.cwd, env: options.env, timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
+      { shell: true, command: String(command), args: [], cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
     ]);
     const result = normalizeExecResult(raw, options);
     if (result.status !== 0) throw execError(result, command);
@@ -595,7 +620,7 @@ const childProcess = {
       args = [];
     }
     const raw = hostCallSync("proc", "run", [
-      { shell: false, command: String(file), args: args.map(String), cwd: options.cwd, env: options.env, timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
+      { shell: false, command: String(file), args: args.map(String), cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
     ]);
     const result = normalizeExecResult(raw, options);
     if (result.status !== 0) throw execError(result, file);
@@ -607,7 +632,7 @@ const childProcess = {
       args = [];
     }
     const raw = hostCallSync("proc", "run", [
-      { shell: !!options.shell, command: String(file), args: args.map(String), cwd: options.cwd, env: options.env, timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
+      { shell: !!options.shell, command: String(file), args: args.map(String), cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
     ]);
     const result = normalizeExecResult(raw, options);
     return { ...result, pid: 0, output: [null, result.stdout, result.stderr], error: undefined };
@@ -871,19 +896,19 @@ class BufferedChildProcess extends EventEmitter {
     if (this._started) return;
     this._started = true;
     const input = this._input.length ? bytesToBase64(Buffer.concat(this._input)) : null;
-    hostCall("proc", "run", [
-      {
-        shell: !!options.shell,
-        command: file,
-        args,
-        cwd: options.cwd,
-        env: options.env,
-        timeout: options.timeout,
-        input,
-        // `detached` only makes a process group; only an unread child may answer before it exits.
-        detached: !!options.detached && (Array.isArray(options.stdio) ? options.stdio[1] : options.stdio) === "ignore",
-      },
-    ]).then(
+    const { pid, exit } = startChild({
+      shell: !!options.shell,
+      command: file,
+      args,
+      cwd: options.cwd,
+      env: childEnv(options.env),
+      timeout: options.timeout,
+      input,
+      // `detached` only makes a process group; only an unread child may answer before it exits.
+      detached: !!options.detached && (Array.isArray(options.stdio) ? options.stdio[1] : options.stdio) === "ignore",
+    });
+    this.pid = pid;
+    exit.then(
       (raw) => {
         this.exitCode = raw.status;
         this.stdin.emit("finish");
@@ -909,9 +934,8 @@ class BufferedChildProcess extends EventEmitter {
     );
   }
 
-  kill() {
-    this.killed = true;
-    return false;
+  kill(signal) {
+    return this.exitCode === null && signalChild(this, signal);
   }
 
   // Node uses these to detach a child from the event loop. Nothing here keeps the runtime alive, so
@@ -953,7 +977,7 @@ childProcess.execFile[PROMISIFY_CUSTOM] = (file, args, options) =>
   });
 
 function pickRunOptions(options = {}) {
-  return { cwd: options.cwd, env: options.env, timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null };
+  return { cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null };
 }
 
 /// Node guarantees `stdout` / `stderr` on a failed exec's error, and extensions inspect them (an
@@ -969,9 +993,36 @@ function decorateProcessError(error, label) {
   return decorated;
 }
 
-/// The async forms get a real async host call so a slow command can't stall the JS thread.
+/// Launched synchronously because extensions store `child.pid` right away to `process.kill` it later.
+function startChild(spec) {
+  try {
+    const pid = hostCallSync("proc", "start", [spec]);
+    const exit = spec.detached ? Promise.resolve({ stdout: "", stderr: "", status: 0 }) : hostCall("proc", "wait", [pid]);
+    return { pid, exit };
+  } catch (error) {
+    return { pid: undefined, exit: Promise.reject(error) };
+  }
+}
+
+/// Node's `ChildProcess.kill` reports an undeliverable signal by returning false, never by throwing.
+function signalChild(child, signal) {
+  if (!child.pid) return false;
+  try {
+    process.kill(child.pid, signal);
+  } catch {
+    return false;
+  }
+  child.killed = true;
+  return true;
+}
+
 function runAsync(spec, options, callback, label) {
-  const promise = hostCall("proc", "run", [spec])
+  const { pid, exit } = startChild(spec);
+  let exited = false;
+  const promise = exit
+    .finally(() => {
+      exited = true;
+    })
     .then((raw) => normalizeExecResult(raw, options))
     .catch((error) => {
       throw decorateProcessError(error, label);
@@ -983,7 +1034,7 @@ function runAsync(spec, options, callback, label) {
     );
   }
   // Node returns a ChildProcess; extensions mostly ignore it or await the promisified form.
-  const handle = { pid: 0, kill: () => false, on: () => handle, stdout: null, stderr: null };
+  const handle = { pid, killed: false, kill: (signal) => !exited && signalChild(handle, signal), on: () => handle, stdout: null, stderr: null };
   handle.then = promise.then.bind(promise);
   handle.catch = promise.catch.bind(promise);
   handle[Symbol.for("nodejs.util.promisify.custom")] = () => promise;

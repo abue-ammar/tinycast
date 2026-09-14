@@ -29,17 +29,9 @@ struct ExtensionTests {
 
         func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String {
             calls.append("\(api).\(method)")
-            if api == "proc", method == "run" {
-                if ProcessInfo.processInfo.environment["EXT_TEST_VERBOSE"] != nil {
-                    let spec = arguments.first?.objectValue ?? [:]
-                    let args = (spec["args"]?.arrayValue ?? []).compactMap(\.stringValue)
-                    print(
-                        "  proc.run: \(spec["command"]?.stringValue ?? "?") \(args.joined(separator: " "))"
-                            + "  [shell=\(spec["shell"]?.boolValue ?? false) detached=\(spec["detached"]?.boolValue ?? false)]"
-                    )
-                }
+            if api == "proc", method == "wait" {
                 return ExtensionRuntime.jsonString(
-                    from: try await ExtensionAsyncProcess.run(arguments.first))
+                    from: try await ExtensionAsyncProcess.wait(arguments.first))
             }
             if api == "fetch" {
                 return ExtensionRuntime.jsonString(from: try await fetcher.request(arguments.first))
@@ -1149,6 +1141,7 @@ struct ExtensionTests {
         await failing.stop(session: "s3")
 
         await swiftHelperChecks()
+        await processKillChecks()
         zlibChecks()
     }
 
@@ -1429,6 +1422,52 @@ struct ExtensionTests {
             recorder.trees.last?.activeRoot?.string("markdown") == "0:#FF0000",
             recorder.trees.last?.activeRoot?.string("markdown") ?? "no tree")
         await runtime.stop(session: "sSwift")
+    }
+
+    /// Timers pauses by storing `exec`'s pid and later `process.kill`ing the shell before it rings.
+    @MainActor
+    static func processKillChecks() async {
+        let marker = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-rang-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: marker) }
+
+        let (runtime, _, recorder) = makeRuntime()
+        try? await runtime.boot(
+            config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        let command = """
+            "use strict";
+            const { Detail } = require("@raycast/api");
+            const React = require("react");
+            const { exec } = require("child_process");
+            const process = require("process");
+            const code = (run) => { try { run(); return "ok"; } catch (error) { return error.code; } };
+            module.exports.default = function Command() {
+              const [state, setState] = React.useState("pending");
+              React.useEffect(() => {
+                const child = exec("sleep 1 >/dev/null 2>&1; touch '\(marker.path)'", (error) => {
+                  setState([live, error ? "failed" : "passed", child.kill(), code(() => process.kill(0)),
+                    code(() => process.kill(2147483647, 0)), code(() => process.kill(child.pid, "SIGNOPE"))
+                  ].join(","));
+                });
+                const live = child.pid > 0 && process.kill(child.pid, 0) && process.kill(child.pid);
+              }, []);
+              return React.createElement(Detail, { markdown: state });
+            };
+            """
+        await runtime.start(
+            session: "sKill", code: command, file: URL(fileURLWithPath: "/tmp/process-kill.js"),
+            mode: .view, context: launchContext())
+        await settle(1500)
+
+        check(
+            "a killed exec child never runs the rest of its script",
+            !FileManager.default.fileExists(atPath: marker.path))
+        check(
+            "exec returns a live pid and process.kill guards Tinycast itself",
+            recorder.trees.last?.activeRoot?.string("markdown")
+                == "true,failed,false,EPERM,ESRCH,ERR_UNKNOWN_SIGNAL",
+            recorder.trees.last?.activeRoot?.string("markdown") ?? "no tree")
+        await runtime.stop(session: "sKill")
     }
 
     /// `zlib` is the one node shim with no JS-side implementation to lean on.

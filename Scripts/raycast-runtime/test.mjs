@@ -10,7 +10,7 @@ import { createContext, runInContext } from "node:vm";
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   createCipheriv,
   createDecipheriv,
@@ -236,10 +236,37 @@ function syncHostCall(api, method, args) {
       cipher.setAutoPadding(padding);
       return Buffer.concat([cipher.update(Buffer.from(data, "base64")), cipher.final()]).toString("base64");
     }
+    case "proc.start": {
+      const spec = args[0];
+      const child = spec.shell
+        ? spawn("/bin/sh", ["-c", spec.command], { cwd: spec.cwd, stdio: spec.detached ? "ignore" : "pipe" })
+        : spawn(spec.command, spec.args, { cwd: spec.cwd, stdio: spec.detached ? "ignore" : "pipe" });
+      child.on("error", () => {});
+      if (child.pid === undefined) throw Object.assign(new Error(`ENOENT: spawn '${spec.command}'`), { code: "ENOENT" });
+      if (spec.detached) return child.pid;
+      if (spec.input) child.stdin.end(Buffer.from(spec.input, "base64"));
+      const stdout = [];
+      const stderr = [];
+      child.stdout.on("data", (chunk) => stdout.push(chunk));
+      child.stderr.on("data", (chunk) => stderr.push(chunk));
+      const exit = new Promise((done) =>
+        child.on("close", (status, signal) =>
+          done({
+            stdout: Buffer.concat(stdout).toString("base64"),
+            stderr: Buffer.concat(stderr).toString("base64"),
+            status: status ?? 1,
+            signal,
+          }),
+        ),
+      );
+      runningChildren.set(child.pid, exit);
+      return child.pid;
+    }
+    case "proc.kill":
+      process.kill(args[0], args[1]);
+      return null;
     case "proc.run": {
       const spec = args[0];
-      // Mirrors the Swift host: a detached child answers at launch, with no output.
-      if (spec.detached) return { stdout: "", stderr: "", status: 0 };
       try {
         const stdout = spec.shell
           ? execFileSync("/bin/sh", ["-c", spec.command], { cwd: spec.cwd })
@@ -271,6 +298,7 @@ function syncHostCall(api, method, args) {
 }
 
 const oauthTokens = new Map();
+const runningChildren = new Map();
 
 async function stubHostCall(api, method, args) {
   switch (`${api}.${method}`) {
@@ -302,8 +330,11 @@ async function stubHostCall(api, method, args) {
         bodyBase64: body.toString("base64"),
       };
     }
-    case "proc.run":
-      return syncHostCall(api, method, args);
+    case "proc.wait": {
+      const exit = runningChildren.get(args[0]);
+      runningChildren.delete(args[0]);
+      return exit;
+    }
     // Positional arguments throughout, matching `src/api/oauth.js`.
     case "oauth.authorize":
       return { authorizationCode: "auth-code-12345", state: args[1] ?? "" };
