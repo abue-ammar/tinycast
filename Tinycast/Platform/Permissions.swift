@@ -61,4 +61,15 @@ enum Permissions {
         else { return }
         NSWorkspace.shared.open(url)
     }
+
+    /// Files and Folders has no prompt API — only a Settings deep link after a denied read.
+    @MainActor
+    static func openFilesAndFoldersSettings() {
+        guard
+            let url = URL(
+                string:
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")
+        else { return }
+        NSWorkspace.shared.open(url)
+    }
 }

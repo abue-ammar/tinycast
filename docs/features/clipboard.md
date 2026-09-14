@@ -38,6 +38,10 @@
 - **No recognition ever runs in the app process.** `ClipboardTextWorker` spawns one bundled
   `ClipboardTextHelper` per item and reaps it, which is the whole reason Vision's and PDFKit's
   allocations do not accumulate in Tinycast. The helper is handed a path and answers with text.
+- **On-demand Extract Text is a menu action, not search metadata.** Plain files are read
+  in-process; images and PDFs still go through the helper. A denied Files and Folders read uses the
+  same `reportFailure` → System Settings recovery as other TCC refusals — there is no separate grant
+  API for that pane.
 
 ## Poll-based capture
 

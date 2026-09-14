@@ -25,6 +25,27 @@ enum ClipboardFileKind: Sendable {
     /// Whether the preview pane plays it rather than drawing a still.
     var isPlayable: Bool { self == .movie || self == .audio }
 
+    /// Bytes are prose we can read without Vision — UTType plus a few data-typed extensions.
+    static func isPlainTextReadable(path: String) -> Bool {
+        let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
+        if let type = UTType(filenameExtension: ext) {
+            if type.conforms(to: .text) || type.conforms(to: .sourceCode)
+                || type.conforms(to: .json) || type.conforms(to: .xml)
+                || type.conforms(to: .yaml) || type.conforms(to: .propertyList)
+            {
+                return true
+            }
+        }
+        switch ext {
+        case "toml", "yml", "yaml", "env", "ini", "cfg", "conf", "log", "lock",
+            "gitignore", "gitattributes", "editorconfig", "xcconfig", "entitlements",
+            "pbxproj", "dockerfile", "makefile", "mk":
+            return true
+        default:
+            return false
+        }
+    }
+
     var title: String {
         switch self {
         case .image: return "Image"

@@ -194,9 +194,34 @@ enum ClipboardActionsMenu {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         }
+        if core.clipboardCoordinator.canExtractText(item) {
+            items.append(
+                PopoverMenuItem(
+                    title: "Extract Text", systemImage: "text.viewfinder", startsSection: true
+                ) {
+                    core.clipboardCoordinator.extractText(from: item)
+                })
+            if core.settings.quickActionsEnabled {
+                let actions =
+                    QuickAction.allBuiltIn
+                    + core.customQuickActions.actions.map(QuickAction.custom)
+                for action in actions {
+                    items.append(
+                        PopoverMenuItem(
+                            title: "Extract → \(action.title)", systemImage: action.symbol
+                        ) {
+                            core.clipboardCoordinator.extractTextAndApplyAction(
+                                from: item, action: action)
+                        })
+                }
+            }
+        }
         if item.kind == .image || item.kind == .file {
             items.append(
-                PopoverMenuItem(title: "Show in Finder", systemImage: "folder", startsSection: true) {
+                PopoverMenuItem(
+                    title: "Show in Finder", systemImage: "folder",
+                    startsSection: !core.clipboardCoordinator.canExtractText(item)
+                ) {
                     core.clipboardCoordinator.revealClip(item)
                 })
         }

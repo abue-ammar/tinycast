@@ -12,6 +12,8 @@ final class ClipboardCoordinator {
     private let paletteCoordinator: PaletteCoordinator
     /// Dialogs, for the one action here that can't be undone.
     private unowned let core: AppCore
+    /// One on-demand Extract Text at a time; a second request cancels the first.
+    private var extractTask: Task<Void, Never>?
 
     init(
         clipboardStore: ClipboardStore,
@@ -165,6 +167,94 @@ final class ClipboardCoordinator {
         paletteCoordinator.hidePalette(restoreFocus: false)
         Paster.copyPlainText(path)
         core.showMessage("Copied path")
+    }
+
+    /// Image, PDF, or a plain-text-ish file — anything Extract Text can turn into prose.
+    func canExtractText(_ item: ClipboardItem) -> Bool {
+        switch item.kind {
+        case .image: return true
+        case .file:
+            guard let path = item.filePath else { return false }
+            let kind = ClipboardFileKind.of(path: path)
+            return kind == .image || kind == .pdf
+                || ClipboardFileKind.isPlainTextReadable(path: path)
+        case .text: return false
+        }
+    }
+
+    /// Pull prose onto the pasteboard; Vision/PDF stay in `ClipboardTextHelper`.
+    func extractText(from item: ClipboardItem) {
+        startExtract(from: item) { text, core in
+            Paster.copyPlainText(text)
+            core.showMessage("Text copied to clipboard")
+        }
+    }
+
+    /// Extract, then hand the pasteboard to a Quick Action the same way a typed rewrite would.
+    func extractTextAndApplyAction(from item: ClipboardItem, action: QuickAction) {
+        startExtract(from: item) { text, core in
+            Paster.copyPlainText(text)
+            core.quickActionCoordinator.run(action)
+        }
+    }
+
+    private func startExtract(
+        from item: ClipboardItem, finish: @MainActor @escaping (String, AppCore) -> Void
+    ) {
+        guard canExtractText(item), let url = clipURL(for: item) else { return }
+        extractTask?.cancel()
+        core.showProgress("Extracting text…")
+        extractTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.extractTask = nil }
+            do {
+                let text = try await Self.pullText(item: item, url: url)
+                guard !Task.isCancelled else { return }
+                self.core.hideProgress()
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else {
+                    self.core.showMessage("No text found", tone: .danger)
+                    return
+                }
+                finish(trimmed, self.core)
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.core.hideProgress()
+                await self.reportExtractFailure(error)
+            }
+        }
+    }
+
+    private func reportExtractFailure(_ error: Error) async {
+        if ClipboardTextWorker.isAccessDenied(error) {
+            let open = await core.reportFailure(
+                title: "Tinycast can’t read that file",
+                message:
+                    "macOS blocked access to this folder. Allow Tinycast under "
+                    + "Privacy & Security › Files and Folders, then try again.",
+                symbol: "folder.badge.questionmark",
+                recovery: "Open System Settings…")
+            if open { Permissions.openFilesAndFoldersSettings() }
+            return
+        }
+        core.showMessage(error.localizedDescription, tone: .danger)
+    }
+
+    private static func pullText(item: ClipboardItem, url: URL) async throws -> String {
+        if item.kind == .image {
+            return try await ClipboardTextWorker.extract(item)
+        }
+        guard let path = item.filePath else { return "" }
+        let kind = ClipboardFileKind.of(path: path)
+        switch kind {
+        case .image, .pdf:
+            return try await ClipboardTextWorker.extract(item)
+        default:
+            guard ClipboardFileKind.isPlainTextReadable(path: path) else { return "" }
+            return try await Task.detached {
+                try ClipboardTextWorker.extractPlainTextFile(at: url)
+            }.value
+        }
     }
 
     /// Nil once the file is gone, so every action reports rather than silently no-opping.
