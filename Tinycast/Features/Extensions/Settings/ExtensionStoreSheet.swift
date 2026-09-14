@@ -149,8 +149,9 @@ struct ExtensionStoreSheet: View {
                     .lineLimit(2)
             }
             Spacer()
+            // Escape, not Return: Return belongs to the search field while typing.
             Button("Done", action: onClose)
-                .keyboardShortcut(.defaultAction)
+                .keyboardShortcut(.cancelAction)
         }
     }
 
