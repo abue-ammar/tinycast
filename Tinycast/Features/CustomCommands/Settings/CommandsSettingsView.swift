@@ -33,6 +33,7 @@ struct CommandsSettingsView: View {
                     ForEach(sortedCommands) { command in
                         CustomCommandSettingsRow(
                             command: command,
+                            showsInLauncher: settings.customCommandsShowInLauncher,
                             isEnabled: Binding(
                                 get: { command.isEnabled },
                                 set: {
@@ -55,7 +56,7 @@ struct CommandsSettingsView: View {
                 }
             } footer: {
                 Text(
-                    "Name it, then give it a shortcut if you want one. Importing reads a folder of "
+                    "Name it, then add an alias or a shortcut if you want one. Importing reads a folder of "
                         + "Raycast script commands, one command per script."
                 )
                 .font(.caption)
@@ -94,6 +95,7 @@ private struct EditorTarget: Identifiable {
 
 private struct CustomCommandSettingsRow: View {
     let command: CustomCommand
+    let showsInLauncher: Bool
     @Binding var isEnabled: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -102,6 +104,10 @@ private struct CustomCommandSettingsRow: View {
         SettingsRow(title: command.name, subtitle: command.command) {
             Image(systemName: command.symbol)
         } trailing: {
+            // An alias only reaches the ranker through the launcher slice, so it dims with it.
+            AliasField(key: command.entryID, name: command.name)
+                .settingsEnabled(command.isEnabled && showsInLauncher)
+
             // A disabled command's shortcut fires into the funnel's refusal, so it dims too.
             ShortcutRecorder(action: .customCommand(id: command.id))
                 .settingsEnabled(command.isEnabled)
