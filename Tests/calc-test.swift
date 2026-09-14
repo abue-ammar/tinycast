@@ -1122,6 +1122,30 @@ struct CalcTests {
         expectBadgesAt("time in malmö", source: "UTC", target: "Stockholm")
         expectBadgesAt("5pm graz in basel", source: "Vienna", target: "Zurich")
 
+        // Countries answer with their main clock, badged with the city that clock belongs to
+        expectDisplayAt("time in uk", "1:18 AM")
+        expectDisplayAt("Time in UK", "1:18 AM")
+        expectBadgesAt("time in united kingdom", source: "UTC", target: "London")
+        expectBadgesAt("time in japan", source: "UTC", target: "Tokyo")
+        expectBadgesAt("what time is it in germany", source: "UTC", target: "Berlin")
+        expectBadgesAt("time in côte d’ivoire", source: "UTC", target: "Abidjan")
+        expectBadgesAt("time in trinidad and tobago", source: "UTC", target: "Port of Spain")
+        expectDisplayAt("5pm uk in japan", "1:00 AM (tomorrow)")
+        expectDisplayAt("time in uk + 2", "3:18 AM")
+        // A country spanning several clocks answers with its capital's, never a remote edge
+        expectBadgesAt("time in usa", source: "UTC", target: "New York")
+        expectBadgesAt("time in us", source: "UTC", target: "New York")
+        expectBadgesAt("time in australia", source: "UTC", target: "Sydney")
+        expectBadgesAt("time in canada", source: "UTC", target: "Toronto")
+        expectBadgesAt("time in russia", source: "UTC", target: "Moscow")
+        expectBadgesAt("time in uae", source: "UTC", target: "Dubai")
+        // A unit spelled like a country code stays a unit
+        expectDisplay("10 ms to us", "10,000 µs")
+        expectNilAt("time in antarctica")
+        check(
+            "country zones resolve", expected: "true",
+            got: "\(CountryZoneData.zones.values.allSatisfy { TimeZone(identifier: $0) != nil })")
+
         // A bare number takes the unit its moment implies
         expectDisplayAt("3:45pm + 5", "24 July at 8:45 PM")
         expectDisplayAt("3:45pm - 2", "24 July at 1:45 PM")

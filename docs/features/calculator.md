@@ -22,6 +22,8 @@ in (see Currency below).
   entries and its `BDT` is the Bangladeshi taka. The home zone is read off the **injected calendar**,
   never `TimeZone.current`, which is what keeps the path pure and the harness deterministic.
   `localizedName` needs a `Locale`, so a badge is the identifier's own city component instead.
+  Countries are the one exception: Foundation carries no country for a zone, so
+  `CountryZoneData.generated.swift` comes from `node Scripts/gen-countries.js` and is never hand-edited.
 - **A workday is 8 hours, and nothing consults a calendar.** Weekends and public holidays would make
   the same query answer differently on two Macs, and the only supported source for them is EventKit,
   whose Full Calendar Access grant a calculator must never provoke mid-keystroke. `workdays` is
@@ -327,6 +329,19 @@ Two are deliberately absent: `MAD` is the Moroccan dirham, and `IST` is India St
 currency and a zone abbreviation both outrank an airport, the same ordering the rest of the file
 follows. The compiler enforces the rest: a duplicate key in the literal is a warning, which is what
 caught `syd` and `hkg` already being nicknames.
+
+**Countries** answer with their main clock: `time in uk`, `time in japan`, `5pm uk in japan`.
+Foundation knows every zone but not which country owns it, so `gen-countries.js` joins IANA's
+`zone.tab` — which names a country's zones, most populous first — with CLDR's English country names,
+short forms included (`UK`, `US`, `Bosnia`). Diacritics fold as they do for cities, and `&` also
+reads as `and`. The badge stays the clock's city, which is what says *which* clock answered.
+
+Where `zone.tab`'s geographic order puts a remote edge first — Lord Howe for Australia, Kaliningrad
+for Russia — the generator's `CAPITAL_ZONES` substitutes the capital's clock, and fails if IANA stops
+listing it. Antarctica and the US Minor Outlying Islands have no capital and no single clock, so they
+stay silent. ISO codes are deliberately not keys: two letters collide with `in`, `at`, `to` and `la`,
+and three with airports (`fra`, `per`); `usa` and `uae` are ordinary entries in `aliases`. Lookup
+order is `aliases`, then `cities`, then countries, so no curated name is ever shadowed.
 
 Order settles the collisions. Time zones run **last** among the named paths, after units and
 currency, so `10 cordoba to usd` stays money and `1 cup to ml` stays volume. `cordoba` is the one

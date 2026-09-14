@@ -108,7 +108,7 @@ enum CalcTimeZone {
     private static func endsInZoneOrDuration(_ tail: String) -> Bool {
         // Folded, because the identifiers carry no accents while `zürich` and `são paulo` do.
         let folded = tail.folding(options: [.diacriticInsensitive], locale: nil)
-        if cities[folded] != nil || aliases[folded] != nil { return true }
+        if zoneIdentifier(named: folded) != nil { return true }
         // `time in 4 hours` ends in the unit alone, so a bare unit word counts as a duration tail.
         if durationUnits.contains(folded) || parseDuration(folded, impliesHours: true) != nil {
             return true
@@ -122,14 +122,13 @@ enum CalcTimeZone {
         "s", "sec", "secs", "second", "seconds"
     ]
 
-    /// The final word of every multi-word name in either table, so `in new york` still reaches it.
+    /// The final word of every multi-word name in any table, so `in new york` still reaches it.
     private static let citySuffixes: Set<String> = {
         var tails: Set<String> = []
-        for name in cities.keys where name.contains(" ") {
-            if let last = name.split(separator: " ").last { tails.insert(String(last)) }
-        }
-        for name in aliases.keys where name.contains(" ") {
-            if let last = name.split(separator: " ").last { tails.insert(String(last)) }
+        for names in [cities.keys, aliases.keys, CountryZoneData.zones.keys] {
+            for name in names where name.contains(" ") {
+                if let last = name.split(separator: " ").last { tails.insert(String(last)) }
+            }
         }
         return tails
     }()
@@ -244,9 +243,12 @@ enum CalcTimeZone {
         // `são paulo` and `zürich` are how the cities are spelled; the identifiers are not.
         let phrase = words.joined(separator: " ")
             .folding(options: [.diacriticInsensitive], locale: nil)
-        if let identifier = aliases[phrase] { return TimeZone(identifier: identifier) }
-        guard let identifier = cities[phrase] else { return nil }
-        return TimeZone(identifier: identifier)
+        return zoneIdentifier(named: phrase).flatMap(TimeZone.init(identifier:))
+    }
+
+    /// A curated alias outranks a city, and a city outranks a country sharing its spelling.
+    private static func zoneIdentifier(named phrase: String) -> String? {
+        aliases[phrase] ?? cities[phrase] ?? CountryZoneData.zones[phrase]
     }
 
     /// Foundation already carries the IANA database, so nothing here is generated.
@@ -264,7 +266,8 @@ enum CalcTimeZone {
         "UTC": ["utc", "zulu"],
         "GMT": ["gmt"],
         "America/New_York": [
-            "est", "edt", "et", "nyc", "new york city", "boston", "washington", "dc", "miami", "atlanta",
+            "est", "edt", "et", "usa", "nyc", "new york city", "boston", "washington", "dc", "miami",
+            "atlanta",
             "philadelphia", "jfk", "atl", "bos", "mia", "ewr", "iad", "charlotte", "nashville", "orlando",
             "tampa", "pittsburgh", "cleveland", "cincinnati", "columbus", "baltimore", "raleigh",
             "indianapolis", "louisville"
@@ -351,7 +354,7 @@ enum CalcTimeZone {
         "Europe/Warsaw": ["waw", "krakow", "gdansk", "wroclaw", "poznan", "lodz"],
         "Europe/Budapest": ["bud"],
         "Europe/Brussels": ["bru", "antwerp", "ghent", "bruges"],
-        "Asia/Dubai": ["dxb", "auh", "sharjah"],
+        "Asia/Dubai": ["uae", "dxb", "auh", "sharjah"],
         "Asia/Qatar": ["doh", "doha"],
         "Asia/Hong_Kong": ["hkg"],
         "Asia/Bangkok": ["bkk", "phuket", "chiang mai"],
