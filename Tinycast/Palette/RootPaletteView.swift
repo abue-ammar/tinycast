@@ -471,7 +471,12 @@ struct RootPaletteView: View {
                     return .handled
                 }
                 let selection = selection(in: screen)
-                if command { return screen.secondary(at: selection) ? .handled : .ignored }
+                if command {
+                    if press.modifiers.contains(.shift), screen.tertiary(at: selection) {
+                        return .handled
+                    }
+                    return screen.secondary(at: selection) ? .handled : .ignored
+                }
                 return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
             }
             .onKeyPress(.escape) {

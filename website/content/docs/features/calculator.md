@@ -6,14 +6,16 @@ description: Math, units, live currency and crypto, dates and time zones, answer
 Type a calculation into the launcher and the answer appears on a card above the results. There is no
 mode to switch into. It works it out as you type.
 
-| Action           | Shortcut                                  |
-| ---------------- | ----------------------------------------- |
-| Copy Answer      | <kbd>return</kbd>                         |
-| Copy Calculation | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd> |
+| Action                   | Shortcut                                  |
+| ------------------------ | ----------------------------------------- |
+| Copy Answer              | <kbd>return</kbd>                         |
+| Copy Unformatted Answer  | <kbd>⌘</kbd><kbd>return</kbd>             |
+| Copy Question and Answer | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd> |
 
 Copying the answer also saves it to **Calculator History**.
 
-A plain word never gets a card. `tomorrow`, `july` or `pi` on its own is a search, not a sum.
+A plain word never gets a card except `now`, `time`, `today`, `tomorrow` and `yesterday`. `july` or
+`pi` on its own remains a search, not a sum.
 
 ## Arithmetic
 
@@ -116,6 +118,7 @@ Use `fl oz` for fluid ounces; plain `oz` is weight. UK measures are `ukgal`, `uk
 | You type                               | You get           |
 | -------------------------------------- | ----------------- |
 | `3000px / 300ppi to inches`            | `10 in`           |
+| `2 inches in px at 72 ppi`             | `144 px`          |
 | `5in * 300ppi`                         | `1,500 px`        |
 | `3000px / 10in to ppi`                 | `300 ppi`         |
 | `sqrt((3840px)^2 + (2160px)^2) / 27in` | `163.1783089 ppi` |
@@ -215,6 +218,8 @@ fractions like `5/2 - 1/2` stay arithmetic.
 `today + 5 business days`, `5 weekdays from now`. Public holidays are not counted.
 
 As a unit on its own, a `workday` is eight hours: `55h in workdays`.
+`workhours in 2023` counts Monday–Friday at eight hours per day. `day percentage`, `week %` and
+`year percentage` show how far through the current period you are.
 
 ### Unix time
 
@@ -226,6 +231,7 @@ an offset.
 
 | You type                           | You get                            |
 | ---------------------------------- | ---------------------------------- |
+| `now in UTC`                       | UTC now, with both local moments   |
 | `time in Tokyo`                    | The time there now                 |
 | `what time is it in London`        | The same                           |
 | `5pm ldn in sf`                    | 5 PM London time, in San Francisco |
@@ -243,12 +249,16 @@ too: `pst`, `cet`, `jst`, `sf`, `nyc`, `ldn`, and airport codes like `lhr`, `nrt
 
 It all works offline. Tinycast does not look cities up online.
 
+`now`, `time`, `today`, `tomorrow` and `yesterday` also answer directly.
+
 ## Percent, ratios and lists
 
 | You type                | You get  |
 | ----------------------- | -------- |
 | `20% off 500`           | `400`    |
 | `15% tip on 42`         | `6.3`    |
+| `20% discount off $500` | `400 USD` |
+| `5% gratuity on $95`    | `4.75 USD` |
 | `50 as % of 200`        | `25%`    |
 | `50 is what % of 200`   | `25%`    |
 | `30 is 20% of what`     | `150`    |
@@ -264,6 +274,7 @@ The card labels what the number is, like **Tip**, **Discounted** or **Ratio**, i
 Functions take comma-separated values: `hypot(3,4)`, `round(3.14159,2)`, `log(8,2)`, `gcd(12,18)`,
 `lcm(4,6)`, `atan2(1,1)`, `pow(2,10)` and `root(-8,3)`. There are also inverse and hyperbolic trig
 functions, `cbrt`, `exp`, `log2`, `sign` and `trunc`, and the constants `tau` and `phi`.
+Degree variants add `d`, such as `cotd(45)` and `acscd(2)`.
 
 `min`, `max`, `sum`, `avg`, `mean` and `average` take lists, including measurements:
 `sum(1km,500m)` is `1.5 km`. Inside a function, write `1000` rather than `1,000`, since commas

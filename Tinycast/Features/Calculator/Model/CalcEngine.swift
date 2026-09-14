@@ -44,7 +44,10 @@ enum CalcEngine {
     ) -> CalcResult? {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, query.count <= 256 else { return nil }
-        guard !query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) else {
+        let bareMoment = ["now", "time", "today", "tomorrow", "yesterday"].contains(query.lowercased())
+        guard bareMoment
+            || !query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) })
+        else {
             return nil
         }
 
@@ -52,6 +55,17 @@ enum CalcEngine {
 
         // Before tokenizing: `5pm ldn in sf` is words, which the tokenizer would reject.
         if let zone = CalcTimeZone.evaluate(query, now: now, calendar: calendar) { return zone }
+
+        if let pixels = pixelAtDensity(
+            query, now: now, calendar: calendar, rates: rates, region: region)
+        {
+            return pixels
+        }
+        if let percentage = namedPercentage(
+            query, now: now, calendar: calendar, rates: rates, region: region)
+        {
+            return percentage
+        }
 
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
 
@@ -151,6 +165,53 @@ enum CalcEngine {
         // Natural-language percent: `20% off 500`, `50 as % of 200`.
         if let percent = CalcPercent.evaluate(tokens, query: query) { return percent }
 
+        return nil
+    }
+
+    private static func pixelAtDensity(
+        _ query: String, now: Date, calendar: Calendar, rates: CurrencyRates?, region: String?
+    ) -> CalcResult? {
+        let lowered = query.lowercased()
+        guard let at = lowered.range(of: " at ", options: .backwards) else { return nil }
+        let conversion = String(lowered[..<at.lowerBound])
+        let density = String(lowered[at.upperBound...])
+        guard let connector = conversion.range(of: " in ", options: .backwards) else { return nil }
+        let source = String(conversion[..<connector.lowerBound])
+        let target = String(conversion[connector.upperBound...])
+        guard ["px", "pixel", "pixels"].contains(target), !source.isEmpty, !density.isEmpty,
+            let result = evaluate(
+                "(\(source)) * (\(density)) to px", now: now, calendar: calendar,
+                rates: rates, region: region)
+        else { return nil }
+        return CalcResult(
+            expression: CalcFormatter.expression(query), sourceBadge: result.sourceBadge,
+            targetBadge: result.targetBadge, payload: result.payload)
+    }
+
+    private static func namedPercentage(
+        _ query: String, now: Date, calendar: Calendar, rates: CurrencyRates?, region: String?
+    ) -> CalcResult? {
+        let lowered = query.lowercased()
+        let forms: [(separator: String, operation: String, badge: String)] = [
+            (" discount off ", "-", "Discounted"),
+            (" gratuity on ", "*", "Tip"), (" gratuity of ", "*", "Tip"),
+            (" tip on ", "*", "Tip"), (" tip of ", "*", "Tip")
+        ]
+        for form in forms {
+            guard let separator = lowered.range(of: form.separator),
+                lowered[..<separator.lowerBound].hasSuffix("%")
+            else { continue }
+            let percentage = String(lowered[..<separator.lowerBound])
+            let base = String(lowered[separator.upperBound...])
+            guard !base.isEmpty,
+                let result = evaluate(
+                    "(\(base)) \(form.operation) \(percentage)", now: now, calendar: calendar,
+                    rates: rates, region: region)
+            else { continue }
+            return CalcResult(
+                expression: CalcFormatter.expression(query), sourceBadge: "Expression",
+                targetBadge: form.badge, payload: result.payload)
+        }
         return nil
     }
 

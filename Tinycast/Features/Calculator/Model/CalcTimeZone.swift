@@ -12,7 +12,8 @@ enum CalcTimeZone {
         // The last word decides: `10 km to mi` carries a connector too.
         guard endsInZoneOrDuration(inputWords[inputWords.count - 1].lowercased()) else { return nil }
 
-        let query = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let input = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = input.lowercased()
         guard !query.isEmpty else { return nil }
 
         if let difference = offsetBetween(query, now: now, calendar: calendar) { return difference }
@@ -62,10 +63,17 @@ enum CalcTimeZone {
         let time = clockString(source.date, zone: target, calendar: calendar)
         let dayNote = sameDay ? "" : " (\(dayOffsetWord(source, target: target, calendar: calendar)))"
 
+        let presentsNow = leading == ["now"]
         return CalcResult(
-            expression: clockString(source.date, zone: source.zone, calendar: calendar),
-            sourceBadge: label(for: source.zone),
-            targetBadge: label(for: target),
+            expression: presentsNow
+                ? CalcFormatter.expression(input)
+                : clockString(source.date, zone: source.zone, calendar: calendar),
+            sourceBadge: presentsNow
+                ? momentBadge(source.date, zone: source.zone, calendar: calendar)
+                : label(for: source.zone),
+            targetBadge: presentsNow
+                ? momentBadge(source.date, zone: target, calendar: calendar)
+                : label(for: target),
             payload: .value(display: time + dayNote, copyText: time))
     }
 
@@ -267,7 +275,7 @@ enum CalcTimeZone {
             "est", "edt", "et", "nyc", "new york city", "boston", "washington", "dc", "miami", "atlanta",
             "philadelphia", "jfk", "atl", "bos", "mia", "ewr", "iad", "charlotte", "nashville", "orlando",
             "tampa", "pittsburgh", "cleveland", "cincinnati", "columbus", "baltimore", "raleigh",
-            "indianapolis", "louisville"
+            "indianapolis", "louisville", "new york jfk", "new york newark"
         ],
         "America/Chicago": [
             "cst", "cdt", "ct", "austin", "dallas", "houston", "ord", "dfw", "iah", "minneapolis", "st louis",
@@ -276,15 +284,17 @@ enum CalcTimeZone {
         "America/Denver": ["mst", "mdt", "mt", "den", "salt lake city", "albuquerque", "boise"],
         "America/Los_Angeles": [
             "pst", "pdt", "pt", "la", "sf", "san francisco", "silicon valley", "seattle", "las vegas", "sfo",
-            "lax", "sea", "san diego", "san jose", "portland", "sacramento", "fresno", "oakland"
+            "lax", "sea", "san diego", "san jose", "portland", "sacramento", "fresno", "oakland",
+            "los angeles lax", "san francisco sfo"
         ],
         "Europe/Paris": [
             "cet", "cest", "cdg", "ory", "lyon", "marseille", "toulouse", "nice", "bordeaux", "nantes",
-            "lille", "strasbourg"
+            "lille", "strasbourg", "paris charles de gaulle", "paris orly"
         ],
         "Europe/London": [
             "bst", "ldn", "lhr", "lgw", "manchester", "birmingham", "liverpool", "leeds", "glasgow",
-            "edinburgh", "bristol", "cardiff", "cambridge", "oxford", "belfast"
+            "edinburgh", "bristol", "cardiff", "cambridge", "oxford", "belfast", "london heathrow",
+            "london gatwick"
         ],
         "Asia/Kolkata": [
             "ist", "kolkata", "bengaluru", "bangalore", "mumbai", "delhi", "new delhi", "chennai",
@@ -299,7 +309,7 @@ enum CalcTimeZone {
         ],
         "Asia/Tokyo": [
             "jst", "osaka", "kyoto", "nrt", "hnd", "kix", "yokohama", "nagoya", "sapporo", "fukuoka", "kobe",
-            "hiroshima", "sendai", "okinawa", "nara"
+            "hiroshima", "sendai", "okinawa", "nara", "tokyo narita", "tokyo haneda", "osaka kansai"
         ],
         "Asia/Seoul": ["kst", "icn", "busan", "incheon", "daegu"],
         "Australia/Sydney": ["aest", "aedt", "syd", "canberra", "newcastle"],
@@ -403,6 +413,11 @@ enum CalcTimeZone {
 
     private static func clockString(_ date: Date, zone: TimeZone, calendar: Calendar) -> String {
         CalcDateFormatters.string(from: date, calendar: calendar, zone: zone, pattern: "h:mm a")
+    }
+
+    private static func momentBadge(_ date: Date, zone: TimeZone, calendar: Calendar) -> String {
+        CalcDateFormatters.string(
+            from: date, calendar: calendar, zone: zone, pattern: "MMMM, d, h:mm a, z")
     }
 
     private static func dayOffsetWord(

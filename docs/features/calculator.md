@@ -37,7 +37,8 @@ in (see Currency below).
 
 `CalcEngine.evaluate` runs:
 
-Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
+Single ASCII words return immediately except Raycast v2's `now`, `time`, `today`, `tomorrow` and
+`yesterday`; a bare app name or constant never earns a card.
 
 1. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
@@ -91,7 +92,7 @@ parser, while the separator still chooses ISO, month-first or day-first interpre
 - **D** — difference between two moments: `jul 4 - today`
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
-- **G** — a named moment, once qualified: `tomorrow at 9am`, `next monday`, `last friday`
+- **G** — a named moment: `tomorrow`, `tomorrow at 9am`, `next monday`, `last friday`
 
 **An answered moment badges its weekday.** Grammars C and E resolve to a date, and the day of the
 week is the thing a date does not say out loud — so `5 weekdays from now` reads `4 September` under
@@ -118,11 +119,10 @@ which is the more common thing to type.
 The same convention writes an **ordinal dot** after the day, so `28. aug + 3` reads as 28 August.
 Only a trailing dot is dropped, which is why `28.5 aug` stays silent rather than becoming a date.
 
-Grammar G needs the qualifier. A lone `tomorrow` is an app search, so `at <time>` or a leading
-`next` / `last` earns a card — the same rule that keeps `today` and `july` silent. **A written day
-is qualifier enough**: `25. aug`, `aug 25` and `25.8.27` all answer, badged with their weekday,
-because nobody types a day-and-month pair looking for an app. A month alone still names no day, so
-`july` stays a search.
+Grammar G answers the five Raycast v2 root words directly: `now`, `time`, `today`, `tomorrow` and
+`yesterday`. A leading `next` / `last` also earns a card. **A written day is qualifier enough**:
+`25. aug`, `aug 25` and `25.8.27` all answer, badged with their weekday, because nobody types a
+day-and-month pair looking for an app. A month alone still names no day, so `july` stays a search.
 
 A bare date takes the year it is **nearest**, not the next one — three days behind is likelier the
 date meant than the same day twelve months out. Grammar C shifts a moment, so it reads the year the
@@ -146,6 +146,8 @@ Subtracting moments with clock times produces a timespan; `to hours` / `to minut
 selects an elapsed-time unit. Bare clocks in a difference share today's date, so `7:30 - 13:30`
 is `-6 hr` even when one clock has already passed. Date-only differences retain calendar-day counting;
 an explicit hours target measures elapsed time, so a DST day can be 23 or 25 hours.
+The range spelling `8am to 4pm` is the same elapsed calculation; an earlier ending clock lands on
+the following day, so `10pm to 2am` is four hours.
 
 A bare number after a moment takes the unit that moment implies: hours off a clock time
 (`3:45pm + 5` → 8:45 PM), days off a date (`august 5 + 5` → 10 August). It is checked before the
@@ -233,6 +235,8 @@ Volume flow adds length³/time to the same dimension table, with `m³/s` as its 
 Pixels have their own dimension, so `3000px to cm` cannot assume a physical size.
 An explicit density supplies it: `3000px / 300ppi to inches` → `10 in`,
 `5in * 300ppi` → `1,500 px`, and `3000px / 10in` → `300 ppi`.
+The design-tool spelling rewrites into that same typed expression: `2 inches in px at 72 ppi`
+is `2 inches * 72 ppi to px`, producing `144 px` without a second conversion engine.
 Density defaults to `ppi` (also `px/in`); `px/cm`, `px/mm` and `px/m` are conversion targets.
 Square pixels (`px²` / `px2`) let the ordinary powers and roots calculate a display's diagonal:
 `sqrt((3840px)^2 + (2160px)^2) / 27in` → `163.1783089 ppi`.
@@ -260,6 +264,7 @@ That is the same table-consulting lookahead the `USD1K` prefix split already use
 
 Beyond the core four, `CalcMath.functions` carries the reciprocal trig (`cot`, `sec`, `csc`),
 the inverses (`asin`/`arcsin` through `atan`), the hyperbolics (`sinh`, `acosh`, …) and
+their reciprocal/inverse and degree variants (`coth`, `acot`, `cotd`, `acotd`), plus
 `cbrt`/`exp`/`log2`/`sign`/`trunc`, alongside the `tau` and `phi` constants. `sec` is also the
 abbreviation for seconds, which costs nothing: a unit position resolves through `CalcUnits` long
 before a bare name reaches the function table, so `10 sec to min` stays a duration.
@@ -282,6 +287,9 @@ work without either side being local. That zone comes from the **injected calend
 performs no environment read and `calc-test` pins UTC exactly as it pins the clock. A result that
 lands on another date is suffixed `(tomorrow)` / `(yesterday)` rather than silently reading as the
 same day — the copyable text stays the bare time.
+
+`now in UTC` keeps that phrase on the source side and badges both sides with their full local moment
+and GMT offset. Explicit clock conversions keep the clock and city badges that name their operands.
 
 A trailing `+ 2h` / `- 30 min` shifts the answer before it is converted, so `5pm ldn in sf + 2h`
 stays one query rather than needing two. Only sub-day units qualify, since a zone answer is a clock
@@ -355,6 +363,9 @@ direction; `saturday + 1 business day` still lands on Monday.
 Public holidays are deliberately not modelled in either. The only supported source is EventKit, and a
 calculator must never provoke its Full Calendar Access grant mid-keystroke — see the invariant above.
 
+`workhours in 2023` counts that year's Monday–Friday dates at eight hours each. `day percentage`,
+`week %` and `year percentage` report elapsed wall-calendar progress from the injected clock.
+
 ## Implicit multiplication
 
 Juxtaposition means `*` at the same binding power as an explicit one (`4(2+3)` → 20, `2pi`,
@@ -377,6 +388,7 @@ and currency paths so a spelled-out word never outranks a measurement:
 
 - `20% off 500` → 400, and `50 as % of 200` → 25%
 - `15% tip on 42` → 6.3 — the tip alone, which is what the phrase asks for
+- `20% discount off $500` → 400 USD, and `5% gratuity on $95` → 4.75 USD
 - `50 is what % of 200` → 25%, the spoken form of `as % of`
 - `30 is 20% of what` → 150, solving for the whole instead of the share
 - `ratio of 1920 to 1080` → `16 : 9`, reduced by GCD; integers only
@@ -545,8 +557,8 @@ than `5.539e-05`.
 Date answers that display and copy identically also reuse their formatted text.
 
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
-the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
-`CalculatorHistoryStore`.
+the list (flat selection index 0, shifting rows by one). Enter copies the formatted answer, ⌘↵ copies
+`copyText`, and ⇧⌘↵ copies the question and formatted answer; all three record it to history.
 
 ## Additional units and transfer rates
 

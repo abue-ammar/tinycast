@@ -125,6 +125,8 @@ private extension MenuPanelCorner {
     func activate(at selection: Int)
     /// ⌘↵. False when the selection has no secondary action, leaving the key unhandled.
     func secondary(at selection: Int) -> Bool
+    /// ⇧⌘↵. False falls through to the screen's ordinary ⌘↵ action.
+    func tertiary(at selection: Int) -> Bool
     /// ⌥↵. False on every screen with nothing to paste, which is most of them.
     func pasteKeepingWindowOpen(at selection: Int) -> Bool
     /// The selection an arrow key lands on, or nil to leave the key to the palette's own default.
@@ -153,6 +155,7 @@ extension PaletteScreen {
             popover: content, selection: menuSelection, onActivate: onActivate)
     }
     func pasteKeepingWindowOpen(at selection: Int) -> Bool { false }
+    func tertiary(at selection: Int) -> Bool { false }
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? { nil }
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding

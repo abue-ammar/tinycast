@@ -27,8 +27,16 @@ final class CalculatorCoordinator {
         calcHistory.clearAll()
     }
 
-    /// Enter on the inline calculator card: copy the answer, remember the calculation, dismiss.
+    /// Enter on the inline calculator card: copy the formatted answer, remember it, dismiss.
     func copyCalculatorResult(_ result: CalcResult) {
+        guard case .value(let display, _) = result.payload else { return }
+        calcHistory.record(expression: result.expression, result: display)
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Paster.copyPlainText(display)
+    }
+
+    /// `⌘↵` copies the unformatted payload while recording the rendered calculation.
+    func copyCalculatorUnformatted(_ result: CalcResult) {
         guard case .value(let display, let copyText) = result.payload else { return }
         calcHistory.record(expression: result.expression, result: display)
         paletteCoordinator.hidePalette(restoreFocus: false)
@@ -37,10 +45,10 @@ final class CalculatorCoordinator {
 
     /// `⇧⌘↵` on the card: the whole calculation, for pasting into a note or a message.
     func copyCalculationWithExpression(_ result: CalcResult) {
-        guard case .value(let display, let copyText) = result.payload else { return }
+        guard case .value(let display, _) = result.payload else { return }
         calcHistory.record(expression: result.expression, result: display)
         paletteCoordinator.hidePalette(restoreFocus: false)
-        Paster.copyPlainText("\(result.expression) = \(copyText)")
+        Paster.copyPlainText("\(result.expression) = \(display)")
     }
 
     /// Enter on a Calculator History row: re-copy the stored answer (no re-record).

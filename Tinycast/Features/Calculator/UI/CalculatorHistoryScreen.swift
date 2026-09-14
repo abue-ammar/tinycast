@@ -73,10 +73,20 @@ struct CalculatorHistoryScreen: PaletteScreen {
         }
     }
 
-    /// ⌘↵: the inline card has no expression to copy, so only stored entries respond.
+    /// ⌘↵ copies a fresh card unformatted; stored rows retain their expression shortcut.
     func secondary(at selection: Int) -> Bool {
+        if case .calc(let result) = row(at: selection) {
+            core.calculatorCoordinator.copyCalculatorUnformatted(result)
+            return true
+        }
         guard let entry = entry(at: selection) else { return false }
         core.calculatorCoordinator.copyHistoryExpression(entry)
+        return true
+    }
+
+    func tertiary(at selection: Int) -> Bool {
+        guard case .calc(let result) = row(at: selection) else { return false }
+        core.calculatorCoordinator.copyCalculationWithExpression(result)
         return true
     }
 

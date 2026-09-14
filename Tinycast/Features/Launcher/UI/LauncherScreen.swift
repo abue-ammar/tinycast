@@ -238,10 +238,20 @@ struct LauncherScreen: PaletteScreen {
         }
     }
 
-    /// ⌘↵ — only an entry backed by a file on disk has somewhere to be revealed.
+    /// ⌘↵ copies calculations unformatted; file-backed entries reveal in Finder.
     func secondary(at selection: Int) -> Bool {
+        if case .calc(let result) = row(at: selection) {
+            core.calculatorCoordinator.copyCalculatorUnformatted(result)
+            return true
+        }
         guard let app = entry(at: selection), app.canRevealInFinder else { return false }
         core.launcherCoordinator.showInFinder(app)
+        return true
+    }
+
+    func tertiary(at selection: Int) -> Bool {
+        guard case .calc(let result) = row(at: selection) else { return false }
+        core.calculatorCoordinator.copyCalculationWithExpression(result)
         return true
     }
 

@@ -12,6 +12,18 @@ enum CalcDateTime {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let lowered = echo.lowercased()
         guard !lowered.isEmpty else { return nil }
+        let query = lowered.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+
+        if let summary = calendarSummary(query, echo: echo, now: now, calendar: calendar) {
+            return summary
+        }
+        if query == "time" {
+            let text = timeString(now, calendar: calendar)
+            return CalcResult(
+                expression: echo, sourceBadge: dateString(now, now: now, calendar: calendar),
+                targetBadge: "Time", payload: .value(display: text, copyText: text))
+        }
+        if let range = clockRange(query, echo: echo, now: now, calendar: calendar) { return range }
 
         // One pass over the words, since an app search pays this on every keystroke.
         let signals = keywordSignals(lowered)
@@ -26,12 +38,11 @@ enum CalcDateTime {
         let isBareMoment =
             signals.contains(.at) || signals.contains(.nextOrLast)
             || (hasDigit && signals.contains(.dayName) && namesADay(lowered))
-            || CalcTimestamp.looksLikeISO(lowered)
+            || CalcTimestamp.looksLikeISO(lowered) || bareMomentWords.contains(query)
         guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment || hasTimestamp else {
             return nil
         }
 
-        let query = lowered.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         if hasTimestamp || query.hasSuffix(" to date") && CalcTimestamp.looksLikeISO(query),
             let result = parseTimestamp(query, echo: echo, now: now, calendar: calendar)
         {
@@ -56,6 +67,88 @@ enum CalcDateTime {
             return result
         }
         return nil
+    }
+
+    private static let bareMomentWords: Set<String> = ["now", "today", "tomorrow", "yesterday"]
+
+    private static func calendarSummary(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        if let workHours = workHours(query, echo: echo, calendar: calendar) { return workHours }
+
+        let words = query.split(separator: " ").map(String.init)
+        guard words.count == 2, words[1] == "percentage" || words[1] == "%" else { return nil }
+        let component: Calendar.Component
+        switch words[0] {
+        case "day": component = .day
+        case "week": component = .weekOfYear
+        case "year": component = .year
+        default: return nil
+        }
+        guard let interval = calendar.dateInterval(of: component, for: now), interval.duration > 0
+        else { return nil }
+        let value = now.timeIntervalSince(interval.start) / interval.duration * 100
+        return CalcResult(
+            expression: echo, sourceBadge: "Elapsed", targetBadge: "\(words[0].capitalized) Percentage",
+            payload: .number(value, suffix: "%"))
+    }
+
+    private static func workHours(
+        _ query: String, echo: String, calendar: Calendar
+    ) -> CalcResult? {
+        let words = query.split(separator: " ").map(String.init)
+        let yearText: String
+        if words.count == 3, words[0] == "workhours", words[1] == "in" {
+            yearText = words[2]
+        } else if words.count == 4, words[0] == "work", words[1] == "hours", words[2] == "in" {
+            yearText = words[3]
+        } else {
+            return nil
+        }
+        guard let year = Int(yearText), (1...9998).contains(year) else { return nil }
+        var components = DateComponents()
+        components.year = year
+        components.month = 1
+        components.day = 1
+        components.timeZone = calendar.timeZone
+        guard var day = calendar.date(from: components),
+            let end = calendar.date(byAdding: .year, value: 1, to: day)
+        else { return nil }
+
+        var count = 0
+        while day < end {
+            if !isWeekend(day, calendar: calendar) { count += 1 }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { return nil }
+            day = next
+        }
+        let hours = Double(count * 8)
+        return CalcResult(
+            expression: echo, sourceBadge: String(year), targetBadge: "Work Hours",
+            payload: .number(hours, suffix: " hr"))
+    }
+
+    private static func clockRange(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        let parts = query.components(separatedBy: " to ")
+        guard parts.count == 2, parseMeridiemClock(parts[0]) != nil,
+            parseMeridiemClock(parts[1]) != nil,
+            let start = parseMoment(parts[0], now: now, calendar: calendar, bias: .nearest),
+            let parsedEnd = parseMoment(parts[1], now: now, calendar: calendar, bias: .nearest)
+        else { return nil }
+        let end: Date
+        if parsedEnd.date >= start.date {
+            end = parsedEnd.date
+        } else {
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: parsedEnd.date)
+            else { return nil }
+            end = nextDay
+        }
+        let text = CalcFormatter.timespan(end.timeIntervalSince(start.date))
+        return CalcResult(
+            expression: echo, sourceBadge: timeString(start.date, calendar: calendar),
+            targetBadge: timeString(end, calendar: calendar),
+            payload: .value(display: text, copyText: text))
     }
 
     private struct Signals: OptionSet {

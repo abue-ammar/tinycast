@@ -94,7 +94,7 @@ private enum CalcSyntax {
     private static let connectors: Set<String> = [
         "to", "of", "off", "on", "as", "from", "ago", "at", "tip", "ratio", "average", "avg",
         "mean", "sum", "total", "round", "nearest", "and", "is", "what", "the", "next", "last",
-        "+", "-", "×", "÷", "^", "→", "->", "mod"
+        "discount", "gratuity", "percentage", "+", "-", "×", "÷", "^", "→", "->", "mod"
     ]
 }
 
@@ -109,7 +109,12 @@ enum CalcActionsMenu {
                     core.calculatorCoordinator.copyCalculatorResult(result)
                 },
                 PopoverMenuItem(
-                    title: "Copy Calculation", systemImage: "doc.on.doc.fill", shortcut: "⇧⌘↵"
+                    title: "Copy Unformatted Answer", systemImage: "textformat", shortcut: "⌘↵"
+                ) {
+                    core.calculatorCoordinator.copyCalculatorUnformatted(result)
+                },
+                PopoverMenuItem(
+                    title: "Copy Question and Answer", systemImage: "doc.on.doc.fill", shortcut: "⇧⌘↵"
                 ) {
                     core.calculatorCoordinator.copyCalculationWithExpression(result)
                 }

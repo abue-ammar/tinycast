@@ -10,6 +10,16 @@ enum CalcMath {
         "arcsin": { asin($0) }, "arccos": { acos($0) }, "arctan": { atan($0) },
         "sinh": { sinh($0) }, "cosh": { cosh($0) }, "tanh": { tanh($0) },
         "asinh": { asinh($0) }, "acosh": { acosh($0) }, "atanh": { atanh($0) },
+        "coth": { 1 / tanh($0) }, "sech": { 1 / cosh($0) }, "csch": { 1 / sinh($0) },
+        "acot": { atan2(1, $0) }, "asec": { acos(1 / $0) }, "acsc": { asin(1 / $0) },
+        "acoth": { atanh(1 / $0) }, "asech": { acosh(1 / $0) }, "acsch": { asinh(1 / $0) },
+        "sind": { sin(degreesToRadians($0)) }, "cosd": { cos(degreesToRadians($0)) },
+        "tand": { tan(degreesToRadians($0)) }, "cotd": { 1 / tan(degreesToRadians($0)) },
+        "secd": { 1 / cos(degreesToRadians($0)) }, "cscd": { 1 / sin(degreesToRadians($0)) },
+        "asind": { radiansToDegrees(asin($0)) }, "acosd": { radiansToDegrees(acos($0)) },
+        "atand": { radiansToDegrees(atan($0)) }, "acotd": { radiansToDegrees(atan2(1, $0)) },
+        "asecd": { radiansToDegrees(acos(1 / $0)) },
+        "acscd": { radiansToDegrees(asin(1 / $0)) },
         "cbrt": { cbrt($0) }, "exp": { exp($0) }, "log2": { log2($0) },
         "sign": { $0 > 0 ? 1 : ($0 < 0 ? -1 : 0) }, "trunc": { $0.rounded(.towardZero) }
     ]
@@ -17,6 +27,10 @@ enum CalcMath {
     static let constants: [String: Double] = [
         "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2
     ]
+
+    private static func degreesToRadians(_ value: Double) -> Double { value * .pi / 180 }
+
+    private static func radiansToDegrees(_ value: Double) -> Double { value * 180 / .pi }
 
     /// Factorial for non-negative integers; 170! is the last value representable as a Double.
     static func factorial(_ value: Double) -> Double? {

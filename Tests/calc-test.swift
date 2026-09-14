@@ -491,6 +491,7 @@ struct CalcTests {
         expectDisplay("1btu to kj", "1.055055853 kJ")
         expectDisplay("1lbf to n", "4.448221615 N")
         expectDisplay("3000px / 300ppi to inches", "10 in")
+        expectDisplay("2 inches in px at 72 ppi", "144 px")
         expectDisplay("5in * 300PPI", "1,500 px")
         expectCopy("5in * 300ppi", "1500 px")
         expectDisplay("300ppi * 5in", "1,500 px")
@@ -584,6 +585,7 @@ struct CalcTests {
         expectDisplayAt("weeks till 9april", "37 weeks")  // 259 / 7
         expectDisplayAt("today + 3 weeks", "14 August")
         expectDisplayAt("now + 90 min", "24 July at 1:48 AM")
+        expectDisplayAt("3 days from now at 4:39pm", "27 July at 4:39 PM")
         expectDisplayAt("jul 4 - today", "345 days")
         expectBadgesAt("jul 4 - today", source: "Sunday, 4 July, 2027", target: "Friday, 24 July")
         // Arithmetic with spaced operators must still be plain math, not date math
@@ -596,13 +598,12 @@ struct CalcTests {
         // A slash date still reads as a date when the other side names a keyword
         expectDisplayAt("9/4 - today", "42 days")
         expectDisplayAt("today - 9/4", "-42 days")
-        // Bare date/unit words alone are app searches, not cards
-        expectNilAt("today")
+        // A bare month remains search input; Raycast v2's relative words answer directly.
         expectNilAt("july")
-        expectNilAt("tomorrow")
 
         // Angle units (deg is a real unit now, not just a trig postfix)
         expectDisplay("1 deg", "0.01745329252 rad")
+        expectDisplay("1 kilo to g", "1,000 g")
         expectExpression("1 deg", "1 deg")
         expectBadges("1 deg", source: "Degrees", target: "Radians")
         expectDisplay("90 deg to rad", "1.570796327 rad")
@@ -644,6 +645,8 @@ struct CalcTests {
         // Percentage phrasings
         expectDisplay("20% off 500", "400")
         expectDisplay("50 as % of 200", "25%")
+        expectDisplay("20% of 500", "100")
+        expectDisplay("90-30%", "63")
 
         // Badges on paths that previously had none
         expectBadges("255 to hex", source: "Decimal", target: "Hexadecimal")
@@ -882,6 +885,7 @@ struct CalcTests {
         // Workdays are 8 hours; weekends and holidays are a calendar's business, not a unit's
         expectDisplay("55h in workdays", "6.875 workdays")
         expectDisplay("3 workdays in hours", "24 hr")
+        expectDisplayAt("workhours in 2023", "2,080 hr")
         expectDisplay("2 businessdays to hours", "16 hr")
         expectBadges("55h in workdays", source: "Hours", target: "Workdays")
 
@@ -894,6 +898,13 @@ struct CalcTests {
         expectDisplay("arctan(1)", "0.7853981634")
         expectDisplay("sinh(1)", "1.175201194")
         expectDisplay("tanh(0)", "0")
+        expectDisplay("coth(1)", "1.313035285")
+        expectDisplay("csch(1)", "0.8509181282")
+        expectDisplay("acot(1)", "0.7853981634")
+        expectDisplay("cotd(45)", "1")
+        expectDisplay("cscd(30)", "2")
+        expectDisplay("acotd(1)", "45")
+        expectDisplay("acscd(2)", "30")
         expectDisplay("cbrt(27)", "3")
         expectDisplay("log2(1024)", "10")
         expectDisplay("exp(0)", "1")
@@ -908,6 +919,8 @@ struct CalcTests {
         // Percentage and ratio phrasings
         expectDisplay("15% tip on 42", "6.3")
         expectDisplay("20% tip of 80", "16")
+        expectDisplay("20% discount off $500", "400.00 USD")
+        expectDisplay("5% gratuity on $95", "4.75 USD")
         expectDisplay("50 is what % of 200", "25%")
         expectDisplay("30 is 20% of what", "150")
         expectDisplay("ratio of 3 to 5", "3 : 5")
@@ -962,6 +975,11 @@ struct CalcTests {
         expectDisplayAt("time in utc", "12:18 AM")
         expectBadgesAt("time in tokyo", source: "UTC", target: "Tokyo")
         expectBadgesAt("time in sf", source: "UTC", target: "Los Angeles")
+        expectDisplayAt("now in UTC", "12:18 AM")
+        expectExpression("now in UTC", "now in UTC")
+        expectBadgesAt(
+            "now in tokyo", source: "July, 24, 12:18 AM, GMT",
+            target: "July, 24, 9:18 AM, GMT+9")
         // A named source zone overrides the Mac's own, so neither side has to be local
         expectDisplayAt("5pm london in sf", "9:00 AM")
         expectDisplayAt("9:30am in nyc", "5:30 AM")
@@ -974,7 +992,6 @@ struct CalcTests {
         expectDisplay("1 cup to ml", "236.5882365 mL")
         expectNil("time in xyzzy")
         expectNil("in tokyo")
-        expectNil("time")
 
         // IATA airport codes, which Foundation has no notion of
         expectDisplayAt("time in vie", "2:18 AM")
@@ -982,6 +999,7 @@ struct CalcTests {
         expectDisplayAt("time in nrt", "9:18 AM")
         expectDisplayAt("time in sfo", "5:18 PM (yesterday)")
         expectBadgesAt("time in vie", source: "UTC", target: "Vienna")
+        expectBadgesAt("time in London Heathrow", source: "UTC", target: "London")
         expectDisplayAt("5pm vie in nrt", "12:00 AM (tomorrow)")
         // `mad` stays the Moroccan dirham, and `ist` stays India Standard Time
         expectError("10 mad to usd", "No exchange rate for MAD.")
@@ -1018,6 +1036,21 @@ struct CalcTests {
         expectDisplayAt("time in 4 hours", "4:18 AM")
         expectDisplayAt("time in 90 min", "1:48 AM")
         expectDisplayAt("time in 4 hours in san francisco", "9:18 PM (yesterday)")
+
+        // Raycast v2's elapsed-period and clock-range forms.
+        expectDisplayAt("day percentage", "1.25%")
+        expectDisplayAt("week %", "71.60714286%")
+        expectDisplayAt("year percentage", "55.89383562%")
+        expectDisplayAt("8am to 4pm", "8 hr")
+        expectDisplayAt("10pm to 2am", "4 hr")
+        expectDisplayAt("now", "24 July at 12:18 AM")
+        expectDisplayAt("time", "12:18 AM")
+        expectDisplayAt("today", "24 July")
+        expectDisplayAt("tomorrow", "25 July")
+        expectDisplayAt("yesterday", "23 July")
+        expectDisplayAt("2024-03-15T14:30:00Z", "15 March, 2024 at 2:30 PM")
+        expectDisplayAt("today + 1 mo", "24 August")
+        expectDisplayAt("today + 1 yr", "24 July, 2027")
 
         // A bare offset on a clock answer is hours, the unit the answer already implies
         expectDisplayAt("time in tokyo + 2", "11:18 AM")
@@ -1076,11 +1109,9 @@ struct CalcTests {
         expectBadgesAt("25. aug", source: "Friday, 24 July", target: "Tuesday")
         // A bare date takes the year it is nearest, so it agrees with the same date plus a shift
         expectDisplayAt("25. aug + 3", "28 August")
-        // A month or a relative word alone is still an app search
+        // A month alone is still an app search.
         expectNilAt("july")
         expectNilAt("aug")
-        expectNilAt("today")
-        expectNilAt("tomorrow")
 
         // Date arithmetic chains left to right, however many terms it carries
         expectDisplayAt("17.2.26 + 100 week days - 4 + 2", "5 July")
@@ -1171,10 +1202,6 @@ struct CalcTests {
         expectDisplayAt("1:00 - 3:00", "-2 hr", calendar: vienna)
         let springNow = clock.calendar.date(from: DateComponents(year: 2026, month: 3, day: 29))!
         expectNilAt("2:30am vienna in london", now: springNow, calendar: vienna)
-        // A lone date word is still an app search
-        expectNilAt("tomorrow")
-        expectNilAt("today")
-
         // Spoken function and operator names
         expectDisplay("square root of 625", "25")
         expectDisplay("square root of 64", "8")
