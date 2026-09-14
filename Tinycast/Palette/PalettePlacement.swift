@@ -13,18 +13,25 @@ enum PalettePlacement {
             y: visibleFrame.maxY - visibleFrame.height * topMarginFraction)
     }
 
-    /// Nil once no display shows enough of the compact bar to grab it back.
+    /// Kept against its display: right of its left edge, down from its top.
+    static func offset(of anchor: CGPoint, on visibleFrame: CGRect) -> CGPoint {
+        CGPoint(x: anchor.x - visibleFrame.minX, y: visibleFrame.maxY - anchor.y)
+    }
+
+    static func anchor(for offset: CGPoint, on visibleFrame: CGRect) -> CGPoint {
+        CGPoint(x: visibleFrame.minX + offset.x, y: visibleFrame.maxY - offset.y)
+    }
+
+    /// Nil once the display shows too little of the compact bar to grab it back.
     static func restored(
-        _ stored: CGPoint, graspable: CGSize, visibleFrames: [CGRect], minimumVisible: CGFloat
+        _ stored: CGPoint, graspable: CGSize, visibleFrame: CGRect, minimumVisible: CGFloat
     ) -> CGPoint? {
         let bar = CGRect(
             x: stored.x, y: stored.y - graspable.height,
             width: graspable.width, height: graspable.height)
-        let reachable = visibleFrames.contains { screen in
-            let shown = screen.intersection(bar)
-            return !shown.isNull && shown.width >= minimumVisible && shown.height >= minimumVisible
-        }
-        return reachable ? stored : nil
+        let shown = visibleFrame.intersection(bar)
+        return !shown.isNull && shown.width >= minimumVisible && shown.height >= minimumVisible
+            ? stored : nil
     }
 
     /// Near enough to the default placement that releasing the drag should drop it home.

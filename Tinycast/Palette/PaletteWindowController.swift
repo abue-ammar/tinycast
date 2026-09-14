@@ -30,6 +30,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private struct DragSession {
         var home: CGPoint
         var screenFrame: CGRect
+        var visibleFrame: CGRect
+        var displayKey: String
         var armed = false
         /// The guides wait for this, so a click that never moves the panel doesn't flash them.
         var moved = false
@@ -241,7 +243,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// A press on a drag handle passed the slop that makes it a drag; the guides follow the move.
     func beginDrag() {
         guard let screen = panel?.screen ?? targetScreen() else { return }
-        drag = DragSession(home: defaultAnchor(on: screen), screenFrame: screen.frame)
+        drag = DragSession(
+            home: defaultAnchor(on: screen), screenFrame: screen.frame,
+            visibleFrame: screen.visibleFrame, displayKey: screen.displayKey)
     }
 
     /// Release: snap home and forget the stored position, or remember where it was dropped.
@@ -252,12 +256,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         dropGuides.hide()
         guard let panel, let session, session.moved else { return }
         guard session.armed else {
-            core.settings.palettePosition = anchor
+            core.settings.setPalettePosition(
+                anchor.map { PalettePlacement.offset(of: $0, on: session.visibleFrame) },
+                on: session.displayKey)
             return
         }
         anchor = session.home
         positionPanel(panel, collapsed: core.paletteCoordinator.paletteIsCollapsed)
-        core.settings.palettePosition = nil
+        core.settings.setPalettePosition(nil, on: session.displayKey)
     }
 
     /// Keep the guides on the panel's screen, armed only while a release would snap it home.
@@ -265,6 +271,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         guard var session = drag else { return }
         if let screen = panel?.screen, screen.frame != session.screenFrame {
             session.screenFrame = screen.frame
+            session.visibleFrame = screen.visibleFrame
+            session.displayKey = screen.displayKey
             session.home = defaultAnchor(on: screen)
         }
         session.armed = PalettePlacement.isSnapping(
@@ -385,18 +393,18 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Cached until hide, so both placements read one `visibleFrame`; a drag outranks the setting.
     private func resolveAnchor() -> CGPoint? {
         if let anchor { return anchor }
-        let resolved = restoredAnchor() ?? targetScreen().map(defaultAnchor(on:))
+        let resolved = targetScreen().flatMap { restoredAnchor(on: $0) ?? defaultAnchor(on: $0) }
         anchor = resolved
         return resolved
     }
 
-    /// Where the last drag left it, unless no display still shows enough of the bar to grab.
-    private func restoredAnchor() -> CGPoint? {
-        guard let stored = core.settings.palettePosition else { return nil }
+    /// This display's own corner, unless too little of the bar would stay grabbable.
+    private func restoredAnchor(on screen: NSScreen) -> CGPoint? {
+        guard let offset = core.settings.palettePosition(on: screen.displayKey) else { return nil }
         return PalettePlacement.restored(
-            stored,
+            PalettePlacement.anchor(for: offset, on: screen.visibleFrame),
             graspable: CGSize(width: metrics.size.panelWidth, height: metrics.size.compactHeight),
-            visibleFrames: NSScreen.screens.map(\.visibleFrame),
+            visibleFrame: screen.visibleFrame,
             minimumVisible: Theme.Size.paletteMinimumVisible)
     }
 
@@ -408,4 +416,16 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     private var metrics: InterfaceMetrics { core.settings.interfaceSize.metrics }
+}
+
+extension NSScreen {
+    /// Survives a replug; the display ID is a session-only fallback.
+    fileprivate var displayKey: String {
+        let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        guard let id = number?.uint32Value else { return "primary" }
+        guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue(),
+            let string = CFUUIDCreateString(nil, uuid) as String?
+        else { return String(id) }
+        return string.lowercased()
+    }
 }

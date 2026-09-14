@@ -240,7 +240,7 @@ The panel's width and height are not constants: they come from `InterfaceMetrics
 changes them. A change re-enters through `AppCore.track` → `applyInterfaceSize()`, which **drops the
 cached anchor** and re-resolves it — one rule, the summon's. An untouched palette re-centres at the new
 width; a dragged one keeps its stored top-left unless the wider bar no longer leaves
-`paletteMinimumVisible` on any display, in which case it falls home.
+`paletteMinimumVisible` on the display it opens on, in which case it falls home.
 
 ### Drag to reposition
 
@@ -283,17 +283,19 @@ default placement, which is what a snap would then land on.
 
 ### Remembering where it was left
 
-A drop that isn't a snap writes the anchor to `AppSettings.palettePosition`, and the next summon reopens
-there — across relaunches, since it is a persisted setting. **A remembered position outranks the display
-setting below**; `PalettePlacement.restored` drops it only when no display still shows
-`Theme.Size.paletteMinimumVisible` of the compact bar, which is what a disconnected screen or a
-resolution change leaves behind. Snapping onto the guides clears the stored position, so the guides
-double as the way back to default behaviour.
+A drop that isn't a snap writes the panel's top-left to `AppSettings.palettePositions`, **one entry per
+display**, keyed by `NSScreen.displayKey` and held **relative to that display's visible top-left**. Per
+display stops a drop made on one screen pulling the palette back there when it is summoned on another;
+relative survives rearranging that display or rescaling it, so no key goes stale.
+
+**The display is chosen first, by the setting below.** `PalettePlacement.restored` drops the corner once
+that display shows less than `Theme.Size.paletteMinimumVisible` of the compact bar, and snapping onto
+the guides clears that display's entry.
 
 The position is deliberately **not** in a settings backup — it is machine-local geometry, the same
 reason the Settings window autosaves its frame instead ([backup.md](backup.md)).
 
-Which display an *unremembered* palette anchors to depends on the **Follow the cursor across displays**
+Which display the palette anchors to depends on the **Follow the cursor across displays**
 setting (`AppSettings.openOnCursorScreen`, on by default):
 
 - **On** — `NSScreen.underCursor`: the screen holding `NSEvent.mouseLocation`, i.e. the display under

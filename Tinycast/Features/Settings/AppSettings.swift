@@ -233,16 +233,21 @@ final class AppSettings {
         didSet { defaults.set(paletteDraggable, forKey: Key.paletteDraggable.rawValue) }
     }
 
-    /// Where a drag left the panel's top-left; nil means the default placement.
-    var palettePosition: CGPoint? {
-        didSet {
-            guard let palettePosition else {
-                defaults.removeObject(forKey: Key.palettePosition.rawValue)
-                return
-            }
-            defaults.set(
-                [palettePosition.x, palettePosition.y], forKey: Key.palettePosition.rawValue)
+    /// Where a drag left the panel's top-left, per display and relative to it.
+    var palettePositions: [String: [Double]] {
+        didSet { defaults.set(palettePositions, forKey: Key.palettePosition.rawValue) }
+    }
+
+    func palettePosition(on display: String) -> CGPoint? {
+        palettePositions[display].flatMap { $0.count == 2 ? CGPoint(x: $0[0], y: $0[1]) : nil }
+    }
+
+    func setPalettePosition(_ offset: CGPoint?, on display: String) {
+        guard let offset else {
+            palettePositions.removeValue(forKey: display)
+            return
         }
+        palettePositions[display] = [offset.x, offset.y]
     }
 
     // Feature switches, off out of the box, and off means fully off.
@@ -543,9 +548,8 @@ final class AppSettings {
             || defaults.bool(forKey: Key.openOnCursorScreen.rawValue)
         autoSwitchInputSourceID = defaults.string(forKey: Key.autoSwitchInputSource.rawValue)
         paletteDraggable = defaults.bool(forKey: Key.paletteDraggable.rawValue)
-        // A half-written pair is no position at all, so both coordinates have to be there.
-        palettePosition = (defaults.array(forKey: Key.palettePosition.rawValue) as? [Double])
-            .flatMap { $0.count == 2 ? CGPoint(x: $0[0], y: $0[1]) : nil }
+        palettePositions = defaults.dictionary(forKey: Key.palettePosition.rawValue)
+            as? [String: [Double]] ?? [:]
         fileSearchEnabled = defaults.bool(forKey: Key.fileSearchEnabled.rawValue)
         // Unset seeds home; a stored empty array is a cleared list that searches nothing.
         fileSearchScopes =

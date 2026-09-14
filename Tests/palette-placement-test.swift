@@ -39,14 +39,15 @@ struct PalettePlacementTests {
             in: screen, width: width, topMarginFraction: topFraction)
     }
 
-    static func restored(_ stored: CGPoint, screens: [CGRect]) -> CGPoint? {
+    static func restored(_ stored: CGPoint, on screen: CGRect) -> CGPoint? {
         PalettePlacement.restored(
-            stored, graspable: graspable, visibleFrames: screens, minimumVisible: minimumVisible)
+            stored, graspable: graspable, visibleFrame: screen, minimumVisible: minimumVisible)
     }
 
     static func main() {
         theDefaultPlacement()
-        restoringAcrossDisplays()
+        restoringOnItsOwnDisplay()
+        offsetsFollowTheirDisplay()
         restoringPartlyOffscreen()
         snapping()
         menuPanelAnchors()
@@ -82,43 +83,70 @@ struct PalettePlacementTests {
 
     // MARK: - Restoring a stored position
 
-    static func restoringAcrossDisplays() {
+    static func restoringOnItsOwnDisplay() {
         let onExternal = CGPoint(x: 2700, y: 900)
         expect(
-            restored(onExternal, screens: [laptop, external]) == onExternal,
-            "a position on a connected display comes back verbatim")
+            restored(onExternal, on: external) == onExternal,
+            "a drop comes back verbatim on the display it was made on")
         expect(
-            restored(onExternal, screens: [laptop]) == nil,
-            "the same position is dropped once that display is unplugged")
+            restored(onExternal, on: laptop) == nil,
+            "and is never read onto the neighbouring display the palette is summoned on")
 
         // The fallback has to be reachable, not merely different.
         expect(
-            restored(home(laptop), screens: [laptop]) != nil,
+            restored(home(laptop), on: laptop) != nil,
             "the default placement is always restorable on its own screen")
+    }
+
+    /// Stored against the display, so rearranging or rescaling it keeps the drop.
+    static func offsetsFollowTheirDisplay() {
+        let dropped = CGPoint(x: external.minX + 400, y: external.maxY - 260)
+        let offset = PalettePlacement.offset(of: dropped, on: external)
+        expect(offset.x, 400, "the offset runs rightward from the display's own left edge")
+        expect(offset.y, 260, "and downward from its top edge")
         expect(
-            restored(CGPoint(x: -4000, y: 9000), screens: [laptop, external]) == nil,
-            "a position on no display at all is dropped")
+            PalettePlacement.anchor(for: offset, on: external) == dropped,
+            "reading it back on the unchanged display returns the point that was dropped")
+
+        // Same display, moved to the other side in Displays settings.
+        let rearranged = CGRect(x: -1920, y: 0, width: 1920, height: 1055)
+        let moved = PalettePlacement.anchor(for: offset, on: rearranged)
+        expect(moved.x, rearranged.minX + 400, "a rearranged display keeps the drop on itself")
+        expect(moved.y, rearranged.maxY - 260, "wherever the global origin left it")
+        expect(restored(moved, on: rearranged) != nil, "and the bar is grabbable there")
+
+        // A resolution change shortens it from the bottom, so a top offset holds.
+        let scaled = CGRect(x: 2560, y: 0, width: 1440, height: 775)
+        let resized = PalettePlacement.anchor(for: offset, on: scaled)
+        expect(resized.y, scaled.maxY - 260, "a rescaled display keeps the distance from the top")
+        expect(restored(resized, on: scaled) != nil, "and still shows enough of the bar to grab")
+
+        let edge = PalettePlacement.offset(
+            of: CGPoint(x: external.maxX - 10, y: external.maxY - 260), on: external)
+        expect(
+            restored(PalettePlacement.anchor(for: edge, on: scaled), on: scaled) == nil,
+            "an offset past the edge of a shrunken display falls home instead")
     }
 
     static func restoringPartlyOffscreen() {
         // Deliberately slid off to the right: still restorable while a grabbable sliver shows.
         let sliver = CGPoint(x: laptop.maxX - minimumVisible, y: 900)
         expect(
-            restored(sliver, screens: [laptop]) != nil,
+            restored(sliver, on: laptop) != nil,
             "exactly the minimum sliver of the compact bar is still grabbable")
         let tooFar = CGPoint(x: laptop.maxX - minimumVisible + 1, y: 900)
         expect(
-            restored(tooFar, screens: [laptop]) == nil,
+            restored(tooFar, on: laptop) == nil,
             "one point less than that is not, and falls back to the default")
 
         // Slid off the top, where the whole grab strip is what goes missing first.
         let peeking = CGPoint(x: 800, y: laptop.maxY + graspable.height - minimumVisible)
         expect(
-            restored(peeking, screens: [laptop]) != nil,
+            restored(peeking, on: laptop) != nil,
             "a bar hanging off the top edge is grabbable while the minimum still shows")
         let gone = CGPoint(x: 800, y: laptop.maxY + graspable.height - minimumVisible + 1)
         expect(
-            restored(gone, screens: [laptop]) == nil,
+            restored(gone, on: laptop) == nil,
             "pushed one point further up it is dropped")
     }
 
@@ -229,13 +257,13 @@ struct PalettePlacementTests {
             let sliver = CGPoint(x: laptop.maxX - minimumVisible, y: 900)
             expect(
                 PalettePlacement.restored(
-                    sliver, graspable: graspable, visibleFrames: [laptop],
+                    sliver, graspable: graspable, visibleFrame: laptop,
                     minimumVisible: minimumVisible) != nil,
                 "the minimum sliver is still grabbable \(label)")
             expect(
                 PalettePlacement.restored(
                     CGPoint(x: laptop.maxX, y: 900), graspable: graspable,
-                    visibleFrames: [laptop], minimumVisible: minimumVisible) == nil,
+                    visibleFrame: laptop, minimumVisible: minimumVisible) == nil,
                 "a bar dragged fully past the right edge is dropped \(label)")
         }
     }
