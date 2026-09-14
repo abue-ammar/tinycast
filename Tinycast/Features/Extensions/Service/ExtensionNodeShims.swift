@@ -1,3 +1,4 @@
+import CommonCrypto
 import CryptoKit
 import Darwin
 import Foundation
@@ -451,6 +452,28 @@ final class ExtensionNodeShims: @unchecked Sendable {
             let key = Data(base64Encoded: arguments[safe: 2] as? String ?? "") ?? Data()
             return try authenticate(algorithm: algorithm, data: data, key: key).base64EncodedString()
 
+        case "pbkdf2":
+            let algorithm = arguments[safe: 0] as? String ?? ""
+            let password = Data(base64Encoded: arguments[safe: 1] as? String ?? "") ?? Data()
+            let salt = Data(base64Encoded: arguments[safe: 2] as? String ?? "") ?? Data()
+            let iterations = (arguments[safe: 3] as? NSNumber)?.intValue ?? 0
+            let length = (arguments[safe: 4] as? NSNumber)?.intValue ?? -1
+            return try deriveKey(
+                algorithm: algorithm, password: password, salt: salt,
+                iterations: iterations, length: length
+            ).base64EncodedString()
+
+        case "cipher":
+            let mode = arguments[safe: 0] as? String ?? ""
+            let decrypt = arguments[safe: 1] as? Bool ?? false
+            let key = Data(base64Encoded: arguments[safe: 2] as? String ?? "") ?? Data()
+            let iv = Data(base64Encoded: arguments[safe: 3] as? String ?? "") ?? Data()
+            let data = Data(base64Encoded: arguments[safe: 4] as? String ?? "") ?? Data()
+            let padding = arguments[safe: 5] as? Bool ?? true
+            return try crypt(
+                mode: mode, decrypt: decrypt, key: key, iv: iv, data: data, padding: padding
+            ).base64EncodedString()
+
         default:
             throw ShimError.failed("crypto.\(method) is not supported.", "ENOSYS")
         }
@@ -479,6 +502,102 @@ final class ExtensionNodeShims: @unchecked Sendable {
         default:
             throw ShimError.failed("Unsupported HMAC algorithm '\(algorithm)'.", "ENOSYS")
         }
+    }
+
+    private func deriveKey(
+        algorithm: String, password: Data, salt: Data, iterations: Int, length: Int
+    ) throws -> Data {
+        let function: Int
+        switch algorithm.lowercased().replacing("-", with: "") {
+        case "sha1": function = kCCPRFHmacAlgSHA1
+        case "sha224": function = kCCPRFHmacAlgSHA224
+        case "sha256": function = kCCPRFHmacAlgSHA256
+        case "sha384": function = kCCPRFHmacAlgSHA384
+        case "sha512": function = kCCPRFHmacAlgSHA512
+        default: throw ShimError.failed("Invalid digest: \(algorithm)", "ERR_CRYPTO_INVALID_DIGEST")
+        }
+        guard (1...Int(Int32.max)).contains(iterations) else {
+            throw ShimError.failed(#"The value of "iterations" is out of range."#, "ERR_OUT_OF_RANGE")
+        }
+        guard (0...Int(Int32.max)).contains(length) else {
+            throw ShimError.failed(#"The value of "keylen" is out of range."#, "ERR_OUT_OF_RANGE")
+        }
+        guard length > 0 else { return Data() }
+
+        var key = Data(count: length)
+        let status = key.withUnsafeMutableBytes { keyBytes in
+            password.withUnsafeBytes { passwordBytes in
+                salt.withUnsafeBytes { saltBytes in
+                    CCKeyDerivationPBKDF(
+                        CCPBKDFAlgorithm(kCCPBKDF2),
+                        passwordBytes.baseAddress?.assumingMemoryBound(to: CChar.self), password.count,
+                        saltBytes.baseAddress?.assumingMemoryBound(to: UInt8.self), salt.count,
+                        CCPseudoRandomAlgorithm(function), UInt32(iterations),
+                        keyBytes.baseAddress?.assumingMemoryBound(to: UInt8.self), length)
+                }
+            }
+        }
+        guard status == kCCSuccess else {
+            throw ShimError.failed("PBKDF2 failed (CommonCrypto status \(status)).")
+        }
+        return key
+    }
+
+    private func crypt(
+        mode: String, decrypt: Bool, key: Data, iv: Data, data: Data, padding: Bool
+    ) throws -> Data {
+        guard mode == "cbc" || mode == "ecb" else {
+            throw ShimError.failed("Unknown cipher", "ERR_CRYPTO_UNKNOWN_CIPHER")
+        }
+        // CCCrypt reads a full block from the IV pointer, whatever the buffer's real size.
+        guard mode == "ecb" || iv.count == kCCBlockSizeAES128 else {
+            throw ShimError.failed("Invalid initialization vector", "ERR_CRYPTO_INVALID_IV")
+        }
+
+        let blockSize = kCCBlockSizeAES128
+        let wrongBlockLength = ShimError.failed(
+            "error:1C80006B:Provider routines::wrong final block length",
+            "ERR_OSSL_WRONG_FINAL_BLOCK_LENGTH")
+        // CommonCrypto accepts padding OpenSSL rejects, which would hide a wrong key.
+        let unpads = decrypt && padding
+        guard !unpads || (!data.isEmpty && data.count % blockSize == 0) else { throw wrongBlockLength }
+
+        var options = CCOptions(0)
+        if padding && !decrypt { options |= CCOptions(kCCOptionPKCS7Padding) }
+        if mode == "ecb" { options |= CCOptions(kCCOptionECBMode) }
+
+        var output = Data(count: data.count + blockSize)
+        let capacity = output.count
+        var written = 0
+        let status = output.withUnsafeMutableBytes { outputBytes in
+            key.withUnsafeBytes { keyBytes in
+                iv.withUnsafeBytes { ivBytes in
+                    data.withUnsafeBytes { dataBytes in
+                        CCCrypt(
+                            CCOperation(decrypt ? kCCDecrypt : kCCEncrypt),
+                            CCAlgorithm(kCCAlgorithmAES), options,
+                            keyBytes.baseAddress, key.count,
+                            mode == "ecb" ? nil : ivBytes.baseAddress,
+                            dataBytes.baseAddress, data.count,
+                            outputBytes.baseAddress, capacity, &written)
+                    }
+                }
+            }
+        }
+        guard Int(status) != kCCAlignmentError else { throw wrongBlockLength }
+        guard status == kCCSuccess else {
+            throw ShimError.failed("AES failed (CommonCrypto status \(status)).")
+        }
+        output.count = written
+        guard unpads else { return output }
+
+        let padLength = Int(output.last ?? 0)
+        guard (1...blockSize).contains(padLength),
+            output.suffix(padLength).allSatisfy({ Int($0) == padLength })
+        else {
+            throw ShimError.failed("error:1C800064:Provider routines::bad decrypt", "ERR_OSSL_BAD_DECRYPT")
+        }
+        return output.dropLast(padLength)
     }
 
     // MARK: - zlib

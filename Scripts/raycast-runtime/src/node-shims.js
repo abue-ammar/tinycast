@@ -654,6 +654,18 @@ const childProcess = {
 
 // ─── crypto ─────────────────────────────────────────────────────────
 
+function cryptoBytes(value, encoding) {
+  if (typeof value === "string") return Buffer.from(value, encoding || "utf8");
+  if (ArrayBuffer.isView(value)) return Buffer.from(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+  return Buffer.from(value);
+}
+
+function cryptoError(message, code, ErrorType = Error) {
+  const error = new ErrorType(message);
+  error.code = code;
+  return error;
+}
+
 class Hash {
   constructor(algorithm, hmacKeyBase64) {
     this._algorithm = String(algorithm).toLowerCase().replace(/-/g, "");
@@ -661,7 +673,7 @@ class Hash {
     this._chunks = [];
   }
   update(data, encoding) {
-    this._chunks.push(typeof data === "string" ? Buffer.from(data, encoding || "utf8") : Buffer.from(data));
+    this._chunks.push(cryptoBytes(data, encoding));
     return this;
   }
   digest(encoding) {
@@ -673,6 +685,63 @@ class Hash {
     const bytes = Buffer.from(base64ToBytes(base64));
     return encoding ? bytes.toString(encoding) : bytes;
   }
+}
+
+// Buffers until `final`: a block cipher's concatenated output still matches Node's byte for byte.
+class Cipher {
+  constructor(algorithm, key, iv, decrypt) {
+    const name = String(algorithm).toLowerCase().replace(/^aes(128|192|256)$/, "aes-$1-cbc");
+    const match = /^aes-(128|192|256)-(cbc|ecb)$/.exec(name);
+    if (!match) throw cryptoError("Unknown cipher", "ERR_CRYPTO_UNKNOWN_CIPHER");
+    this._mode = match[2];
+    this._key = cryptoBytes(key);
+    this._iv = iv == null ? Buffer.alloc(0) : cryptoBytes(iv);
+    if (this._key.length !== Number(match[1]) / 8) {
+      throw cryptoError("Invalid key length", "ERR_CRYPTO_INVALID_KEYLEN", RangeError);
+    }
+    if (this._iv.length !== (this._mode === "cbc" ? 16 : 0)) {
+      throw cryptoError("Invalid initialization vector", "ERR_CRYPTO_INVALID_IV", TypeError);
+    }
+    this._decrypt = decrypt;
+    this._padding = true;
+    this._chunks = [];
+    this._finished = false;
+  }
+  update(data, inputEncoding, outputEncoding) {
+    if (this._finished) throw new Error("Trying to add data in unsupported state");
+    this._chunks.push(cryptoBytes(data, inputEncoding));
+    return outputEncoding ? "" : Buffer.alloc(0);
+  }
+  final(outputEncoding) {
+    if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    this._finished = true;
+    const base64 = hostCallSync("crypto", "cipher", [
+      this._mode,
+      this._decrypt,
+      bytesToBase64(this._key),
+      bytesToBase64(this._iv),
+      bytesToBase64(Buffer.concat(this._chunks)),
+      this._padding,
+    ]);
+    const bytes = Buffer.from(base64ToBytes(base64));
+    return outputEncoding ? bytes.toString(outputEncoding) : bytes;
+  }
+  setAutoPadding(enabled = true) {
+    if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    this._padding = Boolean(enabled);
+    return this;
+  }
+}
+
+function pbkdf2Sync(password, salt, iterations, keylen, digest) {
+  const base64 = hostCallSync("crypto", "pbkdf2", [
+    String(digest),
+    bytesToBase64(cryptoBytes(password)),
+    bytesToBase64(cryptoBytes(salt)),
+    Number(iterations),
+    Number(keylen),
+  ]);
+  return Buffer.from(base64ToBytes(base64));
 }
 
 const cryptoModule = {
@@ -700,7 +769,17 @@ const cryptoModule = {
     return min + (value % (max - min));
   },
   createHash: (algorithm) => new Hash(algorithm),
-  createHmac: (algorithm, key) => new Hash(algorithm, bytesToBase64(typeof key === "string" ? Buffer.from(key, "utf8") : Buffer.from(key))),
+  createHmac: (algorithm, key) => new Hash(algorithm, bytesToBase64(cryptoBytes(key))),
+  createCipheriv: (algorithm, key, iv) => new Cipher(algorithm, key, iv, false),
+  createDecipheriv: (algorithm, key, iv) => new Cipher(algorithm, key, iv, true),
+  pbkdf2Sync,
+  pbkdf2(password, salt, iterations, keylen, digest, callback) {
+    if (typeof callback !== "function") {
+      throw cryptoError('The "callback" argument must be of type function.', "ERR_INVALID_ARG_TYPE", TypeError);
+    }
+    const key = pbkdf2Sync(password, salt, iterations, keylen, digest);
+    queueMicrotask(() => callback(null, key));
+  },
   timingSafeEqual: (a, b) => Buffer.from(a).equals(Buffer.from(b)),
   getRandomValues: (target) => cryptoModule.randomFillSync(target),
   webcrypto: null,

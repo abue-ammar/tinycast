@@ -838,8 +838,11 @@ struct ExtensionTests {
             const h = React.createElement;
             module.exports.default = function Command() {
               const [count, setCount] = React.useState(0);
+              const [derived, setDerived] = React.useState("pending");
               React.useEffect(() => {
                 const timer = setTimeout(() => setCount(1), 20);
+                crypto.pbkdf2("foobar", "foobarbazzybaz", 1e5, 64, "sha512", (error, key) =>
+                  setDerived(error ? error.message : key.toString("hex").slice(0, 16)));
                 showToast({ style: Toast.Style.Success, title: "hello" });
                 return () => clearTimeout(timer);
               }, []);
@@ -874,6 +877,27 @@ struct ExtensionTests {
                 String(util.inspect.custom === Symbol.for("nodejs.util.inspect.custom")),
                 typeof util.aborted(AbortSignal.abort()).then,
               ].join(",");
+              // Bitwarden derives its session hash and caches the vault through exactly these calls.
+              const encrypter = crypto.createCipheriv("aes-256-cbc", "k".repeat(32), "i".repeat(16));
+              const encrypted = Buffer.concat([encrypter.update("hello tinycast"), encrypter.final()]);
+              const decrypter = crypto.createDecipheriv("aes-256-cbc", "k".repeat(32), Buffer.from("i".repeat(16)));
+              const ecb = crypto.createCipheriv("aes-128-ecb", Buffer.alloc(16, 1), null).setAutoPadding(false);
+              const cipherShim = [
+                crypto.pbkdf2Sync("password", "salt", 1000, 16, "sha512").toString("hex"),
+                crypto.pbkdf2Sync("", "", 1, 8, "SHA-256").toString("hex"),
+                crypto.createCipheriv("aes-256-cbc", "k".repeat(32), "i".repeat(16)).final("hex"),
+                encrypted.toString("hex"),
+                decrypter.update(encrypted.toString("hex"), "hex", "utf8") + decrypter.final("utf8"),
+                ecb.update(Buffer.alloc(16, 2)).toString("hex") + ecb.final("hex"),
+                errorCode(() => {
+                  const wrong = crypto.createDecipheriv("aes-256-cbc", "k".repeat(32), "i".repeat(16));
+                  wrong.update(Buffer.alloc(16));
+                  wrong.final();
+                }),
+                errorCode(() => crypto.createCipheriv("aes-256-cbc", "short", "i".repeat(16))),
+                errorCode(() => crypto.pbkdf2Sync("p", "s", 1, 8, "nope")),
+                derived,
+              ].join(",");
               return h(List, { navigationTitle: "Synthetic", isLoading: false },
                 h(List.Item, {
                   title: "count=" + count,
@@ -881,7 +905,7 @@ struct ExtensionTests {
                   icon: Icon.Circle,
                   accessories: [
                     { text: digest }, { text: abortable }, { text: filePaths },
-                    { text: cpuTimes }, { text: utilShim },
+                    { text: cpuTimes }, { text: cipherShim }, { text: utilShim },
                   ],
                   actions: h(ActionPanel, null,
                     h(Action, { title: "Bump", onAction: () => setCount((v) => v + 10) }))
@@ -936,6 +960,15 @@ struct ExtensionTests {
                 + "ERR_INVALID_FILE_URL_PATH\nERR_INVALID_FILE_URL_HOST\n"
                 + "ERR_INVALID_URL_SCHEME",
             String(describing: screen.items.first?.node.array("accessories").dropFirst(2).first))
+        check(
+            "crypto shim derives PBKDF2 keys and round-trips AES like Node",
+            ExtensionAccessoriesView_labelForTest(
+                screen.items.first?.node.array("accessories").dropFirst(4).first)
+                == "afe6c5530785b6cc6b1c6453384731bd,f7ce0b653d2d72a4,5d11c49af18b4b3e482508362bd2c857,"
+                + "eb7b227687302ff167fef6a04d9f99f3,"
+                + "hello tinycast,17d614f379a9359077e95577fd31c20a,ERR_OSSL_BAD_DECRYPT,"
+                + "ERR_CRYPTO_INVALID_KEYLEN,ERR_CRYPTO_INVALID_DIGEST,6cba6dd1d44f53a3",
+            String(describing: screen.items.first?.node.array("accessories").dropFirst(4).first))
         check(
             "util shim answers debuglog, stripVTControlCharacters, aborted and inspect.custom",
             ExtensionAccessoriesView_labelForTest(screen.items.first?.node.array("accessories").last)

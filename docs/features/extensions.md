@@ -563,10 +563,10 @@ would launch Raycast itself.
 **Node built-ins** — `path`, `fs` (+ `fs/promises`, `createReadStream`/`createWriteStream`, and the
 descriptor calls `tar` unpacks through), `os`,
 `child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`),
-`crypto` (hashes, HMAC, random, UUID), `zlib` (gzip/zlib/raw deflate, both directions), `http`/`https`
-(`request` and `get`, buffered over the same URLSession bridge as `fetch`), `stream` (`Readable`,
-`Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`, `finished`, plus `stream/promises` and
-`stream/web`), `util`, `events`, `buffer`, `url`, `querystring`, `punycode`, `assert`,
+`crypto` (hashes, HMAC, PBKDF2, AES-CBC/ECB, random, UUID), `zlib` (gzip/zlib/raw deflate, both
+directions), `http`/`https` (`request` and `get`, buffered over the same URLSession bridge as
+`fetch`), `stream` (`Readable`, `Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`,
+`finished`, plus `stream/promises` and `stream/web`), `util`, `events`, `buffer`, `url`, `querystring`, `punycode`, `assert`,
 `string_decoder`, `timers`. Every other built-in resolves to a stub that throws only when used, so a
 bundle that merely references `dgram` or `http2` still loads.
 

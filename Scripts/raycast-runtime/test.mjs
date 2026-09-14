@@ -11,7 +11,15 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
-import { createHash, randomUUID, randomBytes, createHmac } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  pbkdf2Sync,
+  randomBytes,
+  randomUUID,
+} from "node:crypto";
 import { cpus, freemem, homedir, loadavg, tmpdir, uptime } from "node:os";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
@@ -217,6 +225,17 @@ function syncHostCall(api, method, args) {
       return createHmac(args[0], Buffer.from(args[2], "base64"))
         .update(Buffer.from(args[1], "base64"))
         .digest("base64");
+    case "crypto.pbkdf2":
+      return pbkdf2Sync(Buffer.from(args[1], "base64"), Buffer.from(args[2], "base64"), args[3], args[4], args[0])
+        .toString("base64");
+    case "crypto.cipher": {
+      const [mode, decrypt, key, iv, data, padding] = args;
+      const algorithm = `aes-${Buffer.from(key, "base64").length * 8}-${mode}`;
+      const create = decrypt ? createDecipheriv : createCipheriv;
+      const cipher = create(algorithm, Buffer.from(key, "base64"), mode === "ecb" ? null : Buffer.from(iv, "base64"));
+      cipher.setAutoPadding(padding);
+      return Buffer.concat([cipher.update(Buffer.from(data, "base64")), cipher.final()]).toString("base64");
+    }
     case "proc.run": {
       const spec = args[0];
       // Mirrors the Swift host: a detached child answers at launch, with no output.
