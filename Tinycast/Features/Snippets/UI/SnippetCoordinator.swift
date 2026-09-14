@@ -219,6 +219,8 @@ final class SnippetCoordinator {
         automaticGeneration: UInt?,
         confirmation: String?
     ) {
+        listener.isPromptingForArguments = true
+        defer { listener.isPromptingForArguments = false }
         guard
             let arguments = SnippetArgumentsPrompt.run(
                 snippetName: record.snippet.name,

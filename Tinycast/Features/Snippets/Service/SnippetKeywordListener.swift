@@ -128,6 +128,10 @@ final class SnippetKeywordListener: HealthCheckable {
     @ObservationIgnored private var onUserActivity: (() -> Void)?
     @ObservationIgnored
     private var onMatch: ((StoredSnippet.ID, String, Int, InjectionTarget?) -> Void)?
+    @ObservationIgnored private var matchTask: Task<Void, Never>?
+    var isPromptingForArguments = false {
+        didSet { clearBuffer() }
+    }
     private var sessionActive = true
     private var loggedTapFailure = false
 
@@ -174,6 +178,8 @@ final class SnippetKeywordListener: HealthCheckable {
     }
 
     func stop() {
+        matchTask?.cancel()
+        matchTask = nil
         onUserActivity = nil
         onMatch = nil
         healthTicker?.unsubscribe(self)
@@ -189,7 +195,10 @@ final class SnippetKeywordListener: HealthCheckable {
     }
 
     /// A keystroke Tinycast did not synthesize means the caret is the reader's again, not ours.
-    fileprivate func userActivity() {
+    func userActivity() {
+        guard !isPromptingForArguments else { return }
+        matchTask?.cancel()
+        matchTask = nil
         onUserActivity?()
     }
 
@@ -315,7 +324,7 @@ final class SnippetKeywordListener: HealthCheckable {
         eventUserData: Int64,
         secureEventInputEnabled: Bool
     ) {
-        guard isRequested, status == .active else { return }
+        guard isRequested, status == .active, !isPromptingForArguments else { return }
         let flags = CGEventFlags(rawValue: flagsRaw)
         let input = SnippetKeywordPolicy.classifyInput(
             text: text,
@@ -326,10 +335,16 @@ final class SnippetKeywordListener: HealthCheckable {
             hasCommandOrControl: flags.contains(.maskCommand) || flags.contains(.maskControl),
             isResetKey: Self.resetKeyCodes.contains(keyCode),
             isDeleteBackward: keyCode == kVK_Delete)
-        if input != .ignored { onUserActivity?() }
+        if input != .ignored { userActivity() }
         guard let match = policy.process(input, at: now()) else { return }
         // Sampled here, with the keystroke: by delivery the reader may have moved on.
-        onMatch?(match.snippetID, match.keyword, match.deletionCount, InjectionTarget.current())
+        let target = InjectionTarget.current()
+        // Return the triggering key to the app before a modal prompt can take focus.
+        matchTask = Task { [weak self] in
+            guard let self, !Task.isCancelled else { return }
+            self.matchTask = nil
+            self.onMatch?(match.snippetID, match.keyword, match.deletionCount, target)
+        }
     }
 
     private static let resetKeyCodes: Set<Int> = [

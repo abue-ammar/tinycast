@@ -25,7 +25,7 @@ struct SnippetsTests {
         testTemplateEncodingAndSelectionAlias()
         testKeywordPolicy()
         testKeywordLifecycle()
-        testKeywordListenerLifecycle()
+        await testKeywordListenerLifecycle()
         testOwnEditorInjection()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
@@ -1726,7 +1726,7 @@ struct SnippetsTests {
                 && rapidOn.status == .needsAccessibility)
     }
 
-    private static func testKeywordListenerLifecycle() {
+    private static func testKeywordListenerLifecycle() async {
         let permissions = FakeSnippetPermissions()
         let tap = FakeSnippetKeywordTapController()
         tap.installFailuresRemaining = 1
@@ -1776,10 +1776,51 @@ struct SnippetsTests {
             "real user input invalidates pending automatic delivery while Tinycast events do not",
             activityCount == 1)
 
+        listener.isPromptingForArguments = true
+        for text in ["a", "b", "c", "d", "\r"] {
+            listener.processEvent(
+                typeRaw: CGEventType.keyDown.rawValue,
+                keyCode: 0,
+                flagsRaw: 0,
+                text: text,
+                eventUserData: 0,
+                secureEventInputEnabled: false)
+        }
+        listener.userActivity()
+        check("argument typing and Expand clicks preserve pending delivery", activityCount == 1)
+        listener.isPromptingForArguments = false
+        listener.userActivity()
+        check("user activity cancels delivery again after the prompt", activityCount == 2)
+
         listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in })
         check(
             "real listener repeated start does not install a second tap",
             listener.status == .active && tap.installCount == 2)
+
+        let snippet = record("/tmp/argument-listener.md", Snippet(name: "Test", text: "{argument}", keyword: "#test"))
+        listener.update([snippet])
+        var matches = 0
+        listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in matches += 1 })
+        func typeKeyword() {
+            for character in "#test" {
+                listener.processEvent(
+                    typeRaw: CGEventType.keyDown.rawValue, keyCode: 0, flagsRaw: 0,
+                    text: String(character), eventUserData: 0, secureEventInputEnabled: false)
+            }
+        }
+        typeKeyword()
+        check("keyword callbacks run after the triggering event returns", matches == 0)
+        try? await Task.sleep(for: .milliseconds(10))
+        check("a queued keyword match is delivered", matches == 1)
+        typeKeyword()
+        listener.userActivity()
+        try? await Task.sleep(for: .milliseconds(10))
+        check("activity cancels a match before its callback runs", matches == 1)
+        listener.isPromptingForArguments = true
+        typeKeyword()
+        listener.isPromptingForArguments = false
+        try? await Task.sleep(for: .milliseconds(10))
+        check("argument text cannot trigger nested expansion", matches == 1)
 
         tap.state = .disabled
         listener.healthCheck()
