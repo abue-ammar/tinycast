@@ -29,6 +29,7 @@ struct WindowLayoutInspector: View {
                 WindowLayoutEntryPicker(draft: draft, displays: displays)
                 if draft.selectedEntry != nil {
                     WindowLayoutArgumentField(draft: draft)
+                    frontmostToggle
                     Divider()
                     sizeFields
                     offsetFields
@@ -83,25 +84,21 @@ struct WindowLayoutInspector: View {
 
     private var gapToggle: some View {
         @Bindable var draft = draft
-        return HStack(alignment: .top, spacing: Theme.Spacing.xl) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text("Use preferred gap")
-                    .font(.callout.weight(.medium))
-                Text("Inset every window by the gap set above, as the tiling commands do.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-            Toggle("", isOn: $draft.usesPreferredGap)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-        }
-        .accessibilityElement(children: .combine)
+        return switchRow(
+            "Use preferred gap",
+            detail: "Inset every window by the gap set above, as the tiling commands do.",
+            isOn: $draft.usesPreferredGap)
     }
 
     // MARK: - The entry being edited
+
+    private var frontmostToggle: some View {
+        @Bindable var draft = draft
+        return switchRow(
+            "Bring to front",
+            detail: "Focus this window once the layout finishes. Only one window per layout.",
+            isOn: $draft.isSelectedEntryFrontmost)
+    }
 
     private var sizeFields: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -145,6 +142,27 @@ struct WindowLayoutInspector: View {
     }
 
     // MARK: - Helpers
+
+    private func switchRow(
+        _ title: String, detail: String, isOn: Binding<Bool>
+    ) -> some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.xl) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(title)
+                    .font(.callout.weight(.medium))
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+        }
+        .accessibilityElement(children: .combine)
+    }
 
     private func sectionLabel(_ title: String) -> some View {
         Text(title)

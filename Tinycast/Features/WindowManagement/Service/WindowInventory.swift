@@ -10,6 +10,7 @@ enum WindowInventory {
     /// Live AX handles for one window. Never `Sendable`: these do not leave the main actor.
     struct Element {
         let bundleID: String
+        let app: NSRunningApplication
         let application: AXUIElement
         let window: AXUIElement
     }
@@ -41,7 +42,7 @@ enum WindowInventory {
                         handle: handle, bundleID: bundleID, frame: frame,
                         title: AXWindowAccess.string(window, kAXTitleAttribute) ?? ""))
                 elements[handle] = Element(
-                    bundleID: bundleID, application: application, window: window)
+                    bundleID: bundleID, app: app, application: application, window: window)
             }
         }
         return Snapshot(

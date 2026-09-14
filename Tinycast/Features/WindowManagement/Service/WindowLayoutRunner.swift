@@ -37,13 +37,18 @@ enum WindowLayoutRunner {
         var outcome = Outcome(skipped: plan.skipped)
         guard !plan.placements.isEmpty else { return outcome }
 
-        var claimed: [String: [AXUIElement]] = [:]
-        placeExisting(plan, snapshot: snapshot, claimed: &claimed, outcome: &outcome)
+        var bound: [UUID: WindowInventory.Element] = [:]
+        placeExisting(plan, snapshot: snapshot, bound: &bound, outcome: &outcome)
 
         let pending = plan.opens
-        guard !pending.isEmpty else { return outcome }
-        await open(pending, outcome: &outcome)
-        await placeOpened(pending, claimed: &claimed, outcome: &outcome)
+        if !pending.isEmpty {
+            await open(pending, outcome: &outcome)
+            await placeOpened(pending, bound: &bound, outcome: &outcome)
+        }
+        // Last, so no app this run opened can activate over the one the layout names.
+        if !Task.isCancelled, let frontmost = plan.frontmostEntryID.flatMap({ bound[$0] }) {
+            AXWindowAccess.focus(frontmost.window, in: frontmost.application, of: frontmost.app)
+        }
         return outcome
     }
 
@@ -69,7 +74,7 @@ enum WindowLayoutRunner {
     /// One suppress/restore per application, not per window: the flag is application-scoped.
     private static func placeExisting(
         _ plan: WindowLayoutPlan, snapshot: WindowInventory.Snapshot,
-        claimed: inout [String: [AXUIElement]], outcome: inout Outcome
+        bound: inout [UUID: WindowInventory.Element], outcome: inout Outcome
     ) {
         let existing = plan.placements.filter { $0.source != .launch }
         for (_, group) in Dictionary(grouping: existing, by: \.bundleID) {
@@ -83,7 +88,7 @@ enum WindowLayoutRunner {
                     let element = snapshot.elements[handle]
                 else { continue }
                 if place(placement, on: element.window) { outcome.placed += 1 }
-                claimed[placement.bundleID, default: []].append(element.window)
+                bound[placement.entryID] = element
             }
         }
     }
@@ -133,8 +138,8 @@ enum WindowLayoutRunner {
 
     /// A bounded wait inside this gesture's own task: no timer, no observer, nothing left behind.
     private static func placeOpened(
-        _ placements: [WindowLayoutPlan.Placement], claimed: inout [String: [AXUIElement]],
-        outcome: inout Outcome
+        _ placements: [WindowLayoutPlan.Placement],
+        bound: inout [UUID: WindowInventory.Element], outcome: inout Outcome
     ) async {
         var pending = placements
         // `ContinuousClock`, so a clock step or a sleep cannot shorten or extend the wait.
@@ -143,15 +148,17 @@ enum WindowLayoutRunner {
             try? await Task.sleep(for: pollInterval, tolerance: pollInterval)
             guard !Task.isCancelled else { break }
             pending = pending.filter { placement in
-                guard let (application, _) = WindowInventory.application(for: placement.bundleID),
+                guard let (application, app) = WindowInventory.application(for: placement.bundleID),
                     let window = WindowInventory.unclaimedWindows(
-                        of: application, excluding: claimed[placement.bundleID] ?? []
+                        of: application, excluding: bound.values.map(\.window)
                     ).first
                 else { return true }
                 let restore = AXWindowAccess.suppressEnhancedUserInterface(on: application)
                 defer { restore() }
                 if place(placement, on: window) { outcome.placed += 1 }
-                claimed[placement.bundleID, default: []].append(window)
+                bound[placement.entryID] = WindowInventory.Element(
+                    bundleID: placement.bundleID, app: app, application: application,
+                    window: window)
                 return false
             }
         }

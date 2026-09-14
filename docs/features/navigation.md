@@ -28,8 +28,8 @@ launcher and a still-recorded shortcut for either does nothing.
   is open must not reach `AXUIElementPerformAction`.
 - **Activation hides with `restoreFocus: false`.** Restoring focus reactivates the displaced app,
   which races the raise and can land on the wrong window — the same reason a Space command does it.
-- **`AXWindowAccess` stays the one AX window layer.** `raise`, `unminimize` and `makeFrontmost` were
-  added there rather than opening a second AX shim inside this feature.
+- **`AXWindowAccess` stays the one AX window layer.** `unminimize` and `focus` live there rather
+  than in a second AX shim, and Window Layouts brings its frontmost window forward through `focus`.
 
 ## How it is put together
 

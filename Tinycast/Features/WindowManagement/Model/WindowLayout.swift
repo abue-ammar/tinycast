@@ -99,18 +99,21 @@ struct WindowLayout: Codable, Hashable, Identifiable, Sendable {
     /// Opts the layout into the global `windowGap`, the way the tiling commands use it.
     var usesPreferredGap: Bool
     var entries: [WindowLayoutEntry]
+    /// The one entry whose window ends a run frontmost; an ID rather than a flag, so it is one.
+    var frontmostEntryID: UUID?
     var createdAt: Date
 
     init(
         id: UUID = UUID(), name: String, iconSymbol: String? = nil,
         usesPreferredGap: Bool = true, entries: [WindowLayoutEntry] = [],
-        createdAt: Date = Date()
+        frontmostEntryID: UUID? = nil, createdAt: Date = Date()
     ) {
         self.id = id
         self.name = name
         self.iconSymbol = iconSymbol
         self.usesPreferredGap = usesPreferredGap
         self.entries = entries
+        self.frontmostEntryID = frontmostEntryID
         self.createdAt = createdAt
     }
 
@@ -126,6 +129,12 @@ struct WindowLayout: Codable, Hashable, Identifiable, Sendable {
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
+    /// Cleans every entry, then drops a frontmost mark whose entry did not survive.
+    mutating func sanitizeEntries() {
+        entries = WindowLayoutEntry.sanitized(entries)
+        if !entries.contains(where: { $0.id == frontmostEntryID }) { frontmostEntryID = nil }
+    }
+
     static func id(fromEntryID entryID: String) -> UUID? {
         guard entryID.hasPrefix(entryIDPrefix) else { return nil }
         return UUID(uuidString: String(entryID.dropFirst(entryIDPrefix.count)))
@@ -140,7 +149,7 @@ struct WindowLayout: Codable, Hashable, Identifiable, Sendable {
 
     // Hand-written, so an added field keeps stored layouts and older backups readable.
     private enum CodingKeys: String, CodingKey {
-        case id, name, iconSymbol, usesPreferredGap, entries, createdAt
+        case id, name, iconSymbol, usesPreferredGap, entries, frontmostEntryID, createdAt
     }
 
     init(from decoder: Decoder) throws {
@@ -151,6 +160,7 @@ struct WindowLayout: Codable, Hashable, Identifiable, Sendable {
         usesPreferredGap =
             try container.decodeIfPresent(Bool.self, forKey: .usesPreferredGap) ?? true
         entries = try container.decodeIfPresent([WindowLayoutEntry].self, forKey: .entries) ?? []
+        frontmostEntryID = try container.decodeIfPresent(UUID.self, forKey: .frontmostEntryID)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
     }
 }

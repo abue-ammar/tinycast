@@ -47,10 +47,13 @@ final class WindowLayoutStore {
     @discardableResult
     func duplicate(id: UUID) throws(WindowLayoutValidationError) -> WindowLayout? {
         guard let original = layout(id: id) else { return nil }
+        let entries = original.entries.map(\.copy)
+        // Copies take fresh IDs, so the frontmost mark follows its entry by position.
+        let frontmost = original.entries.firstIndex { $0.id == original.frontmostEntryID }
         let copy = WindowLayout(
             name: Self.uniqueName(from: original.name, among: layouts),
             iconSymbol: original.iconSymbol, usesPreferredGap: original.usesPreferredGap,
-            entries: original.entries.map(\.copy))
+            entries: entries, frontmostEntryID: frontmost.map { entries[$0].id })
         return try add(copy)
     }
 
@@ -77,7 +80,7 @@ final class WindowLayoutStore {
         var value = draft
         value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         value.iconSymbol = draft.iconSymbol?.trimmingCharacters(in: .whitespacesAndNewlines)
-        value.entries = WindowLayoutEntry.sanitized(draft.entries)
+        value.sanitizeEntries()
         guard !value.name.isEmpty else { throw .emptyName }
         guard !value.name.contains("\0") else { throw .invalidCharacter }
         guard !value.entries.isEmpty else { throw .noEntries }
@@ -122,7 +125,7 @@ final class WindowLayoutStore {
             var cleaned = value
             cleaned.name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
             cleaned.iconSymbol = value.iconSymbol?.trimmingCharacters(in: .whitespacesAndNewlines)
-            cleaned.entries = WindowLayoutEntry.sanitized(value.entries)
+            cleaned.sanitizeEntries()
             let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: .current)
             guard !cleaned.name.isEmpty, !cleaned.name.contains("\0"), !cleaned.entries.isEmpty,
                 ids.insert(cleaned.id).inserted, names.insert(foldedName).inserted

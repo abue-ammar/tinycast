@@ -31,6 +31,7 @@ displays. The right side edits the selected window.
 | ----------------- | ---------------------------------------------------------------------------- |
 | App               | Which app the window belongs to                                              |
 | Argument          | Optional. A file, folder, web address or quicklink to open                   |
+| Bring to front    | Leave this window frontmost when the layout finishes. Only one per layout    |
 | Size              | Width and height, as a share of the display                                  |
 | Position          | Where it sits, on a 3 × 3 grid                                               |
 | Offset            | A nudge in points from that position                                         |
@@ -49,6 +50,7 @@ Run a layout from the launcher, from its own global shortcut, or with the ▶ bu
 1. Windows that are already open move into place together, in one step.
 2. Apps that are not running are opened, and each window is placed once it appears. Tinycast waits
    up to 10 seconds per app.
+3. The window marked **Bring to front**, if there is one, is focused once everything else is done.
 
 A few rules make this predictable:
 

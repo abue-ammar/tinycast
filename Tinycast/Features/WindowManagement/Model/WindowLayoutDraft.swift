@@ -16,6 +16,7 @@ final class WindowLayoutDraft {
     var iconSymbol: String?
     var usesPreferredGap: Bool
     private(set) var entries: [WindowLayoutEntry]
+    private var frontmostEntryID: UUID?
     /// Identity, never an index: removing an entry must not strand a field's binding.
     private(set) var selectedEntryID: UUID?
     private(set) var selectedDisplayUUID: String?
@@ -28,6 +29,7 @@ final class WindowLayoutDraft {
         iconSymbol = layout?.iconSymbol
         usesPreferredGap = layout?.usesPreferredGap ?? true
         entries = layout?.entries ?? []
+        frontmostEntryID = layout?.frontmostEntryID
         createdAt = layout?.createdAt ?? Date()
         selectedEntryID = entries.first?.id
         selectedDisplayUUID = entries.first?.display.uuid ?? displays.first?.uuid
@@ -40,6 +42,19 @@ final class WindowLayoutDraft {
 
     var selectedEntry: WindowLayoutEntry? {
         entries.first { $0.id == selectedEntryID }
+    }
+
+    /// Marking a second entry moves the mark, so a layout never names two.
+    var isSelectedEntryFrontmost: Bool {
+        get { selectedEntryID != nil && frontmostEntryID == selectedEntryID }
+        set {
+            guard let id = selectedEntryID else { return }
+            if newValue {
+                frontmostEntryID = id
+            } else if frontmostEntryID == id {
+                frontmostEntryID = nil
+            }
+        }
     }
 
     func entries(onDisplay uuid: String) -> [WindowLayoutEntry] {
@@ -83,6 +98,7 @@ final class WindowLayoutDraft {
     func removeSelectedEntry() {
         guard let id = selectedEntryID else { return }
         entries.removeAll { $0.id == id }
+        if frontmostEntryID == id { frontmostEntryID = nil }
         selectedEntryID =
             selectedDisplayUUID.flatMap { entries(onDisplay: $0).first?.id }
             ?? entries.first?.id
@@ -123,7 +139,8 @@ final class WindowLayoutDraft {
     var previewLayout: WindowLayout {
         WindowLayout(
             id: existingID ?? UUID(), name: name, iconSymbol: iconSymbol,
-            usesPreferredGap: usesPreferredGap, entries: entries, createdAt: createdAt)
+            usesPreferredGap: usesPreferredGap, entries: entries,
+            frontmostEntryID: frontmostEntryID, createdAt: createdAt)
     }
 
     /// What Save persists; the sheet never assembles a record itself.

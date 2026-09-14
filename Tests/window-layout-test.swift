@@ -96,6 +96,7 @@ struct WindowLayoutTests {
         planSkipsAbsentDisplays()
         planBindsWindows()
         planShape()
+        planFrontmost()
         codableRoundTrip()
         storeCRUD()
         storeValidation()
@@ -486,15 +487,35 @@ struct WindowLayoutTests {
         expect(matched.placements.count == 1, "display matching ignores case")
     }
 
+    static func planFrontmost() {
+        let first = entry(display: 1)
+        let absent = entry(bundleID: "com.example.other", display: 2)
+        let duplicate = entry()
+        let screens = [target(mainScreen, 1)]
+        func frontmost(_ id: UUID?) -> UUID? {
+            WindowLayoutPlan.make(
+                layout: WindowLayout(
+                    name: "Office", entries: [first, absent, duplicate], frontmostEntryID: id),
+                screens: screens, windows: [], preferredGap: 0
+            ).frontmostEntryID
+        }
+        expect(frontmost(first.id) == first.id, "a placed frontmost entry is carried")
+        expect(frontmost(nil) == nil, "a layout with no mark focuses nothing")
+        expect(frontmost(absent.id) == nil, "a skipped display leaves nothing to focus")
+        expect(frontmost(duplicate.id) == nil, "a duplicate target leaves nothing to focus")
+        expect(frontmost(UUID()) == nil, "a dangling mark focuses nothing")
+    }
+
     // MARK: - Codable
 
     static func codableRoundTrip() {
+        let marked = entry(bundleID: "com.example.other", display: 2, argument: "https://example.com")
         let value = WindowLayout(
             name: "Office", iconSymbol: "star", usesPreferredGap: false,
             entries: [
                 entry(width: 0.25, height: 0.75, anchor: .bottomLeft, offset: CGPoint(x: -8, y: 12)),
-                entry(bundleID: "com.example.other", display: 2, argument: "https://example.com")
-            ])
+                marked
+            ], frontmostEntryID: marked.id)
         guard let data = try? JSONEncoder().encode(value),
             let decoded = try? JSONDecoder().decode(WindowLayout.self, from: data)
         else {
@@ -526,6 +547,7 @@ struct WindowLayoutTests {
             return
         }
         expect(first.usesPreferredGap, "an absent gap flag defaults on")
+        expect(first.frontmostEntryID == nil, "an absent frontmost mark defaults to none")
         expect(onlyEntry.widthFraction == 1 && onlyEntry.heightFraction == 1, "fractions default full")
         expect(onlyEntry.anchor == .center, "an absent anchor defaults centred")
         expect(onlyEntry.offset == .zero, "an absent offset defaults to none")
@@ -546,7 +568,11 @@ struct WindowLayoutTests {
 
     static func storeCRUD() {
         withStore { store in
-            guard let office = try? store.add(layout("Office", entries: [entry()])) else {
+            let entries = [entry(), entry(bundleID: "com.example.other")]
+            guard
+                let office = try? store.add(
+                    WindowLayout(name: "Office", entries: entries, frontmostEntryID: entries[1].id))
+            else {
                 return expect(false, "adding a layout succeeds")
             }
             expect(store.layouts.map(\.name) == ["Office"], "an added layout is listed")
@@ -568,6 +594,9 @@ struct WindowLayoutTests {
             expect(
                 copy.entries.first?.id != office.entries.first?.id,
                 "a duplicate's entries take fresh identities")
+            expect(
+                copy.frontmostEntryID == copy.entries[1].id,
+                "a duplicate's frontmost mark follows its entry to the fresh identity")
 
             expect(store.remove(id: copy.id)?.id == copy.id, "removing returns the record")
             expect(store.layouts.count == 1, "removing takes it out of the library")
@@ -602,6 +631,7 @@ struct WindowLayoutTests {
 
     static func storeSanitization() {
         let shared = UUID()
+        let dropped = UUID()
         let hostile = [
             WindowLayout(id: shared, name: "Office", entries: [entry()]),
             WindowLayout(id: shared, name: "Second", entries: [entry()]),
@@ -612,9 +642,8 @@ struct WindowLayoutTests {
                 name: "Clamped",
                 entries: [
                     entry(width: 9, height: -3, offset: CGPoint(x: .nan, y: 1e12)),
-                    WindowLayoutEntry(
-                        bundleID: "  ", display: display(1))
-                ])
+                    WindowLayoutEntry(id: dropped, bundleID: "  ", display: display(1))
+                ], frontmostEntryID: dropped)
         ]
         withStore { store in
             let kept = store.replace(with: hostile)
@@ -628,6 +657,7 @@ struct WindowLayoutTests {
                 return expect(false, "the clamped layout kept its usable entry")
             }
             expect(clamped.entries.count == 1, "an entry with no bundle id is dropped")
+            expect(clamped.frontmostEntryID == nil, "a mark on a dropped entry is cleared")
             expect(onlyEntry.widthFraction == 1, "an over-range fraction clamps to full")
             expect(onlyEntry.heightFraction == 0, "a negative fraction clamps to zero")
             expect(onlyEntry.offset.x == 0, "a non-finite offset becomes none")

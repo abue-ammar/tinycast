@@ -63,15 +63,15 @@ enum AXWindowAccess {
             == .success
     }
 
-    /// Raises the window inside its own app; the app still has to be activated separately.
-    static func raise(_ window: AXUIElement) -> Bool {
-        AXUIElementPerformAction(window, kAXRaiseAction as CFString) == .success
-    }
-
-    /// Belt and braces with `NSRunningApplication.activate`: an agent-policy app ignores one.
-    static func makeFrontmost(_ application: AXUIElement) {
+    /// Raises the window inside its app, then brings the app itself forward.
+    static func focus(
+        _ window: AXUIElement, in application: AXUIElement, of app: NSRunningApplication
+    ) {
+        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        // Belt and braces with `activate()`: an agent-policy app's request can be ignored.
         AXUIElementSetAttributeValue(
             application, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        app.activate()
     }
 
     // MARK: - Writing a frame

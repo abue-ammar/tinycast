@@ -51,9 +51,7 @@ final class WindowSwitchCoordinator {
         // Restoring focus reactivates the displaced app, which races the raise below.
         paletteCoordinator.hidePalette(restoreFocus: false)
         if entry.isMinimized { _ = AXWindowAccess.unminimize(element.window) }
-        _ = AXWindowAccess.raise(element.window)
-        AXWindowAccess.makeFrontmost(element.application)
-        element.app.activate()
+        AXWindowAccess.focus(element.window, in: element.application, of: element.app)
     }
 
     // MARK: - Reporting
