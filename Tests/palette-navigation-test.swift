@@ -106,6 +106,15 @@ struct PaletteNavigationTests {
             chatted.pop() && chatted.mode == .launcher,
             "and a second step back reaches the launcher the ring started on")
 
+        let pasted = searchingLauncher()
+        pasted.query = "\nfirst pasted row,\r\nsecond pasted row\u{2028}third\n"
+        expect(
+            pasted.collapseQueryLineBreaks() && pasted.query == "first pasted row, second pasted row third",
+            "a multi-line paste collapses to one line with no edge breaks")
+        expect(
+            !pasted.collapseQueryLineBreaks() && pasted.query == "first pasted row, second pasted row third",
+            "a single-line query is left alone")
+
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }

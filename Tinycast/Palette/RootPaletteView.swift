@@ -288,6 +288,7 @@ struct RootPaletteView: View {
                 if !vm.isVisible, menuOpen { closeMenus() }
             }
             .onChange(of: vm.query) {
+                if vm.collapseQueryLineBreaks() { return }
                 vm.selection = 0
                 scroll = ScrollIntent(kind: .top)
                 if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }

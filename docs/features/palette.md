@@ -463,6 +463,15 @@ screen opened with a carried query (the Search Files fallback) came up with that
 IME's composition and any other focused field — the inline argument fields, an extension form — are
 left alone: the handler returns `.ignored` for them, and their own `onSubmit` still commits.
 
+## The query is one line
+
+A paste, a drop or ⌥↵ can put line breaks into the search field, which then wraps its text out of
+view. `PaletteState.collapseQueryLineBreaks()` joins the lines with a space and drops breaks at
+either end. It runs from `RootPaletteView`'s `onChange(of: vm.query)`, which returns early so the
+filtering runs once, on the rewritten query. It cannot live in `query`'s setter: measured, SwiftUI's
+field editor keeps the text it just set and ignores a rewrite made inside that same set. The rewrite
+moves the caret to the end, which only differs from a normal paste when pasting mid-query.
+
 ## Chords `onKeyPress` never sees
 
 Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Several kinds do not. All but the last are

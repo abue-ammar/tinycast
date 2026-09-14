@@ -112,6 +112,13 @@ final class PaletteState {
         self.mode = mode
     }
 
+    /// The search field is one line, so pasted line breaks become spaces; true when it rewrote.
+    func collapseQueryLineBreaks() -> Bool {
+        guard query.contains(where: \.isNewline) else { return false }
+        query = query.split(whereSeparator: \.isNewline).joined(separator: " ")
+        return true
+    }
+
     /// Tab closing the ring on the launcher, which is its root: nothing is left behind it.
     func resetNavigation() {
         backStack.removeAll()
