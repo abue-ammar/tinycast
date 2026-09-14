@@ -586,6 +586,13 @@ host rather than returning a wrong path. Node's `windows` override is absent: Ti
 macOS, so drive-letter and UNC output would be unreachable. `url.pathToFileURL` escapes `?` and `#`
 so a filename holding either survives the round trip.
 
+The `fs` functions hand URL arguments to that same validator: a URL whose scheme is not `file:`
+throws `ERR_INVALID_URL_SCHEME` instead of degrading to its pathname, and `fs.existsSync` counts
+that as absence, like Node. Raycast's Visual Studio Code extension leans on the guard — a
+`vscode-remote://` workspace whose stripped pathname exists locally (an SSH host opened at `/`
+always does) would otherwise pass `isFolderEntry` and reach `fileURLToPath`, which took the whole
+Search Recent Projects command down.
+
 A bundle that ships its own HTTP client rather than calling `fetch` — node-fetch travels inside
 `@raycast/utils`, and axios has a Node adapter — reaches the network through `http.request`, so the
 shim answers it: one request when the body ends, one response chunk when the bridge replies. The

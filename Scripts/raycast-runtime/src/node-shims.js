@@ -330,7 +330,10 @@ class Dirent {
 }
 
 function fsPath(input) {
-  if (input instanceof URL) return decodeURIComponent(input.pathname);
+  // Node validates URL inputs through fileURLToPath: a non-file scheme (say a VS Code
+  // vscode-remote:// workspace URI) must throw ERR_INVALID_URL_SCHEME rather than quietly
+  // degrading to its pathname — extensions like Search Recent Projects guard on that failure.
+  if (input instanceof URL) return fileURLToPath(input);
   if (input instanceof Uint8Array) return utf8Decode(input);
   return String(input);
 }

@@ -170,6 +170,7 @@ export default function Command() {
 const nodeSource = `
 import path from "node:path";
 import os from "node:os";
+import fs from "node:fs";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -236,6 +237,15 @@ export default function Command() {
     errorCode(() => fileURLToPath("file://user@localhost/tmp/a")),
     errorCode(() => fileURLToPath("file://localhost:/tmp/a")),
     errorCode(() => fileURLToPath("file:///C:/a", { windows: true })),
+    // fs validates URL schemes the way Node does: a vscode-remote:// workspace URI whose stripped
+    // pathname exists locally ("/" always does) must not pass existsSync — Raycast's Search Recent
+    // Projects relies on that guard before handing the URI to fileURLToPath.
+    String(fs.existsSync(new URL("vscode-remote://ssh-remote%2Bucg/"))),
+    String(fs.existsSync(new URL("vscode-remote://ssh-remote%2Bserver/etc/docker/daemon.json"))),
+    String(fs.existsSync(new URL("file:///etc/hosts"))),
+    String(fs.existsSync("/etc/hosts")),
+    errorCode(() => fs.statSync(new URL("https://example.com/a"))),
+    errorCode(() => fs.readFileSync(new URL("https://example.com/a"))),
   ];
   return <Detail markdown={parts.join("\\n")} />;
 }
@@ -744,6 +754,12 @@ export async function runFixtures() {
       "ERR_INVALID_URL",
       "ERR_INVALID_URL",
       "Error",
+      "false",
+      "false",
+      "true",
+      "true",
+      "ERR_INVALID_URL_SCHEME",
+      "ERR_INVALID_URL_SCHEME",
     ];
     expected.forEach((value, index) => check(`shim ${index}: ${value}`, markdown[index] === value, markdown[index]));
   });
