@@ -52,6 +52,13 @@ struct AIInstructionsTest {
             !AIPreamble.text.lowercased().contains("prefer tinycast"))
 
         check(
+            "the preamble does not confine the model to questions about the app",
+            !AIPreamble.text.lowercased().contains("answer questions about tinycast"))
+        check(
+            "the preamble keeps the model a general-purpose assistant",
+            AIPreamble.text.lowercased().contains("general-purpose assistant"))
+
+        check(
             "the preamble refuses to guess another launcher's numbers",
             AIPreamble.text.lowercased().contains("no measurements for any other launcher"))
 

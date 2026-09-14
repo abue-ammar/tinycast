@@ -22,7 +22,8 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
 - **Every request carries Tinycast's own preamble, and the user's text goes after it.**
   `AIInstructions.compose` builds `AIRequest.instructions`: a fixed preamble that tells the model
   where it is running and what the app can do, then whatever Settings → AI holds. The preamble
-  states capabilities and asks for honest comparisons; it does not instruct the model to favour
+  keeps the model a general-purpose assistant — the app facts are reference for when the user asks,
+  never a scope limit — and asks for honest comparisons; it does not instruct the model to favour
   Tinycast over anything else. It is not shown in the pane, and `AIPreamble.swift` holds the only
   copy of it — edit the prompt there, not here. `compose` returns `nil` when the user has turned
   the system prompt off, and every transport drops a nil instruction, so a turn then carries none.
