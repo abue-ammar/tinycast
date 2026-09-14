@@ -197,6 +197,10 @@ or session changes, Secure Event Input, navigation and modifier shortcuts, and 1
 inactivity. It is capped at 256 characters. Keywords are matched case-insensitively by longest suffix;
 duplicates resolve by file identity. Tinycast-tagged synthetic events are ignored.
 
+A match is delivered on a later main-actor turn, never inside the tap callback, so the triggering
+keystroke reaches the target before a modal argument prompt can take focus. The target is still
+sampled with the keystroke. Further real input or `stop()` cancels a match that has not run yet.
+
 Immediately before deleting a matched keyword and before inserting its expansion, automatic delivery
 re-checks consent, both permissions, Secure Event Input, the captured target, and cancellation
 generation. A failed gate leaves the typed keyword untouched. Delivery into one of our own editors
@@ -338,7 +342,11 @@ any pasteboard restoration still owned by Tinycast.
 **Rule 5, and the keystroke that outruns it.** An automatic expansion is speculative, so the reader's
 next real keystroke or click cancels whatever is still in flight — the listener reports every
 non-ignored input to `cancelAutomaticExpansion`, and Tinycast's own tagged synthetic events classify
-as `.ignored`, so a fallback never cancels itself. Delivery then settles exactly once either way:
+as `.ignored`, so a fallback never cancels itself. The argument prompt is the one exception: while
+`isPromptingForArguments` is set, the listener neither matches nor reports activity, because typing
+into the prompt and clicking **Expand** is the reader finishing the expansion, not abandoning it.
+The flag clears the buffer on both edges, so argument text can never trigger a nested expansion.
+Delivery then settles exactly once either way:
 Quick Actions raise a HUD and keep the reply on the clipboard, while snippets pass no failure handler
 and stay as silent as before, because a speculative expansion that declined is not news.
 

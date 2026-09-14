@@ -1797,7 +1797,8 @@ struct SnippetsTests {
             "real listener repeated start does not install a second tap",
             listener.status == .active && tap.installCount == 2)
 
-        let snippet = record("/tmp/argument-listener.md", Snippet(name: "Test", text: "{argument}", keyword: "#test"))
+        let snippet = record(
+            "/tmp/argument-listener.md", Snippet(name: "Test", text: "{argument}", keyword: "#test"))
         listener.update([snippet])
         var matches = 0
         listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in matches += 1 })
