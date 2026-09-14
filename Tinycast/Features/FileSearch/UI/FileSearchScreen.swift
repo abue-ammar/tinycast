@@ -40,22 +40,35 @@ struct FileSearchScreen: PaletteScreen {
         return true
     }
 
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        switch shortcut {
+        case .copyFile: return run(.copyFile, at: selection)
+        case .copyName: return run(.copyName, at: selection)
+        case .copyPath: return run(.copyPath, at: selection)
+        case .pasteFile: return run(.pasteFile, at: selection)
+        case .quickLook: return toggleQuickLook(at: selection)
+        // No ⌃⇧X here: there is no "all" to trash, only the row under the selection.
+        case .delete: return trash(at: selection)
+        default: return false
+        }
+    }
+
     /// ⌃X — mirrors the Actions row, as the clipboard's delete does; trashing asks nothing first.
-    func trash(at selection: Int) -> Bool {
+    private func trash(at selection: Int) -> Bool {
         guard let result = result(at: selection) else { return false }
         core.fileSearchCoordinator.trash(result)
         return true
     }
 
     /// ⌘Y — the overlay follows the selection, so toggling is all the state it needs.
-    func toggleQuickLook(at selection: Int) -> Bool {
+    private func toggleQuickLook(at selection: Int) -> Bool {
         guard result(at: selection) != nil else { return false }
         vm.fileSearchQuickLook.toggle()
         return true
     }
 
     /// ⇧⌘C / ⌥⌘C / ⌃⌘C / ⇧⌘V — the pasteboard rows, each on the selection the menu would act on.
-    func run(_ action: FileSearchPasteboardAction, at selection: Int) -> Bool {
+    private func run(_ action: FileSearchPasteboardAction, at selection: Int) -> Bool {
         guard let result = result(at: selection) else { return false }
         let coordinator = core.fileSearchCoordinator
         switch action {
@@ -119,7 +132,6 @@ struct FileSearchScreen: PaletteScreen {
     }
 }
 
-/// The pasteboard rows a chord can reach, so the key handler names one instead of four selectors.
 enum FileSearchPasteboardAction {
     case copyFile
     case copyName

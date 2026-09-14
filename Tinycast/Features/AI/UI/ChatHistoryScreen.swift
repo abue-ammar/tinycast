@@ -30,12 +30,24 @@ struct ChatHistoryScreen: PaletteScreen {
 
     func secondary(at selection: Int) -> Bool { false }
 
-    func delete(at selection: Int) {
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        switch shortcut {
+        case .commandDelete, .delete:
+            delete(at: selection)
+            return true
+        case .deleteAll:
+            deleteAll()
+            return true
+        default: return false
+        }
+    }
+
+    private func delete(at selection: Int) {
         guard let conversation = conversation(at: selection) else { return }
         coordinator.deleteChat(id: conversation.id)
     }
 
-    func deleteAll() {
+    private func deleteAll() {
         Task { await coordinator.deleteAllChats() }
     }
 

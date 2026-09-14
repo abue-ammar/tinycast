@@ -253,22 +253,33 @@ struct LauncherScreen: PaletteScreen {
         return app
     }
 
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        switch shortcut {
+        case .toggleFavorite: return toggleFavorite(at: selection)
+        case .hideFromSearch: return hideFromSearch(at: selection)
+        case .quit: return quit(at: selection)
+        case .restart: return restart(at: selection)
+        case .favoriteSlot(let index): return launchFavorite(at: index)
+        default: return false
+        }
+    }
+
     /// ⌃⇧Q — the screen owns the chord, but only a running application has anything to quit.
-    func quit(at selection: Int) -> Bool {
+    private func quit(at selection: Int) -> Bool {
         guard let app = runningApplication(at: selection) else { return false }
         core.launcherCoordinator.quit(app)
         return true
     }
 
     /// ⌘R — mirrors the Restart Application row.
-    func restart(at selection: Int) -> Bool {
+    private func restart(at selection: Int) -> Bool {
         guard let app = runningApplication(at: selection) else { return false }
         core.launcherCoordinator.restart(app)
         return true
     }
 
     /// The highlight stays in Favorites: the top on add, the neighbour above on remove.
-    func toggleFavorite(at selection: Int) -> Bool {
+    private func toggleFavorite(at selection: Int) -> Bool {
         guard let app = entry(at: selection), !CommandCatalog.isQueryDriven(app) else { return false }
         let removed = favoriteIndex(of: app)
         favorites.toggle(app)
@@ -279,7 +290,7 @@ struct LauncherScreen: PaletteScreen {
     }
 
     /// ⌘1–⌘9/⌘0 — launch a favorite by position, in either palette size.
-    func launchFavorite(at index: Int) -> Bool {
+    private func launchFavorite(at index: Int) -> Bool {
         guard let app = pinnedFavorites.dropFirst(index).first else { return false }
         core.launcherCoordinator.launch(app)
         return true
@@ -320,7 +331,7 @@ struct LauncherScreen: PaletteScreen {
     }
 
     /// ⇧⌘H — the row leaves the list for good, so the highlight takes the place it vacated.
-    func hideFromSearch(at selection: Int) -> Bool {
+    private func hideFromSearch(at selection: Int) -> Bool {
         guard let app = entry(at: selection), app.canHideFromSearch,
             !CommandCatalog.isQueryDriven(app), let index = results.firstIndex(of: app)
         else { return false }

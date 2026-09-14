@@ -59,15 +59,23 @@ struct QuicklinkListScreen: PaletteScreen {
         return true
     }
 
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        switch shortcut {
+        case .commandDelete: return delete(at: selection)
+        case .pin: return pin(at: selection)
+        default: return false
+        }
+    }
+
     /// ⌘. — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
-    func pin(at selection: Int) -> Bool {
+    private func pin(at selection: Int) -> Bool {
         guard let quicklink = quicklink(at: selection) else { return false }
         core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
         return true
     }
 
     /// ⌘⌫ — deletion honours the "confirm before deleting" setting inside `AppCore`.
-    func delete(at selection: Int) -> Bool {
+    private func delete(at selection: Int) -> Bool {
         guard let quicklink = quicklink(at: selection) else { return false }
         Task { await core.quicklinkCoordinator.deleteQuicklink(id: quicklink.id) }
         return true

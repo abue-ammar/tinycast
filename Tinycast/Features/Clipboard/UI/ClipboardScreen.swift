@@ -34,8 +34,22 @@ struct ClipboardScreen: PaletteScreen {
         core.clipboardCoordinator.activate(item)
     }
 
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        switch shortcut {
+        case .commandDelete, .delete:
+            delete(at: selection)
+            return true
+        case .deleteAll:
+            deleteAll()
+            return true
+        case .pin: return pin(at: selection)
+        case .favoriteSlot(let index): return activatePinned(at: index)
+        default: return false
+        }
+    }
+
     /// ⌘1…⌘0 — the Nth visible pinned entry (Pinned section order), like ↵.
-    func activatePinned(at index: Int) -> Bool {
+    private func activatePinned(at index: Int) -> Bool {
         guard let item = store.pinnedItem(at: index, in: vm.query, filter: vm.clipboardFilter) else {
             return false
         }
@@ -58,20 +72,20 @@ struct ClipboardScreen: PaletteScreen {
     }
 
     /// ⌘. — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
-    func pin(at selection: Int) -> Bool {
+    private func pin(at selection: Int) -> Bool {
         guard let item = item(at: selection) else { return false }
         core.clipboardCoordinator.togglePinnedClip(item)
         return true
     }
 
     /// ⌘⌫ / ⌃X — the screen owns the chord whether or not a row sits under the selection.
-    func delete(at selection: Int) {
+    private func delete(at selection: Int) {
         guard let item = item(at: selection) else { return }
         store.remove(item)
     }
 
     /// ⌃⇧X — mirrors the Actions row, confirmation included; pinned entries go with the rest.
-    func deleteAll() {
+    private func deleteAll() {
         Task { await core.clipboardCoordinator.deleteAllClips() }
     }
 

@@ -83,6 +83,7 @@ struct AIProviderTests {
         modelCatalogSearchesWithoutRenderingEverything()
         endpointPolicyRejectsUnsafeRemoteURLs()
         storedKeysDoNotFollowARetargetedConnection()
+        savingAConnectionDecidesItsKey()
         sseFramesSurviveSplits()
         openAIAndAnthropicStreamsDecode()
         capturedStreamsDecodeHoweverTheyArrive()
@@ -513,6 +514,48 @@ struct AIProviderTests {
         expect(
             AIEndpointPolicy.sameDestination(renamed, saved),
             "editing a label or the model list is not a retarget and keeps the saved key")
+    }
+
+    static func savingAConnectionDecidesItsKey() {
+        var remote = AIConnection()
+        remote.provider = .openAI
+        remote.baseURL = "https://api.openai.com/v1"
+        var local = remote
+        local.baseURL = "http://localhost:11434/v1"
+        var moved = remote
+        moved.baseURL = "https://gateway.example.com/v1"
+        typealias Policy = AIConnectionKeyPolicy
+
+        expect(
+            Policy.resolve(enteredKey: "  sk-new \n", connection: remote, saved: nil, hasStoredKey: false)
+                == .store("sk-new"),
+            "a typed key is stored trimmed")
+        expect(
+            Policy.resolve(enteredKey: "sk-new", connection: moved, saved: remote, hasStoredKey: true)
+                == .store("sk-new"),
+            "a retarget that brings its own key replaces the old one")
+        expect(
+            Policy.resolve(enteredKey: " ", connection: moved, saved: remote, hasStoredKey: true)
+                == .reject("Enter an API key for this endpoint — the saved key stays with the old one."),
+            "a remote retarget without a key is refused, so the old key never reaches the new host")
+        expect(
+            Policy.resolve(enteredKey: "", connection: local, saved: remote, hasStoredKey: true)
+                == .removeStored,
+            "a retarget to loopback drops the key issued for the remote endpoint")
+        expect(
+            Policy.resolve(enteredKey: "", connection: remote, saved: nil, hasStoredKey: false)
+                == .reject("Enter an API key for this remote provider."),
+            "a new remote connection needs a key")
+        expect(
+            Policy.resolve(enteredKey: "", connection: local, saved: nil, hasStoredKey: false) == .keep,
+            "a loopback endpoint saves without a key")
+        expect(
+            Policy.resolve(enteredKey: "", connection: remote, saved: remote, hasStoredKey: true) == .keep,
+            "an unchanged endpoint keeps its saved key")
+        expect(
+            Policy.resolve(enteredKey: "", connection: moved, saved: remote, hasStoredKey: false)
+                == .reject("Enter an API key for this remote provider."),
+            "with no saved key there is nothing to retarget, only a missing key")
     }
 
     static func sseFramesSurviveSplits() {

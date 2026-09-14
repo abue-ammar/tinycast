@@ -212,8 +212,8 @@ not outlive the window.
 None of the copies is marked with `ClipboardManager.internalType`, so a copied file enters clipboard
 history like any other copy. Move to Trash rides the clipboard's own ⌃X, asks nothing first — trashing is
 undoable, as it is for Uninstall and for an extension's `trash` — and has no ⌃⇧X counterpart, since there
-is no "all" to trash. The three ⌘C chords differ only by their second modifier, so one
-key handler resolves them into a `FileSearchPasteboardAction`; bare ⌘C stays with the search field.
+is no "all" to trash. The three ⌘C chords differ only by their second modifier, which
+`PaletteShortcut` reads in order — ⇧, then ⌥, then ⌃; bare ⌘C stays with the search field.
 
 The first in-flight query says nothing — the rows it is about to replace would only flash a message — an
 empty completed query says what the active filter admits ("No files found", "No images found"), a blank

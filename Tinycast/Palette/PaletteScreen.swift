@@ -127,6 +127,8 @@ private extension MenuPanelCorner {
     func secondary(at selection: Int) -> Bool
     /// ⌥↵. False on every screen with nothing to paste, which is most of them.
     func pasteKeepingWindowOpen(at selection: Int) -> Bool
+    /// False when the screen has no answer to the chord, leaving the key unhandled.
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool
     /// The selection an arrow key lands on, or nil to leave the key to the palette's own default.
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int?
     /// Controls the row wants beside the search field; `focus` is lent, never owned.
@@ -153,6 +155,7 @@ extension PaletteScreen {
             popover: content, selection: menuSelection, onActivate: onActivate)
     }
     func pasteKeepingWindowOpen(at selection: Int) -> Bool { false }
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool { false }
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? { nil }
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding

@@ -160,47 +160,6 @@ struct RootPaletteView: View {
             })
     }
 
-    /// Every model configured for chat; selecting one updates the app-wide default route.
-    private var aiModelContent: PopoverMenuContent {
-        let groups = core.aiChatCoordinator.modelGroups
-        let loading = core.aiChatCoordinator.isModelCatalogLoading
-        var items = groups.flatMap { group in
-            group.options.enumerated().map { index, option in
-                PopoverMenuItem(
-                    title: option.title, icon: option.menuIcon,
-                    sectionTitle: index == 0 ? group.title : nil
-                ) {
-                    core.aiChatCoordinator.selectModel(option)
-                }
-            }
-        }
-        if loading {
-            items.insert(
-                PopoverMenuItem(title: "Loading models…", icon: .blank, isLoading: true) {}, at: 0)
-        }
-        guard !items.isEmpty else {
-            return PopoverMenuContent(items: [
-                PopoverMenuItem(title: "Configure AI", systemImage: "slider.horizontal.3") {
-                    core.aiChatCoordinator.showSettings()
-                }
-            ])
-        }
-        return PopoverMenuContent(items: items)
-    }
-
-    private var aiReasoningContent: PopoverMenuContent {
-        let selected = core.aiSettings.defaultModel?.effort
-        return PopoverMenuContent(
-            items: core.aiChatCoordinator.reasoningEfforts.map { effort in
-                PopoverMenuItem(
-                    title: effort.title, icon: .blank,
-                    detail: effort.id == selected ? "✓" : nil
-                ) {
-                    core.aiChatCoordinator.selectReasoningEffort(effort)
-                }
-            })
-    }
-
     /// The bottom-left app menu content (About / Support / Settings).
     private var appMenuContent: PopoverMenuContent {
         PopoverMenuContent(items: [
@@ -237,11 +196,13 @@ struct RootPaletteView: View {
                 width: headerMenuWidth, onActivate: activateMenuItem)
         case .aiModel:
             return PaletteMenuContent(
-                popover: aiModelContent, selection: $menuSelection,
-                width: headerMenuWidth, onActivate: activateMenuItem)
+                popover: AIModelMenu.models(coordinator: core.aiChatCoordinator),
+                selection: $menuSelection, width: headerMenuWidth, onActivate: activateMenuItem)
         case .aiReasoning:
             return PaletteMenuContent(
-                popover: aiReasoningContent, selection: $menuSelection,
+                popover: AIModelMenu.reasoning(
+                    coordinator: core.aiChatCoordinator, settings: core.aiSettings),
+                selection: $menuSelection,
                 width: headerMenuWidth, onActivate: activateMenuItem)
         case .argumentOptions:
             guard let field = argumentOptionsField,
@@ -387,9 +348,11 @@ struct RootPaletteView: View {
                 scroll = ScrollIntent(kind: .top)
             }
             // ⌘. arrives as a token rather than a key press. See `PaletteState.pinChordToken`.
-            .onChange(of: vm.pinChordToken) { pinSelection() }
+            .onChange(of: vm.pinChordToken) { performShortcut(.pin) }
             // ⌘1…⌘0 arrives as a slot index from AppKit keyCode matching.
-            .onChange(of: vm.favoriteSlotToken) { activateFavoriteSlotShortcut() }
+            .onChange(of: vm.favoriteSlotToken) {
+                if let index = vm.favoriteSlotIndex { performShortcut(.favoriteSlot(index)) }
+            }
             // One optional makes "exactly one menu" structural; this only mirrors it for the panel.
             .onChange(of: openMenu) {
                 vm.menuOpen = menuOpen
@@ -530,89 +493,23 @@ struct RootPaletteView: View {
                 toggleActions()
                 return .handled
             }
-            // Bare backspace is intercepted in `sendEvent`; the field editor eats it first.
-            .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
-                if menuOpen { return .handled }
-                guard press.modifiers.contains(.command) else { return .ignored }
+            // The screen answers row chords; a bare backspace is intercepted in `sendEvent`.
+            .onKeyPress(phases: .down) { press in
+                let isDeleteKey = press.key == .delete || press.key == .deleteForward
+                if isDeleteKey, menuOpen { return .handled }
+                guard
+                    let shortcut = PaletteShortcut.resolve(
+                        command: press.modifiers.contains(.command),
+                        shift: press.modifiers.contains(.shift),
+                        option: press.modifiers.contains(.option),
+                        control: press.modifiers.contains(.control),
+                        isDeleteKey: isDeleteKey,
+                        matches: { ASCIIKeyboardLayout.matches(press.key, character: $0) })
+                else { return .ignored }
+                guard !shortcut.requiresExpanded || !isCollapsed else { return .ignored }
                 let screen = screen
-                let selection = selection(in: screen)
-                if let quicklinks = screen as? QuicklinkListScreen {
-                    return quicklinks.delete(at: selection) ? .handled : .ignored
-                }
-                if let clipboard = screen as? ClipboardScreen {
-                    clipboard.delete(at: selection)
-                    return .handled
-                }
-                if let history = screen as? CalculatorHistoryScreen {
-                    history.delete(at: selection)
-                    return .handled
-                }
-                if let history = screen as? ChatHistoryScreen {
-                    history.delete(at: selection)
-                    return .handled
-                }
-                return .ignored
-            }
-            // ⇧⌘C / ⌥⌘C / ⌃⌘C mirror the three copy rows; bare ⌘C stays with the search field.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.command), !isCollapsed,
-                    ASCIIKeyboardLayout.matches(press.key, character: "c"),
-                    let files = screen as? FileSearchScreen
-                else { return .ignored }
-                let action: FileSearchPasteboardAction
-                if press.modifiers.contains(.shift) {
-                    action = .copyFile
-                } else if press.modifiers.contains(.option) {
-                    action = .copyName
-                } else if press.modifiers.contains(.control) {
-                    action = .copyPath
-                } else {
-                    return .ignored
-                }
-                guard files.run(action, at: selection(in: files)) else { return .ignored }
-                if menuOpen { closeMenus() }
-                return .handled
-            }
-            // ⇧⌘V mirrors the Paste File row, which hands the file to the app below the palette.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.command), press.modifiers.contains(.shift),
-                    ASCIIKeyboardLayout.matches(press.key, character: "v"), !isCollapsed,
-                    let files = screen as? FileSearchScreen
-                else { return .ignored }
-                return files.run(.pasteFile, at: selection(in: files)) ? .handled : .ignored
-            }
-            // ⌘Y mirrors the Quick Look row; an open menu closes the way ⌃X's rows close it.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.command),
-                    ASCIIKeyboardLayout.matches(press.key, character: "y"), !isCollapsed,
-                    let files = screen as? FileSearchScreen
-                else { return .ignored }
-                guard files.toggleQuickLook(at: selection(in: files)) else { return .ignored }
-                if menuOpen { closeMenus() }
-                return .handled
-            }
-            // ⌃X / ⌃⇧X mirror the delete rows — both cases, Shift uppercasing — and close an open menu.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.control),
-                    ASCIIKeyboardLayout.matches(press.key, character: "x")
-                else { return .ignored }
-                let screen = screen
-                let selection = selection(in: screen)
-                let all = press.modifiers.contains(.shift)
-                switch screen {
-                case let clipboard as ClipboardScreen:
-                    if all { clipboard.deleteAll() } else { clipboard.delete(at: selection) }
-                case let history as CalculatorHistoryScreen:
-                    if all { history.deleteAll() } else { history.delete(at: selection) }
-                case let history as ChatHistoryScreen:
-                    if all { history.deleteAll() } else { history.delete(at: selection) }
-                case let files as FileSearchScreen:
-                    // No ⌃⇧X here: there is no "all" to trash, only the row under the selection.
-                    guard !all, files.trash(at: selection) else { return .ignored }
-                default:
-                    return .ignored
-                }
-                if menuOpen { closeMenus() }
+                guard screen.perform(shortcut, at: selection(in: screen)) else { return .ignored }
+                if shortcut.closesMenu, menuOpen { closeMenus() }
                 return .handled
             }
             // Never gated on the rows: an over-narrow filter empties them, and this is the way out.
@@ -630,42 +527,6 @@ struct RootPaletteView: View {
                 case .ignored: return .ignored
                 }
                 return .handled
-            }
-            // ⇧⌘F mirrors the Add/Remove Favorites row, closing an open menu the way that row does.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.command), press.modifiers.contains(.shift),
-                    ASCIIKeyboardLayout.matches(press.key, character: "f"),
-                    !isCollapsed, let launcher = screen as? LauncherScreen
-                else { return .ignored }
-                guard launcher.toggleFavorite(at: selection(in: launcher)) else { return .ignored }
-                if menuOpen { closeMenus() }
-                return .handled
-            }
-            // ⇧⌘H mirrors the Hide from Search row, on that row's own guard, and closes the menu.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.command), press.modifiers.contains(.shift),
-                    ASCIIKeyboardLayout.matches(press.key, character: "h"),
-                    !isCollapsed, let launcher = screen as? LauncherScreen
-                else { return .ignored }
-                guard launcher.hideFromSearch(at: selection(in: launcher)) else { return .ignored }
-                if menuOpen { closeMenus() }
-                return .handled
-            }
-            // Both cases, Shift uppercasing the key; the compact bar shows no target.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.control), press.modifiers.contains(.shift),
-                    ASCIIKeyboardLayout.matches(press.key, character: "q"),
-                    !isCollapsed, let launcher = screen as? LauncherScreen
-                else { return .ignored }
-                return launcher.quit(at: selection(in: launcher)) ? .handled : .ignored
-            }
-            // ⌘R mirrors the Restart Application row, on the same guard and the same compact-bar skip.
-            .onKeyPress(phases: .down) { press in
-                guard press.modifiers.contains(.command),
-                    ASCIIKeyboardLayout.matches(press.key, character: "r"), !isCollapsed,
-                    let launcher = screen as? LauncherScreen
-                else { return .ignored }
-                return launcher.restart(at: selection(in: launcher)) ? .handled : .ignored
             }
     }
 
@@ -1024,18 +885,17 @@ struct RootPaletteView: View {
             return
         }
         let refreshTask = core.aiChatCoordinator.prepareModelSwitcher()
-        let options = core.aiChatCoordinator.modelOptions
-        let selected = core.aiSettings.defaultModel
-        let active = aiModelMenuSelection(options: options, selected: selected)
-        open(.aiModel, highlighting: active)
+        open(.aiModel, highlighting: aiModelHighlight)
         Task { @MainActor in
             await refreshTask.value
             guard openMenu == .aiModel else { return }
-            menuSelection = aiModelMenuSelection(
-                options: core.aiChatCoordinator.modelOptions,
-                selected: core.aiSettings.defaultModel)
+            menuSelection = aiModelHighlight
             syncMenuPanel(presenting: false)
         }
+    }
+
+    private var aiModelHighlight: Int {
+        AIModelMenu.modelHighlight(coordinator: core.aiChatCoordinator, settings: core.aiSettings)
     }
 
     private func toggleAIReasoning() {
@@ -1043,25 +903,10 @@ struct RootPaletteView: View {
             closeMenus()
             return
         }
-        let selected = core.aiSettings.defaultModel?.effort
-        let active =
-            core.aiChatCoordinator.reasoningEfforts.firstIndex {
-                $0.id == selected
-            } ?? 0
-        open(.aiReasoning, highlighting: active)
-    }
-
-    private func aiModelMenuSelection(
-        options: [AIModelOption], selected: AIModelSelection?
-    ) -> Int {
-        // With nothing to choose yet, the loading row is the only row the menu has.
-        guard !options.isEmpty else { return 0 }
-        let offset = core.aiChatCoordinator.isModelCatalogLoading ? 1 : 0
-        let selectedIndex =
-            selected.flatMap { selected in
-                options.firstIndex(where: { $0.matches(selected) })
-            } ?? 0
-        return offset + selectedIndex
+        open(
+            .aiReasoning,
+            highlighting: AIModelMenu.reasoningHighlight(
+                coordinator: core.aiChatCoordinator, settings: core.aiSettings))
     }
 
     private var headerMenuWidth: CGFloat {
@@ -1173,27 +1018,10 @@ struct RootPaletteView: View {
         if argumentFocused == nil { searchFocused = true }
     }
 
-    /// ⌘. — mirrors the Actions row, and works while that menu is open like the rest.
-    private func pinSelection() {
+    /// For the chords the panel hands over as tokens, which work while a menu is open.
+    private func performShortcut(_ shortcut: PaletteShortcut) {
         let screen = screen
-        let selection = selection(in: screen)
-        if let clipboard = screen as? ClipboardScreen {
-            _ = clipboard.pin(at: selection)
-        } else if let quicklinks = screen as? QuicklinkListScreen {
-            _ = quicklinks.pin(at: selection)
-        }
-    }
-
-    /// Dispatches the Cmd+number slot action to the active screen.
-    private func activateFavoriteSlotShortcut() {
-        guard let index = vm.favoriteSlotIndex else { return }
-        if let launcher = screen as? LauncherScreen {
-            _ = launcher.launchFavorite(at: index)
-            return
-        }
-        if let clipboard = screen as? ClipboardScreen {
-            _ = clipboard.activatePinned(at: index)
-        }
+        _ = screen.perform(shortcut, at: selection(in: screen))
     }
 
     /// A ring hop leaves a step back — except the hop closing the ring on the launcher, its root.
@@ -1372,142 +1200,5 @@ private struct HeaderBackButton: View {
         .onHover { hovered = $0 }
         .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
         .help(help)
-    }
-}
-
-private struct ArmedHover: ViewModifier {
-    @Environment(PaletteState.self) private var palette
-    @Binding var hovered: Bool
-
-    func body(content: Content) -> some View {
-        content
-            .onContinuousHover(coordinateSpace: .local) { phase in
-                switch phase {
-                case .active: hovered = palette.hoverHighlightArmed
-                case .ended: hovered = false
-                }
-            }
-            // Disarming under a still pointer fires no hover phase, so the drop clears the row.
-            .onChange(of: palette.hoverDisarmToken) { hovered = false }
-    }
-}
-
-extension View {
-    /// Row hover, lit only while the pointer moves; independent of the keyboard selection.
-    func armedHover(_ hovered: Binding<Bool>) -> some View {
-        modifier(ArmedHover(hovered: hovered))
-    }
-}
-
-struct EmptyResults: View {
-    let text: String
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.largeTitle)
-                .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
-            Text(text).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-/// Overflow is a button rather than a slot, so no favorite loses its digit to it.
-private struct CompactFavoritesRow: View {
-    let favorites: [AppEntry]
-    let showsOverflow: Bool
-    let onLaunch: (AppEntry) -> Void
-    let onOverflow: () -> Void
-    @Environment(\.metrics) private var metrics
-
-    var body: some View {
-        HStack(spacing: metrics.spacing.xs) {
-            // Identified by the app, so a reorder moves an icon with its app, not by position.
-            ForEach(Array(favorites.enumerated()), id: \.element.id) { index, app in
-                CompactFavoriteButton(help: help(for: app, at: index)) {
-                    onLaunch(app)
-                } content: {
-                    AppIconView(app: app, pointSize: metrics.size.rowIcon)
-                        .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
-                }
-            }
-            if showsOverflow {
-                CompactFavoriteButton(help: "Show all  ↓", action: onOverflow) {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .frame(width: metrics.size.rowIcon, height: metrics.size.rowIcon)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Theme.Colors.controlSurface)
-                                .padding(metrics.spacing.xxs)
-                        )
-                }
-            }
-        }
-    }
-
-    private func help(for app: AppEntry, at index: Int) -> String {
-        guard let digit = FavoriteSlots.digit(at: index) else { return app.name }
-        return "\(app.name)  ⌘\(digit)"
-    }
-}
-
-/// One compact favorite: bare icon, tooltip, action; no hover chrome, so it reads tight.
-private struct CompactFavoriteButton<Content: View>: View {
-    let help: String
-    let action: () -> Void
-    @ViewBuilder let content: Content
-    @Environment(\.metrics) private var metrics
-
-    var body: some View {
-        Button(action: action) {
-            content
-                .contentShape(RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .help(help)
-    }
-}
-
-private struct PaletteBackground: View {
-    @Environment(AppSettings.self) private var settings
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.displayScale) private var displayScale
-    @Environment(\.metrics) private var metrics
-    let window: NSWindow?
-
-    private var usesSystemShadow: Bool {
-        colorScheme != .dark || settings.paletteTransparency <= 0
-    }
-
-    var body: some View {
-        Theme.Colors.panelScrim(transparency: settings.paletteTransparency)
-            .background(VisualEffectView())
-            .overlay {
-                if settings.paletteTransparency != 0 {
-                    let edge = RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
-                    if usesSystemShadow {
-                        edge.strokeBorder(
-                            Theme.Colors.panelEdgeHighlight(transparency: settings.paletteTransparency),
-                            lineWidth: Theme.Size.hairline / displayScale
-                        )
-                        .allowsHitTesting(false)
-                    } else {
-                        edge.strokeBorder(
-                            Theme.Colors.panelEdgeGradient(transparency: settings.paletteTransparency),
-                            lineWidth: Theme.Size.hairline
-                        )
-                        .allowsHitTesting(false)
-                    }
-                }
-            }
-            .onChange(of: window, initial: true) { applyShadow() }
-            .onChange(of: usesSystemShadow) { applyShadow() }
-    }
-
-    private func applyShadow() {
-        guard let window, window.hasShadow != usesSystemShadow else { return }
-        window.hasShadow = usesSystemShadow
-        window.invalidateShadow()
     }
 }

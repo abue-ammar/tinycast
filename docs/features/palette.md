@@ -86,6 +86,9 @@ written to Chat History as soon as it has a message.
 Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the protocol is what keeps the
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
 palette indexes into it. Adding a mode means adding a conformer, not a branch in `RootPaletteView`.
+A chord aimed at the selected row — ⌃X, ⇧⌘F, ⌘Y and the rest — follows the same rule:
+`PaletteShortcut` recognises the key and carries its compact-bar and open-menu guards, and the screen
+answers through `perform(_:at:)`, so a new chord never adds a cast to the shell.
 
 | Mode | Screen | Inner list |
 | --- | --- | --- |

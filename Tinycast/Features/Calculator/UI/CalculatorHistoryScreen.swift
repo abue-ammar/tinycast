@@ -80,14 +80,26 @@ struct CalculatorHistoryScreen: PaletteScreen {
         return true
     }
 
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        switch shortcut {
+        case .commandDelete, .delete:
+            delete(at: selection)
+            return true
+        case .deleteAll:
+            deleteAll()
+            return true
+        default: return false
+        }
+    }
+
     /// ⌘⌫ / ⌃X — the screen owns the chord, but the inline card can't be deleted.
-    func delete(at selection: Int) {
+    private func delete(at selection: Int) {
         guard let entry = entry(at: selection) else { return }
         history.remove(entry)
     }
 
     /// ⌃⇧X — mirrors the Actions row, confirmation included; the live inline card isn't history.
-    func deleteAll() {
+    private func deleteAll() {
         Task { await core.calculatorCoordinator.deleteAllHistory() }
     }
 
