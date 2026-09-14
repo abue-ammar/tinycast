@@ -74,6 +74,26 @@ final class ExtensionCoordinator {
         runExtensionCommand(entry)
     }
 
+    /// A `raycast://extensions/…` link: the same command the launcher would run, by slug.
+    func runDeepLink(_ link: ExtensionDeepLink) {
+        guard settings.extensionsEnabled else {
+            core.showMessage("Extensions are disabled — enable them in Settings", tone: .danger)
+            return
+        }
+        guard let (owner, command) = extensions.resolve(link) else {
+            core.showMessage("No installed extension provides '\(link.commandName)'", tone: .danger)
+            return
+        }
+        guard command.mode.isSupported else {
+            core.showMessage(
+                command.mode.unsupportedReason ?? "This command isn't supported yet", tone: .danger)
+            return
+        }
+        run(
+            owner, command: command, arguments: link.arguments, fallbackText: link.fallbackText,
+            launchType: link.launchType)
+    }
+
     // MARK: - Managing one extension from the launcher
 
     /// Opens Settings on the extension a launcher row belongs to.
@@ -143,6 +163,13 @@ final class ExtensionCoordinator {
     /// A view command takes over the palette; a no-view command closes it and runs headless.
     func runExtensionCommand(_ app: AppEntry, arguments: [String: String] = [:]) {
         guard let (owner, command) = extensions.resolve(app) else { return }
+        run(owner, command: command, arguments: arguments)
+    }
+
+    private func run(
+        _ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String],
+        fallbackText: String? = nil, launchType: ExtensionLaunchType = .userInitiated
+    ) {
         switch command.mode {
         case .view:
             // Switch the palette over first, so the launching state is what the user sees.
@@ -151,11 +178,14 @@ final class ExtensionCoordinator {
             if !paletteCoordinator.isVisible {
                 paletteCoordinator.showPalette(mode: .extensionCommand)
             }
-            Task { await extensions.run(owner, command: command, arguments: arguments) }
         case .noView, .menuBar:
             // A no-view command's own HUD is the feedback, so the palette gets out of the way.
             paletteCoordinator.hidePalette(restoreFocus: false)
-            Task { await extensions.run(owner, command: command, arguments: arguments) }
+        }
+        Task {
+            await extensions.run(
+                owner, command: command, arguments: arguments, fallbackText: fallbackText,
+                launchType: launchType)
         }
     }
 

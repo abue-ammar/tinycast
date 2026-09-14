@@ -187,6 +187,7 @@ struct ExtensionTests {
         screenChecks()
         actionIconChecks()
         oauthUnitChecks()
+        deepLinkChecks()
         nodeShimChecks()
         await runtimeChecks()
         await searchAccessoryRuntimeChecks()
@@ -726,6 +727,81 @@ struct ExtensionTests {
         check(
             "handleCallbackURL reports an expired callback",
             ExtensionOAuthSession.handleCallbackURL(strayURL) == .expired)
+    }
+
+    static func deepLinkChecks() {
+        let canonical = ExtensionDeepLink.parse(
+            url: URL(string: "raycast://extensions/linear/linear/create-issue")!)
+        check(
+            "deeplink parses owner, extension and command",
+            canonical?.ownerOrAuthor == "linear" && canonical?.extensionName == "linear"
+                && canonical?.commandName == "create-issue",
+            String(describing: canonical))
+        check(
+            "deeplink prefers the scoped manifest name",
+            canonical?.extensionCandidates == ["linear/linear", "linear"],
+            String(describing: canonical?.extensionCandidates))
+
+        let tiny = ExtensionDeepLink.parse(
+            url: URL(string: "tinycast://extensions/linear/linear/create-issue")!)
+        check("deeplink mirrors raycast:// as tinycast://", tiny == canonical)
+
+        let bare = ExtensionDeepLink.parse(url: URL(string: "raycast://extensions/demo/search")!)
+        check(
+            "deeplink without an owner parses",
+            bare?.ownerOrAuthor == nil && bare?.extensionName == "demo"
+                && bare?.commandName == "search")
+
+        let args = ExtensionDeepLink.parse(
+            url: URL(
+                string:
+                    "raycast://extensions/linear/linear/create-issue?arguments=%7B%22title%22%3A%22Triage%22%7D"
+            )!)
+        check(
+            "deeplink decodes arguments JSON",
+            args?.arguments == ["title": "Triage"], String(describing: args?.arguments))
+
+        let coerced = ExtensionDeepLink.parseArguments(#"{"q":"","n":3,"flag":true}"#)
+        check(
+            "deeplink coerces non-string arguments",
+            coerced == ["q": "", "n": "3", "flag": "true"], String(describing: coerced))
+        check(
+            "deeplink treats malformed arguments as none",
+            ExtensionDeepLink.parseArguments("not-json") == [:])
+
+        let full = ExtensionDeepLink.parse(
+            url: URL(
+                string: "raycast://extensions/demo/search?fallbackText=hello&launchType=background"
+            )!)
+        check(
+            "deeplink reads fallback text and background launch",
+            full?.fallbackText == "hello" && full?.launchType == .background)
+
+        let legacy = ExtensionDeepLink.parse(
+            url: URL(string: "com.raycast:/extensions/demo/search")!)
+        check(
+            "deeplink reads the com.raycast path form",
+            legacy?.extensionName == "demo" && legacy?.commandName == "search")
+
+        check(
+            "deeplink rejects a non-extensions link",
+            ExtensionDeepLink.parse(url: URL(string: "raycast://confetti")!) == nil)
+        check(
+            "deeplink rejects an OAuth callback",
+            ExtensionDeepLink.parse(url: URL(string: "raycast://oauth?code=abc")!) == nil)
+        check(
+            "deeplink rejects other schemes",
+            ExtensionDeepLink.parse(url: URL(string: "https://example.com/x")!) == nil)
+
+        check(
+            "deeplink matches a scoped install by slug",
+            bare?.matches(manifestName: "owner/demo") == true)
+        check(
+            "deeplink matches a short install from a scoped link",
+            canonical?.matches(manifestName: "linear") == true)
+        check(
+            "deeplink rejects another extension",
+            canonical?.matches(manifestName: "other/other") == false)
     }
 
     // MARK: - End-to-end through JavaScriptCore
