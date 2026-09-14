@@ -1060,9 +1060,18 @@ class IncomingMessage extends PassThrough {
         ([name]) => name !== "content-encoding" && name !== "content-length",
       ),
     );
-    this.rawHeaders = Object.entries(this.headers).flat();
+    // URLSession folds repeated `Set-Cookie` headers into one line; Node always hands out an array.
+    if (typeof this.headers["set-cookie"] === "string") {
+      this.headers["set-cookie"] = this.headers["set-cookie"].split(SET_COOKIE_BOUNDARY);
+    }
+    this.rawHeaders = Object.entries(this.headers).flatMap(([name, value]) =>
+      [value].flat().flatMap((item) => [name, item]),
+    );
   }
 }
+
+/// A comma that starts another `name=` — never the one inside an `Expires` date.
+const SET_COOKIE_BOUNDARY = /,\s*(?=[^;,=\s]+=)/;
 
 const HEADER_TOKEN = /^[\^`\-\w!#$%&'*+.|~]+$/;
 const HEADER_VALUE = /[^\t\u0020-\u007e\u0080-\u00ff]/;
@@ -1088,10 +1097,29 @@ function validateHeaderValue(name, value) {
   }
 }
 
+/// The bridge owns every socket; `addRequest` is only a hook for cookie agents to override.
+class Agent extends EventEmitter {
+  constructor(options) {
+    super();
+    this.options = { ...options };
+  }
+
+  addRequest() {}
+
+  destroy() {}
+}
+
 class ClientRequest extends EventEmitter {
   constructor(url, options, callback) {
     super();
     this.url = url;
+    // A malformed URL still fails the way it always has: as an `error` once the bridge rejects it.
+    if (URL.canParse(url)) {
+      const target = new URL(url);
+      this.protocol = target.protocol;
+      this.host = target.hostname;
+      this.path = target.pathname + target.search;
+    }
     this.method = String(options.method ?? "GET").toUpperCase();
     this.writable = true;
     this.writableEnded = false;
@@ -1100,7 +1128,12 @@ class ClientRequest extends EventEmitter {
     this._destroyed = false;
     for (const [name, value] of Object.entries(options.headers ?? {})) this.setHeader(name, value);
     if (callback) this.once("response", callback);
+    // Any other agent shape — agent-base 6 extends EventEmitter — would try to open a socket.
+    if (options.agent instanceof Agent) options.agent.addRequest(this, options);
   }
+
+  /// Node's last chance to touch headers before they go out; cookie agents wrap it.
+  _implicitHeader() {}
 
   setHeader(name, value) {
     this._headers.set(String(name).toLowerCase(), Array.isArray(value) ? value.join(", ") : String(value));
@@ -1126,6 +1159,7 @@ class ClientRequest extends EventEmitter {
 
   end(chunk) {
     if (chunk !== undefined && chunk !== null) this.write(chunk);
+    this._implicitHeader();
     this.writableEnded = true;
     this._send();
     return this;
@@ -1369,6 +1403,19 @@ const querystring = {
   unescape: decodeURIComponent,
 };
 
+/// Node's legacy `url.format`, which also takes the parts object http-cookie-agent builds per request.
+function formatURL(value) {
+  if (typeof value !== "object" || value === null || value instanceof URL) return String(value);
+  const protocol = value.protocol ? value.protocol.replace(/:?$/, ":") : "";
+  const slashes = value.slashes || /^(https?|ftp|gopher|file|wss?):$/.test(protocol) ? "//" : "";
+  const auth = value.auth ? `${value.auth}@` : "";
+  const host = value.host ?? (value.hostname ? value.hostname + (value.port ? `:${value.port}` : "") : "");
+  const pathname = (value.pathname ?? "").replace(/[?#]/g, encodeURIComponent);
+  const query = value.query && typeof value.query === "object" ? querystring.stringify(value.query) : "";
+  const search = value.search ?? (query ? `?${query}` : "");
+  return `${protocol}${slashes}${auth}${host}${pathname}${search}${value.hash ?? ""}`;
+}
+
 function assert(value, message) {
   if (!value) throw new Error(message || "Assertion failed");
 }
@@ -1445,7 +1492,8 @@ const httpLike = (name) =>
     validateHeaderValue,
     IncomingMessage,
     ClientRequest,
-    globalAgent: {},
+    Agent,
+    globalAgent: new Agent(),
     STATUS_CODES: {},
     METHODS: [],
   });
@@ -1499,7 +1547,7 @@ export const nodeModules = {
   assert,
   string_decoder: { StringDecoder },
   // node-fetch spreads a parsed URL into its request options and reads the legacy `path` off it.
-  url: { URL, URLSearchParams, fileURLToPath, pathToFileURL, parse: (text) => Object.assign(new URL(text), { path: new URL(text).pathname + new URL(text).search }), format: (value) => String(value), resolve: (from, to) => new URL(to, from).href },
+  url: { URL, URLSearchParams, fileURLToPath, pathToFileURL, parse: (text) => Object.assign(new URL(text), { path: new URL(text).pathname + new URL(text).search }), format: formatURL, resolve: (from, to) => new URL(to, from).href },
   timers: { setTimeout, clearTimeout, setInterval, clearInterval, setImmediate, clearImmediate },
   "timers/promises": { setTimeout: (ms, value) => new Promise((resolve) => setTimeout(() => resolve(value), ms)) },
   perf_hooks: { performance: globalThis.performance },

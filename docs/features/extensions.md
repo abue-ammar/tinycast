@@ -565,8 +565,8 @@ descriptor calls `tar` unpacks through), `os`,
 `child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`,
 each async form reporting the child's real `pid` for `process.kill` — Timers pauses that way),
 `crypto` (hashes, HMAC, PBKDF2, AES-CBC/ECB, random, UUID), `zlib` (gzip/zlib/raw deflate, both
-directions), `http`/`https` (`request` and `get`, buffered over the same URLSession bridge as
-`fetch`), `stream` (`Readable`, `Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`,
+directions), `http`/`https` (`request`, `get` and `Agent`, buffered over the same URLSession bridge
+as `fetch`), `stream` (`Readable`, `Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`,
 `finished`, plus `stream/promises` and `stream/web`), `util`, `events`, `buffer`, `url`, `querystring`, `punycode`, `assert`,
 `string_decoder`, `timers`. Every other built-in resolves to a stub that throws only when used, so a
 bundle that merely references `dgram` or `http2` still loads.
@@ -595,6 +595,11 @@ have the client gunzip plaintext.
 Two things decide whether it gets there. Axios enables that adapter only when
 `Object.prototype.toString.call(process)` reads `[object process]`, so `process` carries the tag; and
 follow-redirects inherits with `Writable.call(this)`, so `stream` hands out callable constructors.
+
+`http.Agent` is a real class whose `addRequest` does nothing, because the bridge owns every socket.
+A request calls it only for an `http.Agent` subclass, which is where axios-cookiejar-support's
+http-cookie-agent reads and writes its jar — Hide My Email is the reference case. URLSession folds
+repeated `Set-Cookie` headers into one line, so the response splits it back into Node's array.
 
 **Bundled helpers** — compiled Mach-O files and shebang scripts live in `assets/`. GitHub's raw-file
 downloads and some store zips lose their executable mode, so installation preserves Git tree mode

@@ -382,6 +382,65 @@ export default async function Command() {
 }
 `;
 
+// Hide My Email hands axios a cookie jar through axios-cookiejar-support, whose http-cookie-agent
+// extends `http.Agent` at load time and hooks each request in `addRequest` — the same way this does.
+const cookieAgentSource = `
+import * as http from "node:http";
+import * as url from "node:url";
+
+class CookieAgent extends http.Agent {
+  constructor(options) {
+    super(options);
+    this.jar = new Map();
+  }
+
+  addRequest(request, options) {
+    const target = url.format({ host: request.host, pathname: request.path, protocol: request.protocol });
+    const implicitHeader = request._implicitHeader.bind(request);
+    request._implicitHeader = () => {
+      if (this.jar.size) request.setHeader("Cookie", [...this.jar].map(([k, v]) => k + "=" + v).join("; "));
+      implicitHeader();
+    };
+    const emit = request.emit.bind(request);
+    request.emit = (event, ...args) => {
+      if (event === "response") {
+        for (const line of args[0].headers["set-cookie"] ?? []) {
+          const [pair] = line.split(";");
+          const [name, value] = pair.split("=");
+          this.jar.set(name, value);
+        }
+        this.urls.push(target);
+      }
+      return emit(event, ...args);
+    };
+    super.addRequest(request, options);
+  }
+}
+
+const send = (agent, path) =>
+  new Promise((resolve, reject) => {
+    const request = http.request("https://example.test" + path, { agent }, (response) => {
+      response.resume();
+      response.on("end", () => resolve(response));
+    });
+    request.on("error", reject);
+    request.end();
+  });
+
+export default async function Command() {
+  const agent = new CookieAgent({ keepAlive: true });
+  agent.urls = [];
+  const first = await send(agent, "/signin?step=1");
+  await send(agent, "/account");
+  globalThis.__cookieAgent = {
+    isAgent: agent instanceof http.Agent,
+    setCookie: first.headers["set-cookie"],
+    rawHeaders: first.rawHeaders,
+    urls: agent.urls,
+  };
+}
+`;
+
 // The Homebrew extension streams its package index to disk rather than buffering it: it guards on
 // `response.body`, counts bytes through a `TransformStream`, and pipes the result into a file — then
 // reads it back through a `Transform`. Issue #429: `Response` had no `body`, so it failed at "HTTP 200".
@@ -807,6 +866,35 @@ export async function runFixtures() {
             url: "https://example.test/data",
             bodyBase64: Buffer.from('{"ok":true}').toString("base64"),
           };
+        },
+      },
+    },
+  );
+
+  const cookieSpecs = [];
+  const cookies = ["a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/", "b=2; Path=/"];
+  await run(
+    "an http.Agent subclass carries cookies between requests",
+    cookieAgentSource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__cookieAgent");
+      const setCookie = JSON.stringify(result?.setCookie);
+      const rawHeaders = JSON.stringify(result?.rawHeaders);
+      const urls = JSON.stringify(result?.urls);
+      const sent = cookieSpecs[1]?.headers;
+      check("http.Agent survives esbuild's namespace import", result?.isAgent === true, JSON.stringify(result));
+      check("splits a folded Set-Cookie without cutting its Expires date", setCookie === JSON.stringify(cookies), setCookie);
+      check("rawHeaders repeats the name per cookie", rawHeaders === JSON.stringify(cookies.flatMap((c) => ["set-cookie", c])), rawHeaders);
+      check("url.format builds the request URL from its parts", result?.urls?.[0] === "https://example.test/signin%3Fstep=1", urls);
+      check("the second request sends every cookie the first received", sent?.cookie === "a=1; b=2", JSON.stringify(sent));
+    },
+    {
+      stubs: {
+        "fetch.request": (args) => {
+          cookieSpecs.push(args[0]);
+          const headers = cookieSpecs.length === 1 ? { "set-cookie": cookies.join(", ") } : {};
+          return { status: 200, statusText: "OK", headers, url: args[0].url, bodyBase64: "" };
         },
       },
     },
