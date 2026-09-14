@@ -24,6 +24,7 @@ struct QuickActionTests {
         diffsFindWordLevelChanges()
         diffsStayBoundedOnLongText()
         settingsPersistAndRepairTheirRoute()
+        actionsOverrideTheirRoute()
         refusalsNameTheirOwnCause()
         customActionsCarryTheirOwnIdentity()
         customActionsKeepTheBoundary()
@@ -139,6 +140,56 @@ struct QuickActionTests {
         expect(
             withOpenCodeEffort.model == .openCode(model: "provider/model", effort: "max"),
             "Quick Actions persist their own OpenCode reasoning effort")
+    }
+
+    static func actionsOverrideTheirRoute() {
+        let suite = "QuickActionTests.overrides"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+
+        let connectionID = UUID()
+        let api = AIModelSelection.api(connection: connectionID, model: "m", effort: "low")
+        let custom = QuickAction.custom(CustomQuickAction(name: "Snark", instructions: "Bite."))
+        let store = QuickActionSettingsStore(defaults: defaults)
+        store.select(.appleIntelligence)
+        store.setModelOverride(.claude(model: "opus", effort: "high"), for: .summarize)
+        store.setModelOverride(api, for: custom)
+        store.setModelOverride(.codex(model: "gpt", effort: nil), for: .translate)
+
+        expect(
+            store.model(for: .summarize) == .claude(model: "opus", effort: "high"),
+            "an action with its own route uses it")
+        expect(store.model(for: .rewrite) == .appleIntelligence, "an action without one follows")
+        expect(store.model(for: custom) == api, "a custom action keeps a route of its own")
+        expect(store.modelOverride(for: .translate) == nil, "Translate never takes a model")
+
+        let reopened = QuickActionSettingsStore(defaults: defaults)
+        expect(
+            reopened.model(for: .summarize) == .claude(model: "opus", effort: "high")
+                && reopened.model(for: custom) == api,
+            "per-action routes and their efforts survive a relaunch")
+
+        reopened.repairModel(against: [], fallback: .codex(model: "gpt", effort: nil))
+        expect(
+            reopened.modelOverride(for: custom) == nil,
+            "a route through a removed connection is dropped, not rerouted to chat's model")
+        expect(reopened.model == .appleIntelligence, "and the shared route is left alone")
+
+        reopened.setModelOverride(.openCode(model: "old", effort: nil), for: .rewrite)
+        reopened.repairInstalledModel(
+            available: [.claude(model: "sonnet", effort: "medium")],
+            unavailableSources: [.openCode], fallback: .appleIntelligence)
+        expect(
+            reopened.modelOverride(for: .summarize) == .claude(model: "sonnet", effort: "medium"),
+            "a model removed from its catalog moves to that command's first model")
+        expect(
+            reopened.modelOverride(for: .rewrite) == nil,
+            "an unavailable command drops the route instead of borrowing the fallback")
+
+        reopened.setModelOverride(nil, for: .summarize)
+        expect(
+            defaults.data(forKey: AppSettingsKey.quickActionModelOverrides.rawValue) == nil,
+            "clearing the last route leaves nothing stored")
     }
 
     static func everyActionDescribesItself() {

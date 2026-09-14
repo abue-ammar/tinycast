@@ -125,6 +125,9 @@ enum SettingsBackupCoverage {
         AppSettingsKey.quickActionModel.rawValue:
             "Names an external AI destination for text taken from whatever app is frontmost; an "
             + "import must not choose one.",
+        AppSettingsKey.quickActionModelOverrides.rawValue:
+            "Sends one action's text to its own AI destination, some keyed by actions that exist only "
+            + "on the Mac that made them.",
         AppSettingsKey.quickActionPreviews.rawValue:
             "Says which actions may rewrite a document without showing the result first, which is a "
             + "decision each Mac makes about its own text.",

@@ -6,6 +6,8 @@ struct AIModelSelectionRows<ModelLabel: View, EffortLabel: View>: View {
     @Environment(InstalledAIManager.self) private var installedAI
 
     let selection: AIModelSelection?
+    /// Offers `nil` as a choice of its own, for a caller whose empty selection means another route.
+    var inheritedTitle: String?
     let select: (AIModelSelection?) -> Void
     @ViewBuilder let modelLabel: () -> ModelLabel
     @ViewBuilder let effortLabel: () -> EffortLabel
@@ -16,6 +18,10 @@ struct AIModelSelectionRows<ModelLabel: View, EffortLabel: View>: View {
                 .foregroundStyle(.secondary)
         } else {
             Picker(selection: modelBinding) {
+                if let inheritedTitle {
+                    Text(inheritedTitle).tag(AIModelSelection?.none)
+                    Divider()
+                }
                 ForEach(modelGroups) { group in
                     Section(group.title) {
                         ForEach(group.options) { option in

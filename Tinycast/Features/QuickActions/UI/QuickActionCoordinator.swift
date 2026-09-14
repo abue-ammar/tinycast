@@ -94,15 +94,19 @@ final class QuickActionCoordinator {
 
     // MARK: - The reader's own actions
 
-    @discardableResult
+    /// The route is stored only once the record is on disk, so a refused save leaves neither behind.
     func addCustomQuickAction(
-        _ draft: CustomQuickAction
-    ) throws(CustomQuickActionError) -> CustomQuickAction {
-        try customActions.add(draft)
+        _ draft: CustomQuickAction, model: AIModelSelection?
+    ) throws(CustomQuickActionError) {
+        let action = try customActions.add(draft)
+        store.setModelOverride(model, for: .custom(action))
     }
 
-    func updateCustomQuickAction(_ draft: CustomQuickAction) throws(CustomQuickActionError) {
+    func updateCustomQuickAction(
+        _ draft: CustomQuickAction, model: AIModelSelection?
+    ) throws(CustomQuickActionError) {
         try customActions.update(draft)
+        store.setModelOverride(model, for: .custom(draft))
     }
 
     func setPreviewsResult(_ previews: Bool, id: UUID) {
@@ -142,6 +146,7 @@ final class QuickActionCoordinator {
         let hotKeyAction = HotKeyAction.quickAction(id: action.id)
         if hotKeys.recordingAction == hotKeyAction { hotKeys.recordingAction = nil }
         hotKeys.setBinding(nil, for: hotKeyAction)
+        store.setModelOverride(nil, for: .custom(action))
         favorites.remove(keys: [action.entryID])
         visibility.removeItemKeys([action.entryID])
         aliases.removeKeys([action.entryID])
@@ -254,7 +259,7 @@ final class QuickActionCoordinator {
         if state.action.usesTranslationFramework {
             return try await TextTranslator.translate(state.original, to: state.targetLanguage)
         }
-        let provider = try core.quickActionProvider()
+        let provider = try core.quickActionProvider(for: state.action)
         return try await QuickActionRunner.run(
             state.action, selection: state.original, using: provider,
             instructionOverride: store.settings.instructionOverride(for: state.action),

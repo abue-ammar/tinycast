@@ -14,6 +14,10 @@ final class QuickActionSettingsStore {
     private(set) var model: AIModelSelection? {
         didSet { persistModel() }
     }
+    /// Keyed by `QuickAction.id`; an action without an entry follows `model`.
+    private(set) var modelOverrides: [String: AIModelSelection] {
+        didSet { persistModelOverrides() }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -27,12 +31,31 @@ final class QuickActionSettingsStore {
             defaults.dictionary(forKey: AppSettingsKey.quickActionInstructions.rawValue)
             as? [String: String] ?? [:]
         settings = loaded
-        model = Self.decodeModel(
-            defaults.data(forKey: AppSettingsKey.quickActionModel.rawValue))
+        model = Self.decode(
+            AIModelSelection.self,
+            from: defaults.data(forKey: AppSettingsKey.quickActionModel.rawValue))
+        modelOverrides =
+            Self.decode(
+                [String: AIModelSelection].self,
+                from: defaults.data(forKey: AppSettingsKey.quickActionModelOverrides.rawValue))
+            ?? [:]
     }
 
     func select(_ selection: AIModelSelection?) {
         model = selection
+    }
+
+    func model(for action: QuickAction) -> AIModelSelection? {
+        modelOverride(for: action) ?? model
+    }
+
+    func modelOverride(for action: QuickAction) -> AIModelSelection? {
+        modelOverrides[action.id]
+    }
+
+    func setModelOverride(_ selection: AIModelSelection?, for action: QuickAction) {
+        guard !action.usesTranslationFramework, modelOverrides[action.id] != selection else { return }
+        modelOverrides[action.id] = selection
     }
 
     /// Nothing chosen takes the route that needs no account, the way chat's own default resolves.
@@ -41,31 +64,55 @@ final class QuickActionSettingsStore {
         model = appleIntelligenceAvailable ? .appleIntelligence : fallback
     }
 
-    /// A connection the reader removed must not leave this pointing at a route that cannot answer.
+    /// A removed connection must not leave a route pointing where nothing can answer.
     func repairModel(against connections: [AIConnection], fallback: AIModelSelection?) {
-        guard case .api(let id, let name, _) = model,
-            !connections.contains(where: { $0.id == id && $0.models.contains(name) })
-        else { return }
-        model = fallback
+        if let model, !Self.reaches(model, through: connections) {
+            self.model = fallback
+        }
+        updateOverrides { Self.reaches($0, through: connections) ? $0 : nil }
     }
 
+    /// A dead override is dropped rather than rerouted, so its action follows `model` again.
     func repairInstalledModel(
         available: [AIModelSelection], unavailableSources: Set<AIModelSource>,
         fallback: AIModelSelection?
     ) {
-        guard let model, model.source.installedKind != nil else { return }
-        let sourceModels = available.filter { $0.source == model.source }
-        if sourceModels.contains(where: { $0.model == model.model }) { return }
-        if let replacement = sourceModels.first {
-            self.model = replacement
-            return
+        if let model {
+            let repaired = Self.repaired(
+                model, available: available, unavailableSources: unavailableSources,
+                fallback: fallback)
+            if repaired != model { self.model = repaired }
         }
-        guard unavailableSources.contains(model.source) else { return }
-        guard let fallback, !unavailableSources.contains(fallback.source), fallback != model else {
-            self.model = nil
-            return
+        updateOverrides {
+            Self.repaired(
+                $0, available: available, unavailableSources: unavailableSources, fallback: nil)
         }
-        self.model = fallback
+    }
+
+    private func updateOverrides(_ transform: (AIModelSelection) -> AIModelSelection?) {
+        let updated = modelOverrides.compactMapValues(transform)
+        if updated != modelOverrides { modelOverrides = updated }
+    }
+
+    private static func reaches(
+        _ selection: AIModelSelection, through connections: [AIConnection]
+    ) -> Bool {
+        guard case .api(let id, let name, _) = selection else { return true }
+        return connections.contains { $0.id == id && $0.models.contains(name) }
+    }
+
+    private static func repaired(
+        _ selection: AIModelSelection, available: [AIModelSelection],
+        unavailableSources: Set<AIModelSource>, fallback: AIModelSelection?
+    ) -> AIModelSelection? {
+        guard selection.source.installedKind != nil else { return selection }
+        let sourceModels = available.filter { $0.source == selection.source }
+        if sourceModels.contains(where: { $0.model == selection.model }) { return selection }
+        if let replacement = sourceModels.first { return replacement }
+        guard unavailableSources.contains(selection.source) else { return selection }
+        guard let fallback, !unavailableSources.contains(fallback.source), fallback != selection
+        else { return nil }
+        return fallback
     }
 
     private func persistSettings() {
@@ -78,15 +125,23 @@ final class QuickActionSettingsStore {
     }
 
     private func persistModel() {
-        guard let model, let data = try? JSONEncoder().encode(model) else {
-            defaults.removeObject(forKey: AppSettingsKey.quickActionModel.rawValue)
-            return
-        }
-        defaults.set(data, forKey: AppSettingsKey.quickActionModel.rawValue)
+        persist(model, forKey: .quickActionModel)
     }
 
-    private static func decodeModel(_ data: Data?) -> AIModelSelection? {
+    private func persistModelOverrides() {
+        persist(modelOverrides.isEmpty ? nil : modelOverrides, forKey: .quickActionModelOverrides)
+    }
+
+    private func persist(_ value: (some Encodable)?, forKey key: AppSettingsKey) {
+        guard let value, let data = try? JSONEncoder().encode(value) else {
+            defaults.removeObject(forKey: key.rawValue)
+            return
+        }
+        defaults.set(data, forKey: key.rawValue)
+    }
+
+    private static func decode<Value: Decodable>(_ type: Value.Type, from data: Data?) -> Value? {
         guard let data else { return nil }
-        return try? JSONDecoder().decode(AIModelSelection.self, from: data)
+        return try? JSONDecoder().decode(type, from: data)
     }
 }

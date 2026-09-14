@@ -13,6 +13,7 @@ struct CustomQuickActionEditorSheet: View {
     @State private var name: String
     @State private var iconSymbol: String?
     @State private var instructions: String
+    @State private var model: AIModelSelection?
     @State private var failure: String?
     @State private var showingIconPicker = false
 
@@ -28,11 +29,12 @@ struct CustomQuickActionEditorSheet: View {
     private static let placeholder =
         "Make the text more concise, keeping the writer's voice and meaning."
 
-    init(request: CustomQuickActionEditRequest) {
+    init(request: CustomQuickActionEditRequest, model: AIModelSelection?) {
         existing = request.action
         _name = State(initialValue: request.action?.name ?? "")
         _iconSymbol = State(initialValue: request.action?.iconSymbol)
         _instructions = State(initialValue: request.action?.instructions ?? "")
+        _model = State(initialValue: model)
     }
 
     var body: some View {
@@ -49,6 +51,8 @@ struct CustomQuickActionEditorSheet: View {
             }
 
             instructionsField
+
+            QuickActionModelPicker(selection: $model)
 
             if let failure {
                 Text(failure)
@@ -157,9 +161,9 @@ struct CustomQuickActionEditorSheet: View {
             createdAt: existing?.createdAt ?? Date())
         do {
             if existing == nil {
-                try core.quickActionCoordinator.addCustomQuickAction(draft)
+                try core.quickActionCoordinator.addCustomQuickAction(draft, model: model)
             } else {
-                try core.quickActionCoordinator.updateCustomQuickAction(draft)
+                try core.quickActionCoordinator.updateCustomQuickAction(draft, model: model)
             }
             dismiss()
         } catch {

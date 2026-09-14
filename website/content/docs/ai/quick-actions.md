@@ -85,6 +85,16 @@ Mac for nothing, and falls back to chat's model when Apple Intelligence is not a
 It offers the same models as [AI Chat](/docs/ai#choosing-a-model), including reasoning effort where
 the model supports it.
 
+### A model for one action
+
+Any action except Translate can use a model of its own. Open it with the pencil button and pick
+one under **Model**, with its own reasoning effort. A quick grammar fix can stay on a fast model while
+a demanding custom prompt uses a stronger one.
+
+**Same as Quick Actions** follows the shared model. An action with its own model shows it under its
+name. If you remove its connection or turn its provider off, the action goes back to the shared
+model.
+
 ## Translate
 
 Translate uses **Apple's own translator on your Mac**. It costs nothing and sends nothing to a
@@ -117,5 +127,5 @@ copied last.
 ## Backups
 
 **Nothing about Quick Actions travels in a [backup](/docs/reference/backup)**: not the switch, the
-model, the Replace or Preview choices, custom prompts, the language, or your custom actions. An
+models, the Replace or Preview choices, custom prompts, the language, or your custom actions. An
 import must never change what a shortcut does to your documents.

@@ -55,16 +55,21 @@ struct QuickActionsSettingsView: View {
         .sheet(item: $editingAction) { action in
             InstructionsEditorSheet(
                 action: action,
-                instructionOverride: store.settings.instructionOverride(for: action)
-            ) { instructionOverride in
+                instructionOverride: store.settings.instructionOverride(for: action),
+                modelOverride: store.modelOverride(for: .builtIn(action))
+            ) { instructionOverride, modelOverride in
                 store.settings.setInstructionOverride(instructionOverride, for: action)
+                store.setModelOverride(modelOverride, for: .builtIn(action))
             }
         }
         .sheet(item: $customEditing) { request in
-            CustomQuickActionEditorSheet(request: request)
+            CustomQuickActionEditorSheet(
+                request: request,
+                model: request.action.flatMap { store.modelOverride(for: .custom($0)) })
         }
         .onAppear {
             core.quickActionCoordinator.loadLanguages()
+            store.repairModel(against: aiSettings.connections, fallback: aiSettings.defaultModel)
             store.resolveModel(
                 appleIntelligenceAvailable: aiSettings.isAppleIntelligenceAvailable(),
                 fallback: aiSettings.defaultModel)
@@ -84,7 +89,7 @@ struct QuickActionsSettingsView: View {
         Section {
             ForEach(BuiltInQuickAction.allCases, content: builtInRow)
             ForEach(customActions.actions) { action in
-                SettingsRow(title: action.name, subtitle: nil) {
+                SettingsRow(title: action.name, subtitle: subtitle(for: .custom(action))) {
                     SymbolImage(name: action.symbol, size: Theme.Size.quickActionHeaderIcon)
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
@@ -117,7 +122,7 @@ struct QuickActionsSettingsView: View {
 
     private func builtInRow(_ action: BuiltInQuickAction) -> some View {
         let entry = CommandCatalog.entry(for: CommandID(action))
-        return SettingsRow(title: action.title, subtitle: subtitle(for: action)) {
+        return SettingsRow(title: action.title, subtitle: subtitle(for: .builtIn(action))) {
             Image(systemName: action.symbol)
                 .frame(width: Theme.Size.settingsRowIcon)
         } trailing: {
@@ -166,7 +171,7 @@ struct QuickActionsSettingsView: View {
                 select: store.select,
                 modelLabel: {
                     SettingsRowTitle(.quickActionsModel, "Model")
-                    Text("Used by every action except Translate.")
+                    Text("Used by every action without a model of its own, except Translate.")
                 },
                 effortLabel: {
                     SettingsRowTitle(.quickActionsModel, "Reasoning effort")
@@ -208,8 +213,18 @@ struct QuickActionsSettingsView: View {
         }
     }
 
-    private func subtitle(for action: BuiltInQuickAction) -> String? {
-        action.alwaysPreviews ? "Always shown in a panel" : nil
+    private func subtitle(for action: QuickAction) -> String? {
+        let details = [
+            action.alwaysPreviews ? "Always shown in a panel" : nil,
+            store.modelOverride(for: action).map(routeTitle)
+        ].compactMap(\.self)
+        return details.isEmpty ? nil : details.joined(separator: " · ")
+    }
+
+    private func routeTitle(_ selection: AIModelSelection) -> String {
+        let model = modelChoices.first { $0.matches(selection) }?.title ?? selection.model
+        guard let effort = selection.effort else { return model }
+        return "\(model) (\(ChatGPTSubscription.Effort(id: effort, detail: nil).title))"
     }
 
     private var enabledBinding: Binding<Bool> {
@@ -280,18 +295,21 @@ struct QuickActionsSettingsView: View {
     private struct InstructionsEditorSheet: View {
         @Environment(\.dismiss) private var dismiss
         @State private var instructions: String
+        @State private var model: AIModelSelection?
 
         let action: BuiltInQuickAction
         let builtIn: String
-        let onSave: (String?) -> Void
+        let onSave: (String?, AIModelSelection?) -> Void
 
         init(
             action: BuiltInQuickAction, instructionOverride: String?,
-            onSave: @escaping (String?) -> Void
+            modelOverride: AIModelSelection?,
+            onSave: @escaping (String?, AIModelSelection?) -> Void
         ) {
             self.action = action
             let builtIn = QuickActionPrompt.instructions(for: action)
             _instructions = State(initialValue: instructionOverride ?? builtIn)
+            _model = State(initialValue: modelOverride)
             self.builtIn = builtIn
             self.onSave = onSave
         }
@@ -318,6 +336,8 @@ struct QuickActionsSettingsView: View {
                             .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
                     )
 
+                QuickActionModelPicker(selection: $model)
+
                 HStack {
                     Button("Use Default") { instructions = builtIn }
                         .disabled(instructions == builtIn)
@@ -325,7 +345,7 @@ struct QuickActionsSettingsView: View {
                     Button("Cancel") { dismiss() }
                         .keyboardShortcut(.cancelAction)
                     Button("Save") {
-                        onSave(instructions == builtIn ? nil : instructions)
+                        onSave(instructions == builtIn ? nil : instructions, model)
                         dismiss()
                     }
                     .keyboardShortcut(.defaultAction)

@@ -43,12 +43,21 @@ provider protocol and the connections behind it.
 - **Quick Actions route themselves.** `quickActionModel` is a second routing decision, defaulting to
   Apple Intelligence and falling back to chat's model. A shortcut pressed all day should not bill an
   API every time, and that is not a choice chat's default can make on its behalf.
+- **An action may override that route, and only by choice.** `quickActionModelOverrides` is keyed by
+  `QuickAction.id`, so the built-in four and custom actions share one lookup,
+  `QuickActionSettingsStore.model(for:)`. An absent entry follows `quickActionModel`, so nothing
+  changes until the reader picks a model in the action's sheet. Translate never takes one.
+- **A dead override is dropped, never rerouted.** Repair walks every override beside the shared
+  route: a vanished catalog model moves to its command's first model, like the shared route, but a
+  removed connection or an unavailable command deletes the entry instead of borrowing chat's model.
+  The action then follows the route its pane names, not one the reader never chose for it.
 - **Installed providers are ordinary routes.** The model picker reads the same live Codex, Claude and
   OpenCode catalogs as AI Settings. Execution still goes through `AIProviderFactory`, so Quick Actions
   inherit the same installed login, tool restrictions and process cleanup without owning CLI logic.
 - **The model picker is the AI picker.** Both panes render `AIModelOption.groupedCatalog`, with the
   same provider sections, model labels and provider-supported reasoning levels. An installed-model
-  selection stores its effort in `quickActionModel`, independently of chat's effort.
+  selection stores its effort in `quickActionModel`, independently of chat's effort. The sheets use the
+  same `AIModelSelectionRows`, with **Same as Quick Actions** as the `nil` choice.
 - **The reader's own text gets permissive guardrails.** `AppCore.quickActionProvider()` asks for
   `SystemLanguageModel.Guardrails.permissiveContentTransformations`. The default filter is tuned for
   a model writing fresh prose and refuses to transform text somebody already wrote, which is the
@@ -60,13 +69,14 @@ provider protocol and the connections behind it.
 - **A custom prompt cannot drop that boundary.** An override on a shipped action may replace
   `boundary`, because the sheet shows the whole prompt. A custom action *is* the prompt, so `boundary`
   is prepended and no control removes it.
-- **Each model action owns its instructions.** The pencil on Fix Grammar, Rewrite and Summarize opens
-  a sheet prefilled with the exact built-in prompt. Saving replaces that prompt for only that action;
-  Use Default restores it. Translate has no editor because no model handles translation. The same
+- **Each model action owns its instructions and its route.** The pencil on Fix Grammar, Rewrite and
+  Summarize opens a sheet prefilled with the exact built-in prompt and the action's model. Saving
+  replaces both for only that action; Use Default restores the prompt. Translate has no editor because no model handles translation. The same
   pencil on a custom action opens its editor, which owns the name and glyph too.
-- **A custom action never travels in a backup.** Neither the record nor its shortcut, for the reason
-  `quickActionInstructions` already doesn't: an import must never change what a shortcut does to
-  somebody's documents. Its JSON sits outside `UserDefaults`, so no settings key can sweep it up.
+- **A custom action never travels in a backup.** Neither the record, its shortcut nor its route, for
+  the reason `quickActionInstructions` already doesn't: an import must never change what a shortcut
+  does to somebody's documents. Its JSON sits outside `UserDefaults`, so no settings key can sweep it
+  up, and `quickActionModelOverrides` is excluded like `quickActionModel`.
 
 ## The actions
 
@@ -122,7 +132,7 @@ install; one that exists but will not decode sets `isAvailable` false and makes 
 `QuicklinkStore`'s rule: authored data is reported on, never written over.
 
 **Deleting unwinds only once the record is gone.** Confirm, remove, *then* drop the binding, the
-favorite, the alias, the visibility key and the ranking. `WindowLayoutCoordinator`'s order: a failed
+route override, the favorite, the alias, the visibility key and the ranking. `WindowLayoutCoordinator`'s order: a failed
 delete must never leave a kept record stripped of its shortcut.
 
 Only Fix Grammar applies unseen: it changes what was wrong, where a rewrite changes the voice.
@@ -261,8 +271,13 @@ failure handler, so automatic expansion stays silent as before.
   `quickActionPanelBody`.
 - Replace Rewrite's instructions, confirm only Rewrite follows them after relaunch, then use the
   modal's default and confirm the shipped behaviour returns.
+- Give Summarize its own model and effort: the row names them, only Summarize uses them, and they
+  survive a relaunch. Turn that provider off in AI Settings and Summarize follows the shared model.
+- Save a custom action with its own model, delete it, and confirm no route is left in
+  `quickActionModelOverrides`.
 - Translate into a language that has not been downloaded: the panel offers the download, then
   translates.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.
-- Harnesses: `quick-action-test` (action metadata, prompt boundaries, preview choices, diffs) and
+- Harnesses: `quick-action-test` (action metadata, prompt boundaries, preview choices, routes and
+  their repair, diffs) and
   `text-diff-test` (exact chunks, Unicode, ties, token boundaries and fast paths).
