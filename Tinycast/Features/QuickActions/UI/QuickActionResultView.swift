@@ -133,6 +133,7 @@ struct QuickActionResultView: View {
             prose(Text(attributed(chunks)))
         } else if state.action == .summarize {
             MarkdownView(blocks: MarkdownBlock.parse(state.output))
+                .textSelection(.enabled)
         } else {
             prose(Text(state.output))
         }
