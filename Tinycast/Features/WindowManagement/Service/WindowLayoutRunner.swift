@@ -37,6 +37,7 @@ enum WindowLayoutRunner {
         var outcome = Outcome(skipped: plan.skipped)
         guard !plan.placements.isEmpty else { return outcome }
 
+        let startingApp = NSWorkspace.shared.frontmostApplication?.processIdentifier
         var bound: [UUID: WindowInventory.Element] = [:]
         placeExisting(plan, snapshot: snapshot, bound: &bound, outcome: &outcome)
 
@@ -46,27 +47,57 @@ enum WindowLayoutRunner {
             await placeOpened(pending, bound: &bound, outcome: &outcome)
         }
         // Last, so no app this run opened can activate over the one the layout names.
-        if !Task.isCancelled, let frontmost = plan.frontmostEntryID.flatMap({ bound[$0] }) {
+        if !Task.isCancelled, let frontmost = plan.frontmostEntryID.flatMap({ bound[$0] }),
+            !userSwitchedApps(since: startingApp, opening: pending)
+        {
             AXWindowAccess.focus(frontmost.window, in: frontmost.application, of: frontmost.app)
         }
         return outcome
     }
 
-    /// Every window a layout could name, described as entries against the display it sits on.
-    static func captureCurrentWindows() -> [WindowLayoutEntry] {
-        guard Permissions.ensureAccessibility() else { return [] }
+    /// A launch taking the front is expected; any other app there means the user moved on.
+    private static func userSwitchedApps(
+        since startingApp: pid_t?, opening placements: [WindowLayoutPlan.Placement]
+    ) -> Bool {
+        guard let current = NSWorkspace.shared.frontmostApplication,
+            current.processIdentifier != startingApp
+        else { return false }
+        return !placements.contains { $0.bundleID == current.bundleIdentifier }
+    }
+
+    /// Every window a layout could name, with the focused one marked to end a run frontmost.
+    static func captureCurrentWindows() -> (entries: [WindowLayoutEntry], frontmostEntryID: UUID?) {
+        guard Permissions.ensureAccessibility() else { return ([], nil) }
         let snapshot = WindowInventory.snapshot(positionableOnly: true)
         let screens = snapshot.screens
-        return snapshot.windows.compactMap { window in
+        let focusedHandle = focusedWindowHandle(in: snapshot)
+        var frontmostEntryID: UUID?
+        let entries = snapshot.windows.compactMap { window -> WindowLayoutEntry? in
             guard
                 let host = WindowPlacementEngine.screen(
                     containing: window.frame, in: screens.map(\.screen)),
                 let target = screens.first(where: { $0.screen.id == host.id })
             else { return nil }
-            return WindowLayoutGeometry.entry(
+            let entry = WindowLayoutGeometry.entry(
                 bundleID: window.bundleID, display: target.display, frame: window.frame,
                 on: target.screen)
+            if window.handle == focusedHandle { frontmostEntryID = entry.id }
+            return entry
         }
+        return (entries, frontmostEntryID)
+    }
+
+    /// Nil when Tinycast itself is frontmost, as it is when capturing from Settings.
+    private static func focusedWindowHandle(in snapshot: WindowInventory.Snapshot) -> Int? {
+        guard let app = NSWorkspace.shared.frontmostApplication,
+            let focused = AXWindowAccess.element(
+                AXWindowAccess.application(for: app.processIdentifier),
+                kAXFocusedWindowAttribute)
+        else { return nil }
+        return snapshot.elements.first { _, element in
+            element.app.processIdentifier == app.processIdentifier
+                && CFEqual(element.window, focused)
+        }?.key
     }
 
     // MARK: - Placing
@@ -150,7 +181,7 @@ enum WindowLayoutRunner {
             pending = pending.filter { placement in
                 guard let (application, app) = WindowInventory.application(for: placement.bundleID),
                     let window = WindowInventory.unclaimedWindows(
-                        of: application, excluding: bound.values.map(\.window)
+                        of: application, excluding: bound.values.lazy.map(\.window)
                     ).first
                 else { return true }
                 let restore = AXWindowAccess.suppressEnhancedUserInterface(on: application)

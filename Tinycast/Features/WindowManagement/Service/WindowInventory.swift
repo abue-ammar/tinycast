@@ -52,7 +52,7 @@ enum WindowInventory {
 
     /// The windows of one app that this run has not already written to.
     static func unclaimedWindows(
-        of application: AXUIElement, excluding claimed: [AXUIElement]
+        of application: AXUIElement, excluding claimed: some Collection<AXUIElement>
     ) -> [AXUIElement] {
         AXWindowAccess.windows(in: application).filter { window in
             AXUIElementSetMessagingTimeout(window, sweepTimeout)

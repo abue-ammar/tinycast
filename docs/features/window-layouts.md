@@ -114,8 +114,9 @@ leaves it off.
 **Focus comes last, once.** Every opened app activates itself on launch, so focusing any earlier
 lets a later launch take the front back; focusing each app in turn would flicker across displays
 and Spaces. The cost is that a layout waiting on a slow launch focuses only when that wait ends,
-up to the deadline below. A cancelled run focuses nothing. `AXWindowAccess.focus` is the same
-raise-and-activate sequence Switch Windows uses.
+up to the deadline below. A cancelled run focuses nothing, and neither does a run whose frontmost
+app, when the wait ends, is neither the one it started with nor one it opened — the user has moved
+on. `AXWindowAccess.focus` is the same raise-and-activate sequence Switch Windows uses.
 
 ### The launch wait
 
@@ -144,6 +145,9 @@ activation policy, since opening About flips Tinycast itself to `.regular`.
 
 Only Accessibility is needed: `AXPosition` and `AXSize` are AX attributes. Screen Recording gates
 window *titles*, which nothing here reads.
+
+The frontmost app's focused window, when it is one of the captured windows, is marked **Bring to
+front**. Capturing from Settings marks nothing, because Tinycast itself is frontmost then.
 
 Capture never saves silently — the draft opens in the editor so it can be seen, trimmed and named.
 

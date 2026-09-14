@@ -20,7 +20,8 @@ In **Settings → Window Management → Window Layouts**:
 Both are also launcher commands: **Create Window Layout** and **Create Layout from Current Windows**.
 
 A capture never saves on its own. It opens the editor so you can see it, remove windows you do not
-want, and give it a name.
+want, and give it a name. From the launcher, the window you were working in is marked **Bring to
+front**.
 
 ### The editor
 
@@ -51,6 +52,7 @@ Run a layout from the launcher, from its own global shortcut, or with the ▶ bu
 2. Apps that are not running are opened, and each window is placed once it appears. Tinycast waits
    up to 10 seconds per app.
 3. The window marked **Bring to front**, if there is one, is focused once everything else is done.
+   If you switched to another app while Tinycast waited, focus stays where you put it.
 
 A few rules make this predictable:
 
