@@ -5,6 +5,9 @@ labels: ["bug", "extension"]
 body:
   - type: markdown
     attributes:
+      value: <sub>⚠️ macOS 15 Sequoia is no longer maintained.</sub>
+  - type: markdown
+    attributes:
       value: |
         **Read this first.** Tinycast runs Raycast extensions in its own runtime — a different system,
         not Raycast. An extension that reaches for something only Raycast has cannot be made to work

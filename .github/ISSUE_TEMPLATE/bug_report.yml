@@ -3,6 +3,9 @@ description: Report a bug running Tinycast
 title: "[Bug]: "
 labels: ["bug"]
 body:
+  - type: markdown
+    attributes:
+      value: <sub>⚠️ macOS 15 Sequoia is no longer maintained.</sub>
   - type: checkboxes
     id: existing-search
     attributes:
