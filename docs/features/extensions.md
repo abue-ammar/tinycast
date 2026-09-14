@@ -6,7 +6,8 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 - [How it works](#how-it-works) · [The JS runtime](#the-js-runtime) ·
   [The Swift host](#the-swift-host) · [Rendering](#rendering)
 - [Turning it on](#turning-it-on) · [Installing extensions](#installing-extensions) ·
-  [Registries](#registries) · [Shortcuts](#shortcuts) · [Aliases](#aliases) · [What's supported](#whats-supported) ·
+  [Registries](#registries) · [Shortcuts](#shortcuts) · [Aliases](#aliases) · [Deeplinks](#deeplinks) ·
+  [What's supported](#whats-supported) ·
   [What isn't](#what-isnt-supported-yet) · [Working on the runtime](#working-on-the-runtime)
 
 ## Invariants
@@ -471,6 +472,18 @@ Settings › Extensions › the command › Alias is the writer; `AppIndex` alre
 `.userAlias`. The field sits beside the shortcut recorder on the command's title row, the same
 pairing Settings ▸ Commands uses. It dims when the command is hidden from launcher search — the
 global Show in launcher switch, or this extension's — because the ranker never sees the entry then.
+
+## Deeplinks
+
+`raycast://extensions/<owner>/<extension>/<command>` runs an installed command from outside the app —
+a browser link, another app, a Shortcut — and `tinycast://` mirrors it so our own links never depend
+on Raycast winning the scheme. Both accept Raycast's query parameters: `arguments` as URL-encoded
+JSON, `fallbackText`, and `launchType=background` to run headless without bringing the palette up.
+The owner is a hint: a scoped install matches by `owner/extension` first and falls back to the bare
+slug, so short links keep working. Anything else on a claimed scheme just reopens the palette, and
+an unknown command says so rather than failing silently. `ExtensionDeepLink` is where the parsing
+lives, covered by `Tests/ext-test.swift`; an extension's own `open("raycast://…")` rides the same
+parser through `ExtensionHostBridge` instead of launching Raycast.
 
 ## Background refresh
 

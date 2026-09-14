@@ -398,8 +398,9 @@ run slow ext-test          -parse-as-library \
                            Tinycast/Platform/Images/IconCache.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
-                           $E/Model/ExtensionBootConfig.swift \
-                           $E/Model/ExtensionLaunchType.swift \
+                            $E/Model/ExtensionBootConfig.swift \
+                            $E/Model/ExtensionDeepLink.swift \
+                            $E/Model/ExtensionLaunchType.swift \
                            $E/Model/ExtensionFormField.swift \
                            $E/Model/ExtensionGridLayout.swift \
                            $E/Model/ExtensionManifest.swift \

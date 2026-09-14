@@ -283,6 +283,20 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         return (owner, command)
     }
 
+    /// A deep link names owner/extension/command; the owner is a hint, the slug decides.
+    func resolve(_ link: ExtensionDeepLink) -> (InstalledExtension, ExtensionCommand)? {
+        let candidates = installed.filter { link.matches(manifestName: $0.manifest.name) }
+        guard
+            let owner = link.extensionCandidates.lazy.compactMap({ want in
+                candidates.first { $0.manifest.name.lowercased() == want.lowercased() }
+            }).first ?? candidates.first,
+            let command = owner.manifest.commands.first(where: {
+                $0.name.lowercased() == link.commandName.lowercased()
+            })
+        else { return nil }
+        return (owner, command)
+    }
+
     func run(_ entry: AppEntry, arguments: [String: String] = [:]) async {
         guard let (owner, command) = resolve(entry) else {
             state = .failed(LaunchError.unknownCommand(entry.id).localizedDescription)
@@ -292,7 +306,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     func run(
-        _ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:]
+        _ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:],
+        fallbackText: String? = nil, launchType: ExtensionLaunchType = .userInitiated
     ) async {
         await stop()
 
@@ -356,7 +371,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         sessionID = session
         let context = makeLaunchContext(
             owner: owner, command: command, arguments: arguments, supportPath: supportPath,
-            launchType: .userInitiated)
+            fallbackText: fallbackText, launchType: launchType)
 
         await runtime.start(
             session: session, code: code, file: bundle, mode: command.mode, context: context)
@@ -364,7 +379,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     private func makeLaunchContext(
         owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String],
-        supportPath: URL, launchType: ExtensionLaunchType
+        supportPath: URL, fallbackText: String? = nil, launchType: ExtensionLaunchType
     ) -> ExtensionLaunchContext {
         let schemas = owner.manifest.preferences + command.preferences
         return ExtensionLaunchContext(
@@ -378,7 +393,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 extension: owner.manifest.name, schemas: schemas),
             caches: storage.caches(extension: owner.manifest.name),
             arguments: command.completeArguments(arguments),
-            fallbackText: nil,
+            fallbackText: fallbackText,
             launchType: launchType,
             isDarkAppearance: NSApp.effectiveAppearance.isDark)
     }
@@ -840,12 +855,42 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     /// `launchCommand` from a running command: same extension unless it names another.
-    func launch(command name: String, extensionName: String?, arguments: [String: String]) throws {
+    func launch(
+        command name: String, extensionName: String?, arguments: [String: String],
+        fallbackText: String?, launchType: ExtensionLaunchType
+    ) throws {
         let owningName = extensionName ?? running?.extensionName
-        guard let owningName, let owner = extensionNamed(owningName),
-            let command = owner.command(named: name)
-        else { throw LaunchError.unknownCommand(name) }
-        Task { await run(owner, command: command, arguments: arguments) }
+        guard let owningName else { throw LaunchError.unknownCommand(name) }
+        // A deep link carries the store owner while installs key on the manifest name.
+        var candidates = [owningName]
+        if let slug = owningName.split(separator: "/").last.map(String.init),
+            slug != owningName
+        {
+            candidates.append(slug)
+        }
+        for candidate in candidates {
+            if let owner = extensionNamed(candidate), let command = owner.command(named: name) {
+                Task {
+                    await run(
+                        owner, command: command, arguments: arguments,
+                        fallbackText: fallbackText, launchType: launchType)
+                }
+                return
+            }
+        }
+        // A bare slug also matches a scoped install, and vice versa.
+        let slug = candidates.last ?? owningName
+        if let owner = installed.first(where: {
+            $0.manifest.name.split(separator: "/").last.map(String.init) == slug
+        }), let command = owner.command(named: name) {
+            Task {
+                await run(
+                    owner, command: command, arguments: arguments,
+                    fallbackText: fallbackText, launchType: launchType)
+            }
+            return
+        }
+        throw LaunchError.unknownCommand(name)
     }
 
     func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult

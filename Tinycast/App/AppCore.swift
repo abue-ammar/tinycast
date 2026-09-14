@@ -347,11 +347,25 @@ final class AppCore {
         switch ExtensionOAuthSession.handleCallbackURL(url) {
         case .delivered:
             paletteCoordinator.showPalette(mode: .extensionCommand, restoreAnyMode: true)
+            return
         case .expired:
             showMessage("Sign-in expired — run the command again", tone: .danger)
+            return
         case .ignored:
             break
         }
+        guard isDeepLinkScheme(url) else { return }
+        guard let link = ExtensionDeepLink.parse(url: url) else {
+            paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
+            return
+        }
+        extensionCoordinator.runDeepLink(link)
+    }
+
+    /// Anything else reopening the palette is what Raycast does with links it can't run.
+    private func isDeepLinkScheme(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased() else { return false }
+        return scheme == "raycast" || scheme == "tinycast" || scheme == "com.raycast"
     }
 
     /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.

@@ -28,7 +28,10 @@ protocol ExtensionHostContext: AnyObject {
     func showHUD(_ text: String)
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool
     func openWithPicker(path: String) async
-    func launch(command: String, extensionName: String?, arguments: [String: String]) throws
+    func launch(
+        command: String, extensionName: String?, arguments: [String: String],
+        fallbackText: String?, launchType: ExtensionLaunchType
+    ) throws
     func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult
     func getOAuthTokens(providerId: String) -> String?
     func setOAuthTokens(providerId: String, tokens: String)
@@ -375,9 +378,13 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             for (key, value) in options["arguments"]?.objectValue ?? [:] {
                 launchArguments[key] = value.stringValue
             }
+            let launchType: ExtensionLaunchType =
+                options["type"]?.stringValue == ExtensionLaunchType.background.rawValue
+                ? .background : .userInitiated
             try context?.launch(
                 command: name, extensionName: options["extensionName"]?.stringValue,
-                arguments: launchArguments)
+                arguments: launchArguments, fallbackText: options["fallbackText"]?.stringValue,
+                launchType: launchType)
             return nil
 
         case "updateCommandMetadata":
@@ -396,7 +403,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             URL(string: target).flatMap { $0.scheme == nil ? nil : $0 }
             ?? URL(fileURLWithPath: (target as NSString).expandingTildeInPath)
         // Extensions address Raycast by scheme; handing that to the workspace would launch Raycast.
-        if let scheme = url.scheme, scheme == "raycast" || scheme == "raycastinternal" {
+        if let scheme = url.scheme?.lowercased(),
+            scheme == "raycast" || scheme == "raycastinternal" || scheme == "tinycast"
+        {
             openRaycastURL(url)
             return
         }
@@ -419,13 +428,20 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     /// A command URL runs it when installed; every other Raycast URL just brings the palette back.
     private func openRaycastURL(_ url: URL) {
-        let path = url.pathComponents.filter { $0 != "/" }
-        if url.host == "extensions", path.count >= 3,
-            (try? context?.launch(command: path[2], extensionName: path[1], arguments: [:])) != nil
-        {
+        guard let link = ExtensionDeepLink.parse(url: url) else {
+            context?.reopenPalette()
             return
         }
-        context?.reopenPalette()
+        do {
+            try context?.launch(
+                command: link.commandName,
+                extensionName: link.ownerOrAuthor.map { "\($0)/\(link.extensionName)" }
+                    ?? link.extensionName,
+                arguments: link.arguments, fallbackText: link.fallbackText,
+                launchType: link.launchType)
+        } catch {
+            context?.reopenPalette()
+        }
     }
 
     private func applications(forPath path: String?) -> [[String: Any]] {

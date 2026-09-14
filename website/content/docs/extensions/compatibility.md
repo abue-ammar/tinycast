@@ -47,7 +47,9 @@ the palette closed. A `no-view` command with an `interval` can refresh on a sche
 [Background refresh](/docs/extensions/customising#background-refresh).
 
 **`raycast://` links** stay inside Tinycast. A link to an installed extension command runs that
-command, and anything else reopens the palette. Passing them on would launch Raycast itself.
+command — from another app or the browser as well as from inside an extension — with its `arguments`,
+`fallbackText` and `launchType` honored, and `tinycast://` works the same way. Anything else reopens
+the palette. Passing them on would launch Raycast itself.
 
 ## Not supported yet
 
