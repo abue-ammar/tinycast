@@ -161,10 +161,11 @@ loads asynchronously, so the coordinator holds it as observed state rather than 
 Names come from `minimalIdentifier` — the maximal form carries the script, and `es` would read
 "Spanish (Latin, Spain)" in a menu that should say "Spanish".
 
-A pair that is supported but not downloaded **opens the panel**, whatever the action's usual result.
-Fetching one needs SwiftUI's `translationTask`, and there is no other API for it — so the download
-has a surface to live on rather than a shortcut that silently does nothing, and text is never
-replaced once a download the reader never saw has finished.
+A pair that is supported but not downloaded **opens the panel**, whatever the action's usual result,
+so a shortcut never silently does nothing. **The download happens in System Settings.**
+`prepareTranslation` never showed its sheet over this non-activating panel, so the prompt says where
+to go — Language & Region → Translation Languages… — and its one button opens that pane and closes
+the panel. System Settings has no anchor for the sheet itself, so the last click stays the reader's.
 
 ## The panel
 
@@ -275,8 +276,8 @@ failure handler, so automatic expansion stays silent as before.
   survive a relaunch. Turn that provider off in AI Settings and Summarize follows the shared model.
 - Save a custom action with its own model, delete it, and confirm no route is left in
   `quickActionModelOverrides`.
-- Translate into a language that has not been downloaded: the panel offers the download, then
-  translates.
+- Translate into a language that has not been downloaded: the panel names the language, and its
+  button closes the panel and opens Language & Region.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.
 - Harnesses: `quick-action-test` (action metadata, prompt boundaries, preview choices, routes and
   their repair, diffs) and

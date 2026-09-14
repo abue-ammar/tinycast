@@ -34,7 +34,7 @@ enum TextTranslator {
         return Locale.Language(identifier: dominant.rawValue)
     }
 
-    /// Installed pairs only: fetching one needs SwiftUI's `translationTask`, which the panel owns.
+    /// Installed pairs only: a missing language is downloaded in System Settings, never from here.
     static func translate(_ text: String, to target: Locale.Language) async throws -> String {
         guard let source = sourceLanguage(of: text) else { throw Failure.undetectableSource }
         guard !source.isEquivalent(to: target) else { return text }

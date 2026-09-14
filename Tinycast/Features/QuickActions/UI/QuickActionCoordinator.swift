@@ -235,7 +235,7 @@ final class QuickActionCoordinator {
         } catch is CancellationError {
             return
         } catch let error as TextTranslator.Failure where error.needsDownload {
-            // Only SwiftUI's `translationTask` can fetch a pair, so this has to become a panel.
+            // A HUD cannot say where the download lives, so this has to become a panel.
             if !previewing { present(state, target: target) }
             state.requireLanguageDownload()
         } catch {
@@ -300,7 +300,6 @@ final class QuickActionCoordinator {
                 state.targetLanguage = language
                 self?.rerun(state, target: target)
             },
-            onDownloaded: { [weak self] in self?.rerun(state, target: target) },
             onReplace: { [weak self] text in
                 self?.deliver(text, to: target, action: state.action)
             })

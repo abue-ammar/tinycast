@@ -8,25 +8,23 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
     private var state: QuickActionPanelState?
     private var onReplace: ((String) -> Void)?
     private var onRetranslate: ((Locale.Language) -> Void)?
-    private var onDownloaded: (() -> Void)?
 
     /// Clear of the pointer, so the panel never opens under the hand that summoned it.
     private static let cursorOffset: CGFloat = 12
     private static let screenMargin: CGFloat = 8
+    private static let languageSettingsPane = "com.apple.Localization-Settings.extension"
 
     func present(
         _ state: QuickActionPanelState,
         metrics: InterfaceMetrics,
         languages: [Locale.Language],
         onRetranslate: @escaping (Locale.Language) -> Void,
-        onDownloaded: @escaping () -> Void,
         onReplace: @escaping (String) -> Void
     ) {
         dismiss()
         self.state = state
         self.onReplace = onReplace
         self.onRetranslate = onRetranslate
-        self.onDownloaded = onDownloaded
 
         let hosting = NSHostingView(
             rootView: QuickActionResultView(
@@ -36,7 +34,7 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
                 onCopy: { [weak self] in self?.copyOutput() },
                 onCancel: { [weak self] in self?.dismiss() },
                 onRetranslate: { [weak self] in self?.onRetranslate?($0) },
-                onDownloaded: { [weak self] in self?.onDownloaded?() },
+                onOpenLanguageSettings: { [weak self] in self?.openLanguageSettings() },
                 onHeight: { [weak self] in self?.resize(toHeight: $0) }
             ).environment(\.metrics, metrics))
         // The controller owns the frame; without this the top edge drifts as the reply grows.
@@ -70,7 +68,6 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
         state = nil
         onReplace = nil
         onRetranslate = nil
-        onDownloaded = nil
         closing.delegate = nil
         closing.onKey = nil
         closing.fadeOut(duration: Theme.Duration.exit)
@@ -79,6 +76,11 @@ final class QuickActionPanelController: NSObject, NSWindowDelegate {
     private func copyOutput() {
         guard let state else { return }
         Paster.copyPlainText(state.output)
+    }
+
+    private func openLanguageSettings() {
+        dismiss()
+        AppLauncher.openSettingsPane(bundleID: Self.languageSettingsPane)
     }
 
     private func replace(_ text: String) {

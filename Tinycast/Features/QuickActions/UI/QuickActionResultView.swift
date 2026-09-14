@@ -1,5 +1,4 @@
 import SwiftUI
-@preconcurrency import Translation
 
 struct QuickActionResultView: View {
 
@@ -10,13 +9,12 @@ struct QuickActionResultView: View {
     let onCopy: () -> Void
     let onCancel: () -> Void
     let onRetranslate: (Locale.Language) -> Void
-    let onDownloaded: () -> Void
+    let onOpenLanguageSettings: () -> Void
     let onHeight: (CGFloat) -> Void
 
     @State private var contentHeight: CGFloat = 0
     @State private var headerHeight: CGFloat = 0
     @State private var footerHeight: CGFloat = 0
-    @State private var download: TranslationSession.Configuration?
 
     /// Explicit overlays, not `safeAreaBar`: that lays its bars over the content instead of inset.
     var body: some View {
@@ -46,13 +44,6 @@ struct QuickActionResultView: View {
         .panelEntrance()
         // Reported, not measured: the frame above is ours, so reading it back would feed itself.
         .onChange(of: panelHeight, initial: true) { onHeight(panelHeight) }
-        .translationTask(download) { session in
-            try? await session.prepareTranslation()
-            await MainActor.run {
-                download = nil
-                onDownloaded()
-            }
-        }
     }
 
     private func measured(_ bar: some View, action: @escaping (CGFloat) -> Void) -> some View {
@@ -173,15 +164,19 @@ struct QuickActionResultView: View {
         }
     }
 
+    /// System Settings, not `prepareTranslation`: its sheet never appears over this panel.
     private var downloadPrompt: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.xl) {
-            Text("\(TextTranslator.displayName(of: state.targetLanguage)) hasn't been downloaded yet.")
-                .font(metrics.typography.rowTitle)
-                .foregroundStyle(Theme.Colors.textSecondary)
-            Button("Download") {
-                download = TranslationSession.Configuration(
-                    source: nil, target: state.targetLanguage)
+        let language = TextTranslator.displayName(of: state.targetLanguage)
+        return VStack(alignment: .leading, spacing: metrics.spacing.lg) {
+            VStack(alignment: .leading, spacing: metrics.spacing.xs) {
+                Text("\(language) hasn't been downloaded yet.")
+                    .font(metrics.typography.rowTitle)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                Text("Click **Translation Languages…** in Language & Region, then download it.")
+                    .font(metrics.typography.rowTrailing)
+                    .foregroundStyle(Theme.Colors.textTertiary)
             }
+            Button("Open Language & Region", action: onOpenLanguageSettings)
         }
     }
 
