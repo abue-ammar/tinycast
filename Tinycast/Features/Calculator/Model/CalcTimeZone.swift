@@ -177,15 +177,23 @@ enum CalcTimeZone {
             words = Array(words[0..<connector])
         }
 
-        guard let head = words.first else { return nil }
+        guard var head = words.first else { return nil }
+        var rest = Array(words.dropFirst())
+        if let meridiem = rest.first, meridiem == "am" || meridiem == "pm" {
+            guard !head.hasSuffix("am"), !head.hasSuffix("pm") else { return nil }
+            head += meridiem
+            rest.removeFirst()
+        }
         guard head == "time" || head == "now" || head == "clock" || parseClock(head) != nil else {
             return nil
         }
 
-        let rest = Array(words.dropFirst())
-        let zone = rest.isEmpty ? calendar.timeZone : (self.zone(named: rest) ?? calendar.timeZone)
+        if rest.first == "in" || rest.first == "at" {
+            rest.removeFirst()
+            guard !rest.isEmpty else { return nil }
+        }
+        guard let zone = rest.isEmpty ? calendar.timeZone : self.zone(named: rest) else { return nil }
         if head == "time" || head == "now" || head == "clock" {
-            guard rest.isEmpty || self.zone(named: rest) != nil else { return nil }
             guard let ahead else { return SourceMoment(date: now, zone: zone) }
             guard let shifted = calendar.date(byAdding: ahead.component, value: ahead.count, to: now)
             else { return nil }
