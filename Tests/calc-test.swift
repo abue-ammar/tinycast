@@ -997,6 +997,35 @@ struct CalcTests {
         expectDisplay("1 cup to ml", "236.5882365 mL")
         expectNil("5pm london in sf + 2 kg")
 
+        for components in [
+            DateComponents(year: 2026, month: 9, day: 15, hour: 12),
+            DateComponents(year: 2026, month: 9, day: 30, hour: 12),
+            DateComponents(year: 2026, month: 12, day: 31, hour: 12),
+            DateComponents(year: 2026, month: 3, day: 8, hour: 12),
+            DateComponents(year: 2026, month: 11, day: 1, hour: 12)
+        ] {
+            let now = clock.calendar.date(from: components)!
+            for home in ["UTC", "Asia/Shanghai", "America/Los_Angeles"] {
+                var calendar = clock.calendar
+                calendar.timeZone = TimeZone(identifier: home)!
+                for (query, expected) in [
+                    ("23:30 Pago Pago to Kiritimati", "12:30 AM (in 2 days)"),
+                    ("00:30 Kiritimati to Pago Pago", "11:30 PM (2 days ago)"),
+                    ("22:59 Pago Pago to Kiritimati", "11:59 PM (tomorrow)"),
+                    ("01:00 Kiritimati to Pago Pago", "12:00 AM (yesterday)"),
+                    ("12:00 Pago Pago to Pago Pago", "12:00 PM")
+                ] {
+                    expectDisplayAt(query, expected, now: now, calendar: calendar)
+                }
+            }
+        }
+        expectBadgesAt("23:30 Pago Pago to Kiritimati", source: "Pago Pago", target: "Kiritimati")
+        expectBadgesAt("00:30 Kiritimati to Pago Pago", source: "Kiritimati", target: "Pago Pago")
+        expectCopy("23:30 Pago Pago to Kiritimati", "12:30 AM")
+        expectCopy("00:30 Kiritimati to Pago Pago", "11:30 PM")
+        expectDisplayAt("23:30 Pago Pago to Kiritimati + 30 min", "1:00 AM (tomorrow)")
+        expectDisplayAt("00:30 Kiritimati to Pago Pago + 30 min", "12:00 AM (yesterday)")
+
         // `<weekday> in <n> weeks` answers that weekday inside the week it lands in
         expectDisplayAt("monday in 3 weeks", "10 August")
         expectDisplayAt("monday in 1 week", "27 July")
@@ -1288,10 +1317,12 @@ struct CalcTests {
 
     // MARK: - Helpers
 
-    static func expectDisplayAt(_ query: String, _ expected: String, calendar: Calendar? = nil) {
+    static func expectDisplayAt(
+        _ query: String, _ expected: String, now: Date = clock.now, calendar: Calendar? = nil
+    ) {
         guard
             case .value(let display, _)? = CalcEngine.evaluate(
-                query, now: clock.now, calendar: calendar ?? clock.calendar)?.payload
+                query, now: now, calendar: calendar ?? clock.calendar)?.payload
         else {
             fail(query, expected: expected, got: "nil / error")
             return

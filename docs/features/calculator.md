@@ -282,8 +282,9 @@ ordinary app search never reaches the zone table at all.
 The source is the Mac's own zone unless the query names one, which is what makes `5pm london in sf`
 work without either side being local. That zone comes from the **injected calendar**, so `Model/`
 performs no environment read and `calc-test` pins UTC exactly as it pins the clock. A result that
-lands on another date is suffixed `(tomorrow)` / `(yesterday)` rather than silently reading as the
-same day — the copyable text stays the bare time.
+lands on another date is suffixed `(tomorrow)` / `(yesterday)`, or `(in 2 days)` / `(2 days ago)`
+for a two-date jump across the date line. The difference compares the source and target calendar
+dates; the copyable text stays the bare time.
 
 A trailing `+ 2h` / `- 30 min` shifts the answer before it is converted, so `5pm ldn in sf + 2h`
 stays one query rather than needing two. Only sub-day units qualify, since a zone answer is a clock

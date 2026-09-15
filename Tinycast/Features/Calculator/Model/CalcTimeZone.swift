@@ -54,13 +54,8 @@ enum CalcTimeZone {
             source = SourceMoment(date: shifted, zone: source.zone)
         }
 
-        var display = calendar
-        display.timeZone = target
-        let sameDay =
-            calendar.dateComponents(in: source.zone, from: source.date).day
-            == display.dateComponents(in: target, from: source.date).day
+        guard let dayNote = dayOffsetNote(source, target: target, calendar: calendar) else { return nil }
         let time = clockString(source.date, zone: target, calendar: calendar)
-        let dayNote = sameDay ? "" : " (\(dayOffsetWord(source, target: target, calendar: calendar)))"
 
         return CalcResult(
             expression: clockString(source.date, zone: source.zone, calendar: calendar),
@@ -408,15 +403,27 @@ enum CalcTimeZone {
         CalcDateFormatters.string(from: date, calendar: calendar, zone: zone, pattern: "h:mm a")
     }
 
-    private static func dayOffsetWord(
+    private static func dayOffsetNote(
         _ source: SourceMoment, target: TimeZone, calendar: Calendar
-    ) -> String {
+    ) -> String? {
         var here = calendar
         here.timeZone = source.zone
         var there = calendar
         there.timeZone = target
-        let from = here.startOfDay(for: source.date)
-        let to = there.startOfDay(for: source.date)
-        return to < from ? "yesterday" : "tomorrow"
+        // Compare civil dates in one zone so offsets and DST cannot shorten the day count.
+        var dates = calendar
+        dates.timeZone = .gmt
+        guard
+            let from = dates.date(from: here.dateComponents([.era, .year, .month, .day], from: source.date)),
+            let to = dates.date(from: there.dateComponents([.era, .year, .month, .day], from: source.date)),
+            let days = dates.dateComponents([.day], from: from, to: to).day
+        else { return nil }
+        switch days {
+        case 0: return ""
+        case 1: return " (tomorrow)"
+        case -1: return " (yesterday)"
+        case ..<0: return " (\(-days) days ago)"
+        default: return " (in \(days) days)"
+        }
     }
 }
