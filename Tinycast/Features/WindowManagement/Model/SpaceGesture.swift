@@ -12,6 +12,10 @@ enum SpaceDirection: Sendable {
         default: return nil
         }
     }
+
+    var reversed: SpaceDirection {
+        self == .next ? .previous : .next
+    }
 }
 
 /// The synthetic Dock swipe macOS switches Spaces with, as data rather than events.

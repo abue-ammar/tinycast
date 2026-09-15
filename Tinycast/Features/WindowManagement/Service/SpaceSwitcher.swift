@@ -19,7 +19,14 @@ final class SpaceSwitcher {
         }
     }
 
+    /// The key is absent until the user first changes it, and macOS defaults it to on.
+    private nonisolated static var naturalScrolling: Bool {
+        UserDefaults.standard.object(forKey: "com.apple.swipescrolldirection") as? Bool ?? true
+    }
+
     private nonisolated static func post(_ direction: SpaceDirection) async {
+        // macOS 27 applies Natural Scrolling to a synthetic swipe, so the sign is undone here.
+        let direction = augmentsEvents && naturalScrolling ? direction.reversed : direction
         for phase in SpaceGesture.Phase.allCases {
             guard let event = event(phase: phase, direction: direction) else { return }
             event.post(tap: .cgSessionEventTap)

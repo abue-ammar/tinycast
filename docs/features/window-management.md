@@ -217,7 +217,9 @@ framework linkage and no SIP change — only public `CGEvent` calls carrying und
 
 `SpaceSwitcher` posts three phases — began, changed, ended — to `.cgSessionEventTap`. A two-phase
 gesture is ignored. Fields 55 (`DockControl`), 110 (dock-swipe HID type), 132 (phase), 123 (horizontal
-motion) and 124 (progress) are common to both encodings; **positive is always "next"**. Progress is
+motion) and 124 (progress) are common to both encodings; **positive is "next"**, except that macOS 27
+applies Natural Scrolling to the synthetic swipe, so `SpaceSwitcher` reverses the direction while
+`com.apple.swipescrolldirection` is on (its default when the key is absent). Progress is
 deliberately the smallest representable nudge: a real distance makes the WindowServer draw the slide.
 
 **macOS 27 changed the contract.** Through macOS 26 the public fields are enough, and velocity (129 and
