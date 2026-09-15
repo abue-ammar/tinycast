@@ -1,0 +1,103 @@
+name: Sync Upstream
+
+# Fork-only: weekly, pull the latest stable upstream release into main (keeping the local
+# fixes on top) and trigger release.yml so the installed app's updater sees a new version.
+# The app's ReleaseFeed points at this fork, so "Update Now" installs what this builds.
+#
+# Merges keep the local RaycastRuntime.generated.js (.gitattributes merge=ours) and the file
+# is regenerated from merged sources below. A conflict in source files fails the run —
+# resolve locally per FORK.md's "Updates" section and re-run this workflow.
+
+on:
+  schedule:
+    - cron: "0 14 * * 1" # Mondays 14:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find latest upstream stable release
+        id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="$(gh api repos/abue-ammar/tinycast/releases/latest --jq .tag_name)"
+          # The tag comes from a repo we don't control; accept only vX.Y.Z before it
+          # touches git commands or the release trigger.
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Unexpected upstream tag format: $TAG"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream stable: $TAG"
+
+      - name: Skip if the fork already released this version
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.upstream.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Fork already has $TAG — nothing to do."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Below the gate on purpose: most weekly runs find nothing new, and the full-history
+      # clone (needed for the merge base with upstream) is the expensive step.
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.proceed == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Merge the upstream release tag
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          TAG: ${{ steps.upstream.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Activates .gitattributes' merge=ours for the generated runtime; regenerated below.
+          git config merge.ours.driver true
+          git remote add upstream https://github.com/abue-ammar/tinycast.git
+          git fetch upstream tag "$TAG" --no-tags
+          git merge --no-edit "$TAG"
+
+      - name: Set up Node
+        if: steps.gate.outputs.proceed == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Regenerate the runtime from merged sources
+        if: steps.gate.outputs.proceed == 'true'
+        run: |
+          cd Scripts/raycast-runtime
+          npm install -g pnpm
+          pnpm install
+          node build.mjs
+          cd ../..
+          if ! git diff --quiet Tinycast/Resources/RaycastRuntime.generated.js; then
+            git add Tinycast/Resources/RaycastRuntime.generated.js
+            git commit -m "Regenerate runtime after upstream merge"
+          fi
+
+      - name: Push and trigger the release build
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.upstream.outputs.version }}
+        run: |
+          git push origin HEAD:main
+          gh workflow run release.yml \
+            --repo "${{ github.repository }}" \
+            -f channel=stable \
+            -f version="$VERSION"
+          echo "Triggered release $VERSION — the app will offer it once the build finishes."

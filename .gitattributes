@@ -1,0 +1,4 @@
+# Generated from Scripts/raycast-runtime/src — never hand-merged: keep ours on merge, then
+# regenerate with `node Scripts/raycast-runtime/build.mjs`. The driver must be defined for the
+# attribute to take effect: `git config merge.ours.driver true` (sync-upstream.yml sets it in CI).
+Tinycast/Resources/RaycastRuntime.generated.js merge=ours
