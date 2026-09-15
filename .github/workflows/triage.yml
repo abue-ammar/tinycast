@@ -5,7 +5,7 @@ name: Triage
 # only, so there's no untrusted-code-execution risk from using the _target event.
 on:
   issues:
-    types: [opened]
+    types: [opened, labeled]
   pull_request_target:
     types: [opened, reopened, edited]
 
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Comment on issue
-        if: github.event_name == 'issues'
+        if: github.event_name == 'issues' && github.event.action == 'opened'
         uses: actions/github-script@v8
         with:
           script: |
@@ -96,7 +96,8 @@ jobs:
               "",
               "1. Open an issue (or find the existing one) describing the change.",
               "2. Wait for it to be marked `approved`.",
-              "3. Put `Closes #<number>` in this PR's description and reopen it.",
+              "3. Put `Closes #<number>` in this PR's description. It reopens on its own once the",
+              "   issue is approved, or reopen it yourself if the issue already is.",
               "",
               "Docs-only changes (`*.md`, `docs/`, `website/`) skip this check. Nothing personal — this is",
               "automated.",
@@ -115,6 +116,70 @@ jobs:
               state_reason: "not_planned"
             });
             core.setOutput("blocked", "true");
+
+      - name: Reopen gated pull requests
+        if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'approved'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue.number;
+            const repo = context.repo.owner + "/" + context.repo.repo;
+            const { repository } = await github.graphql(`
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $number) {
+                    timelineItems(itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT], first: 100) {
+                      nodes {
+                        ... on CrossReferencedEvent { source { ...pr } }
+                        ... on ConnectedEvent { subject { ...pr } }
+                      }
+                    }
+                  }
+                }
+              }
+              fragment pr on PullRequest {
+                number
+                state
+                repository { nameWithOwner }
+                closingIssuesReferences(first: 10) { nodes { number } }
+                timelineItems(itemTypes: [CLOSED_EVENT], last: 1) {
+                  nodes { ... on ClosedEvent { actor { login } } }
+                }
+              }
+            `, { owner: context.repo.owner, repo: context.repo.repo, number: issue });
+
+            const prs = new Map();
+            for (const node of repository.issue.timelineItems.nodes) {
+              const pr = node.source ?? node.subject;
+              if (pr?.number) prs.set(pr.number, pr);
+            }
+            // Only the gate's own closures: a maintainer's later close is the last word.
+            const gated = [...prs.values()].filter((pr) =>
+              pr.state === "CLOSED" &&
+              pr.repository.nameWithOwner === repo &&
+              pr.closingIssuesReferences.nodes.some((i) => i.number === issue) &&
+              pr.timelineItems.nodes[0]?.actor?.login === "github-actions"
+            );
+
+            for (const pr of gated) {
+              try {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  state: "open"
+                });
+              } catch (error) {
+                core.warning(`Could not reopen #${pr.number}: ${error.message}`);
+                continue;
+              }
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: "Reopened — #" + issue + " is now `approved`. This is a solo project, so review can take a while."
+              });
+            }
 
       - name: Comment on pull request
         if: github.event_name == 'pull_request_target' && github.event.action == 'opened' && steps.gate.outputs.blocked != 'true'
