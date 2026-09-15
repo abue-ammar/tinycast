@@ -11,6 +11,11 @@ enum Paster {
     /// Shorter: no activation to wait on, only the pasteboard write reaching the target's process.
     private static let directPostDelay: TimeInterval = 0.05
 
+    /// Longer: the palette was just hidden without focus restore, so key focus is still in
+    /// flight back to the target when `activate()` returns; `activationDelay` loses that race.
+    /// Empirical, from the extension file-paste fix.
+    private static let paletteSettleDelay: TimeInterval = 0.35
+
     /// Write the item and paste it into `previousApp`, activating it so ⌘V lands there.
     @MainActor @discardableResult
     static func paste(
@@ -45,6 +50,16 @@ enum Paster {
         writeString(text)
         previousApp?.activate()
         DispatchQueue.main.asyncAfter(deadline: .now() + activationDelay) {
+            postCommandV()
+        }
+    }
+
+    /// Paste whatever is already on the pasteboard into `previousApp`, right after the palette
+    /// was hidden without focus restore — the caller wrote the pasteboard itself.
+    @MainActor
+    static func pasteCurrentContents(into previousApp: NSRunningApplication?) {
+        previousApp?.activate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + paletteSettleDelay) {
             postCommandV()
         }
     }

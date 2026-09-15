@@ -169,7 +169,12 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             // A file goes on the pasteboard as a file, so it pastes as the picture it is.
             if let path = content["file"]?.stringValue, !path.isEmpty {
                 writeFileToPasteboard(path)
-                if method == "paste" { Paster.postCommandV() }
+                if method == "paste" {
+                    // The palette is the key window, so a ⌘V posted now would land on it.
+                    // Hide it first, then paste once key focus is back in the user's app.
+                    context?.closeMainWindow(clearRootSearch: false)
+                    Paster.pasteCurrentContents(into: context?.pasteTarget)
+                }
                 return nil
             }
             guard let text = clipboardText(from: content) else { return nil }
