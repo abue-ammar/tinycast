@@ -168,8 +168,16 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             let content = arguments.first?.objectValue ?? [:]
             // A file goes on the pasteboard as a file, so it pastes as the picture it is.
             if let path = content["file"]?.stringValue, !path.isEmpty {
+                let target = context?.pasteTarget
+                if method == "paste" { context?.closeMainWindow(clearRootSearch: false) }
                 writeFileToPasteboard(path)
-                if method == "paste" { Paster.postCommandV() }
+                guard method == "paste" else { return nil }
+                target?.activate()
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
+                    Paster.postCommandV()
+                }
                 return nil
             }
             guard let text = clipboardText(from: content) else { return nil }
@@ -198,7 +206,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         }
     }
 
-    /// The file and its picture both: Finder takes the URL, a chat box takes the image data.
+    /// The file, its picture and its path: receivers choose the representation they support.
     private func writeFileToPasteboard(_ path: String) {
         let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
         let pasteboard = NSPasteboard.general
@@ -206,6 +214,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         var items: [NSPasteboardWriting] = [url as NSURL]
         if let image = NSImage(contentsOf: url) { items.append(image) }
         pasteboard.writeObjects(items)
+        pasteboard.setString(url.path, forType: .string)
     }
 
     private func clipboardText(from content: [String: RenderValue]) -> String? {
