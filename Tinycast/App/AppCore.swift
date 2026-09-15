@@ -666,4 +666,11 @@ final class AppCore {
     func createEvent() async -> EventDraft? {
         await dialogs.createEvent()
     }
+
+    /// The snippet argument prompt, for the same reason.
+    func fillSnippetArguments(
+        snippetName: String, arguments: [SnippetTemplateEngine.MissingArgument]
+    ) async -> [String: String]? {
+        await dialogs.fillSnippetArguments(snippetName: snippetName, arguments: arguments)
+    }
 }

@@ -204,8 +204,6 @@ enum Theme {
         static let editorSheetWidth: CGFloat = 480
         /// The multi-line box inside those modals; it scrolls rather than grows the sheet.
         static let editorTextHeight: CGFloat = 120
-        /// The argument prompt's field column, kept under the alert's natural width.
-        static let argumentPromptWidth: CGFloat = 220
         /// The confirmation HUD's width ceiling, and its distance above the screen bottom.
         static let hudMaxWidth: CGFloat = 420
         static let hudEdgeOffset: CGFloat = 48

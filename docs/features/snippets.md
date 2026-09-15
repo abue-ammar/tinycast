@@ -198,7 +198,7 @@ inactivity. It is capped at 256 characters. Keywords are matched case-insensitiv
 duplicates resolve by file identity. Tinycast-tagged synthetic events are ignored.
 
 A match is delivered on a later main-actor turn, never inside the tap callback, so the triggering
-keystroke reaches the target before a modal argument prompt can take focus. The target is still
+keystroke reaches the target before the argument dialog can take focus. The target is still
 sampled with the keystroke. Further real input or `stop()` cancels a match that has not run yet.
 
 Immediately before deleting a matched keyword and before inserting its expansion, automatic delivery

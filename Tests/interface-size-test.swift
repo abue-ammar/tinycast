@@ -115,7 +115,6 @@ struct InterfaceSizeTests {
             "size.clipboardPreviewPixel")
         expect(m.size.emojiCell, Theme.Size.emojiCell, "size.emojiCell")
         expect(m.size.emojiGridInset, Theme.Size.emojiGridInset, "size.emojiGridInset")
-        expect(m.size.argumentPromptWidth, Theme.Size.argumentPromptWidth, "size.argumentPromptWidth")
         expect(m.size.markdownListMarker, Theme.Size.markdownListMarker, "size.markdownListMarker")
         expect(m.size.markdownQuoteBar, Theme.Size.markdownQuoteBar, "size.markdownQuoteBar")
         expect(m.size.chatMessageAction, Theme.Size.chatMessageAction, "size.chatMessageAction")
@@ -283,7 +282,6 @@ struct InterfaceSizeTests {
             ("size.clipboardMediaHeight", m.size.clipboardMediaHeight),
             ("size.emojiGridInset", m.size.emojiGridInset),
             ("size.emojiCell", m.size.emojiCell),
-            ("size.argumentPromptWidth", m.size.argumentPromptWidth),
             ("size.markdownListMarker", m.size.markdownListMarker),
             ("size.markdownQuoteBar", m.size.markdownQuoteBar),
             ("size.chatMessageAction", m.size.chatMessageAction),
