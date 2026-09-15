@@ -79,6 +79,8 @@ enum CalcUnitCatalog {
         nmi|Nautical Miles|1852.0|nmi,nauticalmile,nauticalmiles
         pixels
         px|Pixels|1.0|px,pixel,pixels
+        rem|REM|16.0|rem,rems
+        em|EM|16.0|em,ems
         pixelArea
         px²|Square Pixels|1.0|px2
         pixelDensity

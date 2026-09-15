@@ -151,6 +151,7 @@ enum CalcUnits {
         "V": ("mv", false), "mV": ("v", false), "kV": ("v", false), "MV": ("kv", false),
         "Ω": ("kohm", false), "mΩ": ("ohm", false), "kΩ": ("ohm", false), "MΩ": ("kohm", false),
         "As": ("ah", false), "Ah": ("mah", false), "mAh": ("ah", false), "MAh": ("ah", false),
+        "px": ("rem", false), "rem": ("px", false), "em": ("px", false),
         "ppi": ("px/cm", false), "px/cm": ("ppi", false),
         "px/mm": ("ppi", false), "px/m": ("ppi", false)
     ]

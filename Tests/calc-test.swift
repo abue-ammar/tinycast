@@ -62,7 +62,7 @@ struct CalcTests {
         expectDisplay("2.5e8 / 2", "125,000,000")
         expectDisplay("1E6 + 1", "1,000,001")  // uppercase E
         expectDisplay("1e6", "1,000,000")  // a lone shorthand literal cards like "10k"
-        expectNil("10em")  // partial "e" isn't an exponent, so the ident scanner still gets it
+        expectDisplay("10em", "160 px")  // partial "e" isn't an exponent, so `em` stays a unit
         expectDisplay("1e3k + 1", "1,000,001")  // exponent then compact suffix, both applied
 
         // Exact up to 2^53, past the old 1e15 cutoff — truncating these lost real digits on copy
@@ -510,6 +510,23 @@ struct CalcTests {
         expectError("10px + 1in", "Cannot add Pixels and Length.")
         expectNil("3000px / 0ppi")
         expectNil("pixels")
+        expectDisplay("16px to rem", "1 rem")
+        expectDisplay("1.5rem to px", "24 px")
+        expectDisplay("rem to px", "16 px")
+        expectDisplay("rem px", "16 px")
+        expectDisplay("24px", "1.5 rem")
+        expectBadges("24px", source: "Pixels", target: "REM")
+        expectDisplay("2rem", "32 px")
+        expectDisplay("2em", "32 px")
+        expectDisplay("0.875 rems", "14 px")
+        expectDisplay("1em to rem", "1 rem")
+        expectDisplay("1rem + 8px", "24 px")
+        expectDisplay("8px + 1rem", "1.5 rem")
+        expectDisplay("2rem * 3", "6 rem")
+        expectDisplay("32px / 1rem", "2")
+        expectDisplay("48rem / 96ppi to in", "8 in")
+        expectError("1rem to cm", "Cannot convert Pixels to Length.")
+        expectNil("rem")
         expectDisplay("20m2 / 4m", "5 m")
         expectDisplay("sqrt(25m2)", "5 m")
         expectDisplay("cbrt(-8m3)", "-2 m")

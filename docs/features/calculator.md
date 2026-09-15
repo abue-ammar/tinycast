@@ -71,10 +71,9 @@ When a trailing operator keeps a conversion visible, its input is reconstructed 
 display rounding never feeds back into evaluation.
 
 `UnitDef` is an immutable, Sendable reference shared by its aliases and parsed values. The catalog
-stores 148 base definitions as compact text records rather than repeated construction code, then adds
-SI and transfer-rate prefixes once on first use. `CalcUnitCatalog` owns this data;
-`CalcUnits` owns conversion policy. Every one of the 675 aliases, labels, dimensions, scale factors
-and offsets was compared bit-for-bit with the previous advanced catalog.
+stores 150 base definitions as compact text records rather than repeated construction code, then adds
+SI and transfer-rate prefixes once on first use, for 679 aliases. `CalcUnitCatalog` owns this data;
+`CalcUnits` owns conversion policy.
 
 Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a duration,
 not a scalar subsequently labeled milliseconds. Simple conversions still own their source badges.
@@ -238,7 +237,12 @@ An explicit density supplies it: `3000px / 300ppi to inches` → `10 in`,
 Density defaults to `ppi` (also `px/in`); `px/cm`, `px/mm` and `px/m` are conversion targets.
 Square pixels (`px²` / `px2`) let the ordinary powers and roots calculate a display's diagonal:
 `sqrt((3840px)^2 + (2160px)^2) / 27in` → `163.1783089 ppi`.
-These are image pixels, not CSS's fixed reference pixels or printer dots.
+These are image pixels, not printer dots.
+
+`rem` and `em` are pixel units fixed at the browser's default 16px root font size, so `24px`
+auto-converts to `1.5 rem`, `2em` to `32 px`, and `1rem + 8px` is `24 px`. The base is not a
+setting: a calculator has no stylesheet, so an `em` is always a root em. `pt` stays pints rather
+than typographic points, since volume claimed it first.
 
 `to timespan` / `to duration` formats any evaluated time quantity, including
 `(1hr + 30min) to timespan` and `100km / 40km/h to duration`. It uses the typed parser directly.

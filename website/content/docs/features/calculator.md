@@ -123,6 +123,17 @@ Use `fl oz` for fluid ounces; plain `oz` is weight. UK measures are `ukgal`, `uk
 Pixels have no fixed size, so give a density to convert to inches or centimeters. The last example
 works out a 27-inch 4K display's density from its diagonal.
 
+### REM and EM
+
+| You type      | You get   |
+| ------------- | --------- |
+| `24px`        | `1.5 rem` |
+| `2rem`        | `32 px`   |
+| `16px to rem` | `1 rem`   |
+| `1rem + 8px`  | `24 px`   |
+
+`rem` and `em` use the browser's default 16px root font size. `pt` means pints, not points.
+
 ## Data and transfer rates
 
 `MB/s` is megabytes per second and `Mbps` is megabits per second. `100Mbps to MB/s` is `12.5 MB/s`.
