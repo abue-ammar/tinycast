@@ -41,7 +41,9 @@ enum CalcTimeZone {
         }
 
         let leading = Array(words[0..<connector])
-        guard var source = sourceMoment(leading, now: now, calendar: calendar) else { return nil }
+        guard var source = sourceMoment(
+            leading, allowZoneConnector: ahead == nil, now: now, calendar: calendar)
+        else { return nil }
         if let ahead {
             guard let shifted = calendar.date(byAdding: ahead.component, value: ahead.count, to: source.date)
             else { return nil }
@@ -158,7 +160,7 @@ enum CalcTimeZone {
     }
 
     private static func sourceMoment(
-        _ words: [String], now: Date, calendar: Calendar
+        _ words: [String], allowZoneConnector: Bool, now: Date, calendar: Calendar
     ) -> SourceMoment? {
         var words = words.filter { !["what", "whats", "the", "is", "it", "current"].contains($0) }
 
@@ -172,15 +174,22 @@ enum CalcTimeZone {
             words = Array(words[0..<connector])
         }
 
-        guard let head = words.first else { return nil }
+        guard var head = words.first else { return nil }
+        var rest = Array(words.dropFirst())
+        if rest.first == "am" || rest.first == "pm" {
+            guard !head.hasSuffix("am"), !head.hasSuffix("pm") else { return nil }
+            head += rest.removeFirst()
+        }
         guard head == "time" || head == "now" || head == "clock" || parseClock(head) != nil else {
             return nil
         }
 
-        let rest = Array(words.dropFirst())
-        let zone = rest.isEmpty ? calendar.timeZone : (self.zone(named: rest) ?? calendar.timeZone)
+        if allowZoneConnector, rest.first == "in" || rest.first == "at" {
+            rest.removeFirst()
+            guard !rest.isEmpty else { return nil }
+        }
+        guard let zone = rest.isEmpty ? calendar.timeZone : self.zone(named: rest) else { return nil }
         if head == "time" || head == "now" || head == "clock" {
-            guard rest.isEmpty || self.zone(named: rest) != nil else { return nil }
             guard let ahead else { return SourceMoment(date: now, zone: zone) }
             guard let shifted = calendar.date(byAdding: ahead.component, value: ahead.count, to: now)
             else { return nil }
