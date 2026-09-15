@@ -85,7 +85,8 @@ final class WindowMover {
 
         let input = WindowPlacementEngine.Input(
             command: command, windowFrame: current, screens: screens, gap: gap, step: decision.step,
-            cycle: cycle, restoreFrame: decision.canRestore ? decision.restoreFrame : nil,
+            cycle: cycle, originScreenID: decision.originScreenID,
+            restoreFrame: decision.canRestore ? decision.restoreFrame : nil,
             lastTileCommand: decision.lastTileCommand)
         guard let placement = WindowPlacementEngine.placement(for: input) else { return false }
 

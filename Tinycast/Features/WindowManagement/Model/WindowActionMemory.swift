@@ -10,13 +10,17 @@ struct WindowActionMemory<Key: Hashable> {
         var appliedFrame: CGRect
         var command: WindowCommand.ID
         var step: Int
+        /// Where it landed; a press from any other display starts a new chain.
         var screenID: Int
+        var originScreenID: Int
         var at: Date
     }
 
     struct Decision: Equatable, Sendable {
         /// Cycle position for this press, fed straight into `WindowPlacementEngine.Input.step`.
         var step: Int
+        /// The display the chain started on, which the display cycle counts `step` from.
+        var originScreenID: Int
         /// The frame `commit` should persist as this window's restore point.
         var restoreFrame: CGRect
         /// False on first sight: there is nothing to go back to, so Restore must do nothing.
@@ -54,13 +58,15 @@ struct WindowActionMemory<Key: Hashable> {
         // First sight: capture where it was, so Restore works for a never-moved window.
         guard let record = records[key] else {
             return Decision(
-                step: 0, restoreFrame: currentFrame, canRestore: false, lastTileCommand: nil)
+                step: 0, originScreenID: currentScreenID, restoreFrame: currentFrame,
+                canRestore: false, lastTileCommand: nil)
         }
 
         // Against the observed frame, never the requested one. docs/features/window-management.md
         guard approximatelyEqual(currentFrame, record.appliedFrame) else {
             return Decision(
-                step: 0, restoreFrame: currentFrame, canRestore: true, lastTileCommand: nil)
+                step: 0, originScreenID: currentScreenID, restoreFrame: currentFrame,
+                canRestore: true, lastTileCommand: nil)
         }
 
         let lastTileCommand =
@@ -72,6 +78,7 @@ struct WindowActionMemory<Key: Hashable> {
             && currentScreenID == record.screenID && !expired
         return Decision(
             step: continues ? (record.step + 1) % cycleLength : 0,
+            originScreenID: continues ? record.originScreenID : currentScreenID,
             restoreFrame: record.restoreFrame, canRestore: true, lastTileCommand: lastTileCommand)
     }
 
@@ -82,7 +89,8 @@ struct WindowActionMemory<Key: Hashable> {
     ) {
         records[key] = Record(
             restoreFrame: decision.restoreFrame, appliedFrame: appliedFrame, command: command,
-            step: decision.step, screenID: screenID, at: now)
+            step: decision.step, screenID: screenID, originScreenID: decision.originScreenID,
+            at: now)
         touch(key)
     }
 
@@ -90,6 +98,7 @@ struct WindowActionMemory<Key: Hashable> {
     mutating func forgetCycle(key: Key) {
         guard var record = records[key] else { return }
         record.step = 0
+        record.originScreenID = record.screenID
         records[key] = record
     }
 

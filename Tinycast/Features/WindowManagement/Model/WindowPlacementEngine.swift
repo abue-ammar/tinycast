@@ -52,6 +52,8 @@ enum WindowPlacementEngine {
         var step: Int
         /// What the step means: the mode the user picked for a repeat press.
         var cycle: WindowCycle
+        /// The display the chain started on; `nil`, or one since unplugged, means the host.
+        var originScreenID: Int?
         /// Read only by `.restore`.
         var restoreFrame: CGRect?
         /// The tile that last placed this window, so a display move re-derives rather than scales.
@@ -59,8 +61,8 @@ enum WindowPlacementEngine {
 
         init(
             command: WindowCommand.ID, windowFrame: CGRect, screens: [Screen], gap: CGFloat = 0,
-            step: Int = 0, cycle: WindowCycle = .off, restoreFrame: CGRect? = nil,
-            lastTileCommand: WindowCommand.ID? = nil
+            step: Int = 0, cycle: WindowCycle = .off, originScreenID: Int? = nil,
+            restoreFrame: CGRect? = nil, lastTileCommand: WindowCommand.ID? = nil
         ) {
             self.command = command
             self.windowFrame = windowFrame
@@ -68,6 +70,7 @@ enum WindowPlacementEngine {
             self.gap = gap
             self.step = step
             self.cycle = cycle
+            self.originScreenID = originScreenID
             self.restoreFrame = restoreFrame
             self.lastTileCommand = lastTileCommand
         }
@@ -345,13 +348,17 @@ enum WindowPlacementEngine {
             return tilePlacement(half.fractions(sizeCycle[step]), on: host, gap: input.gap)
         }
         let strip = ordered(input.screens)
-        guard strip.count > 1, let hostIndex = strip.firstIndex(where: { $0.id == host.id }) else {
+        // Mid-chain the window already sits on another display, so counting from it would overshoot.
+        guard strip.count > 1,
+            let originIndex = strip.firstIndex(where: { $0.id == input.originScreenID })
+                ?? strip.firstIndex(where: { $0.id == host.id })
+        else {
             return tilePlacement(half.fractions(0.5), on: host, gap: input.gap)
         }
         // Left and Top walk backwards, so one shortcut sweeps the whole desktop in one direction.
         let leads = half.edge == .leading
         let slot = wrapped(
-            hostIndex * 2 + (leads ? 0 : 1) + (leads ? -step : step), into: strip.count * 2)
+            originIndex * 2 + (leads ? 0 : 1) + (leads ? -step : step), into: strip.count * 2)
         let edge: Half.Edge = slot.isMultiple(of: 2) ? .leading : .trailing
         return tilePlacement(
             Half(axis: half.axis, edge: edge).fractions(0.5), on: strip[slot / 2], gap: input.gap)
