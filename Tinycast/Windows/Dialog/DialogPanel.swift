@@ -48,10 +48,10 @@ final class DialogPanel: NSPanel {
             onKey(.cancel)
         case kVK_Return, kVK_ANSI_KeypadEnter:
             onKey(.confirm)
-        case kVK_LeftArrow,
+        case kVK_LeftArrow where handlesArrowKeys,
             kVK_DownArrow where handlesArrowKeys:
             onKey(.decrement)
-        case kVK_RightArrow,
+        case kVK_RightArrow where handlesArrowKeys,
             kVK_UpArrow where handlesArrowKeys:
             onKey(.increment)
         default:
