@@ -329,6 +329,27 @@ class Dirent {
   }
 }
 
+// `fs.Dir` over the one-shot host `readdir`: the listing is taken at open, then read entry by entry.
+class Dir {
+  constructor(path, entries) {
+    this.path = path;
+    this._entries = entries;
+    this._index = 0;
+  }
+  readSync() {
+    return this._index < this._entries.length ? this._entries[this._index++] : null;
+  }
+  async read() {
+    return this.readSync();
+  }
+  closeSync() {}
+  async close() {}
+  async *[Symbol.asyncIterator]() {
+    let entry;
+    while ((entry = this.readSync()) !== null) yield entry;
+  }
+}
+
 function fsPath(input) {
   if (input instanceof URL) return decodeURIComponent(input.pathname);
   if (input instanceof Uint8Array) return utf8Decode(input);
@@ -410,6 +431,11 @@ const fs = {
     const entries = hostCallSync("fs", "readdir", [fsPath(dir)]);
     if (options?.withFileTypes) return entries.map((entry) => new Dirent(entry));
     return entries.map((entry) => entry.name);
+  },
+  opendirSync(dir) {
+    const path = fsPath(dir);
+    const entries = hostCallSync("fs", "readdir", [path]).map((entry) => new Dirent(entry));
+    return new Dir(path, entries);
   },
   mkdirSync(dir, options) {
     return hostCallSync("fs", "mkdir", [fsPath(dir), !!(options === true || options?.recursive)]);
@@ -533,6 +559,7 @@ for (const [name, sync] of [
   ["stat", fs.statSync],
   ["lstat", fs.lstatSync],
   ["readdir", fs.readdirSync],
+  ["opendir", fs.opendirSync],
   ["mkdir", fs.mkdirSync],
   ["rm", fs.rmSync],
   ["rmdir", fs.rmdirSync],
@@ -565,6 +592,7 @@ const fsPromises = {
   stat: promisify1(fs.statSync),
   lstat: promisify1(fs.lstatSync),
   readdir: promisify1(fs.readdirSync),
+  opendir: promisify1(fs.opendirSync),
   mkdir: promisify1(fs.mkdirSync),
   rm: promisify1(fs.rmSync),
   rmdir: promisify1(fs.rmdirSync),
