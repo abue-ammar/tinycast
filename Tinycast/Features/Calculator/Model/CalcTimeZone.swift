@@ -5,6 +5,11 @@ enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
         guard raw.count <= 128, raw.contains(where: \.isWhitespace) else { return nil }
         let inputWords = raw.split(whereSeparator: \.isWhitespace)
+        if inputWords.count >= 2, inputWords.last?.lowercased() == "time" {
+            let place = inputWords.dropLast().map { $0.lowercased() }
+            guard zone(named: place) != nil else { return nil }
+            return evaluate("time in \(place.joined(separator: " "))", now: now, calendar: calendar)
+        }
         guard inputWords.count >= 2, inputWords.contains(where: { connectors.contains($0.lowercased()) })
         else {
             return nil
@@ -22,7 +27,7 @@ enum CalcTimeZone {
         let words = zoneQuery.split(whereSeparator: \.isWhitespace).map(String.init)
         guard words.count >= 2 else { return nil }
 
-        // Every grammar needs a connector, so an app search never touches the zone table.
+        // Other grammars need a connector before consulting the zone table.
         guard let connector = words.lastIndex(where: { $0 == "in" || $0 == "to" || $0 == "at" })
         else { return nil }
         let targetWords = Array(words[(connector + 1)...])

@@ -278,10 +278,11 @@ still earns a card where a lone `100000` deliberately doesn't. A literal that ov
 
 ## Time zones
 
-`CalcTimeZone` answers `time in Tokyo`, `what time is it in London`, `5pm ldn in sf` and
+`CalcTimeZone` answers `time in Tokyo`, `SF time`, `what time is it in London`, `5pm ldn in sf` and
 `9:30am in nyc`. It runs **before the tokenizer** — a zone phrase is words, and `5pm ldn in sf`
-is not calculator input — but its grammar always needs an `in` / `to` / `at` connector, so an
-ordinary app search never reaches the zone table at all.
+is not calculator input. The `<place> time` form resolves the whole place through the existing
+city, alias and country tables, then uses the same path as `time in <place>`. Other forms still
+require a connector, so ordinary app searches stay outside the zone grammar.
 
 The source is the Mac's own zone unless the query names one, which is what makes `5pm london in sf`
 work without either side being local. That zone comes from the **injected calendar**, so `Model/`
