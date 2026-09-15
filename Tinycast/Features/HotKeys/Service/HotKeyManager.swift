@@ -13,6 +13,7 @@ final class HotKeyManager {
     var onRunWindowLayout: ((UUID) -> Void)?
     var onOpenQuicklink: ((UUID) -> Void)?
     var onRunQuickAction: ((UUID) -> Void)?
+    var onRunAppleShortcut: ((UUID) -> Void)?
     var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
@@ -52,6 +53,7 @@ final class HotKeyManager {
     private let boundQuicklinkKey = "boundQuicklinkIDs"
     private let boundQuickActionKey = "boundQuickActionIDs"
     private let boundWindowLayoutKey = "boundWindowLayoutIDs"
+    private let boundAppleShortcutKey = "boundAppleShortcutIDs"
     private let boundExtensionCommandKey = "boundExtensionCommandEntryIDs"
 
     func start(
@@ -102,6 +104,9 @@ final class HotKeyManager {
 
     var boundQuickActionIDs: [UUID] { boundIDs(key: boundQuickActionKey) }
 
+    /// Pruned by `AppleShortcutCoordinator` after a successful read, never here at launch.
+    var boundAppleShortcutIDs: [UUID] { boundIDs(key: boundAppleShortcutKey) }
+
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
 
     private func storedBinding(for action: HotKeyAction) -> HotKeyBinding? {
@@ -147,6 +152,8 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundQuickActionKey)
         case .windowLayout(let id):
             index(id, bound: binding != nil, key: boundWindowLayoutKey)
+        case .appleShortcut(let id):
+            index(id, bound: binding != nil, key: boundAppleShortcutKey)
         case .extensionCommand(let entryID):
             var set = Set(boundExtensionCommandEntryIDs)
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
@@ -193,6 +200,7 @@ final class HotKeyManager {
         actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
         actions += boundQuickActionIDs.map { .quickAction(id: $0) }
         actions += boundWindowLayoutIDs.map { .windowLayout(id: $0) }
+        actions += boundAppleShortcutIDs.map { .appleShortcut(id: $0) }
         actions += boundExtensionCommandEntryIDs.map { .extensionCommand(entryID: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
@@ -220,6 +228,8 @@ final class HotKeyManager {
             return displayName?(action) ?? "Quicklink"
         case .quickAction:
             return displayName?(action) ?? "Quick Action"
+        case .appleShortcut:
+            return displayName?(action) ?? "Apple Shortcut"
         case .extensionCommand:
             return displayName?(action) ?? "Extension Command"
         }
@@ -257,6 +267,7 @@ final class HotKeyManager {
         case .windowLayout(let id): onRunWindowLayout?(id)
         case .quicklink(let id): onOpenQuicklink?(id)
         case .quickAction(let id): onRunQuickAction?(id)
+        case .appleShortcut(let id): onRunAppleShortcut?(id)
         case .extensionCommand(let entryID): onRunExtensionCommand?(entryID)
         }
     }

@@ -16,8 +16,9 @@ enum ToolRunner {
         }
     }
 
+    /// A nil `timeout` never kills: the tool may be waiting on a person rather than wedged.
     static func run(
-        _ executable: URL, _ arguments: [String], timeout: TimeInterval = 120
+        _ executable: URL, _ arguments: [String], timeout: TimeInterval? = 120
     ) async throws -> Result {
         let process = Process()
         process.executableURL = executable
@@ -45,6 +46,7 @@ enum ToolRunner {
                 continuation.resume(throwing: error)
                 return
             }
+            guard let timeout else { return }
             Task {
                 try? await Task.sleep(for: .seconds(timeout))
                 guard process.isRunning else { return }

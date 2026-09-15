@@ -129,6 +129,11 @@ final class LauncherCoordinator {
             quicklinkCoordinator.openQuicklink(id: id, values: arguments)
             return
         }
+        if app.kind == .appleShortcut {
+            guard let id = AppleShortcut.id(fromEntryID: app.id) else { return }
+            core.appleShortcutCoordinator.run(id: id)
+            return
+        }
         let previous = windowController.previousTarget
         paletteCoordinator.hidePalette(restoreFocus: false)
         switch app.kind {
@@ -141,7 +146,7 @@ final class LauncherCoordinator {
             let snippetID = String(app.id.dropFirst("snippet:".count))
             snippetCoordinator.expandSnippet(id: snippetID, target: previous)
         case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
-            .quicklink, .extensionCommand, .meeting:
+            .quicklink, .appleShortcut, .extensionCommand, .meeting:
             break  // handled above
         }
     }

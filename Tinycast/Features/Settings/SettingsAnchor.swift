@@ -29,6 +29,9 @@ extension SettingsAnchor {
     static let quicklinksBehaviour = Self(tab: .quicklinks, title: "Behaviour")
     static let quicklinksImportExport = Self(tab: .quicklinks, title: "Import & Export")
 
+    static let appleShortcutsAppleShortcuts = Self(tab: .appleShortcuts, title: "Apple Shortcuts")
+    static let appleShortcutsShortcuts = Self(tab: .appleShortcuts, title: "Shortcuts")
+
     static let fallbacksFallbacks = Self(tab: .fallbacks, title: "Fallbacks")
 
     static let aiAI = Self(tab: .ai, title: "AI")

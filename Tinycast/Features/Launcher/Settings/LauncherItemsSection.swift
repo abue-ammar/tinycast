@@ -8,10 +8,7 @@ struct LauncherItemsSection: View {
 
     @Environment(AppIndex.self) private var appIndex
     @Environment(VisibilityStore.self) private var visibility
-    @Environment(AliasStore.self) private var aliases
-    @Environment(HotKeyManager.self) private var hotKeys
     @State private var query = ""
-    @State private var recorderFrame: CGRect?
 
     private var entries: [AppEntry] {
         let scoped = appIndex.apps.filter { $0.kind == kind && $0.settingsOwner == nil }
@@ -33,23 +30,45 @@ struct LauncherItemsSection: View {
 
         Section {
             SettingsFilterField(prompt: searchPrompt, query: $query)
-
-            let entries = entries
-            if entries.isEmpty {
-                Text(query.isEmpty ? "Nothing here yet." : "No matches for “\(query)”.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            } else {
-                // One row holding the table: a `Form` realizes every row it is handed.
-                LauncherItemsTable(
-                    entries: entries, isEnabled: visibility.isKindEnabled(kind),
-                    visibility: visibility, aliases: aliases, hotKeys: hotKeys,
-                    recorderFrame: $recorderFrame
-                )
-                .overlay(alignment: .topLeading) { recorderStandIn }
-            }
+            LauncherItemsList(
+                entries: entries, query: query, isEnabled: visibility.isKindEnabled(kind))
         }
         .settingsEnabled(visibility.isKindEnabled(kind))
+    }
+
+    private var enabledBinding: Binding<Bool> {
+        Binding(
+            get: { visibility.isKindEnabled(kind) },
+            set: { visibility.setKindEnabled($0, for: kind) }
+        )
+    }
+}
+
+/// The rows under a filter field, or what to say when there are none; shared by item panes.
+struct LauncherItemsList: View {
+    let entries: [AppEntry]
+    let query: String
+    let isEnabled: Bool
+
+    @Environment(VisibilityStore.self) private var visibility
+    @Environment(AliasStore.self) private var aliases
+    @Environment(HotKeyManager.self) private var hotKeys
+    @State private var recorderFrame: CGRect?
+
+    var body: some View {
+        if entries.isEmpty {
+            Text(query.isEmpty ? "Nothing here yet." : "No matches for “\(query)”.")
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+        } else {
+            // One row holding the table: a `Form` realizes every row it is handed.
+            LauncherItemsTable(
+                entries: entries, isEnabled: isEnabled,
+                visibility: visibility, aliases: aliases, hotKeys: hotKeys,
+                recorderFrame: $recorderFrame
+            )
+            .overlay(alignment: .topLeading) { recorderStandIn }
+        }
     }
 
     /// The open recorder's anchor can't leave its hosted row, so this republishes its bounds here.
@@ -62,13 +81,6 @@ struct LauncherItemsSection: View {
                 .position(x: recorderFrame.midX, y: recorderFrame.midY)
                 .allowsHitTesting(false)
         }
-    }
-
-    private var enabledBinding: Binding<Bool> {
-        Binding(
-            get: { visibility.isKindEnabled(kind) },
-            set: { visibility.setKindEnabled($0, for: kind) }
-        )
     }
 }
 

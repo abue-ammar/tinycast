@@ -512,6 +512,13 @@ four Quicklinks commands are dropped from the built-in slice in the same publish
 off, so a toggle can't leave the section and its commands out of step. See
 [quicklinks.md](quicklinks.md).
 
+## Apple Shortcuts
+
+`AppleShortcutCoordinator` reads the Shortcuts app's library through `/usr/bin/shortcuts` and supplies
+it as its own slice right after Quicklinks, re-reading on every launcher open. Only the name is indexed,
+and the entry id is keyed on the shortcut's UUID, so an alias or binding survives a rename in
+Shortcuts. See [apple-shortcuts.md](apple-shortcuts.md).
+
 ## Custom commands
 
 `CustomCommandStore` supplies user-authored entries to `AppIndex` without joining the off-main

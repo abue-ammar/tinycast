@@ -111,6 +111,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `custom-command-test` | `CustomCommands/Model/CustomCommand.swift`, `Service/ShellCommandRunner.swift` |
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
 | `quicklink-test` | all of `Quicklinks/Model/` |
+| `apple-shortcut-test` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |
 | `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
 | `notes-test` | all of `Notes/Model/` and `Notes/Service/`, plus the real fuzzy matcher and signposts |
 | `notes-editor-test` | the literal Notes editor with real TextKit 2 and AppKit editing objects |
@@ -380,6 +381,16 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - `{selection}` falls back per the Settings choice
 - Pin, duplicate, delete and Open with Default all behave; import and export round-trip
 - Display order is pinned first by pin time, then by name
+
+### Apple Shortcuts
+
+- Off out of the box: the pane lists nothing and no shortcut reaches the launcher
+- Switching on lists every shortcut with the Shortcuts app's icon; ↵ on a row runs it
+- A shortcut added in Shortcuts appears on the next launcher open
+- A row's hotkey runs it with the palette closed; switching the feature off silences it
+- Unchecking a row hides it from search, and its hotkey still fires
+- Deleting a shortcut in Shortcuts frees its alias and hotkey on the next launcher open
+- A shortcut that fails shows Tinycast's dialog with the tool's error
 
 ### File Search
 

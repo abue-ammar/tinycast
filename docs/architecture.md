@@ -21,7 +21,8 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ WindowCommand · WindowPlacementEngine · WindowActionMemory · WindowLayout/* ·      │
 │ PaletteRowIndex ·                                                          │
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
-│ Quicklink{,Destination,Store,Archive} · Notes/Model/* · Snippets/Model/* · │
+│ Quicklink{,Destination,Store,Archive} · AppleShortcut · Notes/Model/* ·    │
+│ Snippets/Model/* ·                                                         │
 │ ShellCommandRunner · DoubleTap{Modifier,Detector} · ClipboardStore ·       │
 │ RaycastDecoder · Scrypt · AppSettingsKey · SettingsBackupCoverage          │
 │ MeetingLink · MeetingEvent · UpcomingWindow · MeetingDay · MenuBarSummary  │
@@ -39,7 +40,8 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
 │ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor ·       │
 │ CalendarStore · MeetingLauncher · MeetingClock · CameraSession ·           │
-│ SupportReminderStore · AXMenuAccess · WindowZOrder · WindowSwitchSweep     │
+│ SupportReminderStore · AXMenuAccess · WindowZOrder · WindowSwitchSweep ·   │
+│ AppleShortcutRunner                                                        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
@@ -236,7 +238,7 @@ Every `SettingsTab` maps to one `…SettingsView`, and each is a stock `Form` wi
 `.formStyle(.grouped)` — see [ui.md](ui.md#settings). A pane lives with its feature; only a pane no
 feature owns (General, Permissions) lives in `Settings/Panes/`. The four launcher-category panes —
 Applications, System Settings, System Actions, Commands — are thin wrappers over the shared
-`LauncherItemsSection`.
+`LauncherItemsSection`; Apple Shortcuts pairs its feature switch with the same `LauncherItemsList`.
 
 `SettingsTab` and `SettingsSection` both identify by the case itself, never by an index. A selectable
 `List` flattens section and row IDs into one namespace, so overlapping `Int` IDs make SwiftUI drop

@@ -12,6 +12,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case windowCommand
         case windowLayout
         case quicklink
+        case appleShortcut
         case extensionCommand
         case meeting
 
@@ -67,6 +68,12 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                     label: "Quicklink", sectionTitle: "Quicklinks",
                     openVerb: "Open Quicklink", canHideFromSearch: false,
                     canRevealInFinder: false, isSymbolIcon: true)
+            case .appleShortcut:
+                // File-backed so every row draws the Shortcuts app's own icon.
+                return KindDescriptor(
+                    label: "Apple Shortcut", sectionTitle: "Apple Shortcuts",
+                    openVerb: "Run Shortcut", canHideFromSearch: true,
+                    canRevealInFinder: false, isSymbolIcon: false)
             case .extensionCommand:
                 // The label is per-entry, the owning extension's title; this is the fallback.
                 return KindDescriptor(
@@ -173,6 +180,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return WindowLayout.id(fromEntryID: id).map { .windowLayout(id: $0) }
         case .quicklink:
             return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
+        case .appleShortcut:
+            return AppleShortcut.id(fromEntryID: id).map { .appleShortcut(id: $0) }
         case .snippet, .extensionCommand, .meeting:
             return nil
         }
@@ -205,7 +214,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol ?? "questionmark"
         case .windowLayout: return WindowLayout.sfSymbol
         case .meeting: return "video.fill"
-        case .application, .systemSettings, .extensionCommand: return "questionmark"
+        case .application, .systemSettings, .appleShortcut, .extensionCommand: return "questionmark"
         }
     }
 
@@ -244,6 +253,13 @@ extension AppEntry {
             bundleID: nil, kind: .quicklink,
             symbolName: quicklink.iconSymbol
                 ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
+    }
+
+    /// No bundle id: that would key every shortcut's alias and ranking to the Shortcuts app.
+    init(_ shortcut: AppleShortcut, applicationURL: URL) {
+        self.init(
+            id: shortcut.entryID, name: shortcut.name, url: applicationURL, bundleID: nil,
+            kind: .appleShortcut)
     }
 }
 
@@ -312,6 +328,7 @@ final class AppIndex {
     private var windowCommandEntries: [AppEntry] = []
     private var windowLayoutEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
+    private var appleShortcutEntries: [AppEntry] = []
     private var customQuickActionEntries: [AppEntry] = []
     private var extensionEntries: [AppEntry] = []
     private var meetingEntries: [AppEntry] = []
@@ -391,6 +408,13 @@ final class AppIndex {
             .map(AppEntry.init)
         guard entries != quicklinkEntries else { return }
         quicklinkEntries = entries
+        publishEntries()
+    }
+
+    /// Discovered from the Shortcuts app, so it arrives already built and sorted.
+    func setAppleShortcuts(_ entries: [AppEntry]) {
+        guard entries != appleShortcutEntries else { return }
+        appleShortcutEntries = entries
         publishEntries()
     }
 
@@ -548,9 +572,9 @@ final class AppIndex {
         let updated =
             Self.named(meetingEntries) + discoveredEntries
             + Self.named(
-                extensionEntries + quicklinkEntries + snippetEntries + Self.systemActionEntries
-                    + windowLayoutEntries + windowCommandEntries + customCommandEntries
-                    + quickActionEntries + commandEntries)
+                extensionEntries + quicklinkEntries + appleShortcutEntries + snippetEntries
+                    + Self.systemActionEntries + windowLayoutEntries + windowCommandEntries
+                    + customCommandEntries + quickActionEntries + commandEntries)
         guard updated != apps else { return }
         apps = updated
         entriesRevision &+= 1

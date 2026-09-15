@@ -49,6 +49,9 @@ to re-register from
 and to prune bindings whose record was deleted while Tinycast wasn't running. That prune is why
 `QuicklinkStore` loads at launch even when the feature is off
 (see [quicklinks.md](quicklinks.md#hotkeys)).
+Apple Shortcuts keep the same kind of index in `boundAppleShortcutIDs`, pruned not at launch but after
+the first successful read of the library, since a failed read looks exactly like deletion
+(see [apple-shortcuts.md](apple-shortcuts.md#sweeping-deleted-shortcuts)).
 
 `HotKeyBinding` takes the synthesised `Codable`, so a `.combo` writes
 `{"combo":{"_0":{"carbonKeyCode":N,"carbonModifiers":N}}}` and a `.doubleTap` writes

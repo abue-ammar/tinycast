@@ -109,7 +109,8 @@ enum SettingsSearchCatalog {
 
     static let entries: [SettingsSearchEntry] =
         general + applications + systemSettings
-        + systemActions + commands + quicklinks + fallbacks + ai + quickActions + fileSearch + notes
+        + systemActions + commands + quicklinks + appleShortcuts + fallbacks + ai + quickActions + fileSearch
+        + notes
         + snippets + navigation + windowManagement + clipboard + emoji + calendar
         + extensions + permissions + backup + about
 
@@ -243,6 +244,16 @@ enum SettingsSearchCatalog {
         .init(
             .quicklinksImportExport, "Export quicklinks",
             keywords: ["json", "backup"])
+    ]
+
+    private static let appleShortcuts: [SettingsSearchEntry] = [
+        .init(pane: .appleShortcuts, keywords: ["shortcuts app", "automation", "workflow"]),
+        .init(
+            .appleShortcutsAppleShortcuts, "Enable Apple Shortcuts",
+            keywords: ["shortcuts app", "automation", "workflow"]),
+        .init(
+            group: .appleShortcutsShortcuts, "Aliases and shortcuts",
+            keywords: ["alias", "hotkey", "hide"])
     ]
 
     private static let fallbacks: [SettingsSearchEntry] = [
