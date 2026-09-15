@@ -1,0 +1,42 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[scripts]
+setup = """
+set -e
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+npm --prefix website ci
+"""
+archive = "true"
+run_mode = "nonconcurrent"
+
+[scripts.run.app]
+available_in = ["local"]
+default = true
+icon = "play"
+command = """
+set -e
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug -derivedDataPath build/DerivedData build
+exec "$PWD/build/DerivedData/Build/Products/Debug/Tinycast Dev.app/Contents/MacOS/Tinycast Dev"
+"""
+
+[scripts.run.website]
+available_in = ["local"]
+icon = "globe"
+command = 'npm --prefix website run dev -- --hostname 127.0.0.1 --port "$CONDUCTOR_PORT"'
+
+[scripts.run.tests]
+available_in = ["local"]
+icon = "test-tube"
+command = """
+set -e
+mkdir -p build/tmp
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+export TMPDIR="$PWD/build/tmp/"
+exec ./Scripts/run-tests.sh
+"""
+
+[scripts.run.lint]
+available_in = ["local"]
+icon = "code"
+command = "./Scripts/lint.sh"
