@@ -79,6 +79,7 @@ struct WindowCommandTests {
         testNudges()
         testDisplays()
         testDisplayCycle()
+        testDisplayCycleSequence()
         testRestore()
         testMemory()
         testFuzz()
@@ -692,26 +693,28 @@ struct WindowCommandTests {
             frame(.leftHalf, on: left)!, frame(.rightHalf, on: right)!,
             frame(.leftHalf, on: right)!, frame(.rightHalf, on: left)!
         ]
+        var currentLeft = onLeft
         for (step, want) in expected.enumerated() {
-            expectRect(
-                frame(.leftHalf, window: onLeft, step: step, cycle: .displays, allScreens: both)!,
-                want, "left half display step \(step)")
+            currentLeft = frame(
+                .leftHalf, window: currentLeft, step: step, cycle: .displays, allScreens: both)!
+            expectRect(currentLeft, want, "left half display step \(step)")
         }
         expectRect(
-            frame(.leftHalf, window: onLeft, step: 4, cycle: .displays, allScreens: both)!,
+            frame(.leftHalf, window: currentLeft, step: 4, cycle: .displays, allScreens: both)!,
             expected[0], "the display cycle wraps")
         expectRect(
-            frame(.leftHalf, window: onLeft, step: -1, cycle: .displays, allScreens: both)!,
+            frame(.leftHalf, window: expected[2], step: -1, cycle: .displays, allScreens: both)!,
             expected[3], "a negative display step normalises")
 
         // Right is the exact mirror, so the two shortcuts sweep the strip in opposite directions.
+        var currentRight = onLeft
         for (step, want) in [
             frame(.rightHalf, on: left)!, frame(.leftHalf, on: right)!,
             frame(.rightHalf, on: right)!, frame(.leftHalf, on: left)!
         ].enumerated() {
-            expectRect(
-                frame(.rightHalf, window: onLeft, step: step, cycle: .displays, allScreens: both)!,
-                want, "right half display step \(step)")
+            currentRight = frame(
+                .rightHalf, window: currentRight, step: step, cycle: .displays, allScreens: both)!
+            expectRect(currentRight, want, "right half display step \(step)")
         }
 
         // Top and Bottom walk the same strip, keeping their own axis.
@@ -733,9 +736,12 @@ struct WindowCommandTests {
         // One full lap visits every slot exactly once, from either starting display.
         for start in [onLeft, CGRect(x: 1540, y: 100, width: 600, height: 400)] {
             for command in [WindowCommand.ID.leftHalf, .rightHalf] {
-                let lap = (0..<length(command, .displays, both)).map {
-                    placement(
-                        command, window: start, step: $0, cycle: .displays, allScreens: both)!
+                var current = start
+                let lap = (0..<length(command, .displays, both)).map { step in
+                    let placed = placement(
+                        command, window: current, step: step, cycle: .displays, allScreens: both)!
+                    current = placed.frame
+                    return placed
                 }
                 expect(
                     Set(lap.map(\.frame)).count == lap.count,
@@ -752,9 +758,9 @@ struct WindowCommandTests {
             visibleFrame: CGRect(x: 1440, y: 0, width: 200, height: 900))
         expectRect(
             frame(
-                .leftHalf, window: onLeft, gap: 100, step: 2, cycle: .displays,
+                .leftHalf, window: onLeft, gap: 100, step: 1, cycle: .displays,
                 allScreens: screens(left, narrow))!,
-            frame(.leftHalf, on: narrow, gap: 100)!,
+            frame(.rightHalf, on: narrow, gap: 100)!,
             "the destination display sanitises the gap")
 
         // No mode ever gives a non-cycling command a chain to walk.
@@ -764,6 +770,71 @@ struct WindowCommandTests {
                 expect(
                     length(command, cycle, both) == 1,
                     "\(command.rawValue) has no cycle to walk under \(cycle.rawValue)")
+            }
+        }
+    }
+
+    static func testDisplayCycleSequence() {
+        let left = WindowPlacementEngine.Screen(
+            id: 2, frame: CGRect(x: -1920, y: -200, width: 1920, height: 1080),
+            visibleFrame: CGRect(x: -1920, y: -175, width: 1920, height: 1000))
+        let right = WindowPlacementEngine.Screen(
+            id: 3, frame: CGRect(x: 1440, y: -400, width: 2560, height: 1440),
+            visibleFrame: CGRect(x: 1440, y: -375, width: 2560, height: 1390))
+        let directions: [(WindowCommand.ID, WindowCommand.ID)] = [
+            (.leftHalf, .rightHalf), (.topHalf, .bottomHalf)
+        ]
+        let clock = Date(timeIntervalSince1970: 1_000_000)
+
+        for strip in [[mainScreen], [left, mainScreen], [left, mainScreen, right]] {
+            let allScreens = Array(strip.reversed())
+            for (startIndex, start) in strip.enumerated() {
+                let original = CGRect(
+                    x: start.visibleFrame.minX + 100, y: start.visibleFrame.minY + 100,
+                    width: 600, height: 400)
+                for (leading, trailing) in directions {
+                    for command in [leading, trailing] {
+                        for gap: CGFloat in [0, 12] {
+                            var memory = WindowActionMemory<Int>()
+                            var current = original
+                            let count = strip.count * 2
+                            for press in 0..<(count * 2 + 1) {
+                                let host = WindowPlacementEngine.screen(
+                                    containing: current, in: allScreens)!
+                                let decision = memory.decide(
+                                    key: 1, command: command, currentFrame: current,
+                                    currentScreenID: host.id,
+                                    cycleLength: length(command, .displays, allScreens), now: clock)
+                                let placed = placement(
+                                    command, window: current, gap: gap, step: decision.step,
+                                    cycle: .displays, allScreens: allScreens)!
+                                let forward = command == trailing
+                                let firstSlot = startIndex * 2 + (forward ? 1 : 0)
+                                let offset = strip.count == 1 ? 0 : (forward ? press : -press)
+                                let slot = ((firstSlot + offset) % count + count) % count
+                                let expectedScreen = strip[slot / 2]
+                                let expectedCommand = slot.isMultiple(of: 2) ? leading : trailing
+                                let label = "\(command.rawValue), \(strip.count) displays, "
+                                    + "start \(start.id), gap \(gap), press \(press + 1)"
+                                expect(placed.screenID == expectedScreen.id, "\(label): display")
+                                expectRect(
+                                    placed.frame,
+                                    frame(expectedCommand, on: expectedScreen, gap: gap)!,
+                                    "\(label): half")
+                                memory.commit(
+                                    key: 1, command: command, decision: decision,
+                                    appliedFrame: placed.frame, screenID: placed.screenID, now: clock)
+                                current = placed.frame
+                            }
+                            let restore = memory.decide(
+                                key: 1, command: .restore, currentFrame: current,
+                                currentScreenID: WindowPlacementEngine.screen(
+                                    containing: current, in: allScreens)!.id,
+                                cycleLength: 1, now: clock)
+                            expectRect(restore.restoreFrame, original, "cycling keeps the restore point")
+                        }
+                    }
+                }
             }
         }
     }

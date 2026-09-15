@@ -350,8 +350,10 @@ enum WindowPlacementEngine {
         }
         // Left and Top walk backwards, so one shortcut sweeps the whole desktop in one direction.
         let leads = half.edge == .leading
+        // Earlier presses already moved the host; only odd steps cross a display boundary.
+        let offset = step.isMultiple(of: 2) ? 0 : (leads ? -1 : 1)
         let slot = wrapped(
-            hostIndex * 2 + (leads ? 0 : 1) + (leads ? -step : step), into: strip.count * 2)
+            hostIndex * 2 + (leads ? 0 : 1) + offset, into: strip.count * 2)
         let edge: Half.Edge = slot.isMultiple(of: 2) ? .leading : .trailing
         return tilePlacement(
             Half(axis: half.axis, edge: edge).fractions(0.5), on: strip[slot / 2], gap: input.gap)

@@ -149,6 +149,12 @@ so a repeat press stays idempotent unless asked otherwise:
   D1-left → D2-right → D2-left → D1-right. One display makes the mode a quiet no-op — a length of 1 —
   rather than a left/right flip in place, matching Next Display's own single-display behaviour.
 
+Each display-cycle placement uses the window's current display. Even steps select the command's own
+half there; odd steps cross to the adjacent display's opposite half. Earlier steps have already moved
+the window, so adding the cumulative step again would skip slots after crossing a display boundary.
+The harness feeds each placement back through action memory and geometry for the next press, covering
+two full laps from every starting display in one-, two- and three-display arrangements.
+
 The two are deliberately exclusive rather than composable: a 12-press chain over two displays is not a
 shortcut any more, and Raycast's own setting is the same single choice. `Half` carries the (axis, edge)
 pair that makes both modes one expression — a slot's edge decides which side a ⅓ hugs, so the four
