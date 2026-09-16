@@ -88,6 +88,9 @@ struct InterfaceMetrics: Equatable, Sendable {
             (Theme.Size.menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()
         }
         var clipboardListWidth: CGFloat { scaledPoints(Theme.Size.clipboardListWidth, scale) }
+        var extensionDetailMetadataWidth: CGFloat {
+            scaledPoints(Theme.Size.extensionDetailMetadataWidth, scale)
+        }
         var clipboardMediaHeight: CGFloat { scaledPoints(Theme.Size.clipboardMediaHeight, scale) }
         var clipboardPreviewPixel: CGFloat { scaledPoints(Theme.Size.clipboardPreviewPixel, scale) }
         var emojiGridInset: CGFloat { scaledPoints(Theme.Size.emojiGridInset, scale) }

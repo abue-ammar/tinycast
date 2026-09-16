@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// The `Detail` screen, and the pane a `List` shows when `isShowingDetail` is on.
+/// `Detail.Metadata` is a right-hand sidebar, not a block stacked under the markdown.
 struct ExtensionDetailBody: View {
     @Environment(\.metrics) private var metrics
     let markdown: String?
@@ -9,6 +10,16 @@ struct ExtensionDetailBody: View {
     let assetsPath: String?
 
     var body: some View {
+        HStack(spacing: 0) {
+            markdownPane
+            if let metadata {
+                Rectangle().fill(Theme.Colors.separator).frame(width: 1)
+                metadataPane(metadata)
+            }
+        }
+    }
+
+    private var markdownPane: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: metrics.spacing.md) {
                 if isLoading && (markdown ?? "").isEmpty {
@@ -17,18 +28,26 @@ struct ExtensionDetailBody: View {
                 if let markdown, !markdown.isEmpty {
                     ExtensionMarkdownView(markdown: markdown)
                 }
-                if let metadata {
-                    if markdown?.isEmpty == false {
-                        Rectangle().fill(Theme.Colors.separator).frame(height: 1)
-                    }
-                    ExtensionMetadataView(metadata: metadata, assetsPath: assetsPath)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, metrics.spacing.lg)
             .padding(.vertical, metrics.spacing.md)
             .hideNativeScrollers()
         }
+        .frame(maxWidth: .infinity)
+        .edgeDissolve()
+        .thinScrollbar()
+    }
+
+    private func metadataPane(_ metadata: RenderNode) -> some View {
+        ScrollView {
+            ExtensionMetadataView(metadata: metadata, assetsPath: assetsPath)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, metrics.spacing.lg)
+                .padding(.vertical, metrics.spacing.md)
+                .hideNativeScrollers()
+        }
+        .frame(width: metrics.size.extensionDetailMetadataWidth)
         .edgeDissolve()
         .thinScrollbar()
     }
@@ -42,7 +61,7 @@ struct ExtensionMetadataView: View {
     let assetsPath: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+        VStack(alignment: .leading, spacing: metrics.spacing.lg) {
             ForEach(metadata.children) { child in
                 switch child.type {
                 case "Detail.Metadata.Label":
