@@ -28,8 +28,8 @@
   --tc-fg-subtle: #83858a;
   --tc-action: #16181c;
   --tc-action-fg: #f7f7f8;
-  --tc-border: #dcdde0;
-  --tc-border-strong: #b9bbc0;
+  --tc-border: #e7e8ea;
+  --tc-border-strong: #c6c7cc;
   /* The base every alpha overlay is mixed from — ink on light, light on ink. */
   --tc-tint: 0 0 0;
 
@@ -65,8 +65,8 @@
   --tc-fg-subtle: #6a6b6c;
   --tc-action: #e6e6e6;
   --tc-action-fg: #454647;
-  --tc-border: #363739;
-  --tc-border-strong: #54555a;
+  --tc-border: #222326;
+  --tc-border-strong: #3d3e43;
   --tc-tint: 255 255 255;
 
   /* Frozen: these are the literals the dark-only build shipped. */
@@ -171,10 +171,12 @@
   --text-heading--letter-spacing: -0.03em;
   --text-heading--font-weight: 600;
 
-  /* The hero palette scales with the viewport, so it reads like the real app. */
-  --text-demo-query: clamp(1.125rem, 0.85rem + 1.1vw, 1.75rem);
+  /* The hero palette scales with the viewport, so it reads like the real app.
+     Capped near the app's own 17px query and 13.5px rows: it sits in the
+     hero's right column, so it never gets the full page width to grow into. */
+  --text-demo-query: clamp(1rem, 0.9rem + 0.45vw, 1.125rem);
   --text-demo-query--line-height: 1.3;
-  --text-demo-row: clamp(0.9375rem, 0.82rem + 0.45vw, 1.1875rem);
+  --text-demo-row: clamp(0.8125rem, 0.78rem + 0.16vw, 0.875rem);
   --text-demo-row--line-height: 1.4;
 
   --text-closing: clamp(2.25rem, 1.5rem + 3.2vw, 3.75rem); /* 36→60px */
@@ -182,7 +184,9 @@
   --text-closing--letter-spacing: -0.04em;
   --text-closing--font-weight: 600;
 
-  --text-display: clamp(2.6rem, 1.6rem + 4.2vw, 4.5rem); /* 42→72px — hero h1 */
+  /* Hero h1. Sized for the hero's left column, not the full page width, so
+     each headline line stays on one line beside the palette. */
+  --text-display: clamp(2.4rem, 1.4rem + 3.1vw, 3.6rem); /* 38→58px */
   --text-display--line-height: 1.04;
   --text-display--letter-spacing: -0.045em;
   --text-display--font-weight: 600;
@@ -209,6 +213,11 @@
   --shadow-cap: 0 1.5px 0 var(--tc-border);
   /* The app screenshot: key treatment plus a deep ambient drop. */
   --shadow-window: var(--tc-window);
+
+  /* ── Motion ──────────────────────────────────────────────────────────── */
+  /* The logo wall's ticker. 40s across two copies of the list, so a single
+     pass of the seven marks reads at a walking pace. */
+  --animate-marquee: marquee 40s linear infinite;
 }
 
 @layer base {
@@ -297,11 +306,26 @@
 /* Brand surfaces — the only places colour blooms. Kept in CSS so the
    gradients derive from the brand color tokens above. */
 @layer components {
-  /* A dot grid that fades out from the top, so the hero has texture without noise. */
-  .bg-dots {
-    background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
-    background-size: 24px 24px;
-    mask-image: radial-gradient(75% 55% at 50% 0%, #000 25%, transparent 78%);
+  /* A ruled grid that fades out from the top, so the hero has texture without
+     noise. Tint-based, so the lines are ink on Light and light on Dark. */
+  .bg-grid {
+    background-image:
+      linear-gradient(
+        to right,
+        rgb(var(--tc-tint) / 0.045) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        rgb(var(--tc-tint) / 0.045) 1px,
+        transparent 1px
+      );
+    background-size: 48px 48px;
+    mask-image: radial-gradient(
+      ellipse 70% 60% at 50% 0%,
+      #000 30%,
+      transparent
+    );
   }
 
   /* The backdrop the demo palette sits on. Literal in both themes: it stands in
@@ -334,11 +358,6 @@
   /* The demo's text caret. */
   .demo-caret {
     animation: caret-blink 1.05s steps(1) infinite;
-  }
-
-  /* Result rows melt in one after another once a query finishes typing. */
-  .demo-row {
-    animation: demo-row 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   /* ── Glass demo ────────────────────────────────────────────────────────
@@ -429,32 +448,11 @@
     pointer-events: none;
   }
 
-  /* The page's own dot grid behind the palette, fading out past its edges, so
-     the frosted glass has real texture to blur. */
-  .glass-backing {
-    position: absolute;
-    inset: -3rem;
-    z-index: -1;
-    background-image: radial-gradient(
-      color-mix(in srgb, var(--color-fg) 30%, transparent) 2px,
-      transparent 2.5px
-    );
-    background-size: 22px 22px;
-    mask-image: radial-gradient(closest-side, #000 55%, transparent);
-    pointer-events: none;
-  }
-
   .glass-chip {
     background-color: var(--glass-chip);
     box-shadow:
       inset 0 1px 0 var(--glass-edge-top),
       inset 0 0 0 1px var(--glass-edge-ring);
-  }
-
-  /* The scene chip's timer bar, so a viewer can see when the demo moves on. */
-  .demo-progress {
-    transform-origin: left;
-    animation: demo-progress linear both;
   }
 
   /* A keyboard key. One complete rule rather than a stack of utilities: the
@@ -536,6 +534,16 @@
   animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* Half the track is one full copy of the list, so ending there is seamless. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @keyframes header-veil {
   from {
     background-color: transparent;
@@ -545,23 +553,6 @@
 @keyframes caret-blink {
   50% {
     opacity: 0;
-  }
-}
-
-@keyframes demo-row {
-  from {
-    opacity: 0;
-    translate: 0 8px;
-    filter: blur(8px);
-  }
-}
-
-@keyframes demo-progress {
-  from {
-    scale: 0 1;
-  }
-  to {
-    scale: 1 1;
   }
 }
 

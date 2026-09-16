@@ -20,8 +20,9 @@ export const site = {
 
 // The hero, in as few words as possible — headline plus one punchy line.
 export const hero = {
-  // One entry per line: the break falls between the two sentences at every width.
-  headlineLines: ["Everything on your Mac.", "One keystroke away."],
+  // One entry per line: the break falls between the two sentences at every
+  // width. The last line ends bare, because the hero draws a caret after it.
+  headlineLines: ["Everything on your Mac.", "One keystroke away"],
   sub: "A tiny, native launcher. No Electron. No account. No telemetry. No bullshit.",
   // The mono line under the buttons. Each fact is stated in the docs.
   facts: ["Under 100 MB of memory", "Zero dependencies", "Free & open source"],
@@ -76,3 +77,17 @@ export function brewInstallCommand(cask: string): string {
 // and update, so the Homebrew path needs no manual step at all.
 export const quarantineCommand =
   'xattr -dr com.apple.quarantine "/Applications/Tinycast.app"';
+
+// The logo wall under the hero. Order is the render order; the marquee repeats
+// the list once so the loop has no seam.
+export const companies = [
+  "apple",
+  "google",
+  "microsoft",
+  "oracle",
+  "bytedance",
+  "yandex",
+  "redhat",
+] as const;
+
+export type Company = (typeof companies)[number];

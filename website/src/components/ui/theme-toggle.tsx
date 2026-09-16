@@ -5,6 +5,18 @@ import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { cn } from "../../lib/cn";
 
+const noop = () => () => {};
+
+// The server can't know the stored choice, so anything that depends on it has
+// to wait for hydration — otherwise it renders the wrong state and flips.
+function useHasMounted() {
+  return useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
+}
+
 // Three explicit targets, never a cycling button: landing on Light at night blinds the reader.
 const options = [
   { value: "light", label: "Light", Icon: Sun },
@@ -12,17 +24,9 @@ const options = [
   { value: "dark", label: "Dark", Icon: Moon },
 ] as const;
 
-const noop = () => () => {};
-
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
-  // The server can't know the stored choice, so the selected state only appears
-  // after hydration — otherwise it renders against the wrong option and flips.
-  const mounted = useSyncExternalStore(
-    noop,
-    () => true,
-    () => false,
-  );
+  const mounted = useHasMounted();
 
   return (
     <div
@@ -56,5 +60,34 @@ export function ThemeToggle({ className }: { className?: string }) {
         );
       })}
     </div>
+  );
+}
+
+// The header's one-tap flip between Light and Dark. It is not a replacement for
+// the three-way control above: that one still owns System, which a flip cannot
+// reach, so the footer keeps it.
+export function ThemeSwitch({ className }: { className?: string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useHasMounted();
+  const isDark = mounted && resolvedTheme === "dark";
+  const Icon = isDark ? Sun : Moon;
+
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={isDark ? "Switch to light" : "Switch to dark"}
+      title={isDark ? "Switch to light" : "Switch to dark"}
+      className={cn(
+        "flex size-8 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg",
+        className,
+      )}
+    >
+      {mounted ? (
+        <Icon size={16} strokeWidth={1.9} />
+      ) : (
+        <span className="size-4" />
+      )}
+    </button>
   );
 }

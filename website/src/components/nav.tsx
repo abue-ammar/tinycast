@@ -1,35 +1,38 @@
-import { BookOpen } from "lucide-react";
+import { BookOpen, Star } from "lucide-react";
 import { nav, site } from "../data/site";
-import { Button } from "./ui/button";
+import { starCount } from "../lib/version";
 import { DiscordLogo, GitHubLogo, Logo } from "./ui/icon";
 import { Link } from "./ui/link";
+import { ThemeSwitch } from "./ui/theme-toggle";
 
 const iconButtonClass =
   "flex size-8 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg";
 
-// A full-width bar that is see-through over the hero and turns to glass once
-// the page scrolls. Phones get icons instead of a menu: the section links are
-// a scroll away, and a drawer is one more thing to open.
-export function Nav() {
+// One thin bar on a hairline, see-through over the hero and glass once the page
+// scrolls. Phones get icons instead of a menu: the section links are a scroll
+// away, and a drawer is one more thing to open.
+export async function Nav() {
+  const stars = await starCount();
+
   return (
-    <header className="header-veil sticky top-0 z-50">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-5">
+    <header className="header-veil sticky top-0 z-50 border-b border-border">
+      <div className="mx-auto flex h-12 max-w-6xl items-center gap-6 px-5">
         <Link href="/" className="flex items-center gap-2">
-          <Logo size={26} />
-          <span className="text-body font-semibold tracking-tight text-fg">
+          <Logo size={22} />
+          <span className="text-small font-semibold tracking-tight text-fg">
             {site.name}
           </span>
         </Link>
 
         <nav
           aria-label="Sections"
-          className="hidden items-center gap-0.5 md:flex"
+          className="hidden items-center gap-5 md:flex"
         >
           {nav.map((item) => (
             <Link
               key={item.label}
               href={item.href}
-              className="rounded-full px-3.5 py-1.5 text-small font-medium text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg"
+              className="text-small text-fg-muted transition-colors hover:text-fg"
             >
               {item.label}
             </Link>
@@ -48,11 +51,23 @@ export function Nav() {
             href={site.repo}
             target="_blank"
             rel="noreferrer"
-            aria-label="View source on GitHub"
+            aria-label={
+              stars ? `${stars} stars on GitHub` : "View source on GitHub"
+            }
             title="View source on GitHub"
-            className={iconButtonClass}
+            className={
+              stars
+                ? "flex h-8 items-center gap-1.5 rounded-full px-2.5 text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg"
+                : iconButtonClass
+            }
           >
             <GitHubLogo size={16} />
+            {stars && (
+              <span className="inline-flex items-center gap-1 font-mono text-caption">
+                <Star size={12} aria-hidden="true" />
+                {stars}
+              </span>
+            )}
           </a>
           <a
             href={site.community.discord}
@@ -64,9 +79,7 @@ export function Nav() {
           >
             <DiscordLogo size={16} />
           </a>
-          <Button href="/#install" className="ml-2 h-8 px-4">
-            Download
-          </Button>
+          <ThemeSwitch />
         </div>
       </div>
     </header>
