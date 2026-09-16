@@ -686,6 +686,20 @@ struct CalcTests {
         expectDisplay("2*50 usd to eur", "92.00 EUR")  // expression on the value side
         expectDisplay("eur to usd", "1.09 USD")  // implied amount of 1
         expectCopy("100 dollars to yen", "15700.00 JPY")
+        // No connector at all, the way Raycast reads it
+        expectDisplay("10 usd cad", "13.60 CAD")
+        expectDisplay("10usd cad", "13.60 CAD")
+        expectDisplay("$10 cad", "13.60 CAD")
+        expectDisplay("10$ cad", "13.60 CAD")
+        expectDisplay("usd cad", "1.36 CAD")
+        expectDisplay("2*5 usd cad", "13.60 CAD")
+        expectDisplay("10 dollars euros", "9.20 EUR")
+        expectDisplay("10 pounds euros", "11.65 EUR")  // still money once units fall through
+        expectExpression("10 usd cad", "10 USD")
+        expectBadges("10 usd cad", source: "US Dollar", target: "Canadian Dollar")
+        expectExpression("10 usd cad +", "10 usd cad +")
+        expectDisplay("10 usd cad +", "13.60 CAD")
+        expectNil("10 cad usd eur")  // a third code leaves no scalar on the left
         // Currency signs, prefixed and suffixed
         expectDisplay("€20 to GBP", "17.17 GBP")
         expectDisplay("20€ to GBP", "17.17 GBP")
@@ -706,6 +720,8 @@ struct CalcTests {
         // Currency ↔ unit is a friendly category error, like Weight ↔ Time
         expectError("10 usd to kg", "Cannot convert Currency to Weight.")
         expectError("10 kg to usd", "Cannot convert Weight to Currency.")
+        expectNil("10 usd kg")  // without a connector the pair is two words, not a mismatch
+        expectNil("10 kg usd")
         // A known currency the snapshot doesn't quote, and no snapshot at all
         expectError("5 usd to npr", "No exchange rate for NPR.")
         expectErrorWithoutRates(

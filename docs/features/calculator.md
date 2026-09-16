@@ -50,7 +50,7 @@ Single ASCII words return immediately: a bare app name, constant or date keyword
 5. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
    `100km / 2h to km/h`, `(1hr + 30min) to timespan`)
 6. Explicit unit conversion (`10km to mi`, `m to ft`, `day s`)
-7. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
+7. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`, `10 usd cad`)
 8. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
 9. Natural-language percent, ratio and list forms (`CalcPercent`)
 
@@ -432,6 +432,9 @@ echoes the typed text (`10km to mi ×`) rather than the conversion's own shorten
 `CalcCurrency` mirrors `CalcUnits`' shape: a lookup table plus a `parseConversion` over the same
 `expr from (to|in|->) to` token shape, so `eur to usd` implies an amount of 1 exactly like `m to ft`.
 A leading sign is swapped back into amount-first order, so `€20 to GBP` and `20€ to GBP` parse alike.
+The connector is optional, as in Raycast: `10 usd cad`, `$10 cad` and `usd cad` read the same as
+their `to` spellings. A bare pair must be money on both sides, so `10 usd kg` stays an app search
+rather than a category error — only a spelled connector says a conversion was meant.
 
 The table is **generated except for the judgement calls**. `node Scripts/gen-currencies.js` joins three
 sources on the ISO code and emits `CurrencyData.generated.swift`:

@@ -40,26 +40,26 @@ enum CalcCurrency {
     /// The category label used in the mismatch message, mirroring `UnitCategory.displayName`.
     static let categoryName = "Currency"
 
-    /// `expr currency (to|in|->) currency`, shaped like `CalcUnits.parseConversion`, run after it.
+    /// `expr currency [to|in|->] currency`, shaped like `CalcUnits.parseConversion`, run after it.
     static func parseConversion(_ tokens: [CalcToken], rates: CurrencyRates?) -> ConversionParse? {
         let tokens = amountFirst(tokens)
-        guard tokens.count >= 3, CalcUnits.isConnector(tokens[tokens.count - 2]),
-            case .ident(let toName) = tokens[tokens.count - 1],
-            case .ident(let fromName) = tokens[tokens.count - 3]
-        else { return nil }
+        guard tokens.count >= 2, case .ident(let toName) = tokens[tokens.count - 1] else { return nil }
+        let connected = tokens.count >= 3 && CalcUnits.isConnector(tokens[tokens.count - 2])
+        let fromIndex = tokens.count - (connected ? 3 : 2)
+        guard case .ident(let fromName) = tokens[fromIndex] else { return nil }
 
-        // A side that is neither currency nor unit is just a typo, and gets no card.
+        // Only a spelled connector turns a currency beside a unit into a mismatch, not two words.
         switch (byName[fromName], byName[toName]) {
         case (nil, nil):
             return nil
         case (.some, nil):
-            guard let to = CalcUnits.byName[toName] else { return nil }
+            guard connected, let to = CalcUnits.byName[toName] else { return nil }
             return .mismatch(from: categoryName, to: to.category.displayName)
         case (nil, .some):
-            guard let from = CalcUnits.byName[fromName] else { return nil }
+            guard connected, let from = CalcUnits.byName[fromName] else { return nil }
             return .mismatch(from: from.category.displayName, to: categoryName)
         case (let from?, let to?):
-            let valueTokens = Array(tokens[0..<(tokens.count - 3)])
+            let valueTokens = Array(tokens[0..<fromIndex])
             let input: Double
             if valueTokens.isEmpty {
                 input = 1
