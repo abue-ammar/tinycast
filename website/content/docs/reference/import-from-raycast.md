@@ -6,14 +6,26 @@ description: Read a Raycast export and bring your shortcuts, favorites, snippets
 Tinycast reads Raycast's own export file directly, in **Settings → Backup → Raycast Export**, or in
 the welcome screen the first time you open Tinycast.
 
-It reads the `.rayconfig` file that current Raycast versions export. Older Raycast 1.x exports are no
-longer supported.
+## Which exports it reads
+
+**Raycast v2.0 and newer only.** Tinycast reads the `.rayconfig` file that Raycast v2.0 and later
+write, and nothing else. Check your Raycast version in **Raycast → Settings → About** before you
+export.
+
+**Raycast v1.x exports are not supported.** That format was dropped in **Tinycast v0.10.5**, along with
+the Raycast X beta format — both were deleted rather than carried. If your file will not open, export
+it again from a current Raycast.
 
 ## Steps
 
 1. In Raycast, export your settings and data, and note the passphrase.
 2. In Tinycast, go to **Settings → Backup → Raycast Export** and choose the file.
 3. Type the passphrase, tick the things you want, and import.
+4. **Quit Tinycast and open it again.**
+
+**Quit and reopen Tinycast once the import finishes.** Not all of what you brought across takes effect
+in the running app, so a full restart is what makes the whole import live. Quit from the menu-bar icon
+— closing the Settings window is not enough — then open Tinycast again.
 
 Tinycast recognizes the file **before** you type the passphrase, so a wrong passphrase is reported as
 a wrong passphrase, not as "this is not a Raycast file".

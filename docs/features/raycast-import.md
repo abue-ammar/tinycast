@@ -1,8 +1,8 @@
 # Raycast import
 
-Tinycast reads the `.rayconfig` written by Raycast 2.x: a `RAYCFG3` container holding an AES-256-GCM
-payload under a scrypt-derived key. It is the only format read — the 1.x export and the Raycast X beta
-between them are both gone, deleted rather than carried.
+Tinycast reads the `.rayconfig` written by Raycast v2.x: a `RAYCFG3` container holding an AES-256-GCM
+payload under a scrypt-derived key. It is the only format read — the v1.x export and the Raycast X beta
+between them are both gone, deleted rather than carried, as of **v0.10.5**.
 
 ## Invariants
 
