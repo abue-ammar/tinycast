@@ -1,5 +1,5 @@
 #!/bin/bash
-# Format the whole project with swift-format. `--check` reports instead of writing, for CI.
+# Format the whole project with swift-format. `--check` reports instead of writing.
 # Careful: this restructures code, it does not merely lay it out.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1

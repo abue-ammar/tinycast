@@ -7,13 +7,10 @@ RAM.**
   <a href="https://github.com/abue-ammar/tinycast/releases/latest">
     <img alt="Latest release"
          src="https://img.shields.io/github/v/release/abue-ammar/tinycast?sort=semver&style=flat&label=release&color=1F6FEB"></a>
-  <a href="https://github.com/abue-ammar/tinycast/actions/workflows/ci.yml">
-    <img alt="CI status"
-         src="https://img.shields.io/github/actions/workflow/status/abue-ammar/tinycast/ci.yml?branch=main&style=flat&label=CI"></a>
   <img alt="Swift 6.0"
        src="https://img.shields.io/badge/Swift-6.0-F05138?style=flat&logo=swift&logoColor=white">
-  <img alt="macOS 15 or later"
-       src="https://img.shields.io/badge/macOS-15%2B-000000?style=flat&logo=apple&logoColor=white">
+  <img alt="macOS 26 or later"
+       src="https://img.shields.io/badge/macOS-26%2B-000000?style=flat&logo=apple&logoColor=white">
   <a href="LICENSE">
     <img alt="License: AGPL-3.0"
          src="https://img.shields.io/badge/License-AGPL--3.0-3DA639?style=flat"></a>

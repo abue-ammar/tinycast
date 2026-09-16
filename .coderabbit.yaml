@@ -273,7 +273,7 @@ reviews:
         Runs on macos-26 with Xcode 26.
         - Keep permissions minimal and pin actions.
         - Never interpolate untrusted PR input into run:.
-        - CI calls the scripts rather than restating their rules.
+        - Workflows call the scripts rather than restating their rules.
 
     - path: "{AGENTS.md,docs/**/*.md}"
       instructions: |
