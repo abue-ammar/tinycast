@@ -1023,6 +1023,69 @@ struct CalcTests {
         expectNilAt("13 pm SF to London")
         expectNilAt("5:60 pm SF to London")
 
+        let localConversionNow = clock.calendar.date(
+            from: DateComponents(year: 2026, month: 9, day: 15, hour: 12))!
+        for (home, target, time, dayNote) in [
+            ("Asia/Shanghai", "Shanghai", "8:30 AM", " (tomorrow)"),
+            ("UTC", "UTC", "12:30 AM", " (tomorrow)"),
+            ("America/Los_Angeles", "Los Angeles", "5:30 PM", "")
+        ] {
+            var calendar = clock.calendar
+            calendar.timeZone = TimeZone(identifier: home)!
+            let expected = CalcResult(
+                expression: "5:30 PM", sourceBadge: "Los Angeles", targetBadge: target,
+                payload: .value(display: time + dayNote, copyText: time))
+            for query in [
+                "5:30pm SF", "5:30 pm SF", "17:30 San Francisco", "5:30 PM SFO",
+                "  5:30\tpm\u{00A0}sf  "
+            ] {
+                let result = CalcEngine.evaluate(query, now: localConversionNow, calendar: calendar)
+                check("\(query) [home \(home)]", expected: "true", got: "\(result == expected)")
+            }
+        }
+        for components in [
+            DateComponents(year: 2026, month: 9, day: 15, hour: 12),
+            DateComponents(year: 2026, month: 1, day: 1, hour: 0),
+            DateComponents(year: 2026, month: 11, day: 1, hour: 12)
+        ] {
+            let now = clock.calendar.date(from: components)!
+            for (home, destination) in [
+                ("UTC", "UTC"), ("Asia/Shanghai", "Shanghai"),
+                ("Pacific/Kiritimati", "Kiritimati"), ("Pacific/Pago_Pago", "Pago Pago")
+            ] {
+                var calendar = clock.calendar
+                calendar.timeZone = TimeZone(identifier: home)!
+                for (query, explicit) in [
+                    ("5 pm SF", "5pm SF"), ("12 am Canada", "12am Canada"),
+                    ("12 pm CDG", "12pm CDG"), ("09:15 Kathmandu", "09:15 Kathmandu"),
+                    ("23:30 Pago Pago", "23:30 Pago Pago"), ("00:30 Kiritimati", "00:30 Kiritimati"),
+                    ("1:30 am SF", "1:30am SF"), ("17:30 São Paulo", "17:30 São Paulo")
+                ] {
+                    let expected = CalcEngine.evaluate(
+                        "\(explicit) to \(destination)", now: now, calendar: calendar)
+                    let result = CalcEngine.evaluate(query, now: now, calendar: calendar)
+                    check(
+                        "\(query) [home \(home), now \(now)]", expected: "true",
+                        got: "\(expected != nil && result == expected)")
+                }
+            }
+        }
+        expectDisplayAt("5:30 pm SF + 30 min", "1:00 AM (tomorrow)", now: localConversionNow)
+        expectDisplayAt("5:30pm SF - 2h", "10:30 PM", now: localConversionNow)
+        expectDisplayAt("5:30pm in SF", "10:30 AM", now: localConversionNow)
+        expectDisplayAt("5:30pm SF to London", "1:30 AM (tomorrow)", now: localConversionNow)
+        expectNilAt(
+            "2:30 am SF",
+            now: clock.calendar.date(from: DateComponents(year: 2026, month: 3, day: 8, hour: 12))!)
+        for query in [
+            "5:30 pm PSTT", "5:30pm PSTT", "5:30pm SF junk", "5:30 pm SF London",
+            "5pm", "5 pm", "17:30", "17:30 pm", "5 SF", "pm SF", "time SF", "now SF",
+            "13pm SF", "5:60pm SF", "5pm pm SF", "5:30 am pm SF", "25:30 SF",
+            "5:30pm SF to", "5:30pm SF to PSTT", "5:30pm SF + 2 kg",
+            "time in sf in 4 hours", "now in tokyo in 2h", "Screen Time", "Safari SF"
+        ] {
+            expectNilAt(query)
+        }
         // Aliases cover what the identifiers don't spell, and DST is Foundation's own answer
         expectDisplayAt("time in nyc", "8:18 PM (yesterday)")
         expectDisplayAt("time in cet", "2:18 AM")

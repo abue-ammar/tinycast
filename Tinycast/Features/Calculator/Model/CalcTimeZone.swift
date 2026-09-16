@@ -10,7 +10,10 @@ enum CalcTimeZone {
             guard zone(named: place) != nil else { return nil }
             return evaluate("time in \(place.joined(separator: " "))", now: now, calendar: calendar)
         }
-        guard inputWords.count >= 2, inputWords.contains(where: { connectors.contains($0.lowercased()) })
+        guard inputWords.count >= 2,
+            inputWords.contains(where: { connectors.contains($0.lowercased()) })
+                || parseClock(inputWords[0].lowercased()) != nil
+                || parseClock(inputWords.prefix(2).joined().lowercased()) != nil
         else {
             return nil
         }
@@ -27,25 +30,35 @@ enum CalcTimeZone {
         let words = zoneQuery.split(whereSeparator: \.isWhitespace).map(String.init)
         guard words.count >= 2 else { return nil }
 
-        // Other grammars need a connector before consulting the zone table.
-        guard let connector = words.lastIndex(where: { $0 == "in" || $0 == "to" || $0 == "at" })
-        else { return nil }
-        let targetWords = Array(words[(connector + 1)...])
-        guard !targetWords.isEmpty else { return nil }
-
-        // `time in 4 hours` names a duration where a zone would go, so the home zone answers.
         let target: TimeZone
+        let leading: [String]
         var ahead: (count: Int, component: Calendar.Component)?
-        if let zone = zone(named: targetWords) {
-            target = zone
-        } else if let duration = parseDuration(targetWords.joined(separator: " ")) {
-            target = calendar.timeZone
-            ahead = duration
+        if let connector = words.lastIndex(where: { $0 == "in" || $0 == "to" || $0 == "at" }) {
+            let targetWords = Array(words[(connector + 1)...])
+            guard !targetWords.isEmpty else { return nil }
+            // `time in 4 hours` names a duration where a zone would go, so the home zone answers.
+            if let zone = zone(named: targetWords) {
+                target = zone
+            } else if let duration = parseDuration(targetWords.joined(separator: " ")) {
+                target = calendar.timeZone
+                ahead = duration
+            } else {
+                return nil
+            }
+            leading = Array(words[0..<connector])
         } else {
-            return nil
+            var sourceWords = words
+            if sourceWords[1] == "am" || sourceWords[1] == "pm" {
+                let meridiem = sourceWords.remove(at: 1)
+                sourceWords[0] += meridiem
+            }
+            guard parseClock(sourceWords[0]) != nil,
+                zone(named: Array(sourceWords.dropFirst())) != nil
+            else { return nil }
+            leading = sourceWords
+            target = calendar.timeZone
         }
 
-        let leading = Array(words[0..<connector])
         guard var source = sourceMoment(
             leading, allowZoneConnector: ahead == nil, now: now, calendar: calendar)
         else { return nil }

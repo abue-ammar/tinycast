@@ -281,8 +281,14 @@ still earns a card where a lone `100000` deliberately doesn't. A literal that ov
 `CalcTimeZone` answers `time in Tokyo`, `SF time`, `what time is it in London`, `5pm ldn in sf` and
 `9:30am in nyc`. It runs **before the tokenizer** — a zone phrase is words, and `5pm ldn in sf`
 is not calculator input. The `<place> time` form resolves the whole place through the existing
-city, alias and country tables, then uses the same path as `time in <place>`. Other forms still
-require a connector, so ordinary app searches stay outside the zone grammar.
+city, alias and country tables, then uses the same path as `time in <place>`. Every other form needs
+a connector or a leading clock, so ordinary app searches stay outside the zone grammar.
+
+A clock followed by a recognized source, such as `5:30pm SF` or `5:30 pm SF`, converts to the
+Mac's own zone when no destination is supplied. The destination comes from the injected calendar;
+the clock still uses today's date in the source zone and its daylight-saving rules. Existing city,
+country and airport aliases work here too. A missing or unknown source stays silent, and an explicit
+destination keeps its meaning: `5pm in SF` still converts from the Mac's zone to San Francisco.
 
 The source is the Mac's own zone unless the query names one, which is what makes `5pm london in sf`
 work without either side being local. That zone comes from the **injected calendar**, so `Model/`
