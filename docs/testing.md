@@ -433,9 +433,13 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Delete confirms through Tinycast, moves the file to Trash, and selecting another note never loses an
   unsaved edit
 - An existing `Floating Note.md` appears as an ordinary note without conversion
-- Markdown source remains completely literal: markers stay visible, links are not activated, and task
-  syntax is ordinary text; there is no preview, formatting menu, or task overlay
-- Return, Tab, Delete, and formatting-looking shortcuts retain native plain-text behavior
+- Type `[] ` or `- [ ] ` to create a checkbox; click to check/uncheck, then Undo and Redo; the file
+  and copied text preserve Markdown task syntax, including after switching notes and reopening
+- Return continues a task with an unchecked item; Return on an empty item exits the list
+- Checkboxes follow scrolling, wrapping, and window resizing, work with VoiceOver and keyboard focus,
+  and checked text is dimmed and struck through in both appearances
+- Fenced code and non-task Markdown stay literal; links are not activated, and Tab and Delete retain
+  native plain-text behavior
 - Edit one note, switch to a shorter note, then Undo and Redo: the new note remains intact and the app
   does not terminate
 - Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, Undo, Redo, and Find preserve

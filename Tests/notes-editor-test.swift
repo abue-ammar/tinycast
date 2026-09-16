@@ -12,6 +12,7 @@ struct NotesEditorTests {
         testLiteralEditingAndNativeCommands()
         testUndoIsolation()
         testCharacterCountReports()
+        testTasks()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -118,6 +119,63 @@ struct NotesEditorTests {
         check(
             "a stale count cannot be attributed to the replacement note",
             reports.last?.0.id == second.id && reports.last?.1 == 6)
+    }
+
+    private static func testTasks() {
+        let source = "- [ ] 🧑🏽‍💻 first\n* [X] done\n```md\n- [ ] code\n```\n~~~\n- [x] code\n~~~"
+        let parsed = NoteTask.parse(source)
+        check("fenced tasks remain literal", parsed.count == 2)
+        check("uppercase X is checked", parsed.last?.isChecked == true)
+        check("inline syntax and incomplete markers stay literal",
+              NoteTask.parse("inline - [ ] task\n- [] task\n- [q] task").isEmpty)
+        let indented = NoteTask.parse("hello\r\n  + [ ] task\r\n")
+        check("indented CRLF tasks preserve offsets and indentation",
+              indented.first?.markerRange.location == 9 && indented.first?.continuation == "  - [ ] ")
+        check("task content ranges preserve Unicode",
+              (source as NSString).substring(with: parsed[0].contentRange) == "🧑🏽‍💻 first")
+        var changes: [String] = []
+        let editor = makeEditor(
+            input: NoteEditorInput(id: NoteID(rawValue: "Tasks.md"), source: source, epoch: 1),
+            onSourceChange: { changes.append($0) })
+        editor.textView.layoutSubtreeIfNeeded()
+        let buttons = editor.textView.subviews.compactMap { $0 as? NSButton }
+        check("tasks have accessible checkbox controls", buttons.count == 2)
+        check("task controls have layout", buttons.allSatisfy { !$0.isHidden && $0.frame.height > 0 })
+        check("rendering does not rewrite source", editor.textView.string == source)
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+        editor.textView.selectAll(nil)
+        copySelection(of: editor.textView, to: pasteboard)
+        check("copying tasks preserves Markdown", pasteboard.string(forType: .string) == source)
+        editor.textView.setSelectedRange(NSRange(location: NSMaxRange(parsed[0].contentRange), length: 0))
+        buttons[0].performClick(nil)
+        check("clicking saves checked Markdown", changes.last?.hasPrefix("- [x] ") == true)
+        check("clicking preserves the caret", editor.textView.selectedRange().location == NSMaxRange(parsed[0].contentRange))
+        editor.coordinator.editorUndoManager.undo()
+        check("checkbox toggle is undoable", editor.textView.string == source)
+        editor.coordinator.editorUndoManager.redo()
+        check("checkbox toggle is redoable", editor.textView.string.hasPrefix("- [x] "))
+        editor.textView.insertNewline(nil)
+        check("Return continues with an unchecked task", editor.textView.string.contains("first\n- [ ] \n"))
+        editor.textView.insertNewline(nil)
+        check("Return on an empty task exits the list", editor.textView.string.contains("first\n\n"))
+
+        editor.textView.selectAll(nil)
+        editor.textView.insertText("[]", replacementRange: editor.textView.selectedRange())
+        editor.textView.insertText(" ", replacementRange: editor.textView.selectedRange())
+        check("bracket-space shortcut creates Markdown", editor.textView.string == "- [ ] ")
+        editor.textView.insertText("new", replacementRange: editor.textView.selectedRange())
+        check("typing after a checkbox stays visible",
+              editor.textView.textStorage?.attribute(.foregroundColor, at: 6, effectiveRange: nil) as? NSColor
+                == NSColor(Theme.Colors.noteText))
+        editor.textView.selectAll(nil)
+        editor.textView.insertText("```\n[]", replacementRange: editor.textView.selectedRange())
+        editor.textView.insertText(" ", replacementRange: editor.textView.selectedRange())
+        check("bracket shortcuts stay literal in code", editor.textView.string == "```\n[] ")
+        let replacement = NoteEditorInput(id: NoteID(rawValue: "Other.md"), source: "plain", epoch: 2)
+        editor.coordinator.update(replacement)
+        check("switching notes removes old checkboxes", editor.textView.subviews.compactMap { $0 as? NSButton }.isEmpty)
+        check("switching notes clears task undo", !editor.coordinator.editorUndoManager.canUndo)
     }
 
     /// The primitives `copy:`/`cut:`/`paste:` delegate to; the actions clobber the real clipboard.

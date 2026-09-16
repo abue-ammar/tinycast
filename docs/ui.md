@@ -258,9 +258,9 @@ remain click-only controls. Escape closes the switcher before hiding, while Comm
 control order the panel out. Show Notes only shows or focuses; focus loss leaves the panel visible.
 
 The editor is one native TextKit 2 surface. Its string is the canonical Markdown source, using one
-system font and the `noteText` color. Markdown markers remain visible and receive no parsing, rendering,
-formatting controls, task overlays, or link behavior. AppKit owns editing, undo, selection, Find, and
-marked text.
+system font and the `noteText` color. Task markers render as native accessible checkboxes positioned
+with TextKit 2 segment geometry, and completed task text is dimmed and struck through. Other Markdown
+markers and fenced code stay literal. AppKit owns editing, undo, selection, Find, and marked text.
 
 The switcher is its own glass panel over the editor, sized to its list up to a 240-point ceiling and
 never resizing the note window. Its plain search field and

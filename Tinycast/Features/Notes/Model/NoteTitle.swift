@@ -31,6 +31,10 @@ enum NoteTitle {
     }
 
     private static func stripped(_ line: Substring) -> String {
+        if let task = NoteTask.parse(String(line)).first {
+            return (String(line) as NSString).substring(with: task.contentRange)
+                .trimmingCharacters(in: .whitespaces)
+        }
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         let markers = trimmed.prefix { $0 == "#" }
         guard !markers.isEmpty, markers.count <= 6 else { return trimmed }

@@ -10,8 +10,9 @@ commands and global shortcuts can show, search, or extend the collection.
   the source contains no frontmatter, embedded ID, or title field, and there is no database or sidecar.
 - **A note the user has not named shows its first line instead.** Only the names `create` claims yield
   it, it is presentation and nothing else, and naming the note replaces it.
-- **The editor displays literal source.** The string in `NSTextView`, `NotesStore`, search, and the
-  file are identical; there is no parser, projection, preview, or hidden syntax.
+- **Markdown remains canonical.** The string in `NSTextView`, `NotesStore`, search, and the file
+  are identical. Task markers are visually replaced by checkboxes without rewriting the source;
+  toggling changes only the space or `x` inside the brackets.
 - **Only the active note can be dirty.** Switching, creating, renaming, and deleting first flush it, so
   collection navigation cannot abandon an in-memory draft.
 - **Tinycast is the only writer.** There is no watcher and no revision check: a save replaces the file
@@ -55,7 +56,7 @@ in UserDefaults and does not ride settings backups.
 
 A note still carrying a name `create` claimed — `Untitled`, `Untitled 2`, … — shows the first line of
 its source that carries visible text. `NoteTitle` owns that rule: leading blank lines are skipped,
-Markdown heading markers are dropped, and the line is capped to 120 characters so no row or title bar
+Markdown heading and task markers are dropped, and the line is capped to 120 characters so no row or title bar
 has to carry a paragraph. `NoteSummary.title` remains the filename; `displayTitle` is what every
 surface renders — switcher rows and their VoiceOver labels, the Trash confirmation, the window title,
 and the title band of `NoteSearch`, so a fuzzy query reaches a note nobody has named.
@@ -120,15 +121,22 @@ only while the switcher is not renaming; in the editor and title field it remain
 After confirmation, Trash chooses its successor from the current visible ordering. Each row exposes
 VoiceOver actions to activate, rename, and move the actual note title to Trash.
 
-## Plain editor
+## Markdown editor
 
 `NoteEditorView` is one TextKit 2 `NSTextView` inside an `NSScrollView`. It installs
 `NoteEditorInput.source` directly as `NSTextView.string` with one system font and Tinycast's note color.
-Markdown markers remain visible and receive no syntax highlighting, rendered typography, controls, or
-link behavior.
+Markdown remains literal except for task lists: `- [ ]`, `* [ ]`, and `+ [ ]` prefixes followed by
+space render as accessible checkboxes. Checked tasks (`[x]` or `[X]`) have dimmed, struck-through text.
+Fenced code blocks stay literal. The controls use TextKit 2 segment geometry, so they follow wrapping
+and resizing without a second editor or a source/display mapping.
+
+Type `[] ` or `[ ] ` at the start of a line to create `- [ ] `. Return continues a task list with
+an unchecked item; Return on an empty item removes its prefix to leave the list. Clicking a checkbox
+preserves selection, participates in native undo/redo, and publishes through the ordinary autosave path.
+Copy and Find still use the complete Markdown source.
 
 AppKit owns typing, selection, Cut, Copy, Paste, Select All, Find, marked-text input, emoji, combining
-characters, and undo/redo. The only `NoteTextView` customization supplies a document-owned undo manager.
+characters, and undo/redo. `NoteTextView` supplies a document-owned undo manager and task controls.
 Changing the note identity or editor epoch replaces the literal string and clears the previous
 document's undo history; ordinary edits keep native undo grouping.
 
@@ -156,6 +164,7 @@ matcher. It covers repository safety, unique-name claiming, derived titles, sear
 autosave, empty collections, switcher interaction, and cancellation.
 
 `Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects to cover literal source,
-native Cut/Copy/Paste, Unicode and marked text, and undo isolation. Window chrome is not automated:
+native Cut/Copy/Paste, Unicode and marked text, task parsing, checkbox layout and toggling, list
+continuation, bracket shortcuts, and undo isolation. Window chrome is not automated:
 the Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher, focus restoration,
 Finder, Trash recovery, and accessibility.
