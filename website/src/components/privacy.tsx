@@ -64,7 +64,7 @@ export function Privacy() {
       title="Nothing turns on until you do."
       intro="A fresh install is a launcher, a calculator and your clipboard. Everything else waits for you to switch it on, and none of it needs an account."
     >
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {privacyStats.map((stat) => (
           <div
             key={stat.label}

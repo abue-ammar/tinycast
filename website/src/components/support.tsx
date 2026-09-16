@@ -18,7 +18,7 @@ function GlowingMark() {
 
 export function Support() {
   return (
-    <section id="support" className="px-5 pb-24 pt-24 text-center sm:px-10 ">
+    <section id="support" className="px-4 pb-24 pt-24 text-center sm:px-10 ">
       <div aria-hidden="true">
         <GlowingMark />
       </div>

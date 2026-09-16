@@ -19,7 +19,7 @@ export async function Footer() {
 
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-7xl flex-col-reverse gap-6 px-5 py-8 sm:px-10 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex max-w-7xl flex-col-reverse gap-4 px-4 py-8 sm:px-10 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2.5">
           <Logo size={20} />
           <p className="text-caption text-fg-subtle">
@@ -37,7 +37,7 @@ export async function Footer() {
 
         <nav
           aria-label="Footer"
-          className="flex flex-wrap items-center gap-x-6 gap-y-2"
+          className="flex flex-wrap items-center gap-x-5 gap-y-2"
         >
           {links.map((link) => (
             <Link

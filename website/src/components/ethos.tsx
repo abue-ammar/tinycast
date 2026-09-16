@@ -18,7 +18,7 @@ const pillarIcons: Record<
 export function Ethos() {
   return (
     <section id="ethos" className="border-y border-border bg-tint/2">
-      <div className="mx-auto max-w-7xl px-5 py-20 sm:px-10">
+      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-10">
         <blockquote className="mx-auto max-w-3xl text-center">
           <p className="text-quote text-balance font-serif text-fg">
             &ldquo;{ethos.quote}{" "}
@@ -29,7 +29,7 @@ export function Ethos() {
           </footer>
         </blockquote>
 
-        <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {ethosPillars.map((pillar) => {
             const Icon = pillarIcons[pillar.icon];
             return (

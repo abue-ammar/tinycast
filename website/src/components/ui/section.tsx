@@ -49,7 +49,7 @@ export function Section({
 
   return (
     <section id={id} className="relative">
-      <div className="px-5 py-20 sm:px-10 sm:py-24">
+      <div className="px-4 py-20 sm:px-10 sm:py-24">
         {header}
         <div className="mt-12">{children}</div>
       </div>

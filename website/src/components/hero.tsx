@@ -24,7 +24,7 @@ export async function Hero() {
         }}
       />
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-14 sm:px-10 lg:grid-cols-[1.15fr_1fr] lg:pb-28 lg:pt-20">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-10 lg:grid-cols-[1.15fr_1fr] lg:pb-28 lg:pt-20">
         <div className="min-w-0">
           <p className="rise inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-micro uppercase text-fg-muted">
             <span

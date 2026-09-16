@@ -11,7 +11,7 @@ export function Keyboard() {
       title="Built for the keyboard."
       intro="Pick one shortcut to summon the palette. Everything after that is a key away, and keys follow their position, so any layout works."
     >
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {shortcutRows.map((row) => (
           <div
             key={row.does}
@@ -27,7 +27,7 @@ export function Keyboard() {
           </div>
         ))}
       </dl>
-      <p className="mt-6 text-small text-fg-muted">
+      <p className="mt-4 text-small text-fg-muted">
         Every other key, one table per screen, is in{" "}
         <Link
           href="/docs/reference/shortcuts"
