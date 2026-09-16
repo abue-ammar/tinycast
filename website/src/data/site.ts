@@ -34,49 +34,11 @@ export const nav = [
   { label: "Docs", href: "/docs" },
 ] as const;
 
-// Homebrew install channels. Each is a separate app that runs side by side,
-// with its own settings, permissions and login item. Descriptions follow
-// docs/install.md.
+// The hero's two lines. Every other channel lives in docs/install.md, which is
+// where both install CTAs point.
 export const brewTrustCommand = "brew trust --tap abue-ammar/tinycast";
-
-export const channels = [
-  {
-    id: "stable",
-    label: "Stable",
-    cask: "tinycast",
-    description:
-      "Recommended. The smaller build, for Apple silicon on macOS 26.",
-  },
-  {
-    id: "universal",
-    label: "Intel",
-    cask: "tinycast-universal",
-    description:
-      "The universal build, for Intel Macs on macOS 26. Runs on Apple silicon too.",
-  },
-  {
-    id: "beta",
-    label: "Beta",
-    cask: "tinycast@beta",
-    description:
-      "Installs Tinycast Beta, with its own settings, right beside stable.",
-  },
-  {
-    id: "sequoia",
-    label: "Sequoia",
-    cask: "tinycast-sequoia",
-    description: "For macOS 15 Sequoia. New features reach macOS 26 first.",
-  },
-] as const;
-
-export function brewInstallCommand(cask: string): string {
-  return `brew install --cask abue-ammar/tinycast/${cask}`;
-}
-
-// Only for a direct DMG download. Homebrew clears quarantine on every install
-// and update, so the Homebrew path needs no manual step at all.
-export const quarantineCommand =
-  'xattr -dr com.apple.quarantine "/Applications/Tinycast.app"';
+export const brewInstallCommand =
+  "brew install --cask abue-ammar/tinycast/tinycast";
 
 // The logo wall under the hero. Order is the render order; the marquee repeats
 // the list once so the loop has no seam.

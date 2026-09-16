@@ -1,7 +1,7 @@
 import "../index.css";
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { Providers } from "../components/providers";
 import { site } from "../data/site";
 import { asset } from "../lib/asset";
@@ -12,6 +12,14 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+});
+// One display face, for the ethos pull quote and nothing else. Both styles are
+// loaded because the quote sets its last sentence in italic.
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
 });
 
 const description =
@@ -78,7 +86,7 @@ export default function RootLayout({
     // against the incoming page and you land part-way down the new one.
     <html
       lang="en"
-      className={`${geist.variable} ${geistMono.variable}`}
+      className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >

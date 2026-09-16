@@ -1,8 +1,8 @@
 import { Features } from "../components/features";
 import { Footer } from "../components/footer";
 import { Gallery } from "../components/gallery";
+import { Ethos } from "../components/ethos";
 import { Hero } from "../components/hero";
-import { Install } from "../components/install";
 import { Keyboard } from "../components/keyboard";
 import { LogoWall } from "../components/logo-wall";
 import { Nav } from "../components/nav";
@@ -26,7 +26,9 @@ export default function HomePage() {
           <Privacy />
           <Keyboard />
           <Switch />
-          <Install />
+        </div>
+        <Ethos />
+        <div className="mx-auto max-w-7xl">
           <Support />
         </div>
       </main>

@@ -62,14 +62,14 @@ export async function Hero() {
             style={{ animationDelay: "180ms" }}
           >
             <CommandLine command={brewTrustCommand} />
-            <CommandLine command={brewInstallCommand("tinycast")} />
+            <CommandLine command={brewInstallCommand} />
           </div>
 
           <div
             className="rise mt-6 flex flex-wrap items-center gap-3"
             style={{ animationDelay: "240ms" }}
           >
-            <Button href="/#install" variant="action" size="md">
+            <Button href="/docs/install" variant="action" size="md">
               <Download size={15} />
               Download for Mac
             </Button>

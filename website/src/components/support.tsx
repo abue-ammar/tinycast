@@ -9,7 +9,7 @@ function GlowingMark() {
     <span className="relative mx-auto flex size-28 items-center justify-center sm:size-32">
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -inset-24 bg-[radial-gradient(closest-side,rgb(134_59_255/0.32),transparent)]"
+        className="mark-bloom pointer-events-none absolute -inset-32"
       />
       <Logo size={72} className="relative" />
     </span>
@@ -18,10 +18,7 @@ function GlowingMark() {
 
 export function Support() {
   return (
-    <section
-      id="support"
-      className="px-5 pb-24 pt-12 text-center sm:px-10 sm:pb-32"
-    >
+    <section id="support" className="px-5 pb-24 pt-24 text-center sm:px-10 ">
       <div aria-hidden="true">
         <GlowingMark />
       </div>
