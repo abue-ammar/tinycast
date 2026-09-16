@@ -206,6 +206,11 @@ export class Buffer extends Uint8Array {
   }
 }
 
+// Node's statics are enumerable; safer-buffer copies them by `for…in`, else calls Buffer bare.
+for (const name of Object.getOwnPropertyNames(Buffer)) {
+  if (typeof Buffer[name] === "function") Object.defineProperty(Buffer, name, { enumerable: true });
+}
+
 /// `new Uint8Array(...)` results need the Buffer prototype grafted on: subclassing Uint8Array and
 /// then copying would double every allocation for large payloads.
 function wrap(bytes) {
