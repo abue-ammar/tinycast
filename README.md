@@ -139,7 +139,8 @@ standards, the design system and one document per feature.
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first — it covers the memory budget every PR is held to,
 the before/after video requirement for visual changes, and why features get declined. Every PR fills
 in the **[pull request template](.github/PULL_REQUEST_TEMPLATE.md)**. Security issues go through
-[SECURITY.md](SECURITY.md), not the issue tracker.
+[SECURITY.md](SECURITY.md), not the issue tracker. Documentation contributors should also read
+[docs/README.md](docs/README.md) for the documentation structure and style guide.
 
 Questions, ideas, or just want to follow along? **[Join the Discord](https://discord.gg/v2Eeb4QQy3)**.
 
