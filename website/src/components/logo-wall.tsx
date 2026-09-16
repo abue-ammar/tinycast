@@ -19,14 +19,18 @@ export function LogoWall() {
           className="mt-4 overflow-hidden"
           style={{
             maskImage:
-              "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)",
+              "linear-gradient(to right, transparent, #000 6%, #000 94%, transparent)",
           }}
         >
-          <ul className="flex w-max animate-marquee items-center gap-16 text-fg-muted">
+          {/* The spacing is padding on each item, never a flex `gap`. A gap sits
+              between items but not after the last one, so half of it lands in
+              the middle of the -50% translate and the loop jumps there. */}
+          <ul className="flex w-max animate-marquee items-center">
             {track.map((company, index) => (
               <li
                 key={`${company}-${index}`}
                 aria-hidden={index >= companies.length}
+                className="pr-16"
               >
                 <CompanyLogo
                   id={company}

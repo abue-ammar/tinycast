@@ -40,9 +40,12 @@ export const brewTrustCommand = "brew trust --tap abue-ammar/tinycast";
 export const brewInstallCommand =
   "brew install --cask abue-ammar/tinycast/tinycast";
 
-// The logo wall under the hero. Order is the render order; the marquee repeats
-// the list once so the loop has no seam.
+// The logo wall under the hero, in render order. The track starts at the first
+// entry with the left edge under the mask, so the two least-known names lead
+// and the ones worth reading land mid-viewport on load.
 export const companies = [
+  "voidzero",
+  "bytedance",
   "apple",
   "google",
   "microsoft",
@@ -51,12 +54,10 @@ export const companies = [
   "stripe",
   "cloudflare",
   "github",
-  "oracle",
   "samsung",
   "alibaba",
-  "bytedance",
+  "oracle",
   "redhat",
-  "voidzero",
 ] as const;
 
 export type Company = (typeof companies)[number];
