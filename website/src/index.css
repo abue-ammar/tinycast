@@ -294,7 +294,7 @@
 /* The page gutter: 16px on mobile, 24px from the sm breakpoint up. */
 @utility container-page {
   width: 100%;
-  max-width: 72rem;
+  max-width: 80rem;
   margin-inline: auto;
   padding-inline: --spacing(4);
 

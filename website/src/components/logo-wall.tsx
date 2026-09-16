@@ -11,7 +11,7 @@ export function LogoWall() {
       aria-label="Companies using Tinycast"
       className="border-y border-border bg-tint/2"
     >
-      <div className="mx-auto max-w-6xl px-5 py-6 sm:px-10">
+      <div className="mx-auto max-w-7xl px-5 py-6 sm:px-10">
         <p className="text-center font-mono text-eyebrow uppercase text-fg-subtle">
           Used every day by people at
         </p>

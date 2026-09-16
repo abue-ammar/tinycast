@@ -20,6 +20,9 @@ export type DemoSection = {
 export const demoQuery = "gh";
 export const demoAction = "Open Application";
 
+/** The scope the palette is searching, named beside the filter button. */
+export const demoScope = "Apps";
+
 export const demoSections: DemoSection[] = [
   {
     title: "Favorites",

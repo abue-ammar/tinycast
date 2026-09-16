@@ -1,10 +1,10 @@
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Download } from "lucide-react";
 import { brewInstallCommand, brewTrustCommand, hero, site } from "../data/site";
 import { latestVersion } from "../lib/version";
 import { HeroPalette } from "./hero-palette";
 import { Button } from "./ui/button";
 import { CommandLine } from "./ui/command-line";
-import { AppleLogo } from "./ui/icon";
+import { Link } from "./ui/link";
 
 export async function Hero() {
   const version = await latestVersion();
@@ -24,7 +24,7 @@ export async function Hero() {
         }}
       />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-14 sm:px-10 lg:grid-cols-[1.15fr_1fr] lg:pb-28 lg:pt-20">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-14 sm:px-10 lg:grid-cols-[1.15fr_1fr] lg:pb-28 lg:pt-20">
         <div className="min-w-0">
           <p className="rise inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-micro uppercase text-fg-muted">
             <span
@@ -69,17 +69,17 @@ export async function Hero() {
             className="rise mt-6 flex flex-wrap items-center gap-3"
             style={{ animationDelay: "240ms" }}
           >
-            <Button href="/#install" size="lg">
-              <AppleLogo size={16} />
+            <Button href="/#install" variant="action" size="md">
+              <Download size={15} />
               Download for Mac
             </Button>
-            <Button href="/#gallery" variant="ghost" size="lg" className="px-4">
-              <span className="grid size-6 place-items-center rounded-full border border-border bg-canvas">
-                <Play size={12} className="translate-x-px" />
-              </span>
+            <Link
+              href="/#gallery"
+              className="inline-flex items-center gap-1.5 text-small text-fg-muted transition-colors hover:text-fg"
+            >
               See it in action
               <ArrowRight size={14} />
-            </Button>
+            </Link>
           </div>
 
           <ul

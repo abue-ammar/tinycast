@@ -20,7 +20,7 @@ export default function HomePage() {
       <main>
         <Hero />
         <LogoWall />
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-7xl">
           <Features />
           <Gallery />
           <Privacy />

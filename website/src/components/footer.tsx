@@ -40,7 +40,7 @@ export async function Footer() {
   const version = await latestVersion();
 
   return (
-    <footer className="mx-auto max-w-6xl px-5 pb-10 pt-6 sm:px-10">
+    <footer className="mx-auto max-w-7xl px-5 pb-10 pt-6 sm:px-10">
       <div className="flex flex-col gap-10 md:flex-row md:justify-between">
         <div>
           <Link href="/" className="flex items-center gap-2">

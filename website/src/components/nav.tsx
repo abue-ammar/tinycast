@@ -16,7 +16,7 @@ export async function Nav() {
 
   return (
     <header className="header-veil sticky top-0 z-50 border-b border-border">
-      <div className="mx-auto flex h-12 max-w-6xl items-center gap-6 px-5">
+      <div className="mx-auto flex h-12 max-w-7xl items-center gap-6 px-5">
         <Link href="/" className="flex items-center gap-2">
           <Logo size={22} />
           <span className="text-small font-semibold tracking-tight text-fg">
