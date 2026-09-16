@@ -1,4 +1,4 @@
-// A Buffer subset over Uint8Array — enough for the encode/decode work extension bundles do.
+// A Buffer subset over Uint8Array — enough for the encode/decode and binary-parse work bundles do.
 // Anything stream-shaped is deliberately absent; see docs/extensions.md for the supported surface.
 
 import { base64ToBytes, bytesToBase64, utf8Decode, utf8Encode } from "./polyfills.js";
@@ -87,6 +87,78 @@ function compareBytes(a, b) {
   for (let i = 0; i < shared; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
   if (a.length === b.length) return 0;
   return a.length < b.length ? -1 : 1;
+}
+
+function dataViewOf(buffer) {
+  return new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
+function checkSpan(offset, ext, length) {
+  const at = Number(offset) | 0;
+  if (!Number.isInteger(Number(offset)) || at < 0 || at + ext > length) {
+    const error = new RangeError(`The value of "offset" is out of range. It must be >= 0 and <= ${length - ext}. Received ${offset}`);
+    error.code = "ERR_OUT_OF_RANGE";
+    throw error;
+  }
+  return at;
+}
+
+function checkInt(value, min, max, name) {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
+    const error = new RangeError(`The value of "${name}" is out of range. It must be >= ${min} and <= ${max}. Received ${value}`);
+    error.code = "ERR_OUT_OF_RANGE";
+    throw error;
+  }
+}
+
+function readUIntLEGeneric(buffer, offset, byteLength) {
+  const at = checkSpan(offset, byteLength, buffer.length);
+  if (byteLength < 1 || byteLength > 6) throw new RangeError("byteLength must be 1-6");
+  let value = 0;
+  for (let i = byteLength - 1; i >= 0; i--) value = value * 256 + buffer[at + i];
+  return value;
+}
+
+function readUIntBEGeneric(buffer, offset, byteLength) {
+  const at = checkSpan(offset, byteLength, buffer.length);
+  if (byteLength < 1 || byteLength > 6) throw new RangeError("byteLength must be 1-6");
+  let value = 0;
+  for (let i = 0; i < byteLength; i++) value = value * 256 + buffer[at + i];
+  return value;
+}
+
+function readIntLEGeneric(buffer, offset, byteLength) {
+  const unsigned = readUIntLEGeneric(buffer, offset, byteLength);
+  const limit = 2 ** (8 * byteLength - 1);
+  return unsigned >= limit ? unsigned - 2 ** (8 * byteLength) : unsigned;
+}
+
+function readIntBEGeneric(buffer, offset, byteLength) {
+  const unsigned = readUIntBEGeneric(buffer, offset, byteLength);
+  const limit = 2 ** (8 * byteLength - 1);
+  return unsigned >= limit ? unsigned - 2 ** (8 * byteLength) : unsigned;
+}
+
+function writeUIntLEGeneric(buffer, value, offset, byteLength) {
+  const at = checkSpan(offset, byteLength, buffer.length);
+  checkInt(value, 0, 2 ** (8 * byteLength) - 1, "value");
+  let rest = value;
+  for (let i = 0; i < byteLength; i++) {
+    buffer[at + i] = rest & 0xff;
+    rest = Math.floor(rest / 256);
+  }
+  return at + byteLength;
+}
+
+function writeUIntBEGeneric(buffer, value, offset, byteLength) {
+  const at = checkSpan(offset, byteLength, buffer.length);
+  checkInt(value, 0, 2 ** (8 * byteLength) - 1, "value");
+  let rest = value;
+  for (let i = byteLength - 1; i >= 0; i--) {
+    buffer[at + i] = rest & 0xff;
+    rest = Math.floor(rest / 256);
+  }
+  return at + byteLength;
 }
 
 export class Buffer extends Uint8Array {
@@ -201,9 +273,318 @@ export class Buffer extends Uint8Array {
     return count;
   }
 
+  readUInt8(offset = 0) {
+    return this[checkSpan(offset, 1, this.length)];
+  }
+
+  readInt8(offset = 0) {
+    const at = checkSpan(offset, 1, this.length);
+    return (this[at] << 24) >> 24;
+  }
+
+  readUInt16LE(offset = 0) {
+    const at = checkSpan(offset, 2, this.length);
+    return this[at] | (this[at + 1] << 8);
+  }
+
+  readUInt16BE(offset = 0) {
+    const at = checkSpan(offset, 2, this.length);
+    return (this[at] << 8) | this[at + 1];
+  }
+
+  readInt16LE(offset = 0) {
+    const value = this.readUInt16LE(offset);
+    return value >= 0x8000 ? value - 0x10000 : value;
+  }
+
+  readInt16BE(offset = 0) {
+    const value = this.readUInt16BE(offset);
+    return value >= 0x8000 ? value - 0x10000 : value;
+  }
+
+  readUInt32LE(offset = 0) {
+    const at = checkSpan(offset, 4, this.length);
+    return (this[at] | (this[at + 1] << 8) | (this[at + 2] << 16)) + this[at + 3] * 0x1000000;
+  }
+
+  readUInt32BE(offset = 0) {
+    const at = checkSpan(offset, 4, this.length);
+    return this[at] * 0x1000000 + ((this[at + 1] << 16) | (this[at + 2] << 8) | this[at + 3]);
+  }
+
+  readInt32LE(offset = 0) {
+    const at = checkSpan(offset, 4, this.length);
+    return this[at] | (this[at + 1] << 8) | (this[at + 2] << 16) | (this[at + 3] << 24);
+  }
+
+  readInt32BE(offset = 0) {
+    const at = checkSpan(offset, 4, this.length);
+    return (this[at] << 24) | (this[at + 1] << 16) | (this[at + 2] << 8) | this[at + 3];
+  }
+
+  readFloatLE(offset = 0) {
+    return dataViewOf(this).getFloat32(checkSpan(offset, 4, this.length), true);
+  }
+
+  readFloatBE(offset = 0) {
+    return dataViewOf(this).getFloat32(checkSpan(offset, 4, this.length), false);
+  }
+
+  readDoubleLE(offset = 0) {
+    return dataViewOf(this).getFloat64(checkSpan(offset, 8, this.length), true);
+  }
+
+  readDoubleBE(offset = 0) {
+    return dataViewOf(this).getFloat64(checkSpan(offset, 8, this.length), false);
+  }
+
+  readBigUInt64LE(offset = 0) {
+    const at = checkSpan(offset, 8, this.length);
+    let value = 0n;
+    for (let i = 7; i >= 0; i--) value = (value << 8n) | BigInt(this[at + i]);
+    return value;
+  }
+
+  readBigUInt64BE(offset = 0) {
+    const at = checkSpan(offset, 8, this.length);
+    let value = 0n;
+    for (let i = 0; i < 8; i++) value = (value << 8n) | BigInt(this[at + i]);
+    return value;
+  }
+
+  readBigInt64LE(offset = 0) {
+    const unsigned = this.readBigUInt64LE(offset);
+    return unsigned >= 1n << 63n ? unsigned - (1n << 64n) : unsigned;
+  }
+
+  readBigInt64BE(offset = 0) {
+    const unsigned = this.readBigUInt64BE(offset);
+    return unsigned >= 1n << 63n ? unsigned - (1n << 64n) : unsigned;
+  }
+
+  readUIntLE(offset, byteLength) {
+    return readUIntLEGeneric(this, offset, byteLength);
+  }
+
+  readUIntBE(offset, byteLength) {
+    return readUIntBEGeneric(this, offset, byteLength);
+  }
+
+  readIntLE(offset, byteLength) {
+    return readIntLEGeneric(this, offset, byteLength);
+  }
+
+  readIntBE(offset, byteLength) {
+    return readIntBEGeneric(this, offset, byteLength);
+  }
+
+  writeUInt8(value, offset = 0) {
+    checkInt(value, 0, 0xff, "value");
+    this[checkSpan(offset, 1, this.length)] = value;
+    return offset + 1;
+  }
+
+  writeInt8(value, offset = 0) {
+    checkInt(value, -0x80, 0x7f, "value");
+    this[checkSpan(offset, 1, this.length)] = value & 0xff;
+    return offset + 1;
+  }
+
+  writeUInt16LE(value, offset = 0) {
+    checkInt(value, 0, 0xffff, "value");
+    const at = checkSpan(offset, 2, this.length);
+    this[at] = value & 0xff;
+    this[at + 1] = (value >> 8) & 0xff;
+    return at + 2;
+  }
+
+  writeUInt16BE(value, offset = 0) {
+    checkInt(value, 0, 0xffff, "value");
+    const at = checkSpan(offset, 2, this.length);
+    this[at] = (value >> 8) & 0xff;
+    this[at + 1] = value & 0xff;
+    return at + 2;
+  }
+
+  writeInt16LE(value, offset = 0) {
+    checkInt(value, -0x8000, 0x7fff, "value");
+    return this.writeUInt16LE(value & 0xffff, offset);
+  }
+
+  writeInt16BE(value, offset = 0) {
+    checkInt(value, -0x8000, 0x7fff, "value");
+    return this.writeUInt16BE(value & 0xffff, offset);
+  }
+
+  writeUInt32LE(value, offset = 0) {
+    checkInt(value, 0, 0xffffffff, "value");
+    const at = checkSpan(offset, 4, this.length);
+    this[at] = value & 0xff;
+    this[at + 1] = (value >> 8) & 0xff;
+    this[at + 2] = (value >> 16) & 0xff;
+    this[at + 3] = Math.floor(value / 0x1000000) & 0xff;
+    return at + 4;
+  }
+
+  writeUInt32BE(value, offset = 0) {
+    checkInt(value, 0, 0xffffffff, "value");
+    const at = checkSpan(offset, 4, this.length);
+    this[at] = Math.floor(value / 0x1000000) & 0xff;
+    this[at + 1] = (value >> 16) & 0xff;
+    this[at + 2] = (value >> 8) & 0xff;
+    this[at + 3] = value & 0xff;
+    return at + 4;
+  }
+
+  writeInt32LE(value, offset = 0) {
+    checkInt(value, -0x80000000, 0x7fffffff, "value");
+    return this.writeUInt32LE(value >>> 0, offset);
+  }
+
+  writeInt32BE(value, offset = 0) {
+    checkInt(value, -0x80000000, 0x7fffffff, "value");
+    return this.writeUInt32BE(value >>> 0, offset);
+  }
+
+  writeFloatLE(value, offset = 0) {
+    dataViewOf(this).setFloat32(checkSpan(offset, 4, this.length), Number(value), true);
+    return offset + 4;
+  }
+
+  writeFloatBE(value, offset = 0) {
+    dataViewOf(this).setFloat32(checkSpan(offset, 4, this.length), Number(value), false);
+    return offset + 4;
+  }
+
+  writeDoubleLE(value, offset = 0) {
+    dataViewOf(this).setFloat64(checkSpan(offset, 8, this.length), Number(value), true);
+    return offset + 8;
+  }
+
+  writeDoubleBE(value, offset = 0) {
+    dataViewOf(this).setFloat64(checkSpan(offset, 8, this.length), Number(value), false);
+    return offset + 8;
+  }
+
+  writeBigUInt64LE(value, offset = 0) {
+    let rest = BigInt(value);
+    const at = checkSpan(offset, 8, this.length);
+    for (let i = 0; i < 8; i++) {
+      this[at + i] = Number(rest & 0xffn);
+      rest >>= 8n;
+    }
+    return at + 8;
+  }
+
+  writeBigUInt64BE(value, offset = 0) {
+    let rest = BigInt(value);
+    const at = checkSpan(offset, 8, this.length);
+    for (let i = 7; i >= 0; i--) {
+      this[at + i] = Number(rest & 0xffn);
+      rest >>= 8n;
+    }
+    return at + 8;
+  }
+
+  writeBigInt64LE(value, offset = 0) {
+    return this.writeBigUInt64LE(BigInt.asUintN(64, BigInt(value)), offset);
+  }
+
+  writeBigInt64BE(value, offset = 0) {
+    return this.writeBigUInt64BE(BigInt.asUintN(64, BigInt(value)), offset);
+  }
+
+  writeUIntLE(value, offset, byteLength) {
+    return writeUIntLEGeneric(this, value, offset, byteLength);
+  }
+
+  writeUIntBE(value, offset, byteLength) {
+    return writeUIntBEGeneric(this, value, offset, byteLength);
+  }
+
+  writeIntLE(value, offset, byteLength) {
+    const at = checkSpan(offset, byteLength, this.length);
+    const limit = 2 ** (8 * byteLength - 1);
+    checkInt(value, -limit, limit - 1, "value");
+    return writeUIntLEGeneric(this, value < 0 ? value + 2 ** (8 * byteLength) : value, at, byteLength);
+  }
+
+  writeIntBE(value, offset, byteLength) {
+    const at = checkSpan(offset, byteLength, this.length);
+    const limit = 2 ** (8 * byteLength - 1);
+    checkInt(value, -limit, limit - 1, "value");
+    return writeUIntBEGeneric(this, value < 0 ? value + 2 ** (8 * byteLength) : value, at, byteLength);
+  }
+
+  swap16() {
+    if (this.length % 2 !== 0) throw new RangeError("Buffer size must be a multiple of 16-bits");
+    for (let i = 0; i < this.length; i += 2) {
+      const head = this[i];
+      this[i] = this[i + 1];
+      this[i + 1] = head;
+    }
+    return this;
+  }
+
+  swap32() {
+    if (this.length % 4 !== 0) throw new RangeError("Buffer size must be a multiple of 32-bits");
+    for (let i = 0; i < this.length; i += 4) {
+      const a = this[i];
+      const b = this[i + 1];
+      this[i] = this[i + 3];
+      this[i + 1] = this[i + 2];
+      this[i + 2] = b;
+      this[i + 3] = a;
+    }
+    return this;
+  }
+
+  swap64() {
+    if (this.length % 8 !== 0) throw new RangeError("Buffer size must be a multiple of 64-bits");
+    for (let i = 0; i < this.length; i += 8) {
+      for (let j = 0; j < 4; j++) {
+        const head = this[i + j];
+        this[i + j] = this[i + 7 - j];
+        this[i + 7 - j] = head;
+      }
+    }
+    return this;
+  }
+
+  fill(value, offset = 0, end = this.length, encoding) {
+    if (typeof value === "string") {
+      const bytes = encode(value, encoding);
+      if (!bytes.length) return this;
+      const from = Math.max(0, offset);
+      const to = Math.min(this.length, end);
+      for (let i = from; i < to; i++) this[i] = bytes[(i - from) % bytes.length];
+      return this;
+    }
+    return super.fill(value ?? 0, offset, end);
+  }
+
   slice(start, end) {
     return wrap(this.subarray(start, end));
   }
+}
+
+for (const [from, to] of [
+  ["readUInt8", "readUint8"],
+  ["readUInt16LE", "readUint16LE"],
+  ["readUInt16BE", "readUint16BE"],
+  ["readUInt32LE", "readUint32LE"],
+  ["readUInt32BE", "readUint32BE"],
+  ["readUIntLE", "readUintLE"],
+  ["readUIntBE", "readUintBE"],
+  ["writeUInt8", "writeUint8"],
+  ["writeUInt16LE", "writeUint16LE"],
+  ["writeUInt16BE", "writeUint16BE"],
+  ["writeUInt32LE", "writeUint32LE"],
+  ["writeUInt32BE", "writeUint32BE"],
+  ["writeUIntLE", "writeUintLE"],
+  ["writeUIntBE", "writeUintBE"],
+]) {
+  Buffer.prototype[to] = Buffer.prototype[from];
 }
 
 // Node's statics are enumerable; safer-buffer copies them by `for…in`, else calls Buffer bare.
