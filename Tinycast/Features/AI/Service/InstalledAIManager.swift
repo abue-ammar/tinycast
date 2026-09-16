@@ -229,7 +229,7 @@ enum InstalledAIProbe {
     }
 
     nonisolated static func version(in output: String) -> String? {
-        output.firstMatch(of: #/\d+\.\d+(?:\.\d+)?/#).map { String($0.output) }
+        output.firstMatch(of: #/\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?/#).map { String($0.output) }
     }
 
     nonisolated static func loggedIn(toClaude output: String) -> Bool {
