@@ -78,7 +78,7 @@ struct NoteEditorView: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             guard !isInstalling, let textView else { return }
-            textView.refreshTasks()
+            textView.updateTasks()
             let source = textView.string
             guard source != input.source else { return }
             input = NoteEditorInput(id: input.id, source: source, epoch: input.epoch)

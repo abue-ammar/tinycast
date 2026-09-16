@@ -13,6 +13,7 @@ struct NotesEditorTests {
         testUndoIsolation()
         testCharacterCountReports()
         testTasks()
+        testTaskEdits()
         testTaskSpacing()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -147,6 +148,48 @@ struct NotesEditorTests {
               editor.textView.textStorage?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) == nil)
         editor.coordinator.editorUndoManager.undo()
         check("undo restores task source without adding blank lines", editor.textView.string == source)
+    }
+
+    private static func testTaskEdits() {
+        let source = "- [ ] first\n- [ ]    \n```\n- [ ] literal\n```\n- [x] last"
+        let editor = makeEditor(
+            input: NoteEditorInput(id: NoteID(rawValue: "Edits.md"), source: source, epoch: 1))
+        let original = editor.textView.subviews.compactMap { $0 as? NSButton }
+        check("blank tasks have meaningful labels", original[1].accessibilityLabel() == "Task")
+        editor.textView.setSelectedRange(NSRange(location: 11, length: 0))
+        editor.textView.insertText(" longer", replacementRange: editor.textView.selectedRange())
+        let updated = editor.textView.subviews.compactMap { $0 as? NSButton }
+        check("typing preserves task controls",
+              original.count == updated.count && zip(original, updated).allSatisfy { $0 === $1 })
+        check("typing updates the accessible name", updated[0].accessibilityLabel() == "first longer")
+        updated[2].performClick(nil)
+        check("later tasks retain correct toggle offsets", editor.textView.string.hasSuffix("- [ ] last"))
+        let literal = (editor.textView.string as NSString).range(of: "literal")
+        editor.textView.insertText("code", replacementRange: literal)
+        check("editing fenced text keeps it literal",
+              editor.textView.subviews.compactMap { $0 as? NSButton }.count == 3)
+        editor.coordinator.editorUndoManager.undo()
+        check("undo preserves fenced text", editor.textView.string.contains("literal"))
+        editor.textView.insertText("", replacementRange: NSRange(location: 0, length: 6))
+        check("removing a marker removes only its control",
+              editor.textView.subviews.compactMap { $0 as? NSButton }.count == 2)
+        editor.textView.insertText("- [ ] ", replacementRange: NSRange(location: 0, length: 0))
+        check("restoring a marker restores its control",
+              editor.textView.subviews.compactMap { $0 as? NSButton }.count == 3)
+        let fence = (editor.textView.string as NSString).range(of: "```")
+        editor.textView.insertText("plain", replacementRange: fence)
+        check("changing a fence reparses subsequent tasks",
+              NoteTask.parse(editor.textView.string).count
+                == editor.textView.subviews.compactMap { $0 as? NSButton }.count)
+        editor.coordinator.editorUndoManager.undo()
+        check("undoing a fence restores subsequent tasks",
+              NoteTask.parse(editor.textView.string).count
+                == editor.textView.subviews.compactMap { $0 as? NSButton }.count)
+        editor.textView.selectAll(nil)
+        editor.textView.insertText("```\n", replacementRange: editor.textView.selectedRange())
+        editor.textView.insertText("- [ ] hidden", replacementRange: editor.textView.selectedRange())
+        check("typing at the end of an open fence stays literal",
+              editor.textView.subviews.compactMap { $0 as? NSButton }.isEmpty)
     }
 
     private static func testTasks() {

@@ -130,7 +130,10 @@ space render as accessible checkboxes. Each task has 8 points of paragraph spaci
 adding blank lines to the source or expanding wrapped lines. Checked tasks (`[x]` or `[X]`) have dimmed,
 struck-through text.
 Fenced code blocks stay literal. The controls use TextKit 2 segment geometry, so they follow wrapping
-and resizing without a second editor or a source/display mapping.
+and resizing without a second editor or a source/display mapping. Ordinary edits reparse and restyle
+only the affected paragraph, retaining existing checkbox controls and shifting subsequent ranges.
+Line-boundary and code-fence edits rebuild task state because they can affect subsequent paragraphs.
+Whitespace-only tasks use the accessible name "Task".
 
 Type `[] ` or `[ ] ` at the start of a line to create `- [ ] `. Return continues a task list with
 an unchecked item; Return on an empty item removes its prefix to leave the list. Clicking a checkbox

@@ -6,13 +6,109 @@ final class NoteTextView: NSTextView, InjectableTextView {
     var editorUndoManager: UndoManager?
     private var taskButtons: [NSButton] = []
     private var tasks: [NoteTask] = []
+    private var codeRanges: [NSRange] = []
+    private var needsFullTaskRefresh = false
+    private var pendingParagraph: (range: NSRange, delta: Int)?
 
     override var undoManager: UndoManager? { editorUndoManager }
 
+    override func shouldChangeText(in affectedCharRange: NSRange, replacementString: String?) -> Bool {
+        pendingParagraph = nil
+        guard super.shouldChangeText(in: affectedCharRange, replacementString: replacementString) else { return false }
+        guard !hasMarkedText(), !needsFullTaskRefresh, let replacementString else { return true }
+        let source = string as NSString
+        let paragraph = source.lineRange(for: affectedCharRange)
+        let oldText = source.substring(with: paragraph)
+        let localRange = NSRange(location: affectedCharRange.location - paragraph.location,
+                                 length: affectedCharRange.length)
+        let newText = (oldText as NSString).replacingCharacters(in: localRange, with: replacementString)
+        // Fence or line-boundary edits can change the meaning of subsequent paragraphs.
+        if replacementString.rangeOfCharacter(from: .newlines) == nil,
+            source.substring(with: affectedCharRange).rangeOfCharacter(from: .newlines) == nil,
+            !Self.isFence(oldText), !Self.isFence(newText) {
+            pendingParagraph = (paragraph, (replacementString as NSString).length - affectedCharRange.length)
+        }
+        return true
+    }
+
+    private static func isFence(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        return trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~")
+    }
+
+    func updateTasks() {
+        guard !hasMarkedText() else {
+            needsFullTaskRefresh = true
+            pendingParagraph = nil
+            return
+        }
+        guard let edit = pendingParagraph else {
+            refreshTasks()
+            return
+        }
+        pendingParagraph = nil
+        let range = NSRange(location: edit.range.location, length: edit.range.length + edit.delta)
+        let source = string as NSString
+        let inCode = codeRanges.contains { NSLocationInRange(range.location, $0) }
+        let replacement = inCode ? [] : NoteTask.parse(source.substring(with: range)).map {
+            $0.shifted(by: range.location)
+        }
+        let start = tasks.firstIndex { $0.markerRange.location >= edit.range.location } ?? tasks.count
+        let end = tasks[start...].firstIndex { $0.markerRange.location >= NSMaxRange(edit.range) } ?? tasks.count
+        let oldButtons = Array(taskButtons[start..<end])
+        var buttons: [NSButton] = []
+        for (index, task) in replacement.enumerated() {
+            let button = index < oldButtons.count ? oldButtons[index] : makeTaskButton()
+            update(button, for: task)
+            buttons.append(button)
+        }
+        oldButtons.dropFirst(replacement.count).forEach { $0.removeFromSuperview() }
+        for index in end..<tasks.count { tasks[index] = tasks[index].shifted(by: edit.delta) }
+        tasks.replaceSubrange(start..<end, with: replacement)
+        taskButtons.replaceSubrange(start..<end, with: buttons)
+        for index in start..<taskButtons.count { taskButtons[index].tag = index }
+        for index in codeRanges.indices {
+            if codeRanges[index].location >= NSMaxRange(edit.range) {
+                codeRanges[index].location += edit.delta
+            } else if NSLocationInRange(edit.range.location, codeRanges[index]) {
+                codeRanges[index].length += edit.delta
+            }
+        }
+        styleTasks(replacement, in: range)
+    }
+
     func refreshTasks() {
+        pendingParagraph = nil
         guard !hasMarkedText(), let storage = textStorage else { return }
-        tasks = NoteTask.parse(string)
-        let range = NSRange(location: 0, length: storage.length)
+        needsFullTaskRefresh = false
+        (tasks, codeRanges) = NoteTask.scan(string)
+        taskButtons.forEach { $0.removeFromSuperview() }
+        taskButtons = tasks.enumerated().map { index, task in
+            let button = makeTaskButton()
+            button.tag = index
+            update(button, for: task)
+            return button
+        }
+        styleTasks(tasks, in: NSRange(location: 0, length: storage.length))
+    }
+
+    private func makeTaskButton() -> NSButton {
+        let button = NSButton(checkboxWithTitle: "", target: self, action: #selector(toggleTask(_:)))
+        button.contentTintColor = NSColor(Theme.Colors.noteText)
+        button.toolTip = "Toggle Task"
+        addSubview(button)
+        return button
+    }
+
+    private func update(_ button: NSButton, for task: NoteTask) {
+        button.state = task.isChecked ? .on : .off
+        let label = (string as NSString).substring(with: task.contentRange)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        button.setAccessibilityLabel(label.isEmpty ? "Task" : label)
+    }
+
+    private func styleTasks(_ tasks: [NoteTask], in range: NSRange) {
+        guard let storage = textStorage else { return }
         storage.beginEditing()
         storage.addAttribute(.foregroundColor, value: NSColor(Theme.Colors.noteText), range: range)
         storage.removeAttribute(.strikethroughStyle, range: range)
@@ -32,18 +128,6 @@ final class NoteTextView: NSTextView, InjectableTextView {
         }
         storage.endEditing()
         typingAttributes = NoteEditorView.baseAttributes
-        taskButtons.forEach { $0.removeFromSuperview() }
-        taskButtons = tasks.enumerated().map { index, task in
-            let button = NSButton(checkboxWithTitle: "", target: self, action: #selector(toggleTask(_:)))
-            button.tag = index
-            button.state = task.isChecked ? .on : .off
-            button.contentTintColor = NSColor(Theme.Colors.noteText)
-            let label = (string as NSString).substring(with: task.contentRange)
-            button.setAccessibilityLabel(label.isEmpty ? "Task" : label)
-            button.toolTip = "Toggle Task"
-            addSubview(button)
-            return button
-        }
         needsLayout = true
     }
 

@@ -8,8 +8,14 @@ struct NoteTask: Sendable {
     let isChecked: Bool
 
     static func parse(_ source: String) -> [NoteTask] {
+        scan(source).tasks
+    }
+
+    static func scan(_ source: String) -> (tasks: [NoteTask], codeRanges: [NSRange]) {
         let text = source as NSString
         var tasks: [NoteTask] = []
+        var codeRanges: [NSRange] = []
+        var codeStart = 0
         var offset = 0
         var fence: (character: Character, count: Int)?
         while offset < text.length {
@@ -21,9 +27,12 @@ struct NoteTask: Sendable {
                 if let active = fence {
                     if character == active.character, count >= active.count,
                         trimmed.dropFirst(count).allSatisfy({ $0.isWhitespace }) {
+                        codeRanges.append(NSRange(location: codeStart,
+                                                  length: NSMaxRange(lineRange) - codeStart))
                         fence = nil
                     }
                 } else if count >= 3 {
+                    codeStart = offset
                     fence = (character, count)
                 }
             } else if fence == nil, let task = parseLine(line, offset: offset) {
@@ -31,7 +40,20 @@ struct NoteTask: Sendable {
             }
             offset = NSMaxRange(lineRange)
         }
-        return tasks
+        if fence != nil {
+            // An open fence also contains the insertion point after the final newline.
+            codeRanges.append(NSRange(location: codeStart, length: text.length - codeStart + 1))
+        }
+        return (tasks, codeRanges)
+    }
+
+    func shifted(by offset: Int) -> NoteTask {
+        NoteTask(
+            markerRange: NSRange(location: markerRange.location + offset, length: markerRange.length),
+            stateRange: NSRange(location: stateRange.location + offset, length: stateRange.length),
+            contentRange: NSRange(location: contentRange.location + offset, length: contentRange.length),
+            continuation: continuation,
+            isChecked: isChecked)
     }
 
     private static func parseLine(_ line: String, offset: Int) -> NoteTask? {
