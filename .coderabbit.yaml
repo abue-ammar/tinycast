@@ -40,7 +40,7 @@ reviews:
   review_status: true
   review_details: false
   enable_prompt_for_ai_agents: true
-  abort_on_close: true
+  abort_on_close: false
 
   auto_review:
     enabled: true
