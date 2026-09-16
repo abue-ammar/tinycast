@@ -5,7 +5,7 @@ struct CustomWindowSizesSection: View {
     let onEdit: (CustomWindowSize?) -> Void
 
     @Environment(CustomWindowSizeStore.self) private var store
-    @Environment(AppCore.self) private var core
+    @Environment(CustomWindowSizeCoordinator.self) private var coordinator
 
     var body: some View {
         Section {
@@ -28,7 +28,7 @@ struct CustomWindowSizesSection: View {
     }
 
     private func delete(_ size: CustomWindowSize) {
-        Task { await core.customWindowSizeCoordinator.deleteCustomWindowSize(id: size.id) }
+        Task { await coordinator.deleteCustomWindowSize(id: size.id) }
     }
 }
 

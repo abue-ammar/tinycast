@@ -91,7 +91,8 @@ final class CustomWindowSizeStore {
         var result: [CustomWindowSize] = []
         for value in values {
             let cleaned = value.sanitized
-            let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: .current)
+            // Unlocalized, so an import refuses exactly the names `validated` refuses.
+            let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: nil)
             guard !cleaned.name.isEmpty, !cleaned.name.contains("\0"),
                 ids.insert(cleaned.id).inserted, names.insert(foldedName).inserted
             else { continue }

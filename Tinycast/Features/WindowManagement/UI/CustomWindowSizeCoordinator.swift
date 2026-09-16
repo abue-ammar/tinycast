@@ -1,7 +1,8 @@
 import Foundation
 
-/// Owns the custom-size library: its launcher presence, its edits, and a deletion's cleanup.
+/// Owns custom sizes' presence, edits and cleanup; observable only for `@Environment`.
 @MainActor
+@Observable
 final class CustomWindowSizeCoordinator {
     private let store: CustomWindowSizeStore
     private let settings: AppSettings
@@ -36,15 +37,13 @@ final class CustomWindowSizeCoordinator {
         appIndex.setCustomWindowSizes(visible ? store.sizes : [])
     }
 
-    @discardableResult
-    func addCustomWindowSize(
-        _ draft: CustomWindowSize
-    ) throws(CustomWindowSizeValidationError) -> CustomWindowSize {
-        try store.add(draft)
-    }
-
-    func updateCustomWindowSize(_ draft: CustomWindowSize) throws(CustomWindowSizeValidationError) {
-        try store.update(draft)
+    /// Adds or updates; a size deleted while its editor was open comes back rather than vanishing.
+    func saveCustomWindowSize(_ draft: CustomWindowSize) throws(CustomWindowSizeValidationError) {
+        if store.size(id: draft.id) == nil {
+            try store.add(draft)
+        } else {
+            try store.update(draft)
+        }
     }
 
     func deleteCustomWindowSize(id: UUID) async {

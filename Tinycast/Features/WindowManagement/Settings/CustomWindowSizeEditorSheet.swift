@@ -14,7 +14,7 @@ struct CustomWindowSizeEditorSheet: View {
     private let reference: CGSize
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(AppCore.self) private var core
+    @Environment(CustomWindowSizeCoordinator.self) private var coordinator
     @State private var size: CustomWindowSize
     @State private var errorMessage: String?
 
@@ -115,12 +115,7 @@ struct CustomWindowSizeEditorSheet: View {
     private func save() {
         guard canSave else { return }
         do {
-            // A size deleted while its editor was open comes back rather than vanishing.
-            if isNew || core.customWindowSizes.size(id: size.id) == nil {
-                try core.customWindowSizeCoordinator.addCustomWindowSize(size)
-            } else {
-                try core.customWindowSizeCoordinator.updateCustomWindowSize(size)
-            }
+            try coordinator.saveCustomWindowSize(size)
             dismiss()
         } catch {
             errorMessage = error.errorDescription
