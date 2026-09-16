@@ -30,6 +30,8 @@ private final class InstalledCLITurnRunner {
         """
 
     private static let maximumPartialLineBytes = 8 * 1_048_576
+    private static let claudeManagedMCPConfig =
+        "/Library/Application Support/ClaudeCode/managed-mcp.json"
 
     private final class TurnToken: Sendable {}
 
@@ -171,13 +173,15 @@ private final class InstalledCLITurnRunner {
                 "--disable-slash-commands",
                 "--tools", "",
                 "--disallowedTools", "*",
-                "--strict-mcp-config",
                 // `--bare` is not among these: it refuses the OAuth sign-in this whole route reuses.
-                "--mcp-config", #"{"mcpServers":{}}"#,
                 "--no-chrome",
                 "--max-turns", "1",
                 "--system-prompt", Self.safetyInstructions
             ]
+            // The CLI rejects both flags while an admin's managed MCP policy is installed.
+            if !FileManager.default.fileExists(atPath: Self.claudeManagedMCPConfig) {
+                result += ["--strict-mcp-config", "--mcp-config", #"{"mcpServers":{}}"#]
+            }
             if let effort { result += ["--effort", effort] }
             return result
         case .openCode:
