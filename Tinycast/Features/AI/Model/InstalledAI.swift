@@ -3,14 +3,19 @@ import Foundation
 enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
     case codex
     case claude
+    case grok
     case openCode
 
     var id: String { rawValue }
+
+    /// Codex is the app-server; these are launched as subprocesses.
+    static var cliKinds: [InstalledAIKind] { allCases.filter { $0 != .codex } }
 
     var title: String {
         switch self {
         case .codex: return "Codex"
         case .claude: return "Claude"
+        case .grok: return "Grok"
         case .openCode: return "OpenCode"
         }
     }
@@ -19,6 +24,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex: return "codex"
         case .claude: return "claude"
+        case .grok: return "grok"
         case .openCode: return "opencode"
         }
     }
@@ -27,19 +33,25 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex: return URL(string: "https://developers.openai.com/codex/cli")!
         case .claude: return URL(string: "https://code.claude.com/docs/en/setup")!
+        case .grok: return URL(string: "https://x.ai/cli")!
         case .openCode: return URL(string: "https://opencode.ai/docs")!
         }
     }
 
-    /// The one install that puts its command outside every shared `bin` the locator already walks.
+    /// Installs that put their command outside every shared `bin` the locator already walks.
     var extraExecutablePaths: [String] {
-        self == .claude ? [".claude/local/claude"] : []
+        switch self {
+        case .claude: return [".claude/local/claude"]
+        case .grok: return [".grok/bin/grok"]
+        case .codex, .openCode: return []
+        }
     }
 
     var source: AIModelSource {
         switch self {
         case .codex: return .codex
         case .claude: return .claude
+        case .grok: return .grok
         case .openCode: return .openCode
         }
     }
@@ -48,6 +60,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex: return "codex login"
         case .claude: return "claude auth login"
+        case .grok: return "grok login"
         case .openCode: return "opencode auth login"
         }
     }
@@ -59,6 +72,7 @@ extension AIModelSource {
         switch self {
         case .codex: return .codex
         case .claude: return .claude
+        case .grok: return .grok
         case .openCode: return .openCode
         case .appleIntelligence, .api: return nil
         }
@@ -91,6 +105,29 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
 
     private static let claudeEfforts = ["low", "medium", "high", "xhigh", "max"].map {
         ChatGPTSubscription.Effort(id: $0, detail: nil)
+    }
+
+    /// `/effort` advertises these four; a model only honours the ones it supports.
+    private static let grokEfforts = ["low", "medium", "high", "xhigh"].map {
+        ChatGPTSubscription.Effort(id: $0, detail: nil)
+    }
+
+    static func grokCatalog(_ output: String) -> [InstalledAIModel] {
+        let clean = output.replacingOccurrences(
+            of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression)
+        var models: [InstalledAIModel] = []
+        var seen = Set<String>()
+        for raw in clean.components(separatedBy: .newlines) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix("*") || line.hasPrefix("-") else { continue }
+            let rest = line.drop(while: { $0 == "*" || $0 == "-" || $0.isWhitespace })
+            let token = rest.split(whereSeparator: { $0.isWhitespace || $0 == "(" }).first
+            guard let token, !token.isEmpty else { continue }
+            let id = String(token)
+            guard seen.insert(id).inserted else { continue }
+            models.append(InstalledAIModel(id: id, name: id, efforts: grokEfforts))
+        }
+        return models
     }
 
     static func openCodeCatalog(_ output: String) -> [InstalledAIModel] {

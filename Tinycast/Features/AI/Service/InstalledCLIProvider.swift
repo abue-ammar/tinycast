@@ -44,7 +44,8 @@ private final class InstalledCLITurnRunner {
     private var continuation: AIProviderStream.Continuation?
     private var outputBuffer = Data()
     private var errorBuffer = Data()
-    private var openCodeSessionID: String?
+    private var sessionID: String?
+    private var promptFileURL: URL?
     private var activeExecutable: URL?
 
     init(
@@ -113,10 +114,24 @@ private final class InstalledCLITurnRunner {
         let stdout = Pipe()
         let stderr = Pipe()
         process.executableURL = executable
-        process.arguments = arguments
         process.currentDirectoryURL = workspace
         process.environment = environment(for: executable)
-        process.standardInput = stdin
+        if kind == .grok {
+            let url = workspace.appending(path: "tinycast-prompt.txt")
+            do {
+                try Data(prompt.utf8).write(to: url)
+            } catch {
+                continuation.finish(
+                    throwing: AIProviderError.unavailable(
+                        "Tinycast could not write its private AI prompt."))
+                return
+            }
+            promptFileURL = url
+            process.standardInput = FileHandle.nullDevice
+        } else {
+            process.standardInput = stdin
+        }
+        process.arguments = arguments
         process.standardOutput = stdout
         process.standardError = stderr
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
@@ -149,6 +164,7 @@ private final class InstalledCLITurnRunner {
         activeExecutable = executable
         self.token = token
         self.continuation = continuation
+        guard kind != .grok else { return }
         // A prompt past the pipe buffer blocks until the child drains it, so never on the main actor.
         let input = stdin.fileHandleForWriting
         Task.detached {
@@ -187,6 +203,27 @@ private final class InstalledCLITurnRunner {
             ]
             if let effort { result += ["--variant", effort] }
             return result
+        case .grok:
+            var result = [
+                "--prompt-file", promptFileURL?.path ?? "",
+                "--output-format", "streaming-messages-json",
+                "--include-partial-messages",
+                "--model", model,
+                "--max-turns", "1",
+                "--no-subagents",
+                "--disable-web-search",
+                "--no-plan",
+                "--permission-mode", "dontAsk",
+                "--tools", "",
+                "--deny", "*",
+                "--disallowed-tools", "Agent",
+                "--sandbox", "strict",
+                "--verbatim",
+                "--cwd", workspace.path,
+                "--rules", Self.safetyInstructions
+            ]
+            if let effort { result += ["--effort", effort] }
+            return result
         case .codex:
             return []
         }
@@ -208,6 +245,9 @@ private final class InstalledCLITurnRunner {
             result["OPENCODE_CONFIG_CONTENT"] = Self.openCodeConfiguration
             result["OPENCODE_AUTO_SHARE"] = "false"
             result["OPENCODE_DISABLE_AUTOUPDATE"] = "true"
+        case .grok:
+            result["GROK_DISABLE_AUTOUPDATER"] = "1"
+            result["GROK_AGENT_DASHBOARD"] = "0"
         case .codex:
             break
         }
@@ -257,7 +297,7 @@ private final class InstalledCLITurnRunner {
     }
 
     private func apply(_ frame: InstalledAIStreamFrame) {
-        if let sessionID = frame.sessionID { openCodeSessionID = sessionID }
+        if let sessionID = frame.sessionID { self.sessionID = sessionID }
         for event in frame.events { continuation?.yield(event) }
         if let error = frame.error {
             fail(error)
@@ -285,7 +325,7 @@ private final class InstalledCLITurnRunner {
             let fallback = kind.title + " exited with status " + String(status) + "."
             fail(detail.isEmpty ? fallback : detail)
         }
-        deleteOpenCodeSession()
+        deleteSession()
         cleanup()
     }
 
@@ -306,16 +346,20 @@ private final class InstalledCLITurnRunner {
         process?.terminate()
     }
 
-    private func deleteOpenCodeSession() {
-        guard kind == .openCode, let sessionID = openCodeSessionID,
-            let executable = activeExecutable
-        else { return }
+    private func deleteSession() {
+        guard let sessionID, let executable = activeExecutable else { return }
+        let arguments: [String]
+        switch kind {
+        case .openCode: arguments = ["session", "delete", sessionID, "--pure"]
+        case .grok: arguments = ["sessions", "delete", sessionID]
+        case .claude, .codex: return
+        }
         let workspace = workspace
         let environment = environment(for: executable)
         Task.detached {
             let process = Process()
             process.executableURL = executable
-            process.arguments = ["session", "delete", sessionID, "--pure"]
+            process.arguments = arguments
             process.currentDirectoryURL = workspace
             process.environment = environment
             process.standardInput = FileHandle.nullDevice
@@ -335,7 +379,11 @@ private final class InstalledCLITurnRunner {
         continuation = nil
         outputBuffer.removeAll(keepingCapacity: false)
         errorBuffer.removeAll(keepingCapacity: false)
-        openCodeSessionID = nil
+        sessionID = nil
+        if let promptFileURL {
+            try? FileManager.default.removeItem(at: promptFileURL)
+        }
+        promptFileURL = nil
         activeExecutable = nil
     }
 }

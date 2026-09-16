@@ -65,7 +65,7 @@ A refused or failed call is not an error. The model is told what happened and ca
 Only **API connections** are offered tools: OpenAI API, Anthropic Claude, Google Gemini, OpenRouter
 and OpenAI Compatible endpoints.
 
-Apple Intelligence and the installed Codex, Claude and OpenCode commands never get tools. For those,
+Apple Intelligence and the installed Codex, Claude, Grok and OpenCode commands never get tools. For those,
 chat works exactly as it does without MCP.
 
 ## Limits

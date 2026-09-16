@@ -15,7 +15,7 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   a streaming reply and drops the transcript, but touches neither the saved conversations in
   `ai-chats.sqlite3` nor a Keychain key. `aiEnabled` is excluded from settings backups like every
   other AI key, so an import can never arm a feature it cannot configure.
-- **Installed model discovery is per-provider.** Settings → AI → Providers keeps Codex, Claude and
+- **Installed model discovery is per-provider.** Settings → AI → Providers keeps Codex, Claude, Grok and
   OpenCode visible with an individual toggle for each, all off by default. Turning one off cancels
   its check, clears its catalog and releases its process; Apple Intelligence is the default route when
   available, and saved API connections stay available.
@@ -37,7 +37,7 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   `::1`, where a key is optional, and any other scheme is rejected outright — a loopback host does
   not excuse `ftp://`. `AIEndpointPolicy` is the one place that decides this.
 - **The chat model is the routing decision.** It names the on-device model, a model exposed by the
-  installed Codex, Claude or OpenCode command, or one saved API connection and model. Installed
+  installed Codex, Claude, Grok or OpenCode command, or one saved API connection and model. Installed
   routes also carry their reasoning effort when the selected model supports one. A removed route
   falls forward to the on-device model when this Mac
   has one, then to another usable API model, then to no selection. Discovering an installed command
@@ -54,9 +54,9 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   reader *removed*; a Mac with Apple Intelligence switched off keeps its stored selection and is told
   why, because silently moving someone from a free, private, local model onto a billed endpoint is
   the one redirection this feature must never perform.
-- **Installed commands reuse their own login.** Tinycast launches the user's `codex`, `claude` or
+- **Installed commands reuse their own login.** Tinycast launches the user's `codex`, `claude`, `grok` or
   `opencode` executable without asking for or storing another key. Codex inherits the user's normal
-  home and credential-store setting; Claude and OpenCode inherit their normal configuration. Tinycast
+  home and credential-store setting; Claude, Grok and OpenCode inherit their normal configuration. Tinycast
   never reads those credential files, browser cookies or undocumented web endpoints.
 - **Codex tools are unavailable.** The app-server launches with tool capabilities disabled, approvals
   set to never and a read-only, network-disabled sandbox. Any server approval request is declined.
@@ -73,13 +73,15 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
 - **`Model/` stays Foundation-only.** `ai-provider-test` compiles the shipped provider models and pins
   endpoints, request bodies, stream parsing, persistence repair and Codex protocol framing. Request
   bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
-  conversation. `installed-ai-test` runs the Claude and OpenCode adapters against real subprocess
+  conversation. `installed-ai-test` runs the Claude, Grok and OpenCode adapters against real subprocess
   stubs and pins their safety boundaries.
-- **Claude and OpenCode are text transports, not agents.** Claude runs one turn with no tools, MCP
+- **Claude, Grok and OpenCode are text transports, not agents.** Claude runs one turn with no tools, MCP
   servers, browser integration, slash commands or persisted session — but never `--bare`, which reads
-  neither OAuth nor the keychain and so refuses the very sign-in this route reuses. OpenCode runs `--pure` with
+  neither OAuth nor the keychain and so refuses the very sign-in this route reuses. Grok runs with
+  `--deny *`, `dontAsk` permissions and a strict sandbox, and never `--always-approve`, so a user's
+  always-approve config cannot arm tools for this route. OpenCode runs `--pure` with
   deny-all permissions, disabled sharing and a private working directory; Tinycast deletes the session
-  recorded in its JSON stream after each turn. Neither route offers images or web search.
+  recorded in its JSON stream after each turn. None of these routes offer images or web search.
 - **Chat is a palette screen, not another window** — including its lifetime. The launcher command
   enters `.ai`; its search field is the composer, and the shared footer's primary pill is Return's
   job: Send (`↵`), or Stop (`↵`) while a response streams — followed by Actions (`⌘K`), which owns
@@ -126,8 +128,8 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
 
 ## Connections and routing
 
-`AIModelSelection` has five cases: `.appleIntelligence`, `.codex`, `.claude`, `.openCode` and `.api`.
-The first needs no connection at all. The next three name a model from an installed command and carry
+`AIModelSelection` has six cases: `.appleIntelligence`, `.codex`, `.claude`, `.grok`, `.openCode` and `.api`.
+The first needs no connection at all. The next four name a model from an installed command and carry
 no credential. `.api` points at one `AIConnection`; `AIProviderKind` exposes four named presets plus a
 custom OpenAI-compatible route. Decoding still accepts the old `.chatGPT` spelling and writes it back
 as `.codex`, so an existing selection survives the rename.
@@ -137,6 +139,7 @@ as `.codex`, so an existing selection survives the rename.
 | Apple Intelligence | Foundation Models, on device | none |
 | Codex | installed `codex app-server` | user's Codex account |
 | Claude | installed `claude -p` | user's Claude login |
+| Grok | installed `grok --prompt-file` | user's Grok login |
 | OpenCode | installed `opencode run` | providers already configured in OpenCode |
 | OpenAI API | OpenAI Chat Completions | `https://api.openai.com/v1` |
 | Anthropic Claude | Anthropic Messages | `https://api.anthropic.com` |
@@ -301,18 +304,18 @@ and `MCPCoordinator` the twentieth.
   Codex framing, on-device routing), `ai-chat-test` (`ChatSession`, `MarkdownBlock`,
   `ChatHistoryStore`, `AIToolLoopProvider`),
   `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
-  turn ID, plus the no-config-mutation boundary), `installed-ai-test` (Claude/OpenCode flags, prompt
+  turn ID, plus the no-config-mutation boundary), `installed-ai-test` (Claude/Grok/OpenCode flags, prompt
   framing, streaming and cleanup) and `apple-intelligence-test` (status copy, snapshot deltas,
   transcript assembly, error mapping, plus one real generation when this Mac can run one), all in
   `run-tests.sh`.
 
 ## Installed commands
 
-`InstalledAIExecutableLocator` finds `codex`, `claude` and `opencode` on the app's PATH, in the normal
+`ExecutableLocator` finds `codex`, `claude`, `grok` and `opencode` on the app's PATH, in the normal
 Homebrew and local-bin locations, in the active Node installation and by asking the login shell. The
 commands are never installed by Tinycast; Settings links to their own install docs and offers a sign-in
-command to copy. `InstalledAIManager` probes Claude and OpenCode off-main, in parallel. Claude's auth
-status gates three model aliases; a successful OpenCode model list is both its auth check and catalog.
+command to copy. `InstalledAIManager` probes Claude, Grok and OpenCode off-main, in parallel. Claude's auth
+status gates three model aliases; a successful Grok or OpenCode model list is both its auth check and catalog.
 
 `ChatGPTSubscriptionManager` retains its historical type name but now owns only the installed Codex
 app-server lifecycle and discovered account metadata. Production never sets `CODEX_HOME`, so the
@@ -335,10 +338,13 @@ reasoning effort belongs to `turn/start`; neither is written to the user's Codex
 developer instructions say whether the model may reach the web so the two cannot disagree. Images go
 out as `image` input parts with data URLs, and as `input_image` when prior turns are injected.
 
-`InstalledCLITurnRunner` handles Claude and OpenCode behind the same provider protocol. It frames
-Tinycast's instructions and bounded conversation history as stdin, consumes newline-delimited JSON,
-and never puts prompt text on the process command line. Claude uses stream JSON, `--effort` and no
-session persistence. OpenCode runs pure with an inline deny-all configuration and passes the selected
+`InstalledCLITurnRunner` handles Claude, Grok and OpenCode behind the same provider protocol. It frames
+Tinycast's instructions and bounded conversation history as stdin (Claude, OpenCode) or a private
+`--prompt-file` (Grok, whose CLI requires a path), consumes newline-delimited JSON, and never puts
+prompt text on the process command line. Claude uses stream JSON, `--effort` and no session persistence.
+Grok uses `streaming-messages-json` and `--effort`, with `--deny *` so tools cannot run even when the
+user's Grok config is always-approve; it captures the session id, then calls `grok sessions delete`.
+OpenCode runs pure with an inline deny-all configuration and passes the selected
 model variant through `--variant`; it captures the returned session identifier, then calls
 `opencode session delete` after the process exits. Cancellation terminates the child process; only
 one installed-CLI turn can own a runner at a time.
@@ -357,6 +363,7 @@ transport code at all.
 | Apple Intelligence | never — it reaches nothing | never — the model is text-only | never | never |
 | Codex | thread-scoped `web_search` config | `image` input part | never — the app-server takes no document part | never — its tools are disabled by design |
 | Claude command | never | never | never | never |
+| Grok command | never | never | never | never |
 | OpenCode command | never | never | never | never |
 | OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | never yet — its catalog publishes a `file` modality Tinycast does not read | `tools` + `role: "tool"` turns |
 | OpenAI | not offered | `image_url` part, assumed supported | `file` part with `filename` and a `file_data` data URL | `tools` + `role: "tool"` turns |
@@ -443,7 +450,7 @@ A text file is already in the message's text and needs no table. The schema is
 `CREATE TABLE IF NOT EXISTS` re-applied on every open, so the table needed no migration, and its
 `ON DELETE CASCADE` leaves `prune` unchanged.
 
-The switcher's glyph comes from the selection. Codex uses OpenAI's mark; Claude and OpenCode use their
+The switcher's glyph comes from the selection. Codex uses OpenAI's mark; Claude, Grok and OpenCode use their
 own marks; an API model resolves through its connection. It never depends on `modelOptions`, which for
 Codex is empty until the app-server has answered `model/list`; opening the chat on a Codex model warms that list so the title is the
 display name from the first frame. Tab hands chat on to the clipboard, and Escape on an empty
@@ -462,7 +469,7 @@ width and clipped the search field well short of the button.
 Settings → AI is a normal grouped `Form` inside Tinycast's existing Settings window. Its top AI
 section owns the feature switch and the **Providers → Manage…** action, and **Default model** below
 it picks the app-wide route and its reasoning effort. Provider management opens as a sheet, where
-**Installed AI** reports Codex, Claude and OpenCode separately as checking, ready, sign-in required,
+**Installed AI** reports Codex, Claude, Grok and OpenCode separately as checking, ready, sign-in required,
 missing or failed. It never contains a credential field: installation and sign-in happen in each
 command's own flow. **API Connections** remains the explicit Keychain-backed path in that sheet. The
 chat header changes the same default without a trip to Settings, while Quick Actions keeps its own

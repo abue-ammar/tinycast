@@ -24,9 +24,11 @@ final class InstalledAIManager {
     }
 
     @discardableResult
-    func refresh(enabledKinds: Set<InstalledAIKind> = [.claude, .openCode]) -> Task<Void, Never> {
+    func refresh(enabledKinds: Set<InstalledAIKind> = Set(InstalledAIKind.cliKinds))
+        -> Task<Void, Never>
+    {
         var tasks: [Task<Void, Never>] = []
-        for kind in [InstalledAIKind.claude, .openCode] {
+        for kind in InstalledAIKind.cliKinds {
             if enabledKinds.contains(kind) {
                 tasks.append(refresh(kind: kind))
             } else {
@@ -54,7 +56,7 @@ final class InstalledAIManager {
 
     func ensure(enabledKinds: Set<InstalledAIKind>) -> Task<Void, Never> {
         var tasks: [Task<Void, Never>] = []
-        for kind in [InstalledAIKind.claude, .openCode] {
+        for kind in InstalledAIKind.cliKinds {
             guard enabledKinds.contains(kind) else {
                 stop(kind: kind)
                 continue
@@ -138,6 +140,16 @@ final class InstalledAIManager {
                 executable: executable, arguments: ["models", "--pure", "--verbose"],
                 workspace: workspace)
             let catalog = InstalledAIModel.openCodeCatalog(models.output)
+            return (
+                kind,
+                InstalledAIStatus(
+                    phase: models.status == 0 && !catalog.isEmpty ? .ready : .signInRequired,
+                    version: version, executable: executable, models: catalog)
+            )
+        case .grok:
+            let models = await InstalledAIProbe.run(
+                executable: executable, arguments: ["models"], workspace: workspace)
+            let catalog = InstalledAIModel.grokCatalog(models.output)
             return (
                 kind,
                 InstalledAIStatus(

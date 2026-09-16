@@ -157,7 +157,8 @@ final class AISettingsStore {
     ) {
         let selectedModel: String
         switch (kind, defaultModel) {
-        case (.claude, .claude(let model, _)), (.openCode, .openCode(let model, _)):
+        case (.claude, .claude(let model, _)), (.grok, .grok(let model, _)),
+            (.openCode, .openCode(let model, _)):
             selectedModel = model
         default:
             return
@@ -176,6 +177,9 @@ final class AISettingsStore {
         switch kind {
         case .claude:
             defaultModel = .claude(
+                model: replacement.id, effort: replacement.resolvedEffort(nil))
+        case .grok:
+            defaultModel = .grok(
                 model: replacement.id, effort: replacement.resolvedEffort(nil))
         case .openCode:
             defaultModel = .openCode(
@@ -204,7 +208,7 @@ final class AISettingsStore {
         guard let source = defaultModel?.source else { return }
         let matches =
             switch (kind, source) {
-            case (.codex, .codex), (.claude, .claude), (.openCode, .openCode): true
+            case (.codex, .codex), (.claude, .claude), (.grok, .grok), (.openCode, .openCode): true
             default: false
             }
         guard matches else { return }

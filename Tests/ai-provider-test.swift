@@ -977,6 +977,22 @@ struct AIProviderTests {
             claudeFrame.events == [.usage(AIUsage(inputTokens: 8, outputTokens: 3))]
                 && claudeFrame.completed,
             "Claude result usage ends the stream")
+
+        let grokText = Data(
+            #"{"type":"stream_event","session_id":"ses_g","event":{"delta":{"type":"text_delta","text":"Yo"}}}"#
+                .utf8)
+        let grokTextFrame = InstalledAIStreamDecoder.decode(grokText, kind: .grok)
+        expect(
+            grokTextFrame.events == [.text("Yo")] && grokTextFrame.sessionID == "ses_g",
+            "Grok partial text reuses the Claude stream shape and keeps the session id")
+        let grokFinish = Data(
+            #"{"type":"result","is_error":false,"session_id":"ses_g","usage":{"input_tokens":5,"output_tokens":1}}"#
+                .utf8)
+        let grokFrame = InstalledAIStreamDecoder.decode(grokFinish, kind: .grok)
+        expect(
+            grokFrame.events == [.usage(AIUsage(inputTokens: 5, outputTokens: 1))]
+                && grokFrame.completed && grokFrame.sessionID == "ses_g",
+            "Grok result usage ends the stream and names the session to delete")
     }
 }
 

@@ -17,9 +17,18 @@ if (command === "opencode" && process.argv.slice(2, 4).join(" ") === "session de
   process.exit(0);
 }
 
-const prompt = fs.readFileSync(0, "utf8");
+if (command === "grok" && process.argv.slice(2, 4).join(" ") === "sessions delete") {
+  record("grok-deleted.log", process.argv[4]);
+  process.exit(0);
+}
+
+const promptFile = process.argv.indexOf("--prompt-file");
+const prompt = promptFile >= 0 && process.argv[promptFile + 1]
+  ? fs.readFileSync(process.argv[promptFile + 1], "utf8")
+  : fs.readFileSync(0, "utf8");
 record(command + "-prompt.log", prompt);
 record(command + "-environment.log", process.env.OPENCODE_CONFIG_CONTENT ?? "");
+record(command + "-grok-environment.log", process.env.GROK_DISABLE_AUTOUPDATER ?? "");
 
 if (command === "opencode") {
   console.log(JSON.stringify({ type: "step_start", sessionID: "ses_stub", part: {} }));
@@ -29,6 +38,18 @@ if (command === "opencode") {
   console.log(JSON.stringify({
     type: "step_finish", sessionID: "ses_stub",
     part: { tokens: { input: 9, output: 2 } }
+  }));
+} else if (command === "grok") {
+  console.log(JSON.stringify({
+    type: "system", subtype: "init", session_id: "ses_stub"
+  }));
+  console.log(JSON.stringify({
+    type: "stream_event", session_id: "ses_stub",
+    event: { delta: { type: "text_delta", text: "Grok reply" } }
+  }));
+  console.log(JSON.stringify({
+    type: "result", is_error: false, session_id: "ses_stub",
+    usage: { input_tokens: 8, output_tokens: 2 }
   }));
 } else {
   console.log(JSON.stringify({

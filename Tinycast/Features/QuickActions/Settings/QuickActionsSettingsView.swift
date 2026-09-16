@@ -279,7 +279,7 @@ struct QuickActionsSettingsView: View {
         {
             unavailable.insert(.codex)
         }
-        for kind in [InstalledAIKind.claude, .openCode] {
+        for kind in InstalledAIKind.cliKinds {
             let phase = core.installedAI.status(for: kind).phase
             guard
                 !aiSettings.enabledInstalledProviders.contains(kind)

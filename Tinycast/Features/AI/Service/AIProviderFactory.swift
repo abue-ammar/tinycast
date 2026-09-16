@@ -44,6 +44,11 @@ enum AIProviderFactory {
                 throw AIProviderError.unavailable("Claude is disabled in AI Settings.")
             }
             return try installedAI.provider(kind: .claude, model: model, effort: effort)
+        case .grok(let model, let effort):
+            guard settings.enabledInstalledProviders.contains(.grok) else {
+                throw AIProviderError.unavailable("Grok is disabled in AI Settings.")
+            }
+            return try installedAI.provider(kind: .grok, model: model, effort: effort)
         case .openCode(let model, let effort):
             guard settings.enabledInstalledProviders.contains(.openCode) else {
                 throw AIProviderError.unavailable("OpenCode is disabled in AI Settings.")
