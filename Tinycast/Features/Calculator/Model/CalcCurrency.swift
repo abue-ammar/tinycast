@@ -62,6 +62,8 @@ enum CalcCurrency {
             let valueTokens = Array(tokens[0..<fromIndex])
             let input: Double
             if valueTokens.isEmpty {
+                // Only `eur to usd` implies 1; two bare codes are as likely a search as a query.
+                guard connected else { return nil }
                 input = 1
             } else if let value = CalcExpressionParser.scalar(valueTokens) {
                 input = value

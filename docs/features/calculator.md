@@ -432,9 +432,10 @@ echoes the typed text (`10km to mi ×`) rather than the conversion's own shorten
 `CalcCurrency` mirrors `CalcUnits`' shape: a lookup table plus a `parseConversion` over the same
 `expr from (to|in|->) to` token shape, so `eur to usd` implies an amount of 1 exactly like `m to ft`.
 A leading sign is swapped back into amount-first order, so `€20 to GBP` and `20€ to GBP` parse alike.
-The connector is optional, as in Raycast: `10 usd cad`, `$10 cad` and `usd cad` read the same as
-their `to` spellings. A bare pair must be money on both sides, so `10 usd kg` stays an app search
-rather than a category error — only a spelled connector says a conversion was meant.
+The connector is optional once an amount leads, as in Raycast: `10 usd cad` and `$10 cad` read the
+same as their `to` spellings. Without a connector the pair must be money on both sides and carry an
+amount, so `10 usd kg` stays an app search rather than a category error and `usd cad` stays a
+search rather than implying 1 — only a spelled connector says a conversion was meant.
 
 The table is **generated except for the judgement calls**. `node Scripts/gen-currencies.js` joins three
 sources on the ISO code and emits `CurrencyData.generated.swift`:

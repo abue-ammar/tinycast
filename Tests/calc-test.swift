@@ -691,7 +691,8 @@ struct CalcTests {
         expectDisplay("10usd cad", "13.60 CAD")
         expectDisplay("$10 cad", "13.60 CAD")
         expectDisplay("10$ cad", "13.60 CAD")
-        expectDisplay("usd cad", "1.36 CAD")
+        expectNil("usd cad")  // no connector, no amount: an app search
+        expectNil("dollars euros")
         expectDisplay("2*5 usd cad", "13.60 CAD")
         expectDisplay("10 dollars euros", "9.20 EUR")
         expectDisplay("10 pounds euros", "11.65 EUR")  // still money once units fall through
