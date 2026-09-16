@@ -19,7 +19,7 @@ export async function Nav() {
       <div className="mx-auto flex h-12 max-w-7xl items-center gap-6 px-4 sm:px-10">
         <Link href="/" className="flex items-center gap-2">
           <Logo size={24} />
-          <span className="text-body-lg font-semibold tracking-[-0.02em] text-fg">
+          <span className="text-body font-semibold tracking-[-0.02em] text-fg">
             {site.name}
           </span>
         </Link>

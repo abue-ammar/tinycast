@@ -151,13 +151,13 @@
   --text-key: 0.9em;
   --text-key--line-height: 1.4;
 
-  --text-small: 0.8125rem; /* 13px — nav, buttons, supporting copy */
+  --text-small: 0.875rem; /* 14px — nav, buttons, supporting copy */
   --text-small--line-height: 1.6;
 
-  --text-body: 0.9375rem; /* 15px — item titles */
+  --text-body: 1rem; /* 16px — item titles, the wordmark */
   --text-body--line-height: 1.6;
 
-  --text-body-lg: 1rem; /* 16px — section intros */
+  --text-body-lg: 1.0625rem; /* 17px — section intros */
   --text-body-lg--line-height: 1.6;
 
   --text-subheading: 1.125rem; /* 18px — hero intro */

@@ -58,7 +58,7 @@ export async function Hero() {
           </p>
 
           <div
-            className="rise mt-8 max-w-lg space-y-2"
+            className="rise mt-8 max-w-xl space-y-2"
             style={{ animationDelay: "180ms" }}
           >
             <CommandLine command={brewTrustCommand} />
