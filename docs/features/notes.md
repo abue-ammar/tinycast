@@ -126,7 +126,9 @@ VoiceOver actions to activate, rename, and move the actual note title to Trash.
 `NoteEditorView` is one TextKit 2 `NSTextView` inside an `NSScrollView`. It installs
 `NoteEditorInput.source` directly as `NSTextView.string` with one system font and Tinycast's note color.
 Markdown remains literal except for task lists: `- [ ]`, `* [ ]`, and `+ [ ]` prefixes followed by
-space render as accessible checkboxes. Checked tasks (`[x]` or `[X]`) have dimmed, struck-through text.
+space render as accessible checkboxes. Each task has 8 points of paragraph spacing after it, without
+adding blank lines to the source or expanding wrapped lines. Checked tasks (`[x]` or `[X]`) have dimmed,
+struck-through text.
 Fenced code blocks stay literal. The controls use TextKit 2 segment geometry, so they follow wrapping
 and resizing without a second editor or a source/display mapping.
 

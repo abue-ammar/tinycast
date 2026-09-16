@@ -16,7 +16,12 @@ final class NoteTextView: NSTextView, InjectableTextView {
         storage.beginEditing()
         storage.addAttribute(.foregroundColor, value: NSColor(Theme.Colors.noteText), range: range)
         storage.removeAttribute(.strikethroughStyle, range: range)
+        storage.removeAttribute(.paragraphStyle, range: range)
+        let taskStyle = NSMutableParagraphStyle()
+        taskStyle.paragraphSpacing = Theme.Spacing.md
         for task in tasks {
+            let paragraph = (string as NSString).lineRange(for: task.markerRange)
+            storage.addAttribute(.paragraphStyle, value: taskStyle, range: paragraph)
             storage.addAttribute(.foregroundColor, value: NSColor.clear, range: task.markerRange)
             if task.isChecked {
                 storage.addAttribute(.foregroundColor, value: NSColor(Theme.Colors.textSecondary),

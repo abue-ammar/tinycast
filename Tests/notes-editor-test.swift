@@ -13,6 +13,7 @@ struct NotesEditorTests {
         testUndoIsolation()
         testCharacterCountReports()
         testTasks()
+        testTaskSpacing()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -119,6 +120,33 @@ struct NotesEditorTests {
         check(
             "a stale count cannot be attributed to the replacement note",
             reports.last?.0.id == second.id && reports.last?.1 == 6)
+    }
+
+    private static func testTaskSpacing() {
+        let source = "- [ ] first\n- [x] second\nplain\n```\n- [ ] code\n```"
+        let editor = makeEditor(
+            input: NoteEditorInput(id: NoteID(rawValue: "Spacing.md"), source: source, epoch: 1))
+        editor.textView.layoutSubtreeIfNeeded()
+        let buttons = editor.textView.subviews.compactMap { $0 as? NSButton }
+        check("task checkboxes have breathing room",
+              buttons.count == 2 && buttons[1].frame.minY - buttons[0].frame.maxY >= Theme.Spacing.md)
+        for task in NoteTask.parse(source) {
+            let style = editor.textView.textStorage?.attribute(
+                .paragraphStyle, at: task.markerRange.location, effectiveRange: nil) as? NSParagraphStyle
+            check("task spacing belongs to its paragraph", style?.paragraphSpacing == Theme.Spacing.md)
+            check("wrapped task lines retain native spacing", style?.lineSpacing == 0)
+        }
+        for text in ["plain", "- [ ] code"] {
+            let location = (source as NSString).range(of: text).location
+            check("non-task paragraphs retain native spacing",
+                  editor.textView.textStorage?.attribute(.paragraphStyle, at: location, effectiveRange: nil) == nil)
+        }
+        editor.textView.setSelectedRange(NSRange(location: 0, length: 6))
+        editor.textView.insertText("", replacementRange: editor.textView.selectedRange())
+        check("removing a task marker removes its spacing",
+              editor.textView.textStorage?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) == nil)
+        editor.coordinator.editorUndoManager.undo()
+        check("undo restores task source without adding blank lines", editor.textView.string == source)
     }
 
     private static func testTasks() {
