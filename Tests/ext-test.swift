@@ -1279,6 +1279,23 @@ struct ExtensionTests {
               fs.writeSync(writer, Buffer.from("Y"), 0, 1, null);
               fs.closeSync(writer);
               assert.equal(fs.readFileSync(moved).subarray(0, 3).toString(), "YaX");
+              const listing = "\(directory.path)/listing";
+              fs.mkdirSync(listing + "/folder", { recursive: true });
+              fs.writeFileSync(listing + "/entry", "");
+              const handle = fs.opendirSync(listing);
+              assert.equal(handle.path, listing);
+              const first = handle.readSync(), second = handle.readSync();
+              assert.equal(handle.readSync(), null);
+              handle.closeSync();
+              assert.equal(code(() => handle.readSync()), "ERR_DIR_CLOSED");
+              const byName = Object.fromEntries([first, second].map((entry) => [entry.name, entry]));
+              assert(byName.entry.isFile() && byName.folder.isDirectory());
+              assert.equal(byName.entry.parentPath, listing);
+              const [callbackDir] = await call("opendir", listing);
+              assert.equal((await callbackDir.read()).constructor, fs.Dirent);
+              await callbackDir.close();
+              const iterated = await Array.fromAsync(await fs.promises.opendir(listing));
+              assert.equal(iterated.map((entry) => entry.name).sort().join(), "entry,folder");
               const zlibDecoded = new zlib.Unzip()._processChunk(
                 Buffer.from("eJwrSSxi+F+QWJmTn5gCACHpBTE=", "base64"), 4);
               assert(zlibDecoded.equals(expected));

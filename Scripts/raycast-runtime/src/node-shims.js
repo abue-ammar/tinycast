@@ -506,9 +506,52 @@ const fs = {
     stream.path = target;
     return stream;
   },
+  opendirSync(dir) {
+    return new Dir(fsPath(dir), fs.readdirSync(dir, { withFileTypes: true }));
+  },
   Stats,
   Dirent,
 };
+
+// The host has no directory handles, so a Dir walks a snapshot taken when it was opened.
+class Dir {
+  #entries;
+  #closed = false;
+  constructor(path, entries) {
+    this.path = path;
+    this.#entries = entries;
+  }
+  #assertOpen() {
+    if (!this.#closed) return;
+    const error = new Error("Directory handle was closed");
+    error.code = "ERR_DIR_CLOSED";
+    throw error;
+  }
+  readSync() {
+    this.#assertOpen();
+    return this.#entries.shift() ?? null;
+  }
+  read(callback) {
+    if (!callback) return (async () => this.readSync())();
+    callbackify(() => this.readSync())(callback);
+  }
+  closeSync() {
+    this.#assertOpen();
+    this.#closed = true;
+  }
+  close(callback) {
+    if (!callback) return (async () => this.closeSync())();
+    callbackify(() => this.closeSync())(callback);
+  }
+  async *[Symbol.asyncIterator]() {
+    try {
+      for (let entry = this.readSync(); entry; entry = this.readSync()) yield entry;
+    } finally {
+      if (!this.#closed) this.closeSync();
+    }
+  }
+}
+fs.Dir = Dir;
 
 // Callback forms: run the same sync host call, hand the result back on a microtask.
 function callbackify(syncFn) {
@@ -536,6 +579,7 @@ for (const [name, sync] of [
   ["stat", fs.statSync],
   ["lstat", fs.lstatSync],
   ["readdir", fs.readdirSync],
+  ["opendir", fs.opendirSync],
   ["mkdir", fs.mkdirSync],
   ["rm", fs.rmSync],
   ["rmdir", fs.rmdirSync],
@@ -568,6 +612,7 @@ const fsPromises = {
   stat: promisify1(fs.statSync),
   lstat: promisify1(fs.lstatSync),
   readdir: promisify1(fs.readdirSync),
+  opendir: promisify1(fs.opendirSync),
   mkdir: promisify1(fs.mkdirSync),
   rm: promisify1(fs.rmSync),
   rmdir: promisify1(fs.rmdirSync),
