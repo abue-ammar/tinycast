@@ -60,13 +60,11 @@ struct InstalledAITests {
             ("2.0.14 (Claude Code)\n", "2.0.14"),
             ("codex-cli 0.46.0\n", "0.46.0"),
             ("tool 1.2.3-rc.1+build.5\n", "1.2.3-rc.1+build.5"),
-            ("no version here", nil)
+            ("no version here", nil),
         ]
         for (output, expected) in cases {
             let version = InstalledAIProbe.version(in: output)
-            expect(
-                version == expected,
-                "version(in: \(output.debugDescription)) is \(String(describing: version))")
+            expect(version == expected, "version(in: \(output.debugDescription)) is \(String(describing: version))")
         }
     }
 

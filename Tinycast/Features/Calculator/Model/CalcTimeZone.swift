@@ -59,9 +59,8 @@ enum CalcTimeZone {
             target = calendar.timeZone
         }
 
-        guard
-            var source = sourceMoment(
-                leading, allowZoneConnector: ahead == nil, now: now, calendar: calendar)
+        guard var source = sourceMoment(
+            leading, allowZoneConnector: ahead == nil, now: now, calendar: calendar)
         else { return nil }
         if let ahead {
             guard let shifted = calendar.date(byAdding: ahead.component, value: ahead.count, to: source.date)
