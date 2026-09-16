@@ -1,0 +1,408 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Review rules restate AGENTS.md and docs/standards.md; when they disagree, those docs win.
+
+language: en-US
+
+tone_instructions: >-
+  Senior macOS engineer. Direct and terse. Only high-confidence defects: races, leaks,
+  main-thread work, deprecated APIs, broken invariants, security, regressions. No nits.
+
+early_access: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+
+  suggested_labels: true
+  auto_apply_labels: false
+
+  labeling_instructions:
+    - label: extension
+      instructions: Apply when the PR changes Tinycast/Features/Extensions/ or Scripts/raycast-runtime/.
+    - label: bug
+      instructions: Apply when the PR fixes incorrect existing behaviour.
+    - label: enhancement
+      instructions: Apply when the PR adds a feature or extends existing behaviour.
+
+  suggested_reviewers: false
+  poem: false
+  in_progress_fortune: false
+  review_status: true
+  review_details: false
+  enable_prompt_for_ai_agents: true
+  abort_on_close: true
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - WIP
+      - DO NOT REVIEW
+
+  path_filters:
+    - "!**/*.generated.swift"
+    - "!Tinycast/Resources/RaycastRuntime.generated.js"
+    - "!Tinycast.xcodeproj/**"
+    - "!Tinycast/Assets.xcassets/**"
+    - "!Tinycast/tinycast.icon/**"
+    - "!Tests/launcher-corpus/**"
+    - "!Tests/ai-fixtures/*.txt"
+    - "!**/node_modules/**"
+    - "!**/package-lock.json"
+    - "!**/pnpm-lock.yaml"
+    - "!build/**"
+    - "!website/.next/**"
+    - "!website/out/**"
+    - "!website/.source/**"
+    - "!**/*.png"
+    - "!**/*.svg"
+
+  path_instructions:
+    - path: "**/*.swift"
+      instructions: |
+        Tinycast targets only macOS 26+, Xcode 26 and Swift 6 language mode.
+
+        Repository authority:
+        - Review against AGENTS.md and docs/standards.md; use docs/architecture.md, docs/ui.md
+          and docs/testing.md where relevant.
+        - Do not invent conventions that contradict the repository.
+        - Review against the actual current implementation, not an imagined architecture.
+
+        Review discipline:
+        - Flag high-confidence defects, regressions, unsafe behavior, meaningful performance or
+          memory problems, and violations of explicit project rules.
+        - Do not flag code merely because another implementation is possible.
+        - Do not request refactors without a concrete correctness, performance, memory,
+          concurrency, security, or maintainability benefit.
+        - Do not turn subjective style preferences into findings.
+        - Do not repeat what SwiftLint already enforces unless there is an extra correctness concern.
+        - Prefer a few high-confidence findings over speculative comments.
+        - Respect intentional Tinycast conventions even when they differ from generic Swift advice.
+
+        Concurrency (Swift 6 strict; concurrency violations are defects):
+        - @MainActor is the default. Flag any new custom actor or global actor; the app has one actor.
+        - Heavy or IO work (file scans, image decode, SQLite, shell, JSON of real size) must run
+          off-main as a nonisolated (usually static) function driven by Task.detached.
+          Flag it on MainActor.
+        - Types crossing an isolation boundary must be Sendable.
+        - Flag @unchecked Sendable, nonisolated(unsafe) and @preconcurrency without a clear
+          one-line reason.
+        - Flag new MainActor.assumeIsolated; it traps at runtime.
+        - Ignore @available(*, unavailable) on init(coder:); that is the house idiom.
+        - Do not silence strict-concurrency diagnostics merely to make code compile.
+        - Flag DispatchQueue, DispatchGroup, DispatchSemaphore, OperationQueue, completion
+          handlers and performSelector where async/await is appropriate.
+        - DispatchQueue.main.async is never an ordering fix.
+        - Every long-lived Task is stored and cancelled in stop() or deinit. Flag fire-and-forget
+          tasks that can outlive their owner.
+        - Flag loops that never check Task.isCancelled where cancellation matters.
+        - Prefer structured concurrency (async let, task groups) over detached bookkeeping
+          where it fits.
+        - Escaping closures that can outlive their owner should not strongly retain self unless
+          that ownership is intentional and bounded. Prefer [weak self]; [unowned self]
+          requires a lifetime invariant.
+        - Flag retain cycles through Task, Timer, NotificationCenter, KVO and stored closures.
+        - Block observers use NotificationToken, not a bare addObserver plus deinit removal.
+        - A resource that must be torn down on its actor uses isolated deinit (see ClipboardStore).
+        - withObservationTracking's onChange fires before the write; the re-read and re-arm must
+          be deferred into a Task (AppCore.track is the shape).
+        - Signpost .end must sit in defer so a throwing path cannot leak the interval.
+
+        Modern APIs only:
+        - @Observable only. Flag ObservableObject, @Published, @StateObject, @ObservedObject,
+          @EnvironmentObject and Combine used for state.
+        - @ObservationIgnored on memo caches and lazy collaborators.
+        - SMAppService for login items; Swift Concurrency over callbacks.
+        - No #available/@available(macOS …) gates, version flags, compatibility shims,
+          migration code or "just in case" fallbacks. Suggest deleting obsolete compatibility code.
+        - Carbon is allowed only for global hotkeys (RegisterEventHotKey) and TIS input sources;
+          raw C pointers are decoded to plain values before crossing into actor code.
+
+        Memory and speed:
+        - Resident memory must stay under 100 MB and return to baseline after the palette closes.
+        - Flag unbounded caches, arrays or histories without eviction.
+        - Flag a new cache of non-trivial size with no measurement cited in the PR.
+        - Flag allocation, sorting, regex compilation, formatter creation or filtering repeated
+          per keystroke, per row or per render; hoist it or build it once per palette show.
+        - Flag new work in AppCore.start() or initializers that could be deferred or done on
+          first use.
+        - Prefer value types and cheaper data structures over unnecessary caches.
+        - Flag large copies in hot loops.
+        - Flag NSImage, CGImage or Data held longer than the view that shows it.
+
+        Architecture and ownership:
+        - AppCore is the sole owner of long-lived state. Flag any new singleton or static let shared.
+        - Views reach a feature through its coordinator via @Environment, never through AppCore.
+        - AppEntry.Kind is the only source of an entry's category. Flag category logic that
+          parses IDs.
+        - Networking uses a private URLSessionConfiguration.ephemeral session with
+          urlCache = nil (copy CurrencyRateStore). Flag URLSession.shared.
+        - Dialogs go through DialogController, reports through HUDPresenter. Flag NSAlert,
+          NSSlider, NSPopover and SwiftUI .alert, .confirmationDialog and .popover.
+        - Anything newly persisted is keyed by Bundle.main.bundleIdentifier.
+        - Type suffixes must match their responsibility (docs/standards.md#naming).
+        - Flag protocols with one conformer, generics with one use and factories for one type.
+        - Flag force unwraps and try! outside tests unless the invariant is obvious.
+
+        Comments:
+        - Rare, one line, why not what, max 100 chars.
+        - Flag two consecutive comment lines, comment blocks, comments that restate code, and
+          comments narrating the change itself.
+
+    - path: "Tinycast/Features/*/Model/**"
+      instructions: |
+        Pure model layer, compiled directly by the test harnesses.
+        - Must not import AppKit, SwiftUI or Cocoa. This is a hard error.
+        - Every environment fact (clock, filesystem, home directory, rates, locale) is an
+          injected parameter. A defaulted parameter (now: Date = Date()) is fine.
+        - Flag new ambient reads of Date(), FileManager.default, NSHomeDirectory(),
+          Locale.current or UserDefaults that a harness cannot override.
+        - Types crossing actors are Sendable value types. Prefer nonisolated pure functions.
+
+    - path: "Tinycast/App/**"
+      instructions: |
+        Composition root.
+        - New long-lived state goes on AppCore and is wired in start().
+        - Launch time is protected most: flag synchronous work added to start() or init that
+          could be deferred into a Task or done on first use.
+        - Check every started task and observer is torn down.
+
+    - path: "Tinycast/Palette/**"
+      instructions: |
+        The summon path must feel instant.
+        - Anything resolved per show must not be recomputed per render or keystroke.
+        - Flag state that invalidates the whole palette view tree.
+        - Flag observation of whole stores where one property is read.
+        - Flag synchronous IO on show.
+
+    - path: "Tinycast/Features/Extensions/**"
+      instructions: |
+        Runs untrusted Raycast extensions in JavaScriptCore.
+        - Containment: every view, row, menu, geometry and sizing constant lives here. Flag
+          anything added to DesignSystem, Theme, or shared with another feature. Duplicating
+          layout here is the correct trade.
+        - Only Theme base tokens, InterfaceMetrics, PopoverMenuItem and Platform/ may be used
+          from outside.
+        - Treat all extension input as hostile: validate sizes, paths, URLs and types. Flag path
+          traversal, unbounded payloads, and JS values trusted without checks.
+        - JSContext/JSValue stay on their owning actor. Flag retain cycles between JS callbacks
+          and Swift owners.
+
+    - path: "Tinycast/DesignSystem/**"
+      instructions: |
+        Theme.swift is the only design-token source.
+        - Flag hard-coded colours, spacing, radii or fonts elsewhere.
+        - Dark is the baseline: a colour's dark branch is the literal Color.white.opacity(...)
+          it always was. Flag any change to a dark value unless the PR explicitly changes Dark.
+        - DesignSystem must not depend on any feature.
+
+    - path: "Tinycast/DesignSystem/Scrolling/{EdgeDissolve,ThinScrollbar}.swift"
+      instructions: |
+        Off-limits. Any edit here is a visual regression. Ask the author to fix the underlying
+        scroll issue elsewhere unless the PR explicitly exists to change this file.
+
+    - path: "Tinycast/**/*View*.swift"
+      instructions: |
+        SwiftUI:
+        - Keep bodies declarative and small; prefer extracted subviews to large bodies and
+          computed some View helpers.
+        - Flag business logic, IO or formatting work inside body.
+        - Minimise @State; derive instead of duplicate.
+        - No type annotation on @Environment for @Observable types.
+        - Check a new hosting view injects every environment object it reads.
+        - Every custom control needs an accessibility label and traits.
+        - Follow docs/ui.md.
+
+    - path: "Tinycast/Platform/**"
+      instructions: |
+        System shims shared by all features.
+        - Must not depend on any feature.
+        - Keep them thin and Sendable-correct.
+        - Decode C/CF values to Swift values at the boundary.
+
+    - path: "Tinycast/{Info.plist,Tinycast.entitlements}"
+      instructions: |
+        Flag any new entitlement, usage-description key or privilege, and ask why it is required.
+
+    - path: "Tests/**/*.swift"
+      instructions: |
+        Standalone harnesses (one Swift file each, no XCTest) that compile shipped sources and
+        run by ./Scripts/run-tests.sh.
+        - Tests must be deterministic: inject clocks and temp directories, no network, no sleeps
+          for timing.
+        - Check new behaviour has a covering case.
+        - Check a new harness is registered in Scripts/run-tests.sh.
+        - Performance harnesses must assert a budget.
+
+    - path: "Scripts/**/*.sh"
+      instructions: |
+        Run by macOS /bin/bash 3.2.
+        - Flag bash 4+ features (associative arrays, mapfile, ${var,,}, &>>).
+        - Use set -uo pipefail or stricter, and quote expansions.
+        - No step may need a secret only the maintainer holds.
+
+    - path: "Scripts/**/*.{js,mjs}"
+      instructions: |
+        Node generators and the Raycast runtime build.
+        - Their output is committed; check the PR regenerates and commits the matching
+          *.generated.* file.
+        - Keep the runtime small because it is loaded into every extension context. Flag heavy
+          polyfills and eager work.
+
+    - path: "project.yml"
+      instructions: |
+        XcodeGen source of truth.
+        - Check Tinycast.xcodeproj was regenerated in the same PR.
+        - Keep Swift 6 language mode, strict concurrency, the macOS 26 deployment target and
+          zero third-party dependencies.
+        - Flag SwiftPM packages and Bundle.module.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        Runs on macos-26 with Xcode 26.
+        - Keep permissions minimal and pin actions.
+        - Never interpolate untrusted PR input into run:.
+        - CI calls the scripts rather than restating their rules.
+
+    - path: "{AGENTS.md,docs/**/*.md}"
+      instructions: |
+        Check the text matches the code in this PR.
+        - Flag stale type names, paths and commands.
+        - A code change that makes a doc wrong must fix that doc in the same PR.
+
+    - path: "website/**"
+      instructions: |
+        Next.js static export (fumadocs, React 19, Tailwind 4), linted with oxlint.
+        Focus on broken links, accessibility and content accuracy against the app.
+        Skip style nits.
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: true
+
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: warning
+      requirements: >-
+        Imperative mood, sentence case, no conventional-commit prefix (feat:, fix:),
+        no trailing period, at most 72 characters. Example:
+        "Keep the palette above other apps' modal windows".
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+
+    custom_checks:
+      - name: Model purity
+        mode: error
+        instructions: >-
+          Fail if any added or modified file under Tinycast/Features/*/Model/
+          contains import AppKit, import SwiftUI or import Cocoa. Otherwise pass.
+
+      - name: Generated files untouched
+        mode: error
+        instructions: >-
+          Fail if a file whose name contains .generated. changed while none of
+          its generators changed in the same PR: Scripts/gen-emoji.js,
+          Scripts/gen-currencies.js, Scripts/gen-countries.js, or files under
+          Scripts/raycast-runtime/. Otherwise pass.
+
+      - name: Protected scroll files
+        mode: error
+        instructions: >-
+          Fail if Tinycast/DesignSystem/Scrolling/EdgeDissolve.swift or
+          Tinycast/DesignSystem/Scrolling/ThinScrollbar.swift changed and the
+          PR title or description does not explicitly state the change is
+          intended for that file. Otherwise pass.
+
+      - name: No legacy concurrency or state
+        mode: error
+        instructions: >-
+          Fail if added Swift lines introduce ObservableObject, @Published,
+          @StateObject, @ObservedObject, @EnvironmentObject, MainActor.assumeIsolated,
+          URLSession.shared, NSAlert, or a new actor declaration.
+          Also fail if an added @unchecked Sendable or nonisolated(unsafe) has
+          no comment on the same or preceding line giving a reason. Otherwise pass.
+
+      - name: XcodeGen project in sync
+        mode: error
+        instructions: >-
+          Fail if project.yml changed and Tinycast.xcodeproj/project.pbxproj did
+          not, or if Tinycast.xcodeproj/project.pbxproj changed and project.yml
+          did not. Otherwise pass.
+
+      - name: Memory footprint reported
+        mode: warning
+        instructions: >-
+          Pass if the PR changes no Swift file under Tinycast/. Otherwise pass
+          only if the description's "Memory footprint" section has values filled
+          in, or states plainly why measurement does not apply or was not done.
+          Fail if the section is missing or left as the empty template.
+
+  tools:
+    swiftlint:
+      enabled: true
+      config_file: .swiftlint.yml
+    shellcheck:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    gitleaks:
+      enabled: true
+    yamllint:
+      enabled: false
+    oxc:
+      enabled: true
+    github-checks:
+      enabled: true
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
+    biome:
+      enabled: false
+    eslint:
+      enabled: false
+
+chat:
+  auto_reply: true
+  art: false
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - AGENTS.md
+      - docs/standards.md
+      - docs/architecture.md
+      - docs/ui.md
+      - docs/testing.md
+      - docs/features/*.md
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
