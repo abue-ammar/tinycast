@@ -1192,6 +1192,42 @@ struct CalcTests {
             "country zones resolve", expected: "true",
             got: "\(CountryZoneData.zones.values.allSatisfy { TimeZone(identifier: $0) != nil })")
 
+        expectDisplayAt("SF time", "5:18 PM (yesterday)")
+        expectDisplayAt("Tokyo time", "9:18 AM")
+        expectDisplayAt("  sF\tTiMe  ", "5:18 PM (yesterday)")
+        expectDisplayAt("San\u{a0}Francisco\u{2009}time", "5:18 PM (yesterday)")
+        expectDisplayAt("Tokyo\ntime", "9:18 AM")
+        for components in [
+            DateComponents(year: 2026, month: 1, day: 15, hour: 12),
+            DateComponents(year: 2026, month: 9, day: 15, hour: 12),
+            DateComponents(year: 2026, month: 9, day: 15, hour: 23, minute: 30)
+        ] {
+            let now = clock.calendar.date(from: components)!
+            for home in ["UTC", "Asia/Shanghai", "America/Los_Angeles"] {
+                var calendar = clock.calendar
+                calendar.timeZone = TimeZone(identifier: home)!
+                for place in [
+                    "SF", "Tokyo", "London", "Shanghai", "San Francisco", "New York", "Canada",
+                    "United States", "United Kingdom", "India", "South Korea", "PST", "UTC", "GMT",
+                    "SFO", "CDG", "LDN", "SÃO PAULO", "Zürich", "Côte d’Ivoire", "Trinidad and Tobago",
+                    "Georgia", "Basel"
+                ] {
+                    let expected = CalcEngine.evaluate("time in \(place)", now: now, calendar: calendar)
+                    let actual = CalcEngine.evaluate("\(place) TiMe", now: now, calendar: calendar)
+                    check(
+                        "\(place) time [\(home), \(now)]", expected: "true",
+                        got: "\(expected != nil && actual == expected)")
+                }
+            }
+        }
+        for query in [
+            "Screen Time", "QuickTime Player", "Time Machine", "FaceTime", "PSTT time", "xyzzy time",
+            "SF junk time", "4 hours time", "90 min time", "5pm time", "5pm SF time", "time SF",
+            "SF current time", "SF time now", "SF time + 2h", "time in SF time", "time time"
+        ] {
+            expectNilAt(query)
+        }
+
         // A bare number takes the unit its moment implies
         expectDisplayAt("3:45pm + 5", "24 July at 8:45 PM")
         expectDisplayAt("3:45pm - 2", "24 July at 1:45 PM")
