@@ -18,7 +18,9 @@ enum HotKeyAction: Hashable, Sendable {
     /// Keyed by `AppEntry.id`, which is what survives a reinstall of the extension.
     case extensionCommand(entryID: String)
 
-    /// The UserDefaults key, and the `HotKeyCenter` registration id: one per action.
+    /// The UserDefaults key: one per action. The `HotKeyCenter` registration id is derived from
+    /// the *binding* instead, since two `.app` actions may share one combo — see
+    /// `HotKeyManager.registrationID(for:)`.
     var defaultsKey: String {
         switch self {
         case .togglePalette: "hotkey.togglePalette"

@@ -343,6 +343,10 @@ Commands passes `CustomCommand.entryID`, Settings ▸ Extensions passes `extensi
 and each dims the field when the entry is hidden from launcher search, whose entry the ranker never
 sees.
 
+An app's `ShortcutRecorder` is the one pane where recording a chord another row already holds isn't
+refused: two apps may share a chord and cycle through it on each press instead of colliding — see
+[hotkeys.md](hotkeys.md#shared-app-chords).
+
 Aliases ride along in a settings backup (`launcherAliases`), and deleting what an alias points at —
 uninstalling an app, deleting a quicklink or custom command, uninstalling an extension — removes it
 with the entry's other per-entry preferences.

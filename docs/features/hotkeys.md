@@ -7,6 +7,8 @@
   `.doubleTap(DoubleTapModifier)`.
 - `HotKeyCenter` — the Carbon `RegisterEventHotKey` layer, pausable.
 - `DoubleTapModifier` / `DoubleTapDetector` / `DoubleTapMonitor` — the double-tap stack.
+- `HotKeyCycle` — pure step logic for a chord shared by more than one app; see
+  [Shared app chords](#shared-app-chords).
 
 `HotKeyManager` owns them all: persistence, conflict lookup, and dispatch. Every action reads and
 writes one `HotKeyBinding`, so the two kinds share persistence, conflict detection, the recorder and
@@ -15,8 +17,10 @@ the keycap rendering — only the _engine_ differs.
 ## Invariants
 
 - **Hotkeys persist as JSON strings under `hotkey.<action>` UserDefaults keys**, and
-  `HotKeyAction.defaultsKey` is the one place that computes a key — it is also the `HotKeyCenter`
-  registration id, so the two cannot drift.
+  `HotKeyAction.defaultsKey` is the one place that computes a key. It is *not* the `HotKeyCenter`
+  registration id: that is derived from the binding itself
+  (`HotKeyManager.registrationID(for:)`), because two `.app` actions may share one combo — see
+  [Shared app chords](#shared-app-chords).
 - **A command's shortcut and its launcher row run the same funnel.** `HotKeyAction.command(CommandID)`
   is parameterised over the whole catalog and dispatches through `LauncherCoordinator.runCommand`, so a
   new built-in command arrives bindable with no hotkey plumbing of its own, and there is one behaviour
@@ -40,8 +44,9 @@ the keycap rendering — only the _engine_ differs.
 ## Persistence
 
 Bindings persist as JSON strings under `hotkey.<action>` UserDefaults keys, computed in one place —
-`HotKeyAction.defaultsKey`, which doubles as the `HotKeyCenter` registration id. The set of bound
-bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes use
+`HotKeyAction.defaultsKey`. The bound bundle IDs live in `boundAppBundleIDs`, **an ordered array, not
+a set** — cycle order is assignment order, so it is appended to on bind and filtered on unbind rather
+than round-tripped through a `Set`, and it is re-registered on launch. System Settings panes use
 `boundPaneBundleIDs`; custom commands, quicklinks and window layouts use their stable UUIDs in
 `boundCustomCommandIDs`, `boundQuicklinkIDs` and `boundWindowLayoutIDs`. Those three are the per-item
 case — unlike a fixed catalog, there is no `allCases` to walk — so each needs an index for `start()`
@@ -85,6 +90,41 @@ feature switch is off — `WindowCommandCoordinator.runWindowCommand` re-checks 
 [window-management.md](window-management.md)); a system-action shortcut likewise goes through
 `SystemActionCoordinator.runSystemAction(id:)`, so the confirmation gate holds for a hotkey exactly as it does for the
 palette.
+
+## Shared app chords
+
+Only `.app(bundleID:)` may share a binding — every other action keeps the one-owner rule, and an app
+recording a chord already held by a command, pane or any other kind of action is still a conflict.
+`conflictOwner` special-cases exactly that one pairing: two `.app` candidates holding the same
+binding are never a collision, so the recorder accepts the join instead of flashing the callout.
+
+`HotKeyCenter` still gets exactly one registration per distinct combo, whether one app holds it or
+five: `HotKeyManager.registrationID(for:)` derives the Carbon id from the binding's Carbon key code
+and modifiers, not from any one action's `defaultsKey`. `updateComboRegistration` registers a combo
+only when no other action already holds it, and unregisters one only when no other action still
+does — a join or a leave never touches a chord somebody else owns. The fired closure looks the
+current holders up fresh every press (`performBinding`), so membership can change without an
+re-registration at all.
+
+Firing resolves through `performBinding`: one holder runs directly; more than one `.app` holder
+resolves through `HotKeyCycle`, a pure step function (Foundation-only, clock injected, covered by
+`hotkey-test`) that decides who is next:
+
+- The frontmost member advances to its successor, wrapping past the last member to the first.
+- A non-member frontmost within `HotKeyCycle.launchGrace` (2s) of the last press advances from the
+  last target instead — so tapping rapidly keeps cycling through a launch that hasn't finished
+  activating yet, rather than firing the same app twice.
+- Otherwise it returns to wherever the cycle left off, or the first member if it never ran — leaving
+  the group for another app and coming back lands where you left, not one step further.
+
+A shared chord always activates its target through the same `AppLauncher.toggle(bundleID:)` every
+other app hotkey uses; hide-on-frontmost is never reachable here because the cycle's target is by
+construction never the app currently frontmost.
+
+Cycle order is assignment order: `boundBundleIDs` is the array itself, so moving an app requires
+clearing and re-recording it — there is no drag-to-reorder. `SettingsBackup.HotkeyBackup.appOrder`
+carries that order through export/import; an older export without it, or one missing an entry, still
+applies every binding, just without a guaranteed order for what's left out.
 
 ## Double-tap modifiers
 

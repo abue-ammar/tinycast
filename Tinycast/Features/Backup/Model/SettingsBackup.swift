@@ -88,6 +88,8 @@ struct SettingsBackup: Codable {
         var togglePalette: HotKeyBinding?
         var commands: [String: HotKeyBinding]?
         var apps: [String: HotKeyBinding]?
+        /// Cycle order for a chord shared by more than one app; absent for an older export.
+        var appOrder: [String]?
         var panes: [String: HotKeyBinding]?
         var customCommands: [String: HotKeyBinding]?
         var systemActions: [String: HotKeyBinding]?
@@ -184,6 +186,7 @@ extension SettingsBackup {
             uniqueKeysWithValues: hk.boundBundleIDs.compactMap { id in
                 hk.binding(for: .app(bundleID: id)).map { (id, $0) }
             })
+        hotkeys.appOrder = hk.boundBundleIDs
         hotkeys.panes = Dictionary(
             uniqueKeysWithValues: hk.boundPaneBundleIDs.compactMap { id in
                 hk.binding(for: .settingsPane(bundleID: id)).map { (id, $0) }
@@ -498,7 +501,15 @@ extension SettingsBackup {
             guard let action = CommandID(rawValue: rawID)?.hotKeyAction else { continue }
             apply(b, action)
         }
-        for (id, b) in hotkeys.apps ?? [:] { apply(b, .app(bundleID: id)) }
+        // In `appOrder` when present, so a shared chord's cycle order round-trips; an older
+        // export without it, or one hand-edited to drop an entry, still applies every binding,
+        // just without a guaranteed cycle order for those left out.
+        var apps = hotkeys.apps ?? [:]
+        for id in hotkeys.appOrder ?? [] {
+            guard let b = apps.removeValue(forKey: id) else { continue }
+            apply(b, .app(bundleID: id))
+        }
+        for (id, b) in apps { apply(b, .app(bundleID: id)) }
         for (id, b) in hotkeys.panes ?? [:] { apply(b, .settingsPane(bundleID: id)) }
         for (rawID, b) in hotkeys.customCommands ?? [:] {
             guard let id = UUID(uuidString: rawID), core.customCommands.command(id: id) != nil else {

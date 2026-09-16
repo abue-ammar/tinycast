@@ -65,6 +65,7 @@ struct DoubleTapDetectorTests {
         interruptions()
         repeats()
         resetting()
+        sharedAppCycle()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -367,6 +368,47 @@ struct DoubleTapDetectorTests {
         expect(keyboard.fired, [.command], "a triple-tap doesn't fire twice")
         keyboard.tap(.command, at: 0.45)
         expect(keyboard.fired, [.command, .command], "the next full pair fires again")
+    }
+
+    // MARK: - Shared app chords
+
+    static func sharedAppCycle() {
+        let members = ["com.a", "com.b", "com.c"]
+
+        var frontmostMember = HotKeyCycle()
+        expect(
+            frontmostMember.next(members: members, frontmost: "com.a", now: 0) == "com.b",
+            "the frontmost member's successor fires next")
+        expect(
+            frontmostMember.next(members: members, frontmost: "com.c", now: 1) == "com.a",
+            "the cycle wraps from the last member back to the first")
+
+        var single = HotKeyCycle()
+        expect(
+            single.next(members: ["com.a"], frontmost: "com.a", now: 0) == "com.a",
+            "a lone member cycles back to itself")
+
+        var strangerFrontmost = HotKeyCycle()
+        _ = strangerFrontmost.next(members: members, frontmost: "com.a", now: 0)
+        expect(
+            strangerFrontmost.next(members: members, frontmost: "com.other", now: 10) == "com.b",
+            "with a non-member frontmost well outside the launch grace, the cycle repeats its target")
+
+        var launchGrace = HotKeyCycle()
+        _ = launchGrace.next(members: members, frontmost: "com.a", now: 0)
+        expect(
+            launchGrace.next(members: members, frontmost: "com.other", now: 0.5) == "com.c",
+            "a rapid re-press inside the launch grace keeps advancing rather than repeating")
+        expect(
+            launchGrace.next(
+                members: members, frontmost: "com.other",
+                now: 0.5 + HotKeyCycle.launchGrace + 0.01) == "com.c",
+            "past the launch grace the cycle repeats its last target instead of advancing")
+
+        var neverPressed = HotKeyCycle()
+        expect(
+            neverPressed.next(members: members, frontmost: "com.other", now: 0) == "com.a",
+            "with nothing pressed yet and no member frontmost, the first member fires")
     }
 
     // MARK: - Reset

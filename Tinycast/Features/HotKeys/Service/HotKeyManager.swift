@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// Owns every binding: persistence, registration with both engines, conflicts and dispatch.
 @MainActor
@@ -40,9 +40,10 @@ final class HotKeyManager {
     let capture = ShortcutCaptureSession()
 
     private let center = HotKeyCenter()
-    private var doubleTaps: [DoubleTapModifier: HotKeyAction] = [:]
     /// Every binding, loaded once in `start()` and written through on change.
     private var bindings: [HotKeyAction: HotKeyBinding] = [:]
+    /// Cycle state per shared binding — which app fires next. Empty for a single-holder binding.
+    private var cycles: [HotKeyBinding: HotKeyCycle] = [:]
     @ObservationIgnored private var candidateActionsCache: [HotKeyAction]?
     // Reused: the startup load decodes once per candidate action.
     private let decoder = JSONDecoder()
@@ -67,12 +68,11 @@ final class HotKeyManager {
         // After the prunes, so a dropped record can't survive in memory this session.
         for action in candidateActions { bindings[action] = storedBinding(for: action) }
 
-        // `register` no-ops on an unbound item, so the fixed catalogs need no index of their own.
-        for action in candidateActions { register(action) }
+        // One Carbon registration per distinct combo, however many actions share it.
+        registerAllCombos()
 
         doubleTapMonitor.onDoubleTap = { [weak self] modifier in
-            guard let self, let action = doubleTaps[modifier] else { return }
-            perform(action)
+            self?.performBinding(.doubleTap(modifier))
         }
         doubleTapMonitor.start()
         syncDoubleTaps()
@@ -83,7 +83,8 @@ final class HotKeyManager {
         UserDefaults.standard.stringArray(forKey: boundExtensionCommandKey) ?? []
     }
 
-    /// Bundle IDs holding a per-app hotkey, so `start()` knows which records to load.
+    /// Bundle IDs holding a per-app hotkey, in the order they were assigned — a shared chord
+    /// cycles through this order, so it is never re-sorted into a set.
     var boundBundleIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundKey) ?? []
     }
@@ -131,15 +132,20 @@ final class HotKeyManager {
             bindings[action] = nil
             UserDefaults.standard.removeObject(forKey: action.defaultsKey)
         }
-        // Unregister unconditionally: the previous binding may have been a combo.
-        center.unregister(id: action.defaultsKey)
-        register(action)
+        // Only the two combos that actually changed are touched — a join or a leave never
+        // disturbs a chord some other action still holds.
+        updateComboRegistration(previous: previous, action: action)
 
         switch action {
         case .app(let bundleID):
-            var set = Set(boundBundleIDs)
-            if binding == nil { set.remove(bundleID) } else { set.insert(bundleID) }
-            UserDefaults.standard.set(Array(set), forKey: boundKey)
+            // An ordered array, not a set: cycle order is assignment order.
+            var order = boundBundleIDs
+            if binding == nil {
+                order.removeAll { $0 == bundleID }
+            } else if !order.contains(bundleID) {
+                order.append(bundleID)
+            }
+            UserDefaults.standard.set(order, forKey: boundKey)
         case .settingsPane(let bundleID):
             var set = Set(boundPaneBundleIDs)
             if binding == nil { set.remove(bundleID) } else { set.insert(bundleID) }
@@ -182,9 +188,12 @@ final class HotKeyManager {
     }
 
     /// What else holds `binding`, or nil. Whole-binding comparison covers both kinds alike.
+    /// Two `.app` actions never conflict: a chord already held by one app just gains another
+    /// member to cycle through, rather than being refused.
     func conflictOwner(of binding: HotKeyBinding, excluding action: HotKeyAction) -> String? {
         for candidate in candidateActions
         where candidate != action && self.binding(for: candidate) == binding {
+            if case .app = action, case .app = candidate { continue }
             return displayName(of: candidate)
         }
         return nil
@@ -235,22 +244,70 @@ final class HotKeyManager {
         }
     }
 
-    /// Hands a combo to Carbon; a double-tap has no per-action registration to make.
-    private func register(_ action: HotKeyAction) {
-        guard let shortcut = binding(for: action)?.shortcut else { return }
-        center.register(id: action.defaultsKey, shortcut: shortcut) { [weak self] in
-            self?.perform(action)
+    /// One Carbon id per distinct combo — however many actions end up sharing it.
+    private func registrationID(for binding: HotKeyBinding) -> String {
+        guard let shortcut = binding.shortcut else { return "" }
+        return "hotkey.combo.\(shortcut.carbonKeyCode).\(shortcut.carbonModifiers)"
+    }
+
+    /// Registers every distinct combo once, no matter how many actions hold it.
+    private func registerAllCombos() {
+        var seen: Set<HotKeyBinding> = []
+        for action in candidateActions {
+            guard let binding = bindings[action], let shortcut = binding.shortcut else { continue }
+            guard seen.insert(binding).inserted else { continue }
+            center.register(id: registrationID(for: binding), shortcut: shortcut) { [weak self] in
+                self?.performBinding(binding)
+            }
         }
     }
 
-    /// Rebuilt wholesale, so the map can't drift from what is on disk.
-    private func syncDoubleTaps() {
-        doubleTaps = [:]
-        for action in candidateActions {
-            guard let modifier = binding(for: action)?.doubleTapModifier else { continue }
-            doubleTaps[modifier] = action
+    /// Registers or unregisters only the two combos `action` actually left or joined; a chord
+    /// still held by someone else is never touched, and one already held by someone else is
+    /// never re-registered.
+    private func updateComboRegistration(previous: HotKeyBinding?, action: HotKeyAction) {
+        let new = bindings[action]
+        func stillHeld(_ candidate: HotKeyBinding) -> Bool {
+            candidateActions.contains { $0 != action && bindings[$0] == candidate }
         }
-        doubleTapMonitor.update(bound: Set(doubleTaps.keys))
+        if let previous, previous.shortcut != nil, previous != new, !stillHeld(previous) {
+            center.unregister(id: registrationID(for: previous))
+        }
+        if let new, let shortcut = new.shortcut, new != previous, !stillHeld(new) {
+            center.register(id: registrationID(for: new), shortcut: shortcut) { [weak self] in
+                self?.performBinding(new)
+            }
+        }
+    }
+
+    /// Rebuilt wholesale, so the set can't drift from what is on disk.
+    private func syncDoubleTaps() {
+        var modifiers: Set<DoubleTapModifier> = []
+        for action in candidateActions {
+            if let modifier = binding(for: action)?.doubleTapModifier { modifiers.insert(modifier) }
+        }
+        doubleTapMonitor.update(bound: modifiers)
+    }
+
+    /// Resolves who actually fires for `binding` — one action runs directly, several `.app`
+    /// holders advance the shared cycle instead.
+    private func performBinding(_ binding: HotKeyBinding) {
+        let holders = candidateActions.filter { bindings[$0] == binding }
+        guard !holders.isEmpty else { return }
+        let bundleIDs = holders.compactMap { holder -> String? in
+            if case .app(let bundleID) = holder { return bundleID }
+            return nil
+        }
+        guard bundleIDs.count > 1 else {
+            perform(holders[0])
+            return
+        }
+        let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        var cycle = cycles[binding] ?? HotKeyCycle()
+        let target = cycle.next(
+            members: bundleIDs, frontmost: frontmost, now: ProcessInfo.processInfo.systemUptime)
+        cycles[binding] = cycle
+        perform(.app(bundleID: target))
     }
 
     private func perform(_ action: HotKeyAction) {
