@@ -133,6 +133,7 @@ works out a 27-inch 4K display's density from its diagonal.
 | `1rem + 8px`  | `24 px`   |
 
 `rem` and `em` use the browser's default 16px root font size. `pt` means pints, not points.
+Copying a `px`, `rem` or `em` result drops the space (`24px`), ready to paste into CSS.
 
 ## Data and transfer rates
 

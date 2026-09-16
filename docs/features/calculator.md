@@ -242,7 +242,8 @@ These are image pixels, not printer dots.
 `rem` and `em` are pixel units fixed at the browser's default 16px root font size, so `24px`
 auto-converts to `1.5 rem`, `2em` to `32 px`, and `1rem + 8px` is `24 px`. The base is not a
 setting: a calculator has no stylesheet, so an `em` is always a root em. `pt` stays pints rather
-than typographic points, since volume claimed it first.
+than typographic points, since volume claimed it first. A `px`, `rem` or `em` answer copies without
+the space (`24px`) so it pastes straight into CSS; the card keeps the space every other unit shows.
 
 `to timespan` / `to duration` formats any evaluated time quantity, including
 `(1hr + 30min) to timespan` and `100km / 40km/h to duration`. It uses the typed parser directly.

@@ -12,6 +12,15 @@ struct CalcResult: Equatable, Sendable {
             let text = CalcFormatter.copyText(value)
             return .value(display: CalcFormatter.grouped(text) + suffix, copyText: text + suffix)
         }
+
+        /// CSS lengths copy unspaced ("24px") so the answer pastes straight into a stylesheet.
+        static func measurement(_ value: Double, unit: UnitDef) -> Self {
+            let text = CalcFormatter.copyText(value)
+            let copySeparator = unit.category == .pixels ? "" : " "
+            return .value(
+                display: "\(CalcFormatter.grouped(text)) \(unit.symbol)",
+                copyText: text + copySeparator + unit.symbol)
+        }
     }
 
     /// Normalized echo of what was evaluated, shown on the card's left side ("3×3", "10 km").
@@ -94,7 +103,7 @@ enum CalcEngine {
                     expression: "\(CalcFormatter.display(input)) \(from.symbol)",
                     sourceBadge: from.name,
                     targetBadge: to.name,
-                    payload: .number(output, suffix: " \(to.symbol)"))
+                    payload: .measurement(output, unit: to))
             case .mismatch(let from, let to):
                 return CalcResult(
                     expression: query,
@@ -139,7 +148,7 @@ enum CalcEngine {
                 let text = CalcFormatter.compoundFeetInches(bare.output)
                 payload = .value(display: text, copyText: text)
             } else {
-                payload = .number(bare.output, suffix: " \(bare.to.symbol)")
+                payload = .measurement(bare.output, unit: bare.to)
             }
             return CalcResult(
                 expression: "\(CalcFormatter.display(bare.input)) \(bare.from.symbol)",
