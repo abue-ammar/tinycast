@@ -11,6 +11,7 @@ final class AppCore {
     let customCommands = CustomCommandStore()
     let quicklinks = QuicklinkStore()
     let windowLayouts = WindowLayoutStore()
+    let customWindowSizes = CustomWindowSizeStore()
     let clipboardStore = ClipboardStore()
     @ObservationIgnored private var clipboardTextIndexer: ClipboardTextIndexer?
     let clipboardManager: ClipboardManager
@@ -101,7 +102,12 @@ final class AppCore {
         settingsCoordinator: settingsCoordinator, settings: settings, core: self)
     @ObservationIgnored private(set) lazy var windowCommandCoordinator = WindowCommandCoordinator(
         settings: settings, paletteCoordinator: paletteCoordinator, windowMover: windowMover,
-        spaceSwitcher: spaceSwitcher)
+        spaceSwitcher: spaceSwitcher, customSizes: customWindowSizes)
+    @ObservationIgnored private(set) lazy var customWindowSizeCoordinator =
+        CustomWindowSizeCoordinator(
+            store: customWindowSizes, settings: settings, appIndex: appIndex, hotKeys: hotKeys,
+            favorites: favorites, visibility: visibility, ranking: launcherRanking,
+            aliases: aliases, core: self)
     @ObservationIgnored private(set) lazy var windowLayoutCoordinator = WindowLayoutCoordinator(
         store: windowLayouts, settings: settings, appIndex: appIndex, hotKeys: hotKeys,
         favorites: favorites, visibility: visibility, ranking: launcherRanking, aliases: aliases,
@@ -244,6 +250,10 @@ final class AppCore {
             }
             customCommandCoordinator.applyCustomCommandsPresence()
             applyWindowCommandsPresence()
+            customWindowSizes.onChange = { [weak self] _ in
+                self?.customWindowSizeCoordinator.applyCustomWindowSizesPresence()
+            }
+            customWindowSizeCoordinator.applyCustomWindowSizesPresence()
             windowLayouts.onChange = { [weak self] _ in
                 self?.windowLayoutCoordinator.applyWindowLayoutsPresence()
             }
@@ -288,6 +298,9 @@ final class AppCore {
             hotKeys.onRunWindowLayout = { [weak self] id in
                 self?.windowLayoutCoordinator.runWindowLayout(id: id)
             }
+            hotKeys.onRunCustomWindowSize = { [weak self] id in
+                self?.windowCommandCoordinator.runCustomWindowSize(id: id)
+            }
             hotKeys.onOpenQuicklink = { [weak self] id in
                 self?.quicklinkCoordinator.openQuicklink(id: id)
             }
@@ -321,6 +334,7 @@ final class AppCore {
                 customCommandIDs: Set(customCommands.commands.map(\.id)),
                 quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)),
                 windowLayoutIDs: Set(windowLayouts.layouts.map(\.id)),
+                customWindowSizeIDs: Set(customWindowSizes.sizes.map(\.id)),
                 quickActionIDs: Set(customQuickActions.actions.map(\.id)))
             // Keeps running while Carbon pauses: the recorder needs its rewritten flags.
             hyperKeyTap.start(settings: settings)
@@ -393,6 +407,8 @@ final class AppCore {
             return customQuickActions.action(id: id)?.name
         case .windowLayout(let id):
             return windowLayouts.layout(id: id)?.name
+        case .customWindowSize(let id):
+            return customWindowSizes.size(id: id)?.name
         case .appleShortcut(let id):
             return appleShortcutCoordinator.name(of: id)
         case .extensionCommand(let entryID):
@@ -491,7 +507,11 @@ final class AppCore {
             {
                 _ = $0.windowManagementEnabled
                 _ = $0.windowManagementShowInLauncher
-            }, reproject: { $0.applyWindowCommandsPresence() })
+            },
+            reproject: {
+                $0.applyWindowCommandsPresence()
+                $0.customWindowSizeCoordinator.applyCustomWindowSizesPresence()
+            })
         track(
             {
                 _ = $0.windowManagementEnabled

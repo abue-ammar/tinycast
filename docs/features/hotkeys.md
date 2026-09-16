@@ -42,9 +42,9 @@ the keycap rendering — only the _engine_ differs.
 Bindings persist as JSON strings under `hotkey.<action>` UserDefaults keys, computed in one place —
 `HotKeyAction.defaultsKey`, which doubles as the `HotKeyCenter` registration id. The set of bound
 bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes use
-`boundPaneBundleIDs`; custom commands, quicklinks and window layouts use their stable UUIDs in
-`boundCustomCommandIDs`, `boundQuicklinkIDs` and `boundWindowLayoutIDs`. Those three are the per-item
-case — unlike a fixed catalog, there is no `allCases` to walk — so each needs an index for `start()`
+`boundPaneBundleIDs`; custom commands, quicklinks, window layouts and custom window sizes use their
+stable UUIDs in `boundCustomCommandIDs`, `boundQuicklinkIDs`, `boundWindowLayoutIDs` and
+`boundCustomWindowSizeIDs`. Those four are the per-item case — unlike a fixed catalog, there is no `allCases` to walk — so each needs an index for `start()`
 to re-register from
 and to prune bindings whose record was deleted while Tinycast wasn't running. That prune is why
 `QuicklinkStore` loads at launch even when the feature is off

@@ -4,6 +4,7 @@ struct WindowManagementSettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(AppCore.self) private var core
     @State private var pendingDeletion: WindowLayout?
+    @State private var customSizeEdit: CustomWindowSizeEditRequest?
 
     var body: some View {
         @Bindable var settings = settings
@@ -23,6 +24,9 @@ struct WindowManagementSettingsView: View {
                 WindowLayoutsSection(onDelete: { pendingDeletion = $0 })
                 FeatureCommandsSection(
                     owner: .windowManagement, anchor: .windowManagementLayoutCommands)
+                CustomWindowSizesSection(onEdit: {
+                    customSizeEdit = CustomWindowSizeEditRequest(size: $0)
+                })
                 commands
             }
             .settingsEnabled(settings.windowManagementEnabled)
@@ -32,6 +36,9 @@ struct WindowManagementSettingsView: View {
         // Presented from the pane, so the two launcher commands can open it too.
         .sheet(item: $core.pendingWindowLayoutEdit) { request in
             WindowLayoutEditorSheet(request: request)
+        }
+        .sheet(item: $customSizeEdit) { request in
+            CustomWindowSizeEditorSheet(request: request)
         }
         .alert(item: $pendingDeletion) { layout in
             Alert(

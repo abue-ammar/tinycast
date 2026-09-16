@@ -492,8 +492,9 @@ dismissal matches Accessibility subroles rather than English labels.
 actions they carry dedicated global hotkeys (`AppEntry.hotKeyAction` returns `.windowCommand(id:)`),
 so launcher rows render keycaps for them. Their per-command shortcut and visibility controls live in
 Settings › Window Management rather than a launcher-category pane of their own — the same call already
-made for snippets. The feature ships off. See
-[window-management.md](window-management.md).
+made for snippets. The feature ships off. User-defined custom sizes join the same section as their
+own slice, `AppIndex.setCustomWindowSizes(_:)`, published right after the catalog. See
+[window-management.md](window-management.md#custom-sizes).
 
 ## Window layouts
 

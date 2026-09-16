@@ -7,15 +7,17 @@ final class WindowCommandCoordinator {
     private let paletteCoordinator: PaletteCoordinator
     private let windowMover: WindowMover
     private let spaceSwitcher: SpaceSwitcher
+    private let customSizes: CustomWindowSizeStore
 
     init(
         settings: AppSettings, paletteCoordinator: PaletteCoordinator, windowMover: WindowMover,
-        spaceSwitcher: SpaceSwitcher
+        spaceSwitcher: SpaceSwitcher, customSizes: CustomWindowSizeStore
     ) {
         self.settings = settings
         self.paletteCoordinator = paletteCoordinator
         self.windowMover = windowMover
         self.spaceSwitcher = spaceSwitcher
+        self.customSizes = customSizes
     }
 
     /// The one funnel for palette and hotkey alike. See docs/features/window-management.md#wiring.
@@ -27,10 +29,21 @@ final class WindowCommandCoordinator {
             spaceSwitcher.perform(direction)
             return
         }
+        windowMover.perform(
+            id, target: handOffTarget(), gap: CGFloat(settings.windowGap),
+            cycle: settings.windowCycle)
+    }
+
+    /// The same funnel for a custom size, so the feature switch gates it identically.
+    func runCustomWindowSize(id: UUID) {
+        guard settings.windowManagementEnabled, let size = customSizes.size(id: id) else { return }
+        windowMover.perform(size, target: handOffTarget(), gap: CGFloat(settings.windowGap))
+    }
+
+    /// The app to move, read before the palette hides and hands focus back to it.
+    private func handOffTarget() -> NSRunningApplication? {
         let target = paletteCoordinator.targetApp
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: true) }
-        windowMover.perform(
-            id, target: target, gap: CGFloat(settings.windowGap),
-            cycle: settings.windowCycle)
+        return target
     }
 }

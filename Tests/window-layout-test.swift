@@ -1,4 +1,5 @@
-// Standalone contract tests for the pure window-layout model, geometry, plan and store.
+// Standalone contract tests for the pure window-layout model, geometry, plan and store,
+// and for the custom sizes that share the layouts' anchor grid.
 import CoreGraphics
 import Foundation
 
@@ -103,6 +104,12 @@ struct WindowLayoutTests {
         storeSanitization()
         storePersistence()
         fuzzSweep()
+        customSizeRecord()
+        customSizeDimensions()
+        customSizeFrames()
+        customSizePlacement()
+        customSizeStore()
+        customSizePersistence()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -753,5 +760,209 @@ struct WindowLayoutTests {
         expect(checked > 1000, "the fuzz sweep exercised a meaningful number of entries")
         expect(problems.isEmpty, "fuzz sweep found no violations")
         for problem in problems.prefix(10) { print("      \(problem)") }
+    }
+
+    // MARK: - Custom sizes
+
+    static func customSize(
+        _ name: String = "Wide", width: CustomWindowSize.Dimension = .init(1200, .points),
+        height: CustomWindowSize.Dimension = .init(800, .points),
+        anchor: WindowLayoutAnchor = .center
+    ) -> CustomWindowSize {
+        CustomWindowSize(name: name, width: width, height: height, anchor: anchor)
+    }
+
+    static func customSizeRecord() {
+        let value = customSize()
+        expect(value.entryID.hasPrefix("window-size:"), "a custom size's entry id is namespaced")
+        expect(
+            CustomWindowSize.id(fromEntryID: value.entryID) == value.id,
+            "a custom size's entry id round-trips")
+        expect(
+            CustomWindowSize.id(fromEntryID: WindowLayout(name: "x").entryID) == nil,
+            "a layout's entry id is not claimed")
+        expect(
+            customSize(height: .init(60, .percent)).summary == "1200 pt × 60% · Center",
+            "the summary names both lengths and the position")
+        expect(
+            CustomWindowSize.precedes(customSize("alpha"), customSize("Beta")),
+            "custom sizes order case-insensitively by name")
+
+        guard let data = try? JSONEncoder().encode(value),
+            let decoded = try? JSONDecoder().decode(CustomWindowSize.self, from: data)
+        else { return expect(false, "a custom size encodes and decodes") }
+        expect(decoded == value, "every field survives a Codable round trip")
+    }
+
+    static func customSizeDimensions() {
+        typealias Dimension = CustomWindowSize.Dimension
+        expect(Dimension(0, .percent).value == 1, "a zero percent clamps up")
+        expect(Dimension(250, .percent).value == 100, "an over-range percent clamps down")
+        expect(Dimension(99_999, .points).value == 16_000, "an absurd point size clamps")
+        expect(Dimension(-5, .points).value == 1, "a negative point size clamps up")
+
+        expect(Dimension(1200, .points).length(in: 1000) == 1000, "points never exceed the box")
+        expect(Dimension(1, .percent).length(in: 50) == 1, "a length never falls below 1 pt")
+        expect(Dimension(25, .percent).length(in: 1440) == 360, "percent is of the box")
+
+        expect(
+            Dimension(50, .percent).converted(to: .points, in: 1440) == Dimension(720, .points),
+            "percent converts to points against the reference")
+        expect(
+            Dimension(720, .points).converted(to: .percent, in: 1440) == Dimension(50, .percent),
+            "points convert to percent against the reference")
+        expect(
+            Dimension(3000, .points).converted(to: .percent, in: 1440) == Dimension(100, .percent),
+            "a conversion past the display clamps")
+        expect(
+            Dimension(40, .percent).converted(to: .percent, in: 1440) == Dimension(40, .percent),
+            "converting to the same unit changes nothing")
+        expect(
+            Dimension(40, .percent).converted(to: .points, in: 0) == Dimension(40, .points),
+            "no reference keeps the number rather than dividing by zero")
+    }
+
+    static func customSizeFrames() {
+        let visible = mainScreen.visibleFrame
+        expectRect(
+            customSize().frame(in: visible, gap: 0),
+            CGRect(x: 120, y: 50, width: 1200, height: 800), "a point size centres exactly")
+        expectRect(
+            customSize(width: .init(50, .percent), height: .init(50, .percent), anchor: .topLeft)
+                .frame(in: visible, gap: 0),
+            CGRect(x: 0, y: 0, width: 720, height: 450),
+            "top left is the AX origin, not the bottom")
+        expectRect(
+            customSize(width: .init(5000, .points), height: .init(5000, .points))
+                .frame(in: visible, gap: 0),
+            visible, "an oversized request fills the display rather than overflowing it")
+        expectRect(
+            customSize(
+                width: .init(50, .percent), height: .init(50, .percent), anchor: .bottomRight
+            ).frame(in: visible, gap: 10),
+            CGRect(x: 720, y: 450, width: 710, height: 440),
+            "the gap insets the box before the percent is taken")
+        expectRect(
+            customSize(width: .init(1000, .points), height: .init(500, .points), anchor: .right)
+                .frame(in: rightScreen.visibleFrame, gap: 0),
+            CGRect(x: 3000, y: 183, width: 1000, height: 500),
+            "an off-origin display places and rounds on its own edges")
+        expectRect(
+            customSize(anchor: .left).frame(in: leftScreen.visibleFrame, gap: 0),
+            CGRect(x: -1920, y: 53, width: 1200, height: 800),
+            "a negative-coordinate display places from its own origin")
+        expect(
+            customSize().frame(in: CGRect(x: 0, y: 0, width: 0, height: 900), gap: 0) == nil,
+            "a display with no visible width yields nothing")
+
+        for anchor in WindowLayoutAnchor.allCases {
+            for gap: CGFloat in [0, 8, .nan, 1e6] {
+                guard let frame = customSize(anchor: anchor).frame(in: visible, gap: gap) else {
+                    expect(false, "\(anchor.rawValue) at gap \(gap) resolves")
+                    continue
+                }
+                expect(
+                    visible.contains(frame) && frame.width >= 1 && frame.height >= 1,
+                    "\(anchor.rawValue) at gap \(gap) stays on the display")
+            }
+        }
+    }
+
+    static func customSizePlacement() {
+        let screens = [mainScreen, rightScreen]
+        let window = CGRect(x: 2000, y: 100, width: 400, height: 300)
+        let placement = customSize(anchor: .topRight).placement(
+            for: window, screens: screens, gap: 0)
+        expect(placement?.screenID == rightScreen.id, "a custom size stays on the window's display")
+        expect(placement?.resizes == true, "a custom size always resizes")
+        expect(
+            placement?.anchor == WindowLayoutAnchor.topRight.placement,
+            "a refused shrink re-anchors to the chosen position")
+        expectRect(
+            placement?.frame, CGRect(x: 2800, y: -275, width: 1200, height: 800),
+            "the frame is resolved on the host display")
+        expect(
+            customSize().placement(for: window, screens: [], gap: 0) == nil,
+            "no displays means nowhere to go")
+    }
+
+    static func withCustomSizeStore(_ body: (UserDefaults) -> Void) {
+        let name = "tinycast-custom-window-size-test-\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: name) else {
+            return expect(false, "a scratch defaults suite opens")
+        }
+        defer { defaults.removePersistentDomain(forName: name) }
+        body(defaults)
+    }
+
+    static func customSizeStore() {
+        withCustomSizeStore { defaults in
+            let store = CustomWindowSizeStore(defaults: defaults)
+            var changes = 0
+            store.onChange = { _ in changes += 1 }
+            guard let wide = try? store.add(customSize("  Wide  ")) else {
+                return expect(false, "adding a custom size succeeds")
+            }
+            expect(wide.name == "Wide", "a saved name is trimmed")
+            expect(store.size(id: wide.id) == wide, "a custom size is found by id")
+            expect(changes == 1, "an add reports one change")
+
+            do throws(CustomWindowSizeValidationError) {
+                try store.add(customSize("wide"))
+                expect(false, "a duplicate name is refused")
+            } catch {
+                expect(error == .duplicateName, "a duplicate name is refused case-insensitively")
+            }
+            do throws(CustomWindowSizeValidationError) {
+                try store.add(customSize("   "))
+                expect(false, "an empty name is refused")
+            } catch {
+                expect(error == .emptyName, "an empty name is refused")
+            }
+            do throws(CustomWindowSizeValidationError) {
+                try store.add(customSize("Bad\0Name"))
+                expect(false, "a null character is refused")
+            } catch {
+                expect(error == .invalidCharacter, "a null character is refused")
+            }
+
+            var edited = wide
+            edited.name = "Narrow"
+            edited.width = CustomWindowSize.Dimension(40, .percent)
+            try? store.update(edited)
+            expect(store.sizes == [edited], "an update replaces the record in place")
+            expect((try? store.update(edited)) != nil, "renaming to its own name is allowed")
+            _ = try? store.add(customSize("Alpha"))
+            expect(store.sizes.map(\.name) == ["Alpha", "Narrow"], "the library stays sorted")
+
+            expect(store.remove(id: edited.id) == edited, "a removal returns the record")
+            expect(store.remove(id: edited.id) == nil, "a second removal is a no-op")
+
+            var outOfRange = customSize("Imported")
+            outOfRange.width.value = 0
+            outOfRange.height.value = 400
+            outOfRange.height.unit = .percent
+            let duplicateID = CustomWindowSize(id: outOfRange.id, name: "Twin")
+            let count = store.replace(with: [
+                outOfRange, duplicateID, customSize(""), customSize("imported")
+            ])
+            expect(count == 1, "an import drops duplicate ids, empty names and duplicate names")
+            expect(store.sizes.first?.width.value == 1, "an imported zero clamps up")
+            expect(store.sizes.first?.height.value == 100, "an imported percent clamps down")
+        }
+    }
+
+    static func customSizePersistence() {
+        withCustomSizeStore { defaults in
+            var stored: CustomWindowSize?
+            do {
+                let store = CustomWindowSizeStore(defaults: defaults)
+                stored = try? store.add(
+                    customSize(width: .init(70, .percent), anchor: .bottomLeft))
+            }
+            let reopened = CustomWindowSizeStore(defaults: defaults)
+            expect(reopened.sizes.count == 1, "a reopened store finds its custom sizes")
+            expect(reopened.sizes.first == stored, "every field survives persistence")
+        }
     }
 }

@@ -415,7 +415,13 @@ enum SettingsSearchCatalog {
             keywords: ["add", "create", "arrangement", "preset"]),
         .init(
             .windowManagementLayouts, "Create Layout from Current Windows",
-            keywords: ["capture", "snapshot", "current", "save arrangement"])
+            keywords: ["capture", "snapshot", "current", "save arrangement"]),
+        .init(
+            group: .windowManagementCustomSizes, "Custom Sizes",
+            keywords: ["custom", "size", "resize", "dimensions", "pixels", "points", "percent"]),
+        .init(
+            .windowManagementCustomSizes, "New Custom Size",
+            keywords: ["add", "create", "resize", "window size"])
     ]
 
     private static let clipboard: [SettingsSearchEntry] = [

@@ -103,8 +103,12 @@ final class LauncherCoordinator {
             return
         }
         if app.kind == .windowCommand {
-            guard let command = WindowCommandCatalog.command(forEntryID: app.id) else { return }
-            windowCommandCoordinator.runWindowCommand(id: command.id)
+            if let command = WindowCommandCatalog.command(forEntryID: app.id) {
+                windowCommandCoordinator.runWindowCommand(id: command.id)
+                return
+            }
+            guard let id = CustomWindowSize.id(fromEntryID: app.id) else { return }
+            windowCommandCoordinator.runCustomWindowSize(id: id)
             return
         }
         if app.kind == .windowLayout {
