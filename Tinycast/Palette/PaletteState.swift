@@ -78,11 +78,38 @@ final class PaletteState {
     @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
     /// A fresh presentation resets a long popover to the row it opens with.
     private(set) var menuPresentationToken = UUID()
+    var actionsQuery: String = ""
+    @ObservationIgnored var isActionsMenuOpen = false
+
+    func clearActionsQuery() {
+        actionsQuery = ""
+    }
+
+    func deleteLastInActionsQuery() {
+        guard !actionsQuery.isEmpty else { return }
+        actionsQuery.removeLast()
+    }
+
+    func deleteWordInActionsQuery() {
+        guard !actionsQuery.isEmpty else { return }
+        var str = actionsQuery
+        while let last = str.last, last.isWhitespace {
+            str.removeLast()
+        }
+        while let last = str.last, !last.isWhitespace {
+            str.removeLast()
+        }
+        actionsQuery = str
+    }
 
     func noteVisible(_ visible: Bool) {
         isVisible = visible
         // Ordering out leaves the tree mounted, and a preview must not outlive the window.
-        if !visible { fileSearchQuickLook = false }
+        if !visible {
+            fileSearchQuickLook = false
+            isActionsMenuOpen = false
+            actionsQuery = ""
+        }
     }
 
     var canGoBack: Bool { !backStack.isEmpty }
@@ -151,6 +178,8 @@ final class PaletteState {
         forceExpanded = false
         dropHoverHighlight()
         menuOpen = false
+        isActionsMenuOpen = false
+        actionsQuery = ""
         focusToken = UUID()
     }
 

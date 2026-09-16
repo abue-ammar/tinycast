@@ -66,6 +66,25 @@ struct PopoverMenuItem {
 struct PopoverMenuContent {
     var header: String?
     let items: [PopoverMenuItem]
+
+    func filtering(by query: String) -> PopoverMenuContent {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return self }
+        let filtered = items.compactMap { item -> (PopoverMenuItem, Int)? in
+            let titleScore = FuzzyMatch.score(query: trimmed, candidate: item.title)
+            let detailScore = item.detail.flatMap { FuzzyMatch.score(query: trimmed, candidate: $0) }
+            guard let score = [titleScore, detailScore].compactMap({ $0 }).max() else { return nil }
+            return (item, score)
+        }
+        .sorted { $0.1 > $1.1 }
+        .map { pair -> PopoverMenuItem in
+            var item = pair.0
+            item.startsSection = false
+            item.sectionTitle = nil
+            return item
+        }
+        return PopoverMenuContent(header: header, items: filtered)
+    }
 }
 
 /// The palette's own menu, hosted by `MenuPanelController` in a window of its own.
@@ -97,6 +116,7 @@ struct PopoverMenu: View {
     @Binding var selection: Int
     /// Fixed, never intrinsic: a width tracking the longest row would jitter as rows change.
     var width: CGFloat?
+    var isSearchable: Bool = false
     let onActivate: (Int) -> Void
     var attachment = Attachment.none
 
@@ -110,10 +130,58 @@ struct PopoverMenu: View {
         let shape = SurfaceShape(
             attachment: attachment, radius: metrics.radius.menuPanel,
             attachedRadius: metrics.size.menuButton / 2)
-        rows
-            .padding(metrics.spacing.sm)
-            .frame(width: width ?? metrics.size.menuWidth)
-            .glassEffect(.regular, in: shape)
+        VStack(alignment: .leading, spacing: 0) {
+            if isSearchable {
+                searchBar
+                Rectangle()
+                    .fill(Theme.Colors.separator)
+                    .frame(height: Theme.Size.hairline)
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.bottom, metrics.spacing.xs)
+            }
+            rows
+        }
+        .padding(metrics.spacing.sm)
+        .frame(width: width ?? metrics.size.menuWidth)
+        .glassEffect(.regular, in: shape)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: metrics.spacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: metrics.scaled(Theme.Typography.menuSymbolSize), weight: .medium))
+                .foregroundStyle(Theme.Colors.menuSymbol)
+                .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
+            ZStack(alignment: .leading) {
+                if palette.actionsQuery.isEmpty {
+                    Text("Search actions…")
+                        .font(metrics.typography.menuRow)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                HStack(spacing: 0) {
+                    Text(palette.actionsQuery)
+                        .font(metrics.typography.menuRow)
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .lineLimit(1)
+                    Rectangle()
+                        .fill(Theme.Colors.textPrimary)
+                        .frame(width: 1.5, height: metrics.scaled(14))
+                }
+            }
+            Spacer(minLength: metrics.spacing.xs)
+            if !palette.actionsQuery.isEmpty {
+                Button {
+                    palette.clearActionsQuery()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: metrics.scaled(Theme.Typography.menuSymbolSize)))
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, metrics.spacing.md)
+        .frame(height: metrics.size.menuRowHeight)
     }
 
     private func headerLabel(_ text: String) -> some View {
@@ -132,29 +200,36 @@ struct PopoverMenu: View {
     private var rows: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let header {
-                        headerLabel(header)
-                        Color.clear.frame(height: metrics.size.menuRowSpacing)
-                    }
-                    // Index-as-id is stable: a menu's rows never reorder while it is open.
-                    ForEach(items.indices, id: \.self) { index in
-                        VStack(alignment: .leading, spacing: 0) {
-                            rowBoundary(before: index)
-                            VStack(alignment: .leading, spacing: 0) {
-                                if let sectionTitle = items[index].sectionTitle {
-                                    sectionLabel(sectionTitle, isFirst: index == 0)
-                                }
-                                PopoverMenuRow(
-                                    item: items[index],
-                                    selected: index == selection && items[index].isSelectable
-                                ) {
-                                    onActivate(index)
-                                }
-                            }
-                            .onContinuousHover { if case .active = $0 { hover(index) } }
+                if items.isEmpty, isSearchable {
+                    Text("No matching actions")
+                        .font(metrics.typography.menuRow)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: metrics.size.menuRowHeight * 1.5, alignment: .center)
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let header {
+                            headerLabel(header)
+                            Color.clear.frame(height: metrics.size.menuRowSpacing)
                         }
-                        .id(index)
+                        // Index-as-id is stable: a menu's rows never reorder while it is open.
+                        ForEach(items.indices, id: \.self) { index in
+                            VStack(alignment: .leading, spacing: 0) {
+                                rowBoundary(before: index)
+                                VStack(alignment: .leading, spacing: 0) {
+                                    if let sectionTitle = items[index].sectionTitle {
+                                        sectionLabel(sectionTitle, isFirst: index == 0)
+                                    }
+                                    PopoverMenuRow(
+                                        item: items[index],
+                                        selected: index == selection && items[index].isSelectable
+                                    ) {
+                                        onActivate(index)
+                                    }
+                                }
+                                .onContinuousHover { if case .active = $0 { hover(index) } }
+                            }
+                            .id(index)
+                        }
                     }
                 }
             }
@@ -198,6 +273,9 @@ struct PopoverMenu: View {
     private var viewportCapacity: CGFloat { metrics.size.menuRowsMaxHeight + headerExtent }
 
     private var contentHeight: CGFloat {
+        if items.isEmpty, isSearchable {
+            return metrics.size.menuRowHeight * 1.5
+        }
         let rows = CGFloat(items.count)
         let separators = CGFloat(items.dropFirst().filter(\.startsSection).count)
         let regularGaps = max(rows - 1 - separators, 0)

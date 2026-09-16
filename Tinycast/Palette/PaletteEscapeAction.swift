@@ -2,6 +2,7 @@ import Foundation
 
 /// Ordered like a bare backspace: a screen is only left once the search field is empty.
 enum PaletteEscapeAction: Equatable {
+    case clearActionsQuery
     case closeMenu
     case leaveArgumentField
     case clearQuery
@@ -10,10 +11,13 @@ enum PaletteEscapeAction: Equatable {
     case hidePalette
 
     static func resolve(
-        menuOpen: Bool, argumentFocused: Bool, query: String, mode: PaletteMode,
+        menuOpen: Bool, actionsQuery: String = "", argumentFocused: Bool, query: String, mode: PaletteMode,
         canGoBack: Bool, behavior: EscapeKeyBehavior
     ) -> Self {
-        if menuOpen { return .closeMenu }
+        if menuOpen {
+            if !actionsQuery.isEmpty { return .clearActionsQuery }
+            return .closeMenu
+        }
         // An argument field is a step deeper than the query, so it is left before anything clears.
         if argumentFocused { return .leaveArgumentField }
         if !query.isEmpty { return .clearQuery }

@@ -15,8 +15,9 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   activation. `Features/PaletteRowIndex.swift` is that mapping and stays **Foundation-only and pure** —
   no SwiftUI, no AppKit — so `palette-selection-test` compiles the shipped type rather than a copy.
   Section headers are not selectable and never consume an index.
-- **While a footer menu is open the search field never resigns first responder.** Input is frozen
-  instead; resigning shifts the text a point or two.
+- **While a footer menu is open the search field never resigns first responder.** Input to the search
+  field is frozen instead; resigning shifts the text a point or two. The ⌘K actions menu intercepts typing
+  directly to filter its actions.
 - **The search field is never mounted conditionally.** A screen that owns the keyboard itself hides it
   through `PaletteScreen.hidesSearchField` — opacity and hit testing, never an `if` — because
   flipping a branch around it tears its field editor down. The header is simply left empty, and an

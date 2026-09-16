@@ -198,7 +198,7 @@ struct RootPaletteView: View {
         case .actions:
             let screen = screen
             return screen.menuContent(
-                at: selection(in: screen), menuSelection: $menuSelection,
+                at: selection(in: screen), query: vm.actionsQuery, menuSelection: $menuSelection,
                 onActivate: activateMenuItem)
         case .app:
             return PaletteMenuContent(
@@ -396,8 +396,16 @@ struct RootPaletteView: View {
             // One optional makes "exactly one menu" structural; this only mirrors it for the panel.
             .onChange(of: openMenu) {
                 vm.menuOpen = menuOpen
+                vm.isActionsMenuOpen = openMenu == .actions
+                if openMenu != .actions {
+                    vm.clearActionsQuery()
+                }
                 guard menuOpen else { return }
                 syncMenuPanel(presenting: true)
+            }
+            .onChange(of: vm.actionsQuery) {
+                menuSelection = 0
+                syncMenuPanel(presenting: false)
             }
             // The hosted tree is its own hierarchy, so the highlight has to be pushed into it.
             .onChange(of: menuSelection) { syncMenuPanel(presenting: false) }
@@ -482,10 +490,12 @@ struct RootPaletteView: View {
                 // An open list closes itself first, exactly as the ⌘K menu does.
                 if vm.isControlListOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
-                    menuOpen: menuOpen, argumentFocused: argumentFocused != nil, query: vm.query,
+                    menuOpen: menuOpen, actionsQuery: vm.actionsQuery, argumentFocused: argumentFocused != nil, query: vm.query,
                     mode: vm.mode, canGoBack: vm.canGoBack,
                     behavior: settings.escapeKeyBehavior)
                 {
+                case .clearActionsQuery:
+                    vm.clearActionsQuery()
                 case .closeMenu:
                     closeMenus()
                 case .leaveArgumentField:
@@ -885,6 +895,7 @@ struct RootPaletteView: View {
 
     /// The one path opening the Actions menu, sampling the state its rows depend on.
     private func openActions() {
+        vm.clearActionsQuery()
         let launcher = screen as? LauncherScreen
         selectionIsRunning = launcher.map { $0.isRunning(at: selection(in: $0)) } ?? false
         open(.actions, highlighting: 0)
@@ -978,6 +989,10 @@ struct RootPaletteView: View {
     private func open(_ menu: OpenMenu, highlighting row: Int) {
         menuSelection = row
         vm.noteMenuPresentation()
+        vm.isActionsMenuOpen = menu == .actions
+        if menu != .actions {
+            vm.clearActionsQuery()
+        }
         openMenu = menu
     }
 
@@ -985,6 +1000,8 @@ struct RootPaletteView: View {
         menuPanel.hide()
         openMenu = nil
         argumentOptionsField = nil
+        vm.isActionsMenuOpen = false
+        vm.clearActionsQuery()
     }
 
     /// Drives the menu's window from the two pieces of state that decide what it shows.

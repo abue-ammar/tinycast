@@ -28,16 +28,20 @@ struct PaletteEscapeTests {
 
     /// The shipped default, so a case only spells out what it is actually about.
     static func resolve(
-        menuOpen: Bool = false, argumentFocused: Bool = false, query: String = "",
+        menuOpen: Bool = false, actionsQuery: String = "", argumentFocused: Bool = false, query: String = "",
         mode: PaletteMode = .launcher, canGoBack: Bool = false,
         behavior: EscapeKeyBehavior = .navigateBackOrClose
     ) -> PaletteEscapeAction {
         PaletteEscapeAction.resolve(
-            menuOpen: menuOpen, argumentFocused: argumentFocused, query: query, mode: mode,
+            menuOpen: menuOpen, actionsQuery: actionsQuery, argumentFocused: argumentFocused, query: query, mode: mode,
             canGoBack: canGoBack, behavior: behavior)
     }
 
     static func main() {
+        expect(
+            resolve(menuOpen: true, actionsQuery: "quit"),
+            .clearActionsQuery,
+            "an open menu with typed actions query clears the query before closing")
         expect(
             resolve(menuOpen: true, query: "notes"),
             .closeMenu,

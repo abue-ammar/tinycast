@@ -152,6 +152,27 @@ final class PalettePanel: NSPanel {
             x: frame.minX, y: height - frame.maxY, width: frame.width, height: frame.height)
     }
 
+    private func handleActionsMenuKey(_ event: NSEvent) {
+        if Int(event.keyCode) == kVK_Delete {
+            if event.modifierFlags.contains(.option) {
+                paletteState?.deleteWordInActionsQuery()
+            } else {
+                paletteState?.deleteLastInActionsQuery()
+            }
+            return
+        }
+        guard let chars = event.characters, !chars.isEmpty else { return }
+        let printable = chars.filter { character in
+            character.unicodeScalars.allSatisfy { scalar in
+                scalar.value >= 0x20 && scalar.value != 0x7F && (scalar.value < 0xF700 || scalar.value > 0xF8FF)
+                    && scalar.properties.generalCategory != .control
+            }
+        }
+        if !printable.isEmpty {
+            paletteState?.actionsQuery.append(printable)
+        }
+    }
+
     override func sendEvent(_ event: NSEvent) {
         switch event.type {
         case .mouseMoved: paletteState?.notePointerMoved(to: NSEvent.mouseLocation)
@@ -174,6 +195,17 @@ final class PalettePanel: NSPanel {
             event.modifierFlags.isDisjoint(with: [.command, .control]),
             !Self.menuNavKeys.contains(Int(event.keyCode))
         {
+            if paletteState?.isActionsMenuOpen == true {
+                handleActionsMenuKey(event)
+            }
+            return
+        }
+        if event.type == .keyDown,
+            paletteState?.isActionsMenuOpen == true,
+            event.modifierFlags.contains(.command),
+            Int(event.keyCode) == kVK_Delete
+        {
+            paletteState?.clearActionsQuery()
             return
         }
         if event.type == .keyDown,

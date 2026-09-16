@@ -92,10 +92,19 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     /// A command's rows carry tinted icons and its panel scrolls; a menu row cannot.
     func menuContent(
-        at selection: Int, menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
+        at selection: Int, query: String = "", menuSelection: Binding<Int>, onActivate: @escaping (Int) -> Void
     ) -> PaletteMenuContent? {
-        let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
+        var actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
         guard !actions.isEmpty else { return nil }
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty {
+            actions = actions.compactMap { action -> (ExtensionAction, Int)? in
+                guard let score = FuzzyMatch.score(query: trimmed, candidate: action.title) else { return nil }
+                return (action, score)
+            }
+            .sorted { $0.1 > $1.1 }
+            .map(\.0)
+        }
         let screen = screen
         let assetsPath = assetsPath
         let extensions = extensions
@@ -106,10 +115,10 @@ struct ExtensionCommandScreen: PaletteScreen {
                     ExtensionActionsPanel(
                         header: ExtensionActionsMenu.header(screen: screen, selection: selection),
                         items: ExtensionActionsMenu.rows(actions, assetsPath: assetsPath),
-                        selection: menuSelection, onActivate: onActivate))
+                        selection: menuSelection, isSearchable: true, onActivate: onActivate))
             },
             activate: { index in
-                guard let handler = actions[index].handler else { return }
+                guard index >= 0, index < actions.count, let handler = actions[index].handler else { return }
                 extensions.dispatch(handler: handler)
             },
             clipPath: { bounds, metrics, _ in

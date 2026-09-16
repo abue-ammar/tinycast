@@ -20,7 +20,10 @@ private struct Metrics {
     }
 
     /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
-    func contentHeight(items: [ExtensionActionItem], hasHeader: Bool) -> CGFloat {
+    func contentHeight(items: [ExtensionActionItem], hasHeader: Bool, isSearchable: Bool = false) -> CGFloat {
+        if items.isEmpty, isSearchable {
+            return rowHeight * 1.5
+        }
         let rows = CGFloat(items.count)
         let separators = CGFloat(items.dropFirst().filter(\.startsSection).count)
         let regularGaps = max(rows - 1 - separators, 0)
@@ -50,6 +53,7 @@ struct ExtensionActionsPanel: View {
     var header: String?
     let items: [ExtensionActionItem]
     @Binding var selection: Int
+    var isSearchable: Bool = false
     let onActivate: (Int) -> Void
 
     /// The palette arms this only once the pointer has moved of its own accord.
@@ -61,7 +65,7 @@ struct ExtensionActionsPanel: View {
 
     var body: some View {
         let hasHeader = header != nil
-        let contentHeight = panel.contentHeight(items: items, hasHeader: hasHeader)
+        let contentHeight = panel.contentHeight(items: items, hasHeader: hasHeader, isSearchable: isSearchable)
         let maximumHeight = panel.maximumHeight(hasHeader: hasHeader)
         let shape = UnevenRoundedRectangle(
             topLeadingRadius: metrics.radius.menuPanel,
@@ -69,54 +73,109 @@ struct ExtensionActionsPanel: View {
             bottomTrailingRadius: metrics.size.menuButton / 2,
             topTrailingRadius: metrics.radius.menuPanel,
             style: .continuous)
-        return ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let header {
-                        Text(header)
-                            .font(metrics.typography.sectionHeader)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .frame(height: metrics.size.menuSectionHeader, alignment: .leading)
-                            .padding(.horizontal, metrics.spacing.lg)
-                            .padding(.top, metrics.spacing.xs)
-                            .padding(.bottom, metrics.spacing.xs / 2)
-                        Color.clear.frame(height: panel.rowSpacing)
-                    }
-                    // Index-as-id is stable: a panel's rows never reorder while it is open.
-                    ForEach(items.indices, id: \.self) { index in
+        return VStack(alignment: .leading, spacing: 0) {
+            if isSearchable {
+                searchBar
+                Rectangle()
+                    .fill(Theme.Colors.separator)
+                    .frame(height: Theme.Size.hairline)
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.bottom, metrics.spacing.xs)
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if items.isEmpty, isSearchable {
+                        Text("No matching actions")
+                            .font(metrics.typography.menuRow)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .frame(maxWidth: .infinity, minHeight: panel.rowHeight * 1.5, alignment: .center)
+                    } else {
                         VStack(alignment: .leading, spacing: 0) {
-                            rowBoundary(before: index)
-                            ExtensionActionRow(
-                                item: items[index],
-                                selected: index == selection,
-                                onActivate: { onActivate(index) }
-                            )
-                            .onContinuousHover { if case .active = $0 { hover(index) } }
+                            if let header {
+                                Text(header)
+                                    .font(metrics.typography.sectionHeader)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .frame(height: metrics.size.menuSectionHeader, alignment: .leading)
+                                    .padding(.horizontal, metrics.spacing.lg)
+                                    .padding(.top, metrics.spacing.xs)
+                                    .padding(.bottom, metrics.spacing.xs / 2)
+                                Color.clear.frame(height: panel.rowSpacing)
+                            }
+                            // Index-as-id is stable: a panel's rows never reorder while it is open.
+                            ForEach(items.indices, id: \.self) { index in
+                                VStack(alignment: .leading, spacing: 0) {
+                                    rowBoundary(before: index)
+                                    ExtensionActionRow(
+                                        item: items[index],
+                                        selected: index == selection,
+                                        onActivate: { onActivate(index) }
+                                    )
+                                    .onContinuousHover { if case .active = $0 { hover(index) } }
+                                }
+                                .id(index)
+                            }
                         }
-                        .id(index)
                     }
                 }
-            }
-            .frame(height: min(contentHeight, maximumHeight))
-            .scrollBounceBehavior(
-                contentHeight > maximumHeight ? .always : .basedOnSize
-            )
-            // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
-            .scrollIndicators(.never)
-            .overflowFade(band: panel.fadeBand, includingTop: true)
-            .onChange(of: selection) {
-                let movedByPointer = hoverSelection == selection
-                hoverSelection = nil
-                guard !movedByPointer else { return }
-                // No anchor: reveal the row, never re-centre the list around it.
-                proxy.scrollTo(selection)
+                .frame(height: min(contentHeight, maximumHeight))
+                .scrollBounceBehavior(
+                    contentHeight > maximumHeight ? .always : .basedOnSize
+                )
+                // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
+                .scrollIndicators(.never)
+                .overflowFade(band: panel.fadeBand, includingTop: true)
+                .onChange(of: selection) {
+                    let movedByPointer = hoverSelection == selection
+                    hoverSelection = nil
+                    guard !movedByPointer else { return }
+                    // No anchor: reveal the row, never re-centre the list around it.
+                    proxy.scrollTo(selection)
+                }
             }
         }
         .padding(metrics.spacing.sm)
         .frame(width: panel.width)
         .glassEffect(.regular, in: shape)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: metrics.spacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: metrics.scaled(Theme.Typography.menuSymbolSize), weight: .medium))
+                .foregroundStyle(Theme.Colors.menuSymbol)
+                .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
+            ZStack(alignment: .leading) {
+                if palette.actionsQuery.isEmpty {
+                    Text("Search actions…")
+                        .font(metrics.typography.menuRow)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                HStack(spacing: 0) {
+                    Text(palette.actionsQuery)
+                        .font(metrics.typography.menuRow)
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .lineLimit(1)
+                    Rectangle()
+                        .fill(Theme.Colors.textPrimary)
+                        .frame(width: 1.5, height: metrics.scaled(14))
+                }
+            }
+            Spacer(minLength: metrics.spacing.xs)
+            if !palette.actionsQuery.isEmpty {
+                Button {
+                    palette.clearActionsQuery()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: metrics.scaled(Theme.Typography.menuSymbolSize)))
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, metrics.spacing.md)
+        .frame(height: panel.rowHeight)
     }
 
     @ViewBuilder
