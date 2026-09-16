@@ -70,6 +70,12 @@ final class CalendarCoordinator {
         return summary.event(from: store.events, now: clock.now)
     }
 
+    /// With the option on, an item with nothing to show leaves the menu bar until an event is due.
+    var isMenuBarItemInserted: Bool {
+        guard settings.calendarMenuBarDisplay != .disabled else { return false }
+        return !settings.menuBarHidesWhenEmpty || menuBarEvent != nil
+    }
+
     // MARK: - Feature switch
 
     /// The switch funnels here so enabling, which is also consent, confirms first.

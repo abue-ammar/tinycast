@@ -495,6 +495,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - `Only show events with meetings` hides a linkless event and shows it again when unchecked
 - Hide Current Event on Automatically clears the entry at the start and hands the space to the next
   event inside its lead time; on 5 minutes it lingers counting up, then clears
+- `Hide the item when nothing is upcoming` takes the calendar item out of the menu bar once nothing
+  is left to show, brings it back on the minute boundary the next event reaches its lead, and leaves
+  the picker on its choice; dragging the item out while it is up still sets Disabled
 - Clicking the calendar item opens `Join <title>`, `Open in Calendar...`, `My Schedule` and
   `Calendar Settings...` and nothing else; the second opens that event in Calendar.app, while a bare
   click never joins

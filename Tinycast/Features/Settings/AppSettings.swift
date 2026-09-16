@@ -4,7 +4,6 @@ import SwiftUI
 enum SettingsKey {
     /// The launcher icon's visibility — read by its `MenuBarExtra` and the General toggle.
     static let showInMenuBar = "showInMenuBar"
-    static let calendarMenuBarDisplay = "calendarMenuBarDisplay"
 }
 
 /// Delay before a closed palette pops to root; an unset key reads as `.immediately`.
@@ -425,6 +424,13 @@ final class AppSettings {
         didSet { defaults.set(hideCurrentEvent.rawValue, forKey: Key.hideCurrentEvent.rawValue) }
     }
 
+    /// On, the item leaves the menu bar whenever it has no event to show.
+    var menuBarHidesWhenEmpty: Bool {
+        didSet {
+            defaults.set(menuBarHidesWhenEmpty, forKey: Key.menuBarHidesWhenEmpty.rawValue)
+        }
+    }
+
     /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
     var windowManagementEnabled: Bool {
         didSet {
@@ -631,6 +637,7 @@ final class AppSettings {
             defaults.object(forKey: Key.hideCurrentEvent.rawValue)
             .flatMap { $0 as? Int }
             .flatMap(HideCurrentEvent.init(rawValue:)) ?? .dontHide
+        menuBarHidesWhenEmpty = defaults.bool(forKey: Key.menuBarHidesWhenEmpty.rawValue)
         navigationEnabled = defaults.bool(forKey: Key.navigationEnabled.rawValue)
         menuSearchDisabledApps =
             defaults.stringArray(forKey: Key.menuSearchDisabledApps.rawValue) ?? []

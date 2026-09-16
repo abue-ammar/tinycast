@@ -179,10 +179,13 @@ for the timed options. Because the earliest qualifying event wins, one hiding ha
 next with no extra logic.
 
 **The calendar's item and Tinycast's own item are two independent `MenuBarExtra` scenes**, each
-inserted by one preference and reading nothing off the other: `showInMenuBar` on General for
-Tinycast's, `calendarMenuBarDisplay` here for the calendar's. Either may be the only one in the menu
-bar, both may be, or neither. Dragging the calendar item out writes `.disabled`, which is what the
-picker already said — it never touches `showInMenuBar`.
+inserted by its own answer and reading nothing off the other: `showInMenuBar` on General for
+Tinycast's, `CalendarCoordinator.isMenuBarItemInserted` here for the calendar's. Either may be the
+only one in the menu bar, both may be, or neither. The scene reads that answer in `body`, where
+Observation tracks it, rather than only inside the binding's getter. Dragging the calendar item out
+writes `.disabled`, which is what the picker already said — it never touches `showInMenuBar`.
+**SwiftUI hands the insertion value back after every change, including the `false` of a hide**, so
+the binding treats `false` as a drag-out only while the coordinator still says the item belongs up.
 
 The display choice is **Disabled**, **Meeting Icon**, or **Meeting Title**; the title reads
 `title • in X min` and is capped at `MenuBarSummary.titleCap` characters — a hard cap is the only
@@ -190,6 +193,14 @@ thing that bounds a menu bar. `CalendarMenuBarLabel` reads the coordinator rathe
 which scopes Observation to the label instead of re-running either scene. It falls back to a calendar
 glyph when nothing is due, so the calendar item never disappears out from under the user. In **Meeting
 Title** mode, once no event remains today it instead reads `No upcoming events`.
+
+**Hide the item when nothing is upcoming** is the one way past that placeholder. With it on,
+`isMenuBarItemInserted` answers false whenever `menuBarEvent` is nil, and the item leaves the menu bar
+until the next event reaches it — at the lead **Show Upcoming Events** already sets, so there is no
+second horizon to drift from the first. On **Today** the item is up while any event remains today and
+goes once the last one ends; on **30 minutes before** it appears half an hour ahead of each meeting
+and goes between them. Only with the option on does the scene's answer read the clock, so an item
+that is never hidden never re-runs its scene on the minute.
 
 `CalendarMenuBarMenu` lists calendar actions only — `Join <title>` and `Open in Calendar...` for the
 displayed event, then `My Schedule` and `Calendar Settings...` — so the two menus never repeat each
@@ -247,8 +258,10 @@ it could not read would be wrong half the time.
 
 `CalendarMenuBarDisplay` and `MenuBarEvents` both put their default at `rawValue == 0`, so an unset
 preference lands on `.disabled` and `.today` rather than fighting them. `MenuBarEvents` has no `Never`:
-`.disabled` is the one switch that takes the item out of the menu bar, and a second one would only
-disagree with it.
+`.disabled` is the one switch that takes the item out of the menu bar for good, and a second one would
+only disagree with it. `menuBarHidesWhenEmpty` takes it out only for as long as there is nothing to
+show, ships off, and carries over in a backup like the rest of the menu-bar settings: it narrows what
+is shown rather than granting anything.
 
 `CalendarStore.access` is a snapshot, refreshed on `start`, on every `reload` and after a request —
 TCC announces nothing when a grant changes in Settings. `refreshAccess()` is why anything that acts on

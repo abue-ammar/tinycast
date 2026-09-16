@@ -117,6 +117,11 @@ struct CalendarSettingsView: View {
                 }
                 .toggleStyle(.checkbox)
                 .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
+                Toggle(isOn: $settings.menuBarHidesWhenEmpty) {
+                    SettingsRowTitle(.calendarMenuBar, "Hide the item when nothing is upcoming")
+                }
+                .toggleStyle(.checkbox)
+                .settingsEnabled(settings.calendarMenuBarDisplay != .disabled)
                 Picker(selection: $settings.hideCurrentEvent) {
                     ForEach(HideCurrentEvent.allCases) { hide in
                         Text(hide.title).tag(hide)

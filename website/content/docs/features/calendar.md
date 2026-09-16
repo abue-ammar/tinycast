@@ -103,15 +103,21 @@ the preview opens and off as soon as it closes. It uses the same camera screen a
 The calendar gets its **own** menu bar item, separate from the Tinycast icon. You can show either,
 both or neither.
 
-| Setting                        | Options                                                                  | Default                          |
-| ------------------------------ | ------------------------------------------------------------------------ | -------------------------------- |
-| Calendar in Menu Bar           | Disabled · Meeting Icon · Meeting Title                                  | **Disabled**                     |
-| Show Upcoming Events           | Today · 2 · 5 · 10 · 30 minutes before                                   | **Today**                        |
-| Only show events with meetings | On · Off                                                                 | **On**                           |
-| Hide Current Event             | Keep visible, show time left · Automatically · After 5, 10 or 30 minutes | **Keep visible, show time left** |
+| Setting                                | Options                                                                  | Default                          |
+| -------------------------------------- | ------------------------------------------------------------------------ | -------------------------------- |
+| Calendar in Menu Bar                   | Disabled · Meeting Icon · Meeting Title                                  | **Disabled**                     |
+| Show Upcoming Events                   | Today · 2 · 5 · 10 · 30 minutes before                                   | **Today**                        |
+| Only show events with meetings         | On · Off                                                                 | **On**                           |
+| Hide the item when nothing is upcoming | On · Off                                                                 | **Off**                          |
+| Hide Current Event                     | Keep visible, show time left · Automatically · After 5, 10 or 30 minutes | **Keep visible, show time left** |
 
 **Meeting Title** reads like `Standup • in 4 min`. Once nothing is left today, it reads
 **No upcoming events**. Today also counts the first 30 minutes after midnight.
+
+Prefer an empty menu bar to a placeholder? Turn on **Hide the item when nothing is upcoming** and the
+item leaves the menu bar whenever it has no event to show, returning when the next one reaches it —
+at the lead **Show Upcoming Events** sets. On **Today** it stays up while any event remains today; on
+**30 minutes before** it appears half an hour ahead of each meeting and goes between them.
 
 The item's menu offers **Join** the meeting, **Open in Calendar…**, **My Schedule** and
 **Calendar Settings…**. **A plain click never joins.** Mis-clicking the menu bar should not open a

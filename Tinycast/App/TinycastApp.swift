@@ -5,13 +5,11 @@ struct TinycastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     // `@AppStorage` republishes only on change, avoiding a scene ⇄ binding loop.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
-    @AppStorage(SettingsKey.calendarMenuBarDisplay)
-    private var calendarMenuBarDisplay = CalendarMenuBarDisplay.disabled.rawValue
 
     // Channel-aware: "Tinycast", "Tinycast Dev", or "Tinycast Beta".
     private let appName = Bundle.main.appDisplayName
 
-    /// Two independent items: one preference each, no state either can read off the other.
+    /// Two independent items: each inserted by its own answer, reading no state off the other.
     var body: some Scene {
         MenuBarExtra(isInserted: $showInMenuBar) {
             MenuBarMenu(appName: appName)
@@ -20,26 +18,29 @@ struct TinycastApp: App {
         }
         .commands { menuBarCommands }
 
-        MenuBarExtra(isInserted: calendarMenuBarInsertion) {
+        // Read in `body`, where Observation tracks it, not only inside the binding's getter.
+        let calendarInserted = AppCore.shared.calendarCoordinator.isMenuBarItemInserted
+        MenuBarExtra(isInserted: calendarMenuBarInsertion(calendarInserted)) {
             CalendarMenuBarMenu()
         } label: {
             CalendarMenuBarLabel(appName: appName)
         }
     }
 
-    /// Reads the raw preference so the scene invalidates, but writes through `AppSettings`: dragging
-    /// the item out must also stop the clock and move the picker, not just the stored value.
-    private var calendarMenuBarInsertion: Binding<Bool> {
-        Binding(
-            get: { calendarMenuBarDisplay != CalendarMenuBarDisplay.disabled.rawValue },
-            set: { inserted in
-                let settings = AppCore.shared.settings
-                if !inserted {
-                    settings.calendarMenuBarDisplay = .disabled
-                } else if settings.calendarMenuBarDisplay == .disabled {
-                    settings.calendarMenuBarDisplay = .meetingIcon
-                }
-            })
+    /// Writes through `AppSettings`, so a drag-out also stops the clock and moves the picker.
+    private func calendarMenuBarInsertion(_ inserted: Bool) -> Binding<Bool> {
+        Binding(get: { inserted }, set: { calendarMenuBarInsertionDidChange(to: $0) })
+    }
+
+    /// Handed back after every change, so `false` is a drag-out only while the item should be up.
+    private func calendarMenuBarInsertionDidChange(to inserted: Bool) {
+        let core = AppCore.shared
+        if !inserted {
+            guard core.calendarCoordinator.isMenuBarItemInserted else { return }
+            core.settings.calendarMenuBarDisplay = .disabled
+        } else if core.settings.calendarMenuBarDisplay == .disabled {
+            core.settings.calendarMenuBarDisplay = .meetingIcon
+        }
     }
 
     /// Declared, not assigned to `NSApp.mainMenu`: SwiftUI rebuilds the menu on any scene change.

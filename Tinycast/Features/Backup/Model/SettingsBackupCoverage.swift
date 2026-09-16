@@ -54,6 +54,7 @@ enum SettingsBackupCoverage {
         "calendarMenuBarDisplay": .calendarMenuBarDisplay,
         "menuBarLinkedEventsOnly": .menuBarLinkedEventsOnly,
         "hideCurrentEvent": .hideCurrentEvent,
+        "menuBarHidesWhenEmpty": .menuBarHidesWhenEmpty,
         "supportReminders": .supportReminders
     ]
 

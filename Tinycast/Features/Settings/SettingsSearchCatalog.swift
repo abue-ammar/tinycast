@@ -495,6 +495,9 @@ enum SettingsSearchCatalog {
             .calendarMenuBar, "Only show events with meetings",
             keywords: ["links", "filter", "menubar"]),
         .init(
+            .calendarMenuBar, "Hide the item when nothing is upcoming",
+            keywords: ["empty", "no upcoming events", "placeholder", "menubar"]),
+        .init(
             .calendarMenuBar, "Hide Current Event",
             keywords: ["started", "time left", "menubar"]),
         .init(
