@@ -257,6 +257,9 @@ enum BackupActions {
     private static let snippetsNeedEnablingText =
         "Turn on Snippets in Settings to use their keywords."
 
+    /// Not everything an import applies settles in the running app, so say to relaunch.
+    private static let restartAfterImportText = "Quit and reopen Tinycast to finish."
+
     /// One sentence per Raycast category that actually moved, shared by the pane and onboarding.
     static func raycastText(_ outcome: RaycastOutcome) -> String {
         var parts: [String] = []
@@ -283,6 +286,7 @@ enum BackupActions {
         if outcome.missingImages > 0 {
             message += " \(outcome.missingImages) images were unavailable and skipped."
         }
+        if !parts.isEmpty { message += " \(restartAfterImportText)" }
         return message
     }
 
