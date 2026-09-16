@@ -69,7 +69,11 @@ export async function Hero() {
             className="rise mt-6 flex flex-wrap items-center gap-3"
             style={{ animationDelay: "240ms" }}
           >
-            <Button href="/docs/install" variant="action" size="md">
+            <Button
+              href={`${site.repo}/releases/latest`}
+              variant="action"
+              size="md"
+            >
               <Download size={15} />
               Download for Mac
             </Button>

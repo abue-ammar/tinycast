@@ -13,7 +13,7 @@ export function LogoWall() {
     >
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-10">
         <p className="text-center font-mono text-eyebrow uppercase text-fg-subtle">
-          Used every day by people at
+          Trusted and used every day by people at
         </p>
         <div
           className="mt-4 overflow-hidden"

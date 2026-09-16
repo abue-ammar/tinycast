@@ -46,10 +46,17 @@ export const companies = [
   "apple",
   "google",
   "microsoft",
+  "openai",
+  "anthropic",
+  "stripe",
+  "cloudflare",
+  "github",
   "oracle",
+  "samsung",
+  "alibaba",
   "bytedance",
-  "yandex",
   "redhat",
+  "voidzero",
 ] as const;
 
 export type Company = (typeof companies)[number];
