@@ -215,7 +215,7 @@ final class PalettePanel: NSPanel {
 
         isFloatingPanel = true
         acceptsMouseMovedEvents = true
-        level = .floating
+        level = .palette
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
         titleVisibility = .hidden

@@ -217,7 +217,7 @@ An extension's own surfaces live in `ExtensionColors` (`Features/Extensions/UI/`
 
 Source: `Palette/PalettePanel.swift`, `Palette/RootPaletteView.swift`.
 
-- **`PalettePanel`** is a borderless `NSPanel`: `isOpaque = false`, `backgroundColor = .clear`, `.floating` level, `hasShadow`, `animationBehavior = .none`. The two more transparent Dark detents turn off the native shadow and its black outline, adding a one-point white gradient border with a brighter upper edge. It hosts SwiftUI via `NSHostingView`. `PaletteWindowController` centers it slightly above screen center (`+8%`) and dismisses it on `windowDidResignKey`.
+- **`PalettePanel`** is a borderless `NSPanel`: `isOpaque = false`, `backgroundColor = .clear`, `.palette` level (one above `.modalPanel`, so other apps' open panels never cover it), `hasShadow`, `animationBehavior = .none`. The two more transparent Dark detents turn off the native shadow and its black outline, adding a one-point white gradient border with a brighter upper edge. It hosts SwiftUI via `NSHostingView`. `PaletteWindowController` centers it slightly above screen center (`+8%`) and dismisses it on `windowDidResignKey`.
 - **The results layer fills the whole panel.** The header and bottom bar attach via `.safeAreaInset(edge: .top/.bottom)` as transparent overlays that float _over_ the list. The list underlaps them and dissolves at the edges.
 - **Header** (`headerHeight 44`): a back-chevron _or_ mode glyph, then the plain `TextField` (no border/background). Sub-screens (Clipboard, Calculator History) show the back chevron; the launcher shows a magnifying glass. The search icon aligns horizontally with row content.
 - **Compact keyboard entry:** pressing `↓` in the collapsed launcher expands the results and selects the first row without replacing or defocusing the shared search field.
@@ -431,7 +431,7 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   afterwards, so confirming Restart is never held up by an animation. The pill fades without the
   scale — a growing capsule reads bouncy.
 - **Non-activating**, like the palette: the dialog takes key focus for its own keys without pulling app
-  focus off whatever the user was in. It sits at `.modalPanel`, above the palette's `.floating`, and is
+  focus off whatever the user was in. It sits at `.dialog`, above the palette's `.palette`, and is
   centred on the **cursor's** display with the same slight optical lift the palette uses.
 - **`VolumeSlider`** is hand-drawn (track `volumeTrackHeight 6`, knob `volumeKnob 16`, `controlSurface`
   rail under a white-0.85 fill) with a monospaced-digit percentage in the same `volumeReadout 38` slot
@@ -512,7 +512,7 @@ per-scroll-view shim: chasing that flip after the fact is what caused the flash.
 
 `CameraPreviewPanel` is the third borderless surface, beside the dialog and the notes panel. It takes
 the same recipe — `panelScrim`, then `VisualEffectView`, then the clip — and the same optical lift a
-dialog takes, but sits at `.floating` rather than `.modalPanel` so a failure report still lands on
+dialog takes, but sits at `.floating` rather than `.dialog` so a failure report still lands on
 top of it.
 
 `AVCaptureVideoPreviewLayer` is hosted in one `NSViewRepresentable` and nothing else; the title,

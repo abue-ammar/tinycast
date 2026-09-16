@@ -23,8 +23,7 @@ final class DialogPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        // Above the palette, so a confirmation is never buried under its trigger.
-        level = .modalPanel
+        level = .dialog
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
         titleVisibility = .hidden

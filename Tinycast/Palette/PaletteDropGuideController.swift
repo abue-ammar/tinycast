@@ -45,15 +45,12 @@ final class PaletteDropGuideController {
 
     // MARK: - Private
 
-    /// One step under `.floating`, so guides clear other apps but not the dragged panel.
-    private static let level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue - 1)
-
     private func ensurePanel() -> NSPanel {
         if let panel { return panel }
         let host = NSHostingView(rootView: guides)
         // The controller owns the frame; without this the hosting view would size the window.
         host.sizingOptions = []
-        let panel = PaletteDropGuidePanel(level: Self.level)
+        let panel = PaletteDropGuidePanel()
         panel.contentView = host
         self.host = host
         self.panel = panel
@@ -75,7 +72,7 @@ final class PaletteDropGuideController {
 
 /// Borderless, click-through, never key: the guides are a readout, not a surface.
 private final class PaletteDropGuidePanel: NSPanel {
-    init(level: NSWindow.Level) {
+    init() {
         super.init(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -84,7 +81,7 @@ private final class PaletteDropGuidePanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        self.level = level
+        level = .paletteDropGuide
         ignoresMouseEvents = true
         hidesOnDeactivate = false
         animationBehavior = .none

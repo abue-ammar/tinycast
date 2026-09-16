@@ -275,7 +275,7 @@ programmatic resize would be recorded as one.
 ### The drop guides
 
 While a drag is in flight, `PaletteDropGuideController` puts a click-through borderless panel over the
-display the panel is on, one level under `.floating` so it never covers the panel being dragged. It
+display the panel is on, at `.paletteDropGuide`, one level under `.palette`, so it never covers the panel being dragged. It
 draws three dotted lines through the default placement — both panel edges full height, the top edge full
 width — which turn `Theme.Colors.dropGuideArmed` once the anchor is within `Theme.Size.paletteSnapDistance`
 of home. Releasing while armed snaps the panel there.

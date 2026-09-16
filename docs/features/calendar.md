@@ -219,7 +219,7 @@ join(meeting)
 ```
 
 **The preview is itself a confirmation**, so it stands in for one when both are on rather than asking
-twice. `CameraPanel` sits at `.floating`, below a dialog's `.modalPanel`, so a failure report
+twice. `CameraPanel` sits at `.floating`, below a dialog's `.dialog`, so a failure report
 still lands on top of it. The session, the panel and the stage are the `Camera` feature's — see
 [camera.md](camera.md); only the join-specific controller and footer live here.
 

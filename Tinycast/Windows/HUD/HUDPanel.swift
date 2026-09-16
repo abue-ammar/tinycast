@@ -12,7 +12,7 @@ final class HUDPanel: NSPanel {
         backgroundColor = .clear
         // Both HUDs take the palette's surface recipe, so neither carries elevation.
         hasShadow = true
-        level = .floating
+        level = .palette
         ignoresMouseEvents = true
         hidesOnDeactivate = false
         // Suppresses AppKit's own window animation; `fadeIn`/`fadeOut` replace it.
