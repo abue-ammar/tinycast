@@ -41,7 +41,7 @@ jobs:
               ">",
               "> Docs-only changes (`*.md`, `docs/`, `website/`) skip this and need no approval.",
               "",
-              "This is a solo project, so replies can take a while.",
+              "Thanks for opening this! A maintainer will take a look soon.",
             ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -177,7 +177,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: "Reopened — #" + issue + " is now `approved`. This is a solo project, so review can take a while."
+                body: "Reopened — #" + issue + " is now `approved`. Thanks for your patience — a maintainer will review it soon."
               });
             }
 
@@ -190,5 +190,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: "Thanks for the PR! This is a solo project, so review can take a while."
+              body: "Thanks for the PR! A maintainer will review it soon."
             });
