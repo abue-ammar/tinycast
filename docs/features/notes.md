@@ -1,7 +1,7 @@
 # Notes
 
-Notes is an unlimited local collection of plain Markdown files in one persistent floating editor. One
-window edits one active note at a time; a title-bar button opens the searchable switcher, and launcher
+Notes is an unlimited local collection of plain Markdown files in one persistent floating editor, which
+renders the Markdown in place. One window edits one active note at a time; a title-bar button opens the searchable switcher, and launcher
 commands and global shortcuts can show, search, or extend the collection.
 
 ## Invariants
@@ -10,9 +10,14 @@ commands and global shortcuts can show, search, or extend the collection.
   the source contains no frontmatter, embedded ID, or title field, and there is no database or sidecar.
 - **A note the user has not named shows its first line instead.** Only the names `create` claims yield
   it, it is presentation and nothing else, and naming the note replaces it.
-- **Markdown remains canonical.** The string in `NSTextView`, `NotesStore`, search, and the file
-  are identical. Task markers are visually replaced by checkboxes without rewriting the source;
-  toggling changes only the space or `x` inside the brackets.
+- **The storage is the source.** The string in `NSTextView`, `NotesStore`, search, and the file are
+  identical; rendering is attributes and drawing over that string, never a second string or an offset
+  map.
+- **The caret's line is raw.** Every line under the selection shows its Markdown; an unfocused editor
+  reveals nothing.
+- **Styling never reaches undo.** Attribute passes bypass `shouldChangeText`; every edit a Markdown
+  gesture makes goes through `NoteTextView.performEdit`.
+- **Render Markdown off is the literal editor**, with native Return, Tab and shortcuts and no parsing.
 - **Only the active note can be dirty.** Switching, creating, renaming, and deleting first flush it, so
   collection navigation cannot abandon an in-memory draft.
 - **Tinycast is the only writer.** There is no watcher and no revision check: a save replaces the file
@@ -55,9 +60,9 @@ in UserDefaults and does not ride settings backups.
 ## Derived titles
 
 A note still carrying a name `create` claimed — `Untitled`, `Untitled 2`, … — shows the first line of
-its source that carries visible text. `NoteTitle` owns that rule: leading blank lines are skipped,
-Markdown heading and task markers are dropped, and the line is capped to 120 characters so no row or title bar
-has to carry a paragraph. `NoteSummary.title` remains the filename; `displayTitle` is what every
+its source that carries visible text. `NoteTitle` owns that rule: blank, rule and fence lines are
+skipped, block and inline Markdown markers are dropped whether or not rendering is on, and the line is
+capped to 120 characters so no row or title bar has to carry a paragraph. `NoteSummary.title` remains the filename; `displayTitle` is what every
 surface renders — switcher rows and their VoiceOver labels, the Trash confirmation, the window title,
 and the title band of `NoteSearch`, so a fuzzy query reaches a note nobody has named.
 
@@ -121,29 +126,105 @@ only while the switcher is not renaming; in the editor and title field it remain
 After confirmation, Trash chooses its successor from the current visible ordering. Each row exposes
 VoiceOver actions to activate, rename, and move the actual note title to Trash.
 
-## Markdown editor
+## Editor
 
 `NoteEditorView` is one TextKit 2 `NSTextView` inside an `NSScrollView`. It installs
-`NoteEditorInput.source` directly as `NSTextView.string` with one system font and Tinycast's note color.
-Markdown remains literal except for task lists: `- [ ]`, `* [ ]`, and `+ [ ]` prefixes followed by
-space render as accessible checkboxes. Each task has 8 points of paragraph spacing after it, without
-adding blank lines to the source or expanding wrapped lines. Checked tasks (`[x]` or `[X]`) have dimmed,
-struck-through text.
-Fenced code blocks stay literal. The controls use TextKit 2 segment geometry, so they follow wrapping
-and resizing without a second editor or a source/display mapping. Ordinary edits reparse and restyle
-only the affected paragraph, retaining existing checkbox controls and shifting subsequent ranges.
-Line-boundary and code-fence edits rebuild task state because they can affect subsequent paragraphs.
-Whitespace-only tasks use the accessible name "Task".
+`NoteEditorInput.source` as `NSTextView.string` and never swaps that string for a display version.
+Rendering is attributes and drawing over the source.
 
-Type `[] ` or `[ ] ` at the start of a line to create `- [ ] `. Return continues a task list with
-an unchecked item; Return on an empty item removes its prefix to leave the list. Clicking a checkbox
-preserves selection, participates in native undo/redo, and publishes through the ordinary autosave path.
-Copy and Find still use the complete Markdown source.
+### Parsing
 
-AppKit owns typing, selection, Cut, Copy, Paste, Select All, Find, marked-text input, emoji, combining
-characters, and undo/redo. `NoteTextView` supplies a document-owned undo manager and task controls.
-Changing the note identity or editor epoch replaces the literal string and clears the previous
-document's undo history; ordinary edits keep native undo grouping.
+`Model/NoteMarkdownParser` splits the source on the same boundaries as `NSString.lineRange(for:)`, so
+one line is one TextKit paragraph. `NoteMarkdown` gives each line its kind, UTF-16 ranges for its
+content, block marker and task checkbox, a list level from an indent stack, and its inline spans with
+the marker ranges to hide.
+
+It covers headings 1 to 6 (4 to 6 look like 3), bold, italic, bold italic, strikethrough, inline code,
+links, bare `http` and `https` URLs, bullet, numbered and task lists with nesting, quotes, fenced code
+blocks and horizontal rules. Inline spans never cross a line. Images, underline, HTML, setext headings,
+indented code, footnotes, reference links and blocks nested inside quotes stay plain text. A GFM table
+(a pipe row, a delimiter row with as many cells, then the pipe rows after it) also stays plain text, but
+is recognised so it gets no inline styling: it shows in the code font, with wrapped rows hanging under
+their first line, and a delimiter row typed under existing rows restyles all of them.
+The whole note is reparsed on each edit. The AI chat's `MarkdownBlock` is a separate read-only parser
+and is not shared.
+
+### Rendering
+
+`UI/NoteMarkdownRenderer` holds the parse and the set of revealed lines. `textDidChange` and
+`textViewDidChangeSelection` both call it, and it compares the storage with the source it last parsed.
+Undo, redo and marked text change the storage without posting `textDidChange`, so that comparison, not
+the callback, is what finds an edit. The common prefix and suffix give the edited lines. Those lines and
+one neighbour on each side are restyled, widened to the rest of the note when a fenced block moved and
+to any list line whose depth changed.
+
+`NoteMarkdownStyler` turns one line into attributes. `NoteMarkdownTypography` sets the body one
+system text style up (title3) and headings at largeTitle, title1 and title2, with or without
+rendering; Interface Size does not scale Notes. A hidden marker gets a 0.01-point system font and
+a clear colour, so it stays in the string at almost no width. Fence and rule lines are cleared at their
+normal font instead, so they keep their row height. Every list item (bullet, numbered or task) gets 8
+points of space after it, rendered or revealed, so items read as separate rows and moving the caret
+never shifts them; a wrapped item keeps normal line spacing. A restyle writes straight to `NSTextStorage` inside
+`beginEditing` and `endEditing`, then invalidates layout for those lines. It never calls
+`shouldChangeText`, which is what keeps styling off the undo stack.
+
+`NoteRevealPolicy` picks the lines that show raw Markdown: every line under the selection, plus both
+fences of a code block the selection is in. Nothing is revealed unless the editor is first responder in
+the key window. Revealed markers use `textTertiary`. During a drag selection the reveal waits for
+mouse-up, because revealing moves text under the pointer. A revealed list or quote line hangs its
+marker left of the content indent, so its text stays where the rendered line had it. Since the caret's line is always raw, the
+caret never sits inside hidden text and the arrow keys need no special handling.
+
+### Block drawing
+
+`NoteLayoutFragmentProvider` is the text layout manager's delegate. A paragraph whose first character
+carries a `NoteBlockDecoration` is laid out by `NoteBlockLayoutFragment`, which draws code bands with
+their language label, quote bars, rules, bullets, the source's own list numbers, and checkboxes, all
+list markers in a neutral gray. Vertical
+spacing comes from paragraph styles: overriding the fragment's frame would leave the caret above the
+glyphs. There are no text attachments, overlay controls, `NSTextList`, `NSTextTable` or private API.
+
+### Editing
+
+`Model/NoteMarkdownEditing` turns a gesture into a `NoteEditPlan`, one replacement plus the selection
+after it. Nil means AppKit handles the key natively. `NoteTextView.performEdit` applies a plan through
+`shouldChangeText`, `replaceCharacters` and `didChangeText`, so each gesture is one undo step and
+reaches autosave.
+
+- Return continues a list or quote and leaves it on an empty item. Tab and Shift-Tab nest list items
+  by four spaces. Backspace at an item's content start outdents it, then removes its marker. These
+  edits renumber the ordered run they touch in the same undo step.
+- Typing `[] ` or `[ ] ` at the start of a paragraph makes `- [ ] `.
+- Pasting a single `http` or `https` URL over text selected on one line makes `[text](url)`.
+- Clicking a checkbox toggles `[ ]` and `[x]` without moving the caret. The hit test uses
+  `NoteCheckboxGeometry`, the rect the fragment draws, grown by 3 points.
+- Clicking a rendered link opens it, unless the click lands in the outer 30% of the label's first or
+  last glyph, which places the caret. Only `http`, `https` and `mailto` open. A revealed line carries
+  no link attribute, so its URL is edited as text.
+
+| Shortcut | Does |
+| --- | --- |
+| ⌘B, ⌘I, ⌘E | bold, italic, inline code |
+| ⇧⌘X | strikethrough |
+| ⌘K | link |
+| ⇧⌘7, ⇧⌘8, ⇧⌘9 | numbered, bullet, task list |
+| ⌥⌘1, ⌥⌘2, ⌥⌘3 | heading 1, 2, 3 |
+| ⌥⌘0 | plain paragraph |
+
+Digits match by key code. The text view sees these chords before `NotesPanel` claims its own, and none
+collide. In a note, ⌘E replaces AppKit's Use Selection for Find.
+
+AppKit still owns typing, selection, Cut, Copy, Paste, Select All, Find, marked text, emoji, combining
+characters and undo grouping. Copy yields raw Markdown and VoiceOver reads the source. Changing the note
+identity or editor epoch reinstalls and restyles the string and clears the previous document's undo
+history. Snippets expand through `insertText` and are styled like typed text.
+
+### The setting
+
+Settings > Notes > **Render Markdown** is `AppSettings.notesRendersMarkdown`, on when absent and carried
+by settings backups. `NotesCoordinator` exposes it and `NotesView` hands it to `NoteEditorView`. Off
+gives the literal editor: one font and colour, native Return, Tab and shortcuts, and no parsing.
+Flipping it restyles the open note without touching its undo history or marking it dirty.
 
 An empty note shows a `Start writing…` placeholder aligned to the 16-point text container inset, and a
 footer under the editor reports the character count straight off `NSTextStorage.length`. Both belong to
@@ -166,10 +247,14 @@ the window re-lists the folder before it presents anything.
 
 `Tests/notes-test.swift` compiles the shipped Notes model and service sources with the real fuzzy
 matcher. It covers repository safety, unique-name claiming, derived titles, search, selection,
-autosave, empty collections, switcher interaction, and cancellation.
+autosave, empty collections, switcher interaction, and cancellation, plus the Markdown parser, every
+edit plan and the reveal policy.
 
-`Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects to cover literal source,
-native Cut/Copy/Paste, Unicode and marked text, task parsing, checkbox layout and toggling, list
-continuation, bracket shortcuts, and undo isolation. Window chrome is not automated:
+`Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects. It runs the native
+Cut/Copy/Paste, Unicode and marked-text cases with rendering off and on, and covers undo isolation, an
+exact source after styling, hidden and revealed markers, restyling after edits and after undo, block
+decorations and layout fragments, list keys, chords, the task rule, checkbox toggles, link schemes and
+pasting a URL. `Tests/notes-editor-performance.swift` times install, typing and caret moves on a
+100,000-character note; its budget is in `docs/testing.md`. Window chrome is not automated:
 the Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher, focus restoration,
 Finder, Trash recovery, and accessibility.

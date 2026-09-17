@@ -130,9 +130,9 @@ driven imperatively from AppKit.
   unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
   palette's in both directions.
 - **Notes** — a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
-  The user owns its size and AppKit autosaves the frame; its literal-source TextKit 2 editor switches
-  among local Markdown files and stays visible on focus loss. The editor string is the canonical
-  file source; task checkboxes overlay their markers without a source/display mapping or preview.
+  The user owns its size and AppKit autosaves the frame; its TextKit 2 editor renders Markdown over the
+  literal source, switches among local Markdown files and stays visible on focus loss. The displayed
+  string is the canonical file source; there is no source/display mapping.
   See [features/notes.md](features/notes.md).
 - **The main menu** — shaped by `TinycastApp`'s `.commands`, which rebinds ⌘Q to Close Settings. It is
   only ever on screen while a titled window is open, so it is Settings' menu bar. It must stay

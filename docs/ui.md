@@ -198,7 +198,7 @@ shipped. Light is the same stop with the ink inverted, and is the only column op
 | `cardFill`        | white 0.05     | black 0.04     | settings/calc card fill                          |
 | `cardStroke`      | white 0.10     | black 0.10     | settings/calc card border + inset dividers       |
 | `glassFrost`      | white 0.05     | white **0.25** | whitish tint layered into the floating glass     |
-| `noteText`        | white 0.90     | black 0.85     | Notes Markdown source                            |
+| `noteText`        | white 0.90     | black 0.85     | Notes body text                                  |
 | `dropGuide`       | white 0.35     | black 0.35     | the palette's drop guides while dragging         |
 
 `glassFrost` is white in **both** — the frost brightens glass rather than inking it — so it is an
@@ -259,10 +259,23 @@ empty header moves the panel after a three-point threshold. Create, Reveal, Hide
 remain click-only controls. Escape closes the switcher before hiding, while Command-W and the hide
 control order the panel out. Show Notes only shows or focuses; focus loss leaves the panel visible.
 
-The editor is one native TextKit 2 surface. Its string is the canonical Markdown source, using one
-system font and the `noteText` color. Task markers render as native accessible checkboxes positioned
-with TextKit 2 segment geometry, and completed task text is dimmed and struck through. Other Markdown
-markers and fenced code stay literal. AppKit owns editing, undo, selection, Find, and marked text.
+The editor is one native TextKit 2 surface. Its string is the canonical Markdown source, and Render
+Markdown styles it in place with no new tokens. Notes type sits one system text style above the rest
+of the app, because a note is for reading: body text is the title3 size in `noteText`, and headings 1
+to 3 use the largeTitle, title1 and title2 sizes (bold, bold, semibold). Interface Size does not scale
+it. Inline code is monospaced on `controlSurface`, and links use the system link colour. Quotes and
+checked tasks dim to `textSecondary`, and a checked task is struck through. Markers on the caret's line
+show in `textTertiary`; everywhere else they are hidden. A revealed list or quote marker hangs left of
+its text, so the text does not move when the caret arrives, unless the marker is wider than the slot.
+
+A layout fragment draws the block chrome. A code band fills `cardFill` with `menu` corners at its ends
+and a `textTertiary` language label, inset by `lg`. A quote bar is `markdownQuoteBar` wide in `border`,
+stepping `markdownQuoteBar + lg` per depth. A rule is a `hairline` of `separator`. List markers sit in
+a slot per level, `markdownListMarker` grown in proportion to the body size. Bullets, numbers and
+checkboxes are `textSecondary`; a done box is filled with the check cut out. Headings 1 and 2 get `xl`
+space above, the rest `md`, and `xs` below; every list item gets `md` below. A table stays literal
+source in the code-block font, and a wrapped row hangs `lg` under its first line. AppKit owns editing,
+undo, selection, Find, and marked text.
 
 The switcher is its own glass panel over the editor, sized to its list up to a 240-point ceiling and
 never resizing the note window. Its plain search field and

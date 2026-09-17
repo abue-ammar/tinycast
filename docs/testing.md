@@ -114,8 +114,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `quicklink-test` | all of `Quicklinks/Model/` |
 | `apple-shortcut-test` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |
 | `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
-| `notes-test` | all of `Notes/Model/` and `Notes/Service/`, plus the real fuzzy matcher and signposts |
-| `notes-editor-test` | the literal Notes editor with real TextKit 2 and AppKit editing objects |
+| `notes-test` | all of `Notes/Model/` and `Notes/Service/`, including the Markdown parser, edit plans and reveal policy, plus the real fuzzy matcher and signposts |
+| `notes-editor-test` | the Notes editor, rendered and literal, with real TextKit 2 and AppKit editing objects: styling, reveal, layout fragments, keys, chords, checkboxes and links |
 | `raycast-test` | `Backup/Service/RaycastDecoder.swift`, `Scrypt.swift`, `Platform/Compression/Zlib.swift` |
 | `symbols-test` | `Extensions/Service/SymbolCatalog.swift`, against this machine's CoreGlyphs |
 | `ext-store-test` | `Extensions/Model/` — the registry model and both registry APIs' parsers |
@@ -264,6 +264,25 @@ swiftc -O -swift-version 6 Tinycast/Features/Emoji/Model/{EmojiCatalog,EmojiData
 /tmp/emoji-search-performance --names
 ```
 
+`Tests/notes-editor-performance.swift` installs a 100,000-character note in a real rendered editor and
+prints, as JSON, the median over 30 runs of the install with its full restyle, one typed character at
+the end, middle and start, and a caret move between distant lines. The budget is 150 ms, 8 ms (end and
+middle) and 4 ms:
+
+```sh
+N=Tinycast/Features/Notes
+swiftc -O -swift-version 6 Tinycast/Platform/{Signposts,Appearance,NotificationToken}.swift \
+    Tinycast/DesignSystem/{Theme,InterfaceMetrics}.swift \
+    Tinycast/Features/TextInjection/Service/InjectableTextView.swift \
+    $N/Model/{NoteDocument,NoteMarkdown,NoteMarkdownParser,NoteInlineScanner}.swift \
+    $N/Model/{NoteEditPlan,NoteEditAction,NoteMarkdownEditing,NoteRevealPolicy}.swift \
+    $N/UI/{NoteMarkdownTypography,NoteBlockDecoration,NoteMarkdownStyler,NoteMarkdownRenderer}.swift \
+    $N/UI/{NoteCheckboxGeometry,NoteBlockLayoutFragment,NoteLayoutFragmentProvider}.swift \
+    $N/UI/{NoteTextViewEditing,NoteTextView,NoteEditorView}.swift \
+    Tests/notes-editor-performance.swift -o /tmp/notes-editor-performance
+/tmp/notes-editor-performance
+```
+
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the
 instrument then shows an interval that never closes.
@@ -287,6 +306,7 @@ Measured at the end of the 2026 refactor, on `main`. Useful as orders of magnitu
 | `palette-selection-test` | 111,684 assertions — a tripwire: a change in this count means the row-order model moved |
 | `SnippetKeywordPolicy` match | 7 µs/keystroke at 50 keywords, 59 µs at 1,000 — the `lowercased()` is 0.09 µs of it |
 | `ClipboardStore.pinnedItems` | 27–127 µs per uncached search, 1,000-row window — no cache earns its invalidation yet |
+| Rendered Notes editor, 100,000 characters | 30 ms install and full restyle; 7.5, 5.9 and 3.3 ms per character typed at the end, middle and start (5.2, 3.1 and 0.6 ms with rendering off); 0.6 ms per caret move |
 | `count items of trash` | 5,000 ms against a cold Finder on an *empty* Trash, 110 ms warm — why AppleScript is detached |
 
 Launch time, allocation counts and RSS have never been captured as numbers. The signposts are in place,
@@ -445,13 +465,33 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Delete confirms through Tinycast, moves the file to Trash, and selecting another note never loses an
   unsaved edit
 - An existing `Floating Note.md` appears as an ordinary note without conversion
-- Type `[] ` or `- [ ] ` to create a checkbox; click to check/uncheck, then Undo and Redo; the file
-  and copied text preserve Markdown task syntax, including after switching notes and reopening
-- Return continues a task with an unchecked item; Return on an empty item exits the list
-- Checkboxes follow scrolling, wrapping, and window resizing, work with VoiceOver and keyboard focus,
-  and checked text is dimmed and struck through in both appearances
-- Fenced code and non-task Markdown stay literal; links are not activated, and Tab and Delete retain
-  native plain-text behavior
+- A note using every construct renders in Dark and Light: sized headings, emphasis, strikethrough,
+  inline code, coloured links, bullets, numbers, checkboxes with space between tasks, lists nested at
+  two and four spaces, quote bars, a code band with its language label, and a rule
+- The caret's line shows raw Markdown in the tertiary colour and re-renders when the caret leaves; a
+  multi-line selection reveals every selected line, and Select All shows the whole source
+- Dragging a selection across rendered lines does not jump under the pointer; the lines reveal on
+  mouse-up
+- Clicking another app renders the whole note; clicking back reveals the caret line again
+- Inside a code block both fences show and Markdown inside it stays literal
+- A table shows as its literal source in the code font, with no styling inside it; adding the `| --- |`
+  row under existing rows turns them all into the table at once
+- Bullets, numbers and checkboxes are a neutral gray, bullet, numbered and task items are evenly spaced,
+  and revealing a bullet or numbered line leaves its text where it was
+- A checkbox click toggles without moving the caret, autosaves, and Command-Z restores it; the file on
+  disk shows `[x]`
+- A link click opens the browser, a click at the label's edge places the caret, a `file:` link does
+  nothing, and a link on the caret's line is editable text
+- Return continues and leaves lists and quotes, Tab and Shift-Tab nest, ordered lists renumber, `[] `
+  becomes a task, and every formatting shortcut works and undoes in one step
+- Pasting a URL over selected text makes a link; pasting anything else is plain text
+- Copy from a rendered line pastes raw Markdown into another app; a snippet keyword expands inside a
+  rendered note and is styled at once
+- The derived title of an Untitled note shows no Markdown markers
+- A narrow window wraps list items under their text, not under the marker
+- With Render Markdown **off**, the note is fully literal (markers visible, links inert, task syntax
+  plain) and Return, Tab, Delete, and formatting-looking shortcuts keep native plain-text behavior;
+  flipping it back re-renders without dirtying the note or touching undo
 - Edit one note, switch to a shorter note, then Undo and Redo: the new note remains intact and the app
   does not terminate
 - Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, Undo, Redo, and Find preserve
