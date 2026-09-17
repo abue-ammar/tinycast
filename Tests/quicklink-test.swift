@@ -16,6 +16,7 @@ struct QuicklinkTests {
         encodingChoice()
         placeholderDetection()
         displayOrder()
+        faviconResolution()
         storeCRUD()
         storeValidation()
         pinning()
@@ -29,6 +30,23 @@ struct QuicklinkTests {
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
+    }
+
+    static func faviconResolution() {
+        expect(
+            link("GitHub", "https://github.com/search?q={argument}").faviconURL
+                == url("https://api.ray.so/favicon?url=github.com&size=64"),
+            "a web quicklink uses Raycast's favicon provider")
+        expect(
+            link("Short YouTube", "https://youtu.be/abc").faviconURL
+                == url("https://api.ray.so/favicon?url=youtube.com&size=64"),
+            "Raycast's YouTube hostname alias is preserved")
+        expect(
+            link("Local", "~/Downloads").faviconURL == nil,
+            "a path quicklink never asks for a favicon")
+        expect(
+            link("Shortcut", "shortcuts://run-shortcut?name=Focus").faviconURL == nil,
+            "a deeplink never asks for a favicon")
     }
 
     // MARK: - Destination detection

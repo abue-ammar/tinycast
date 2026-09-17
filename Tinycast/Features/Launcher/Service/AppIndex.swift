@@ -265,6 +265,7 @@ extension AppEntry {
             bundleID: nil, kind: .quicklink,
             symbolName: quicklink.iconSymbol
                 ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
+        iconOverride = quicklink.iconSource
     }
 
     /// No bundle id: that would key every shortcut's alias and ranking to the Shortcuts app.

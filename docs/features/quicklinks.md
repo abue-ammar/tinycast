@@ -56,6 +56,10 @@ The detected kind decides the icon a row draws when the quicklink has no icon of
 from the link's **prefix**, not from a parsed destination, because the encoding has to be chosen
 before the placeholders are resolved.
 
+Like Raycast, an automatic web icon requests
+`https://api.ray.so/favicon?url=<hostname>&size=64`. Successful images stay in memory. A custom symbol
+wins without a request, and failures are not retried during that run.
+
 ## Placeholders
 
 Quicklinks reuse Tinycast's one template engine — the same

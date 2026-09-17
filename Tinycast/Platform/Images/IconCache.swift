@@ -48,6 +48,7 @@ enum EntryIcon: Hashable, Sendable {
     case symbol(String)
     case tintedSymbol(name: String, tint: SymbolTint)
     case artwork(path: String, extent: CGFloat)
+    case remote(url: URL, fallbackSymbol: String)
 }
 
 struct IconSize: Hashable, Sendable {
@@ -97,6 +98,26 @@ enum IconCache {
         return cache
     }()
     private static let fittedGeneration = Mutex(IconCacheGeneration())
+    private struct RemoteState {
+        var attempted = Set<URL>()
+        var tasks = [URL: Task<NSImage?, Never>]()
+    }
+    private static let remoteState = Mutex(RemoteState())
+    private static let remoteLoader = Mutex<(@Sendable (URL) async -> Data?)?>(nil)
+    private static let remoteSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 5
+        return URLSession(configuration: config)
+    }()
+
+    static func setRemoteLoaderForTesting(
+        _ loader: (@Sendable (URL) async -> Data?)?
+    ) {
+        remoteLoader.withLock { $0 = loader }
+        remoteState.withLock { $0 = RemoteState() }
+        cache.removeAllObjects()
+    }
 
     /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
     static func cached(forFile path: String, stamp: Int = 0, size: IconSize? = nil) -> NSImage? {
@@ -333,6 +354,9 @@ enum IconCache {
         case .symbol(let name): return symbolIcon(named: name)
         case .tintedSymbol(let name, let tint): return symbolIcon(named: name, tint: tint)
         case .artwork(let path, let extent): return artwork(atPath: path, extent: extent)
+        case .remote(let url, let fallback):
+            return cache.object(forKey: remoteKey(url))
+                ?? symbolIcon(named: fallback)
         }
     }
 
@@ -342,6 +366,9 @@ enum IconCache {
         case .symbol(let name): return cachedSymbol(named: name)
         case .tintedSymbol(let name, let tint): return cachedSymbol(named: name, tint: tint)
         case .artwork(let path, let extent): return cachedArtwork(atPath: path, extent: extent)
+        case .remote(let url, let fallback):
+            return cache.object(forKey: remoteKey(url))
+                ?? cachedSymbol(named: fallback)
         }
     }
 
@@ -352,8 +379,54 @@ enum IconCache {
         case .tintedSymbol(let name, let tint): return await loadSymbolAsync(named: name, tint: tint)
         case .artwork(let path, let extent):
             return await loadArtworkAsync(atPath: path, extent: extent)
+        case .remote(let url, let fallback):
+            if let remote = await loadRemoteAsync(url) { return remote }
+            return await loadSymbolAsync(named: fallback)
         }
     }
+
+    private static func loadRemoteAsync(_ url: URL) async -> NSImage? {
+        if let cached = cache.object(forKey: remoteKey(url)) { return cached }
+        let task = remoteState.withLock { state -> Task<NSImage?, Never>? in
+            if let task = state.tasks[url] { return task }
+            guard state.attempted.insert(url).inserted else { return nil }
+            let task = Task { await fetchRemote(url) }
+            state.tasks[url] = task
+            return task
+        }
+        guard let task else { return nil }
+        let image = await task.value
+        remoteState.withLock { state in
+            state.tasks[url] = nil
+            if image != nil { state.attempted.remove(url) }
+        }
+        return image
+    }
+
+    private static func fetchRemote(_ url: URL) async -> NSImage? {
+        let data: Data?
+        if let loader = remoteLoader.withLock({ $0 }) {
+            data = await loader(url)
+        } else if let (downloaded, urlResponse) = try? await remoteSession.data(from: url),
+            let http = urlResponse as? HTTPURLResponse,
+            (200..<300).contains(http.statusCode),
+            http.mimeType?.lowercased().hasPrefix("image/") ?? true
+        {
+            data = downloaded
+        } else {
+            data = nil
+        }
+        guard let data, data.count <= 1024 * 1024, let source = await decode(data) else { return nil }
+        let (image, cost) = fitted(source, to: appIconExtent)
+        cache.setObject(image, forKey: remoteKey(url), cost: cost)
+        return image
+    }
+
+    private static func decode(_ data: Data) async -> NSImage? {
+        await Task.detached(priority: .userInitiated) { NSImage(data: data) }.value
+    }
+
+    private static func remoteKey(_ url: URL) -> NSString { key("remote:" + url.absoluteString) }
 
     static func cachedFitted(forFile path: String) -> NSImage? {
         fittedCache.object(forKey: fittedKey(path))

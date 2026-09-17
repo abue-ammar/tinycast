@@ -1,5 +1,13 @@
 import AppKit
 
+extension Quicklink {
+    var iconSource: EntryIcon {
+        if let iconSymbol { return .symbol(iconSymbol) }
+        if let faviconURL { return .remote(url: faviconURL, fallbackSymbol: symbol) }
+        return .symbol(symbol)
+    }
+}
+
 /// Owns the quicklink flow: the open funnel, the argument prompt, the library and import/export.
 @MainActor
 final class QuicklinkCoordinator {

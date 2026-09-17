@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Synchronization
 
 @main
 @MainActor
@@ -174,6 +175,50 @@ struct IconCacheTests {
         expect(symbol === IconCache.symbolIcon(named: "star"), "symbols use the existing rendering path")
     }
 
+    static func remoteIcons() async {
+        let requests = Mutex(0)
+        let png = Data(
+            base64Encoded:
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lE"
+                + "QVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        )!
+        IconCache.setRemoteLoaderForTesting { _ in
+            requests.withLock { $0 += 1 }
+            try? await Task.sleep(for: .milliseconds(20))
+            return png
+        }
+        let url = URL(string: "https://api.ray.so/favicon?url=fixture.test&size=64")!
+        async let first = IconCache.loadAsync(
+            .remote(url: url, fallbackSymbol: "globe"),
+            fileURL: URL(filePath: "/"))
+        async let second = IconCache.loadAsync(
+            .remote(url: url, fallbackSymbol: "globe"),
+            fileURL: URL(filePath: "/"))
+        let images = await [first, second]
+        expect(images.allSatisfy { $0 != nil }, "a valid remote image loads")
+        expect(requests.withLock { $0 } == 1, "concurrent rows share one request")
+        _ = await IconCache.loadAsync(
+            .remote(url: url, fallbackSymbol: "globe"),
+            fileURL: URL(filePath: "/"))
+        expect(requests.withLock { $0 } == 1, "a successful image is cached")
+
+        let failedURL = URL(string: "https://api.ray.so/favicon?url=missing.test&size=64")!
+        requests.withLock { $0 = 0 }
+        IconCache.setRemoteLoaderForTesting { _ in
+            requests.withLock { $0 += 1 }
+            return nil
+        }
+        let fallback = await IconCache.loadAsync(
+            .remote(url: failedURL, fallbackSymbol: "globe"),
+            fileURL: URL(filePath: "/"))
+        expect(fallback != nil, "a failed request returns the symbol fallback")
+        _ = await IconCache.loadAsync(
+            .remote(url: failedURL, fallbackSymbol: "globe"),
+            fileURL: URL(filePath: "/"))
+        expect(requests.withLock { $0 } == 1, "a failed URL is not retried in one run")
+        IconCache.setRemoteLoaderForTesting(nil)
+    }
+
     static func main() async {
         var generation = IconCacheGeneration()
         let captured = generation.value
@@ -191,6 +236,7 @@ struct IconCacheTests {
         rowLifetime()
         rowRendering()
         await asynchronousRows()
+        await remoteIcons()
         tintedTiles()
         restyling()
         styleFingerprint()

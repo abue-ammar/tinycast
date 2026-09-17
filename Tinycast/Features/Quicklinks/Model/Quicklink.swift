@@ -44,6 +44,18 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
         iconSymbol ?? QuicklinkDestination.detect(link)?.defaultSymbol ?? Self.sfSymbol
     }
 
+    var faviconURL: URL? {
+        guard case .web(let destination) = QuicklinkDestination.detect(link),
+            let host = destination.host
+        else { return nil }
+        var components = URLComponents(string: "https://api.ray.so/favicon")
+        components?.queryItems = [
+            URLQueryItem(name: "url", value: host == "youtu.be" ? "youtube.com" : host),
+            URLQueryItem(name: "size", value: "64")
+        ]
+        return components?.url
+    }
+
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
 
     static func id(fromEntryID entryID: String) -> UUID? {

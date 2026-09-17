@@ -165,7 +165,8 @@ private struct QuicklinkSettingsRow: View {
 
     var body: some View {
         SettingsRow(title: quicklink.name, subtitle: quicklink.link) {
-            SymbolImage(name: quicklink.symbol, size: 13)
+            EntryIconView(source: quicklink.iconSource)
+                .frame(width: 24, height: 24)
         } trailing: {
             if quicklink.isPinned {
                 Image(systemName: "pin.fill")
