@@ -1,4 +1,3 @@
-import Carbon.HIToolbox
 import SwiftUI
 
 struct RootPaletteView: View {
@@ -1070,17 +1069,20 @@ struct RootPaletteView: View {
     }
 
     private func handleMenuPanelKey(_ event: NSEvent) -> Bool {
-        let code = Int(event.keyCode)
         let modifiers = event.modifierFlags
         let navigationModifiers = modifiers.intersection([.command, .control, .option, .shift])
-        switch code {
-        case kVK_DownArrow where navigationModifiers.isEmpty:
+        if event.charactersIgnoringModifiers == "\u{1B}" {
+            escapeMenu()
+            return true
+        }
+        switch event.specialKey {
+        case .some(.downArrow) where navigationModifiers.isEmpty:
             moveMenu(1)
             return true
-        case kVK_UpArrow where navigationModifiers.isEmpty:
+        case .some(.upArrow) where navigationModifiers.isEmpty:
             moveMenu(-1)
             return true
-        case kVK_Return, kVK_ANSI_KeypadEnter:
+        case .some(.carriageReturn), .some(.enter):
             let screen = screen
             let selection = selection(in: screen)
             if modifiers.contains(.command) { return screen.secondary(at: selection) }
@@ -1089,10 +1091,7 @@ struct RootPaletteView: View {
             }
             activateMenuItem(menuSelection)
             return true
-        case kVK_Escape:
-            escapeMenu()
-            return true
-        case kVK_Tab:
+        case .some(.tab), .some(.backTab):
             return true
         default:
             break

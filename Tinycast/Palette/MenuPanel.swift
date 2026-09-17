@@ -27,7 +27,10 @@ final class MenuPanel: NSPanel {
     override func sendEvent(_ event: NSEvent) {
         switch event.type {
         case .mouseMoved: paletteState?.notePointerMoved(to: NSEvent.mouseLocation)
-        case .scrollWheel: paletteState?.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
+        case .keyDown, .scrollWheel:
+            paletteState?.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
+        case .flagsChanged:
+            paletteState?.noteCommandHeld(event.modifierFlags.contains(.command))
         default: break
         }
         if event.type == .keyDown, onKeyDown?(event) == true {
@@ -38,6 +41,7 @@ final class MenuPanel: NSPanel {
 
     override func resignKey() {
         super.resignKey()
+        paletteState?.noteCommandHeld(false)
         guard onKeyDown != nil else { return }
         Task { @MainActor [weak self] in
             await Task.yield()
