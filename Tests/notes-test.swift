@@ -8,6 +8,7 @@ struct NotesTests {
     static func main() async throws {
         try testRepositoryAndSearch()
         testDerivedTitles()
+        testMarkdownParser()
         try testUnnamedNotesTitleThemselves()
         testSwitcherInteraction()
         try await testStoreCollectionAndAutosave()
@@ -396,6 +397,205 @@ struct NotesTests {
             "an edit that lands during a write is not lost",
             try String(contentsOf: activeURL, encoding: .utf8) == "edit during the write")
         store.stop()
+    }
+
+    private static func testMarkdownParser() {
+        let tiled = ["a\nb\n", "a\r\nb", "\n\n", "x", "a\u{2029}b\rc"]
+        check("empty source has no lines", NoteMarkdownParser.parse("").lines.isEmpty)
+        for source in tiled {
+            let lines = NoteMarkdownParser.parse(source).lines
+            let string = source as NSString
+            var location = 0
+            var agrees = true
+            for line in lines {
+                agrees = agrees && line.range == string.lineRange(for: NSRange(location: location, length: 0))
+                location = NSMaxRange(line.range)
+            }
+            check("lines tile \(source.debugDescription) like NSString", agrees && location == string.length)
+        }
+        check("a final terminator adds no empty line", NoteMarkdownParser.parse("a\n").lines.count == 1)
+        let crlf = NoteMarkdownParser.parse("# Hi\r\nnext").lines
+        check(
+            "a CRLF terminator belongs to the range, never the content",
+            crlf[0].range == NSRange(location: 0, length: 6)
+                && crlf[0].contentRange == NSRange(location: 2, length: 2))
+
+        check(
+            "each line kind is recognised",
+            kinds("para\n\n# One\n###### Six\n- a\n* b\n+ c\n1. d\n12) e\n- [ ] f\n- [x] g\n> q\n>> r\n---")
+                == [
+                    .paragraph, .blank, .heading(level: 1), .heading(level: 6), .bullet, .bullet, .bullet,
+                    .ordered(number: 1), .ordered(number: 12), .task(checked: false),
+                    .task(checked: true), .quote(depth: 1), .quote(depth: 2), .rule
+                ])
+        check(
+            "rules win over lists, and hashtags stay paragraphs",
+            kinds("- - -\n***\n___\n#hashtag\n####### seven\n3.14 pi\n-\n#")
+                == [.rule, .rule, .rule, .paragraph, .paragraph, .paragraph, .bullet, .heading(level: 1)])
+        check("quote nesting counts every marker", kinds("> > nested") == [.quote(depth: 2)])
+
+        let heading = NoteMarkdownParser.parse("## Title ##").lines[0]
+        check(
+            "a heading marker covers the hashes and one space; a closing run stays content",
+            heading.markerRange == NSRange(location: 0, length: 3)
+                && substring("## Title ##", heading.contentRange) == "Title ##")
+
+        let tasks = "- [ ] a\n- [x] b\n- [X] c\n-[ ] d\n- [y] e\n  - [ ]"
+        let taskLines = NoteMarkdownParser.parse(tasks).lines
+        check(
+            "task checkboxes cover the bracket triple",
+            taskLines[0].checkboxRange == NSRange(location: 2, length: 3)
+                && substring(tasks, taskLines[1].checkboxRange) == "[x]"
+                && substring(tasks, taskLines[2].checkboxRange) == "[X]"
+                && taskLines[5].checkboxRange == NSRange(location: 43, length: 3))
+        check(
+            "malformed boxes are not tasks",
+            taskLines[3].kind == .paragraph && taskLines[4].kind == .bullet
+                && taskLines[4].checkboxRange == nil)
+        check(
+            "a task marker runs through the space after the box",
+            substring(tasks, taskLines[0].markerRange) == "- [ ] "
+                && substring(tasks, taskLines[0].contentRange) == "a")
+
+        check(
+            "two-space, four-space and tab indentation nest by the indent stack",
+            levels("- a\n  - b\n    - c\n- d") == [0, 1, 2, 0]
+                && levels("1. a\n    1. b\n\t- c") == [0, 1, 1])
+        check("a blank line keeps list depth", levels("- a\n  - b\n\n  - c") == [0, 1, 0, 1])
+        check("a paragraph resets list depth", levels("- a\n  - b\npara\n  - c") == [0, 1, 0, 0])
+
+        let fenced = "```swift\n# not heading\n**x**\n````\nafter\n~~~\ncode"
+        let fence = NoteMarkdownParser.parse(fenced)
+        check(
+            "fences mark their lines as code with no inlines",
+            fence.lines.map(\.kind) == [
+                .fenceOpen(language: "swift"), .code, .code, .fenceClose, .paragraph,
+                .fenceOpen(language: nil), .code
+            ] && fence.lines[2].inlines.isEmpty)
+        check(
+            "fence blocks list open through close, and an unclosed one runs to the end",
+            fence.fenceBlocks == [0...3, 5...6])
+        check(
+            "a backtick fence never closes on tildes or a shorter run",
+            kinds("````\n~~~~\n```\n````") == [.fenceOpen(language: nil), .code, .code, .fenceClose])
+        check(
+            "a backtick info string may not contain a backtick",
+            kinds("``` a`b") == [.paragraph] && kinds("~~~ a`b") == [.fenceOpen(language: "a`b")])
+        check(
+            "fence lines hide whole, with an empty content range",
+            fence.lines[0].markerRange == NSRange(location: 0, length: 8)
+                && fence.lines[0].contentRange.length == 0)
+
+        check(
+            "emphasis, strong, both and strikethrough",
+            spans("**a** _b_ ***c*** ~~d~~") == [
+                .init(.strong, "a"), .init(.emphasis, "b"), .init(.strongEmphasis, "c"),
+                .init(.strikethrough, "d")
+            ])
+        check(
+            "nested spans are separate values, outer first",
+            spans("**bold _both_**") == [.init(.strong, "bold _both_"), .init(.emphasis, "both")])
+        check("unmatched delimiters stay text", spans("**open and * alone ~~no").isEmpty)
+        check("intraword underscores stay text", spans("snake_case_name").isEmpty)
+        check("whitespace-flanked delimiters do not open", spans("a * b * c").isEmpty)
+        check("an escape stops a delimiter", spans("\\*not\\* *yes*") == [.init(.emphasis, "yes")])
+        let strong = NoteMarkdownParser.parse("x **a** y").lines[0].inlines[0]
+        check(
+            "delimiter markers are hidden runs",
+            strong.markerRanges == [NSRange(location: 2, length: 2), NSRange(location: 5, length: 2)]
+                && strong.range == NSRange(location: 2, length: 5))
+
+        check(
+            "code spans match runs of equal length and are not parsed further",
+            spans("``a ` **b**`` `c`") == [.init(.code, "a ` **b**"), .init(.code, "c")])
+        check("an unclosed backtick is text", spans("`open **b**") == [.init(.strong, "b")])
+
+        let linkSource = "see [**a** b](https://x.com/(y)) now"
+        check(
+            "a link parses its label and keeps balanced parentheses",
+            spans(linkSource) == [
+                .init(.link(destination: "https://x.com/(y)"), "**a** b"), .init(.strong, "a")
+            ])
+        let link = NoteMarkdownParser.parse(linkSource).lines[0].inlines[0]
+        check(
+            "a link hides its bracket and its destination",
+            link.markerRanges.map { substring(linkSource, $0) } == ["[", "](https://x.com/(y))"])
+        check("an image stays literal", spans("![alt **x**](a.png)").isEmpty)
+        check("a destination with a space is not a link", spans("[a](b c)").isEmpty)
+
+        check(
+            "bare URLs link with trailing punctuation trimmed",
+            spans("go https://a.com/x. or (http://b.org/p_(1)), ok")
+                == [.init(.autolink, "https://a.com/x"), .init(.autolink, "http://b.org/p_(1)")])
+        check(
+            "bare URLs never link inside code, a link or a word",
+            spans("`https://a.com` [https://b.com](https://c.com) xhttps://d.com")
+                == [.init(.code, "https://a.com"), .init(.link(destination: "https://c.com"), "https://b.com")])
+
+        let table = "| Folder | Holds |\n| --- | :---: |\n| `App/` | **root** |\nnot | a row\n\n| after |"
+        check(
+            "a table is a header, a matching delimiter row and the pipe rows after it",
+            kinds(table) == [.table, .table, .table, .table, .blank, .paragraph])
+        check(
+            "table rows stay literal, with no inline spans",
+            NoteMarkdownParser.parse(table).lines.allSatisfy(\.inlines.isEmpty))
+        check(
+            "outer pipes are optional and alignment colons are allowed",
+            kinds("a | b\n:-- | --:\nc | d") == [.table, .table, .table])
+        check(
+            "a pipe row without a delimiter row, or with the wrong cell count, is a paragraph",
+            kinds("| a | b |\n| c | d |") == [.paragraph, .paragraph]
+                && kinds("| a | b |\n| --- |") == [.paragraph, .paragraph])
+        check(
+            "a table inside a fence stays code, and a list line never starts one",
+            kinds("```\n| a |\n| --- |\n```") == [.fenceOpen(language: nil), .code, .code, .fenceClose]
+                && kinds("- | a |\n| --- |") == [.bullet, .paragraph])
+
+        let emoji = "🧑🏽‍💻 **e\u{301}** 👍🏻"
+        let emojiSpan = NoteMarkdownParser.parse(emoji).lines[0].inlines[0]
+        check(
+            "surrogate pairs and combining marks keep exact UTF-16 ranges",
+            substring(emoji, emojiSpan.range) == "**e\u{301}**"
+                && substring(emoji, emojiSpan.contentRange) == "e\u{301}")
+
+        let index = NoteMarkdownParser.parse("ab\ncd\n")
+        check(
+            "line lookup covers the start, a terminator and the end of the source",
+            index.lineIndex(at: 0) == 0 && index.lineIndex(at: 2) == 0 && index.lineIndex(at: 3) == 1
+                && index.lineIndex(at: 6) == 1 && index.lineIndex(at: 7) == nil)
+        check(
+            "an empty range touches its line; a range ending at a line start does not reach it",
+            index.lineIndexes(intersecting: NSRange(location: 2, length: 0)) == 0..<1
+                && index.lineIndexes(intersecting: NSRange(location: 0, length: 3)) == 0..<1
+                && index.lineIndexes(intersecting: NSRange(location: 1, length: 3)) == 0..<2)
+    }
+
+    private struct Span: Equatable {
+        let kind: NoteMarkdown.Inline.Kind
+        let text: String
+
+        init(_ kind: NoteMarkdown.Inline.Kind, _ text: String) {
+            self.kind = kind
+            self.text = text
+        }
+    }
+
+    private static func kinds(_ source: String) -> [NoteMarkdown.Line.Kind] {
+        NoteMarkdownParser.parse(source).lines.map(\.kind)
+    }
+
+    private static func levels(_ source: String) -> [Int] {
+        NoteMarkdownParser.parse(source).lines.map(\.level)
+    }
+
+    /// The first line's spans, each as its kind and the text of its content.
+    private static func spans(_ source: String) -> [Span] {
+        let inlines = NoteMarkdownParser.parse(source).lines.first?.inlines ?? []
+        return inlines.map { Span($0.kind, (source as NSString).substring(with: $0.contentRange)) }
+    }
+
+    private static func substring(_ source: String, _ range: NSRange?) -> String? {
+        range.map { (source as NSString).substring(with: $0) }
     }
 
     /// Deleting trashes for real, so every harness repository redirects that inside the root.
