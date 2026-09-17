@@ -1,5 +1,6 @@
 import { site, summary } from "../../data/site";
-import { MARKDOWN_LEAF, source } from "../../lib/source";
+import { markdownUrl } from "../../lib/markdown-url";
+import { source } from "../../lib/source";
 
 // The llms.txt convention: one Markdown index an agent reads in a single fetch, with each page's
 // raw Markdown one link away. Grouped by section, because a flat list of 37 reads as noise.
@@ -25,7 +26,7 @@ export function GET() {
     const description = page.data.description
       ? `: ${page.data.description}`
       : "";
-    const line = `- [${page.data.title}](${site.url}${page.url}/${MARKDOWN_LEAF})${description}`;
+    const line = `- [${page.data.title}](${site.url}${markdownUrl(page.url)})${description}`;
     grouped.set(section, [...(grouped.get(section) ?? []), line]);
   }
 
