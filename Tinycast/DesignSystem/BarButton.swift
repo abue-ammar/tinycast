@@ -1,5 +1,22 @@
 import SwiftUI
 
+/// AppKit resolves the named base symbol directly, without inheriting a button variant.
+private struct HeaderMenuSymbol: View {
+    let name: String
+    let size: CGFloat
+
+    var body: some View {
+        let configuration = NSImage.SymbolConfiguration(pointSize: size, weight: .medium)
+        if let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration)
+        {
+            Image(nsImage: image)
+                .renderingMode(.template)
+                .frame(width: size, height: size)
+        }
+    }
+}
+
 /// A bar control's hover chrome; footer pills and header pop-ups share `barControl` as one family.
 enum BarButtonChrome {
     case capsule
@@ -73,9 +90,8 @@ struct HeaderMenuButton: View {
                 case .blank:
                     EmptyView()
                 case .symbol(let name):
-                    Image(systemName: name)
-                        .font(metrics.typography.bar)
-                        .symbolRenderingMode(.hierarchical)
+                    HeaderMenuSymbol(
+                        name: name, size: metrics.scaled(Theme.Typography.menuSymbolSize))
                 case .asset(let name):
                     Image(name)
                         .resizable()

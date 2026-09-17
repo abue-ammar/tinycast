@@ -76,6 +76,16 @@ struct PopoverMenu: View {
         case bottomTrailing
     }
 
+    struct Search {
+        enum Placement {
+            case top
+            case bottom
+        }
+
+        let placeholder: String
+        let placement: Placement
+    }
+
     struct SurfaceShape: Shape {
         let attachment: Attachment
         let radius: CGFloat
@@ -99,21 +109,92 @@ struct PopoverMenu: View {
     var width: CGFloat?
     let onActivate: (Int) -> Void
     var attachment = Attachment.none
+    let search: Search
 
     /// The palette arms this only once the pointer has moved of its own accord.
     @Environment(PaletteState.self) private var palette
     @Environment(\.metrics) private var metrics
+    @FocusState private var searchFocused: Bool
     /// Set by the pointer so the reveal can tell its own move from a keyboard one.
     @State private var pointerSelection: Int?
 
+    private var listInset: CGFloat { metrics.spacing.md }
     var body: some View {
         let shape = SurfaceShape(
             attachment: attachment, radius: metrics.radius.menuPanel,
             attachedRadius: metrics.size.menuButton / 2)
-        rows
-            .padding(metrics.spacing.sm)
+        surfaceContent
             .frame(width: width ?? metrics.size.menuWidth)
             .glassEffect(.regular, in: shape)
+    }
+
+    private var surfaceContent: some View {
+        VStack(spacing: 0) {
+            if search.placement == .top {
+                searchField
+                searchSeparator
+            }
+            menuContent
+            if search.placement == .bottom {
+                searchSeparator
+                searchField
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var menuContent: some View {
+        if items.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                if let header {
+                    headerLabel(header)
+                    Color.clear.frame(height: metrics.size.menuRowSpacing)
+                }
+                Text("No Results")
+                    .font(metrics.typography.menuRow)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: metrics.size.menuRowHeight)
+            }
+            .padding(listInset)
+        } else {
+            rows
+        }
+    }
+
+    private var searchField: some View {
+        @Bindable var palette = palette
+        let placeholder = search.placeholder
+        return TextField("", text: $palette.menuQuery)
+            .textFieldStyle(.plain)
+            .font(metrics.typography.menuRow)
+            .foregroundStyle(Theme.Colors.textPrimary)
+            .tint(Theme.Colors.textPrimary)
+            .focused($searchFocused)
+            .lineLimit(1)
+            .background(alignment: .leading) {
+                if palette.menuQuery.isEmpty {
+                    Text(placeholder)
+                        .font(metrics.typography.menuRow)
+                        .foregroundStyle(Theme.Colors.textTertiary)
+                        .lineLimit(1)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, metrics.spacing.xl + metrics.spacing.sm)
+            .frame(height: metrics.size.menuRowHeight)
+            .offset(y: search.placement == .bottom ? -metrics.spacing.xxs / 2 : 0)
+            .padding(.vertical, metrics.spacing.xxs / 2)
+            .accessibilityLabel(placeholder)
+            .onAppear { searchFocused = true }
+    }
+
+    private var searchSeparator: some View {
+        Rectangle()
+            .fill(Theme.Colors.separator)
+            .frame(height: Theme.Size.hairline)
+            .accessibilityHidden(true)
     }
 
     private func headerLabel(_ text: String) -> some View {
@@ -157,12 +238,12 @@ struct PopoverMenu: View {
                         .id(index)
                     }
                 }
+                .padding(listInset)
             }
-            .frame(height: viewportHeight)
+            .frame(height: viewportHeight + listInset * 2)
             // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
             .scrollIndicators(.never)
             .scrollBounceBehavior(contentHeight > viewportCapacity ? .always : .basedOnSize)
-            .overflowFade(band: metrics.scaled(Theme.Size.menuOverflowFade), includingTop: true)
             // The hosting view outlives a presentation, so a fresh one must not inherit the offset.
             .id(palette.menuPresentationToken)
             .onAppear { proxy.scrollTo(selection, anchor: .center) }
@@ -252,6 +333,7 @@ private struct PopoverMenuRow: View {
     let selected: Bool
     let onActivate: () -> Void
     @Environment(\.metrics) private var metrics
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: onActivate) {
@@ -265,17 +347,20 @@ private struct PopoverMenuRow: View {
                     case .blank:
                         EmptyView()
                     case .symbol(let name):
-                        Image(systemName: name)
-                            .font(
-                                .system(
-                                    size: metrics.scaled(Theme.Typography.menuSymbolSize),
-                                    weight: Theme.Typography.menuSymbolWeight)
-                            )
-                            .symbolRenderingMode(.monochrome)
-                            .foregroundStyle(
-                                item.isDestructive ? Color.red : Theme.Colors.menuSymbol
-                            )
-                            .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
+                        Image(
+                            systemName: SystemSymbolName.resolve(
+                                name, isDark: colorScheme == .dark)
+                        )
+                        .font(
+                            .system(
+                                size: metrics.scaled(Theme.Typography.menuSymbolSize),
+                                weight: Theme.Typography.menuSymbolWeight)
+                        )
+                        .symbolRenderingMode(.monochrome)
+                        .foregroundStyle(
+                            item.isDestructive ? Color.red : Theme.Colors.menuSymbol
+                        )
+                        .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     case .asset(let name):
                         Image(name)
                             .resizable()

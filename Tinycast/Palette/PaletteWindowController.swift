@@ -222,6 +222,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Not for one of our own dialogs: hiding would tear down a command mid-`confirmAlert`.
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, !core.isShowingDialog else { return }
+        if core.palette.menuOpen { return }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 

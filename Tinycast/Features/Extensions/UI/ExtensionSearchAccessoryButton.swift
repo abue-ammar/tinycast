@@ -21,7 +21,8 @@ struct ExtensionSearchAccessoryButton: View {
         BarButton(chrome: .rounded, action: action) {
             HStack(spacing: metrics.spacing.sm) {
                 if let icon {
-                    ExtensionIconView(resolved: icon, size: metrics.size.menuIcon)
+                    ExtensionIconView(
+                        resolved: icon, size: metrics.size.menuIcon, usesMenuSymbolStyle: true)
                 }
                 Text(accessory.title(for: value) ?? "")
                     .font(metrics.typography.bar)

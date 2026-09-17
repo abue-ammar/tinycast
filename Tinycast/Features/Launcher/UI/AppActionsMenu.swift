@@ -18,9 +18,14 @@ enum AppActionsMenu {
         favorites: FavoriteActions, onResetRanking: @escaping () -> Void,
         onHideFromSearch: @escaping () -> Void
     ) -> PopoverMenuContent {
+        let primarySymbol =
+            switch app.kind {
+            case .application, .command, .extensionCommand: "list.dash.header.rectangle"
+            default: "list.bullet.rectangle"
+            }
         var items: [PopoverMenuItem] = [
             PopoverMenuItem(
-                title: app.kind.descriptor.openVerb, systemImage: "list.bullet.rectangle",
+                title: app.kind.descriptor.openVerb, systemImage: primarySymbol,
                 shortcut: "↵"
             ) { core.launcherCoordinator.launch(app, searchQuery: searchQuery) }
         ]

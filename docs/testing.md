@@ -86,6 +86,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `file-search-test` | `FileSearch/Model/`, plus the shared `FuzzyMatch` scorer |
 | `file-search-session-test` | serialized query execution, debounce coalescing and cancellation |
 | `menu-search-test` | `MenuSearch/Model/` decisions, `MenuSearch/Service/` session filtering, the shared `FuzzyMatch` scorer |
+| `action-menu-search-test` | Action-menu query normalization and shared fuzzy matching |
 | `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
 | `scopes-test` | `Launcher/Model/SearchScopes.swift` |
 | `app-name-test` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
@@ -327,7 +328,16 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Section headers appear in order: Favorites, Applications, System Settings, Quicklinks, Snippets,
   System Actions, Window Management, Custom Commands, Commands
 - With a non-ASCII input source active, ⌘K opens Actions; ↑/↓ move it, ↵ activates, Escape closes it
-- While a menu is open, typing does **not** change the query and the caret is hidden
+- In either ⌘K Actions panel, typing filters immediately in the bottom search band without changing
+  the palette query; sections survive filtering, **No Results** is centred, and no dissolve covers the
+  last row. The native caret blinks; mouse drag and ⌘A select text; ←/→ move through it; ↑/↓ still
+  move the menu highlight. Escape clears a non-empty query, then closes the menu on the next press
+- The bottom-left app menu also searches from its bottom band; every header menu — including Emoji
+  categories, File Search filters and extension dropdowns — searches from its top band
+- A long menu opens with unchanged row insets; while scrolling, rows can reach the panel edges
+- A click in the palette but outside its menu closes only the menu; a click outside the palette
+  closes both, regardless of the menu query; the next summon accepts typing immediately
+- Footer menus are about 30pt wider; their row hover keeps the shared 10pt menu-row corner
 - Tab toggles launcher ↔ clipboard; bare Backspace on an empty query backs out of a sub-screen
 - Launching an app focuses it; escaping the palette returns focus to the app you came from
 - Paste from clipboard history lands in that app, not in Tinycast
@@ -337,6 +347,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - A copy appears at the top within about a second; an image copy records a thumbnail
 - Search is correct both under and over three characters
+- The type filter searches from its top band, retains its active checkmark when matched, and shows
+  centred **No Results** without changing the clipboard query; its native field supports selection
 - ⌘. pins and the highlight follows the row into Pinned; ⌘⌫ deletes; ⌘↵ copies without pasting
 - ⌃X deletes the selected entry and ⌃⇧X clears the history, from the list and from an open ⌘K menu
 - ⌃⇧X asks first, through Tinycast's own dialog; Cancel and Esc both leave every entry in place

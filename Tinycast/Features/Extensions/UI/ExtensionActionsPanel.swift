@@ -10,7 +10,7 @@ private struct Metrics {
     var rowHeight: CGFloat { interface.size.menuIcon + interface.spacing.md * 2 }
     var rowSpacing: CGFloat { 1 }
     var separatorSpacing: CGFloat { interface.spacing.sm }
-    var fadeBand: CGFloat { interface.scaled(30) }
+    var listInset: CGFloat { interface.spacing.md }
     /// Six rows and half of the seventh, so a long panel reads as scrollable rather than clipped.
     var visibleRows: CGFloat { 6.5 }
     /// Rounded: a fractional height lands the glass edge on a half pixel.
@@ -18,7 +18,6 @@ private struct Metrics {
     var headerHeight: CGFloat {
         interface.size.menuSectionHeader + interface.spacing.xs * 1.5 + rowSpacing
     }
-
     /// Exact, because every row is one known height: no measuring pass, and no greedy scroll view.
     func contentHeight(items: [ExtensionActionItem], hasHeader: Bool) -> CGFloat {
         let rows = CGFloat(items.count)
@@ -60,30 +59,51 @@ struct ExtensionActionsPanel: View {
     private var panel: Metrics { Metrics(interface: metrics) }
 
     var body: some View {
-        let hasHeader = header != nil
-        let contentHeight = panel.contentHeight(items: items, hasHeader: hasHeader)
-        let maximumHeight = panel.maximumHeight(hasHeader: hasHeader)
         let shape = UnevenRoundedRectangle(
             topLeadingRadius: metrics.radius.menuPanel,
             bottomLeadingRadius: metrics.radius.menuPanel,
             bottomTrailingRadius: metrics.size.menuButton / 2,
             topTrailingRadius: metrics.radius.menuPanel,
             style: .continuous)
+        return VStack(spacing: 0) {
+            listContent
+            Rectangle()
+                .fill(Theme.Colors.separator)
+                .frame(height: Theme.Size.hairline)
+                .accessibilityHidden(true)
+            ExtensionMenuSearchField(
+                placeholder: "Search for actions…", height: panel.rowHeight,
+                verticalOffset: -metrics.spacing.xxs / 2)
+        }
+        .frame(width: panel.width)
+        .glassEffect(.regular, in: shape)
+    }
+
+    @ViewBuilder
+    private var listContent: some View {
+        if items.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                headerLabel
+                Text("No Results")
+                    .font(metrics.typography.menuRow)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: panel.rowHeight)
+            }
+            .padding(panel.listInset)
+        } else {
+            actionRows
+        }
+    }
+
+    private var actionRows: some View {
+        let hasHeader = header != nil
+        let contentHeight = panel.contentHeight(items: items, hasHeader: hasHeader)
+        let maximumHeight = panel.maximumHeight(hasHeader: hasHeader)
         return ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if let header {
-                        Text(header)
-                            .font(metrics.typography.sectionHeader)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .frame(height: metrics.size.menuSectionHeader, alignment: .leading)
-                            .padding(.horizontal, metrics.spacing.lg)
-                            .padding(.top, metrics.spacing.xs)
-                            .padding(.bottom, metrics.spacing.xs / 2)
-                        Color.clear.frame(height: panel.rowSpacing)
-                    }
+                    headerLabel
                     // Index-as-id is stable: a panel's rows never reorder while it is open.
                     ForEach(items.indices, id: \.self) { index in
                         VStack(alignment: .leading, spacing: 0) {
@@ -98,14 +118,12 @@ struct ExtensionActionsPanel: View {
                         .id(index)
                     }
                 }
+                .padding(panel.listInset)
             }
-            .frame(height: min(contentHeight, maximumHeight))
-            .scrollBounceBehavior(
-                contentHeight > maximumHeight ? .always : .basedOnSize
-            )
+            .frame(height: min(contentHeight, maximumHeight) + panel.listInset * 2)
+            .scrollBounceBehavior(contentHeight > maximumHeight ? .always : .basedOnSize)
             // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
             .scrollIndicators(.never)
-            .overflowFade(band: panel.fadeBand, includingTop: true)
             .onChange(of: selection) {
                 let movedByPointer = hoverSelection == selection
                 hoverSelection = nil
@@ -114,9 +132,22 @@ struct ExtensionActionsPanel: View {
                 proxy.scrollTo(selection)
             }
         }
-        .padding(metrics.spacing.sm)
-        .frame(width: panel.width)
-        .glassEffect(.regular, in: shape)
+    }
+
+    @ViewBuilder
+    private var headerLabel: some View {
+        if let header {
+            Text(header)
+                .font(metrics.typography.sectionHeader)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(height: metrics.size.menuSectionHeader, alignment: .leading)
+                .padding(.horizontal, metrics.spacing.lg)
+                .padding(.top, metrics.spacing.xs)
+                .padding(.bottom, metrics.spacing.xs / 2)
+            Color.clear.frame(height: panel.rowSpacing)
+        }
     }
 
     @ViewBuilder

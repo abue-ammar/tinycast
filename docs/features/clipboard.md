@@ -192,6 +192,8 @@ the only palette screen with a control up there. It toggles a `PopoverMenu` anch
 under the button, so the ⌘K Actions menu, the app menu and this one are the same view on the same
 glass. **⌘P** toggles it; ↑/↓, ↵ and Esc come free from `RootPaletteView`'s one menu path, and the
 menu opens highlighting the *active* filter rather than the first row, the way a pop-up button does.
+A native, row-height search field above the rows filters their titles with the shared fuzzy matcher;
+an empty result centres **No Results** in one row. Escape clears a non-empty query before closing.
 The filter is not gated on the list having rows: an over-narrow filter empties it, and the button is
 the way back out.
 

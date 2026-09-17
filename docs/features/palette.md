@@ -15,8 +15,8 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   activation. `Features/PaletteRowIndex.swift` is that mapping and stays **Foundation-only and pure** —
   no SwiftUI, no AppKit — so `palette-selection-test` compiles the shipped type rather than a copy.
   Section headers are not selectable and never consume an index.
-- **While a footer menu is open the search field never resigns first responder.** Input is frozen
-  instead; resigning shifts the text a point or two.
+- **A menu owns native text input while it is open.** Its panel becomes key so the menu field gets an
+  AppKit field editor; the palette field stays mounted and inert beneath it.
 - **The search field is never mounted conditionally.** A screen that owns the keyboard itself hides it
   through `PaletteScreen.hidesSearchField` — opacity and hit testing, never an `if` — because
   flipping a branch around it tears its field editor down. The header is simply left empty, and an
@@ -416,15 +416,25 @@ Built-in action menus mark boundaries between opening or copying, managing the i
 deletion. Menus offering one kind of action, such as calculator copies, color formats, or emoji
 transfers, keep their rows in one group.
 
+Every launcher Action Menu has a native, row-height search field. Footer menus place it below their
+rows; header menus place it above them. `ActionMenuSearchQuery` folds the shared fuzzy query once per
+menu rebuild, then each menu filters its own rows and preserves section boundaries. A search with no
+match keeps the header, when present, and centres **No Results** in one row. The list has no edge
+dissolve beside a search field. Its resting inset travels with the scroll content, so rows can reach
+the panel edge without moving their initial position. Footer menus add 30pt to the standard menu
+width; their hover keeps the shared 10pt menu-row corner.
+
 ### The menu's own window
 
 A menu is **not** an overlay inside the palette: `MenuPanelController` hosts it in a `MenuPanel`, a
 borderless non-activating `NSPanel` added as a **child window** of the palette's, which is what makes
 it follow a palette drag and vanish with it. Glass renders against the desktop rather than inside an
 already-blurred, clipped panel, and no menu can be cropped by `RootPaletteView`'s `clipShape` however
-long it grows. `MenuPanel.canBecomeKey` is `false` so the palette keeps key status and its
-`onKeyPress` handlers keep driving the highlight, and `MenuPanel.sendEvent` mirrors `PalettePanel`'s
-hover arming — rows light on real pointer movement, never on a scroll under a still cursor.
+long it grows. The menu temporarily becomes key so its native `TextField` owns the caret and selection, while
+`MenuPanel` hands navigation and action shortcuts back to `RootPaletteView`. It restores key status
+to the palette when it closes. Resigning to the palette closes only the menu; resigning to another
+app closes the palette as well. `MenuPanel.sendEvent` also mirrors `PalettePanel`'s hover arming — rows
+light on real pointer movement, never on a scroll under a still cursor.
 
 The panel is a second SwiftUI hierarchy, so it observes nothing of `RootPaletteView`'s `@State`:
 `syncMenuPanel` pushes a rebuilt tree on every `openMenu` or `menuSelection` change, and
@@ -441,18 +451,20 @@ path; the controller applies it as an opaque value and never reconstructs extens
 
 ## Menu-open input freeze
 
-While a popover menu (⌘K Actions / app menu / clipboard type filter) is open the search field reads as inert but
-**never resigns first responder** — resigning makes the `NSTextField` swap between its field-editor
-and cell rendering, shifting the text / placeholder a point or two, so focus stays put. Input is
-frozen instead:
+While a popover menu is open, its native field takes key status so AppKit supplies the blinking
+caret, mouse selection and standard editing commands.
 
 - `RootPaletteView` mirrors the open state into `PaletteState.menuOpen`, whose `didSet` fires
   `onMenuOpenChanged`.
-- `PalettePanel.sendEvent` then swallows text-editing keystrokes while `menuOpen` (letting ⌘/⌃ chords
-  and menu-nav keys through to SwiftUI `onKeyPress`), which is how ⌘. and ⌃X still reach their rows.
+- The searchable field binds directly to `PaletteState.menuQuery`; Escape clears a non-empty query,
+  then closes the menu on the next press. A click outside still closes it immediately. `MenuPanel`
+  keeps ↑/↓, ↵, Tab and action chords on the menu while leaving text editing, selection and
+  clipboard commands to AppKit.
+- The palette window delegate ignores this intentional key transfer. Losing key status to anything
+  else still dismisses the palette, and closing the child restores key status before it fades out.
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
-  force-casts its field editor to a private subclass, so vending a custom one crashes — only the
-  existing one can be tuned.
+  force-casts its field editor to a private subclass, so vending a custom one crashes. The searchable
+  menu draws no caret of its own; AppKit draws the caret in its field editor.
 
 ## ↵ never commits the search field
 

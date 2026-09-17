@@ -41,6 +41,17 @@ struct SymbolTint: Hashable, Sendable {
     let color: NSColor
 }
 
+enum SystemSymbolName {
+    static func resolve(_ name: String, isDark: Bool) -> String {
+        guard isDark else { return name }
+        // The target SF Symbols runtime renders this base name as its inverse in Dark Aqua.
+        return switch name {
+        case "face.smiling": "face.smiling.inverse"
+        default: name
+        }
+    }
+}
+
 /// A feature sets one rather than branching `AppEntry`; `artwork` carries its extent.
 enum EntryIcon: Hashable, Sendable {
     /// The stamp is `FileIconStamp`'s: it moves when the file's icon does, retiring the old bitmap.
@@ -252,7 +263,7 @@ enum IconCache {
 
             // A tinted tile keeps white ink in both appearances; the tint carries the contrast.
             let ink = tint == nil ? NSColor.srgbInk(plainInk, alpha: 0.85) : .white
-            guard let symbol = glyph(named: name, tint: ink)
+            guard let symbol = glyph(named: name, tint: ink, isDark: isDark)
             else { return true }
             let size = symbol.size
             symbol.draw(
@@ -267,12 +278,14 @@ enum IconCache {
     }
 
     /// Symbols where they exist; the names SF Symbols lacks fall back to template assets.
-    private static func glyph(named name: String, tint: NSColor) -> NSImage? {
+    private static func glyph(named name: String, tint: NSColor, isDark: Bool) -> NSImage? {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
             .applying(.init(paletteColors: [tint]))
-        if let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
-            .withSymbolConfiguration(config)
-        {
+        if let symbol = NSImage(
+            systemSymbolName: SystemSymbolName.resolve(name, isDark: isDark),
+            accessibilityDescription: nil
+        )?
+        .withSymbolConfiguration(config) {
             return symbol
         }
         guard let asset = NSImage(named: name) else { return nil }

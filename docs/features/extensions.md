@@ -176,6 +176,7 @@ screens hold (see [palette.md](palette.md)).
   path and no second key handler exists to disagree with it. `PaletteFilterAction` routes ⌘P, so a
   command's own dropdown answers before Tinycast's clipboard filter can. The list is
   `listWidth` (240) rather than a form picker's 360: it hangs off a chip, not a field.
+  Its native search field sits above the choices and uses the palette menu's fuzzy matcher.
   **Swift owns the selection** — the runtime keeps `makeSearchDropdown` hook-free so an extension may
   call `List.Dropdown({…})` directly — so `ExtensionManager.accessoryValues` keys it by render-node id
   and `seedSearchBarAccessory` reports the opening choice through `onChange` on the first commit, as
@@ -308,15 +309,19 @@ screens hold (see [palette.md](palette.md)).
   rows read as colours rather than a column of grey circles. Untinted symbols use the extension's
   14pt Medium monochrome treatment; a destructive action with no tint of its own falls back to red.
   Section boundaries add 6pt above and below their separator without moving ordinary rows. The
-  title shares the elastic scroller with the actions. The panel opens and closes from its
+  title shares the elastic scroller with the actions. A native, row-height search field below it
+  filters titles through the launcher's fuzzy matcher, preserves section boundaries and centres
+  **No Results** in one row when empty; the scrolling edge beside that field has no dissolve. The
+  8pt resting inset scrolls with the actions, so rows can reach the panel edge without shifting their
+  initial position; hover keeps the shared 10pt menu-row corner. The panel opens and closes from its
   bottom-right attachment with extension-owned opacity and scale timing, briefly reaching 1.003;
   its attached corner matches the footer button. The first action is the primary ↵ action; an
   action's own `shortcut` is matched against modified keystrokes.
   `ExtensionCommandScreen.menuContent` hands the whole panel to the palette as a
   `PaletteMenuContent`, so the palette never learns the row type — and a row's handler is taken from
   the flattened `ExtensionAction` list rather than the drawn rows, so ↵ and the panel fire the same
-  one without resolving an icon per arrow key. Header accessory menus use the same extension-owned
-  transition, anchored to the control that opened them.
+  one without resolving an icon per arrow key. Header accessory symbols use the same 14pt Medium
+  monochrome treatment; their menus use the same extension-owned transition, anchored to the control.
 - **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, and `confirmAlert`
   goes through `DialogController` like every other question the app asks. Its dialog sits at
   `.dialog`, above the palette's `.palette`, so a view command keeps its screen behind it — and

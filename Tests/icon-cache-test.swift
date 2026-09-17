@@ -35,6 +35,16 @@ struct IconCacheTests {
 
     static func bitmap(_ image: NSImage) -> Data? { image.tiffRepresentation }
 
+    static func semanticSymbolNames() {
+        expect(
+            SystemSymbolName.resolve("face.smiling", isDark: false) == "face.smiling",
+            "Aqua preserves the semantic smiley")
+        expect(
+            SystemSymbolName.resolve("face.smiling", isDark: true) == "face.smiling.inverse",
+            "Dark Aqua compensates for the swapped smiley pair")
+        expect(SystemSymbolName.resolve("star", isDark: true) == "star", "other symbols stay unchanged")
+    }
+
     /// A restyle has to both drop what is cached and move the generation views key their fetch on.
     static func restyling() {
         let before = IconCache.style.generation
@@ -191,6 +201,7 @@ struct IconCacheTests {
         rowLifetime()
         rowRendering()
         await asynchronousRows()
+        semanticSymbolNames()
         tintedTiles()
         restyling()
         styleFingerprint()
